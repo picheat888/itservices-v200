@@ -1,8 +1,9 @@
 /**
- * "ไฟล์ส่งออกของฉัน" in the Report Center's right rail, as the design draws it: the files this
- * person queued from a report's Export dialog, newest first — each row names the report and
- * the slice it holds, then waiting / being built (with a bar, polled until done), ready to
- * download for 7 days (rows · size · how long ago), or failed with a Retry.
+ * "ไฟล์ส่งออกของฉัน" in the Report Center's right rail: the files this person queued from a
+ * report's Export dialog, newest first, drawn as a file browser lists files — a file tile (type
+ * and size), then three lines: the report; the slice it holds and its row count; when it was
+ * made and how long ago (or, while not ready, waiting / being built with a bar, or failed with
+ * the reason). Download, retry and delete are icon buttons. Kept 7 days.
  * Data: useMyExports (GET /api/reports/exports).
  */
 import { useT } from '@/lang';
@@ -50,11 +51,8 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     const title = t(`rep_${reportStem(item.report_key)}_title`);
     const slow = item.status === 'queued' && Date.now() - new Date(item.created_at).getTime() > SLOW_QUEUE_MS;
 
-    const details: string[] = [];
-    if (item.rows_count != null) details.push(t('rep_my_exports_rows').replace('{n}', String(item.rows_count)));
     const size = formatSize(item.size_bytes);
-    if (size) details.push(size);
-    details.push(relativeTime(item.finished_at ?? item.created_at, lang, ''));
+    const madeAt = item.finished_at ?? item.created_at;
     // The panel heading already says how long files are kept; the exact day sits in the tooltip.
     const keptUntil = item.expires_at ? t('rep_my_exports_kept_until').replace('{date}', formatDateTime(item.expires_at, false)) : undefined;
 
@@ -78,57 +76,87 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     };
 
     const building = item.status === 'queued' || item.status === 'running';
+    const iconButton = 'text-muted-foreground hover:text-foreground h-7 w-7';
 
     return (
         <div className="border-border flex items-start gap-3 border-b px-4 py-3 last:border-b-0">
+            {/* The file itself, as a file browser draws one: its type, and its size under it. */}
             <span
                 className={cn(
-                    'border-border flex h-10 w-[34px] shrink-0 items-center justify-center rounded-md border font-mono text-[9.5px] font-bold uppercase',
+                    'flex h-12 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border',
                     item.format === 'xlsx'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-red-500/10 text-red-600 dark:text-red-400',
+                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400',
                 )}
+                title={item.file_name ?? undefined}
             >
-                {item.format}
+                <span className="font-mono text-[10px] leading-none font-bold uppercase">{item.format}</span>
+                <span className="text-muted-foreground text-[9px] leading-none">{size ?? '—'}</span>
             </span>
+
             <div className="min-w-0 flex-1">
-                <div className="text-[13px] leading-snug font-semibold">
-                    {title} · {reportScope(item.filters, item.columns_count, t, lang)}
+                {/* 1 — which report */}
+                <div className="truncate text-sm font-semibold" title={title}>
+                    {title}
                 </div>
-                <div className="text-muted-foreground mt-0.5 text-[11.5px]" title={keptUntil}>
-                    {item.status === 'failed' ? (
-                        <span className="inline-flex flex-wrap items-center gap-1.5">
-                            <span className={cn('inline-flex h-5 items-center gap-1 rounded-full px-2 text-[11px] font-semibold', tone)}>
-                                <Icon className="h-3 w-3" />
-                                {t('rep_my_exports_st_failed')}
-                            </span>
-                            {item.error && t(`rep_my_exports_err_${item.error}`)}
+                {/* 2 — which slice of it, and how many rows */}
+                <div className="text-foreground/75 mt-0.5 truncate text-xs">
+                    {reportScope(item.filters, item.columns_count, t, lang)}
+                    {item.rows_count != null && ` · ${t('rep_my_exports_rows').replace('{n}', item.rows_count.toLocaleString())}`}
+                </div>
+                {/* 3 — when it was made and how long ago; or where it stands while it is not ready */}
+                {item.status === 'failed' ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span className={cn('inline-flex h-5 items-center gap-1 rounded-full px-2 font-semibold', tone)}>
+                            <Icon className="h-3 w-3" />
+                            {t('rep_my_exports_st_failed')}
                         </span>
-                    ) : building ? (
-                        `${t(`rep_my_exports_st_${item.status}`)}…`
-                    ) : (
-                        details.join(' · ')
-                    )}
-                </div>
-                {building && (
-                    // Indeterminate: the queue gives no percentage. Still under reduced motion.
-                    <div className="bg-muted mt-2 h-1 overflow-hidden rounded-full" aria-hidden="true">
-                        <span className={cn('bg-brand block h-full w-3/5 animate-pulse rounded-full motion-reduce:animate-none', spin && 'w-4/5')} />
+                        {item.error && <span className="text-muted-foreground">{t(`rep_my_exports_err_${item.error}`)}</span>}
+                    </div>
+                ) : building ? (
+                    <>
+                        <div className="text-muted-foreground mt-0.5 text-[11px]">{`${t(`rep_my_exports_st_${item.status}`)}…`}</div>
+                        {/* Indeterminate: the queue gives no percentage. Still under reduced motion. */}
+                        <div className="bg-muted mt-1.5 h-1 overflow-hidden rounded-full" aria-hidden="true">
+                            <span
+                                className={cn('bg-brand block h-full w-3/5 animate-pulse rounded-full motion-reduce:animate-none', spin && 'w-4/5')}
+                            />
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-muted-foreground mt-0.5 text-[11px]" title={keptUntil}>
+                        {formatDateTime(madeAt)} · {relativeTime(madeAt, lang, '')}
                     </div>
                 )}
-                {slow && <div className="mt-1 text-[11.5px] text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
+                {slow && <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
             </div>
-            <div className="flex shrink-0 items-center gap-0.5">
+
+            {/* Icons only; the name and the tooltip say what each does. */}
+            <div className="-mt-0.5 -mr-1 flex shrink-0 items-center">
                 {item.status === 'ready' && (
-                    <Button size="sm" variant="outline" onClick={onDownload} disabled={download.isPending} className="h-[30px] px-2.5 text-xs">
-                        {download.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                        {t('rep_my_exports_download')}
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={onDownload}
+                        disabled={download.isPending}
+                        aria-label={t('rep_my_exports_download')}
+                        title={t('rep_my_exports_download')}
+                        className="text-brand hover:text-brand h-7 w-7"
+                    >
+                        {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                     </Button>
                 )}
                 {item.status === 'failed' && (
-                    <Button size="sm" variant="outline" onClick={onRetry} disabled={retry.isPending} className="h-[30px] px-2.5 text-xs">
-                        {retry.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                        {t('rep_my_exports_retry')}
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={onRetry}
+                        disabled={retry.isPending}
+                        aria-label={t('rep_my_exports_retry')}
+                        title={t('rep_my_exports_retry')}
+                        className={iconButton}
+                    >
+                        {retry.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
                     </Button>
                 )}
                 {item.status !== 'running' && (
@@ -138,9 +166,9 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                         onClick={onDelete}
                         aria-label={t('rep_my_exports_delete')}
                         title={t('rep_my_exports_delete')}
-                        className="text-muted-foreground h-[30px] w-[30px]"
+                        className={cn(iconButton, 'hover:text-destructive')}
                     >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
                     </Button>
                 )}
             </div>
