@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
- * Report exports built on the queue ("ไฟล์ Export ของฉัน" on the Report Center).
+ * Report exports built on the queue ("ไฟล์ส่งออกของฉัน" on the Report Center).
  *
  * `queue()` records what was asked for and hands it to GenerateReportExport; the job calls
  * `build()`, which writes the file to the private disk and rings the requester's bell either

@@ -1,7 +1,7 @@
 /**
  * Report module HTTP calls — Report Center catalogue, the Ticket & SLA report
  * (summary, rows, queued export), the generic tabular reports (definition, rows, queued export)
- * "ไฟล์ Export ของฉัน" (list, download, retry, remove) and scheduled report emails (set, list, edit, send now, remove).
+ * "ไฟล์ส่งออกของฉัน" (list, download, retry, remove) and scheduled report emails (set, list, edit, send now, remove).
  */
 import { http } from '@/shared/lib/http';
 import type {

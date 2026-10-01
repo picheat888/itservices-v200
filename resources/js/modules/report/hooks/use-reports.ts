@@ -1,6 +1,6 @@
 /**
  * Report module React Query hooks — catalogue (+ pinning), the hub number strip, Ticket & SLA summary/rows/export, the
- * generic tabular report definition/rows/export, "ไฟล์ Export ของฉัน" (queued files: list, download, retry, remove) and
+ * generic tabular report definition/rows/export, "ไฟล์ส่งออกของฉัน" (queued files: list, download, retry, remove) and
  * scheduled report emails.
  */
 import { downloadBlob } from '@/shared/lib/utils';
@@ -19,7 +19,7 @@ export function noRetryOn4xx(count: number, error: unknown): boolean {
 
 const CATALOGUE_KEY = ['reports', 'catalogue'] as const;
 
-/** "ไฟล์ Export ของฉัน" — also refreshed by the shell when a report_export bell arrives. */
+/** "ไฟล์ส่งออกของฉัน" — also refreshed by the shell when a report_export bell arrives. */
 export const REPORT_EXPORTS_KEY = ['reports', 'exports'] as const;
 
 /** Scheduled report emails — also refreshed by the shell when a report_schedule bell arrives. */

@@ -335,7 +335,7 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'asset_recalled') return '/my-assets-access';
     if (n.data.type === 'asset_offboarding') return '/assets';
     if (n.data.type === 'access_offboarding') return '/access';
-    // The file waits in "ไฟล์ Export ของฉัน" on the Report Center.
+    // The file waits in "ไฟล์ส่งออกของฉัน" on the Report Center.
     if (n.data.type === 'report_export' || n.data.type === 'report_schedule') return '/reports';
     const mod = moduleOf(n.data.type, n.data.module);
     // The stuck-request bell asks for an account, so it opens the person who needs one

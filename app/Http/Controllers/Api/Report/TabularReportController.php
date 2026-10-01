@@ -45,7 +45,7 @@ class TabularReportController extends Controller
         ]);
     }
 
-    /** Queue the file (202) — it is built by GenerateReportExport and lands in "ไฟล์ Export ของฉัน". */
+    /** Queue the file (202) — it is built by GenerateReportExport and lands in "ไฟล์ส่งออกของฉัน". */
     public function export(ExportTabularReportRequest $request, ReportExportService $exports): JsonResponse
     {
         $export = $exports->queue(

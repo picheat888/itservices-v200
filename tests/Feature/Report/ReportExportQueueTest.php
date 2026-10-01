@@ -18,7 +18,7 @@ use Tests\TestCase;
 
 /**
  * Report exports through the queue (Phase 5b): POST …/export records the request and
- * GenerateReportExport builds the file, which then waits in "ไฟล์ Export ของฉัน"
+ * GenerateReportExport builds the file, which then waits in "ไฟล์ส่งออกของฉัน"
  * (/api/reports/exports) for 7 days — its owner's alone.
  */
 class ReportExportQueueTest extends TestCase

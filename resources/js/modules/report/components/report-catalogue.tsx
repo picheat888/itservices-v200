@@ -2,7 +2,7 @@
  * Report Center list, as the design lays it out: reports grouped by module (in the design's
  * module order), each row linking to its report page and reading title + description, the
  * file formats it offers, the design's "Export ล่าสุด" column (the reader's latest kept file —
- * being built, failed, or when it was made, from "ไฟล์ Export ของฉัน"), and a pin toggle.
+ * being built, failed, or when it was made, from "ไฟล์ส่งออกของฉัน"), and a pin toggle.
  */
 import { useT } from '@/lang';
 import { relativeTime } from '@/shared/lib/datetime';

@@ -84,7 +84,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/snapshot', [ReportController::class, 'snapshot'])->name('api.reports.snapshot');
     Route::put('reports/{key}/pin', [ReportController::class, 'pin'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.pin');
     Route::delete('reports/{key}/pin', [ReportController::class, 'unpin'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.unpin');
-    // "ไฟล์ Export ของฉัน" — files queued by the export endpoints below; each one its owner's only.
+    // "ไฟล์ส่งออกของฉัน" — files queued by the export endpoints below; each one its owner's only.
     Route::get('reports/exports', [ReportExportController::class, 'index'])->name('api.reports.exports.index');
     Route::get('reports/exports/{export}/download', [ReportExportController::class, 'download'])->whereNumber('export')->name('api.reports.exports.download');
     Route::post('reports/exports/{export}/retry', [ReportExportController::class, 'retry'])->whereNumber('export')->name('api.reports.exports.retry');
