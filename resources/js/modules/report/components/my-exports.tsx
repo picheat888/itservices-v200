@@ -1,9 +1,10 @@
 /**
  * "ไฟล์ส่งออกของฉัน" in the Report Center's right rail: the files this person queued from a
  * report's Export dialog, newest first, drawn as a file browser lists files — a file tile (type
- * and size), then three lines: the report; the slice it holds and its row count; when it was
- * made and how long ago (or, while not ready, waiting / being built with a bar, or failed with
- * the reason). Download, retry and delete are icon buttons. Kept 7 days.
+ * and size), then three lines: the report; the slice it holds and its row count; the date it
+ * was made (or, while not ready, waiting / being built with a bar, or failed with the reason).
+ * The right column holds the icon buttons (download, retry, delete) with how long ago at its
+ * foot, so the row has no dead corner. Kept 7 days.
  * Data: useMyExports (GET /api/reports/exports).
  */
 import { useT } from '@/lang';
@@ -125,51 +126,57 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                     </>
                 ) : (
                     <div className="text-muted-foreground mt-0.5 text-[11px]" title={keptUntil}>
-                        {formatDateTime(madeAt)} · {relativeTime(madeAt, lang, '')}
+                        {formatDateTime(madeAt)}
                     </div>
                 )}
                 {slow && <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
             </div>
 
-            {/* Icons only; the name and the tooltip say what each does. */}
-            <div className="-mt-0.5 -mr-1 flex shrink-0 items-center">
+            {/* Right column: the actions on top (icons only — the name and the tooltip say what
+                each does), how long ago the file was made at the foot, level with its date. */}
+            <div className="-mr-1 flex shrink-0 flex-col items-end justify-between self-stretch">
+                <div className="-mt-0.5 flex items-center">
+                    {item.status === 'ready' && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={onDownload}
+                            disabled={download.isPending}
+                            aria-label={t('rep_my_exports_download')}
+                            title={t('rep_my_exports_download')}
+                            className="text-brand hover:text-brand h-7 w-7"
+                        >
+                            {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        </Button>
+                    )}
+                    {item.status === 'failed' && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={onRetry}
+                            disabled={retry.isPending}
+                            aria-label={t('rep_my_exports_retry')}
+                            title={t('rep_my_exports_retry')}
+                            className={iconButton}
+                        >
+                            {retry.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                        </Button>
+                    )}
+                    {item.status !== 'running' && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={onDelete}
+                            aria-label={t('rep_my_exports_delete')}
+                            title={t('rep_my_exports_delete')}
+                            className={cn(iconButton, 'hover:text-destructive')}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
                 {item.status === 'ready' && (
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onDownload}
-                        disabled={download.isPending}
-                        aria-label={t('rep_my_exports_download')}
-                        title={t('rep_my_exports_download')}
-                        className="text-brand hover:text-brand h-7 w-7"
-                    >
-                        {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    </Button>
-                )}
-                {item.status === 'failed' && (
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onRetry}
-                        disabled={retry.isPending}
-                        aria-label={t('rep_my_exports_retry')}
-                        title={t('rep_my_exports_retry')}
-                        className={iconButton}
-                    >
-                        {retry.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                    </Button>
-                )}
-                {item.status !== 'running' && (
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onDelete}
-                        aria-label={t('rep_my_exports_delete')}
-                        title={t('rep_my_exports_delete')}
-                        className={cn(iconButton, 'hover:text-destructive')}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <span className="text-muted-foreground mr-1 text-[11px] whitespace-nowrap">{relativeTime(madeAt, lang, '')}</span>
                 )}
             </div>
         </div>
