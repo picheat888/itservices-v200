@@ -6,7 +6,7 @@ import type { Dict } from '@/lang/types';
 export const report: Dict = {
     // pages/index.tsx — Report Center
     rep_center_title: 'ศูนย์รายงาน',
-    rep_center_sub: 'รวมรายงานทุกเรื่องไว้ที่นี่ ดูบนเว็บ กรองข้อมูล แล้ว Export เป็น Excel หรือ PDF ได้ แสดงเฉพาะรายงานที่คุณมีสิทธิ์ดู',
+    rep_center_sub: 'รวมรายงานทุกเรื่องไว้ที่นี่ ดูบนเว็บ กรองข้อมูล แล้วส่งออกเป็น Excel หรือ PDF ได้ แสดงเฉพาะรายงานที่คุณมีสิทธิ์ดู',
     rep_search_placeholder: 'ค้นหารายงาน เช่น SLA, ประกัน, ลาออก',
     rep_filter_all: 'ทั้งหมด',
     rep_domain_tickets: 'Ticket',
@@ -16,7 +16,7 @@ export const report: Dict = {
     rep_unpin: 'เลิกปักหมุด',
     rep_last_export_at: 'ส่งออกล่าสุด {t}',
     rep_last_export_building: 'กำลังสร้างไฟล์',
-    rep_last_export_failed: 'Export ไม่สำเร็จ',
+    rep_last_export_failed: 'ส่งออกไม่สำเร็จ',
     // components/snapshot-strip.tsx — number strip
     rep_period_7d: '7 วัน',
     rep_period_month: 'เดือนนี้',
@@ -46,8 +46,8 @@ export const report: Dict = {
     rep_snap_none_sla_rate: 'ยังไม่มีงานที่ปิดในช่วงนี้',
     // components/column-picker.tsx — column picker
     rep_columns: 'คอลัมน์',
-    rep_columns_hint: 'เลือกคอลัมน์ที่จะแสดง ไฟล์ Export จะมีเฉพาะคอลัมน์ที่เลือก',
-    rep_export_columns_note: 'Export เฉพาะ {n} คอลัมน์ที่แสดงอยู่',
+    rep_columns_hint: 'เลือกคอลัมน์ที่จะแสดง ไฟล์ที่ส่งออกจะมีเฉพาะคอลัมน์ที่เลือก',
+    rep_export_columns_note: 'ส่งออกเฉพาะ {n} คอลัมน์ที่แสดงอยู่',
     rep_empty_title: 'ยังไม่มีรายงานที่เปิดได้',
     rep_empty_sub: 'บัญชีของคุณยังไม่มีสิทธิ์ดูรายงาน ติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์',
     rep_no_match: 'ไม่พบรายงานที่ตรงกับคำค้น',
@@ -55,7 +55,7 @@ export const report: Dict = {
     rep_tickets_overview_desc: 'ปริมาณงาน เวลาแก้ไข และการปิดงานทัน SLA แยกตามหมวด ความสำคัญ และแผนก',
 
     // pages/ticket-overview.tsx — header, KPI tiles
-    rep_export: 'Export',
+    rep_export: 'ส่งออก',
     rep_kpi_total: 'Ticket ทั้งหมด',
     rep_kpi_completed: 'ปิดสำเร็จ',
     rep_kpi_canceled: 'ยกเลิก {n}',
@@ -124,7 +124,7 @@ export const report: Dict = {
     rep_sla_breached: 'เกิน SLA',
 
     // components/export-report-dialog.tsx — export dialog
-    rep_export_eyebrow: 'Export รายงาน',
+    rep_export_eyebrow: 'ส่งออกรายงาน',
     rep_export_format: 'รูปแบบไฟล์',
     rep_export_xlsx: 'Excel',
     rep_export_xlsx_desc: 'ข้อมูลทุกแถว พร้อมชีตสรุป กรองและทำ Pivot ต่อได้',
@@ -140,8 +140,8 @@ export const report: Dict = {
     rep_export_queued: 'เสร็จแล้วจะแจ้งที่กระดิ่ง ดาวน์โหลดได้ที่ "ไฟล์ส่งออกของฉัน" ในศูนย์รายงาน',
     rep_export_refusal_failed: 'สร้างไฟล์ไม่สำเร็จ ลองอีกครั้ง',
     rep_export_refusal_invalid: 'ตัวกรองไม่ถูกต้อง ตรวจแล้วลองอีกครั้ง',
-    rep_export_refusal_forbidden: 'คุณไม่มีสิทธิ์ Export รายงานนี้',
-    rep_export_refusal_export_queue_full: 'มีไฟล์รอสร้างอยู่ {limit} ไฟล์แล้ว รอให้เสร็จก่อนค่อย Export เพิ่ม',
+    rep_export_refusal_forbidden: 'คุณไม่มีสิทธิ์ส่งออกรายงานนี้',
+    rep_export_refusal_export_queue_full: 'มีไฟล์รอสร้างอยู่ {limit} ไฟล์แล้ว รอให้เสร็จก่อนค่อยส่งออกเพิ่ม',
     rep_export_refusal_export_not_failed: 'ลองใหม่ได้เฉพาะไฟล์ที่สร้างไม่สำเร็จ',
 
     // components/my-exports.tsx — My exports panel
@@ -151,7 +151,7 @@ export const report: Dict = {
     rep_scope_filters: 'ตัวกรอง {n} รายการ',
     rep_scope_columns: '{n} คอลัมน์',
     rep_my_exports_sub: 'เก็บไว้ให้ดาวน์โหลด {days} วัน',
-    rep_my_exports_empty: 'ยังไม่มีไฟล์ กด Export ในหน้ารายงาน แล้วไฟล์จะมาอยู่ที่นี่',
+    rep_my_exports_empty: 'ยังไม่มีไฟล์ กด "ส่งออก" ในหน้ารายงาน แล้วไฟล์จะมาอยู่ที่นี่',
     rep_my_exports_st_queued: 'รอคิว',
     rep_my_exports_st_running: 'กำลังสร้าง',
     rep_my_exports_st_ready: 'พร้อมดาวน์โหลด',
