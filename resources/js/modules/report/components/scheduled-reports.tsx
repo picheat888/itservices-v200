@@ -1,7 +1,8 @@
 /**
- * "รายงานที่ตั้งเวลาไว้" in the Report Center's right rail: the reader's scheduled report emails — how
- * often and to whom, when the next one goes out, how the last one went — with edit, pause /
- * resume, send now and delete. With none yet it shows the design's intro card instead; a
+ * "รายงานที่ตั้งเวลาไว้" in the Report Center's right rail, laid out like the exports card above
+ * it: a tile (the file type, with a clock), then the report, when it goes out, to whom, and the
+ * next send (or why the last one failed); send now / edit / delete as icons on the right with the
+ * on/off switch at the foot. With none yet it shows the design's intro card instead; a
  * schedule is set from a report page's "ตั้งเวลาส่ง" button. Data: useReportSchedules
  * (GET /api/reports/schedules).
  */
@@ -14,7 +15,7 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
-import { CalendarClock, Clock, Pencil, Send, Trash2 } from 'lucide-react';
+import { CalendarClock, Clock, Mail, Pencil, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useDeleteSchedule, useReportCatalogue, useReportSchedules, useSendScheduleNow, useUpdateSchedule } from '../hooks/use-reports';
 import type { ReportScheduleItem } from '../types';
@@ -50,51 +51,63 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
         if (ok) useToastStore.getState().push(t('rep_schedules_deleted'), 'error', undefined, 'trash', { duration: 4000 });
     };
 
-    const when = `${t(`rep_schedule_freq_${item.frequency}`)} · ${hourLabel(item.send_hour)}`;
+    // "ทุกวันจันทร์ · 07:00" — the day it goes out and the hour.
+    const when = `${t(`rep_schedule_freq_${item.frequency}_when`)} · ${hourLabel(item.send_hour)}`;
     const recipients =
         item.recipients.length === 1
             ? item.recipients[0]
             : t('rep_schedules_recipients')
                   .replace('{first}', item.recipients[0])
                   .replace('{n}', String(item.recipients.length - 1));
+    const failed = item.last_status === 'failed';
+    const lastSent = item.last_run_at && !failed ? t('rep_schedules_last_sent').replace('{t}', formatDateTime(item.last_run_at)) : undefined;
+    const iconButton = 'text-muted-foreground hover:text-foreground h-7 w-7';
 
     return (
-        <div className="border-border flex gap-3 border-b px-4 py-3 last:border-b-0">
+        <div className="border-border flex items-start gap-3 border-b px-4 py-3 last:border-b-0">
+            {/* The file it sends, marked with a clock: a schedule, where an export row is a file. */}
             <span
                 className={cn(
-                    'flex h-10 w-9 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold uppercase',
+                    'flex h-12 w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-md border',
                     item.format === 'xlsx'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-red-500/10 text-red-600 dark:text-red-400',
+                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400',
+                    !item.active && 'opacity-50',
                 )}
             >
-                {item.format}
+                <span className="font-mono text-[10px] leading-none font-bold uppercase">{item.format}</span>
+                <Clock className="text-muted-foreground h-3 w-3" />
             </span>
-            <div className="min-w-0 flex-1">
-                {/* A paused schedule reads faded; its switch stays at full strength so it reads as the way back. */}
-                <div className={cn('truncate text-sm font-semibold', !item.active && 'opacity-60')} title={title}>
+
+            {/* A paused schedule reads faded; its switch stays at full strength as the way back. */}
+            <div className={cn('min-w-0 flex-1', !item.active && 'opacity-60')}>
+                {/* 1 — which report */}
+                <div className="truncate text-sm font-semibold" title={title}>
                     {title}
                 </div>
-                <div className="text-muted-foreground truncate text-xs">
-                    {when} · {recipients}
+                {/* 2 — when it goes out */}
+                <div className="text-foreground/75 mt-0.5 truncate text-xs">{when}</div>
+                {/* 3 — to whom */}
+                <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 text-[11px]" title={item.recipients.join(', ')}>
+                    <Mail className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{recipients}</span>
                 </div>
-                <div className="text-muted-foreground text-xs">
+                {/* 4 — the next one, or why the last one did not go */}
+                <div className="text-muted-foreground mt-0.5 text-[11px]" title={lastSent}>
                     {item.active ? t('rep_schedules_next').replace('{t}', formatDateTime(item.next_run_at)) : t('rep_schedules_paused')}
-                    {item.last_run_at && (
-                        <>
-                            {' · '}
-                            <span className={item.last_status === 'failed' ? 'text-destructive' : undefined}>
-                                {(item.last_status === 'failed' ? t('rep_schedules_last_failed') : t('rep_schedules_last_sent')).replace(
-                                    '{t}',
-                                    formatDateTime(item.last_run_at),
-                                )}
-                                {item.last_status === 'failed' && item.last_error && ` - ${t(`rep_schedules_err_${item.last_error}`)}`}
-                            </span>
-                        </>
-                    )}
                 </div>
-                <div className="mt-2 flex items-center gap-1">
-                    <Switch checked={item.active} onChange={onToggle} disabled={update.isPending} aria-label={t('rep_schedules_active')} />
+                {failed && item.last_run_at && (
+                    <div className="text-destructive mt-0.5 text-[11px]">
+                        {t('rep_schedules_last_failed').replace('{t}', formatDateTime(item.last_run_at))}
+                        {item.last_error && ` - ${t(`rep_schedules_err_${item.last_error}`)}`}
+                    </div>
+                )}
+            </div>
+
+            {/* Right column: actions on top (icons only — the name and the tooltip say what each
+                does), the on/off switch at its foot, level with the next send. */}
+            <div className="-mr-1 flex shrink-0 flex-col items-end justify-between self-stretch">
+                <div className="-mt-0.5 flex items-center">
                     <Button
                         size="icon"
                         variant="ghost"
@@ -102,15 +115,33 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                         disabled={!item.active || sendNow.isPending}
                         aria-label={t('rep_schedules_send_now')}
                         title={t('rep_schedules_send_now')}
+                        className="text-brand hover:text-brand h-7 w-7"
                     >
                         <Send className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={onEdit} aria-label={t('rep_schedules_edit')} title={t('rep_schedules_edit')}>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={onEdit}
+                        aria-label={t('rep_schedules_edit')}
+                        title={t('rep_schedules_edit')}
+                        className={iconButton}
+                    >
                         <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={onDelete} aria-label={t('rep_schedules_delete')} title={t('rep_schedules_delete')}>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={onDelete}
+                        aria-label={t('rep_schedules_delete')}
+                        title={t('rep_schedules_delete')}
+                        className={cn(iconButton, 'hover:text-destructive')}
+                    >
                         <Trash2 className="h-4 w-4" />
                     </Button>
+                </div>
+                <div className="mr-1" title={t('rep_schedules_active')}>
+                    <Switch checked={item.active} onChange={onToggle} disabled={update.isPending} aria-label={t('rep_schedules_active')} />
                 </div>
             </div>
         </div>
