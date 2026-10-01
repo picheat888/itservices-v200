@@ -151,7 +151,7 @@ export const report: Dict = {
     rep_scope_filters: 'ตัวกรอง {n} รายการ',
     rep_scope_columns: '{n} คอลัมน์',
     rep_my_exports_sub: 'เก็บไว้ {days} วัน',
-    rep_my_exports_empty: 'ยังไม่มีไฟล์ กด "ส่งออก" ในหน้ารายงาน แล้วไฟล์จะมาอยู่ที่นี่',
+    rep_my_exports_empty: 'ไม่มีไฟล์ส่งออก',
     rep_my_exports_st_queued: 'รอคิว',
     rep_my_exports_st_running: 'กำลังสร้าง',
     rep_my_exports_st_ready: 'พร้อมดาวน์โหลด',
@@ -210,7 +210,7 @@ export const report: Dict = {
 
     // components/scheduled-reports.tsx — scheduled reports panel
     rep_schedules_title: 'รายงานที่ตั้งเวลาไว้',
-    rep_schedules_sub: 'ส่งเข้าอีเมลอัตโนมัติ',
+    rep_schedules_sub: 'ส่งอัตโนมัติ',
     rep_schedules_intro: 'ให้ระบบส่งรายงานเข้าอีเมลรายวัน รายสัปดาห์ หรือรายเดือน เป็น PDF หรือ Excel กด "ตั้งเวลาส่ง" ในหน้ารายงานที่ต้องการ',
     rep_schedules_next: 'ส่งครั้งถัดไป {t}',
     rep_schedules_paused: 'หยุดไว้',
