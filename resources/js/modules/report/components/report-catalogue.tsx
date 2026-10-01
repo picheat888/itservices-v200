@@ -1,8 +1,8 @@
 /**
  * Report Center list, as the design lays it out: reports grouped by module (in the design's
  * module order), each row linking to its report page and reading title + description, the
- * file formats it offers (lined up beside the pin), the reader's latest kept file at the end of
- * the description (being built, failed, or when it was made, from "ไฟล์ส่งออกของฉัน"), and a pin.
+ * file formats it offers (lined up beside the pin) with the reader's latest kept file under them
+ * (being built, failed, or when it was made, from "ไฟล์ส่งออกของฉัน"), and a pin.
  */
 import { useT } from '@/lang';
 import { relativeTime } from '@/shared/lib/datetime';
@@ -60,7 +60,7 @@ function StatusPill({ tone, children }: { tone: 'blue' | 'red'; children: React.
 }
 
 /**
- * The reader's latest kept file of this report, at the end of the row's description line.
+ * The reader's latest kept file of this report, under the row's format badges.
  * Nothing when there is none — a "no file yet" on every row says nothing a missing line does not.
  */
 function LastExport({ item }: { item: ReportExportItem }) {
@@ -106,21 +106,21 @@ function ReportRow({ report, latest }: { report: ReportDefinition; latest?: Repo
             >
                 <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{t(`rep_${reportStem(report.key)}_title`)}</div>
-                    <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
-                        <span>{t(`rep_${reportStem(report.key)}_desc`)}</span>
-                        {latest && (
-                            <>
-                                <span aria-hidden="true">·</span>
-                                <LastExport item={latest} />
-                            </>
-                        )}
-                    </div>
+                    <div className="text-muted-foreground mt-0.5 text-xs">{t(`rep_${reportStem(report.key)}_desc`)}</div>
                 </div>
-                {/* Last on the line, beside the pin, so the badges line up down every group. */}
-                <div className="hidden shrink-0 gap-1 sm:flex">
-                    {report.formats.map((f) => (
-                        <FormatChip key={f} format={f} />
-                    ))}
+                {/* Beside the pin, right-aligned: the badges line up down every group, and the
+                    latest file sits under them (nothing when there is none). */}
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                    <div className="hidden gap-1 sm:flex">
+                        {report.formats.map((f) => (
+                            <FormatChip key={f} format={f} />
+                        ))}
+                    </div>
+                    {latest && (
+                        <div className="text-muted-foreground text-[11px] whitespace-nowrap">
+                            <LastExport item={latest} />
+                        </div>
+                    )}
                 </div>
             </Link>
             <PinButton report={report} />
