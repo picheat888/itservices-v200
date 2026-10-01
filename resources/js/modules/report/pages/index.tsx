@@ -3,7 +3,8 @@
  * strip (SnapshotStrip), then two columns as in the design: the reports this user may open
  * (search, module chips, a "pinned" chip) on the left, and a rail with their queued files
  * (MyExports — "ไฟล์ Export ของฉัน") and scheduled report emails (ScheduledReports) on the
- * right. Below xl the rail follows the reports.
+ * right — about a third of the page, kept between 300 and 500px. Below xl the rail follows
+ * the reports.
  * Server decides visibility (GET /api/reports → ReportCatalogue) and remembers pins.
  */
 import { useT } from '@/lang';
@@ -59,7 +60,7 @@ export default function ReportsPage() {
 
             <SnapshotStrip period={period} />
 
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_clamp(300px,32%,500px)]">
                 <div className="min-w-0 space-y-4">
                     {isLoading ? (
                         <Skeleton className="h-40 w-full" />
