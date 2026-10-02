@@ -70,7 +70,7 @@ class ReportCatalogue
     public const ACCESS_SOFTWARE_LICENSES = 'access.software_licenses';
 
     /**
-     * @return array<string, array{domain: string, kind: string, class?: class-string<TabularReport>, requires: list<string>, formats: list<string>}>
+     * @return array<string, array{domain: string, kind: string, class?: class-string<TabularReport>, requires: list<string>, formats: list<string>, range?: bool}>
      */
     public static function definitions(): array
     {
@@ -82,6 +82,7 @@ class ReportCatalogue
                 'kind' => 'custom',
                 'requires' => ['tickets.view_all', 'tickets.resolve'],
                 'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             // The backlog carries SLA verdicts, so it asks what the overview asks; within that,
             // it counts only the reader's `tickets.level_*` categories. ("Ticket ตามแผนกและหมวด"
@@ -134,6 +135,7 @@ class ReportCatalogue
                 'class' => AssetTransferHistoryReport::class,
                 'requires' => ['assets.view'],
                 'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             // The movement log is its own permission in the stock module (stock.view_events).
             self::STOCK_MOVEMENTS => [
@@ -142,6 +144,7 @@ class ReportCatalogue
                 'class' => StockMovementReport::class,
                 'requires' => ['stock.view_events'],
                 'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             self::STOCK_BELOW_MIN => [
                 'domain' => 'stock',
@@ -163,6 +166,7 @@ class ReportCatalogue
                 'class' => RequestSummaryReport::class,
                 'requires' => ['requests.view_all'],
                 'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             self::REQUESTS_APPROVAL_TIME => [
                 'domain' => 'requests',
@@ -170,6 +174,7 @@ class ReportCatalogue
                 'class' => ApprovalTimeReport::class,
                 'requires' => ['requests.view_all'],
                 'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             self::REQUESTS_IT_PENDING => [
                 'domain' => 'requests',
@@ -186,6 +191,7 @@ class ReportCatalogue
                 'class' => JoinersLeaversReport::class,
                 'requires' => ['employees.view'],
                 'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             self::EMPLOYEES_LEAVER_ASSETS => [
                 'domain' => 'employees',
@@ -221,14 +227,18 @@ class ReportCatalogue
     }
 
     /**
-     * @return list<array{key: string, domain: string, kind: string, formats: list<string>}>
+     * `range`: the report has a from/to date range, so a Report Center link may hand it the hub's
+     * period (?from=&to=). Set by hand per report; ReportCatalogueTest checks it against each
+     * tabular report's own filters.
+     *
+     * @return list<array{key: string, domain: string, kind: string, formats: list<string>, range: bool}>
      */
     public static function forUser(?User $user): array
     {
         $visible = [];
         foreach (self::definitions() as $key => $definition) {
             if (self::allows($user, $key)) {
-                $visible[] = ['key' => $key, 'domain' => $definition['domain'], 'kind' => $definition['kind'], 'formats' => $definition['formats']];
+                $visible[] = ['key' => $key, 'domain' => $definition['domain'], 'kind' => $definition['kind'], 'formats' => $definition['formats'], 'range' => $definition['range'] ?? false];
             }
         }
 

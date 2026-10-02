@@ -24,7 +24,7 @@ class ReportPinService
      * place in the order the user pinned things (0 = pinned first) — so the hub's "ปักหมุดไว้"
      * card can list them that way.
      *
-     * @return list<array{key: string, domain: string, kind: string, formats: list<string>, pinned: bool, pin_order: int|null}>
+     * @return list<array{key: string, domain: string, kind: string, formats: list<string>, range: bool, pinned: bool, pin_order: int|null}>
      */
     public function catalogueFor(User $user): array
     {

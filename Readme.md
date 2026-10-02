@@ -4137,3 +4137,11 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **`pages/unknown-report.tsx`** — URL `/reports/…` ที่ไม่มีในรายการ ขึ้น "ไม่พบรายงานนี้" + ปุ่ม "กลับไปหน้ารายงาน" · ลิงก์เก่า `/reports/r/<key>` ยัง redirect ได้
 
 ตรวจใน Chrome: `/reports/stock-below-min` · `/reports/tickets-overview` · `/reports/nope-nothing` → ไม่พบรายงาน · `/reports/r/tickets.backlog` → `/reports/tickets-backlog` · tsc + eslint + `npm run build` ผ่าน · `SidebarRouteGateTest` + `RequestPermissionGateTest` ผ่าน
+
+## หน้า "รายงาน": แนบช่วงวันที่เฉพาะรายงานที่มีช่วงวันที่ (2026-10-02)
+
+**อาการ**: ลิงก์ในหน้า `/reports` แนบ `?from=&to=` ให้ทุกรายงาน รายงานที่ไม่มีช่วงวันที่ (เช่น อะไหล่ต่ำกว่าขั้นต่ำ) จึงลบ query ทิ้งตอนเปิด ทำให้ URL กระพริบ
+- `ReportCatalogue` มี flag `range` (6 รายงาน: ภาพรวม Ticket & SLA, ประวัติโอนย้ายฯ, พนักงานเข้า-ออก, ระยะเวลาอนุมัติ, สรุปคำขอ, สต็อกเคลื่อนไหว) ส่งไปกับ `GET /api/reports` · `ReportCatalogueTest` ใหม่ตรวจว่า flag ตรงกับตัวกรอง from/to ของแต่ละรายงานจริง (ลืมแก้ = เทสต์ฟ้อง)
+- `reportRoute` แนบช่วงวันที่เฉพาะ `def.range` · การ์ดตัวเลขด้านบนอ่าน flag จาก catalogue
+
+ตรวจใน Chrome: ลิงก์ในหน้า `/reports` มีช่วงวันที่เฉพาะ 6 รายงานข้างบน · `ReportCatalogueTest` 9 ผ่าน · tsc + eslint ผ่าน

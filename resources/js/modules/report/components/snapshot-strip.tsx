@@ -17,7 +17,7 @@ import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useReportSnapshot } from '../hooks/use-reports';
+import { useReportCatalogue, useReportSnapshot } from '../hooks/use-reports';
 import type { SnapshotPeriod, SnapshotTile } from '../types';
 import { reportRoute } from './report-catalogue';
 import { periodRange } from './report-scope';
@@ -127,7 +127,7 @@ function Footer({ tile, periodWords }: { tile: SnapshotTile; periodWords: string
     }
 }
 
-function Tile({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) {
+function Tile({ tile, period, hasRange }: { tile: SnapshotTile; period: SnapshotPeriod; hasRange: boolean }) {
     const t = useT();
     const value = tile.value === null ? '—' : tile.unit === 'percent' ? tile.value.toLocaleString() : tile.value.toLocaleString();
     const periodWords = t(`rep_period_in_${period}`);
@@ -141,7 +141,7 @@ function Tile({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) 
     return (
         <Link
             // Opens the report on the strip's own period, so it shows the days this number counts.
-            to={reportRoute({ key: tile.report_key }, periodRange(period))}
+            to={reportRoute({ key: tile.report_key, range: hasRange }, periodRange(period))}
             className="bg-card hover:bg-accent focus-visible:ring-brand/30 flex min-w-0 flex-col gap-1 px-4 py-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
             <span className="text-muted-foreground truncate text-xs" title={label}>
@@ -211,6 +211,8 @@ export function PeriodSwitch({ period, onChange }: { period: SnapshotPeriod; onC
 
 export function SnapshotStrip({ period }: { period: SnapshotPeriod }) {
     const { data, isLoading } = useReportSnapshot(period);
+    // Which tiles' reports take a date range — the hub already holds the catalogue.
+    const { data: catalogue = [] } = useReportCatalogue();
 
     if (!isLoading && (data?.tiles.length ?? 0) === 0) return null;
 
@@ -226,7 +228,9 @@ export function SnapshotStrip({ period }: { period: SnapshotPeriod }) {
                           <Skeleton className="h-3 w-20" />
                       </div>
                   ))
-                : data.tiles.map((tile) => <Tile key={tile.key} tile={tile} period={period} />)}
+                : data.tiles.map((tile) => (
+                      <Tile key={tile.key} tile={tile} period={period} hasRange={!!catalogue.find((r) => r.key === tile.report_key)?.range} />
+                  ))}
         </Card>
     );
 }

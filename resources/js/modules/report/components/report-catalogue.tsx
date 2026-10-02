@@ -28,14 +28,14 @@ export const reportSlug = (key: string) => key.replace('.', '-').replaceAll('_',
 export const reportKeyFromSlug = (slug: string) => slug.replace('-', '.').replaceAll('-', '_');
 
 /**
- * Every report opens at /reports/<slug> — the ticket overview's own page ("tickets-overview")
- * and the generic tabular one alike. With `range` (the hub's period) the link carries
- * ?from=&to=, which a report with a date range opens on (use-ticket-report-filters /
- * use-tabular-filters); others ignore it.
+ * Every report opens at /reports/<slug> (its page in pages/<slug>.tsx). With `range` (the hub's
+ * period) the link carries ?from=&to= — but only for a report that has a date range
+ * (`def.range`, from the catalogue): handing dates to one without would make it shed the query
+ * and the address flicker.
  */
-export function reportRoute(def: Pick<ReportDefinition, 'key'>, range?: { from: string; to: string }): string {
+export function reportRoute(def: Pick<ReportDefinition, 'key'> & { range?: boolean }, range?: { from: string; to: string }): string {
     const path = `/reports/${reportSlug(def.key)}`;
-    return range ? `${path}?${new URLSearchParams(range)}` : path;
+    return range && def.range ? `${path}?${new URLSearchParams(range)}` : path;
 }
 
 const DOMAIN_ICONS: Record<ReportDomain, LucideIcon> = {
