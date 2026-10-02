@@ -1,7 +1,9 @@
 /**
  * Paired weekly bars — opened (brand) vs closed (green) — on one shared scale with a faint
- * grid (labelled lines at 0, half and top, dashed unlabelled guides between them), plus the "ค้างสะสม" line (red, its own scale on the right axis): tickets still open at
- * each week's end, labelled at its last point. Every bar is labelled by the first day it really
+ * grid (labelled lines at 0, half and top, dashed unlabelled guides between them), and under
+ * them, in a band of its own on the same weeks, the "ค้างสะสม" line (red): tickets still open at
+ * each week's end, with its own 0 / top labels and its last point labelled. Two panels rather
+ * than a second axis on the right, so the line is never read against the bars' scale. Every bar is labelled by the first day it really
  * covers — the range start for a week that began before it, else the Monday — and thinned only
  * past 16 weeks; its <title> gives the days it spans and its three numbers. Hand-rolled SVG like shared/components/month-bar-chart.tsx: a dozen bars need no
  * chart library, and colours come from theme classes so both themes work.
@@ -17,7 +19,11 @@ import type { TicketOverviewSummary } from '../types';
 const W = 640;
 /** The shortest the drawing gets — its own shape when there is no extra height to fill. */
 const MIN_H = 240;
-const PAD = { l: 34, r: 40, t: 14, b: 28 };
+const PAD = { l: 34, r: 14, t: 14, b: 28 };
+/** Space between the bars and the backlog band, holding the band's name. */
+const BAND_GAP = 38;
+/** The bars' share of the drawing height left after the gap; the backlog band takes the rest. */
+const BARS_SHARE = 0.7;
 
 /**
  * Round the axis top up to a tidy step so every tick label is a value the chart reaches.
@@ -85,10 +91,14 @@ function WeeklyBars({ weeks, range }: ChartProps) {
     const minorTicks = [max / 4, (max * 3) / 4];
     const cw = W - PAD.l - PAD.r;
     const ch = H - PAD.t - PAD.b;
+    const barsH = Math.round((ch - BAND_GAP) * BARS_SHARE);
+    const barsBottom = PAD.t + barsH;
+    const bandTop = barsBottom + BAND_GAP;
+    const bandH = PAD.t + ch - bandTop;
     const gw = cw / weeks.length;
     const bw = Math.min(14, gw * 0.32);
-    const y = (v: number) => PAD.t + ch - (v / max) * ch;
-    const yBacklog = (v: number) => PAD.t + ch - (v / backlogMax) * ch;
+    const y = (v: number) => barsBottom - (v / max) * barsH;
+    const yBacklog = (v: number) => bandTop + bandH - (v / backlogMax) * bandH;
     const xOf = (i: number) => PAD.l + gw * i + gw / 2;
     const labelEvery = Math.ceil(weeks.length / MAX_LABELS);
 
@@ -112,15 +122,31 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                         strokeWidth={1}
                     />
                 ))}
-                {ticks.map((v, i) => (
+                {ticks.map((v) => (
                     <g key={v}>
                         <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} className="stroke-border" strokeWidth={1} />
                         <text x={PAD.l - 8} y={y(v) + 3.5} textAnchor="end" className="fill-muted-foreground font-mono text-[10.5px]">
                             {v}
                         </text>
-                        {/* Right axis: the backlog line's own scale, same three gridlines. */}
-                        <text x={W - PAD.r + 8} y={y(v) + 3.5} className="fill-red-500 font-mono text-[10.5px]">
-                            {(backlogMax / 2) * i}
+                    </g>
+                ))}
+                {/* The backlog band: its name above, its own scale (0 and top) on the left. */}
+                <text x={PAD.l} y={bandTop - 14} className="fill-red-500 text-[11px] font-semibold">
+                    {t('rep_weekly_backlog')}
+                </text>
+                {[0, backlogMax].map((v) => (
+                    <g key={`band-${v}`}>
+                        <line
+                            x1={PAD.l}
+                            x2={W - PAD.r}
+                            y1={yBacklog(v)}
+                            y2={yBacklog(v)}
+                            className="stroke-border"
+                            strokeDasharray={v === 0 ? undefined : '3 4'}
+                            strokeWidth={1}
+                        />
+                        <text x={PAD.l - 8} y={yBacklog(v) + 3.5} textAnchor="end" className="fill-red-500 font-mono text-[10.5px]">
+                            {v}
                         </text>
                     </g>
                 ))}
@@ -142,8 +168,8 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                             </title>
                             {/* The whole week column answers the hover, not just its bars. */}
                             <rect x={x - gw / 2} y={PAD.t} width={gw} height={ch} className="fill-transparent" />
-                            <rect x={x - bw - 1} y={y(w.opened)} width={bw} height={ch - (y(w.opened) - PAD.t)} rx={2.5} className="fill-brand" />
-                            <rect x={x + 1} y={y(w.closed)} width={bw} height={ch - (y(w.closed) - PAD.t)} rx={2.5} className="fill-emerald-500" />
+                            <rect x={x - bw - 1} y={y(w.opened)} width={bw} height={barsBottom - y(w.opened)} rx={2.5} className="fill-brand" />
+                            <rect x={x + 1} y={y(w.closed)} width={bw} height={barsBottom - y(w.closed)} rx={2.5} className="fill-emerald-500" />
                             {i % labelEvery === 0 && (
                                 <text x={x} y={H - 9} textAnchor="middle" className="fill-muted-foreground font-mono text-[10.5px]">
                                     {label}
@@ -162,8 +188,8 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                 />
                 <text
                     x={xOf(weeks.length - 1) - 8}
-                    // Under the point when it sits at the top, so the label is never clipped.
-                    y={yBacklog(last.backlog) < PAD.t + 16 ? yBacklog(last.backlog) + 18 : yBacklog(last.backlog) - 9}
+                    // Under the point when it sits at the top of its band, so the label never meets the band's name.
+                    y={yBacklog(last.backlog) < bandTop + 16 ? yBacklog(last.backlog) + 18 : yBacklog(last.backlog) - 9}
                     textAnchor="end"
                     className="fill-foreground pointer-events-none font-mono text-[11px] font-bold"
                 >
