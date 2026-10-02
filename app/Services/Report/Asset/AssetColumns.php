@@ -20,7 +20,7 @@ trait AssetColumns
     // Excel/PDF export never disagrees with the on-screen wording.
     private const STATUS_TH = [
         'ready' => 'พร้อมส่งมอบ', 'pending_acceptance' => 'รอรับมอบ', 'deployed' => 'ใช้งานอยู่',
-        'common' => 'Common', 'pending_return' => 'รอรับคืน', 'writeoff' => 'ตัดจำหน่าย',
+        'common' => 'ส่วนกลาง', 'pending_return' => 'รอรับคืน', 'writeoff' => 'ตัดจำหน่าย',
     ];
 
     /**

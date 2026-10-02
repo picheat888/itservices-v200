@@ -235,7 +235,8 @@ export type TabularChart =
           title_key: string;
           /** Ways to split each row's bar (e.g. by status, by source); the first shows first. */
           views: { key: string; label_key: string; series: ChartSeries[] }[];
-          rows: { label: ChartLabel; values: Record<string, number>; total: number }[];
+          /** `apart`: not one of the grouped things (assets in no department) — listed last, on its own scale. */
+          rows: { label: ChartLabel; values: Record<string, number>; total: number; apart?: boolean }[];
       }
     | {
           type: 'donut';
