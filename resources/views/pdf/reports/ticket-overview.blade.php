@@ -69,9 +69,9 @@
 
 <h2>ผลงานเจ้าหน้าที่ IT</h2>
 <div class="muted">นับเคสที่ปิดในช่วงวันที่</div>
-<table class="data"><thead><tr><th>ผู้รับผิดชอบ</th><th>ปิดสำเร็จ</th><th>ยกเลิก</th><th>เวลาแก้ไขโดยเฉลี่ย (ชม.)</th><th>ทัน SLA %</th></tr></thead><tbody>
+<table class="data"><thead><tr><th>ผู้รับผิดชอบ</th><th>ทั้งหมด</th><th>ปิดสำเร็จ</th><th>ยกเลิก</th><th>เวลาแก้ไขโดยเฉลี่ย (ชม.)</th><th>ทัน SLA %</th></tr></thead><tbody>
 @foreach ($summary['by_assignee'] as $a)
-    <tr><td>{{ $a['name'] ?? '—' }}</td><td>{{ $a['completed'] }}</td><td>{{ $a['canceled'] }}</td><td>{{ $a['avg_resolve_hours'] ?? '—' }}</td><td>{{ $a['sla_rate'] ?? '—' }}</td></tr>
+    <tr><td>{{ $a['name'] ?? '—' }}</td><td>{{ $a['total'] }}</td><td>{{ $a['completed'] }}</td><td>{{ $a['canceled'] }}</td><td>{{ $a['avg_resolve_hours'] ?? '—' }}</td><td>{{ $a['sla_rate'] ?? '—' }}</td></tr>
 @endforeach
 </tbody></table>
 

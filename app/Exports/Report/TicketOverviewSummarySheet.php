@@ -70,9 +70,9 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
         }
         $rows[] = [];
         $rows[] = ['ผลงานเจ้าหน้าที่ IT (นับเคสที่ปิดในช่วงวันที่)'];
-        $rows[] = ['ผู้รับผิดชอบ', 'ปิดสำเร็จ', 'ยกเลิก', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', 'ทัน SLA %'];
+        $rows[] = ['ผู้รับผิดชอบ', 'ทั้งหมด', 'ปิดสำเร็จ', 'ยกเลิก', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', 'ทัน SLA %'];
         foreach ($s['by_assignee'] as $a) {
-            $rows[] = [$a['name'], $a['completed'], $a['canceled'], $a['avg_resolve_hours'], $a['sla_rate']];
+            $rows[] = [$a['name'], $a['total'], $a['completed'], $a['canceled'], $a['avg_resolve_hours'], $a['sla_rate']];
         }
 
         return $rows;

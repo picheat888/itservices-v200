@@ -364,7 +364,7 @@ class TicketOverviewReportService
      * here. Most closed first.
      *
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
-     * @return list<array{assignee_id: int, name: ?string, completed: int, canceled: int, avg_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
+     * @return list<array{assignee_id: int, name: ?string, total: int, completed: int, canceled: int, avg_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
      */
     private function byAssignee(User $viewer, array $filters): array
     {
@@ -382,6 +382,8 @@ class TicketOverviewReportService
                 return [
                     'assignee_id' => $id,
                     'name' => $group->first()->assignee?->name,
+                    // Every case they closed in the range, completed or canceled.
+                    'total' => $group->count(),
                     'completed' => $completed->count(),
                     'canceled' => $group->filter(fn (Ticket $t) => $t->status === TicketStatus::Canceled)->count(),
                     'avg_resolve_hours' => $this->average($this->sortedHours($completed)),

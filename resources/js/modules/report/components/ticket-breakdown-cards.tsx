@@ -8,9 +8,10 @@
  *   "อื่น ๆ (n)" row (with a true SLA rate from summed met/measured) until "แสดงทั้งหมด"; the
  *   no-department row sits apart under a dashed rule, scaled to its own total.
  * - StaffPerformanceCard ("ผลงานเจ้าหน้าที่ IT", was the report of that name) — every IT staff
- *   member who closed something in the range: closed / canceled, average resolve time and
- *   SLA hit rate — the chosen period only, nothing about what is in hand now. The shared DataTable, inset and paged like the "รายการ Ticket" card, so a desk of 30+
- *   keeps the page short.
+ *   member who closed something in the range: a full-width bar of completed vs canceled with the
+ *   counts over it, the total, average resolve time and SLA hit rate — the chosen period only.
+ *   The shared DataTable, inset and paged like the "รายการ Ticket" card, so a desk of 30+ keeps
+ *   the page short.
  *
  * The stacked bar and the fold come from tabular-charts.tsx, so these read like the asset report.
  * Used by pages/ticket-overview.tsx.
@@ -171,44 +172,62 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
     );
 }
 
+/** The staff bar's two pieces, in the ticket status badges' colours (completed green, canceled gray). */
+const STAFF_SERIES: ChartSeries[] = [
+    { key: 'completed', tone: 'green', label_key: 'rep_col_completed' },
+    { key: 'canceled', tone: 'gray', label_key: 'rep_col_canceled' },
+];
+
 export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaGoal: number }) {
     const t = useT();
-    const most = Math.max(1, ...rows.map((r) => r.completed));
 
     const columns: Column<StaffRow>[] = [
         {
             key: 'name',
             header: t('rep_col_staff'),
-            className: 'max-w-[14rem] truncate whitespace-nowrap',
+            width: '200px',
+            className: 'truncate whitespace-nowrap',
             render: (r) => <span title={r.name ?? undefined}>{r.name ?? '—'}</span>,
         },
         {
-            key: 'completed',
-            header: t('rep_col_completed'),
-            align: 'right',
-            // Bar against whoever closed the most, so the ranking reads at a glance.
-            render: (r) => (
-                <div className="flex items-center justify-end gap-2">
-                    <span className="bg-brand/70 block h-1.5 rounded-full" style={{ width: `${(r.completed / most) * 60}px` }} />
-                    <span className="font-mono font-semibold">{r.completed}</span>
-                </div>
+            key: 'split',
+            // The column's own key: what the two pieces of every bar are.
+            header: (
+                <span className="inline-flex items-center gap-3">
+                    {STAFF_SERIES.map((s) => (
+                        <span key={s.key} className="inline-flex items-center gap-1.5">
+                            <i className={cn('inline-block h-2 w-2 rounded-full', FILL[s.tone])} />
+                            {t(s.label_key)}
+                        </span>
+                    ))}
+                </span>
             ),
+            // A full-width bar per person — each split as a share of their own total, as sketched.
+            render: (r) => <StackBar values={{ completed: r.completed, canceled: r.canceled }} series={STAFF_SERIES} scale={r.total} />,
         },
         {
-            key: 'canceled',
-            header: t('rep_col_canceled'),
+            key: 'total',
+            header: t('rep_col_total'),
+            width: '80px',
             align: 'right',
-            render: (r) => <Count value={r.canceled} className="text-muted-foreground" />,
+            render: (r) => <span className="font-mono font-semibold">{r.total}</span>,
         },
         {
             key: 'avg',
             // The mean over the cases closed in the range — the hint says so on hover.
             header: <span title={t('rep_col_time_hint')}>{t('rep_col_time')}</span>,
+            width: '150px',
             align: 'right',
             className: 'whitespace-nowrap',
             render: (r) => <span className="font-mono">{r.avg_resolve_hours === null ? '—' : `${r.avg_resolve_hours} ${t('rep_hours')}`}</span>,
         },
-        { key: 'sla', header: t('rep_col_sla_rate'), align: 'right', render: (r) => <SlaRate value={r.sla_rate} goal={slaGoal} /> },
+        {
+            key: 'sla',
+            header: <span title={t('rep_col_sla_closed_hint')}>{t('rep_col_sla_closed')}</span>,
+            width: '110px',
+            align: 'right',
+            render: (r) => <SlaRate value={r.sla_rate} goal={slaGoal} />,
+        },
     ];
 
     return (
