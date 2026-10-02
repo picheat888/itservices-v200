@@ -4224,3 +4224,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **ผู้แจ้ง**: บนจอเคยเป็น "ผู้ขอ" (ไม่ตรงกับ Excel "ผู้แจ้ง") — `ReportColumn::labelKey()` ใหม่ ให้คอลัมน์ใช้ key ของตัวเอง (`rep_c_ticket_requester`) รายงานคำขอยังเป็น "ผู้ขอ" · "เลขที่ Ticket" ตรงกับ Excel
 
 **Tests**: `TicketTabularReportsTest` (label key ผู้แจ้ง / เลขที่ Ticket / ป้ายรออะไร) · `tests/Feature/Report` **135 passed** · tsc + eslint + pint ผ่าน · key ไทย/อังกฤษครบคู่ · ตรวจใน Chrome ทั้งสองภาษา
+- **ค้างตามหมวด**: หัวการ์ดใช้คำอธิบายสี "■ เกิน SLA ■ ยังไม่เกิน" แทนข้อความ "ส่วนสีแดง = เกิน SLA" — แบบเดียวกับการ์ด "ค้างอยู่กับใคร" (`Swatch` ใช้ร่วมกันทั้งสองการ์ด; key ใหม่ `rep_sla_not_breached`, เลิกใช้ `rep_bl_cats_sub`)

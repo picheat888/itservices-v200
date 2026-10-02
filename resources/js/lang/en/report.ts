@@ -534,7 +534,7 @@ export const report: Dict = {
     rep_bl_owner_count: '{n} open',
     rep_bl_owner_over: '{n} over SLA',
     rep_bl_cats_title: 'By category',
-    rep_bl_cats_sub: 'Red = over SLA',
+    rep_sla_not_breached: 'Not over SLA',
     rep_bl_empty: 'No open tickets match these filters',
     rep_k_open: 'Waiting',
     rep_k_in_progress: 'In progress',

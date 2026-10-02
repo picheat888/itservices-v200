@@ -100,6 +100,16 @@ function Heading({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode
     );
 }
 
+/** A legend entry: a small square in the bar's colour, then what it means. */
+function Swatch({ tone, children }: { tone: string; children: React.ReactNode }) {
+    return (
+        <span className="inline-flex items-center gap-1.5">
+            <i className={cn('inline-block h-2.5 w-2.5 rounded-sm', tone)} />
+            {children}
+        </span>
+    );
+}
+
 /** The tickets the board shows under the page's SLA filter. */
 function narrowed(tickets: BacklogBoardTicket[], filters: TabularFilters) {
     const sla = filters.sla as SlaState | null | undefined;
@@ -308,18 +318,9 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 title={t('rep_bl_owners_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="inline-flex items-center gap-1.5">
-                            <i className="inline-block h-2.5 w-2.5 rounded-sm bg-red-500" />
-                            {t('rep_sla_breached')}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                            <i className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-500" />
-                            {t('rep_sla_due_soon')}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                            <i className="bg-brand/70 inline-block h-2.5 w-2.5 rounded-sm" />
-                            {t('rep_sla_on_track')}
-                        </span>
+                        <Swatch tone="bg-red-500">{t('rep_sla_breached')}</Swatch>
+                        <Swatch tone="bg-amber-500">{t('rep_sla_due_soon')}</Swatch>
+                        <Swatch tone="bg-brand/70">{t('rep_sla_on_track')}</Swatch>
                     </span>
                 }
             />
@@ -352,7 +353,15 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
 
     return (
         <Card className="overflow-hidden">
-            <Heading title={t('rep_bl_cats_title')} sub={t('rep_bl_cats_sub')} />
+            <Heading
+                title={t('rep_bl_cats_title')}
+                sub={
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <Swatch tone="bg-red-500">{t('rep_sla_breached')}</Swatch>
+                        <Swatch tone="bg-brand/70">{t('rep_sla_not_breached')}</Swatch>
+                    </span>
+                }
+            />
             {rows.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_bl_empty')}</div>
             ) : (
