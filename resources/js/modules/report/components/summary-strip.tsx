@@ -5,6 +5,8 @@
  * the whole as a badge and a meter in the tile's tone, and its `split` as a stacked meter (when
  * there is no share) and as coloured dots in the footer ("● ซื้อ 62 · ● เช่า 18"). Two or three
  * tiles share the row between them on wide screens, so a short strip leaves no empty slot.
+ * A tile with a `note` and no split carries that line at its foot instead — a duration in days
+ * (hours under a day, as the time-left pills) and/or a short date and time.
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -16,6 +18,31 @@ import { KpiTile } from './kpi-tile';
 
 /** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
 const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3' };
+
+/** "38 วัน" / "5 ชม." — the same rule as HoursLeftBadge. */
+function duration(t: (key: string) => string, hours: number): string {
+    const abs = Math.abs(hours);
+    return abs < 24
+        ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(abs))))
+        : t('rep_days_n').replace('{n}', String(Math.round(abs / 24)));
+}
+
+/** "Y-m-d H:i" → "2 ต.ค. 17:00" (Gregorian years, as the rest of the app). */
+function shortMoment(value: string, lang: string): string {
+    const [date, time = ''] = value.split(' ');
+    const [y, m, d] = date.split('-').map(Number);
+    if (!y || !m || !d) return value;
+    const day = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short' }).format(
+        new Date(y, m - 1, d),
+    );
+    return time ? `${day} ${time}` : day;
+}
+
+function noteText(t: (key: string) => string, lang: string, note: NonNullable<SummaryItem['note']>): string {
+    return t(note.label_key)
+        .replace('{n}', note.hours === null || note.hours === undefined ? '—' : duration(t, note.hours))
+        .replace('{at}', note.at ? shortMoment(note.at, lang) : '—');
+}
 
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const t = useT();
@@ -68,6 +95,8 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                         </span>
                                     ))}
                                 </span>
+                            ) : item.note ? (
+                                <span className="truncate">{noteText(t, lang, item.note)}</span>
                             ) : undefined
                         }
                     />
