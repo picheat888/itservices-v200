@@ -93,6 +93,12 @@ final class ReportColumn
         return new self($key, $heading, 'days_left', $resolve);
     }
 
+    /** The resolver returns hours to a deadline (negative = past it); the page shows it as "เกิน 3 วัน" / "อีก 5 ชม.". */
+    public static function hoursLeft(string $key, string $heading, Closure $resolve): self
+    {
+        return new self($key, $heading, 'hours_left', $resolve);
+    }
+
     /**
      * @param  array<string, string>  $labelKeys
      * @param  array<string, string>  $exportLabels
@@ -107,7 +113,7 @@ final class ReportColumn
         $raw = ($this->resolve)($row);
 
         return match ($this->type) {
-            'number', 'money' => $raw === null ? null : (float) $raw,
+            'number', 'money', 'hours_left' => $raw === null ? null : (float) $raw,
             'date' => $raw instanceof CarbonInterface ? $raw->format('Y-m-d') : null,
             'days_left' => $raw instanceof CarbonInterface
                 ? (int) now()->startOfDay()->diffInDays($raw->copy()->startOfDay(), false)

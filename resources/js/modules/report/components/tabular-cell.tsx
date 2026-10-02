@@ -20,6 +20,21 @@ function DaysLeftBadge({ value }: { value: number }) {
     return <StatusBadge tone={tone}>{t('rep_days_left').replace('{n}', String(value))}</StatusBadge>;
 }
 
+/**
+ * Hours to a deadline as a pill: past it red ("เกิน 3 วัน"), inside a day amber ("อีก 5 ชม."),
+ * further out gray. Under a day it counts hours, beyond that whole days.
+ */
+export function HoursLeftBadge({ value }: { value: number }) {
+    const t = useT();
+    const abs = Math.abs(value);
+    const amount =
+        abs < 24
+            ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(abs))))
+            : t('rep_days_n').replace('{n}', String(Math.round(abs / 24)));
+    const tone = value < 0 ? 'red' : value <= 24 ? 'amber' : 'gray';
+    return <StatusBadge tone={tone}>{t(value < 0 ? 'rep_left_over' : 'rep_left_in').replace('{n}', amount)}</StatusBadge>;
+}
+
 const ZERO = 'text-muted-foreground/60';
 
 export function TabularCell({ column, value, href }: { column: TabularColumnDef; value: unknown; href?: string }) {
@@ -59,6 +74,8 @@ function CellValue({ column, value }: { column: TabularColumnDef; value: unknown
             return <span className="font-mono">{(value as string | null) ?? '—'}</span>;
         case 'days_left':
             return value === null || value === undefined ? <>—</> : <DaysLeftBadge value={value as number} />;
+        case 'hours_left':
+            return value === null || value === undefined ? <>—</> : <HoursLeftBadge value={value as number} />;
         case 'enum': {
             if (value === null || value === undefined) return <>—</>;
             const key = column.labels?.[String(value)] ?? String(value);

@@ -5,6 +5,7 @@
  */
 import { http } from '@/shared/lib/http';
 import type {
+    BacklogBoardTicket,
     ExportFormat,
     PagedRows,
     ReportDefinition,
@@ -69,6 +70,10 @@ export const reportApi = {
         http
             .post<{ data: ReportExportItem }>('/reports/tickets/overview/export', null, { params: { ...ticketParams(f), format } })
             .then((r) => r.data.data),
+
+    /** Every live ticket the backlog filters keep (SLA filter aside), unpaged — the due board. */
+    backlogBoard: (filters: TabularFilters) =>
+        http.get<{ data: BacklogBoardTicket[] }>('/reports/tickets/backlog/board', { params: tabularParams(filters) }).then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 

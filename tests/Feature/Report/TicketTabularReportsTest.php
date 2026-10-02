@@ -91,26 +91,36 @@ class TicketTabularReportsTest extends TestCase
 
     // ── tickets.backlog ─────────────────────────────────────────────────────────────
 
-    public function test_backlog_lists_live_tickets_oldest_first_with_time_left(): void
+    public function test_backlog_lists_live_tickets_most_overdue_first_with_time_left(): void
     {
         $this->seedTickets();
+        // Opened before every other live ticket but due far ahead: age must not decide the order.
+        $later = $this->ticket($this->set['t1']->requester, ['status' => 'in_progress', 'assignee_id' => $this->set['som']->id,
+            'created_at' => '2026-09-02 10:00:00', 'responded_at' => '2026-09-02 11:00:00', 'sla_resolve_due_at' => '2026-10-10 10:00:00']);
 
         $body = $this->actingAs($this->reader())->getJson('/api/reports/r/tickets.backlog/rows')->assertOk()->json();
 
-        $this->assertSame([$this->set['t2']->id, $this->set['t5']->id], array_column($body['data'], 'id'));
+        $this->assertSame([$this->set['t2']->id, $this->set['t5']->id, $later->id], array_column($body['data'], 'id'));
         [$t2, $t5] = $body['data'];
         $this->assertEquals(15.0, $t2['age_days']);
         $this->assertEqualsWithDelta(-120.0, $t2['hours_left'], 0.01);
+        $this->assertSame('resolve', $t2['due_kind']);
         $this->assertSame('in_progress', $t2['ticket_status']);
         $this->assertSame('Kankanok', $t2['assignee']);
+        // Waiting to be taken: it runs against its response deadline.
         $this->assertSame('2026-09-26', $t5['due_at']);
+        $this->assertSame('response', $t5['due_kind']);
         $this->assertEqualsWithDelta(24.0, $t5['hours_left'], 0.01);
 
         $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(2, $summary['total']['value']);
-        $this->assertSame(1, $summary['open']['value']);
-        $this->assertSame(1, $summary['in_progress']['value']);
+        $this->assertSame(3, $summary['total']['value']);
+        $this->assertSame([1, 2], array_column($summary['total']['split'], 'value'));
         $this->assertSame(1, $summary['breached']['value']);
+        $this->assertSame(1, $summary['due_soon']['value']);
+        $this->assertSame(1, $summary['unassigned']['value']);
+
+        $columns = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns'))->keyBy('key');
+        $this->assertSame('hours_left', $columns['hours_left']['type']);
     }
 
     /** A ticket number opens the case: the column says it links, each row carries where to. */
@@ -128,15 +138,56 @@ class TicketTabularReportsTest extends TestCase
         }
     }
 
+    /** breached = past the deadline · due_soon = inside 24 hours · on_track = further out (or none). */
     public function test_backlog_sla_filter(): void
+    {
+        $this->seedTickets();
+        $far = $this->ticket($this->set['t1']->requester, ['status' => 'in_progress', 'assignee_id' => $this->set['som']->id,
+            'created_at' => '2026-09-20 10:00:00', 'responded_at' => '2026-09-20 11:00:00', 'sla_resolve_due_at' => '2026-10-01 10:00:00']);
+        $user = $this->reader();
+        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
+
+        $this->assertSame([$this->set['t2']->id], $ids('sla=breached'));
+        $this->assertSame([$this->set['t5']->id], $ids('sla=due_soon'));
+        $this->assertSame([$far->id], $ids('sla=on_track'));
+        $this->assertSame([$this->set['t2']->id], $ids('category=software'));
+    }
+
+    public function test_backlog_assignee_filter_and_the_unassigned_queue(): void
     {
         $this->seedTickets();
         $user = $this->reader();
         $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
 
-        $this->assertSame([$this->set['t2']->id], $ids('sla=breached'));
-        $this->assertSame([$this->set['t5']->id], $ids('sla=on_track'));
-        $this->assertSame([$this->set['t2']->id], $ids('category=software'));
+        $this->assertSame([$this->set['t2']->id], $ids('assignee='.$this->set['kan']->id));
+        $this->assertSame([$this->set['t5']->id], $ids('assignee=none'));
+        $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?assignee=999999')->assertUnprocessable();
+
+        $options = collect($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.filters'))->firstWhere('name', 'assignee')['options'];
+        $this->assertSame('none', $options[0]['value']);
+        $this->assertContains($this->set['kan']->id, array_column($options, 'value'));
+    }
+
+    /** The due board gets every live ticket the other filters keep — unpaged, SLA filter ignored. */
+    public function test_backlog_board_lists_every_live_ticket_without_the_sla_filter(): void
+    {
+        $this->seedTickets();
+        $user = $this->reader();
+
+        $board = $this->actingAs($user)->getJson('/api/reports/tickets/backlog/board?sla=breached')->assertOk()->json('data');
+
+        $this->assertSame([$this->set['t2']->id, $this->set['t5']->id], array_column($board, 'id'));
+        $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที'], $board[0]['department']);
+        $this->assertSame('2026-09-20 10:00', $board[0]['due_at']);
+        $this->assertSame('resolve', $board[0]['due_kind']);
+        $this->assertSame('Kankanok', $board[0]['assignee']);
+        $this->assertNull($board[1]['assignee']);
+        $this->assertSame('response', $board[1]['due_kind']);
+
+        $this->assertSame([$this->set['t2']->id], array_column(
+            $this->actingAs($user)->getJson('/api/reports/tickets/backlog/board?category=software')->assertOk()->json('data'), 'id'));
+        $this->actingAs($this->userWith(['tickets.view_all', 'tickets.level_hardware']))
+            ->getJson('/api/reports/tickets/backlog/board')->assertForbidden();
     }
 
     // ── access & export ─────────────────────────────────────────────────────────────

@@ -204,7 +204,7 @@ export interface TabularFilterDef {
     label_key: string;
 }
 
-export type ColumnType = 'text' | 'localized' | 'number' | 'money' | 'date' | 'days_left' | 'enum';
+export type ColumnType = 'text' | 'localized' | 'number' | 'money' | 'date' | 'days_left' | 'hours_left' | 'enum';
 
 export interface TabularColumnDef {
     key: string;
@@ -277,6 +277,24 @@ export type TabularChart =
           segments: (ChartSeries & { value: number })[];
       }
     | { type: 'bars'; key: string; title_key: string; rows: { label: ChartLabel; value: number }[] };
+
+/** One live ticket on the backlog page's due board (TicketBacklogReport::board). */
+export interface BacklogBoardTicket {
+    id: number;
+    ticket_no: string;
+    subject: string;
+    category: string | null;
+    priority: string | null;
+    status: string | null;
+    assignee_id: number | null;
+    assignee: string | null;
+    department: { name: string | null; name_th: string | null } | null;
+    /** "YYYY-MM-DD HH:mm" — the deadline it runs against now. */
+    due_at: string | null;
+    due_kind: 'response' | 'resolve' | null;
+    /** Negative = already past the deadline. */
+    hours_left: number | null;
+}
 
 export interface TabularRows {
     data: Array<Record<string, unknown> & { id: number }>;
