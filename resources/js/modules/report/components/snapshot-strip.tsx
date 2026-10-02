@@ -173,12 +173,20 @@ export function useSnapshotPeriod(): [SnapshotPeriod, (period: SnapshotPeriod) =
     return [period, setPeriod];
 }
 
-/** Segmented period control — sits beside the Report Center heading. */
+/**
+ * Segmented period control beside the Reports heading. On the light page ground a muted track
+ * vanished, so in light it is a bordered card with the chosen period in brand (as the Ticket
+ * page's range switch); dark keeps its muted track, which already reads.
+ */
 export function PeriodSwitch({ period, onChange }: { period: SnapshotPeriod; onChange: (period: SnapshotPeriod) => void }) {
     const t = useT();
 
     return (
-        <div className="bg-muted inline-flex gap-0.5 rounded-lg p-1" role="group" aria-label={t('rep_period_label')}>
+        <div
+            className="border-border bg-card dark:bg-muted inline-flex gap-0.5 rounded-lg border p-0.5 shadow-xs dark:border-transparent dark:shadow-none"
+            role="group"
+            aria-label={t('rep_period_label')}
+        >
             {PERIODS.map((p) => (
                 <button
                     key={p}
@@ -187,7 +195,9 @@ export function PeriodSwitch({ period, onChange }: { period: SnapshotPeriod; onC
                     onClick={() => onChange(p)}
                     className={cn(
                         'focus-visible:ring-brand/30 h-7 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                        period === p ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                        period === p
+                            ? 'bg-brand text-brand-foreground dark:bg-background dark:text-foreground dark:shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent dark:hover:bg-transparent',
                     )}
                 >
                     {t(`rep_period_${p}`)}
