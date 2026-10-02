@@ -85,23 +85,27 @@ class TicketBacklogReport extends TabularReport
             ->orderBy('id');
     }
 
+    /**
+     * Read left to right as the page's job: which ticket, then how its SLA stands (time left,
+     * which deadline, when) — on screen without scrolling — then who and what, then its age.
+     */
     public function columns(): array
     {
         return [
             ReportColumn::text('ticket_no', 'เลขที่ Ticket', fn (Ticket $t) => $t->ticket_no)->linkTo('/tickets', fn (Ticket $t) => $t->id),
             ReportColumn::text('subject', 'เรื่อง', fn (Ticket $t) => $t->subject),
-            ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, self::categoryKeys(), self::categoryTh()),
+            ReportColumn::hoursLeft('hours_left', 'เหลือ (ชม.)', fn (Ticket $t) => self::hoursLeft($t)),
+            ReportColumn::enum('due_kind', 'เงื่อนไข SLA', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
+            ReportColumn::dateTime('due_at', 'ครบกำหนด SLA', fn (Ticket $t) => TicketMetrics::activeDue($t)),
             ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, self::priorityKeys(), self::priorityTh()),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),
+            ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
+            ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, self::categoryKeys(), self::categoryTh()),
             ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null)
                 ->labelKey('rep_c_ticket_requester'),
             ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null),
-            ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
             ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::number('age_days', 'ค้างมา (วัน)', fn (Ticket $t) => $t->created_at === null ? null : round($t->created_at->diffInHours(now(), true) / 24, 1)),
-            ReportColumn::dateTime('due_at', 'ครบกำหนด SLA', fn (Ticket $t) => TicketMetrics::activeDue($t)),
-            ReportColumn::enum('due_kind', 'เงื่อนไข SLA', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
-            ReportColumn::hoursLeft('hours_left', 'เหลือ (ชม.)', fn (Ticket $t) => self::hoursLeft($t)),
         ];
     }
 
