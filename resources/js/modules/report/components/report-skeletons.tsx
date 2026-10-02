@@ -116,13 +116,13 @@ export function DataTableSkeleton({ rows = 6, cols = 6 }: { rows?: number; cols?
     return <TableSkeleton rows={rows} cols={cols} />;
 }
 
-/** BacklogAging's four tiles: count over age label. */
+/** BacklogAging's four tiles, each with its age label under it. */
 export function AgingSkeleton() {
     return (
         <div className="grid grid-cols-2 gap-2 px-5 pt-3.5 pb-4 sm:grid-cols-4">
             {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="bg-muted/60 flex min-w-0 flex-col gap-1.5 rounded-lg p-2.5">
-                    <Skeleton className="h-5 w-6" />
+                <div key={i} className="flex min-w-0 flex-col items-center gap-1.5">
+                    <Skeleton className="h-11 w-full rounded-lg" />
                     <Skeleton className="h-3 w-14" />
                 </div>
             ))}

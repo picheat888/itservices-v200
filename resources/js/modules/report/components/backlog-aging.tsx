@@ -1,7 +1,6 @@
 /**
- * Age of the open-ticket backlog as four tinted tiles, fresh (green) to stale (red): a big count
- * over its age band, both in the tile's colour — the design's ".aging" tiles. Four across, two
- * by two on a phone. Used by pages/ticket-overview.tsx.
+ * Age of the open-ticket backlog as four tinted tiles, fresh (green) to stale (red): the count
+ * centred in its tile, the age band centred under it. Four across, two by two on a phone. Used by pages/ticket-overview.tsx.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -21,9 +20,9 @@ export function BacklogAging({ aging }: { aging: TicketOverviewSummary['backlog'
     return (
         <div className="grid grid-cols-2 gap-2 px-5 pt-3.5 pb-4 sm:grid-cols-4">
             {BUCKETS.map((b) => (
-                <div key={b.key} className={cn('flex min-w-0 flex-col gap-0.5 rounded-lg p-2.5', b.tone)}>
-                    <b className="font-mono text-xl leading-tight">{aging[b.key]}</b>
-                    <span className="truncate text-xs" title={t(b.label)}>
+                <div key={b.key} className="flex min-w-0 flex-col items-center gap-1.5">
+                    <b className={cn('w-full rounded-lg py-2.5 text-center font-mono text-xl leading-tight', b.tone)}>{aging[b.key]}</b>
+                    <span className="text-muted-foreground w-full truncate text-center text-xs" title={t(b.label)}>
                         {t(b.label)}
                     </span>
                 </div>
