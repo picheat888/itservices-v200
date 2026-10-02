@@ -9,12 +9,14 @@
  *   no-department row sits apart under a dashed rule, scaled to its own total.
  * - StaffPerformanceCard ("ผลงานเจ้าหน้าที่ IT", was the report of that name) — every IT staff
  *   member: closed / canceled in the range, median resolve time, SLA hit rate, and what they hold
- *   now. The top 10 show until "แสดงทั้งหมด", so a desk of 30+ keeps the page short.
+ *   now. The shared DataTable, inset and paged like the "รายการ Ticket" card, so a desk of 30+
+ *   keeps the page short.
  *
  * The stacked bar and the fold come from tabular-charts.tsx, so these read like the asset report.
  * Used by pages/ticket-overview.tsx.
  */
 import { useT } from '@/lang';
+import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -171,69 +173,57 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
 
 export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaGoal: number }) {
     const t = useT();
-    const [expanded, setExpanded] = useState(false);
-    const folding = fold(rows, TOP_ROWS, expanded);
     const most = Math.max(1, ...rows.map((r) => r.completed));
 
+    const columns: Column<StaffRow>[] = [
+        {
+            key: 'name',
+            header: t('rep_col_staff'),
+            className: 'max-w-[14rem] truncate whitespace-nowrap',
+            render: (r) => <span title={r.name ?? undefined}>{r.name ?? '—'}</span>,
+        },
+        {
+            key: 'completed',
+            header: t('rep_col_completed'),
+            align: 'right',
+            // Bar against whoever closed the most, so the ranking reads at a glance.
+            render: (r) => (
+                <div className="flex items-center justify-end gap-2">
+                    <span className="bg-brand/70 block h-1.5 rounded-full" style={{ width: `${(r.completed / most) * 60}px` }} />
+                    <span className="font-mono font-semibold">{r.completed}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'canceled',
+            header: t('rep_col_canceled'),
+            align: 'right',
+            render: (r) => <Count value={r.canceled} className="text-muted-foreground" />,
+        },
+        {
+            key: 'median',
+            header: t('rep_col_time'),
+            align: 'right',
+            className: 'whitespace-nowrap',
+            render: (r) => <span className="font-mono">{r.median_resolve_hours === null ? '—' : `${r.median_resolve_hours} ${t('rep_hours')}`}</span>,
+        },
+        { key: 'sla', header: t('rep_col_sla_rate'), align: 'right', render: (r) => <SlaRate value={r.sla_rate} goal={slaGoal} /> },
+        { key: 'in_hand', header: t('rep_col_in_hand'), align: 'right', render: (r) => <Count value={r.in_hand} /> },
+        {
+            key: 'breached',
+            header: t('rep_col_breached_in_hand'),
+            align: 'right',
+            render: (r) => (r.breached_in_hand > 0 ? <StatusBadge tone="red">{r.breached_in_hand}</StatusBadge> : <Count value={0} />),
+        },
+    ];
+
     return (
-        <Card className="flex flex-col overflow-hidden">
+        <Card className="overflow-hidden">
             <Heading title={t('rep_by_assignee')} sub={t('rep_by_assignee_sub')} />
-            <div className="overflow-x-auto">
-                <table className="w-full min-w-[40rem] text-sm">
-                    <thead className="bg-muted text-muted-foreground text-xs">
-                        <tr>
-                            <th className="px-5 py-2 text-left">{t('rep_col_staff')}</th>
-                            <th className="px-5 py-2 text-right">{t('rep_col_completed')}</th>
-                            <th className="px-5 py-2 text-right">{t('rep_col_canceled')}</th>
-                            <th className="px-5 py-2 text-right">{t('rep_col_time')}</th>
-                            <th className="px-5 py-2 text-right">{t('rep_col_sla_rate')}</th>
-                            <th className="px-5 py-2 text-right">{t('rep_col_in_hand')}</th>
-                            <th className="px-5 py-2 text-right">{t('rep_col_breached_in_hand')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.length === 0 && (
-                            <tr>
-                                <td colSpan={7} className="text-muted-foreground py-6 text-center text-sm">
-                                    {t('rep_no_data')}
-                                </td>
-                            </tr>
-                        )}
-                        {/* Past the top 10 the rest stay hidden until "แสดงทั้งหมด" — no "อื่น ๆ" row:
-                            summing people together would say nothing about anyone. */}
-                        {folding.shown.map((r) => (
-                            <tr key={r.assignee_id} className="border-border border-t">
-                                <td className="max-w-[14rem] truncate px-5 py-2" title={r.name ?? undefined}>
-                                    {r.name ?? '—'}
-                                </td>
-                                <td className="px-5 py-2">
-                                    {/* Bar against whoever closed the most, so the ranking reads at a glance. */}
-                                    <div className="flex items-center justify-end gap-2">
-                                        <span className="bg-brand/70 block h-1.5 rounded-full" style={{ width: `${(r.completed / most) * 60}px` }} />
-                                        <span className="font-mono font-semibold">{r.completed}</span>
-                                    </div>
-                                </td>
-                                <td className="px-5 py-2 text-right">
-                                    <Count value={r.canceled} className="text-muted-foreground" />
-                                </td>
-                                <td className="px-5 py-2 text-right font-mono">
-                                    {r.median_resolve_hours === null ? '—' : `${r.median_resolve_hours} ${t('rep_hours')}`}
-                                </td>
-                                <td className="px-5 py-2 text-right">
-                                    <SlaRate value={r.sla_rate} goal={slaGoal} />
-                                </td>
-                                <td className="px-5 py-2 text-right">
-                                    <Count value={r.in_hand} />
-                                </td>
-                                <td className="px-5 py-2 text-right">
-                                    {r.breached_in_hand > 0 ? <StatusBadge tone="red">{r.breached_in_hand}</StatusBadge> : <Count value={0} />}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            {/* Inset in the card and paged like the "รายการ Ticket" table below it. */}
+            <div className="p-5">
+                <DataTable columns={columns} rows={rows} rowKey={(r) => r.assignee_id} emptyState={t('rep_no_data')} />
             </div>
-            {folding.folds && <FoldToggle open={expanded} total={rows.length} onToggle={() => setExpanded((open) => !open)} />}
         </Card>
     );
 }
