@@ -18,12 +18,23 @@ import { CARD_HEADING_TINT } from './card-heading';
 import { periodRange } from './report-scope';
 
 /**
- * The ticket overview report keeps its own dedicated page; every tabular report shares the generic one.
- * With `range` (the hub's period) the link carries ?from=&to=, which a report with a date range
- * opens on for that visit (use-ticket-report-filters / use-tabular-filters); others ignore it.
+ * A report's page address: its key with every "." and "_" made a "-" — "assets.by_status_department"
+ * → "assets-by-status-department". Reversible because a domain ("assets", "tickets", …) never
+ * holds a "-" or "_": the first "-" is the dot, the rest were underscores (reportKeyFromSlug).
+ * The API keeps the dotted key (/api/reports/r/{key}); only the page URL reads plainly.
+ */
+export const reportSlug = (key: string) => key.replace('.', '-').replaceAll('_', '-');
+
+export const reportKeyFromSlug = (slug: string) => slug.replace('-', '.').replaceAll('-', '_');
+
+/**
+ * Every report opens at /reports/<slug> — the ticket overview's own page ("tickets-overview")
+ * and the generic tabular one alike. With `range` (the hub's period) the link carries
+ * ?from=&to=, which a report with a date range opens on (use-ticket-report-filters /
+ * use-tabular-filters); others ignore it.
  */
 export function reportRoute(def: Pick<ReportDefinition, 'key'>, range?: { from: string; to: string }): string {
-    const path = def.key === 'tickets.overview' ? '/reports/tickets-overview' : `/reports/r/${def.key}`;
+    const path = `/reports/${reportSlug(def.key)}`;
     return range ? `${path}?${new URLSearchParams(range)}` : path;
 }
 
