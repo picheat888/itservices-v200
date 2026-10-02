@@ -374,7 +374,7 @@ export default function TicketOverviewReportPage() {
                     open={exportOpen}
                     onOpenChange={setExportOpen}
                     title={t('rep_tickets_overview_title')}
-                    subtitle={`${filters.from} – ${filters.to}`}
+                    filterChips={ticketFilterChips(filters, data.options, t, lang, true)}
                     total={data.kpi.total}
                     formats={['xlsx', 'pdf']}
                     onExport={(format) => exportMut.mutateAsync({ filters, format })}

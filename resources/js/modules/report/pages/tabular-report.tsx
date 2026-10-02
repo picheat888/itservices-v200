@@ -210,6 +210,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 total={rowsTotal}
                 formats={definition.formats}
                 note={exportColumns ? t('rep_export_columns_note').replace('{n}', String(exportColumns.length)) : undefined}
+                filterChips={tabularFilterChips(definition, filters, t, lang, true)}
                 onExport={(format) => exportMut.mutateAsync({ key: reportKey, filters, format, columns: exportColumns })}
                 isPending={exportMut.isPending}
                 error={exportMut.error}
