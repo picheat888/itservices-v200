@@ -191,17 +191,7 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
         },
         {
             key: 'split',
-            // The column's own key: what the two pieces of every bar are.
-            header: (
-                <span className="inline-flex items-center gap-3">
-                    {STAFF_SERIES.map((s) => (
-                        <span key={s.key} className="inline-flex items-center gap-1.5">
-                            <i className={cn('inline-block h-2 w-2 rounded-full', FILL[s.tone])} />
-                            {t(s.label_key)}
-                        </span>
-                    ))}
-                </span>
-            ),
+            header: t('rep_col_close_result'),
             // A full-width bar per person — each split as a share of their own total, as sketched.
             render: (r) => <StackBar values={{ completed: r.completed, canceled: r.canceled }} series={STAFF_SERIES} scale={r.total} />,
         },
@@ -232,7 +222,22 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
 
     return (
         <Card className="overflow-hidden">
-            <Heading title={t('rep_by_assignee')} sub={t('rep_by_assignee_sub')} />
+            <Heading
+                title={t('rep_by_assignee')}
+                sub={
+                    // The bars' key sits where the department card keeps its own, before the scope note.
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        {STAFF_SERIES.map((s) => (
+                            <span key={s.key} className="inline-flex items-center gap-1.5">
+                                <i className={cn('inline-block h-2.5 w-2.5 rounded-sm', FILL[s.tone])} />
+                                {t(s.label_key)}
+                            </span>
+                        ))}
+                        <span aria-hidden>·</span>
+                        {t('rep_by_assignee_sub')}
+                    </span>
+                }
+            />
             {/* Inset in the card and paged like the "รายการ Ticket" table below it. */}
             <div className="p-5">
                 <DataTable columns={columns} rows={rows} rowKey={(r) => r.assignee_id} emptyState={t('rep_no_data')} />

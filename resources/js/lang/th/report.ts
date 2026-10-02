@@ -109,6 +109,7 @@ export const report: Dict = {
     rep_col_canceled: 'ยกเลิก',
     rep_col_time: 'เวลาแก้ไขโดยเฉลี่ย',
     rep_col_time_hint: 'เวลาเฉลี่ยตั้งแต่แจ้งจนปิดสำเร็จ ของเคสในช่วงวันที่ที่เลือก',
+    rep_col_close_result: 'ผลการปิดเคส',
     rep_col_total: 'ทั้งหมด',
     rep_col_sla_closed: 'ปิดทัน SLA',
     rep_col_sla_closed_hint: 'สัดส่วนเคสที่ปิดสำเร็จทันกำหนด SLA ของเคสนั้น',
