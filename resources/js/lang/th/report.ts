@@ -70,7 +70,6 @@ export const report: Dict = {
     rep_vs_previous: 'จาก {n} ในช่วงก่อนหน้า',
     rep_vs_previous_sla: 'ช่วงก่อนหน้า {n}%',
     rep_hours: 'ชม.',
-    rep_generated_at: 'ข้อมูล ณ {t}',
     rep_err_range_order: 'วันที่สิ้นสุดอยู่ก่อนวันที่เริ่มต้น',
     rep_err_no_access: 'คุณไม่มีสิทธิ์ดูรายงานนี้',
     rep_err_range_invalid: 'ตรวจสอบช่วงวันที่ (ไม่เกิน 366 วัน)',
