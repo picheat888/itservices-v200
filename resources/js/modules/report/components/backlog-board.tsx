@@ -21,7 +21,7 @@ import { useBacklogBoard } from '../hooks/use-reports';
 import type { BacklogBoardTicket, ChartSeries, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { FILL } from './chart-tones';
-import { fold, StackBar } from './tabular-charts';
+import { fold, FoldToggle, StackBar } from './tabular-charts';
 import { categoryKey, priorityKey } from './ticket-labels';
 
 export type SlaState = 'breached' | 'due_soon' | 'on_track';
@@ -278,6 +278,13 @@ const OWNER_SERIES: ChartSeries[] = [
     { key: 'on_track', label_key: 'rep_sla_on_track', tone: 'blue' },
 ];
 
+/**
+ * Owners shown before the card folds — the ones with most past SLA, as the list is sorted. With
+ * 30 staff the card would otherwise run far past the category card beside it. The unassigned
+ * queue always shows.
+ */
+const OWNER_ROWS = 5;
+
 /** Name / bar / total — shared by the header row and every owner row so the columns line up. */
 const OWNER_GRID = 'grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_2.5rem] gap-3';
 
@@ -294,6 +301,8 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
     const max = Math.max(1, ...[...by.values()].map((r) => r.n));
     const named = [...by.entries()].filter(([name]) => name !== '').sort(([, a], [, b]) => b.breached - a.breached || b.n - a.n);
     const unassigned = by.get('');
+    const [open, setOpen] = useState(false);
+    const folding = fold(named, OWNER_ROWS, open);
 
     const row = (name: string, r: { breached: number; due_soon: number; on_track: number; n: number }, apart = false) => (
         <div
@@ -304,15 +313,8 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 apart && 'border-border border-t-2 border-dashed',
             )}
         >
-            <span className="min-w-0">
-                <span className={cn('block truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>
-                    {name || t('rep_opt_unassigned')}
-                </span>
-                <span className="text-muted-foreground block truncate text-xs">
-                    {/* The total first, then how many of them are past SLA. */}
-                    {t('rep_bl_owner_count').replace('{n}', String(r.n))}
-                    {r.breached > 0 && ` · ${t('rep_bl_owner_over').replace('{n}', String(r.breached))}`}
-                </span>
+            <span className={cn('min-w-0 truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>
+                {name || t('rep_opt_unassigned')}
             </span>
             {/* Each part's count over it, as "ค้างตามหมวด"; the length against whoever holds the most. */}
             <StackBar values={{ breached: r.breached, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
@@ -321,7 +323,7 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
     );
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="flex flex-col overflow-hidden">
             <Heading
                 title={t('rep_bl_owners_title')}
                 sub={
@@ -340,11 +342,12 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                     <div className={cn(OWNER_GRID, 'text-muted-foreground px-5 pt-3 text-xs')}>
                         <span className="col-start-3 text-right">{t('rep_col_total')}</span>
                     </div>
-                    {named.map(([name, r]) => row(name, r))}
+                    {folding.shown.map(([name, r]) => row(name, r))}
                     {/* The queue nobody has taken yet sits apart — it needs handing out, not chasing. */}
                     {unassigned && row('', unassigned, true)}
                 </div>
             )}
+            {folding.folds && <FoldToggle open={open} total={named.length} onToggle={() => setOpen((o) => !o)} />}
         </Card>
     );
 }
