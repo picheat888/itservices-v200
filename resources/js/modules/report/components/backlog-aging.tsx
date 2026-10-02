@@ -1,40 +1,33 @@
 /**
- * Age of the open-ticket backlog as four columns, fresh (green) to stale (red): each a full-height
- * track filled from the bottom by its share of the biggest bucket, the count above, the age under.
- * The tracks take whatever height the card is given (flex-1), so a card stretched to its row reads
- * as a taller chart, not as empty space. Used by pages/ticket-overview.tsx.
+ * Age of the open-ticket backlog as four tinted tiles, fresh (green) to stale (red): a big count
+ * over its age band, both in the tile's colour — the design's ".aging" tiles. Four across, two
+ * by two on a phone. Used by pages/ticket-overview.tsx.
  */
 import { useT } from '@/lang';
+import { cn } from '@/shared/lib/utils';
 import type { TicketOverviewSummary } from '../types';
 
+/** The same soft tints and text colours as StatusBadge's tones, so the hues read as one set. */
 const BUCKETS = [
-    { key: 'd1', label: 'rep_aging_d1', fill: 'bg-emerald-500' },
-    { key: 'd3', label: 'rep_aging_d3', fill: 'bg-brand' },
-    { key: 'd7', label: 'rep_aging_d7', fill: 'bg-amber-500' },
-    { key: 'older', label: 'rep_aging_older', fill: 'bg-red-500' },
+    { key: 'd1', label: 'rep_aging_d1', tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+    { key: 'd3', label: 'rep_aging_d3', tone: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
+    { key: 'd7', label: 'rep_aging_d7', tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+    { key: 'older', label: 'rep_aging_older', tone: 'bg-red-500/10 text-red-600 dark:text-red-400' },
 ] as const;
 
 export function BacklogAging({ aging }: { aging: TicketOverviewSummary['backlog']['aging'] }) {
     const t = useT();
-    const max = Math.max(1, ...BUCKETS.map((b) => aging[b.key]));
 
     return (
-        <div className="grid flex-1 grid-cols-4 gap-3 px-5 pt-3 pb-4">
-            {BUCKETS.map((b) => {
-                const count = aging[b.key];
-                return (
-                    <div key={b.key} className="flex min-w-0 flex-col items-center gap-1.5">
-                        <b className="font-mono text-lg leading-none">{count}</b>
-                        <div className="bg-muted relative flex min-h-16 w-full max-w-14 flex-1 flex-col justify-end overflow-hidden rounded-md">
-                            {/* Height is the data, so it cannot be a fixed class (as horizontal-bars.tsx does for width). */}
-                            {count > 0 && <span className={`block w-full rounded-md ${b.fill}`} style={{ height: `${(count / max) * 100}%` }} />}
-                        </div>
-                        <span className="text-muted-foreground w-full truncate text-center text-xs" title={t(b.label)}>
-                            {t(b.label)}
-                        </span>
-                    </div>
-                );
-            })}
+        <div className="grid grid-cols-2 gap-2 px-5 pt-3.5 pb-4 sm:grid-cols-4">
+            {BUCKETS.map((b) => (
+                <div key={b.key} className={cn('flex min-w-0 flex-col gap-0.5 rounded-lg p-2.5', b.tone)}>
+                    <b className="font-mono text-xl leading-tight">{aging[b.key]}</b>
+                    <span className="truncate text-xs" title={t(b.label)}>
+                        {t(b.label)}
+                    </span>
+                </div>
+            ))}
         </div>
     );
 }
