@@ -354,7 +354,10 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
         if (slaState(ticket.hours_left) === 'breached') row.breached++;
         by.set(key, row);
     }
-    const rows = [...by.entries()].sort(([, a], [, b]) => b.n - a.n);
+    // Most past SLA first, then the most open (as "ค้างอยู่กับใคร"); the catch-all "อื่น ๆ" always last.
+    const rows = [...by.entries()].sort(
+        ([ka, a], [kb, b]) => Number(ka === 'other') - Number(kb === 'other') || b.breached - a.breached || b.n - a.n,
+    );
     const max = Math.max(1, ...rows.map(([, r]) => r.n));
 
     return (
@@ -382,7 +385,8 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
                             {/* Past SLA in red, the rest in blue, each count over its part (as the staff card),
                                 the bar's length against the largest category. */}
                             <StackBar values={{ breached: r.breached, not_breached: r.n - r.breached }} series={CATEGORY_SERIES} scale={max} />
-                            <span className="text-right font-mono text-xs font-bold">{r.n}</span>
+                            {/* Same size and weight as the totals of "ค้างอยู่กับใคร" beside it. */}
+                            <span className="text-right font-mono font-semibold">{r.n}</span>
                         </div>
                     ))}
                 </div>
