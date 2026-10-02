@@ -30,7 +30,7 @@ use Illuminate\Support\Collection;
  * - Weekly: Monday-start weeks; "closed" counts completions whose resolved_at is in range.
  * - Previous: the same-length window immediately before `from`.
  * - Staff (by_assignee): unlike the rest, counts what was closed (resolved_at) inside the
- *   range plus what each person holds now — merged in from the former "ผลงานเจ้าหน้าที่ IT".
+ *   range, and nothing outside it — merged in from the former "ผลงานเจ้าหน้าที่ IT".
  * - Departments (by_department): every department, split by category — merged in from the
  *   former "Ticket ตามแผนกและหมวด".
  */
@@ -92,7 +92,7 @@ class TicketOverviewReportService
             'sla_by_priority' => $this->slaByPriority($completed),
             'by_category' => $this->byCategory($tickets),
             'by_department' => $this->byDepartment($tickets),
-            'by_assignee' => $this->byAssignee($viewer, $filters, $now),
+            'by_assignee' => $this->byAssignee($viewer, $filters),
             'options' => $this->options($viewer),
         ];
     }
@@ -351,41 +351,34 @@ class TicketOverviewReportService
     }
 
     /**
-     * Every IT staff member with something to show: what they closed in the range (by
-     * resolved_at, so a case opened last month and finished this month counts this month),
-     * how fast and how often inside SLA, and what is in their hands right now whatever the
-     * range. Most closed first.
+     * Every IT staff member who closed something in the range — by resolved_at, so a case
+     * opened last month and finished this month counts this month — with how fast and how
+     * often inside SLA. Only the chosen period: what someone holds right now is not counted
+     * here. Most closed first.
      *
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
-     * @return list<array{assignee_id: int, name: ?string, completed: int, canceled: int, median_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float, in_hand: int, breached_in_hand: int}>
+     * @return list<array{assignee_id: int, name: ?string, completed: int, canceled: int, median_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
      */
-    private function byAssignee(User $viewer, array $filters, CarbonInterface $now): array
+    private function byAssignee(User $viewer, array $filters): array
     {
-        $live = TicketStatus::liveValues();
         $tickets = $this->scoped($viewer, $filters)
             ->whereNotNull('assignee_id')
-            ->where(fn (Builder $q) => $q->whereBetween('resolved_at', [$filters['from'], $filters['to']])->orWhereIn('status', $live))
+            ->whereIn('status', [TicketStatus::Completed->value, TicketStatus::Canceled->value])
+            ->whereBetween('resolved_at', [$filters['from'], $filters['to']])
             ->with('assignee:id,name')
-            ->get(['id', 'assignee_id', 'status', 'created_at', 'resolved_at', 'responded_at', 'sla_response_due_at', 'sla_resolve_due_at']);
-
-        $closedInRange = fn (Ticket $t, TicketStatus $status) => $t->status === $status
-            && $t->resolved_at !== null
-            && $t->resolved_at->between($filters['from'], $filters['to']);
+            ->get(['id', 'assignee_id', 'status', 'created_at', 'resolved_at', 'sla_resolve_due_at']);
 
         return $tickets->groupBy('assignee_id')
-            ->map(function (Collection $group, int $id) use ($live, $closedInRange, $now) {
-                $completed = $group->filter(fn (Ticket $t) => $closedInRange($t, TicketStatus::Completed));
-                $inHand = $group->filter(fn (Ticket $t) => in_array($t->status->value, $live, true));
+            ->map(function (Collection $group, int $id) {
+                $completed = $group->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed);
 
                 return [
                     'assignee_id' => $id,
                     'name' => $group->first()->assignee?->name,
                     'completed' => $completed->count(),
-                    'canceled' => $group->filter(fn (Ticket $t) => $closedInRange($t, TicketStatus::Canceled))->count(),
+                    'canceled' => $group->filter(fn (Ticket $t) => $t->status === TicketStatus::Canceled)->count(),
                     'median_resolve_hours' => $this->percentile($this->sortedHours($completed), 0.5),
                     ...$this->slaCounts($completed),
-                    'in_hand' => $inHand->count(),
-                    'breached_in_hand' => $inHand->filter(fn (Ticket $t) => TicketMetrics::slaState($t, $now) === 'breached')->count(),
                 ];
             })
             ->sortBy([['completed', 'desc'], ['name', 'asc']])

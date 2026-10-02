@@ -142,7 +142,7 @@ export interface TicketOverviewSummary {
         sla_met: number;
         sla_rate: number | null;
     }[];
-    /** Every IT staff member: closed inside the range (by resolved_at) + what they hold now. Most closed first. */
+    /** Every IT staff member who closed something inside the range (by resolved_at) — the period only. Most closed first. */
     by_assignee: {
         assignee_id: number;
         name: string | null;
@@ -152,8 +152,6 @@ export interface TicketOverviewSummary {
         sla_measured: number;
         sla_met: number;
         sla_rate: number | null;
-        in_hand: number;
-        breached_in_hand: number;
     }[];
     options: {
         departments: { id: number; name: string; name_th: string | null }[];
