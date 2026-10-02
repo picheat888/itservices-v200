@@ -113,6 +113,8 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame(1, $departments['No department']['values']['common']);
         $this->assertSame(1, $departments['No department']['values']['writeoff']);
 
+        $this->assertSame(['status', 'source'], array_column($charts['department']['views'], 'key'));
+
         $segments = collect($charts['status']['segments'])->keyBy('key');
         $this->assertSame(2, $segments['deployed']['value']);
         $this->assertSame('green', $segments['deployed']['tone']);
@@ -127,6 +129,41 @@ class AssetActivityReportsTest extends TestCase
             ->getJson("/api/reports/r/assets.by_status_department/rows?category_id={$printers->id}")->json('charts'))->keyBy('key');
         $this->assertSame(1, $printersOnly['status']['total']);
         $this->assertCount(1, $printersOnly['category']['rows']);
+    }
+
+    public function test_by_status_department_says_how_many_were_bought_and_rented(): void
+    {
+        $it = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
+        $holder = Employee::create(['code' => 'EMP-1', 'first_name' => 'Anan', 'last_name' => 'IT', 'department_id' => $it->id]);
+        Asset::factory()->create(['status' => 'deployed', 'source' => 'purchased', 'owner_employee_id' => $holder->id, 'owner' => null]);
+        Asset::factory()->create(['status' => 'deployed', 'source' => 'rented', 'owner_employee_id' => $holder->id, 'owner' => null]);
+        Asset::factory()->create(['status' => 'ready', 'source' => 'rented', 'owner_employee_id' => null, 'owner' => null]);
+        Asset::factory()->create(['status' => 'pending_return', 'source' => 'purchased', 'owner_employee_id' => $holder->id, 'owner' => null]);
+
+        $body = $this->actingAs($this->userWith(['assets.view']))
+            ->getJson('/api/reports/r/assets.by_status_department/rows')->assertOk()->json();
+
+        // Every tile breaks its number down: bought, then rented.
+        $split = collect($body['summary'])->mapWithKeys(fn (array $tile) => [$tile['key'] => array_column($tile['split'], 'value', 'key')]);
+        $this->assertSame(['purchased' => 2, 'rented' => 2], $split['total']);
+        $this->assertSame(['purchased' => 1, 'rented' => 1], $split['in_use']);
+        $this->assertSame(['purchased' => 0, 'rented' => 1], $split['ready']);
+        $this->assertSame(['purchased' => 1, 'rented' => 0], $split['pending_return']);
+        $this->assertSame('rep_src_rented', $body['summary'][0]['split'][1]['label_key']);
+
+        // The department bars carry a source view beside the status one.
+        $department = collect($body['charts'])->firstWhere('key', 'department');
+        $this->assertSame(['status', 'source'], array_column($department['views'], 'key'));
+        $this->assertSame(['purchased', 'rented'], array_column($department['views'][1]['series'], 'key'));
+        $itRow = collect($department['rows'])->firstWhere('label.name', 'IT');
+        $this->assertSame(2, $itRow['values']['purchased']);
+        $this->assertSame(1, $itRow['values']['rented']);
+        $this->assertSame(2, $itRow['values']['deployed']);
+
+        // The source filter narrows the tiles' split as well.
+        $rentedOnly = $this->actingAs($this->userWith(['assets.view']))
+            ->getJson('/api/reports/r/assets.by_status_department/rows?source=rented')->json('summary.0.split');
+        $this->assertSame(['purchased' => 0, 'rented' => 2], array_column($rentedOnly, 'value', 'key'));
     }
 
     public function test_reports_without_charts_send_an_empty_list(): void

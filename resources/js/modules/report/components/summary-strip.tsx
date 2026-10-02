@@ -1,11 +1,12 @@
 /**
  * Headline numbers above a tabular report's table: one KpiTile per `SummaryItem` from the
- * rows response (`rows.summary`) — mirrors App\Services\Report\Tabular\ReportSummary.
+ * rows response (`rows.summary`) — mirrors App\Services\Report\Tabular\ReportSummary,
+ * its optional `split` printed as the tile's footer.
  */
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
-import { KpiTile } from './kpi-tile';
 import type { SummaryItem } from '../types';
+import { KpiTile } from './kpi-tile';
 
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const t = useT();
@@ -30,6 +31,12 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         // A 0-valued tile has nothing to warn about — only flag it once there's
                         // actually something overdue/expiring behind the amber/red tone.
                         alert={(item.tone === 'amber' || item.tone === 'red') && (item.value ?? 0) > 0}
+                        // "ซื้อ 62 · เช่า 18" — how the number breaks down, when the report says.
+                        footer={
+                            item.split && item.split.length > 0
+                                ? item.split.map((part) => `${t(part.label_key)} ${part.value.toLocaleString(locale)}`).join(' · ')
+                                : undefined
+                        }
                     />
                 );
             })}

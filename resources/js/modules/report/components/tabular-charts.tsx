@@ -2,7 +2,7 @@
  * Charts a tabular report draws above its table (TabularRows.charts), laid out as the design's
  * asset screen: the 'stacks' chart in the wide left card — one row per department, its status
  * mix as a stacked bar against the largest row with each piece's count over it, the row total
- * after it — and, in the right card,
+ * after it, and a switch between the chart's views (status / source) — and, in the right card,
  * the 'donut' (shares of the whole, a headline percent in its hole, a legend with counts and
  * shares) over the 'bars'. A long list (departments past 10, categories past 8) shows its top
  * rows and folds the rest into one "อื่น ๆ (n)" row, so the bars still add up to the whole, with
@@ -90,7 +90,7 @@ type Stacks = Extract<TabularChart, { type: 'stacks' }>;
 type Donut = Extract<TabularChart, { type: 'donut' }>;
 type Bars = Extract<TabularChart, { type: 'bars' }>;
 
-function Heading({ title, sub, className }: { title: string; sub?: React.ReactNode; className?: string }) {
+function Heading({ title, sub, className }: { title: React.ReactNode; sub?: React.ReactNode; className?: string }) {
     return (
         <div
             className={cn(
@@ -105,6 +105,35 @@ function Heading({ title, sub, className }: { title: string; sub?: React.ReactNo
     );
 }
 
+/** A small segmented switch between a chart's views, styled as the hub's period switch. */
+function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; active: string; onChange: (key: string) => void }) {
+    const t = useT();
+
+    return (
+        <span
+            role="group"
+            className="border-border bg-card dark:bg-muted inline-flex gap-0.5 rounded-md border p-0.5 font-normal dark:border-transparent"
+        >
+            {views.map((view) => (
+                <button
+                    key={view.key}
+                    type="button"
+                    aria-pressed={active === view.key}
+                    onClick={() => onChange(view.key)}
+                    className={cn(
+                        'focus-visible:ring-brand/30 h-6 rounded px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                        active === view.key
+                            ? 'bg-brand text-brand-foreground dark:bg-background dark:text-foreground dark:shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent dark:hover:bg-transparent',
+                    )}
+                >
+                    {t(view.label_key)}
+                </button>
+            ))}
+        </span>
+    );
+}
+
 function useLabel() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -114,13 +143,15 @@ function useLabel() {
 function StacksCard({ chart }: { chart: Stacks }) {
     const t = useT();
     const label = useLabel();
+    const [viewKey, setViewKey] = useState(chart.views[0]?.key ?? '');
+    const series = (chart.views.find((v) => v.key === viewKey) ?? chart.views[0])?.series ?? [];
     // Only the series that appear anywhere get a legend entry.
-    const legend = chart.legend.filter((s) => chart.rows.some((r) => (r.values[s.key] ?? 0) > 0));
+    const legend = series.filter((s) => chart.rows.some((r) => (r.values[s.key] ?? 0) > 0));
     const fold = useFold(chart.rows, TOP_STACKS);
     const rows: (Stacks['rows'][number] & { others?: boolean })[] = [...fold.shown];
     if (fold.rest.length > 0) {
         const values: Record<string, number> = {};
-        for (const s of chart.legend) values[s.key] = fold.rest.reduce((sum, r) => sum + (r.values[s.key] ?? 0), 0);
+        for (const s of series) values[s.key] = fold.rest.reduce((sum, r) => sum + (r.values[s.key] ?? 0), 0);
         rows.push({
             label: { name: t('rep_chart_others').replace('{n}', String(fold.rest.length)), name_th: null },
             values,
@@ -134,7 +165,12 @@ function StacksCard({ chart }: { chart: Stacks }) {
     return (
         <Card className="flex flex-1 flex-col overflow-hidden">
             <Heading
-                title={t(chart.title_key)}
+                title={
+                    <span className="flex items-center gap-3">
+                        {t(chart.title_key)}
+                        {chart.views.length > 1 && <ViewSwitch views={chart.views} active={viewKey} onChange={setViewKey} />}
+                    </span>
+                }
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {legend.map((s) => (
@@ -159,7 +195,7 @@ function StacksCard({ chart }: { chart: Stacks }) {
                                 each piece's count sits over it, centred, in its own colour. */}
                             <div className="min-w-0">
                                 <div className="flex h-4 items-end">
-                                    {chart.legend.map((s) => {
+                                    {series.map((s) => {
                                         const value = row.values[s.key] ?? 0;
                                         if (value === 0) return null;
                                         return (
@@ -177,7 +213,7 @@ function StacksCard({ chart }: { chart: Stacks }) {
                                     })}
                                 </div>
                                 <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
-                                    {chart.legend.map((s) => {
+                                    {series.map((s) => {
                                         const value = row.values[s.key] ?? 0;
                                         if (value === 0) return null;
                                         return (

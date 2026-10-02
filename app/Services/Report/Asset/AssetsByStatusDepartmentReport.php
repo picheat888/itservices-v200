@@ -18,12 +18,23 @@ use Illuminate\Database\Eloquent\Builder;
  * On screen it is drawn, as the design does: each department's status mix as a stacked bar with
  * its counts, the statuses as a donut (in use at its centre) and the categories as bars — the
  * department bars say what the table would, so the page shows no table; the export keeps it.
+ * Bought or rented is never left to the filter alone: every tile says how many of each, and the
+ * department bars switch from status to source (ซื้อ / เช่า).
  */
 class AssetsByStatusDepartmentReport extends TabularReport
 {
     use AssetColumns;
 
     private const SOURCE_KEYS = ['purchased' => 'asset_purchase', 'rented' => 'asset_lease'];
+
+    /** Short source names and colours for the tiles' footers and the department bars' source view. */
+    private const SOURCE_CHART = [
+        'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'blue'],
+        'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'violet'],
+    ];
+
+    /** Thai export headings of the per-source columns. */
+    private const SOURCE_TH = ['purchased' => 'ซื้อ', 'rented' => 'เช่า'];
 
     /**
      * The charts' status order and colours (tabular-charts.tsx draws each tone): in use first,
@@ -60,6 +71,11 @@ class AssetsByStatusDepartmentReport extends TabularReport
             array_keys(self::STATUS_KEYS),
         );
 
+        $perSource = array_map(
+            fn (string $source) => "SUM(CASE WHEN assets.source = '{$source}' THEN 1 ELSE 0 END) as src_{$source}",
+            array_keys(self::SOURCE_KEYS),
+        );
+
         return Asset::query()
             ->leftJoin('employees', 'employees.id', '=', 'assets.owner_employee_id')
             ->leftJoin('departments', 'departments.id', '=', 'employees.department_id')
@@ -70,6 +86,7 @@ class AssetsByStatusDepartmentReport extends TabularReport
                 'departments.name_th as department_name_th',
                 'COUNT(*) as total_count',
                 ...$perStatus,
+                ...$perSource,
             ]))
             ->tap(fn (Builder $q) => $this->filtered($q, $filters))
             // MariaDB has no functional-dependency check: every selected department column is grouped.
@@ -85,11 +102,17 @@ class AssetsByStatusDepartmentReport extends TabularReport
             array_keys(self::STATUS_KEYS),
         );
 
+        $sources = array_map(
+            fn (string $source) => ReportColumn::number("src_{$source}", self::SOURCE_TH[$source], fn (Asset $a) => (int) $a->getAttribute("src_{$source}")),
+            array_keys(self::SOURCE_KEYS),
+        );
+
         return [
             ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $a->getAttribute('department_id') === null
                 ? ['name' => 'No department', 'name_th' => 'ไม่ระบุแผนก']
                 : ['name' => $a->getAttribute('department_name'), 'name_th' => $a->getAttribute('department_name_th')]),
             ReportColumn::number('total_count', 'ทั้งหมด', fn (Asset $a) => (int) $a->getAttribute('total_count')),
+            ...$sources,
             ...$statuses,
         ];
     }
@@ -141,12 +164,23 @@ class AssetsByStatusDepartmentReport extends TabularReport
                 'type' => 'stacks',
                 'key' => 'department',
                 'title_key' => 'rep_chart_by_department',
-                'legend' => $legend,
+                // Two ways to split each department's bar; the page switches between them.
+                'views' => [
+                    ['key' => 'status', 'label_key' => 'rep_chart_view_status', 'series' => $legend],
+                    ['key' => 'source', 'label_key' => 'rep_chart_view_source', 'series' => $this->sourceSeries()],
+                ],
                 'rows' => $rows->map(fn (Asset $a) => [
                     'label' => $a->getAttribute('department_id') === null
                         ? ['name' => 'No department', 'name_th' => 'ไม่ระบุแผนก']
                         : ['name' => $a->getAttribute('department_name'), 'name_th' => $a->getAttribute('department_name_th')],
-                    'values' => array_combine($statuses, array_map(fn (string $s) => (int) $a->getAttribute("st_{$s}"), $statuses)),
+                    // Status and source keys never collide, so one map serves both views.
+                    'values' => [
+                        ...array_combine($statuses, array_map(fn (string $s) => (int) $a->getAttribute("st_{$s}"), $statuses)),
+                        ...array_combine(array_keys(self::SOURCE_KEYS), array_map(
+                            fn (string $s) => (int) $a->getAttribute("src_{$s}"),
+                            array_keys(self::SOURCE_KEYS),
+                        )),
+                    ],
                     'total' => (int) $a->getAttribute('total_count'),
                 ])->values()->all(),
             ],
@@ -176,16 +210,42 @@ class AssetsByStatusDepartmentReport extends TabularReport
         ];
     }
 
+    /**
+     * @return list<array{key: string, label_key: string, tone: string}>
+     */
+    private function sourceSeries(): array
+    {
+        return array_map(
+            fn (string $source) => ['key' => $source, ...self::SOURCE_CHART[$source]],
+            array_keys(self::SOURCE_CHART),
+        );
+    }
+
     public function summary(Builder $query, array $filters): array
     {
         $rows = (clone $query)->get();
         $sum = fn (string $alias) => (int) $rows->sum(fn (Asset $a) => (int) $a->getAttribute($alias));
 
+        // How many of each status were bought and how many rented, for each tile's footer.
+        $bySource = $this->filtered(Asset::query(), $filters)
+            // Aliased off the enum-cast attribute names, so they read back as plain strings.
+            ->selectRaw('assets.status as status_value, assets.source as source_value, COUNT(*) as total_count')
+            ->groupBy('assets.status', 'assets.source')
+            ->get();
+        $split = fn (array $statuses) => array_map(fn (array $series) => [
+            'key' => $series['key'],
+            'label_key' => $series['label_key'],
+            'value' => (int) $bySource
+                ->filter(fn (Asset $a) => $a->getAttribute('source_value') === $series['key']
+                    && ($statuses === [] || in_array($a->getAttribute('status_value'), $statuses, true)))
+                ->sum(fn (Asset $a) => (int) $a->getAttribute('total_count')),
+        ], $this->sourceSeries());
+
         return [
-            ReportSummary::make('total', 'ทรัพย์สินทั้งหมด', $sum('total_count')),
-            ReportSummary::make('in_use', 'ใช้งานอยู่', $sum('st_deployed') + $sum('st_common'), 'green'),
-            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready')),
-            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'amber'),
+            ReportSummary::make('total', 'ทรัพย์สินทั้งหมด', $sum('total_count'))->withSplit($split([])),
+            ReportSummary::make('in_use', 'ใช้งานอยู่', $sum('st_deployed') + $sum('st_common'), 'green')->withSplit($split(['deployed', 'common'])),
+            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'))->withSplit($split(['ready'])),
+            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'amber')->withSplit($split(['pending_return'])),
         ];
     }
 }
