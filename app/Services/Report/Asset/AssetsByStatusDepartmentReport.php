@@ -34,9 +34,6 @@ class AssetsByStatusDepartmentReport extends TabularReport
         'pending_acceptance' => 'orange', 'pending_return' => 'amber', 'writeoff' => 'gray',
     ];
 
-    /** The category chart's longest list; the rest fold into the table below it. */
-    private const CATEGORY_BARS = 8;
-
     public function key(): string
     {
         return 'assets.by_status_department';
@@ -134,8 +131,9 @@ class AssetsByStatusDepartmentReport extends TabularReport
             ->leftJoin('categories', 'categories.id', '=', 'assets.category_id')
             ->selectRaw('categories.id as category_id, categories.name as category_name, categories.name_th as category_name_th, COUNT(*) as total_count')
             ->groupBy('categories.id', 'categories.name', 'categories.name_th')
+            // Every category, largest first — the page shows the top ones and folds the rest into
+            // "อื่น ๆ" with a way to open them all, so the bars always add up to the whole.
             ->orderByDesc('total_count')
-            ->limit(self::CATEGORY_BARS)
             ->get();
 
         return [
