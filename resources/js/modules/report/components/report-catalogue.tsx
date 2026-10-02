@@ -68,7 +68,7 @@ function StatusPill({ tone, children }: { tone: 'blue' | 'red'; children: React.
     return (
         <span
             className={cn(
-                'inline-flex h-5 items-center gap-1 rounded-full px-2 text-[11px] font-semibold whitespace-nowrap',
+                'inline-flex h-5 items-center gap-1 rounded-full px-2 text-xs font-semibold whitespace-nowrap',
                 tone === 'blue' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-red-500/10 text-red-600 dark:text-red-400',
             )}
         >
@@ -136,7 +136,7 @@ function ReportRow({ report, latest, range }: { report: ReportDefinition; latest
                         ))}
                     </div>
                     {latest && (
-                        <div className="text-muted-foreground text-[11px] whitespace-nowrap">
+                        <div className="text-muted-foreground text-xs whitespace-nowrap">
                             <LastExport item={latest} />
                         </div>
                     )}
