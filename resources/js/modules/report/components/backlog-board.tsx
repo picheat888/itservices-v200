@@ -3,7 +3,7 @@
  * mockup: the SLA segments at the head of the filter bar (with how many tickets each holds),
  * the SLA due board — every live ticket in six lanes by the time left on the deadline it runs
  * against now, past-due on the left of a "ตอนนี้" line; a long lane folds and opens on its own —
- * then who holds them and the categories.
+ * then who holds them and the categories — a press on an owner or a category filters the page.
  *
  * All of it reads useBacklogBoard (every live ticket the other filters keep, unpaged); the SLA
  * filter narrows the board and cards here, while the table below is filtered on the server.
@@ -287,40 +287,90 @@ const OWNER_ROWS = 5;
 
 /** Name / bar / total — shared by the header row and every owner row so the columns line up. */
 const OWNER_GRID = 'grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_2.5rem] gap-3';
+const CATEGORY_GRID = 'grid grid-cols-[92px_minmax(0,1fr)_40px] gap-2.5';
 
-function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
+/**
+ * One row of the owner or category card, as a button: it sets the page's filter to this row
+ * (the board and the table follow), and a second press clears it. Both cards share its rhythm
+ * — the same height, no dividers — so they read as one pair. The title gives the full name
+ * (a long Thai name is cut in its column) and says what a press does.
+ */
+function FilterRow({
+    grid,
+    label,
+    selected,
+    onSelect,
+    className,
+    children,
+}: {
+    grid: string;
+    label: string;
+    selected: boolean;
+    onSelect: () => void;
+    className?: string;
+    children: React.ReactNode;
+}) {
     const t = useT();
-    const by = new Map<string, { breached: number; due_soon: number; on_track: number; n: number }>();
+
+    return (
+        <button
+            type="button"
+            aria-pressed={selected}
+            onClick={onSelect}
+            title={`${label}\n${t(selected ? 'rep_bl_filter_clear' : 'rep_bl_filter_hint')}`}
+            className={cn(
+                grid,
+                'focus-visible:ring-brand/30 w-full items-center rounded-md px-2 py-1.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                selected ? 'bg-brand/10 ring-brand/40 ring-1' : 'hover:bg-accent',
+                className,
+            )}
+        >
+            {children}
+        </button>
+    );
+}
+
+function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
+    const t = useT();
+    // Keyed by the assignee's id, the value the page's assignee filter takes ('' = nobody yet).
+    const by = new Map<string, { name: string; breached: number; due_soon: number; on_track: number; n: number }>();
     for (const ticket of tickets) {
-        const key = ticket.assignee ?? '';
-        const row = by.get(key) ?? { breached: 0, due_soon: 0, on_track: 0, n: 0 };
+        const key = ticket.assignee_id === null ? '' : String(ticket.assignee_id);
+        const row = by.get(key) ?? { name: ticket.assignee ?? '', breached: 0, due_soon: 0, on_track: 0, n: 0 };
         row[slaState(ticket.hours_left)]++;
         row.n++;
         by.set(key, row);
     }
     const max = Math.max(1, ...[...by.values()].map((r) => r.n));
-    const named = [...by.entries()].filter(([name]) => name !== '').sort(([, a], [, b]) => b.breached - a.breached || b.n - a.n);
+    // Most past SLA, then most open; a tie goes by name, so the order never shuffles on a refresh.
+    const named = [...by.entries()]
+        .filter(([id]) => id !== '')
+        .sort(([, a], [, b]) => b.breached - a.breached || b.n - a.n || a.name.localeCompare(b.name));
     const unassigned = by.get('');
     const [open, setOpen] = useState(false);
     const folding = fold(named, OWNER_ROWS, open);
+    const active = filters.assignee === null || filters.assignee === undefined ? null : String(filters.assignee);
 
-    const row = (name: string, r: { breached: number; due_soon: number; on_track: number; n: number }, apart = false) => (
-        <div
-            key={name || 'none'}
-            className={cn(
-                OWNER_GRID,
-                'border-border/60 items-center border-b px-5 py-2.5 text-sm last:border-b-0',
-                apart && 'border-border border-t-2 border-dashed',
-            )}
-        >
-            <span className={cn('min-w-0 truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>
-                {name || t('rep_opt_unassigned')}
-            </span>
-            {/* Each part's count over it, as "ค้างตามหมวด"; the length against whoever holds the most. */}
-            <StackBar values={{ breached: r.breached, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
-            <span className="text-right font-mono font-semibold">{r.n}</span>
-        </div>
-    );
+    const row = (id: string, r: { name: string; breached: number; due_soon: number; on_track: number; n: number }, apart = false) => {
+        // The filter's own values: the user id, or "none" for the unassigned queue.
+        const value = apart ? 'none' : id;
+        const label = r.name || t('rep_opt_unassigned');
+        const selected = active === value;
+        return (
+            <FilterRow
+                key={value}
+                grid={OWNER_GRID}
+                label={label}
+                selected={selected}
+                onSelect={() => patch({ assignee: selected ? null : apart ? 'none' : Number(id) })}
+            >
+                <span className={cn('min-w-0 truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>{label}</span>
+                {/* Each part's count over it, as "ค้างตามหมวด"; the length against whoever holds the most. */}
+                <StackBar values={{ breached: r.breached, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
+                <span className="text-right font-mono font-semibold">{r.n}</span>
+            </FilterRow>
+        );
+    };
 
     return (
         <Card className="flex flex-col overflow-hidden">
@@ -337,14 +387,19 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
             {tickets.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_bl_empty')}</div>
             ) : (
-                <div>
+                <div className="space-y-0.5 px-3 py-2">
                     {/* Names the right-hand count, as in "ค้างตามหมวด". */}
-                    <div className={cn(OWNER_GRID, 'text-muted-foreground px-5 pt-3 text-xs')}>
+                    <div className={cn(OWNER_GRID, 'text-muted-foreground px-2 pt-1 text-xs')}>
                         <span className="col-start-3 text-right">{t('rep_col_total')}</span>
                     </div>
-                    {folding.shown.map(([name, r]) => row(name, r))}
-                    {/* The queue nobody has taken yet sits apart — it needs handing out, not chasing. */}
-                    {unassigned && row('', unassigned, true)}
+                    {folding.shown.map(([id, r]) => row(id, r))}
+                    {/* The queue nobody has taken yet sits apart, under the card's only rule — it needs handing out, not chasing. */}
+                    {/* The rule only divides — with no owner above (filtered to the queue) it is left out. */}
+                    {unassigned && (
+                        <div className={cn(folding.shown.length > 0 && 'border-border mt-1.5 border-t-2 border-dashed pt-1.5')}>
+                            {row('', unassigned, true)}
+                        </div>
+                    )}
                 </div>
             )}
             {folding.folds && <FoldToggle open={open} total={named.length} onToggle={() => setOpen((o) => !o)} />}
@@ -358,7 +413,7 @@ const CATEGORY_SERIES: ChartSeries[] = [
     { key: 'not_breached', label_key: 'rep_sla_not_breached', tone: 'blue' },
 ];
 
-function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
+function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
     const by = new Map<string, { n: number; breached: number }>();
     for (const ticket of tickets) {
@@ -368,11 +423,13 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
         if (slaState(ticket.hours_left) === 'breached') row.breached++;
         by.set(key, row);
     }
-    // Most past SLA first, then the most open (as "ค้างอยู่กับใคร"); the catch-all "อื่น ๆ" always last.
+    // Most past SLA first, then the most open (as "ค้างอยู่กับใคร"); the catch-all "อื่น ๆ" always last;
+    // a tie goes by the category's key, so the order never shuffles on a refresh.
     const rows = [...by.entries()].sort(
-        ([ka, a], [kb, b]) => Number(ka === 'other') - Number(kb === 'other') || b.breached - a.breached || b.n - a.n,
+        ([ka, a], [kb, b]) => Number(ka === 'other') - Number(kb === 'other') || b.breached - a.breached || b.n - a.n || ka.localeCompare(kb),
     );
     const max = Math.max(1, ...rows.map(([, r]) => r.n));
+    const active = filters.category ?? null;
 
     return (
         <Card className="overflow-hidden">
@@ -388,29 +445,39 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
             {rows.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_bl_empty')}</div>
             ) : (
-                <div className="space-y-2.5 px-5 py-4">
+                <div className="space-y-0.5 px-3 py-2">
                     {/* Names the right-hand count, as the staff card's "ทั้งหมด" column. */}
-                    <div className="text-muted-foreground grid grid-cols-[92px_minmax(0,1fr)_40px] gap-2.5 text-xs">
+                    <div className={cn(CATEGORY_GRID, 'text-muted-foreground px-2 pt-1 text-xs')}>
                         <span className="col-start-3 text-right">{t('rep_col_total')}</span>
                     </div>
-                    {rows.map(([category, r]) => (
-                        <div key={category} className="grid grid-cols-[92px_minmax(0,1fr)_40px] items-center gap-2.5 text-sm">
-                            <span className="truncate">{t(categoryKey(category))}</span>
-                            {/* Past SLA in red, the rest in blue, each count over its part (as the staff card),
-                                the bar's length against the largest category. */}
-                            <StackBar values={{ breached: r.breached, not_breached: r.n - r.breached }} series={CATEGORY_SERIES} scale={max} />
-                            {/* Same size and weight as the totals of "ค้างอยู่กับใคร" beside it. */}
-                            <span className="text-right font-mono font-semibold">{r.n}</span>
-                        </div>
-                    ))}
+                    {rows.map(([category, r]) => {
+                        const label = t(categoryKey(category));
+                        const selected = active === category;
+                        return (
+                            <FilterRow
+                                key={category}
+                                grid={CATEGORY_GRID}
+                                label={label}
+                                selected={selected}
+                                onSelect={() => patch({ category: selected ? null : category })}
+                            >
+                                <span className="truncate">{label}</span>
+                                {/* Past SLA in red, the rest in blue, each count over its part (as the staff card),
+                                    the bar's length against the largest category. */}
+                                <StackBar values={{ breached: r.breached, not_breached: r.n - r.breached }} series={CATEGORY_SERIES} scale={max} />
+                                {/* Same size and weight as the totals of "ค้างอยู่กับใคร" beside it. */}
+                                <span className="text-right font-mono font-semibold">{r.n}</span>
+                            </FilterRow>
+                        );
+                    })}
                 </div>
             )}
         </Card>
     );
 }
 
-/** The board and its two cards, between the summary tiles and the table. */
-export function BacklogBoardCards({ filters }: { filters: TabularFilters }) {
+/** The board and its two cards, between the summary tiles and the table; a card row press filters the page. */
+export function BacklogBoardCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const { data, isLoading } = useBacklogBoard(filters);
 
     if (isLoading || !data) {
@@ -431,8 +498,8 @@ export function BacklogBoardCards({ filters }: { filters: TabularFilters }) {
         <div className="space-y-4">
             <DueBoard tickets={tickets} />
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                <Owners tickets={tickets} />
-                <Categories tickets={tickets} />
+                <Owners tickets={tickets} filters={filters} patch={patch} />
+                <Categories tickets={tickets} filters={filters} patch={patch} />
             </div>
         </div>
     );

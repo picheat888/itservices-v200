@@ -64,6 +64,7 @@ function TabularReportRows({
     hasCharts,
     showsTable,
     onTotalChange,
+    onPatch,
     extras,
     columnPicker,
     emptyState,
@@ -82,6 +83,8 @@ function TabularReportRows({
     visibleColumns: TabularColumnDef[];
     filters: TabularFilters;
     onTotalChange: (total: number) => void;
+    /** The page's filter patch — handed to `extras.beforeTable` so its cards can filter the page. */
+    onPatch: (next: TabularFilters) => void;
 }) {
     const t = useT();
     const [page, setPage] = useState(1);
@@ -115,7 +118,7 @@ function TabularReportRows({
             {/* Tiles pulse until the first rows arrive, so the table does not jump down when they do. */}
             {data ? <SummaryStrip items={data.summary} /> : <KpiRowSkeleton count={4} className="lg:grid-cols-4" />}
             {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
-            {extras.beforeTable?.({ filters })}
+            {extras.beforeTable?.({ filters, patch: onPatch })}
             {/* The rows in a headed card with the table inset, as the Ticket & SLA page's
                 "รายการ Ticket" — the same heading tint and padding (no "ข้อมูล ณ" line, as there). */}
             {showsTable && (
@@ -229,6 +232,7 @@ function TabularReportBody({
                 hasCharts={definition.has_charts}
                 showsTable={definition.shows_table}
                 onTotalChange={setRowsTotal}
+                onPatch={patch}
                 extras={extras}
                 columnPicker={<ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
                 emptyState={<TabularEmptyState definition={definition} filters={filters} onPatch={patch} />}
@@ -275,7 +279,7 @@ function TabularReportBody({
 export interface TabularReportExtras {
     hiddenFilters?: string[];
     filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
-    beforeTable?: (ctx: { filters: TabularFilters }) => React.ReactNode;
+    beforeTable?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     rowClassName?: (row: Record<string, unknown>) => string | undefined;
 }
 
