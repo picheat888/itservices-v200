@@ -32,6 +32,7 @@ import { ScheduleReportDialog, scheduleCoverage } from './schedule-report-dialog
 import { SummaryStrip } from './summary-strip';
 import { TabularCell } from './tabular-cell';
 import { ChartsSkeleton, TabularCharts } from './tabular-charts';
+import { TabularEmptyState } from './tabular-empty-state';
 import { TabularFilterBar } from './tabular-filter-bar';
 
 const REPORT_DIALOGS = ['export', 'schedule'] as const;
@@ -65,11 +66,14 @@ function TabularReportRows({
     onTotalChange,
     extras,
     columnPicker,
+    emptyState,
 }: {
     reportKey: string;
     extras: TabularReportExtras;
     /** The column picker, shown at the right of the rows card heading. */
     columnPicker: React.ReactNode;
+    /** What the table says when the filters leave no rows (TabularEmptyState). */
+    emptyState: React.ReactNode;
     /** TabularDefinition.has_charts — holds the charts' place until the first rows arrive. */
     hasCharts: boolean;
     /** TabularDefinition.shows_table — a chart-led report lists no rows on screen. */
@@ -135,6 +139,7 @@ function TabularReportRows({
                             rows={data?.data ?? []}
                             rowKey={(r) => r.id}
                             rowClassName={extras.rowClassName}
+                            emptyState={emptyState}
                             loading={isLoading || isFetching}
                             server={{
                                 page,
@@ -226,6 +231,7 @@ function TabularReportBody({
                 onTotalChange={setRowsTotal}
                 extras={extras}
                 columnPicker={<ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
+                emptyState={<TabularEmptyState definition={definition} filters={filters} onPatch={patch} />}
             />
             <ExportReportDialog
                 open={exportOpen}
