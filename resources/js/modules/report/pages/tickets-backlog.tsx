@@ -10,6 +10,14 @@
  */
 import { BacklogBoardCards, BacklogSlaSegments, backlogRowClass } from '../components/backlog-board';
 import { TabularReportView } from '../components/tabular-report-view';
+import { TicketPriorityBadge, TicketStatusBadge } from '../components/ticket-badges';
+
+/** Priority and status wear the same pills as the Ticket & SLA page's ticket list. */
+function backlogCell(key: string, row: Record<string, unknown>) {
+    if (key === 'priority') return <TicketPriorityBadge priority={row.priority as string | null} />;
+    if (key === 'ticket_status') return <TicketStatusBadge status={row.ticket_status as string | null} />;
+    return undefined;
+}
 
 export default function TicketsBacklogReportPage() {
     return (
@@ -21,6 +29,7 @@ export default function TicketsBacklogReportPage() {
                 filterLead: ({ filters, patch }) => <BacklogSlaSegments filters={filters} patch={patch} />,
                 beforeTable: ({ filters, patch }) => <BacklogBoardCards filters={filters} patch={patch} />,
                 rowClassName: backlogRowClass,
+                renderCell: backlogCell,
             }}
         />
     );

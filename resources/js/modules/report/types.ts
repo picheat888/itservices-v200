@@ -210,7 +210,7 @@ export interface TabularFilterDef {
     label_key: string;
 }
 
-export type ColumnType = 'text' | 'localized' | 'number' | 'money' | 'date' | 'days_left' | 'hours_left' | 'enum';
+export type ColumnType = 'text' | 'localized' | 'number' | 'money' | 'date' | 'datetime' | 'days_left' | 'hours_left' | 'enum';
 
 export interface TabularColumnDef {
     key: string;

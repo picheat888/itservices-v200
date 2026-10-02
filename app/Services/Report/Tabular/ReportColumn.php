@@ -100,6 +100,12 @@ final class ReportColumn
         return new self($key, $heading, 'date', $resolve);
     }
 
+    /** The resolver returns a datetime (or null); shown as "Y-m-d H:i" on the page and in the file. */
+    public static function dateTime(string $key, string $heading, Closure $resolve): self
+    {
+        return new self($key, $heading, 'datetime', $resolve);
+    }
+
     /** The resolver returns a date (or null); shown as whole days from today (negative = past). */
     public static function daysLeft(string $key, string $heading, Closure $resolve): self
     {
@@ -128,6 +134,7 @@ final class ReportColumn
         return match ($this->type) {
             'number', 'money', 'hours_left' => $raw === null ? null : (float) $raw,
             'date' => $raw instanceof CarbonInterface ? $raw->format('Y-m-d') : null,
+            'datetime' => $raw instanceof CarbonInterface ? $raw->format('Y-m-d H:i') : null,
             'days_left' => $raw instanceof CarbonInterface
                 ? (int) now()->startOfDay()->diffInDays($raw->copy()->startOfDay(), false)
                 : null,

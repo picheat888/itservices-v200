@@ -108,7 +108,8 @@ class TicketTabularReportsTest extends TestCase
         $this->assertSame('in_progress', $t2['ticket_status']);
         $this->assertSame('Kankanok', $t2['assignee']);
         // Waiting to be taken: it runs against its response deadline.
-        $this->assertSame('2026-09-26', $t5['due_at']);
+        $this->assertSame('2026-09-26 10:00', $t5['due_at']);
+        $this->assertSame('2026-09-13 10:00', $t5['opened_at']);
         $this->assertSame('response', $t5['due_kind']);
         $this->assertEqualsWithDelta(24.0, $t5['hours_left'], 0.01);
 
@@ -121,6 +122,8 @@ class TicketTabularReportsTest extends TestCase
 
         $columns = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns'))->keyBy('key');
         $this->assertSame('hours_left', $columns['hours_left']['type']);
+        $this->assertSame('datetime', $columns['opened_at']['type']);
+        $this->assertSame('datetime', $columns['due_at']['type']);
         // A ticket is reported ("ผู้แจ้ง"), not requested: its own heading key, the shared one stays for requests.
         $this->assertSame('rep_c_ticket_requester', $columns['requester']['label_key']);
         $this->assertSame('rep_c_ticket_no', $columns['ticket_no']['label_key']);
