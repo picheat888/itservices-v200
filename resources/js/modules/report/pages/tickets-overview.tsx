@@ -6,6 +6,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -13,7 +14,6 @@ import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Download } from 'lucide-react';
-import { useState } from 'react';
 import { BacklogAging } from '../components/backlog-aging';
 import { CARD_HEADING_TINT } from '../components/card-heading';
 import { ExportReportDialog } from '../components/export-report-dialog';
@@ -38,6 +38,8 @@ import { TicketReportTable } from '../components/ticket-report-table';
 import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
 import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
+
+const REPORT_DIALOGS = ['export', 'schedule'] as const;
 
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
 
@@ -113,9 +115,13 @@ export default function TicketOverviewReportPage() {
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTicketReportFilters();
     const { data, isLoading, isError, error } = useTicketOverview(filters);
-    const [exportOpen, setExportOpen] = useState(false);
+    // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
+    const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
+    const exportOpen = dialog === 'export';
+    const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
+    const scheduleOpen = dialog === 'schedule';
+    const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
     const exportMut = useExportTicketOverview();
-    const [scheduleOpen, setScheduleOpen] = useState(false);
     const scheduleMut = useCreateSchedule();
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));

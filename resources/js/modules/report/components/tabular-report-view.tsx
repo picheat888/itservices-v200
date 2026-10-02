@@ -8,6 +8,7 @@
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -33,6 +34,8 @@ import { SummaryStrip } from './summary-strip';
 import { TabularCell } from './tabular-cell';
 import { ChartsSkeleton, TabularCharts } from './tabular-charts';
 import { TabularFilterBar } from './tabular-filter-bar';
+
+const REPORT_DIALOGS = ['export', 'schedule'] as const;
 
 function errorMessageFor(t: (key: string) => string, error: unknown): string {
     const status = isAxiosError(error) ? error.response?.status : undefined;
@@ -165,10 +168,14 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTabularFilters(definition);
     const { hidden, visibleColumns, toggle, showAll } = useHiddenColumns(definition);
-    const [exportOpen, setExportOpen] = useState(false);
+    // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
+    const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
+    const exportOpen = dialog === 'export';
+    const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
+    const scheduleOpen = dialog === 'schedule';
+    const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
-    const [scheduleOpen, setScheduleOpen] = useState(false);
     const scheduleMut = useCreateSchedule();
     // Only sent when something is hidden, so a full export stays a plain request. A report with
     // no table on screen has no column picker either, so its files always carry every column —
