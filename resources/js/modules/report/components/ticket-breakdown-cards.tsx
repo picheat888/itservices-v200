@@ -202,7 +202,7 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
         },
         {
             key: 'median',
-            // "Typical" for the median: half the cases closed faster — the hint says so on hover.
+            // The median: half the cases closed faster — the hint says so on hover.
             header: <span title={t('rep_col_time_hint')}>{t('rep_col_time')}</span>,
             align: 'right',
             className: 'whitespace-nowrap',
