@@ -62,7 +62,7 @@ export const report: Dict = {
     rep_kpi_sla: 'ปิดทัน SLA',
     rep_kpi_goal: 'เป้า {n}%',
     rep_kpi_avg: 'เวลาแก้ไขโดยเฉลี่ย',
-    rep_kpi_p90: 'P90 = {n} ชม.',
+    rep_kpi_p90: '90% ปิดภายใน {n} ชม.',
     rep_kpi_backlog: 'ค้างอยู่ตอนนี้',
     rep_kpi_breached: 'เกิน SLA {n}',
     rep_kpi_backlog_split: 'เปิด {a} · กำลังทำ {b}',
