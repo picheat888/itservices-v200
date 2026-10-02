@@ -288,9 +288,9 @@ export default function TicketOverviewReportPage() {
                                 </span>
                             }
                         >
-                            {/* The SLA/age/category card beside it is the taller one; the chart keeps its
-                                shape and sits centred in the height, as the design's "meet" does. */}
-                            <div className="flex flex-1 flex-col justify-center px-4 py-3">
+                            {/* The SLA/age/category card beside it is the taller one; the chart grows
+                                into the height that leaves (weekly-ticket-chart.tsx measures it). */}
+                            <div className="flex flex-1 flex-col px-4 py-3">
                                 <WeeklyTicketChart weeks={data.weekly} range={data.range} />
                             </div>
                         </Section>
