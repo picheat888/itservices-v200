@@ -1,8 +1,9 @@
 /**
  * Paired weekly bars — opened (brand) vs closed (green) — on one shared scale with a faint
  * grid, plus the "ค้างสะสม" line (red, its own scale on the right axis): tickets still open at
- * each week's end, labelled at its last point. Each week carries a <title>, so hovering shows its
- * three numbers. Hand-rolled SVG like shared/components/month-bar-chart.tsx: a dozen bars need no
+ * each week's end, labelled at its last point. Every bar is labelled by the first day it really
+ * covers — the range start for a week that began before it, else the Monday — and thinned only
+ * past 16 weeks; its <title> gives the days it spans and its three numbers. Hand-rolled SVG like shared/components/month-bar-chart.tsx: a dozen bars need no
  * chart library, and colours come from theme classes so both themes work.
  */
 import { useT } from '@/lang';
@@ -23,7 +24,24 @@ function niceMax(value: number): number {
     return Math.max(unit, Math.ceil(value / unit) * unit);
 }
 
-export function WeeklyTicketChart({ weeks }: { weeks: TicketOverviewSummary['weekly'] }) {
+/** "YYYY-MM-DD" → "d/m". */
+const dayMonth = (iso: string) => {
+    const [, m, d] = iso.split('-');
+    return `${Number(d)}/${Number(m)}`;
+};
+
+/** The Sunday ending the week that starts on `iso` (a Monday), as "YYYY-MM-DD". */
+const weekEnd = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    const end = new Date(y, m - 1, d + 6);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+};
+
+/** Every bar keeps its label up to this many weeks; past it they thin out evenly. */
+const MAX_LABELS = 16;
+
+export function WeeklyTicketChart({ weeks, range }: { weeks: TicketOverviewSummary['weekly']; range: TicketOverviewSummary['range'] }) {
     const t = useT();
     const peak = Math.max(0, ...weeks.flatMap((w) => [w.opened, w.closed]));
     const backlogPeak = Math.max(0, ...weeks.map((w) => w.backlog));
@@ -41,7 +59,7 @@ export function WeeklyTicketChart({ weeks }: { weeks: TicketOverviewSummary['wee
     const y = (v: number) => PAD.t + ch - (v / max) * ch;
     const yBacklog = (v: number) => PAD.t + ch - (v / backlogMax) * ch;
     const xOf = (i: number) => PAD.l + gw * i + gw / 2;
-    const labelEvery = Math.ceil(weeks.length / 7);
+    const labelEvery = Math.ceil(weeks.length / MAX_LABELS);
 
     const line = weeks.map((w, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yBacklog(w.backlog).toFixed(1)}`).join(' ');
     const last = weeks[weeks.length - 1];
@@ -62,13 +80,16 @@ export function WeeklyTicketChart({ weeks }: { weeks: TicketOverviewSummary['wee
             ))}
             {weeks.map((w, i) => {
                 const x = xOf(i);
-                const [, m, d] = w.week_start.split('-');
-                const label = `${Number(d)}/${Number(m)}`;
+                // The days this bar really counts: the first and last weeks are cut by the range.
+                const start = w.week_start < range.from ? range.from : w.week_start;
+                const end = weekEnd(w.week_start) > range.to ? range.to : weekEnd(w.week_start);
+                const label = dayMonth(start);
+                const span = start === end ? label : `${label}–${dayMonth(end)}`;
                 return (
                     <g key={w.week_start}>
                         <title>
                             {t('rep_weekly_tip')
-                                .replace('{week}', label)
+                                .replace('{week}', span)
                                 .replace('{opened}', String(w.opened))
                                 .replace('{closed}', String(w.closed))
                                 .replace('{backlog}', String(w.backlog))}

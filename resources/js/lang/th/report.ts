@@ -81,7 +81,7 @@ export const report: Dict = {
     rep_weekly_closed: 'ปิดแล้ว',
     rep_weekly_backlog: 'ค้างสะสม',
     rep_weekly_backlog_end: '{n} ค้าง',
-    rep_weekly_tip: 'สัปดาห์ {week} · เปิดใหม่ {opened} · ปิดแล้ว {closed} · ค้าง {backlog}',
+    rep_weekly_tip: '{week} · เปิดใหม่ {opened} · ปิดแล้ว {closed} · ค้าง {backlog}',
     rep_weekly_empty: 'ไม่มี Ticket ในช่วงนี้',
     rep_sla_priority_title: 'ปิดทัน SLA แยกตามความสำคัญ',
     rep_sla_priority_sub: 'เส้น = เป้า',

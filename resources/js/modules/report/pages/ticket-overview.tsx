@@ -20,6 +20,7 @@ import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
 import { KpiTile } from '../components/kpi-tile';
 import { ReportHeader } from '../components/report-header';
+import { compactRange } from '../components/report-scope';
 import {
     AgingSkeleton,
     BarRowsSkeleton,
@@ -40,7 +41,7 @@ import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
 
 /** A card's heading row: title on the left, a short note (legend, unit, "Top 6") on the right. */
-function SectionHeading({ title, sub, className }: { title: string; sub?: React.ReactNode; className?: string }) {
+function SectionHeading({ title, sub, className }: { title: React.ReactNode; sub?: React.ReactNode; className?: string }) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3', className)}>
             <span className="text-sm font-semibold">{title}</span>
@@ -49,7 +50,17 @@ function SectionHeading({ title, sub, className }: { title: string; sub?: React.
     );
 }
 
-function Section({ title, sub, className, children }: { title: string; sub?: React.ReactNode; className?: string; children: React.ReactNode }) {
+function Section({
+    title,
+    sub,
+    className,
+    children,
+}: {
+    title: React.ReactNode;
+    sub?: React.ReactNode;
+    className?: string;
+    children: React.ReactNode;
+}) {
     return (
         <Card className={cn('overflow-hidden', className)}>
             <SectionHeading title={title} sub={sub} />
@@ -260,7 +271,15 @@ export default function TicketOverviewReportPage() {
 
                     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                         <Section
-                            title={t('rep_weekly_title')}
+                            // The range in the title, so the weeks read as the chosen period's, not the latest ones.
+                            title={
+                                <>
+                                    {t('rep_weekly_title')}
+                                    <span className="text-muted-foreground ml-2 text-xs font-normal">
+                                        {compactRange(data.range.from, data.range.to, lang)}
+                                    </span>
+                                </>
+                            }
                             sub={
                                 // Swatches in the bars' own fills (weekly-ticket-chart.tsx), so the key reads.
                                 <span className="inline-flex items-center gap-3">
@@ -280,7 +299,7 @@ export default function TicketOverviewReportPage() {
                             }
                         >
                             <div className="px-4 py-3">
-                                <WeeklyTicketChart weeks={data.weekly} />
+                                <WeeklyTicketChart weeks={data.weekly} range={data.range} />
                             </div>
                         </Section>
                         {/* One card, as in the design: SLA by priority, then backlog age. The card is as
