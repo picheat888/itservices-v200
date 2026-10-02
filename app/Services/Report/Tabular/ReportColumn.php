@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  *
  * `linkTo()` makes the cell open the record on its own module page (`/tickets?view=5`); the
  * page only turns it into a link when the reader may open that module (nav.ts anyOf).
+ * `labelKey()` gives the page heading its own i18n key when the shared `rep_c_{key}` reads
+ * wrong for this report (a ticket's "ผู้แจ้ง" against a request's "ผู้ขอ").
  */
 final class ReportColumn
 {
@@ -35,6 +37,17 @@ final class ReportColumn
 
     /** @var (Closure(Model): (int|null))|null */
     private ?Closure $linkId = null;
+
+    /** The page heading's i18n key when not the shared `rep_c_{key}`. */
+    private ?string $labelKey = null;
+
+    /** Head the column on the page with this i18n key instead of `rep_c_{key}`. */
+    public function labelKey(string $key): self
+    {
+        $this->labelKey = $key;
+
+        return $this;
+    }
 
     /**
      * Link the cell to the record on its module page — `?view={id}` opens its detail there.
@@ -139,7 +152,7 @@ final class ReportColumn
      */
     public function toArray(): array
     {
-        $column = ['key' => $this->key, 'type' => $this->type, 'label_key' => "rep_c_{$this->key}"];
+        $column = ['key' => $this->key, 'type' => $this->type, 'label_key' => $this->labelKey ?? "rep_c_{$this->key}"];
         if ($this->linkPath !== null) {
             $column['link'] = $this->linkPath;
         }
