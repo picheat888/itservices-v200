@@ -140,9 +140,29 @@ abstract class TabularReport
     }
 
     /**
+     * Charts drawn above the table, over the same filtered query — none by default. Each entry
+     * is a typed array the page draws as it comes (resources/js/modules/report/components/
+     * tabular-charts.tsx): 'stacks' (one stacked bar per row), 'donut' (shares of a whole) or
+     * 'bars' (one bar per row). Screen only; the file export keeps to the table.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array<string, mixed>>
+     */
+    public function charts(Builder $query, array $filters): array
+    {
+        return [];
+    }
+
+    /** Whether charts() draws anything — lets the page hold their place while rows load. */
+    public function hasCharts(): bool
+    {
+        return false;
+    }
+
+    /**
      * What the generic page needs to draw this report.
      *
-     * @return array{key: string, filters: list<array<string, mixed>>, columns: list<array<string, mixed>>}
+     * @return array{key: string, filters: list<array<string, mixed>>, columns: list<array<string, mixed>>, has_charts: bool}
      */
     public function definition(): array
     {
@@ -150,6 +170,7 @@ abstract class TabularReport
             'key' => $this->key(),
             'filters' => array_map(fn (ReportFilter $f) => $f->toArray(), $this->filters()),
             'columns' => array_map(fn (ReportColumn $c) => $c->toArray(), $this->columns()),
+            'has_charts' => $this->hasCharts(),
         ];
     }
 

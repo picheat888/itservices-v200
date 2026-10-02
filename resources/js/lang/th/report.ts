@@ -120,6 +120,11 @@ export const report: Dict = {
     rep_f_clear: 'ล้างทั้งหมด',
 
     // components/ticket-report-table.tsx — ticket rows
+    rep_chart_by_department: 'แยกตามแผนก',
+    rep_chart_status: 'สถานะทรัพย์สิน',
+    rep_chart_in_use: 'ใช้งานอยู่',
+    rep_chart_by_category: 'แยกตามหมวด',
+    rep_chart_items: '{n} รายการ',
     rep_rows_generic: 'รายการ',
     rep_rows_count: 'ทั้งหมด {n} รายการ',
     rep_rows_title: 'รายการ Ticket',

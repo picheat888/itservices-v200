@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 
 /**
  * Endpoints shared by every tabular report (/api/reports/r/{key}): what to draw, the rows
- * with their headline numbers, and queuing the file export.
+ * with their headline numbers and charts, and queuing the file export.
  */
 class TabularReportController extends Controller
 {
@@ -42,6 +42,7 @@ class TabularReportController extends Controller
                 'last_page' => $page->lastPage(),
             ],
             'summary' => array_map(fn (ReportSummary $s) => $s->toArray(), $report->summary($query, $filters)),
+            'charts' => $report->charts($query, $filters),
         ]);
     }
 

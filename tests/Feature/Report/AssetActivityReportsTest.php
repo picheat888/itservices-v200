@@ -9,6 +9,7 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
@@ -83,6 +84,54 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame(2, $summary['in_use']['value']);
         $this->assertSame(2, $summary['ready']['value']);
         $this->assertSame(1, $summary['pending_return']['value']);
+    }
+
+    public function test_by_status_department_draws_department_status_and_category_charts(): void
+    {
+        $it = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
+        $holder = Employee::create(['code' => 'EMP-1', 'first_name' => 'Anan', 'last_name' => 'IT', 'department_id' => $it->id]);
+        $laptops = Category::create(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป']);
+        $printers = Category::create(['name' => 'Printer', 'name_th' => 'เครื่องพิมพ์']);
+        Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $holder->id, 'owner' => null, 'category_id' => $laptops->id]);
+        Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $holder->id, 'owner' => null, 'category_id' => $laptops->id]);
+        Asset::factory()->create(['status' => 'common', 'owner_employee_id' => null, 'owner' => 'Meeting room', 'category_id' => $printers->id]);
+        Asset::factory()->create(['status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null, 'category_id' => $laptops->id]);
+
+        $viewer = $this->userWith(['assets.view']);
+        $this->assertTrue($this->actingAs($viewer)->getJson('/api/reports/r/assets.by_status_department')->assertOk()->json('data.has_charts'));
+
+        $charts = collect($this->actingAs($viewer)
+            ->getJson('/api/reports/r/assets.by_status_department/rows')->assertOk()->json('charts'))->keyBy('key');
+        $this->assertSame(['department', 'status', 'category'], $charts->keys()->all());
+
+        $departments = collect($charts['department']['rows'])->keyBy(fn (array $r) => $r['label']['name']);
+        $this->assertSame(2, $departments['IT']['values']['deployed']);
+        $this->assertSame(2, $departments['IT']['total']);
+        $this->assertSame(1, $departments['No department']['values']['common']);
+        $this->assertSame(1, $departments['No department']['values']['writeoff']);
+
+        $segments = collect($charts['status']['segments'])->keyBy('key');
+        $this->assertSame(2, $segments['deployed']['value']);
+        $this->assertSame('green', $segments['deployed']['tone']);
+        $this->assertSame(4, $charts['status']['total']);
+        // Deployed 2 + common 1 of 4.
+        $this->assertSame(75, $charts['status']['center']['value']);
+
+        $this->assertSame([['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], 3], [$charts['category']['rows'][0]['label'], $charts['category']['rows'][0]['value']]);
+
+        // The category filter narrows every chart, the category bars included.
+        $printersOnly = collect($this->actingAs($viewer)
+            ->getJson("/api/reports/r/assets.by_status_department/rows?category_id={$printers->id}")->json('charts'))->keyBy('key');
+        $this->assertSame(1, $printersOnly['status']['total']);
+        $this->assertCount(1, $printersOnly['category']['rows']);
+    }
+
+    public function test_reports_without_charts_send_an_empty_list(): void
+    {
+        $body = $this->actingAs($this->userWith(['assets.view']))
+            ->getJson('/api/reports/r/assets.transfer_history/rows')->assertOk()->json();
+
+        $this->assertSame([], $body['charts']);
     }
 
     // ── assets.transfer_history ─────────────────────────────────────────────────────
