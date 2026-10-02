@@ -13,12 +13,18 @@ import { useUiStore } from '@/stores/ui';
 import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
-import type { ReportDefinition, ReportDomain, ReportExportItem } from '../types';
+import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotPeriod } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
+import { periodRange } from './report-scope';
 
-/** The ticket overview report keeps its own dedicated page; every tabular report shares the generic one. */
-export function reportRoute(def: Pick<ReportDefinition, 'key'>): string {
-    return def.key === 'tickets.overview' ? '/reports/tickets-overview' : `/reports/r/${def.key}`;
+/**
+ * The ticket overview report keeps its own dedicated page; every tabular report shares the generic one.
+ * With `range` (the hub's period) the link carries ?from=&to=, which a report with a date range
+ * opens on for that visit (use-ticket-report-filters / use-tabular-filters); others ignore it.
+ */
+export function reportRoute(def: Pick<ReportDefinition, 'key'>, range?: { from: string; to: string }): string {
+    const path = def.key === 'tickets.overview' ? '/reports/tickets-overview' : `/reports/r/${def.key}`;
+    return range ? `${path}?${new URLSearchParams(range)}` : path;
 }
 
 const DOMAIN_ICONS: Record<ReportDomain, LucideIcon> = {
@@ -97,13 +103,13 @@ function PinButton({ report }: { report: ReportDefinition }) {
     );
 }
 
-function ReportRow({ report, latest }: { report: ReportDefinition; latest?: ReportExportItem }) {
+function ReportRow({ report, latest, period }: { report: ReportDefinition; latest?: ReportExportItem; period?: SnapshotPeriod }) {
     const t = useT();
 
     return (
         <div className="border-border hover:bg-accent flex items-center border-b transition-colors last:border-b-0">
             <Link
-                to={reportRoute(report)}
+                to={reportRoute(report, period && periodRange(period))}
                 className="focus-visible:ring-brand/30 flex min-w-0 flex-1 items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
             >
                 <div className="min-w-0 flex-1">
@@ -199,7 +205,16 @@ const pinnedFirst = (a: ReportDefinition, b: ReportDefinition) => (a.pin_order ?
  * the order the reader pinned things, as Drive or a Start menu does. Pinned reports stay in
  * their module group as well, listed first there.
  */
-export function ReportCatalogue({ reports, showPinned = false }: { reports: ReportDefinition[]; showPinned?: boolean }) {
+export function ReportCatalogue({
+    reports,
+    showPinned = false,
+    period,
+}: {
+    reports: ReportDefinition[];
+    showPinned?: boolean;
+    /** The hub's period switch — each report link opens on its dates. */
+    period?: SnapshotPeriod;
+}) {
     const t = useT();
     const { data: exportsList = [] } = useMyExports();
     // Newest first from the API, so the first one seen per report is its latest.
@@ -213,7 +228,7 @@ export function ReportCatalogue({ reports, showPinned = false }: { reports: Repo
             {showPinned && pinned.length > 0 && (
                 <GroupCard icon={Pin} title={t('rep_pinned_title')} count={pinned.length}>
                     {pinned.map((r) => (
-                        <ReportRow key={r.key} report={r} latest={latest.get(r.key)} />
+                        <ReportRow key={r.key} report={r} latest={latest.get(r.key)} period={period} />
                     ))}
                 </GroupCard>
             )}
@@ -222,7 +237,7 @@ export function ReportCatalogue({ reports, showPinned = false }: { reports: Repo
                 return (
                     <GroupCard key={domain} icon={DOMAIN_ICONS[domain]} title={t(`rep_domain_${domain}`)} count={items.length}>
                         {items.map((r) => (
-                            <ReportRow key={r.key} report={r} latest={latest.get(r.key)} />
+                            <ReportRow key={r.key} report={r} latest={latest.get(r.key)} period={period} />
                         ))}
                     </GroupCard>
                 );

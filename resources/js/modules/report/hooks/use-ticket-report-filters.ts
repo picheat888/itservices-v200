@@ -6,8 +6,14 @@
  * quarter up to today) it is not stored, so it rolls forward with the calendar on the next
  * visit instead of freezing on the day the page was first opened — the same rule the tabular
  * reports follow (use-tabular-filters.ts).
+ *
+ * A link from the Report Center carries its period as ?from=&to= (report-catalogue.tsx
+ * reportRoute). Those dates open the page for this visit and are then taken off the URL; they
+ * are not remembered as the reader's own pick — a later visit still rolls with the calendar, or
+ * keeps the range they chose themselves — unless they change the dates on the page.
  */
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { TicketReportFilters } from '../types';
 
 // v2: the first version stored the default range as fixed dates, so every browser that had
@@ -66,16 +72,59 @@ export function ticketFiltersToStore(filters: TicketReportFilters, today = new D
     return from === defaults.from && to === defaults.to ? rest : filters;
 }
 
+/** The dates a Report Center link brought, when both are real and in order. */
+function fromLink(params: URLSearchParams): { from: string; to: string } | null {
+    const from = params.get('from');
+    const to = params.get('to');
+    return isDate(from) && isDate(to) && (from as string) <= (to as string) ? { from: from as string, to: to as string } : null;
+}
+
+/** The dates already remembered, so a linked visit can leave them as they were. */
+function storedDates(): Partial<TicketReportFilters> {
+    try {
+        const { from, to } = fromStorage(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
+        return from && to ? { from, to } : {};
+    } catch {
+        return {};
+    }
+}
+
 export function useTicketReportFilters() {
-    const [filters, setFilters] = useState<TicketReportFilters>(load);
+    const [params, setParams] = useSearchParams();
+    const [linked] = useState(() => fromLink(params));
+    const [filters, setFilters] = useState<TicketReportFilters>(() => ({ ...load(), ...(linked ?? {}) }));
+
+    // Once read, the link's dates leave the URL — a reload shows what the reader has since picked.
+    useEffect(() => {
+        if (!params.has('from') && !params.has('to')) return;
+        setParams(
+            (next) => {
+                next.delete('from');
+                next.delete('to');
+                return next;
+            },
+            { replace: true },
+        );
+    }, [params, setParams]);
 
     useEffect(() => {
+        // Still on the dates the link brought: remember everything else, keep the old dates.
+        const onLinkedDates = linked !== null && filters.from === linked.from && filters.to === linked.to;
+        const toStore = onLinkedDates
+            ? {
+                  categories: filters.categories,
+                  priority: filters.priority,
+                  department_id: filters.department_id,
+                  assignee_id: filters.assignee_id,
+                  ...storedDates(),
+              }
+            : ticketFiltersToStore(filters);
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(ticketFiltersToStore(filters)));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
         } catch {
             // Storage blocked (private window) — filters still work for this visit.
         }
-    }, [filters]);
+    }, [filters, linked]);
 
     const patch = (next: Partial<TicketReportFilters>) => setFilters((f) => ({ ...f, ...next }));
     const reset = () => setFilters(defaultTicketReportFilters());

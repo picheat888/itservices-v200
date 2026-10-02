@@ -102,7 +102,7 @@ export default function ReportsPage() {
                                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_match')}</div>
                             ) : (
                                 // Quick access on the plain view only; filtered or searched, pinned ones lead their group.
-                                <ReportCatalogue reports={visible} showPinned={domain === 'all' && query.trim() === ''} />
+                                <ReportCatalogue reports={visible} showPinned={domain === 'all' && query.trim() === ''} period={period} />
                             )}
                         </>
                     )}
