@@ -3,21 +3,22 @@
  * (from ถึง to), categories (multi), priority, department, assignee. A field turns brand-tinted
  * once it differs from the default — the field look of the app's Filter popover
  * (SearchableSelect `active`, gray dot for "all"). "ล้างทั้งหมด" is a gray badge at the end,
- * shown only while something is filtered. Options come from
- * the report payload so the bar never needs another module's permissions.
+ * shown only while something is filtered — all from filter-row.tsx, shared with the tabular
+ * reports' bar. Options come from the report payload so the bar never needs another module's
+ * permissions.
  */
 import { useT } from '@/lang';
-import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
-import { Card } from '@/shared/ui/card';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { DateInput } from '@/shared/ui/date-input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useUiStore } from '@/stores/ui';
-import { ChevronsUpDown, X } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { defaultTicketReportFilters } from '../hooks/use-ticket-report-filters';
 import type { TicketOverviewSummary, TicketReportFilters } from '../types';
+import { ClearFiltersBadge, FILTER_ACTIVE, FilterField, FilterRow, useWithAllOption } from './filter-row';
 import { FILTER_SELECT_ALL as ALL } from './filter-select';
 import { categoryKey, priorityKey } from './ticket-labels';
 
@@ -27,12 +28,6 @@ const PRIORITIES = [
     { value: 'medium', tone: 'blue' },
     { value: 'low', tone: 'gray' },
 ] as const;
-
-/** A field set away from its default — SearchableSelect's `active` tint, so every field matches. */
-const ACTIVE = 'border-brand/50 bg-brand/5 text-brand font-medium';
-
-/** The name before each field. */
-const labelClass = 'text-muted-foreground shrink-0 text-sm';
 
 export function TicketReportFilterBar({
     filters,
@@ -59,34 +54,32 @@ export function TicketReportFilterBar({
         (filters.department_id ? 1 : 0) +
         (filters.assignee_id ? 1 : 0);
 
-    // "ทั้งหมด" first with a gray dot, as in the Filter popovers.
-    const withAll = (items: SearchOption[]): SearchOption[] => [
-        { value: ALL, label: t('rep_f_any'), search: t('rep_f_any'), icon: <ToneDot tone="gray" /> },
-        ...items,
-    ];
+    const withAll = useWithAllOption();
 
     return (
-        <Card className="flex flex-wrap items-center gap-x-4 gap-y-2 p-3">
+        <FilterRow>
             <div className="flex items-center gap-2">
-                <label htmlFor="rep-from" className={labelClass}>
+                <label htmlFor="rep-from" className="text-muted-foreground shrink-0 text-sm">
                     {t('rep_f_range')}
                 </label>
                 <DateInput
                     id="rep-from"
                     value={filters.from}
                     onChange={(v) => v && onChange({ from: v })}
-                    className={cn('w-36', rangeSet && ACTIVE)}
+                    className={cn('w-36', rangeSet && FILTER_ACTIVE)}
                 />
-                <label htmlFor="rep-to" className={labelClass}>
+                <label htmlFor="rep-to" className="text-muted-foreground shrink-0 text-sm">
                     {t('rep_f_to')}
                 </label>
-                <DateInput id="rep-to" value={filters.to} onChange={(v) => v && onChange({ to: v })} className={cn('w-36', rangeSet && ACTIVE)} />
+                <DateInput
+                    id="rep-to"
+                    value={filters.to}
+                    onChange={(v) => v && onChange({ to: v })}
+                    className={cn('w-36', rangeSet && FILTER_ACTIVE)}
+                />
             </div>
 
-            <div className="flex items-center gap-2">
-                <label htmlFor="rep-category" className={labelClass}>
-                    {t('rep_f_category')}
-                </label>
+            <FilterField htmlFor="rep-category" label={t('rep_f_category')}>
                 <Popover>
                     <PopoverTrigger asChild>
                         <button
@@ -94,7 +87,7 @@ export function TicketReportFilterBar({
                             type="button"
                             className={cn(
                                 'flex h-10 w-36 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors',
-                                filters.categories.length > 0 ? ACTIVE : 'border-input bg-background hover:border-brand/50',
+                                filters.categories.length > 0 ? FILTER_ACTIVE : 'border-input bg-background hover:border-brand/50',
                             )}
                         >
                             <span className="truncate">
@@ -114,12 +107,9 @@ export function TicketReportFilterBar({
                         ))}
                     </PopoverContent>
                 </Popover>
-            </div>
+            </FilterField>
 
-            <div className="flex items-center gap-2">
-                <label htmlFor="rep-priority" className={labelClass}>
-                    {t('rep_f_priority')}
-                </label>
+            <FilterField htmlFor="rep-priority" label={t('rep_f_priority')}>
                 <div className="w-36">
                     <SearchableSelect
                         id="rep-priority"
@@ -136,12 +126,9 @@ export function TicketReportFilterBar({
                         )}
                     />
                 </div>
-            </div>
+            </FilterField>
 
-            <div className="flex items-center gap-2">
-                <label htmlFor="rep-department" className={labelClass}>
-                    {t('rep_f_department')}
-                </label>
+            <FilterField htmlFor="rep-department" label={t('rep_f_department')}>
                 <div className="w-48">
                     <SearchableSelect
                         id="rep-department"
@@ -157,12 +144,9 @@ export function TicketReportFilterBar({
                         )}
                     />
                 </div>
-            </div>
+            </FilterField>
 
-            <div className="flex items-center gap-2">
-                <label htmlFor="rep-assignee" className={labelClass}>
-                    {t('rep_f_assignee')}
-                </label>
+            <FilterField htmlFor="rep-assignee" label={t('rep_f_assignee')}>
                 <div className="w-48">
                     <SearchableSelect
                         id="rep-assignee"
@@ -172,19 +156,9 @@ export function TicketReportFilterBar({
                         options={withAll((options?.assignees ?? []).map((a) => ({ value: String(a.id), label: a.name, search: a.name })))}
                     />
                 </div>
-            </div>
+            </FilterField>
 
-            {/* A gray badge at the row's end, there only while something is filtered. */}
-            {activeCount > 0 && (
-                <button
-                    type="button"
-                    onClick={onReset}
-                    className="bg-muted text-muted-foreground hover:bg-accent hover:text-foreground ml-auto inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
-                >
-                    <X className="h-3.5 w-3.5" />
-                    {t('rep_f_clear')}
-                </button>
-            )}
-        </Card>
+            <ClearFiltersBadge active={activeCount > 0} onClear={onReset} />
+        </FilterRow>
     );
 }

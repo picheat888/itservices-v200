@@ -120,6 +120,8 @@ export const report: Dict = {
     rep_f_clear: 'ล้างทั้งหมด',
 
     // components/ticket-report-table.tsx — ticket rows
+    rep_rows_generic: 'รายการ',
+    rep_rows_count: 'ทั้งหมด {n} รายการ',
     rep_rows_title: 'รายการ Ticket',
     rep_col_no: 'เลขที่',
     rep_col_subject: 'เรื่อง',

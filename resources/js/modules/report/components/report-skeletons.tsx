@@ -32,17 +32,16 @@ export function KpiRowSkeleton({ count, className }: { count: number; className:
     );
 }
 
-/** TabularFilterBar: `fields` fields, each a name over its box, then the clear button. */
+/** A filter row (filter-row.tsx): `fields` "name [field]" pairs on one line. */
 export function FilterBarSkeleton({ fields }: { fields: number }) {
     return (
-        <Card className="flex flex-wrap items-end gap-3 p-3" aria-hidden="true">
+        <Card className="flex flex-wrap items-center gap-x-4 gap-y-2 p-3" aria-hidden="true">
             {Array.from({ length: fields }, (_, i) => (
-                <div key={i} className="flex flex-col gap-1">
-                    <Skeleton className="h-3 w-12" />
-                    <Skeleton className="h-9 w-44" />
+                <div key={i} className="flex items-center gap-2">
+                    <Skeleton className="h-3.5 w-14" />
+                    <Skeleton className="h-10 w-48" />
                 </div>
             ))}
-            <Skeleton className="h-9 w-20" />
         </Card>
     );
 }

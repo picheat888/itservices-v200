@@ -1,18 +1,21 @@
 /**
- * Filter row of a generic tabular report: one field per `TabularFilterDef` (select, date
- * or debounced search) plus a clear-all button. Options and labels come from the report's
- * own definition, so the bar never needs another module's permissions — mirrors
- * `ticket-report-filter-bar.tsx`, generalized to whatever filters a report declares.
+ * Filter row of a generic tabular report: one "name [field]" pair per `TabularFilterDef`
+ * (select, date or debounced search), built from filter-row.tsx so it reads like the Ticket &
+ * SLA bar — a field turns brand-tinted once it differs from the report's default, and the gray
+ * "ล้างทั้งหมด" badge shows only while something differs. Options and labels come from the
+ * report's own definition, so the bar never needs another module's permissions.
  */
 import { useT } from '@/lang';
-import { Button } from '@/shared/ui/button';
-import { Card } from '@/shared/ui/card';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { cn } from '@/shared/lib/utils';
 import { DateInput } from '@/shared/ui/date-input';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
+import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { TabularDefinition, TabularFilters } from '../types';
-import { FILTER_SELECT_ALL as ALL, FilterSelect } from './filter-select';
+import type { TabularDefinition, TabularFilterDef, TabularFilters } from '../types';
+import { ClearFiltersBadge, FILTER_ACTIVE, FilterField, FilterRow, useWithAllOption } from './filter-row';
+import { FILTER_SELECT_ALL as ALL } from './filter-select';
 
 function optionLabel(
     t: (key: string) => string,
@@ -23,7 +26,13 @@ function optionLabel(
     return (lang === 'th' && option.label_th) || option.label || '';
 }
 
-function SearchField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
+/** null, '' and undefined all mean "not set". */
+const normalize = (v: string | number | null | undefined) => (v === null || v === undefined || v === '' ? null : String(v));
+
+/** True when the filter's value is not the report's default — what tints the field. */
+const differs = (filter: TabularFilterDef, filters: TabularFilters) => normalize(filters[filter.name]) !== normalize(filter.default);
+
+function SearchField({ id, value, active, onChange }: { id: string; value: string; active: boolean; onChange: (v: string) => void }) {
     const [draft, setDraft] = useState(value);
 
     // Keep the field in sync when the filters are reset (or seeded) from outside.
@@ -39,10 +48,15 @@ function SearchField({ id, label, value, onChange }: { id: string; label: string
     }, [draft]);
 
     return (
-        <label className="flex flex-col gap-1 text-xs">
-            <span className="text-muted-foreground">{label}</span>
-            <Input id={id} value={draft} onChange={(e) => setDraft(e.target.value)} className="h-9 w-44" />
-        </label>
+        <div className="relative w-48">
+            <Search
+                className={cn(
+                    'pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2',
+                    active ? 'text-brand' : 'text-muted-foreground',
+                )}
+            />
+            <Input id={id} value={draft} onChange={(e) => setDraft(e.target.value)} className={cn('pl-9', active && FILTER_ACTIVE)} />
+        </div>
     );
 }
 
@@ -59,55 +73,65 @@ export function TabularFilterBar({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const withAll = useWithAllOption();
+    const anySet = definition.filters.some((filter) => differs(filter, filters));
 
     return (
-        <Card className="flex flex-wrap items-end gap-3 p-3">
+        <FilterRow>
             {definition.filters.map((filter) => {
+                const id = `rep-fl-${filter.name}`;
                 const label = t(filter.label_key);
                 const value = filters[filter.name];
+                const active = differs(filter, filters);
 
                 if (filter.type === 'select') {
                     return (
-                        <FilterSelect
-                            key={filter.name}
-                            id={`rep-fl-${filter.name}`}
-                            label={label}
-                            value={value === null || value === undefined || value === '' ? ALL : String(value)}
-                            onChange={(v) => onChange({ [filter.name]: v === ALL ? null : v })}
-                            items={filter.options.map((o) => ({ value: String(o.value), label: optionLabel(t, lang, o) }))}
-                            anyLabel={t('rep_f_any')}
-                        />
+                        <FilterField key={filter.name} htmlFor={id} label={label}>
+                            <div className="w-48">
+                                <SearchableSelect
+                                    id={id}
+                                    active={active}
+                                    value={normalize(value) ?? ALL}
+                                    onChange={(v) => onChange({ [filter.name]: v === ALL ? null : v })}
+                                    options={withAll(
+                                        filter.options.map((o) => {
+                                            const text = optionLabel(t, lang, o);
+                                            // Master data stores mixed TH/EN names — search both.
+                                            return { value: String(o.value), label: text, search: `${text} ${o.label ?? ''} ${o.label_th ?? ''}` };
+                                        }),
+                                    )}
+                                />
+                            </div>
+                        </FilterField>
                     );
                 }
 
                 if (filter.type === 'date') {
                     return (
-                        <label key={filter.name} className="flex flex-col gap-1 text-xs">
-                            <span className="text-muted-foreground">{label}</span>
+                        <FilterField key={filter.name} htmlFor={id} label={label}>
                             <DateInput
-                                id={`rep-fl-${filter.name}`}
+                                id={id}
                                 value={value ? String(value) : ''}
                                 onChange={(v) => onChange({ [filter.name]: v || null })}
-                                className="h-9 w-40"
+                                className={cn('w-36', active && FILTER_ACTIVE)}
                             />
-                        </label>
+                        </FilterField>
                     );
                 }
 
                 return (
-                    <SearchField
-                        key={filter.name}
-                        id={`rep-fl-${filter.name}`}
-                        label={label}
-                        value={value ? String(value) : ''}
-                        onChange={(v) => onChange({ [filter.name]: v || null })}
-                    />
+                    <FilterField key={filter.name} htmlFor={id} label={label}>
+                        <SearchField
+                            id={id}
+                            value={value ? String(value) : ''}
+                            active={active}
+                            onChange={(v) => onChange({ [filter.name]: v || null })}
+                        />
+                    </FilterField>
                 );
             })}
 
-            <Button variant="ghost" size="sm" onClick={onReset}>
-                {t('rep_f_clear')}
-            </Button>
-        </Card>
+            <ClearFiltersBadge active={anySet} onClear={onReset} />
+        </FilterRow>
     );
 }
