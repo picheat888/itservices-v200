@@ -32,7 +32,8 @@ class AssetsByStatusDepartmentReport extends TabularReport
     /** Short source names and colours for the tiles' footers and the department bars' source view. */
     private const SOURCE_CHART = [
         'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'blue'],
-        'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'violet'],
+        // Pink, not violet: violet already means พร้อมส่งมอบ in the same tiles and charts.
+        'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'pink'],
     ];
 
     /** The one row for assets in no department — in store, shared, written off, or held by someone without one. */

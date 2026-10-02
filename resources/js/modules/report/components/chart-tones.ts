@@ -13,6 +13,7 @@ export const FILL: Record<ChartTone, string> = {
     orange: 'bg-orange-500',
     amber: 'bg-amber-500',
     red: 'bg-red-500',
+    pink: 'bg-pink-500',
     gray: 'bg-slate-400 dark:bg-slate-500',
 };
 /** Each tone as text, for the counts printed over a stacked bar. */
@@ -23,6 +24,7 @@ export const TEXT: Record<ChartTone, string> = {
     orange: 'text-orange-600 dark:text-orange-400',
     amber: 'text-amber-600 dark:text-amber-400',
     red: 'text-red-600 dark:text-red-400',
+    pink: 'text-pink-600 dark:text-pink-400',
     gray: 'text-slate-500 dark:text-slate-400',
 };
 export const STROKE: Record<ChartTone, string> = {
@@ -32,5 +34,6 @@ export const STROKE: Record<ChartTone, string> = {
     orange: 'stroke-orange-500',
     amber: 'stroke-amber-500',
     red: 'stroke-red-500',
+    pink: 'stroke-pink-500',
     gray: 'stroke-slate-400 dark:stroke-slate-500',
 };

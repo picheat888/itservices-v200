@@ -216,7 +216,7 @@ export interface SummaryItem {
 }
 
 /** A chart colour, drawn by tabular-charts.tsx. */
-export type ChartTone = 'green' | 'blue' | 'violet' | 'orange' | 'amber' | 'red' | 'gray';
+export type ChartTone = 'green' | 'blue' | 'violet' | 'orange' | 'amber' | 'red' | 'pink' | 'gray';
 
 /** A row's name from master data — the reader's language when it has one. */
 export interface ChartLabel {
