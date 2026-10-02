@@ -162,7 +162,7 @@ export const report: Dict = {
     rep_export_xlsx_desc: 'Every row and a summary sheet. Easy to filter.',
     rep_export_pdf: 'PDF',
     rep_export_pdf_desc: 'Summary and table, ready to print',
-    rep_export_scope: '{n} rows',
+    rep_export_scope: 'Rows to export: {n}',
     rep_export_filters_none: 'None (the whole report)',
     rep_export_pdf_cap: 'The PDF shows the latest {n} rows. Excel has all of them.',
     rep_export_queue_note:
@@ -216,7 +216,7 @@ export const report: Dict = {
     rep_schedule_email_invalid: 'That is not a valid email address',
     rep_schedule_recipients_max: 'Up to {n} recipients',
     rep_schedule_recipients_required: 'Add at least one recipient',
-    rep_schedule_filters_label: 'Filters',
+    rep_schedule_filters_label: 'Filters:',
     rep_schedule_filters_none: 'None (the whole report)',
     rep_schedule_dates_roll: 'The dates move forward with each send.',
     rep_schedule_permission_note: 'Recipients see the data you have access to.',
