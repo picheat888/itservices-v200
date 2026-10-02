@@ -4062,6 +4062,7 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 - การ์ด KPI "เวลาแก้ไข (มัธยฐาน)" → "เวลาแก้ไขโดยทั่วไป" + tooltip (prop ใหม่ `hint` ของ `KpiTile`) · Excel/PDF ใช้คำเดียวกัน
 - หัวการ์ดกราฟ "Ticket รายสัปดาห์" → "ภาพรวม Ticket" (ตาม mockup)
 - การ์ดแยกตามแผนกแสดงไม่เกิน 10 แผนกเสมอ (เดิมแผนกที่ 11 แสดงเลยแทนที่จะเป็น "อื่น ๆ (1)") — `fold()` รับ `spare` (ค่าเริ่มต้น 1 เหมือนเดิม; การ์ดนี้ส่ง 0) รายงานทรัพย์สินยังใช้กติกาเดิม
+- ถ้อยคำ: "ปิดทัน SLA แยกตามความสำคัญ" → "ภาพรวม SLA แยกตามความสำคัญ" · "เส้น = เป้า" → "เป้าหมาย N%" (N = เป้า SLA จาก Settings → SLA) · "อายุ Ticket ที่ค้าง" → "Ticket ที่ค้าง" · คอลัมน์ "หมวดที่แจ้ง" → "หมวดหมู่"
 - แท่ง stacked + fold ใช้ของ `tabular-charts.tsx` ร่วมกับรายงานทรัพย์สิน (export `StackBar`, `fold`, `FoldToggle`)
 - ลิงก์เก่า `/reports/r/tickets.by_department` และ `/reports/r/tickets.staff_performance` redirect ไปหน้าภาพรวม
 
