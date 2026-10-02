@@ -533,7 +533,7 @@ export const report: Dict = {
     rep_bl_owner_count: 'ค้าง {n} รายการ',
     rep_bl_owner_over: 'เกิน SLA {n}',
     rep_bl_cats_title: 'ค้างตามหมวด',
-    rep_bl_cats_sub: 'ส่วนสีแดง = เกิน SLA',
+    rep_sla_not_breached: 'ยังไม่เกิน',
     rep_bl_empty: 'ไม่มีงานค้างในตัวกรองนี้',
     rep_k_open: 'รอรับเรื่อง',
     rep_k_in_progress: 'กำลังดำเนินการ',
