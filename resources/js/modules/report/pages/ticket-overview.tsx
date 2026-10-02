@@ -251,9 +251,21 @@ export default function TicketOverviewReportPage() {
                                 ) : undefined
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
-                            footer={t('rep_kpi_backlog_split')
-                                .replace('{a}', String(data.backlog.open))
-                                .replace('{b}', String(data.backlog.in_progress))}
+                            footer={
+                                // In the status badges' colours (open blue, in progress amber), as in the ticket list.
+                                <span className="inline-flex items-center gap-3">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <i className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+                                        {t('rep_kpi_backlog_open')}
+                                        <b className="font-mono text-blue-600 dark:text-blue-400">{data.backlog.open}</b>
+                                    </span>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <i className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                                        {t('rep_kpi_backlog_in_progress')}
+                                        <b className="font-mono text-amber-600 dark:text-amber-400">{data.backlog.in_progress}</b>
+                                    </span>
+                                </span>
+                            }
                             alert={data.backlog.breached > 0}
                         />
                     </div>
