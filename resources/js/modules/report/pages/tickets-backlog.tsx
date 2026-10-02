@@ -28,6 +28,7 @@ export default function TicketsBacklogReportPage() {
                 hiddenFilters: ['sla', 'search'],
                 filterLead: ({ filters, patch }) => <BacklogSlaSegments filters={filters} patch={patch} />,
                 beforeTable: ({ filters, patch }) => <BacklogBoardCards filters={filters} patch={patch} />,
+                rowsTitle: 'rep_bl_rows_title',
                 rowClassName: backlogRowClass,
                 renderCell: backlogCell,
             }}

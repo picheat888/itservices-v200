@@ -530,6 +530,7 @@ export const report: Dict = {
     rep_bl_more: 'แสดงอีก {n} รายการ',
     rep_bl_none: 'ไม่มี',
     rep_bl_owners_title: 'ค้างอยู่กับใคร',
+    rep_bl_rows_title: 'รายการ Ticket ครบกำหนด SLA และยังพอมีเวลา',
     rep_bl_filter_hint: 'กดเพื่อกรองทั้งหน้า',
     rep_bl_filter_clear: 'กดอีกครั้งเพื่อยกเลิกตัวกรอง',
     rep_bl_cats_title: 'ค้างตามหมวด',

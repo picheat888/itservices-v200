@@ -127,7 +127,7 @@ function TabularReportRows({
             {showsTable && (
                 <Card className="overflow-hidden">
                     <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
-                        <span className="text-sm font-semibold">{t('rep_rows_generic')}</span>
+                        <span className="text-sm font-semibold">{t(extras.rowsTitle ?? 'rep_rows_generic')}</span>
                         {/* Row count, then the column picker past a thin divider — both are about this table. */}
                         <div className="flex items-center gap-3">
                             {data && (
@@ -284,6 +284,8 @@ export interface TabularReportExtras {
     filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     beforeTable?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     rowClassName?: (row: Record<string, unknown>) => string | undefined;
+    /** i18n key of the rows card's heading when the generic "รายการ" says too little for this page. */
+    rowsTitle?: string;
     /** Draw one column's cell the page's own way; undefined = the shared TabularCell. */
     renderCell?: (key: string, row: Record<string, unknown>) => React.ReactNode | undefined;
 }

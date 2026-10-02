@@ -531,6 +531,7 @@ export const report: Dict = {
     rep_bl_more: 'Show {n} more',
     rep_bl_none: 'None',
     rep_bl_owners_title: 'Who has them',
+    rep_bl_rows_title: 'Tickets over SLA or with time left',
     rep_bl_filter_hint: 'Click to filter the page',
     rep_bl_filter_clear: 'Click again to clear the filter',
     rep_bl_cats_title: 'By category',
