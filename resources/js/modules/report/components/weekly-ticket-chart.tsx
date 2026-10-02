@@ -1,6 +1,6 @@
 /**
  * Paired weekly bars — opened (brand) vs closed (green) — on one shared scale with a faint
- * grid, plus the "ค้างสะสม" line (red, its own scale on the right axis): tickets still open at
+ * grid (labelled lines at 0, half and top, dashed unlabelled guides between them), plus the "ค้างสะสม" line (red, its own scale on the right axis): tickets still open at
  * each week's end, labelled at its last point. Every bar is labelled by the first day it really
  * covers — the range start for a week that began before it, else the Monday — and thinned only
  * past 16 weeks; its <title> gives the days it spans and its three numbers. Hand-rolled SVG like shared/components/month-bar-chart.tsx: a dozen bars need no
@@ -81,6 +81,8 @@ function WeeklyBars({ weeks, range }: ChartProps) {
     const max = niceMax(peak);
     const backlogMax = niceMax(backlogPeak);
     const ticks = [0, max / 2, max];
+    /** Faint unlabelled guides halfway between the labelled ones, so a bar's height reads closer. */
+    const minorTicks = [max / 4, (max * 3) / 4];
     const cw = W - PAD.l - PAD.r;
     const ch = H - PAD.t - PAD.b;
     const gw = cw / weeks.length;
@@ -98,6 +100,19 @@ function WeeklyBars({ weeks, range }: ChartProps) {
         // laid over it, so its drawing never feeds back into the height it is measured from.
         <div ref={box} className="relative w-full flex-1" style={{ minHeight: size ? (size.width * MIN_H) / W : undefined }}>
             <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" role="img" aria-label={t('rep_weekly_title')}>
+                {minorTicks.map((v) => (
+                    <line
+                        key={`minor-${v}`}
+                        x1={PAD.l}
+                        x2={W - PAD.r}
+                        y1={y(v)}
+                        y2={y(v)}
+                        className="stroke-border"
+                        strokeOpacity={0.5}
+                        strokeDasharray="3 4"
+                        strokeWidth={1}
+                    />
+                ))}
                 {ticks.map((v, i) => (
                     <g key={v}>
                         <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} className="stroke-border" strokeWidth={1} />
