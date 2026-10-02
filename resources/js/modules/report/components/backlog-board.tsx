@@ -18,9 +18,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useBacklogBoard } from '../hooks/use-reports';
-import type { BacklogBoardTicket, TabularFilters } from '../types';
+import type { BacklogBoardTicket, ChartSeries, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
-import { fold } from './tabular-charts';
+import { FILL } from './chart-tones';
+import { fold, StackBar } from './tabular-charts';
 import { categoryKey, priorityKey } from './ticket-labels';
 
 export type SlaState = 'breached' | 'due_soon' | 'on_track';
@@ -337,6 +338,12 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
     );
 }
 
+/** The category card's two parts — past SLA, and the rest — in the report palette. */
+const CATEGORY_SERIES: ChartSeries[] = [
+    { key: 'breached', label_key: 'rep_sla_breached', tone: 'red' },
+    { key: 'not_breached', label_key: 'rep_sla_not_breached', tone: 'blue' },
+];
+
 function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
     const t = useT();
     const by = new Map<string, { n: number; breached: number }>();
@@ -349,7 +356,6 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
     }
     const rows = [...by.entries()].sort(([, a], [, b]) => b.n - a.n);
     const max = Math.max(1, ...rows.map(([, r]) => r.n));
-    const width = (v: number) => `${(v / max) * 100}%`;
 
     return (
         <Card className="overflow-hidden">
@@ -357,8 +363,8 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 title={t('rep_bl_cats_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone="bg-red-500">{t('rep_sla_breached')}</Swatch>
-                        <Swatch tone="bg-brand/70">{t('rep_sla_not_breached')}</Swatch>
+                        <Swatch tone={FILL.red}>{t('rep_sla_breached')}</Swatch>
+                        <Swatch tone={FILL.blue}>{t('rep_sla_not_breached')}</Swatch>
                     </span>
                 }
             />
@@ -369,11 +375,9 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
                     {rows.map(([category, r]) => (
                         <div key={category} className="grid grid-cols-[92px_minmax(0,1fr)_40px] items-center gap-2.5 text-sm">
                             <span className="truncate">{t(categoryKey(category))}</span>
-                            {/* The part past SLA in red, the rest in the brand blue, against the largest category. */}
-                            <span className="bg-muted flex h-2.5 overflow-hidden rounded-full">
-                                <span className="block h-full bg-red-500" style={{ width: width(r.breached) }} />
-                                <span className="bg-brand/70 block h-full" style={{ width: width(r.n - r.breached) }} />
-                            </span>
+                            {/* Past SLA in red, the rest in blue, each count over its part (as the staff card),
+                                the bar's length against the largest category. */}
+                            <StackBar values={{ breached: r.breached, not_breached: r.n - r.breached }} series={CATEGORY_SERIES} scale={max} />
                             <span className="text-right font-mono text-xs font-bold">{r.n}</span>
                         </div>
                     ))}
