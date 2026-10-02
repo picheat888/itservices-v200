@@ -48,17 +48,33 @@ const TREND_TONE: Record<string, string> = { tickets_open: 'text-red-500', sla_r
 const GOOD = 'text-emerald-600 dark:text-emerald-400';
 const BAD = 'text-red-600 dark:text-red-400';
 
-/** "▲ 6" / "▼ 1.8 pt" — coloured by whether the move is good for this figure. */
-function Delta({ tile }: { tile: SnapshotTile }) {
+/**
+ * What a tile's change is measured from, so "▲ 3" never stands alone: the open count against
+ * the start of the period (ReportSnapshotService trend), the SLA rate against the period before.
+ */
+const DELTA_BASE: Record<string, 'since' | 'prev'> = { tickets_open: 'since', sla_rate: 'prev' };
+
+/** "▲ 6 จากต้นเดือน" / "▼ 1.8% จากเดือนก่อน" — coloured by whether the move is good for this figure. */
+function Delta({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) {
     const t = useT();
     const value = tile.delta ?? 0;
-    if (value === 0) return <span className="text-muted-foreground font-semibold">{t('rep_snap_same')}</span>;
+    const base = <span className="text-muted-foreground">{t(`rep_snap_${DELTA_BASE[tile.key] ?? 'prev'}_${period}`)}</span>;
+    if (value === 0) {
+        return (
+            <span className="min-w-0 truncate">
+                <span className="text-muted-foreground font-semibold">{t('rep_snap_same')}</span> {base}
+            </span>
+        );
+    }
     const good = value > 0 === (UP_IS_GOOD[tile.key] ?? true);
     const size = tile.unit === 'percent' ? t('rep_snap_delta_pt').replace('{n}', String(Math.abs(value))) : String(Math.abs(value));
 
     return (
-        <span className={cn('font-semibold', good ? GOOD : BAD)}>
-            {value > 0 ? '▲' : '▼'} {size}
+        <span className="min-w-0 truncate">
+            <span className={cn('font-semibold', good ? GOOD : BAD)}>
+                {value > 0 ? '▲' : '▼'} {size}
+            </span>{' '}
+            {base}
         </span>
     );
 }
@@ -99,7 +115,7 @@ function Pill({ tone, children }: { tone: 'amber' | 'red'; children: React.React
     );
 }
 
-function Footer({ tile, periodWords }: { tile: SnapshotTile; periodWords: string }) {
+function Footer({ tile, period, periodWords }: { tile: SnapshotTile; period: SnapshotPeriod; periodWords: string }) {
     const t = useT();
     const sub = tile.secondary;
     const subText =
@@ -111,7 +127,7 @@ function Footer({ tile, periodWords }: { tile: SnapshotTile; periodWords: string
             if (tile.value === null) return <span className="text-muted-foreground">{t(`rep_snap_none_${tile.key}`)}</span>;
             return (
                 <>
-                    {tile.delta !== null ? <Delta tile={tile} /> : <span />}
+                    {tile.delta !== null ? <Delta tile={tile} period={period} /> : <span />}
                     {tile.trend && <Sparkline values={tile.trend} className={TREND_TONE[tile.key]} />}
                 </>
             );
@@ -154,7 +170,7 @@ function Tile({ tile, period, hasRange }: { tile: SnapshotTile; period: Snapshot
                 {beside && <small className={cn('truncate font-sans text-xs font-semibold', BAD)}>{beside}</small>}
             </span>
             <span className="flex min-h-5 items-center justify-between gap-1.5 text-[11.5px]">
-                <Footer tile={tile} periodWords={periodWords} />
+                <Footer tile={tile} period={period} periodWords={periodWords} />
             </span>
         </Link>
     );
