@@ -1,9 +1,12 @@
 /**
  * Generic export dialog shared by every report page: pick Excel or PDF, then queue the
  * caller's own export (ticket overview or a tabular report). Centered focus dialog
- * (FocusDialogHeader) per the app's dialog standard. The dialog owns the format choice,
- * the PDF-cap note and the "file is being built" toast (which opens the Report Center,
- * where "ไฟล์ส่งออกของฉัน" lists it); the caller owns the mutation (isPending/error/reset).
+ * (FocusDialogHeader) per the app's dialog standard. One summary box says what the file holds —
+ * the row count, the dates and filters as chips (`filterChips`, from schedule-filter-summary.ts),
+ * the column / PDF-cap notes — with the "made in the background" line under it. The format
+ * cards are a radio group to assistive tech. The dialog owns the format choice and the toast
+ * (clicking it opens the Report Center, where "ไฟล์ส่งออกของฉัน" lists the file); the caller
+ * owns the mutation (isPending/error/reset).
  */
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
@@ -13,9 +16,10 @@ import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
 import { Download, Info, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ExportFormat } from '../types';
+import type { FilterChip } from './schedule-filter-summary';
 
 /** Mirrors TabularReportExporter::PDF_ROW_LIMIT (and TicketOverviewExporter's own copy). */
 const PDF_ROW_LIMIT = 1000;
@@ -28,6 +32,7 @@ export function ExportReportDialog({
     total,
     formats,
     note,
+    filterChips,
     onExport,
     isPending,
     error,
@@ -41,6 +46,8 @@ export function ExportReportDialog({
     formats: ExportFormat[];
     /** One extra line under the scope note (e.g. "only the 5 columns shown"). */
     note?: string;
+    /** The dates and filters the file is built with; [] = the whole report. */
+    filterChips?: FilterChip[];
     onExport: (format: ExportFormat) => Promise<unknown>;
     isPending: boolean;
     /** The mutation's error — a refusal (e.g. too many files waiting) is worded from its reason. */
@@ -50,6 +57,7 @@ export function ExportReportDialog({
     const t = useT();
     const navigate = useNavigate();
     const [format, setFormat] = useState<ExportFormat>(formats[0] ?? 'xlsx');
+    const formatLabelId = useId();
 
     const handleOpenChange = (next: boolean) => {
         if (!next) onReset();
@@ -88,11 +96,15 @@ export function ExportReportDialog({
                     srDescription={t('rep_export_eyebrow')}
                 />
                 <div className="space-y-4 px-6 pb-2">
-                    <div className="text-muted-foreground text-xs font-semibold">{t('rep_export_format')}</div>
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div id={formatLabelId} className="text-muted-foreground text-xs font-semibold">
+                        {t('rep_export_format')}
+                    </div>
+                    <div role="radiogroup" aria-labelledby={formatLabelId} className="grid gap-3 sm:grid-cols-2">
                         {choices.map((c) => (
                             <ChoiceCard
                                 key={c.value}
+                                role="radio"
+                                aria-checked={format === c.value}
                                 selected={format === c.value}
                                 onClick={() => {
                                     onReset();
@@ -112,16 +124,32 @@ export function ExportReportDialog({
                             </ChoiceCard>
                         ))}
                     </div>
-                    <div className="bg-brand/5 rounded-lg px-3 py-2 text-sm">
-                        {t('rep_export_scope').replace('{n}', String(total))}
-                        {note && <div className="text-muted-foreground mt-1 text-xs">{note}</div>}
+                    {/* One box for what the file holds: how many rows, which dates and filters, then the caveats. */}
+                    <div className="bg-brand/5 space-y-2 rounded-lg px-3 py-2.5 text-sm">
+                        <div className="font-medium">{t('rep_export_scope').replace('{n}', total.toLocaleString())}</div>
+                        {filterChips && (
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">{t('rep_schedule_filters_label')}</span>
+                                {filterChips.length === 0 ? (
+                                    <span className="text-muted-foreground">{t('rep_export_filters_none')}</span>
+                                ) : (
+                                    filterChips.map((chip) => (
+                                        <span key={chip.label} className="bg-background border-border rounded-full border px-2 py-0.5">
+                                            <span className="text-muted-foreground">{chip.label}:</span>{' '}
+                                            <span className="font-medium">{chip.value}</span>
+                                        </span>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                        {note && <div className="text-muted-foreground text-xs">{note}</div>}
                         {format === 'pdf' && total > PDF_ROW_LIMIT && (
-                            <div className="text-muted-foreground mt-1 text-xs">{t('rep_export_pdf_cap').replace('{n}', String(PDF_ROW_LIMIT))}</div>
+                            <div className="text-muted-foreground text-xs">{t('rep_export_pdf_cap').replace('{n}', String(PDF_ROW_LIMIT))}</div>
                         )}
                     </div>
-                    {/* Said before the click, as in the design — the file is not what comes back from the button. */}
-                    <div className="flex gap-2 rounded-lg bg-blue-500/10 px-3 py-2 text-sm">
-                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                    {/* Said before the click — the file is not what comes back from the button. */}
+                    <div className="text-muted-foreground flex items-start gap-2 text-xs">
+                        <Info className="mt-px h-3.5 w-3.5 shrink-0" />
                         <span>{t('rep_export_queue_note')}</span>
                     </div>
                     {error != null && <div className="text-destructive text-sm">{refusalText(error, t, 'rep_export_refusal_')}</div>}

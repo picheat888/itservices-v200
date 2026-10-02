@@ -4091,3 +4091,13 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: radio/aria ถูก, ch
 ## ภาษาอังกฤษหน้า Ticket & SLA ใช้คำง่ายขึ้น (2026-10-02)
 
 ผู้ใช้ขอให้ใช้คำง่าย ๆ — แก้เฉพาะ `lang/en/report.ts`: "Volume … SLA compliance" → "Tickets opened, time to fix and SLA results…" · "Open right now" → "Open now" · "past SLA" → "over SLA" · "vs {n} in the previous period" → "from {n} last period" · "Average resolve time" → "Average time to fix" · คอลัมน์ "Resolution" → "Time to fix" · "Outcome" → "Result" · "{n} open" (หัวการ์ด Ticket ที่ค้าง) → "Total {n}" · "Share within this group" → "Shown on its own scale" · "The 'to' date is before the 'from' date" → "The end date is before the start date" · tooltip ใช้ประโยคสั้นลง
+
+## Dialog "ส่งออกรายงาน": รีวิว UX/UI + ภาษา (2026-10-02)
+
+- **บอกว่าไฟล์มีอะไร** — กล่องสรุปเดียว: "{n} รายการ" + chip ช่วงวันที่/ตัวกรอง (`tabularFilterChips`/`ticketFilterChips` ใหม่ `withDates` — export ใช้วันที่ตามที่ตั้ง ไม่เลื่อนเหมือนตั้งเวลาส่ง; วันเดียว `as_of` แสดงเป็นวันที่เดียว) + หมายเหตุคอลัมน์/PDF จำกัดแถว · หน้า Ticket & SLA เลิกใช้ subtitle ช่วงวันที่ดิบ "2026-08-01 – 2026-10-02" (ไปอยู่ใน chip "ช่วงวันที่: 1 ส.ค. – 2 ต.ค. 2026") ทั้งสองหน้าจึงแสดงเหมือนกัน
+- **ไม่ซ้อนกล่อง** — หมายเหตุ "สร้างเบื้องหลัง" ลดเป็นบรรทัดเล็กสีเทาใต้กล่องสรุป (เดิมเป็นกล่องสีน้ำเงินอีกกล่อง)
+- **Accessibility** — การ์ด Excel/PDF เป็น `radiogroup` + `aria-checked`
+- **ภาษา (ไทย)** — หมายเหตุก่อนกด "ระบบกำลังสร้างไฟล์ให้" → "ระบบจะสร้างไฟล์ให้เบื้องหลัง…" (ยังไม่ได้กด) · การ์ด Excel "ทุกแถว พร้อมชีตสรุป เอาไปกรองต่อได้" · PDF "สรุปและตาราง พร้อมพิมพ์" (เดิมตัดคำ "ส่งผู้|บริหาร") · toast บอกที่อยู่ (เมนู "รายงาน" หัวข้อ "ไฟล์ส่งออกของฉัน") และ "กดเพื่อไปดู"
+- **ภาษา (อังกฤษ คำง่าย)** — "Every row and a summary sheet. Easy to filter." · "Summary and table, ready to print" · "We make the file in the background. You can close this…" · "{n} rows" · PDF cap แยกเป็น 2 ประโยค
+
+tsc + eslint ผ่าน · ตรวจใน Chrome (DOM) ทั้งหน้า Ticket & SLA และ Ticket ค้างและเกิน SLA · ไม่ได้กดสร้างไฟล์จริง
