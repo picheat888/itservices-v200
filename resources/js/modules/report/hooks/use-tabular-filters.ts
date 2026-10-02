@@ -1,6 +1,6 @@
 /**
  * Filter state of a generic tabular report, remembered per browser in localStorage
- * (the app's list-filter convention; tabs go in the URL, filters do not). Keyed per
+ * (the app's list-filter convention) and mirrored into the URL for sharing (below). Keyed per
  * report (`report.${key}.filters`) so different reports don't clobber each other's
  * saved filters — mirrors `use-ticket-report-filters.ts`, generalized to whatever
  * filter set the report's own definition declares.
@@ -12,10 +12,13 @@
  * no `{}` render, no "seed effect" running a tick after the first fetch already fired
  * with no filters, and no risk of report A's filters bleeding into report B.
  *
- * A link from the Report Center carries its period as ?from=&to= (report-catalogue.tsx
- * reportRoute). A report with both a `from` and a `to` filter opens on those dates for this
- * visit; they are taken off the URL (by every report, so none keeps a stray query) and are not
- * remembered as the reader's pick unless they change the dates on the page.
+ * The filters also live in the URL, so a link or bookmark opens on exactly what the sender saw:
+ * the URL always holds the current ones (dates always, others when off their default),
+ * rewritten with `replace` as they change. A URL with any of this report's filters wins outright
+ * (missing ones mean their default, not the remembered value); a URL with none (the menu) opens on
+ * the remembered ones. Filters that came in a URL are not remembered as the reader's own until
+ * they change one — same rules as use-ticket-report-filters.ts. Report Center links add the hub's
+ * period as ?from=&to= (report-catalogue.tsx reportRoute).
  */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -72,43 +75,82 @@ function toStore(definition: TabularDefinition, filters: TabularFilters): Tabula
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** The dates a Report Center link brought — only for a report that has both, and in order. */
-function fromLink(definition: TabularDefinition, params: URLSearchParams): { from: string; to: string } | null {
-    const names = new Set(definition.filters.filter((f) => f.type === 'date').map((f) => f.name));
-    const from = params.get('from') ?? '';
-    const to = params.get('to') ?? '';
-    if (!names.has('from') || !names.has('to') || !ISO_DATE.test(from) || !ISO_DATE.test(to) || from > to) return null;
-    return { from, to };
+/**
+ * The filters a URL carries, checked against the definition as stored ones are; null when it
+ * carries none of this report's filters. An empty value (`within=`) means "ทั้งหมด" for a
+ * filter whose default is not; a missing one means its default.
+ */
+function fromUrl(definition: TabularDefinition, params: URLSearchParams): TabularFilters | null {
+    if (!definition.filters.some((f) => params.has(f.name))) return null;
+    const filters = defaultsFrom(definition);
+    for (const filter of definition.filters) {
+        const value = params.get(filter.name);
+        if (value === null) continue;
+        if (value === '') {
+            filters[filter.name] = null;
+        } else if (filter.type === 'date') {
+            if (ISO_DATE.test(value)) filters[filter.name] = value;
+        } else if (filter.type === 'select') {
+            const option = filter.options.find((o) => String(o.value) === value);
+            if (option) filters[filter.name] = option.value;
+        } else {
+            filters[filter.name] = value;
+        }
+    }
+    return filters;
+}
+
+/** The filters as URL params: dates always, anything else only when it differs from its default. */
+function toUrl(definition: TabularDefinition, filters: TabularFilters): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const filter of definition.filters) {
+        const value = filters[filter.name];
+        if (filter.type === 'date') {
+            if (value !== null && value !== undefined && value !== '') out[filter.name] = String(value);
+        } else if ((value ?? null) !== filter.default) {
+            out[filter.name] = value === null || value === undefined ? '' : String(value);
+        }
+    }
+    return out;
 }
 
 export function useTabularFilters(definition: TabularDefinition) {
     const [params, setParams] = useSearchParams();
-    const [linked] = useState(() => fromLink(definition, params));
-    const [filters, setFilters] = useState<TabularFilters>(() => ({ ...load(definition), ...(linked ?? {}) }));
+    // What a link brought, kept so those filters are not saved as the reader's own pick.
+    const [linked] = useState(() => fromUrl(definition, params));
+    const [filters, setFilters] = useState<TabularFilters>(() => linked ?? load(definition));
+    const names = definition.filters.map((f) => f.name);
 
-    // Once read, the link's dates leave the URL — a reload shows what the reader has since picked.
+    // Mirror the filters into the URL so it can be shared or bookmarked as it stands. Only this
+    // report's own names are touched — the charts' ?view= and any stray ?from= of a report that
+    // has no such filter are left to themselves / cleared.
     useEffect(() => {
-        if (!params.has('from') && !params.has('to')) return;
+        const wanted = toUrl(definition, filters);
+        const owned = [...new Set([...names, 'from', 'to'])];
+        const current = Object.fromEntries(owned.filter((n) => params.has(n)).map((n) => [n, params.get(n) as string]));
+        const sorted = (o: Record<string, string>) =>
+            JSON.stringify(
+                Object.keys(o)
+                    .sort()
+                    .map((k) => [k, o[k]]),
+            );
+        if (sorted(current) === sorted(wanted)) return;
         setParams(
             (next) => {
-                next.delete('from');
-                next.delete('to');
+                owned.forEach((n) => next.delete(n));
+                Object.entries(wanted).forEach(([n, v]) => next.set(n, v));
                 return next;
             },
             { replace: true },
         );
-    }, [params, setParams]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- names follow the definition
+    }, [definition, filters, params, setParams]);
 
     useEffect(() => {
-        const key = `report.${definition.key}.filters`;
-        let stored = toStore(definition, filters);
-        // Still on the dates the link brought: remember everything else, keep the old dates.
-        if (linked !== null && filters.from === linked.from && filters.to === linked.to) {
-            const previous = load(definition);
-            stored = toStore(definition, { ...filters, from: previous.from, to: previous.to });
-        }
+        // Still exactly what a link brought: leave the reader's remembered filters as they were.
+        if (linked !== null && JSON.stringify(toUrl(definition, filters)) === JSON.stringify(toUrl(definition, linked))) return;
         try {
-            localStorage.setItem(key, JSON.stringify(stored));
+            localStorage.setItem(`report.${definition.key}.filters`, JSON.stringify(toStore(definition, filters)));
         } catch {
             // Storage blocked (private window) — filters still work for this visit.
         }

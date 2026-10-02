@@ -1,16 +1,18 @@
 /**
- * Filter state of the Ticket & SLA report, remembered per browser in localStorage
- * (the app's list-filter convention; tabs go in the URL, filters do not).
+ * Filter state of the Ticket & SLA report — in the URL, so a link or bookmark opens on exactly
+ * what the sender saw, and remembered per browser in localStorage for a visit that brings none.
  *
- * The date range is remembered only when the reader picked it. Left on its default (about a
- * quarter up to today) it is not stored, so it rolls forward with the calendar on the next
- * visit instead of freezing on the day the page was first opened — the same rule the tabular
- * reports follow (use-tabular-filters.ts).
- *
- * A link from the Report Center carries its period as ?from=&to= (report-catalogue.tsx
- * reportRoute). Those dates open the page for this visit and are then taken off the URL; they
- * are not remembered as the reader's own pick — a later visit still rolls with the calendar, or
- * keeps the range they chose themselves — unless they change the dates on the page.
+ * - The URL always holds the current filters (?from=&to=, plus categories=a,b / priority /
+ *   department_id / assignee_id when set), rewritten with `replace` as they change, so the
+ *   address bar can be copied at any moment and Back is not flooded.
+ * - A URL with any of them wins outright: missing ones mean "all", not the remembered value,
+ *   so a shared link shows the same numbers for everyone. Report Center links use this too
+ *   (report-catalogue.tsx reportRoute adds the hub's period).
+ * - A URL without any (the menu) opens on the remembered filters.
+ * - Filters that came in a URL are not remembered as the reader's own until they change one on
+ *   the page; and a date range on its default (about a quarter up to today) is never stored, so
+ *   it rolls forward with the calendar — the same rules as the tabular reports
+ *   (use-tabular-filters.ts).
  */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -72,55 +74,69 @@ export function ticketFiltersToStore(filters: TicketReportFilters, today = new D
     return from === defaults.from && to === defaults.to ? rest : filters;
 }
 
-/** The dates a Report Center link brought, when both are real and in order. */
-function fromLink(params: URLSearchParams): { from: string; to: string } | null {
+const URL_NAMES = ['from', 'to', 'categories', 'priority', 'department_id', 'assignee_id'];
+const ID = /^\d+$/;
+const SLUG = /^[a-z_]+$/;
+
+/** The filters a URL carries, each checked on its own; null when it carries none. */
+function fromUrl(params: URLSearchParams): TicketReportFilters | null {
+    if (!URL_NAMES.some((name) => params.has(name))) return null;
+    const filters = defaultTicketReportFilters();
     const from = params.get('from');
     const to = params.get('to');
-    return isDate(from) && isDate(to) && (from as string) <= (to as string) ? { from: from as string, to: to as string } : null;
+    if (isDate(from) && isDate(to) && (from as string) <= (to as string)) {
+        filters.from = from as string;
+        filters.to = to as string;
+    }
+    const categories = (params.get('categories') ?? '').split(',').filter((c) => SLUG.test(c));
+    if (categories.length > 0) filters.categories = categories;
+    const priority = params.get('priority') ?? '';
+    if (SLUG.test(priority)) filters.priority = priority;
+    const department = params.get('department_id') ?? '';
+    if (ID.test(department)) filters.department_id = Number(department);
+    const assignee = params.get('assignee_id') ?? '';
+    if (ID.test(assignee)) filters.assignee_id = Number(assignee);
+    return filters;
 }
 
-/** The dates already remembered, so a linked visit can leave them as they were. */
-function storedDates(): Partial<TicketReportFilters> {
-    try {
-        const { from, to } = fromStorage(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
-        return from && to ? { from, to } : {};
-    } catch {
-        return {};
-    }
+/** The filters as URL params: the dates always, the rest only when they narrow the report. */
+function toUrl(filters: TicketReportFilters): Record<string, string> {
+    const out: Record<string, string> = { from: filters.from, to: filters.to };
+    if (filters.categories.length > 0) out.categories = filters.categories.join(',');
+    if (filters.priority) out.priority = filters.priority;
+    if (filters.department_id !== null) out.department_id = String(filters.department_id);
+    if (filters.assignee_id !== null) out.assignee_id = String(filters.assignee_id);
+    return out;
 }
+
+const sameFilters = (a: TicketReportFilters, b: TicketReportFilters) => JSON.stringify(toUrl(a)) === JSON.stringify(toUrl(b));
 
 export function useTicketReportFilters() {
     const [params, setParams] = useSearchParams();
-    const [linked] = useState(() => fromLink(params));
-    const [filters, setFilters] = useState<TicketReportFilters>(() => ({ ...load(), ...(linked ?? {}) }));
+    // What a link brought, kept so those filters are not saved as the reader's own pick.
+    const [linked] = useState(() => fromUrl(params));
+    const [filters, setFilters] = useState<TicketReportFilters>(() => linked ?? load());
 
-    // Once read, the link's dates leave the URL — a reload shows what the reader has since picked.
+    // Mirror the filters into the URL so it can be shared or bookmarked as it stands.
     useEffect(() => {
-        if (!params.has('from') && !params.has('to')) return;
+        const wanted = toUrl(filters);
+        const current = Object.fromEntries(URL_NAMES.filter((n) => params.has(n)).map((n) => [n, params.get(n) as string]));
+        if (JSON.stringify(current) === JSON.stringify(wanted)) return;
         setParams(
             (next) => {
-                next.delete('from');
-                next.delete('to');
+                URL_NAMES.forEach((n) => next.delete(n));
+                Object.entries(wanted).forEach(([n, v]) => next.set(n, v));
                 return next;
             },
             { replace: true },
         );
-    }, [params, setParams]);
+    }, [filters, params, setParams]);
 
     useEffect(() => {
-        // Still on the dates the link brought: remember everything else, keep the old dates.
-        const onLinkedDates = linked !== null && filters.from === linked.from && filters.to === linked.to;
-        const toStore = onLinkedDates
-            ? {
-                  categories: filters.categories,
-                  priority: filters.priority,
-                  department_id: filters.department_id,
-                  assignee_id: filters.assignee_id,
-                  ...storedDates(),
-              }
-            : ticketFiltersToStore(filters);
+        // Still exactly what a link brought: leave the reader's remembered filters as they were.
+        if (linked !== null && sameFilters(filters, linked)) return;
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(ticketFiltersToStore(filters)));
         } catch {
             // Storage blocked (private window) — filters still work for this visit.
         }
