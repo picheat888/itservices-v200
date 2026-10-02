@@ -8,7 +8,6 @@ import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Download } from 'lucide-react';
@@ -17,6 +16,7 @@ import { useParams } from 'react-router-dom';
 import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { ReportHeader } from '../components/report-header';
+import { DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from '../components/report-skeletons';
 import { ScheduleReportDialog, scheduleCoverage } from '../components/schedule-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
@@ -88,7 +88,8 @@ function TabularReportRows({
 
     return (
         <div className="space-y-4">
-            {data && <SummaryStrip items={data.summary} />}
+            {/* Tiles pulse until the first rows arrive, so the table does not jump down when they do. */}
+            {data ? <SummaryStrip items={data.summary} /> : <KpiRowSkeleton count={4} className="lg:grid-cols-4" />}
             <DataTable
                 columns={columns}
                 rows={data?.data ?? []}
@@ -204,13 +205,10 @@ export default function TabularReportPage() {
                 <div className="space-y-4">
                     {/* The heading shows at once; its actions arrive with the definition. */}
                     <ReportHeader title={t(`rep_${stem}_title`)} description={t(`rep_${stem}_desc`)} />
-                    <Skeleton className="h-16 w-full" />
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                        {Array.from({ length: 4 }, (_, i) => (
-                            <Skeleton key={i} className="h-24" />
-                        ))}
-                    </div>
-                    <Skeleton className="h-72" />
+                    {/* Filters, summary tiles and table in their own shapes. */}
+                    <FilterBarSkeleton fields={4} />
+                    <KpiRowSkeleton count={4} className="lg:grid-cols-4" />
+                    <DataTableSkeleton />
                 </div>
             ) : (
                 <TabularReportBody key={definition.key} reportKey={key} stem={stem} definition={definition} />
