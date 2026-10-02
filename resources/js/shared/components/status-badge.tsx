@@ -11,8 +11,9 @@ const tones: Record<Tone, string> = {
     gray: 'bg-muted text-muted-foreground',
 };
 
-// Solid dot color per tone — same hues the badge tones use for their text/dot.
-const toneDots: Record<Tone, string> = {
+// Solid dot color per tone — same hues the badge tones use for their text/dot. Exported so a
+// plain dot elsewhere (a report board's priority dots) matches the pills exactly.
+export const toneDots: Record<Tone, string> = {
     blue: 'bg-blue-500',
     green: 'bg-emerald-500',
     amber: 'bg-amber-500',

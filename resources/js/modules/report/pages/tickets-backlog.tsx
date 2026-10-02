@@ -12,6 +12,7 @@ import { useT } from '@/lang';
 import { BacklogBoardCards, BacklogSlaSegments, backlogRowClass } from '../components/backlog-board';
 import { TabularReportView } from '../components/tabular-report-view';
 import { TicketPriorityBadge, TicketStatusBadge } from '../components/ticket-badges';
+import type { TabularFilters } from '../types';
 
 /** "39 วัน" — or "5 ชม." under a day — rather than 39.4 days, as the time-left pills count. */
 function AgeCell({ days }: { days: number | null }) {
@@ -22,6 +23,11 @@ function AgeCell({ days }: { days: number | null }) {
             ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(days * 24))))
             : t('rep_days_n').replace('{n}', String(Math.round(days)));
     return <span className="font-mono">{text}</span>;
+}
+
+/** The table card names what it holds under the SLA segment pressed: all, over SLA, due within 24 h, not due yet. */
+function backlogRowsTitle(filters: TabularFilters) {
+    return filters.sla ? `rep_bl_rows_${filters.sla}` : 'rep_bl_rows_title';
 }
 
 /** Priority and status wear the same pills as the Ticket & SLA page's ticket list; age reads in days. */
@@ -41,7 +47,7 @@ export default function TicketsBacklogReportPage() {
                 hiddenFilters: ['sla', 'search'],
                 filterLead: ({ filters, patch }) => <BacklogSlaSegments filters={filters} patch={patch} />,
                 beforeTable: ({ filters, patch }) => <BacklogBoardCards filters={filters} patch={patch} />,
-                rowsTitle: 'rep_bl_rows_title',
+                rowsTitle: backlogRowsTitle,
                 rowClassName: backlogRowClass,
                 renderCell: backlogCell,
             }}
