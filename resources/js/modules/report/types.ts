@@ -208,6 +208,8 @@ export interface SummaryItem {
     tone: 'amber' | 'red' | 'green' | null;
     /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping). */
     format: 'count' | 'money';
+    /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
+    split?: { key: string; label_key: string; value: number }[];
 }
 
 /** A chart colour, drawn by tabular-charts.tsx. */
@@ -231,7 +233,8 @@ export type TabularChart =
           type: 'stacks';
           key: string;
           title_key: string;
-          legend: ChartSeries[];
+          /** Ways to split each row's bar (e.g. by status, by source); the first shows first. */
+          views: { key: string; label_key: string; series: ChartSeries[] }[];
           rows: { label: ChartLabel; values: Record<string, number>; total: number }[];
       }
     | {
