@@ -194,6 +194,8 @@ export interface TabularDefinition {
     columns: TabularColumnDef[];
     /** The rows response carries charts — the page holds their place while it loads. */
     has_charts: boolean;
+    /** False when the charts already say what the table would — the page then lists no rows. */
+    shows_table: boolean;
 }
 
 /** Filter values keyed by `TabularFilterDef.name`; null/'' means "not set". */

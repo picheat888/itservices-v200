@@ -160,9 +160,19 @@ abstract class TabularReport
     }
 
     /**
+     * Whether the page lists the rows under the charts. A report whose charts already say what
+     * its table would (one row per department, its status mix) leaves it out on screen; the
+     * columns still shape the file export.
+     */
+    public function showsTable(): bool
+    {
+        return true;
+    }
+
+    /**
      * What the generic page needs to draw this report.
      *
-     * @return array{key: string, filters: list<array<string, mixed>>, columns: list<array<string, mixed>>, has_charts: bool}
+     * @return array{key: string, filters: list<array<string, mixed>>, columns: list<array<string, mixed>>, has_charts: bool, shows_table: bool}
      */
     public function definition(): array
     {
@@ -171,6 +181,7 @@ abstract class TabularReport
             'filters' => array_map(fn (ReportFilter $f) => $f->toArray(), $this->filters()),
             'columns' => array_map(fn (ReportColumn $c) => $c->toArray(), $this->columns()),
             'has_charts' => $this->hasCharts(),
+            'shows_table' => $this->showsTable(),
         ];
     }
 

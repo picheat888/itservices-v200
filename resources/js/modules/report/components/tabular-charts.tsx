@@ -1,7 +1,8 @@
 /**
  * Charts a tabular report draws above its table (TabularRows.charts), laid out as the design's
  * asset screen: the 'stacks' chart in the wide left card — one row per department, its status
- * mix as a stacked bar against the largest row, the count after it — and, in the right card,
+ * mix as a stacked bar against the largest row with each piece's count over it, the row total
+ * after it — and, in the right card,
  * the 'donut' (shares of the whole, a headline percent in its hole, a legend with counts and
  * shares) over the 'bars'. Used by pages/tabular-report.tsx; ChartsSkeleton holds the place
  * while rows load.
@@ -25,6 +26,16 @@ const FILL: Record<ChartTone, string> = {
     amber: 'bg-amber-500',
     red: 'bg-red-500',
     gray: 'bg-slate-400 dark:bg-slate-500',
+};
+/** Each tone as text, for the counts printed over a stacked bar. */
+const TEXT: Record<ChartTone, string> = {
+    green: 'text-emerald-600 dark:text-emerald-400',
+    blue: 'text-blue-600 dark:text-blue-400',
+    violet: 'text-violet-600 dark:text-violet-400',
+    orange: 'text-orange-600 dark:text-orange-400',
+    amber: 'text-amber-600 dark:text-amber-400',
+    red: 'text-red-600 dark:text-red-400',
+    gray: 'text-slate-500 dark:text-slate-400',
 };
 const STROKE: Record<ChartTone, string> = {
     green: 'stroke-emerald-500',
@@ -92,20 +103,41 @@ function StacksCard({ chart }: { chart: Stacks }) {
                             <span className="truncate" title={label(row.label)}>
                                 {label(row.label)}
                             </span>
-                            {/* Width against the largest row, so rows compare by size as well as mix. */}
-                            <div className="bg-muted flex h-3 overflow-hidden rounded-full">
-                                {chart.legend.map((s) => {
-                                    const value = row.values[s.key] ?? 0;
-                                    if (value === 0) return null;
-                                    return (
-                                        <span
-                                            key={s.key}
-                                            title={`${t(s.label_key)}: ${value}`}
-                                            className={cn('block h-full', FILL[s.tone])}
-                                            style={{ width: `${(value / max) * 100}%` }}
-                                        />
-                                    );
-                                })}
+                            {/* Width against the largest row, so rows compare by size as well as mix;
+                                each piece's count sits over it, centred, in its own colour. */}
+                            <div className="min-w-0">
+                                <div className="flex h-4 items-end">
+                                    {chart.legend.map((s) => {
+                                        const value = row.values[s.key] ?? 0;
+                                        if (value === 0) return null;
+                                        return (
+                                            <span
+                                                key={s.key}
+                                                className={cn(
+                                                    'flex shrink-0 justify-center overflow-visible font-mono text-[11px] leading-none font-semibold whitespace-nowrap',
+                                                    TEXT[s.tone],
+                                                )}
+                                                style={{ width: `${(value / max) * 100}%` }}
+                                            >
+                                                {value}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                                <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
+                                    {chart.legend.map((s) => {
+                                        const value = row.values[s.key] ?? 0;
+                                        if (value === 0) return null;
+                                        return (
+                                            <span
+                                                key={s.key}
+                                                title={`${t(s.label_key)}: ${value}`}
+                                                className={cn('block h-full', FILL[s.tone])}
+                                                style={{ width: `${(value / max) * 100}%` }}
+                                            />
+                                        );
+                                    })}
+                                </div>
                             </div>
                             <span className="text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
                         </div>
