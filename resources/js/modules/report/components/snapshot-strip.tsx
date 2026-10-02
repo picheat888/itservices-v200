@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import { useReportSnapshot } from '../hooks/use-reports';
 import type { SnapshotPeriod, SnapshotTile } from '../types';
 import { reportRoute } from './report-catalogue';
+import { periodRange } from './report-scope';
 
 const PERIODS: SnapshotPeriod[] = ['7d', 'month', 'quarter', 'year'];
 const STORAGE_KEY = 'reports.snapshot.period';
@@ -139,7 +140,8 @@ function Tile({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) 
 
     return (
         <Link
-            to={reportRoute({ key: tile.report_key })}
+            // Opens the report on the strip's own period, so it shows the days this number counts.
+            to={reportRoute({ key: tile.report_key }, periodRange(period))}
             className="bg-card hover:bg-accent focus-visible:ring-brand/30 flex min-w-0 flex-col gap-1 px-4 py-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
             <span className="text-muted-foreground truncate text-xs" title={label}>

@@ -1,7 +1,8 @@
 /**
  * One short line saying which slice of a report a file or a schedule holds — "ก.ย. 2026 ·
  * กรอง 2 อย่าง · 5 คอลัมน์" — built from the filters it was made with. Used by the Report
- * Center rail (my-exports.tsx) so two files of the same report can be told apart. Dates are
+ * Center rail (my-exports.tsx) so two files of the same report can be told apart — plus
+ * `periodRange`, the dates of the hub's period switch for its report links. Dates are
  * written short, as the design does ("ส.ค. 2026"): a whole calendar month by its name, any
  * other range as "1 ก.ค. – 25 ก.ย. 2026". Gregorian years in both languages, like the rest
  * of the app's dates.
@@ -56,4 +57,25 @@ export function reportScope(filters: Record<string, unknown>, columnsCount: numb
     if (columnsCount) parts.push(t('rep_scope_columns').replace('{n}', String(columnsCount)));
 
     return parts.length > 0 ? parts.join(' · ') : t('rep_scope_all');
+}
+
+/**
+ * The dates a Report Center period covers, worked out as ReportSnapshotService::range does:
+ * 7 days = today and the six before it; month / quarter / year = from its first day; all to
+ * today. Local dates, so a link from the hub opens a report on the very days its tiles count.
+ */
+export function periodRange(period: '7d' | 'month' | 'quarter' | 'year', today = new Date()): { from: string; to: string } {
+    const y = today.getFullYear();
+    const m = today.getMonth();
+    const start =
+        period === '7d'
+            ? new Date(y, m, today.getDate() - 6)
+            : period === 'quarter'
+              ? new Date(y, m - (m % 3), 1)
+              : period === 'year'
+                ? new Date(y, 0, 1)
+                : new Date(y, m, 1);
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    return { from: iso(start), to: iso(today) };
 }

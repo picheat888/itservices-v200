@@ -11,8 +11,14 @@
  * That way the `useState` initialiser below always has a real definition to seed from:
  * no `{}` render, no "seed effect" running a tick after the first fetch already fired
  * with no filters, and no risk of report A's filters bleeding into report B.
+ *
+ * A link from the Report Center carries its period as ?from=&to= (report-catalogue.tsx
+ * reportRoute). A report with both a `from` and a `to` filter opens on those dates for this
+ * visit; they are taken off the URL (by every report, so none keeps a stray query) and are not
+ * remembered as the reader's pick unless they change the dates on the page.
  */
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { TabularDefinition, TabularFilters } from '../types';
 
 function defaultsFrom(definition: TabularDefinition): TabularFilters {
@@ -64,16 +70,49 @@ function toStore(definition: TabularDefinition, filters: TabularFilters): Tabula
     return stored;
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The dates a Report Center link brought — only for a report that has both, and in order. */
+function fromLink(definition: TabularDefinition, params: URLSearchParams): { from: string; to: string } | null {
+    const names = new Set(definition.filters.filter((f) => f.type === 'date').map((f) => f.name));
+    const from = params.get('from') ?? '';
+    const to = params.get('to') ?? '';
+    if (!names.has('from') || !names.has('to') || !ISO_DATE.test(from) || !ISO_DATE.test(to) || from > to) return null;
+    return { from, to };
+}
+
 export function useTabularFilters(definition: TabularDefinition) {
-    const [filters, setFilters] = useState<TabularFilters>(() => load(definition));
+    const [params, setParams] = useSearchParams();
+    const [linked] = useState(() => fromLink(definition, params));
+    const [filters, setFilters] = useState<TabularFilters>(() => ({ ...load(definition), ...(linked ?? {}) }));
+
+    // Once read, the link's dates leave the URL — a reload shows what the reader has since picked.
+    useEffect(() => {
+        if (!params.has('from') && !params.has('to')) return;
+        setParams(
+            (next) => {
+                next.delete('from');
+                next.delete('to');
+                return next;
+            },
+            { replace: true },
+        );
+    }, [params, setParams]);
 
     useEffect(() => {
+        const key = `report.${definition.key}.filters`;
+        let stored = toStore(definition, filters);
+        // Still on the dates the link brought: remember everything else, keep the old dates.
+        if (linked !== null && filters.from === linked.from && filters.to === linked.to) {
+            const previous = load(definition);
+            stored = toStore(definition, { ...filters, from: previous.from, to: previous.to });
+        }
         try {
-            localStorage.setItem(`report.${definition.key}.filters`, JSON.stringify(toStore(definition, filters)));
+            localStorage.setItem(key, JSON.stringify(stored));
         } catch {
             // Storage blocked (private window) — filters still work for this visit.
         }
-    }, [definition, filters]);
+    }, [definition, filters, linked]);
 
     const patch = (next: TabularFilters) => setFilters((f) => ({ ...f, ...next }));
     const reset = () => setFilters(defaultsFrom(definition));
