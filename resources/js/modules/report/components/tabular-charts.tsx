@@ -78,7 +78,7 @@ function FoldToggle({ open, total, onToggle }: { open: boolean; total: number; o
             type="button"
             onClick={onToggle}
             aria-expanded={open}
-            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors"
+            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground mt-auto flex w-full items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors"
         >
             <Icon className="h-3.5 w-3.5" />
             {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', String(total))}
@@ -132,7 +132,7 @@ function StacksCard({ chart }: { chart: Stacks }) {
     const max = Math.max(1, ...rows.map((r) => r.total));
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="flex flex-1 flex-col overflow-hidden">
             <Heading
                 title={t(chart.title_key)}
                 sub={
@@ -300,17 +300,18 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
     const side = donuts.length + bars.length > 0;
 
     return (
-        <div className={cn('grid items-start gap-3', stacks.length > 0 && side && 'xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]')}>
+        <div className={cn('grid gap-3', stacks.length > 0 && side && 'xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]')}>
             {stacks.length > 0 && (
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                     {stacks.map((c) => (
                         <StacksCard key={c.key} chart={c} />
                     ))}
                 </div>
             )}
             {side && (
-                // One card, as the design's: the donut, then the bars under a ruled heading.
-                <Card className="overflow-hidden">
+                // One card, as the design's: the donut, then the bars under a ruled heading. Both cards
+                // stretch to the row, so their bottoms line up however long either list runs.
+                <Card className="flex flex-col overflow-hidden">
                     {donuts.map((c) => (
                         <DonutSection key={c.key} chart={c} />
                     ))}
@@ -326,7 +327,7 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
 /** The charts' shape while rows load: the wide card of rows beside the donut-and-bars card. */
 export function ChartsSkeleton() {
     return (
-        <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]" aria-hidden="true">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]" aria-hidden="true">
             <Card className="overflow-hidden">
                 <CardHeadingSkeleton />
                 <BarRowsSkeleton rows={6} />
