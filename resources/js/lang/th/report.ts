@@ -76,7 +76,7 @@ export const report: Dict = {
     rep_err_load_failed: 'โหลดรายงานไม่สำเร็จ ลองอีกครั้ง',
 
     // pages/ticket-overview.tsx — charts and breakdowns
-    rep_weekly_title: 'Ticket รายสัปดาห์',
+    rep_weekly_title: 'ภาพรวม Ticket',
     rep_weekly_opened: 'เปิดใหม่',
     rep_weekly_closed: 'ปิดแล้ว',
     rep_weekly_backlog: 'ค้างสะสม',

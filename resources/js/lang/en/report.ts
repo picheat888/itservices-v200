@@ -76,7 +76,7 @@ export const report: Dict = {
     rep_err_load_failed: 'The report could not be loaded. Try again.',
 
     // pages/ticket-overview.tsx — charts and breakdowns
-    rep_weekly_title: 'Tickets per week',
+    rep_weekly_title: 'Ticket overview',
     rep_weekly_opened: 'Opened',
     rep_weekly_closed: 'Closed',
     rep_weekly_backlog: 'Still open',
