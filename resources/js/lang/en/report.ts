@@ -142,6 +142,7 @@ export const report: Dict = {
     rep_rows_count: '{n} in all',
     rep_rows_title: 'Tickets',
     rep_col_no: 'No.',
+    rep_col_opened: 'Opened',
     rep_col_subject: 'Subject',
     rep_col_category: 'Category',
     rep_col_priority: 'Priority',

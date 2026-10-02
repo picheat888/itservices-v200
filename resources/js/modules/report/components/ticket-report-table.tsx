@@ -5,6 +5,7 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { formatDateTime } from '@/shared/lib/datetime';
 import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -38,6 +39,13 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
                 ) : (
                     <span className="font-mono text-xs">{r.ticket_no}</span>
                 ),
+        },
+        {
+            key: 'opened',
+            header: t('rep_col_opened'),
+            width: '140px',
+            className: 'whitespace-nowrap',
+            render: (r) => <span className="font-mono text-xs">{formatDateTime(r.created_at)}</span>,
         },
         {
             key: 'subject',
