@@ -2,6 +2,8 @@
  * Column picker of a tabular report: a "Columns" button (with how many are hidden) opening
  * the shared FilterPopover panel of checkboxes, one per column. What stays ticked is what
  * the table shows and what the Excel/PDF export carries. State lives in useHiddenColumns.
+ * Sits at the right of the rows card heading, so the trigger is the small size and the
+ * panel opens right-aligned under it.
  */
 import { useT } from '@/lang';
 import { FilterPopover } from '@/shared/components/filter-popover';
@@ -24,7 +26,7 @@ export function ColumnPicker({
     const lastVisible = hidden.length + 1 >= definition.columns.length;
 
     return (
-        <FilterPopover count={hidden.length} onClear={onShowAll} label={t('rep_columns')} icon={Columns3}>
+        <FilterPopover count={hidden.length} onClear={onShowAll} label={t('rep_columns')} icon={Columns3} size="sm" align="end">
             {() => (
                 <div className="space-y-1">
                     <p className="text-muted-foreground pb-1 text-xs">{t('rep_columns_hint')}</p>
