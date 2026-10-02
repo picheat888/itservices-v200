@@ -17,6 +17,8 @@ const PANEL_WIDTH = 288;
  *
  * `label` / `icon` rename the trigger and panel title for other "pick from a list" panels
  * (e.g. the report column picker); they default to "Filters" + the sliders icon.
+ * `size="sm"` shrinks the trigger to sit in a card heading; `align="end"` opens the panel
+ * right-aligned under it, for a trigger at the right edge of its row.
  */
 export function FilterPopover({
     count,
@@ -25,12 +27,18 @@ export function FilterPopover({
     resultCount,
     label,
     icon: Icon = SlidersHorizontal,
+    size = 'default',
+    align = 'start',
     children,
 }: {
     count: number;
     /** Trigger + panel title; defaults to the "Filters" string. */
     label?: string;
     icon?: LucideIcon;
+    /** Trigger size — `sm` for a card heading. */
+    size?: 'default' | 'sm';
+    /** Panel edge to line up with the trigger. */
+    align?: 'start' | 'end';
     /** Panel width in px — widen when the content lays out in multiple columns. */
     width?: number;
     /** Renders a "Clear all" button in the panel header (disabled while nothing is set). */
@@ -51,7 +59,7 @@ export function FilterPopover({
         if (!r) {
             return;
         }
-        const left = Math.min(r.left, window.innerWidth - width - 8);
+        const left = Math.min(align === 'end' ? r.right - width : r.left, window.innerWidth - width - 8);
         setPos({ top: r.bottom + 4, left: Math.max(8, left) });
     };
 
@@ -107,11 +115,12 @@ export function FilterPopover({
                 type="button"
                 onClick={toggle}
                 className={cn(
-                    'flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors',
+                    'flex items-center rounded-md border font-medium transition-colors',
+                    size === 'sm' ? 'bg-background h-8 gap-1.5 px-2.5 text-xs' : 'h-10 gap-2 px-3 text-sm',
                     count > 0 ? 'border-brand/50 bg-brand/5 text-brand' : 'border-input hover:bg-accent',
                 )}
             >
-                <Icon className="h-4 w-4" />
+                <Icon className={size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                 {label ?? t('filters')}
                 {count > 0 && (
                     <span className="bg-brand text-brand-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">

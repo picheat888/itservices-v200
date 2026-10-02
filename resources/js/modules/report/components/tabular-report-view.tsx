@@ -64,9 +64,12 @@ function TabularReportRows({
     showsTable,
     onTotalChange,
     extras,
+    columnPicker,
 }: {
     reportKey: string;
     extras: TabularReportExtras;
+    /** The column picker, shown at the right of the rows card heading. */
+    columnPicker: React.ReactNode;
     /** TabularDefinition.has_charts — holds the charts' place until the first rows arrive. */
     hasCharts: boolean;
     /** TabularDefinition.shows_table — a chart-led report lists no rows on screen. */
@@ -115,11 +118,16 @@ function TabularReportRows({
                 <Card className="overflow-hidden">
                     <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
                         <span className="text-sm font-semibold">{t('rep_rows_generic')}</span>
-                        {data && (
-                            <span className="text-muted-foreground text-xs">
-                                {t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString())}
-                            </span>
-                        )}
+                        {/* Row count, then the column picker past a thin divider — both are about this table. */}
+                        <div className="flex items-center gap-3">
+                            {data && (
+                                <span className="text-muted-foreground text-xs tabular-nums">
+                                    {t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString())}
+                                </span>
+                            )}
+                            <span aria-hidden className="bg-border h-5 w-px" />
+                            {columnPicker}
+                        </div>
                     </div>
                     <div className="p-5">
                         <DataTable
@@ -189,7 +197,6 @@ function TabularReportBody({
                 description={t(`rep_${stem}_desc`)}
                 actions={
                     <>
-                        {definition.shows_table && <ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
                         <Button variant="outline" onClick={() => setScheduleOpen(true)}>
                             <CalendarClock className="h-4 w-4" />
                             {t('rep_schedule')}
@@ -218,6 +225,7 @@ function TabularReportBody({
                 showsTable={definition.shows_table}
                 onTotalChange={setRowsTotal}
                 extras={extras}
+                columnPicker={<ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
             />
             <ExportReportDialog
                 open={exportOpen}
