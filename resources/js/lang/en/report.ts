@@ -83,7 +83,7 @@ export const report: Dict = {
     rep_weekly_backlog_end: '{n} open',
     rep_weekly_tip: '{week} · opened {opened} · closed {closed} · open {backlog}',
     rep_weekly_empty: 'No tickets in this period',
-    rep_sla_priority_title: 'SLA overview by priority',
+    rep_sla_priority_title: 'Cases closed within SLA by priority',
     rep_sla_priority_sub: 'Goal {n}%',
     rep_aging_title: 'Open tickets',
     rep_aging_total: '{n} open',
