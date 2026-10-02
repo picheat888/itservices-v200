@@ -166,8 +166,10 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
     const exportMut = useExportTabular();
     const [scheduleOpen, setScheduleOpen] = useState(false);
     const scheduleMut = useCreateSchedule();
-    // Only sent when something is hidden, so a full export stays a plain request.
-    const exportColumns = hidden.length > 0 ? visibleColumns.map((c) => c.key) : undefined;
+    // Only sent when something is hidden, so a full export stays a plain request. A report with
+    // no table on screen has no column picker either, so its files always carry every column —
+    // even if columns were hidden in this browser before the table went.
+    const exportColumns = definition.shows_table && hidden.length > 0 ? visibleColumns.map((c) => c.key) : undefined;
 
     return (
         <>
@@ -176,7 +178,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 description={t(`rep_${stem}_desc`)}
                 actions={
                     <>
-                        <ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />
+                        {definition.shows_table && <ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
                         <Button variant="outline" onClick={() => setScheduleOpen(true)}>
                             <CalendarClock className="h-4 w-4" />
                             {t('rep_schedule')}
