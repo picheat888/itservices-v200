@@ -20,6 +20,15 @@ import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
 import { KpiTile } from '../components/kpi-tile';
 import { ReportHeader } from '../components/report-header';
+import {
+    AgingSkeleton,
+    BarRowsSkeleton,
+    CardHeadingSkeleton,
+    ChartSkeleton,
+    DataTableSkeleton,
+    KpiRowSkeleton,
+    TableRowsSkeleton,
+} from '../components/report-skeletons';
 import { ScheduleReportDialog } from '../components/schedule-report-dialog';
 import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
@@ -151,13 +160,41 @@ export default function TicketOverviewReportPage() {
                     <p className="text-muted-foreground text-sm">{errorMessage}</p>
                 </Card>
             ) : isLoading || !data ? (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                        {Array.from({ length: 5 }, (_, i) => (
-                            <Skeleton key={i} className="h-24" />
+                // The page's own shape — tiles, chart + SLA/age card, three breakdowns, the
+                // ticket table — so each piece lands where its bars were.
+                <div className="space-y-4" aria-hidden="true">
+                    <KpiRowSkeleton count={5} className="lg:grid-cols-5" />
+                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+                        <Card className="overflow-hidden">
+                            <CardHeadingSkeleton />
+                            <ChartSkeleton className="h-64" />
+                        </Card>
+                        <Card className="flex flex-col overflow-hidden">
+                            <CardHeadingSkeleton />
+                            <BarRowsSkeleton rows={4} />
+                            <CardHeadingSkeleton className="border-t" />
+                            <AgingSkeleton />
+                        </Card>
+                    </div>
+                    <div className="grid gap-3 xl:grid-cols-3">
+                        <Card className="overflow-hidden">
+                            <CardHeadingSkeleton />
+                            <BarRowsSkeleton rows={5} />
+                        </Card>
+                        {[0, 1].map((i) => (
+                            <Card key={i} className="overflow-hidden">
+                                <CardHeadingSkeleton />
+                                <TableRowsSkeleton rows={5} />
+                            </Card>
                         ))}
                     </div>
-                    <Skeleton className="h-72" />
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton note={false} />
+                        <div className="space-y-3 p-5">
+                            <Skeleton className="h-3 w-40" />
+                            <DataTableSkeleton cols={8} />
+                        </div>
+                    </Card>
                 </div>
             ) : (
                 <>
