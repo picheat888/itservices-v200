@@ -109,6 +109,9 @@ export const report: Dict = {
     rep_col_canceled: 'Canceled',
     rep_col_time: 'Average resolve time',
     rep_col_time_hint: 'Mean time from raised to completed, over the cases in the chosen range',
+    rep_col_total: 'Total',
+    rep_col_sla_closed: 'Within SLA',
+    rep_col_sla_closed_hint: 'Share of completed cases closed by their SLA deadline',
     rep_no_department: 'No department',
     rep_no_data: 'No data',
 

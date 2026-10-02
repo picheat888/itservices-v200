@@ -146,6 +146,8 @@ export interface TicketOverviewSummary {
     by_assignee: {
         assignee_id: number;
         name: string | null;
+        /** completed + canceled in the range */
+        total: number;
         completed: number;
         canceled: number;
         avg_resolve_hours: number | null;

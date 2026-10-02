@@ -308,6 +308,7 @@ class TicketOverviewReportTest extends TestCase
         // Most closed first; "Old timer" closed only in August, "Busy" closed nothing yet.
         $this->assertSame(['Kankanok', 'Latecomer', 'Somsak'], $rows->pluck('name')->all());
         $kan = $rows->firstWhere('assignee_id', $staff['kan']->id);
+        $this->assertSame(3, $kan['total']);
         $this->assertSame(2, $kan['completed']);
         $this->assertSame(1, $kan['canceled']);
         // Mean of [24, 48] — the same measure as the KPI tile.
