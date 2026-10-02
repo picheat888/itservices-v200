@@ -5,6 +5,7 @@ namespace Tests\Feature\Report;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -73,6 +74,27 @@ class ReportCatalogueTest extends TestCase
         $this->assertSame(['access.software_licenses'], $keysFor(['access.software_view']));
         // Submitting or completing requests is not reading them all.
         $this->assertSame([], $keysFor(['requests.submit', 'requests.complete']));
+    }
+
+    /**
+     * `range` decides whether a Report Center link hands the report the hub's period; a report
+     * flagged without from/to would just shed the query, one with them but unflagged would miss it.
+     */
+    public function test_the_range_flag_matches_each_reports_own_date_filters(): void
+    {
+        foreach (ReportCatalogue::definitions() as $key => $definition) {
+            $report = ReportCatalogue::tabular($key);
+            $names = $report ? array_map(fn ($f) => $f->name, $report->filters()) : ['from', 'to'];
+            $hasRange = in_array('from', $names, true) && in_array('to', $names, true);
+
+            $this->assertSame($hasRange, $definition['range'] ?? false, $key);
+        }
+
+        $listed = collect($this->actingAs($this->userWith(['tickets.view_all', 'tickets.resolve', 'stock.view', 'stock.view_events']))
+            ->getJson('/api/reports')->assertOk()->json('data'))->keyBy('key');
+        $this->assertTrue($listed['tickets.overview']['range']);
+        $this->assertTrue($listed['stock.movements']['range']);
+        $this->assertFalse($listed['stock.below_min']['range']);
     }
 
     public function test_every_mockup_report_is_listed_for_a_reader_with_every_permission(): void

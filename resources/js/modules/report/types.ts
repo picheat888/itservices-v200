@@ -65,6 +65,8 @@ export interface ReportDefinition {
     domain: ReportDomain;
     kind: ReportKind;
     formats: ExportFormat[];
+    /** Has a from/to date range, so a Report Center link may hand it the hub's period (ReportCatalogue). */
+    range: boolean;
     /** Pinned by the current user (ReportPinService). */
     pinned: boolean;
     /** Place in the order the reader pinned reports (0 = pinned first); null when not pinned. */
