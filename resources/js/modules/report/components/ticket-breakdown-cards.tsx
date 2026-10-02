@@ -225,7 +225,7 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
             <Heading
                 title={t('rep_by_assignee')}
                 sub={
-                    // The bars' key sits where the department card keeps its own, before the scope note.
+                    // The bars' key sits where the department card keeps its own.
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {STAFF_SERIES.map((s) => (
                             <span key={s.key} className="inline-flex items-center gap-1.5">
@@ -233,8 +233,6 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
                                 {t(s.label_key)}
                             </span>
                         ))}
-                        <span aria-hidden>·</span>
-                        {t('rep_by_assignee_sub')}
                     </span>
                 }
             />

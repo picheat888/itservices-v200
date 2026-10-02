@@ -96,7 +96,6 @@ export const report: Dict = {
     rep_by_category_sub: 'Tickets',
     rep_by_department: 'By department',
     rep_by_assignee: 'IT staff performance',
-    rep_by_assignee_sub: 'Counts only cases closed in the chosen range',
     rep_col_requester: 'Requester',
     rep_col_department: 'Department',
     rep_col_tickets: 'Tickets',
