@@ -101,7 +101,7 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                 </div>
 
                 <div
-                    className={cn('text-muted-foreground flex min-w-0 items-center gap-1 text-[11px]', !item.active && 'opacity-60')}
+                    className={cn('text-muted-foreground flex min-w-0 items-center gap-1 text-xs', !item.active && 'opacity-60')}
                     title={item.recipients.join(', ')}
                 >
                     <Mail className="h-3 w-3 shrink-0" />
@@ -143,12 +143,12 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                 </div>
 
                 <div className={cn('text-foreground/75 truncate text-xs', !item.active && 'opacity-60')}>{when}</div>
-                <div className={cn('text-muted-foreground text-right text-[11px] whitespace-nowrap', !item.active && 'opacity-60')} title={lastSent}>
+                <div className={cn('text-muted-foreground text-right text-xs whitespace-nowrap', !item.active && 'opacity-60')} title={lastSent}>
                     {item.active ? t('rep_schedules_next').replace('{t}', formatDateTime(item.next_run_at)) : t('rep_schedules_paused')}
                 </div>
 
                 {failed && item.last_run_at && (
-                    <div className="text-destructive col-span-2 text-[11px]">
+                    <div className="text-destructive col-span-2 text-xs">
                         {t('rep_schedules_last_failed').replace('{t}', formatDateTime(item.last_run_at))}
                         {item.last_error && ` - ${t(`rep_schedules_err_${item.last_error}`)}`}
                     </div>

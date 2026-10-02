@@ -129,7 +129,7 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
                         <span
                             key={s.key}
                             className={cn(
-                                'flex shrink-0 justify-center overflow-visible font-mono text-[11px] leading-none font-semibold whitespace-nowrap',
+                                'flex shrink-0 justify-center overflow-visible font-mono text-xs leading-none font-semibold whitespace-nowrap',
                                 TEXT[s.tone],
                             )}
                             style={{ width: width(value) }}
@@ -182,7 +182,7 @@ function StackRow({
                 <span className={cn('block truncate', muted && 'text-muted-foreground')} title={label(row.label)}>
                     {label(row.label)}
                 </span>
-                {note && <span className="text-muted-foreground block truncate text-[11px]">{note}</span>}
+                {note && <span className="text-muted-foreground block truncate text-xs">{note}</span>}
             </span>
             <StackBar values={row.values} series={series} scale={scale} />
             <span className="text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
@@ -318,7 +318,7 @@ function DonutSection({ chart }: { chart: Donut }) {
                                 <text x={85} y={87} textAnchor="middle" className="fill-foreground font-mono text-[24px] font-bold">
                                     {`${chart.center.value}%`}
                                 </text>
-                                <text x={85} y={106} textAnchor="middle" className="fill-muted-foreground text-[11.5px]">
+                                <text x={85} y={106} textAnchor="middle" className="fill-muted-foreground text-[13.5px]">
                                     {t(chart.center.label_key)}
                                 </text>
                             </>

@@ -109,7 +109,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                 </div>
                 {/* 3 — when it was made and how long ago; or where it stands while it is not ready */}
                 {item.status === 'failed' ? (
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
                         <span className={cn('inline-flex h-5 items-center gap-1 rounded-full px-2 font-semibold', tone)}>
                             <Icon className="h-3 w-3" />
                             {t('rep_my_exports_st_failed')}
@@ -118,7 +118,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                     </div>
                 ) : building ? (
                     <>
-                        <div className="text-muted-foreground mt-0.5 text-[11px]">{`${t(`rep_my_exports_st_${item.status}`)}…`}</div>
+                        <div className="text-muted-foreground mt-0.5 text-xs">{`${t(`rep_my_exports_st_${item.status}`)}…`}</div>
                         {/* Indeterminate: the queue gives no percentage. Still under reduced motion. */}
                         <div className="bg-muted mt-1.5 h-1 overflow-hidden rounded-full" aria-hidden="true">
                             <span
@@ -127,11 +127,11 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                         </div>
                     </>
                 ) : (
-                    <div className="text-muted-foreground mt-0.5 text-[11px]" title={keptUntil}>
+                    <div className="text-muted-foreground mt-0.5 text-xs" title={keptUntil}>
                         {formatDateTime(madeAt)}
                     </div>
                 )}
-                {slow && <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
+                {slow && <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
             </div>
 
             {/* Right column: the actions on top (icons only — the name and the tooltip say what
@@ -178,7 +178,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                     )}
                 </div>
                 {item.status === 'ready' && (
-                    <span className="text-muted-foreground mr-1 text-[11px] whitespace-nowrap">{relativeTime(madeAt, lang, '')}</span>
+                    <span className="text-muted-foreground mr-1 text-xs whitespace-nowrap">{relativeTime(madeAt, lang, '')}</span>
                 )}
             </div>
         </div>

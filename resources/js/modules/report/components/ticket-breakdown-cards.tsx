@@ -115,7 +115,7 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
                 <span className={cn('block truncate', muted && 'text-muted-foreground')} title={name(r)}>
                     {name(r)}
                 </span>
-                {note && <span className="text-muted-foreground block truncate text-[11px]">{note}</span>}
+                {note && <span className="text-muted-foreground block truncate text-xs">{note}</span>}
             </span>
             <StackBar values={r.categories} series={series} scale={rowScale} />
             <span className="text-right font-mono font-semibold">{r.count.toLocaleString()}</span>

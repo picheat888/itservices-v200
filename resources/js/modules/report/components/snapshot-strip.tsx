@@ -90,7 +90,7 @@ function Pill({ tone, children }: { tone: 'amber' | 'red'; children: React.React
     return (
         <span
             className={cn(
-                'inline-flex h-5 items-center gap-1 rounded-full px-2 text-[11px] font-semibold whitespace-nowrap',
+                'inline-flex h-5 items-center gap-1 rounded-full px-2 text-xs font-semibold whitespace-nowrap',
                 tone === 'amber' ? 'bg-amber-500/12 text-amber-700 dark:text-amber-400' : 'bg-red-500/12 text-red-700 dark:text-red-400',
             )}
         >
@@ -155,7 +155,7 @@ function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRa
                 {tile.total !== null && <small className="text-muted-foreground text-xs font-medium">/ {tile.total.toLocaleString()}</small>}
                 {beside && <small className={cn('truncate font-sans text-xs font-semibold', BAD)}>{beside}</small>}
             </span>
-            <span className="flex min-h-5 items-center justify-between gap-1.5 text-[11.5px]">
+            <span className="flex min-h-5 items-center justify-between gap-1.5 text-xs">
                 <Footer tile={tile} period={period} periodWords={periodWords} />
             </span>
         </Link>

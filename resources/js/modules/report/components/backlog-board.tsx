@@ -147,11 +147,11 @@ function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
         <>
             <i className={cn('mt-1 h-2 w-2 shrink-0 rounded-full', (ticket.priority && PRIORITY_DOT[ticket.priority]) || NO_PRIORITY_DOT)} />
             <span className="min-w-0">
-                <span className="text-muted-foreground block font-mono text-[10.5px]">{ticket.ticket_no}</span>
+                <span className="text-muted-foreground block font-mono text-xs">{ticket.ticket_no}</span>
                 <span className="block truncate text-xs font-semibold">{ticket.subject}</span>
                 <span
                     className={cn(
-                        'block truncate text-[11px]',
+                        'block truncate text-xs',
                         ticket.assignee ? 'text-muted-foreground' : 'font-semibold text-amber-600 dark:text-amber-400',
                     )}
                 >
@@ -224,7 +224,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                             <div key={lane.key} className="contents">
                                 {i === 3 && (
                                     <div className="border-foreground/50 relative mt-1 border-l-2 border-dashed" aria-hidden>
-                                        <span className="bg-foreground text-background absolute -top-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-px text-[10.5px] font-bold whitespace-nowrap">
+                                        <span className="bg-foreground text-background absolute -top-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-px text-xs font-bold whitespace-nowrap">
                                             {t('rep_bl_now')}
                                         </span>
                                     </div>
@@ -244,7 +244,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                             type="button"
                                             onClick={() => toggleLane(lane.key)}
                                             aria-expanded={open}
-                                            className="border-border text-muted-foreground hover:border-brand/50 hover:bg-accent hover:text-foreground focus-visible:ring-brand/30 flex items-center justify-center gap-1 rounded-lg border border-dashed py-1.5 text-[11.5px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                                            className="border-border text-muted-foreground hover:border-brand/50 hover:bg-accent hover:text-foreground focus-visible:ring-brand/30 flex items-center justify-center gap-1 rounded-lg border border-dashed py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                                         >
                                             {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                                             {open ? t('rep_chart_show_less') : t('rep_bl_more').replace('{n}', String(folding.rest.length))}
@@ -287,7 +287,7 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 <span className={cn('block truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>
                     {name || t('rep_opt_unassigned')}
                 </span>
-                <span className="text-muted-foreground block truncate text-[11px]">
+                <span className="text-muted-foreground block truncate text-xs">
                     {r.breached > 0 && `${t('rep_bl_owner_over').replace('{n}', String(r.breached))} · `}
                     {t('rep_bl_owner_count').replace('{n}', String(r.n))}
                 </span>
