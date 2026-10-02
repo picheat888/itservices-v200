@@ -71,10 +71,10 @@ class AssetActivityReportsTest extends TestCase
             ->getJson('/api/reports/r/assets.by_status_department/rows')->assertOk()->json();
 
         $rows = collect($body['data'])->keyBy(fn (array $r) => $r['department']['name']);
-        $this->assertSame(['No department', 'IT'], $rows->keys()->all());
-        $this->assertEquals(3, $rows['No department']['total_count']);
-        $this->assertEquals(2, $rows['No department']['st_ready']);
-        $this->assertEquals(1, $rows['No department']['st_common']);
+        $this->assertSame(['Store · common · no department', 'IT'], $rows->keys()->all());
+        $this->assertEquals(3, $rows['Store · common · no department']['total_count']);
+        $this->assertEquals(2, $rows['Store · common · no department']['st_ready']);
+        $this->assertEquals(1, $rows['Store · common · no department']['st_common']);
         $this->assertEquals(1, $rows['IT']['st_deployed']);
         $this->assertEquals(1, $rows['IT']['st_pending_return']);
         $this->assertSame('ไอที', $rows['IT']['department']['name_th']);
@@ -110,8 +110,11 @@ class AssetActivityReportsTest extends TestCase
         $departments = collect($charts['department']['rows'])->keyBy(fn (array $r) => $r['label']['name']);
         $this->assertSame(2, $departments['IT']['values']['deployed']);
         $this->assertSame(2, $departments['IT']['total']);
-        $this->assertSame(1, $departments['No department']['values']['common']);
-        $this->assertSame(1, $departments['No department']['values']['writeoff']);
+        $this->assertSame(1, $departments['Store · common · no department']['values']['common']);
+        $this->assertSame(1, $departments['Store · common · no department']['values']['writeoff']);
+        // Assets in no department are kept apart from the departments.
+        $this->assertTrue($departments['Store · common · no department']['apart']);
+        $this->assertFalse($departments['IT']['apart']);
 
         $this->assertSame(['status', 'source'], array_column($charts['department']['views'], 'key'));
 

@@ -19,7 +19,9 @@ use Illuminate\Database\Eloquent\Builder;
  * its counts, the statuses as a donut (in use at its centre) and the categories as bars — the
  * department bars say what the table would, so the page shows no table; the export keeps it.
  * Bought or rented is never left to the filter alone: every tile says how many of each, and the
- * department bars switch from status to source (ซื้อ / เช่า).
+ * department bars switch from status to source (ซื้อ / เช่า). Assets in no department (in store,
+ * shared, written off, or held by someone without one) are one "คลัง · ส่วนกลาง · ไม่ระบุแผนก" row
+ * that the chart keeps apart from the departments.
  */
 class AssetsByStatusDepartmentReport extends TabularReport
 {
@@ -32,6 +34,9 @@ class AssetsByStatusDepartmentReport extends TabularReport
         'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'blue'],
         'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'violet'],
     ];
+
+    /** The one row for assets in no department — in store, shared, written off, or held by someone without one. */
+    private const UNASSIGNED = ['name' => 'Store · common · no department', 'name_th' => 'คลัง · ส่วนกลาง · ไม่ระบุแผนก'];
 
     /** Thai export headings of the per-source columns. */
     private const SOURCE_TH = ['purchased' => 'ซื้อ', 'rented' => 'เช่า'];
@@ -109,7 +114,7 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
         return [
             ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $a->getAttribute('department_id') === null
-                ? ['name' => 'No department', 'name_th' => 'ไม่ระบุแผนก']
+                ? self::UNASSIGNED
                 : ['name' => $a->getAttribute('department_name'), 'name_th' => $a->getAttribute('department_name_th')]),
             ReportColumn::number('total_count', 'ทั้งหมด', fn (Asset $a) => (int) $a->getAttribute('total_count')),
             ...$sources,
@@ -171,8 +176,10 @@ class AssetsByStatusDepartmentReport extends TabularReport
                 ],
                 'rows' => $rows->map(fn (Asset $a) => [
                     'label' => $a->getAttribute('department_id') === null
-                        ? ['name' => 'No department', 'name_th' => 'ไม่ระบุแผนก']
+                        ? self::UNASSIGNED
                         : ['name' => $a->getAttribute('department_name'), 'name_th' => $a->getAttribute('department_name_th')],
+                    // Not a department: the page lists it last, apart, so it does not set the scale.
+                    'apart' => $a->getAttribute('department_id') === null,
                     // Status and source keys never collide, so one map serves both views.
                     'values' => [
                         ...array_combine($statuses, array_map(fn (string $s) => (int) $a->getAttribute("st_{$s}"), $statuses)),
@@ -243,7 +250,7 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
         return [
             ReportSummary::make('total', 'ทรัพย์สินทั้งหมด', $sum('total_count'))->withSplit($split([])),
-            ReportSummary::make('in_use', 'ใช้งานอยู่', $sum('st_deployed') + $sum('st_common'), 'green')->withSplit($split(['deployed', 'common'])),
+            ReportSummary::make('in_use', 'ใช้งาน (รวมส่วนกลาง)', $sum('st_deployed') + $sum('st_common'), 'green')->withSplit($split(['deployed', 'common'])),
             ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'))->withSplit($split(['ready'])),
             ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'amber')->withSplit($split(['pending_return'])),
         ];

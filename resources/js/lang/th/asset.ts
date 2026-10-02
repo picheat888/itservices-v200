@@ -13,7 +13,7 @@ export const asset: Dict = {
     asset_ready: 'พร้อมส่งมอบ',
     asset_pending_accept: 'รอรับมอบ',
     asset_pending_return: 'รอรับคืน',
-    asset_common: 'Common',
+    asset_common: 'ส่วนกลาง',
     asset_writeoff: 'ตัดจำหน่าย',
     asset_tag: 'รหัสทรัพย์สิน',
     asset_nickname: 'Tag',

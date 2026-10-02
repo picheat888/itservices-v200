@@ -6,8 +6,11 @@
  * the 'donut' (shares of the whole, a headline percent in its hole, a legend with counts and
  * shares) over the 'bars'. A long list (departments past 10, categories past 8) shows its top
  * rows and folds the rest into one "อื่น ๆ (n)" row, so the bars still add up to the whole, with
- * "แสดงทั้งหมด (n)" under it to open every row in place. Used by pages/tabular-report.tsx;
- * ChartsSkeleton holds the place while rows load.
+ * "แสดงทั้งหมด (n)" under it to open every row in place — one switch for every list on the page,
+ * so the two cards grow together. Rows marked `apart` (assets in no department) come last under
+ * a dashed rule, drawn as a share of their own total so they never set the departments' scale.
+ * The chosen view (สถานะ / ที่มา) lives in the URL (?view=), as the app keeps tabs.
+ * Used by pages/tabular-report.tsx; ChartsSkeleton holds the place while rows load.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -16,6 +19,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { ChartLabel, ChartTone, TabularChart } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { HorizontalBars } from './horizontal-bars';
@@ -56,16 +60,15 @@ const TOP_STACKS = 10;
 const TOP_BARS = 8;
 
 /**
- * The rows a list shows: all of them, or — past `top` and until opened — the first `top` with
- * the rest handed back to be summed into one "อื่น ๆ" row. One extra row is shown rather than
- * folded, since "อื่น ๆ (1)" would only hide a name.
+ * The rows a list shows: all of them, or — past `top` and while not `open` — the first `top`
+ * with the rest handed back to be summed into one "อื่น ๆ" row. One extra row is shown rather
+ * than folded, since "อื่น ๆ (1)" would only hide a name.
  */
-function useFold<T>(rows: T[], top: number) {
-    const [open, setOpen] = useState(false);
+function fold<T>(rows: T[], top: number, open: boolean) {
     const folds = rows.length > top + 1;
     const folded = folds && !open;
 
-    return { open, setOpen, folds, shown: folded ? rows.slice(0, top) : rows, rest: folded ? rows.slice(top) : [] };
+    return { folds, shown: folded ? rows.slice(0, top) : rows, rest: folded ? rows.slice(top) : [] };
 }
 
 /** "แสดงทั้งหมด (24)" / "ย่อ" under a folding list. */
@@ -110,10 +113,7 @@ function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; activ
     const t = useT();
 
     return (
-        <span
-            role="group"
-            className="border-border bg-card dark:bg-muted inline-flex gap-0.5 rounded-md border p-0.5 font-normal dark:border-transparent"
-        >
+        <span role="group" className="border-border bg-card dark:bg-background inline-flex gap-0.5 rounded-md border p-0.5 font-normal">
             {views.map((view) => (
                 <button
                     key={view.key}
@@ -122,9 +122,7 @@ function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; activ
                     onClick={() => onChange(view.key)}
                     className={cn(
                         'focus-visible:ring-brand/30 h-6 rounded px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                        active === view.key
-                            ? 'bg-brand text-brand-foreground dark:bg-background dark:text-foreground dark:shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent dark:hover:bg-transparent',
+                        active === view.key ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
                     )}
                 >
                     {t(view.label_key)}
@@ -140,26 +138,113 @@ function useLabel() {
     return (label: ChartLabel) => (lang === 'th' && label.name_th) || label.name || t('rep_no_data');
 }
 
-function StacksCard({ chart }: { chart: Stacks }) {
+type StackRowData = Stacks['rows'][number] & { others?: boolean };
+
+/**
+ * One row: name, the stacked bar with each piece's count over it, the total. `scale` is what a
+ * full-width bar stands for — the largest department, or for an apart row its own total.
+ */
+function StackRow({
+    row,
+    series,
+    scale,
+    muted,
+    note,
+}: {
+    row: StackRowData;
+    series: Stacks['views'][number]['series'];
+    scale: number;
+    muted?: boolean;
+    note?: string;
+}) {
     const t = useT();
     const label = useLabel();
-    const [viewKey, setViewKey] = useState(chart.views[0]?.key ?? '');
+    const width = (value: number) => `${Math.min(100, (value / Math.max(1, scale)) * 100)}%`;
+
+    return (
+        <div className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3rem] items-center gap-3 px-5 py-2.5 text-sm">
+            <span className="min-w-0">
+                <span className={cn('block truncate', muted && 'text-muted-foreground')} title={label(row.label)}>
+                    {label(row.label)}
+                </span>
+                {note && <span className="text-muted-foreground block truncate text-[11px]">{note}</span>}
+            </span>
+            <div className="min-w-0">
+                <div className="flex h-4 items-end">
+                    {series.map((s) => {
+                        const value = row.values[s.key] ?? 0;
+                        if (value === 0) return null;
+                        return (
+                            <span
+                                key={s.key}
+                                className={cn(
+                                    'flex shrink-0 justify-center overflow-visible font-mono text-[11px] leading-none font-semibold whitespace-nowrap',
+                                    TEXT[s.tone],
+                                )}
+                                style={{ width: width(value) }}
+                            >
+                                {value}
+                            </span>
+                        );
+                    })}
+                </div>
+                <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
+                    {series.map((s) => {
+                        const value = row.values[s.key] ?? 0;
+                        if (value === 0) return null;
+                        return (
+                            <span
+                                key={s.key}
+                                title={`${t(s.label_key)}: ${value}`}
+                                className={cn('block h-full', FILL[s.tone])}
+                                style={{ width: width(value) }}
+                            />
+                        );
+                    })}
+                </div>
+            </div>
+            <span className="text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
+        </div>
+    );
+}
+
+function StacksCard({ chart, expanded, onToggle }: { chart: Stacks; expanded: boolean; onToggle: () => void }) {
+    const t = useT();
+    // The view is kept in the URL, like the app's tabs; an unknown value falls back to the first.
+    const [params, setParams] = useSearchParams();
+    const first = chart.views[0]?.key ?? '';
+    const fromUrl = params.get('view');
+    const viewKey = chart.views.some((v) => v.key === fromUrl) ? (fromUrl as string) : first;
+    const setViewKey = (key: string) =>
+        setParams(
+            (current) => {
+                const next = new URLSearchParams(current);
+                if (key === first) next.delete('view');
+                else next.set('view', key);
+                return next;
+            },
+            { replace: true },
+        );
     const series = (chart.views.find((v) => v.key === viewKey) ?? chart.views[0])?.series ?? [];
     // Only the series that appear anywhere get a legend entry.
     const legend = series.filter((s) => chart.rows.some((r) => (r.values[s.key] ?? 0) > 0));
-    const fold = useFold(chart.rows, TOP_STACKS);
-    const rows: (Stacks['rows'][number] & { others?: boolean })[] = [...fold.shown];
-    if (fold.rest.length > 0) {
+
+    const departments = chart.rows.filter((r) => !r.apart);
+    const apart = chart.rows.filter((r) => r.apart);
+    const folding = fold(departments, TOP_STACKS, expanded);
+    const rows: StackRowData[] = [...folding.shown];
+    if (folding.rest.length > 0) {
         const values: Record<string, number> = {};
-        for (const s of series) values[s.key] = fold.rest.reduce((sum, r) => sum + (r.values[s.key] ?? 0), 0);
+        for (const s of series) values[s.key] = folding.rest.reduce((sum, r) => sum + (r.values[s.key] ?? 0), 0);
         rows.push({
-            label: { name: t('rep_chart_others').replace('{n}', String(fold.rest.length)), name_th: null },
+            label: { name: t('rep_chart_others').replace('{n}', String(folding.rest.length)), name_th: null },
             values,
-            total: fold.rest.reduce((sum, r) => sum + r.total, 0),
+            total: folding.rest.reduce((sum, r) => sum + r.total, 0),
             others: true,
         });
     }
-    // Widths against the largest row on show — "อื่น ๆ" included, since it can outgrow the rest.
+    // Widths against the largest department on show — "อื่น ๆ" included, since it can outgrow the
+    // rest; the apart rows are left out so they cannot squash every department to a sliver.
     const max = Math.max(1, ...rows.map((r) => r.total));
 
     return (
@@ -185,54 +270,22 @@ function StacksCard({ chart }: { chart: Stacks }) {
             {chart.rows.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
             ) : (
-                <div className="divide-border/60 divide-y">
-                    {rows.map((row, i) => (
-                        <div key={i} className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3rem] items-center gap-3 px-5 py-2.5 text-sm">
-                            <span className={cn('truncate', row.others && 'text-muted-foreground')} title={label(row.label)}>
-                                {label(row.label)}
-                            </span>
-                            {/* Width against the largest row, so rows compare by size as well as mix;
-                                each piece's count sits over it, centred, in its own colour. */}
-                            <div className="min-w-0">
-                                <div className="flex h-4 items-end">
-                                    {series.map((s) => {
-                                        const value = row.values[s.key] ?? 0;
-                                        if (value === 0) return null;
-                                        return (
-                                            <span
-                                                key={s.key}
-                                                className={cn(
-                                                    'flex shrink-0 justify-center overflow-visible font-mono text-[11px] leading-none font-semibold whitespace-nowrap',
-                                                    TEXT[s.tone],
-                                                )}
-                                                style={{ width: `${(value / max) * 100}%` }}
-                                            >
-                                                {value}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                                <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
-                                    {series.map((s) => {
-                                        const value = row.values[s.key] ?? 0;
-                                        if (value === 0) return null;
-                                        return (
-                                            <span
-                                                key={s.key}
-                                                title={`${t(s.label_key)}: ${value}`}
-                                                className={cn('block h-full', FILL[s.tone])}
-                                                style={{ width: `${(value / max) * 100}%` }}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            <span className="text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
+                <>
+                    <div className="divide-border/60 divide-y">
+                        {rows.map((row, i) => (
+                            <StackRow key={i} row={row} series={series} scale={max} muted={row.others} />
+                        ))}
+                    </div>
+                    {apart.length > 0 && (
+                        <div className="border-border divide-border/60 divide-y border-t-2 border-dashed">
+                            {apart.map((row, i) => (
+                                <StackRow key={i} row={row} series={series} scale={row.total} muted note={t('rep_chart_apart_note')} />
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    )}
+                </>
             )}
-            {fold.folds && <FoldToggle open={fold.open} total={chart.rows.length} onToggle={() => fold.setOpen(!fold.open)} />}
+            {folding.folds && <FoldToggle open={expanded} total={departments.length} onToggle={onToggle} />}
         </Card>
     );
 }
@@ -307,16 +360,20 @@ function DonutSection({ chart }: { chart: Donut }) {
     );
 }
 
-function BarsSection({ chart, className }: { chart: Bars; className?: string }) {
+/** A neutral fill: the category bars are counts, not one of the status or source colours. */
+const NEUTRAL_BAR = 'bg-slate-500 dark:bg-slate-400';
+
+function BarsSection({ chart, className, expanded, onToggle }: { chart: Bars; className?: string; expanded: boolean; onToggle: () => void }) {
     const t = useT();
     const label = useLabel();
-    const fold = useFold(chart.rows, TOP_BARS);
-    const bars = fold.shown.map((r, i) => ({ key: String(i), label: label(r.label), value: r.value }));
-    if (fold.rest.length > 0) {
+    const folding = fold(chart.rows, TOP_BARS, expanded);
+    const bars = folding.shown.map((r, i) => ({ key: String(i), label: label(r.label), value: r.value, tone: NEUTRAL_BAR }));
+    if (folding.rest.length > 0) {
         bars.push({
             key: 'others',
-            label: t('rep_chart_others').replace('{n}', String(fold.rest.length)),
-            value: fold.rest.reduce((sum, r) => sum + r.value, 0),
+            label: t('rep_chart_others').replace('{n}', String(folding.rest.length)),
+            value: folding.rest.reduce((sum, r) => sum + r.value, 0),
+            tone: NEUTRAL_BAR,
         });
     }
 
@@ -324,7 +381,7 @@ function BarsSection({ chart, className }: { chart: Bars; className?: string }) 
         <>
             <Heading title={t(chart.title_key)} className={className} />
             <HorizontalBars bars={bars} max={Math.max(1, ...bars.map((b) => b.value))} emptyLabel={t('rep_no_data')} />
-            {fold.folds && <FoldToggle open={fold.open} total={chart.rows.length} onToggle={() => fold.setOpen(!fold.open)} />}
+            {folding.folds && <FoldToggle open={expanded} total={chart.rows.length} onToggle={onToggle} />}
         </>
     );
 }
@@ -334,13 +391,16 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
     const donuts = charts.filter((c): c is Donut => c.type === 'donut');
     const bars = charts.filter((c): c is Bars => c.type === 'bars');
     const side = donuts.length + bars.length > 0;
+    // One "show all" for every list, so opening one card's list fills the other card's height too.
+    const [expanded, setExpanded] = useState(false);
+    const toggle = () => setExpanded((open) => !open);
 
     return (
         <div className={cn('grid gap-3', stacks.length > 0 && side && 'xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]')}>
             {stacks.length > 0 && (
                 <div className="flex flex-col gap-3">
                     {stacks.map((c) => (
-                        <StacksCard key={c.key} chart={c} />
+                        <StacksCard key={c.key} chart={c} expanded={expanded} onToggle={toggle} />
                     ))}
                 </div>
             )}
@@ -352,7 +412,13 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
                         <DonutSection key={c.key} chart={c} />
                     ))}
                     {bars.map((c, i) => (
-                        <BarsSection key={c.key} chart={c} className={donuts.length + i > 0 ? 'border-t' : undefined} />
+                        <BarsSection
+                            key={c.key}
+                            chart={c}
+                            className={donuts.length + i > 0 ? 'border-t' : undefined}
+                            expanded={expanded}
+                            onToggle={toggle}
+                        />
                     ))}
                 </Card>
             )}
