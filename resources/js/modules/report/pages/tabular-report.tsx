@@ -6,17 +6,20 @@
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { isAxiosError } from 'axios';
-import { AlertCircle, CalendarClock, Download } from 'lucide-react';
+import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { CARD_HEADING_TINT } from '../components/card-heading';
 import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { ReportHeader } from '../components/report-header';
-import { DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from '../components/report-skeletons';
+import { CardHeadingSkeleton, DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from '../components/report-skeletons';
 import { ScheduleReportDialog, scheduleCoverage } from '../components/schedule-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
@@ -33,6 +36,13 @@ function errorMessageFor(t: (key: string) => string, error: unknown): string {
     if (status === 404) return t('rep_err_not_found');
     if (status === 422) return t('rep_err_filter_invalid');
     return t('rep_err_load_failed');
+}
+
+/** "2026-10-02 09:41" — the same shape as the Ticket & SLA page's server-stamped time. */
+function stamp(ms: number): string {
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function ErrorCard({ message }: { message: string }) {
@@ -62,7 +72,7 @@ function TabularReportRows({
     const t = useT();
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
-    const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, filters, page, perPage, true);
+    const { data, isLoading, isFetching, isError, error, dataUpdatedAt } = useTabularRows(reportKey, filters, page, perPage, true);
     const canOpen = useCanOpen();
 
     useEffect(() => {
@@ -90,22 +100,40 @@ function TabularReportRows({
         <div className="space-y-4">
             {/* Tiles pulse until the first rows arrive, so the table does not jump down when they do. */}
             {data ? <SummaryStrip items={data.summary} /> : <KpiRowSkeleton count={4} className="lg:grid-cols-4" />}
-            <DataTable
-                columns={columns}
-                rows={data?.data ?? []}
-                rowKey={(r) => r.id}
-                loading={isLoading || isFetching}
-                server={{
-                    page,
-                    pageSize: perPage,
-                    total: data?.meta.total ?? 0,
-                    onPageChange: setPage,
-                    onPageSizeChange: (s) => {
-                        setPerPage(s);
-                        setPage(1);
-                    },
-                }}
-            />
+            {/* The rows in a headed card with the table inset, as the Ticket & SLA page's
+                "รายการ Ticket" — the same heading tint, "ข้อมูล ณ" line and padding. */}
+            <Card className="overflow-hidden">
+                <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
+                    <span className="text-sm font-semibold">{t('rep_rows_generic')}</span>
+                    {data && (
+                        <span className="text-muted-foreground text-xs">{t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString())}</span>
+                    )}
+                </div>
+                <div className="space-y-3 p-5">
+                    {dataUpdatedAt > 0 && (
+                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                            <Clock className="h-3.5 w-3.5" />
+                            {t('rep_generated_at').replace('{t}', stamp(dataUpdatedAt))}
+                        </div>
+                    )}
+                    <DataTable
+                        columns={columns}
+                        rows={data?.data ?? []}
+                        rowKey={(r) => r.id}
+                        loading={isLoading || isFetching}
+                        server={{
+                            page,
+                            pageSize: perPage,
+                            total: data?.meta.total ?? 0,
+                            onPageChange: setPage,
+                            onPageSizeChange: (s) => {
+                                setPerPage(s);
+                                setPage(1);
+                            },
+                        }}
+                    />
+                </div>
+            </Card>
         </div>
     );
 }
@@ -208,7 +236,13 @@ export default function TabularReportPage() {
                     {/* Filters, summary tiles and table in their own shapes. */}
                     <FilterBarSkeleton fields={4} />
                     <KpiRowSkeleton count={4} className="lg:grid-cols-4" />
-                    <DataTableSkeleton />
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <div className="space-y-3 p-5">
+                            <Skeleton className="h-3 w-40" />
+                            <DataTableSkeleton />
+                        </div>
+                    </Card>
                 </div>
             ) : (
                 <TabularReportBody key={definition.key} reportKey={key} stem={stem} definition={definition} />
