@@ -16,13 +16,16 @@ use Carbon\CarbonImmutable;
  * from that report (its own query and summary, or the Ticket & SLA overview's own summary),
  * so clicking a tile never lands on a page that says something else.
  *
- * The period (7 days / this month / quarter / year, up to today) moves the tiles that count
- * something over time — the SLA rate (with the change against the period before it) and
+ * The period — the last 7, 30 or 90 days up to today, or a range the reader picks — moves the
+ * tiles that count something over time — the SLA rate (with the change against the period before it) and
  * requests submitted. The others are states as of now.
  */
 class ReportSnapshotService
 {
-    public const PERIODS = ['7d', 'month', 'quarter', 'year'];
+    public const PERIODS = ['7d', '30d', '90d', 'custom'];
+
+    /** Days each preset period looks back over, today included. */
+    private const PRESET_DAYS = ['7d' => 7, '30d' => 30, '90d' => 90];
 
     /** Points on a tile's trend line (the mockup's sparklines). */
     public const TREND_POINTS = 7;
@@ -33,11 +36,13 @@ class ReportSnapshotService
     public function __construct(private TicketOverviewReportService $tickets) {}
 
     /**
+     * @param  ?string  $customFrom  "YYYY-MM-DD" — the custom period only (validated by the caller)
+     * @param  ?string  $customTo  "YYYY-MM-DD" — the custom period only
      * @return array{period: string, from: string, to: string, tiles: list<array<string, mixed>>}
      */
-    public function for(User $viewer, string $period): array
+    public function for(User $viewer, string $period, ?string $customFrom = null, ?string $customTo = null): array
     {
-        [$from, $to] = $this->range($period);
+        [$from, $to] = $this->range($period, $customFrom, $customTo);
         $tiles = array_values(array_filter([
             $this->ticketsOpen($viewer, $from, $to),
             $this->slaRate($viewer, $from, $to),
@@ -50,18 +55,22 @@ class ReportSnapshotService
         return ['period' => $period, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'tiles' => $tiles];
     }
 
-    /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */
-    private function range(string $period): array
+    /**
+     * A preset counts back from today (7 days = today and the six before it); custom is the
+     * reader's own from / to.
+     *
+     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
+     */
+    private function range(string $period, ?string $customFrom, ?string $customTo): array
     {
-        $today = CarbonImmutable::today();
-        $from = match ($period) {
-            '7d' => $today->subDays(6),
-            'quarter' => $today->startOfQuarter(),
-            'year' => $today->startOfYear(),
-            default => $today->startOfMonth(),
-        };
+        if ($period === 'custom' && $customFrom !== null && $customTo !== null) {
+            return [CarbonImmutable::parse($customFrom)->startOfDay(), CarbonImmutable::parse($customTo)->endOfDay()];
+        }
 
-        return [$from->startOfDay(), $today->endOfDay()];
+        $today = CarbonImmutable::today();
+        $days = self::PRESET_DAYS[$period] ?? self::PRESET_DAYS['30d'];
+
+        return [$today->subDays($days - 1)->startOfDay(), $today->endOfDay()];
     }
 
     /** @return array<string, mixed>|null */

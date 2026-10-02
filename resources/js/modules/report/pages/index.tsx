@@ -14,10 +14,12 @@ import { Input } from '@/shared/ui/input';
 import { LineChart, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { MyExports } from '../components/my-exports';
+import { PeriodSwitch } from '../components/period-switch';
 import { byDomainOrder, ReportCatalogue, ReportCatalogueSkeleton, reportStem } from '../components/report-catalogue';
 import { ScheduledReports } from '../components/scheduled-reports';
-import { PeriodSwitch, SnapshotStrip, useSnapshotPeriod } from '../components/snapshot-strip';
+import { SnapshotStrip } from '../components/snapshot-strip';
 import { useReportCatalogue } from '../hooks/use-reports';
+import { useSnapshotRange } from '../hooks/use-snapshot-range';
 import type { ReportDomain } from '../types';
 
 type Chip = ReportDomain | 'all';
@@ -27,7 +29,7 @@ export default function ReportsPage() {
     const { data: reports = [], isLoading } = useReportCatalogue();
     const [query, setQuery] = useState('');
     const [chip, setChip] = useState<Chip>('all');
-    const [period, setPeriod] = useSnapshotPeriod();
+    const [range, setRange] = useSnapshotRange();
     const domains = [...new Set(reports.map((r) => r.domain))].sort(byDomainOrder);
     const domain: Chip = chip;
     const chips: { id: Chip; label: string; count: number }[] = [
@@ -51,10 +53,10 @@ export default function ReportsPage() {
                     <h1 className="text-2xl font-bold">{t('rep_center_title')}</h1>
                     <p className="text-muted-foreground mt-1 max-w-[72ch] text-sm">{t('rep_center_sub')}</p>
                 </div>
-                <PeriodSwitch period={period} onChange={setPeriod} />
+                <PeriodSwitch range={range} onChange={setRange} />
             </div>
 
-            <SnapshotStrip period={period} />
+            <SnapshotStrip range={range} />
 
             <div className="grid items-start gap-5 xl:grid-cols-[66.6667%_minmax(0,1fr)]">
                 <div className="min-w-0 space-y-4">
@@ -102,7 +104,7 @@ export default function ReportsPage() {
                                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_match')}</div>
                             ) : (
                                 // Quick access on the plain view only; filtered or searched, pinned ones lead their group.
-                                <ReportCatalogue reports={visible} showPinned={domain === 'all' && query.trim() === ''} period={period} />
+                                <ReportCatalogue reports={visible} showPinned={domain === 'all' && query.trim() === ''} range={range} />
                             )}
                         </>
                     )}

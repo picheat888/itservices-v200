@@ -74,7 +74,13 @@ export interface ReportDefinition {
 }
 
 /** Period of the hub's number strip — mirrors ReportSnapshotService::PERIODS. */
-export type SnapshotPeriod = '7d' | 'month' | 'quarter' | 'year';
+export type SnapshotPeriod = '7d' | '30d' | '90d' | 'custom';
+
+/** A preset period: the last 7, 30 or 90 days up to today. */
+export type SnapshotPreset = Exclude<SnapshotPeriod, 'custom'>;
+
+/** What the hub's period switch holds — a preset, or the reader's own from / to ("YYYY-MM-DD"). */
+export type SnapshotRange = { period: SnapshotPreset } | { period: 'custom'; from: string; to: string };
 
 /** One tile of the hub's number strip (ReportSnapshotService::tile()). */
 export interface SnapshotTile {

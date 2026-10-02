@@ -13,7 +13,7 @@ import { useUiStore } from '@/stores/ui';
 import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
-import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotPeriod } from '../types';
+import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotRange } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { periodRange } from './report-scope';
 
@@ -114,13 +114,13 @@ function PinButton({ report }: { report: ReportDefinition }) {
     );
 }
 
-function ReportRow({ report, latest, period }: { report: ReportDefinition; latest?: ReportExportItem; period?: SnapshotPeriod }) {
+function ReportRow({ report, latest, range }: { report: ReportDefinition; latest?: ReportExportItem; range?: SnapshotRange }) {
     const t = useT();
 
     return (
         <div className="border-border hover:bg-accent flex items-center border-b transition-colors last:border-b-0">
             <Link
-                to={reportRoute(report, period && periodRange(period))}
+                to={reportRoute(report, range && periodRange(range))}
                 className="focus-visible:ring-brand/30 flex min-w-0 flex-1 items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
             >
                 <div className="min-w-0 flex-1">
@@ -219,12 +219,12 @@ const pinnedFirst = (a: ReportDefinition, b: ReportDefinition) => (a.pin_order ?
 export function ReportCatalogue({
     reports,
     showPinned = false,
-    period,
+    range,
 }: {
     reports: ReportDefinition[];
     showPinned?: boolean;
     /** The hub's period switch — each report link opens on its dates. */
-    period?: SnapshotPeriod;
+    range?: SnapshotRange;
 }) {
     const t = useT();
     const { data: exportsList = [] } = useMyExports();
@@ -239,7 +239,7 @@ export function ReportCatalogue({
             {showPinned && pinned.length > 0 && (
                 <GroupCard icon={Pin} title={t('rep_pinned_title')} count={pinned.length}>
                     {pinned.map((r) => (
-                        <ReportRow key={r.key} report={r} latest={latest.get(r.key)} period={period} />
+                        <ReportRow key={r.key} report={r} latest={latest.get(r.key)} range={range} />
                     ))}
                 </GroupCard>
             )}
@@ -248,7 +248,7 @@ export function ReportCatalogue({
                 return (
                     <GroupCard key={domain} icon={DOMAIN_ICONS[domain]} title={t(`rep_domain_${domain}`)} count={items.length}>
                         {items.map((r) => (
-                            <ReportRow key={r.key} report={r} latest={latest.get(r.key)} period={period} />
+                            <ReportRow key={r.key} report={r} latest={latest.get(r.key)} range={range} />
                         ))}
                     </GroupCard>
                 );

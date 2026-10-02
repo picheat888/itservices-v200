@@ -13,7 +13,7 @@ import type {
     ReportScheduleItem,
     ReportSnapshot,
     ScheduleInput,
-    SnapshotPeriod,
+    SnapshotRange,
     TabularDefinition,
     TabularFilters,
     TabularRows,
@@ -51,7 +51,7 @@ function tabularParams(f: TabularFilters) {
 export const reportApi = {
     catalogue: () => http.get<{ data: ReportDefinition[] }>('/reports').then((r) => r.data.data),
 
-    snapshot: (period: SnapshotPeriod) => http.get<{ data: ReportSnapshot }>('/reports/snapshot', { params: { period } }).then((r) => r.data.data),
+    snapshot: (range: SnapshotRange) => http.get<{ data: ReportSnapshot }>('/reports/snapshot', { params: range }).then((r) => r.data.data),
 
     pin: (key: string) => http.put(`/reports/${key}/pin`),
 

@@ -28,9 +28,19 @@ class ReportController extends Controller
 
     public function snapshot(Request $request, ReportSnapshotService $snapshot): JsonResponse
     {
-        $validated = $request->validate(['period' => ['nullable', Rule::in(ReportSnapshotService::PERIODS)]]);
+        $validated = $request->validate([
+            'period' => ['nullable', Rule::in(ReportSnapshotService::PERIODS)],
+            'from' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'to' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:from', 'before_or_equal:today'],
+        ]);
+        $period = $validated['period'] ?? '30d';
 
-        return response()->json(['data' => $snapshot->for($request->user(), $validated['period'] ?? 'month')]);
+        return response()->json(['data' => $snapshot->for(
+            $request->user(),
+            $period,
+            $period === 'custom' ? $validated['from'] : null,
+            $period === 'custom' ? $validated['to'] : null,
+        )]);
     }
 
     public function pin(Request $request, string $key): JsonResponse
