@@ -31,7 +31,7 @@ class TicketBacklogReport extends TabularReport
 
     private const DUE_KIND_KEYS = ['response' => 'rep_due_kind_response', 'resolve' => 'rep_due_kind_resolve'];
 
-    private const DUE_KIND_TH = ['response' => 'รอรับเรื่อง', 'resolve' => 'รอแก้ไขเสร็จ'];
+    private const DUE_KIND_TH = ['response' => 'รอรับเคส', 'resolve' => 'รอปิดเคส'];
 
     /** "Due soon" reaches this far ahead. */
     private const SOON_HOURS = 24;
@@ -100,7 +100,7 @@ class TicketBacklogReport extends TabularReport
             ReportColumn::date('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::number('age_days', 'ค้างมา (วัน)', fn (Ticket $t) => $t->created_at === null ? null : round($t->created_at->diffInHours(now(), true) / 24, 1)),
             ReportColumn::date('due_at', 'ครบกำหนด SLA', fn (Ticket $t) => TicketMetrics::activeDue($t)),
-            ReportColumn::enum('due_kind', 'รออะไร', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
+            ReportColumn::enum('due_kind', 'เงื่อนไข SLA', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
             ReportColumn::hoursLeft('hours_left', 'เหลือ (ชม.)', fn (Ticket $t) => self::hoursLeft($t)),
         ];
     }
