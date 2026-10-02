@@ -502,7 +502,7 @@ export const report: Dict = {
     rep_bl_lane_soon: 'Within 24 h',
     rep_bl_lane_later: '1–3 days',
     rep_bl_lane_far: 'More than 3 days',
-    rep_bl_more: '+{n} more in the table',
+    rep_bl_more: 'Show {n} more',
     rep_bl_none: 'None',
     rep_bl_owners_title: 'Who holds them',
     rep_bl_owner_count: '{n} open',

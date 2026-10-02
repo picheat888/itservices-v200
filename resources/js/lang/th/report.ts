@@ -501,7 +501,7 @@ export const report: Dict = {
     rep_bl_lane_soon: 'ภายใน 24 ชม.',
     rep_bl_lane_later: '1–3 วัน',
     rep_bl_lane_far: 'มากกว่า 3 วัน',
-    rep_bl_more: '+{n} รายการในตาราง',
+    rep_bl_more: 'แสดงอีก {n} รายการ',
     rep_bl_none: 'ไม่มี',
     rep_bl_owners_title: 'ค้างอยู่กับใคร',
     rep_bl_owner_count: 'ค้าง {n} รายการ',

@@ -2,7 +2,8 @@
  * The "Ticket ค้างและเกิน SLA" page's own parts (pages/tickets-backlog.tsx), from the design
  * mockup: the SLA segments at the head of the filter bar (with how many tickets each holds),
  * the SLA due board — every live ticket in six lanes by the time left on the deadline it runs
- * against now, past-due on the left of a "ตอนนี้" line — then who holds them and the categories.
+ * against now, past-due on the left of a "ตอนนี้" line; a long lane folds and opens on its own —
+ * then who holds them and the categories.
  *
  * All of it reads useBacklogBoard (every live ticket the other filters keep, unpaged); the SLA
  * filter narrows the board and cards here, while the table below is filtered on the server.
@@ -12,11 +13,14 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useBacklogBoard } from '../hooks/use-reports';
 import type { BacklogBoardTicket, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
+import { fold } from './tabular-charts';
 import { categoryKey, priorityKey } from './ticket-labels';
 
 export type SlaState = 'breached' | 'due_soon' | 'on_track';
@@ -77,7 +81,7 @@ const LANES: { key: string; label: string; test: (h: number | null) => boolean; 
     { key: 'far', label: 'rep_bl_lane_far', test: (h) => h === null || h > 72, tone: 'border-border', count: '' },
 ];
 
-/** Cards per lane before "+n รายการในตาราง". */
+/** Cards per lane before "แสดงอีก n รายการ". */
 const LANE_CARDS = 6;
 
 const SEGMENTS: { value: SlaState | null; label: string }[] = [
@@ -175,6 +179,9 @@ function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
 
 function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
     const t = useT();
+    // Lanes opened past LANE_CARDS — each lane folds and opens on its own.
+    const [openLanes, setOpenLanes] = useState<string[]>([]);
+    const toggleLane = (key: string) => setOpenLanes((keys) => (keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key]));
     const legend: [string, string][] = [
         ['critical', PRIORITY_DOT.critical],
         ['high', PRIORITY_DOT.high],
@@ -211,6 +218,8 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 <div className="grid min-w-[52rem] grid-cols-[repeat(3,minmax(0,1fr))_0_repeat(3,minmax(0,1fr))] gap-x-2.5 px-5 pt-2 pb-5">
                     {LANES.map((lane, i) => {
                         const items = tickets.filter((ticket) => lane.test(ticket.hours_left));
+                        const open = openLanes.includes(lane.key);
+                        const folding = fold(items, LANE_CARDS, open);
                         return (
                             <div key={lane.key} className="contents">
                                 {i === 3 && (
@@ -228,12 +237,18 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                     {items.length === 0 ? (
                                         <span className="text-muted-foreground py-2 text-xs">{t('rep_bl_none')}</span>
                                     ) : (
-                                        items.slice(0, LANE_CARDS).map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
+                                        folding.shown.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
                                     )}
-                                    {items.length > LANE_CARDS && (
-                                        <span className="text-muted-foreground text-center text-[11.5px]">
-                                            {t('rep_bl_more').replace('{n}', String(items.length - LANE_CARDS))}
-                                        </span>
+                                    {folding.folds && (
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleLane(lane.key)}
+                                            aria-expanded={open}
+                                            className="border-border text-muted-foreground hover:border-brand/50 hover:bg-accent hover:text-foreground focus-visible:ring-brand/30 flex items-center justify-center gap-1 rounded-lg border border-dashed py-1.5 text-[11.5px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                                        >
+                                            {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                            {open ? t('rep_chart_show_less') : t('rep_bl_more').replace('{n}', String(folding.rest.length))}
+                                        </button>
                                     )}
                                 </div>
                             </div>
