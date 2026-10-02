@@ -14,6 +14,7 @@ import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehous
 import { Link } from 'react-router-dom';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
 import type { ReportDefinition, ReportDomain, ReportExportItem } from '../types';
+import { CARD_HEADING_TINT } from './card-heading';
 
 /** The ticket overview report keeps its own dedicated page; every tabular report shares the generic one. */
 export function reportRoute(def: Pick<ReportDefinition, 'key'>): string {
@@ -138,7 +139,7 @@ function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; t
 
     return (
         <Card className="overflow-hidden">
-            <div className="bg-brand/[0.04] dark:bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
+            <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center gap-2.5 border-b px-[18px] py-3')}>
                 <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
                     <Icon className="h-[15px] w-[15px]" />
                 </span>
@@ -166,7 +167,7 @@ export function ReportCatalogueSkeleton() {
             </div>
             {[4, 3].map((rows, g) => (
                 <Card key={g} className="overflow-hidden">
-                    <div className="bg-brand/[0.04] dark:bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
+                    <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center gap-2.5 border-b px-[18px] py-3')}>
                         <Skeleton className="bg-muted dark:bg-background/70 h-7 w-7" />
                         <Skeleton className="bg-muted dark:bg-background/70 h-4 w-28" />
                         <Skeleton className="bg-muted dark:bg-background/70 h-3 w-14" />

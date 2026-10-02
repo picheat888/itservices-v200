@@ -15,6 +15,7 @@ import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
 import { useState } from 'react';
 import { BacklogAging } from '../components/backlog-aging';
+import { CARD_HEADING_TINT } from '../components/card-heading';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
 import { KpiTile } from '../components/kpi-tile';
@@ -32,7 +33,7 @@ const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'b
 /** A card's heading row: title on the left, a short note (legend, unit, "Top 6") on the right. */
 function SectionHeading({ title, sub, className }: { title: string; sub?: React.ReactNode; className?: string }) {
     return (
-        <div className={cn('border-border flex items-center justify-between gap-3 border-b px-5 py-3', className)}>
+        <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3', className)}>
             <span className="text-sm font-semibold">{title}</span>
             {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
         </div>
