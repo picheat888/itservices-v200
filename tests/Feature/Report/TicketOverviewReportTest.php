@@ -296,13 +296,16 @@ class TicketOverviewReportTest extends TestCase
         $this->assertCount(12, $this->summary($this->deskMember())['by_department']);
     }
 
-    public function test_staff_count_what_they_closed_in_the_range_and_hold_now(): void
+    public function test_staff_count_only_what_they_closed_in_the_range(): void
     {
         $staff = $this->seedDeskSet();
+        // Holds a live ticket and has closed nothing in the range — the card is about the period only.
+        $busy = User::factory()->create(['name' => 'Busy']);
+        $this->ticket(['status' => 'in_progress', 'assignee_id' => $busy->id, 'created_at' => '2026-09-10 10:00']);
 
         $rows = collect($this->summary($this->deskMember())['by_assignee']);
 
-        // Most closed first; "Old timer" closed only in August and holds nothing.
+        // Most closed first; "Old timer" closed only in August, "Busy" closed nothing yet.
         $this->assertSame(['Kankanok', 'Latecomer', 'Somsak'], $rows->pluck('name')->all());
         $kan = $rows->firstWhere('assignee_id', $staff['kan']->id);
         $this->assertSame(2, $kan['completed']);
@@ -310,15 +313,14 @@ class TicketOverviewReportTest extends TestCase
         // Nearest-rank median of [24, 48] — the page's own measure.
         $this->assertEquals(24.0, $kan['median_resolve_hours']);
         $this->assertEquals(100.0, $kan['sla_rate']);
-        $this->assertSame(1, $kan['in_hand']);
-        $this->assertSame(1, $kan['breached_in_hand']);
+        // Nothing about what is in hand now.
+        $this->assertArrayNotHasKey('in_hand', $kan);
+        $this->assertArrayNotHasKey('breached_in_hand', $kan);
         // Opened in August, closed in September: counts by when it was closed.
         $this->assertSame(1, $rows->firstWhere('assignee_id', $staff['late']->id)['completed']);
         $som = $rows->firstWhere('assignee_id', $staff['som']->id);
         $this->assertEquals(192.0, $som['median_resolve_hours']);
         $this->assertEquals(0.0, $som['sla_rate']);
-        // Somsak's network ticket sits outside the reader's levels.
-        $this->assertSame(0, $som['in_hand']);
     }
 
     public function test_staff_follow_the_category_filter(): void
@@ -326,11 +328,11 @@ class TicketOverviewReportTest extends TestCase
         $staff = $this->seedDeskSet();
         $user = $this->deskMember();
 
-        $software = $this->summary($user, ['categories' => ['software']])['by_assignee'];
-        $this->assertSame([$staff['kan']->id], array_column($software, 'assignee_id'));
-        $this->assertSame(0, $software[0]['completed']);
-        $this->assertNull($software[0]['median_resolve_hours']);
-        $this->assertSame(1, $software[0]['in_hand']);
+        // Kankanok's software ticket is still in progress, so nobody closed software in the range.
+        $this->assertSame([], $this->summary($user, ['categories' => ['software']])['by_assignee']);
+
+        $hardware = $this->summary($user, ['categories' => ['hardware']])['by_assignee'];
+        $this->assertSame([$staff['kan']->id, $staff['late']->id, $staff['som']->id], array_column($hardware, 'assignee_id'));
 
         // A category outside the reader's levels shows nobody.
         $this->assertSame([], $this->summary($user, ['categories' => ['network']])['by_assignee']);
