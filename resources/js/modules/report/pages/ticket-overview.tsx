@@ -226,16 +226,16 @@ export default function TicketOverviewReportPage() {
                             }
                         />
                         <KpiTile
-                            label={t('rep_kpi_median')}
+                            label={t('rep_kpi_avg')}
                             hint={t('rep_col_time_hint')}
-                            value={fmt(data.kpi.median_resolve_hours)}
-                            unit={data.kpi.median_resolve_hours === null ? undefined : t('rep_hours')}
+                            value={fmt(data.kpi.avg_resolve_hours)}
+                            unit={data.kpi.avg_resolve_hours === null ? undefined : t('rep_hours')}
                             footer={
                                 data.kpi.p90_resolve_hours === null ? undefined : (
                                     <span className="inline-flex items-center gap-1.5">
                                         <HoursChange
-                                            current={data.kpi.median_resolve_hours}
-                                            previous={data.previous.median_resolve_hours}
+                                            current={data.kpi.avg_resolve_hours}
+                                            previous={data.previous.avg_resolve_hours}
                                             unit={t('rep_hours')}
                                         />
                                         {t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours))}

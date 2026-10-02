@@ -102,7 +102,7 @@ class TicketOverviewExportTest extends TestCase
 
             // แผนก, Ticket, ฮาร์ดแวร์ … อื่น ๆ (6 categories), ยังไม่ปิด, ทัน SLA %
             return $department === ['ปฏิบัติการ', 2, 2, 0, 0, 0, 0, 0, 1, 100.0]
-                // ผู้รับผิดชอบ, ปิดสำเร็จ, ยกเลิก, เวลาแก้ไขโดยมัธยฐาน, ทัน SLA % — the period only
+                // ผู้รับผิดชอบ, ปิดสำเร็จ, ยกเลิก, เวลาแก้ไขโดยเฉลี่ย, ทัน SLA % — the period only
                 && $staff === ['Tech One', 1, 0, 2.0, 100.0];
         });
     }
