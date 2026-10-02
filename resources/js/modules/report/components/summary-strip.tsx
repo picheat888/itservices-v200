@@ -3,7 +3,8 @@
  * rows response (`rows.summary`) — mirrors App\Services\Report\Tabular\ReportSummary. Like the
  * Ticket & SLA tiles, a tile carries colour when the report gives it the means: its `share` of
  * the whole as a badge and a meter in the tile's tone, and its `split` as a stacked meter (when
- * there is no share) and as coloured dots in the footer ("● ซื้อ 62 · ● เช่า 18").
+ * there is no share) and as coloured dots in the footer ("● ซื้อ 62 · ● เช่า 18"). Two or three
+ * tiles share the row between them on wide screens, so a short strip leaves no empty slot.
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -13,12 +14,15 @@ import type { SummaryItem } from '../types';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 
+/** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
+const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3' };
+
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
 
     return (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className={cn('grid grid-cols-2 gap-3', WIDE_COLUMNS[items.length] ?? 'lg:grid-cols-4')}>
             {items.map((item) => {
                 const locale = lang === 'th' ? 'th-TH' : 'en-US';
                 const value =

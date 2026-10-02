@@ -37,7 +37,7 @@ const CATEGORY_TONES: [string, ChartTone][] = [
     ['software', 'violet'],
     ['network', 'green'],
     ['telephone', 'amber'],
-    ['cctv', 'red'],
+    ['cctv', 'pink'],
     ['other', 'gray'],
 ];
 

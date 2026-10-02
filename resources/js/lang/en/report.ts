@@ -376,7 +376,7 @@ export const report: Dict = {
     rep_c_stock_value: 'Stock value',
     rep_c_monthly_cost: 'Per month',
     rep_c_yearly_cost: 'Per year',
-    rep_fl_from: 'From',
+    rep_fl_from: 'Dates',
     rep_fl_to: 'To',
     rep_fl_warehouse_id: 'Warehouse',
     rep_fl_as_of: 'As of',
