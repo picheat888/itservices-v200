@@ -1,8 +1,10 @@
 /**
- * Generic tabular report page (/reports/:slug, e.g. /reports/assets-by-status-department): fetches the report's own definition
- * (filters/columns/formats), then its rows (with summary + pagination), and renders them
- * through the shared filter bar, summary strip, cell formatter and export dialog — one
- * page serves every report declared as a `TabularReport` on the backend.
+ * The body of every tabular report page (pages/<slug>.tsx, e.g. pages/assets-by-status-department.tsx):
+ * fetches the report's own definition (filters/columns/formats) from the backend, then its rows
+ * (with summary + pagination), and renders them through the shared filter bar, summary strip,
+ * cell formatter and export / schedule dialogs. The columns and filters stay defined once, in the
+ * report's backend TabularReport class, so the screen, Excel, PDF and scheduled mail never differ;
+ * a page that needs more than this can wrap or replace it.
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
@@ -15,24 +17,22 @@ import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { CARD_HEADING_TINT } from '../components/card-heading';
-import { ColumnPicker } from '../components/column-picker';
-import { ExportReportDialog } from '../components/export-report-dialog';
-import { reportKeyFromSlug } from '../components/report-catalogue';
-import { ReportHeader } from '../components/report-header';
-import { CardHeadingSkeleton, DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from '../components/report-skeletons';
-import { tabularFilterChips } from '../components/schedule-filter-summary';
-import { ScheduleReportDialog, scheduleCoverage } from '../components/schedule-report-dialog';
-import { SummaryStrip } from '../components/summary-strip';
-import { TabularCell } from '../components/tabular-cell';
-import { ChartsSkeleton, TabularCharts } from '../components/tabular-charts';
-import { TabularFilterBar } from '../components/tabular-filter-bar';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
 import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
+import { CARD_HEADING_TINT } from './card-heading';
+import { ColumnPicker } from './column-picker';
+import { ExportReportDialog } from './export-report-dialog';
+import { ReportHeader } from './report-header';
+import { CardHeadingSkeleton, DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from './report-skeletons';
+import { tabularFilterChips } from './schedule-filter-summary';
+import { ScheduleReportDialog, scheduleCoverage } from './schedule-report-dialog';
+import { SummaryStrip } from './summary-strip';
+import { TabularCell } from './tabular-cell';
+import { ChartsSkeleton, TabularCharts } from './tabular-charts';
+import { TabularFilterBar } from './tabular-filter-bar';
 
 function errorMessageFor(t: (key: string) => string, error: unknown): string {
     const status = isAxiosError(error) ? error.response?.status : undefined;
@@ -237,11 +237,9 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
     );
 }
 
-export default function TabularReportPage() {
+/** One tabular report, by its backend key ("assets.by_status_department"). */
+export function TabularReportView({ reportKey: key }: { reportKey: string }) {
     const t = useT();
-    // The page address is the slug (/reports/assets-by-status-department); the API wants the key.
-    const { slug = '' } = useParams<{ slug: string }>();
-    const key = reportKeyFromSlug(slug);
     const stem = key.replace('.', '_');
     const defQuery = useTabularDefinition(key);
     const definition = defQuery.data;

@@ -54,7 +54,7 @@ export const report: Dict = {
     rep_tickets_overview_title: 'ภาพรวม Ticket & SLA',
     rep_tickets_overview_desc: 'ปริมาณงาน เวลาแก้ไข และการปิดงานทัน SLA แยกตามหมวด ความสำคัญ และแผนก',
 
-    // pages/ticket-overview.tsx — header, KPI tiles
+    // pages/tickets-overview.tsx — header, KPI tiles
     rep_export: 'ส่งออก',
     rep_kpi_total: 'Ticket ทั้งหมด',
     rep_kpi_completed: 'ปิดสำเร็จ',
@@ -76,7 +76,7 @@ export const report: Dict = {
     rep_err_range_invalid: 'ตรวจสอบช่วงวันที่ (ไม่เกิน 366 วัน)',
     rep_err_load_failed: 'โหลดรายงานไม่สำเร็จ ลองอีกครั้ง',
 
-    // pages/ticket-overview.tsx — charts and breakdowns
+    // pages/tickets-overview.tsx — charts and breakdowns
     rep_weekly_title: 'ภาพรวม Ticket',
     rep_weekly_opened: 'เปิดใหม่',
     rep_weekly_closed: 'ปิดแล้ว',
@@ -262,12 +262,13 @@ export const report: Dict = {
     rep_schedules_delete: 'ลบ',
     rep_schedules_deleted: 'ลบการตั้งเวลาแล้ว',
 
-    // pages/tabular-report.tsx — generic table report
+    // components/tabular-report-view.tsx — generic table report
     rep_days_left: '{n} วัน',
     rep_err_not_found: 'ไม่พบรายงานนี้',
+    rep_back_to_reports: 'กลับไปหน้ารายงาน',
     rep_err_filter_invalid: 'ตรวจสอบตัวกรองอีกครั้ง',
 
-    // pages/tabular-report.tsx — definition-driven labels (titles, columns, filters, summaries)
+    // components/tabular-report-view.tsx — definition-driven labels (titles, columns, filters, summaries)
     rep_domain_assets: 'ทรัพย์สิน',
     rep_domain_contracts: 'สัญญาและการเช่า',
     rep_contracts_expiring_title: 'สัญญาใกล้หมดอายุ',

@@ -14,7 +14,7 @@
  *   the page short.
  *
  * The stacked bar and the fold come from tabular-charts.tsx, so these read like the asset report.
- * Used by pages/ticket-overview.tsx.
+ * Used by pages/tickets-overview.tsx.
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';

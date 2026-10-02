@@ -1,6 +1,6 @@
 /**
  * Age of the open-ticket backlog as four tinted tiles, fresh (green) to stale (red): the count
- * centred in its tile, the age band centred under it. Four across, two by two on a phone. Used by pages/ticket-overview.tsx.
+ * centred in its tile, the age band centred under it. Four across, two by two on a phone. Used by pages/tickets-overview.tsx.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
