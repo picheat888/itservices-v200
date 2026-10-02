@@ -205,11 +205,14 @@ export interface SummaryItem {
     key: string;
     label_key: string;
     value: number | null;
-    tone: 'amber' | 'red' | 'green' | null;
+    /** Amber / red also mark the tile as needing attention. */
+    tone: 'amber' | 'red' | 'green' | 'violet' | 'blue' | null;
     /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping). */
     format: 'count' | 'money';
     /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
-    split?: { key: string; label_key: string; value: number }[];
+    split?: { key: string; label_key: string; tone: ChartTone; value: number }[];
+    /** The value as a percent of the report's whole — a badge and a meter in the tile's tone. */
+    share?: number | null;
 }
 
 /** A chart colour, drawn by tabular-charts.tsx. */

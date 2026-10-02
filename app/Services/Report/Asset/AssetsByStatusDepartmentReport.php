@@ -242,17 +242,23 @@ class AssetsByStatusDepartmentReport extends TabularReport
         $split = fn (array $statuses) => array_map(fn (array $series) => [
             'key' => $series['key'],
             'label_key' => $series['label_key'],
+            'tone' => $series['tone'],
             'value' => (int) $bySource
                 ->filter(fn (Asset $a) => $a->getAttribute('source_value') === $series['key']
                     && ($statuses === [] || in_array($a->getAttribute('status_value'), $statuses, true)))
                 ->sum(fn (Asset $a) => (int) $a->getAttribute('total_count')),
         ], $this->sourceSeries());
 
+        // Each status tile in its donut colour, with its share of the whole as a badge and meter.
+        $all = $sum('total_count');
+
         return [
-            ReportSummary::make('total', 'ทรัพย์สินทั้งหมด', $sum('total_count'))->withSplit($split([])),
-            ReportSummary::make('in_use', 'ใช้งาน (รวมส่วนกลาง)', $sum('st_deployed') + $sum('st_common'), 'green')->withSplit($split(['deployed', 'common'])),
-            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'))->withSplit($split(['ready'])),
-            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'amber')->withSplit($split(['pending_return'])),
+            ReportSummary::make('total', 'ทรัพย์สินทั้งหมด', $all)->withSplit($split([])),
+            ReportSummary::make('in_use', 'ใช้งาน (รวมส่วนกลาง)', $sum('st_deployed') + $sum('st_common'), 'green')
+                ->withSplit($split(['deployed', 'common']))->withShareOf($all),
+            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'), 'violet')->withSplit($split(['ready']))->withShareOf($all),
+            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'amber')
+                ->withSplit($split(['pending_return']))->withShareOf($all),
         ];
     }
 }

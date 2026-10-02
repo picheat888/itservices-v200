@@ -20,40 +20,11 @@ import { useUiStore } from '@/stores/ui';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ChartLabel, ChartTone, TabularChart } from '../types';
+import type { ChartLabel, TabularChart } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
+import { FILL, STROKE, TEXT } from './chart-tones';
 import { HorizontalBars } from './horizontal-bars';
 import { BarRowsSkeleton, CardHeadingSkeleton } from './report-skeletons';
-
-/** Each tone as a fill (bars, swatches) and as a stroke (donut arcs). */
-const FILL: Record<ChartTone, string> = {
-    green: 'bg-emerald-500',
-    blue: 'bg-blue-500',
-    violet: 'bg-violet-500',
-    orange: 'bg-orange-500',
-    amber: 'bg-amber-500',
-    red: 'bg-red-500',
-    gray: 'bg-slate-400 dark:bg-slate-500',
-};
-/** Each tone as text, for the counts printed over a stacked bar. */
-const TEXT: Record<ChartTone, string> = {
-    green: 'text-emerald-600 dark:text-emerald-400',
-    blue: 'text-blue-600 dark:text-blue-400',
-    violet: 'text-violet-600 dark:text-violet-400',
-    orange: 'text-orange-600 dark:text-orange-400',
-    amber: 'text-amber-600 dark:text-amber-400',
-    red: 'text-red-600 dark:text-red-400',
-    gray: 'text-slate-500 dark:text-slate-400',
-};
-const STROKE: Record<ChartTone, string> = {
-    green: 'stroke-emerald-500',
-    blue: 'stroke-blue-500',
-    violet: 'stroke-violet-500',
-    orange: 'stroke-orange-500',
-    amber: 'stroke-amber-500',
-    red: 'stroke-red-500',
-    gray: 'stroke-slate-400 dark:stroke-slate-500',
-};
 
 /** How many rows a long list shows before folding the rest into "อื่น ๆ". */
 const TOP_STACKS = 10;
