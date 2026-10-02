@@ -61,7 +61,7 @@ export const report: Dict = {
     rep_kpi_canceled: '{n} canceled',
     rep_kpi_sla: 'Closed within SLA',
     rep_kpi_goal: 'Goal {n}%',
-    rep_kpi_median: 'Resolution time (median)',
+    rep_kpi_median: 'Typical resolve time',
     rep_kpi_p90: 'P90 = {n} h',
     rep_kpi_backlog: 'Open right now',
     rep_kpi_breached: '{n} past SLA',

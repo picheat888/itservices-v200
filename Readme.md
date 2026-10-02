@@ -4059,6 +4059,7 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 - **แยกตามแผนก** (`components/ticket-breakdown-cards.tsx` → `DepartmentStacksCard`): ทุกแผนก แท่ง stacked ตามหมวดพร้อมตัวเลขบนแต่ละชิ้น · Ticket / ทัน SLA (แดงเมื่อต่ำกว่าเป้า) / ยังไม่ปิด · 10 แผนกแรก + แถว "อื่น ๆ (n)" (SLA คิดจาก met/measured รวม) + ปุ่ม "แสดงทั้งหมด" · "ไม่ระบุแผนก" แยกใต้เส้นประ สเกลของตัวเอง
 - **ผลงานเจ้าหน้าที่ IT** (`StaffPerformanceCard`): **เฉพาะช่วงวันที่ที่เลือก** — ทุกคนที่ปิดเคสในช่วง: ปิดสำเร็จ (แถบเทียบคนที่ปิดมากสุด) / ยกเลิก / เวลาแก้ไขโดยทั่วไป (= มัธยฐาน, tooltip อธิบาย "ครึ่งหนึ่งของเคสปิดได้เร็วกว่านี้") / ทัน SLA · ไม่มีคอลัมน์ "ในมือตอนนี้" (ผู้ใช้ขอให้เป็นสรุปตาม period เท่านั้น) · ใช้ `DataTable` ตัวเดียวกับ "รายการ Ticket" (ตารางอยู่ในกรอบ inset + แบ่งหน้า 20 แถว เลือกจำนวนได้) — รองรับเจ้าหน้าที่ 30+ คนโดยหน้าไม่ยาว
 - การ์ด "รายการ Ticket" เอาบรรทัด "ข้อมูล ณ …" ออก
+- การ์ด KPI "เวลาแก้ไข (มัธยฐาน)" → "เวลาแก้ไขโดยทั่วไป" + tooltip (prop ใหม่ `hint` ของ `KpiTile`) · Excel/PDF ใช้คำเดียวกัน
 - แท่ง stacked + fold ใช้ของ `tabular-charts.tsx` ร่วมกับรายงานทรัพย์สิน (export `StackBar`, `fold`, `FoldToggle`)
 - ลิงก์เก่า `/reports/r/tickets.by_department` และ `/reports/r/tickets.staff_performance` redirect ไปหน้าภาพรวม
 

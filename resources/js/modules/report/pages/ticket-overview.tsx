@@ -227,6 +227,7 @@ export default function TicketOverviewReportPage() {
                         />
                         <KpiTile
                             label={t('rep_kpi_median')}
+                            hint={t('rep_col_time_hint')}
                             value={fmt(data.kpi.median_resolve_hours)}
                             unit={data.kpi.median_resolve_hours === null ? undefined : t('rep_hours')}
                             footer={
