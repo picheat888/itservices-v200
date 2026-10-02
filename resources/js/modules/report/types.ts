@@ -128,8 +128,33 @@ export interface TicketOverviewSummary {
     weekly: { week_start: string; opened: number; closed: number; backlog: number }[];
     sla_by_priority: { priority: string; measured: number; met: number; rate: number | null }[];
     by_category: { category: string; count: number }[];
-    by_department: { department_id: number | null; name: string | null; name_th: string | null; count: number; sla_rate: number | null }[];
-    by_assignee: { assignee_id: number; name: string | null; completed: number; median_resolve_hours: number | null }[];
+    /** Every requesting department, busiest first; the no-department row (department_id null) comes last. */
+    by_department: {
+        department_id: number | null;
+        name: string | null;
+        name_th: string | null;
+        count: number;
+        /** category value → tickets; categories with none are absent */
+        categories: Record<string, number>;
+        /** still open or in progress */
+        open: number;
+        sla_measured: number;
+        sla_met: number;
+        sla_rate: number | null;
+    }[];
+    /** Every IT staff member: closed inside the range (by resolved_at) + what they hold now. Most closed first. */
+    by_assignee: {
+        assignee_id: number;
+        name: string | null;
+        completed: number;
+        canceled: number;
+        median_resolve_hours: number | null;
+        sla_measured: number;
+        sla_met: number;
+        sla_rate: number | null;
+        in_hand: number;
+        breached_in_hand: number;
+    }[];
     options: {
         departments: { id: number; name: string; name_th: string | null }[];
         assignees: { id: number; name: string }[];

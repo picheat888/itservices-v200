@@ -20,7 +20,7 @@ import { useUiStore } from '@/stores/ui';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ChartLabel, TabularChart } from '../types';
+import type { ChartLabel, ChartSeries, TabularChart } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { FILL, STROKE, TEXT } from './chart-tones';
 import { HorizontalBars } from './horizontal-bars';
@@ -35,7 +35,7 @@ const TOP_BARS = 8;
  * with the rest handed back to be summed into one "อื่น ๆ" row. One extra row is shown rather
  * than folded, since "อื่น ๆ (1)" would only hide a name.
  */
-function fold<T>(rows: T[], top: number, open: boolean) {
+export function fold<T>(rows: T[], top: number, open: boolean) {
     const folds = rows.length > top + 1;
     const folded = folds && !open;
 
@@ -43,7 +43,7 @@ function fold<T>(rows: T[], top: number, open: boolean) {
 }
 
 /** "แสดงทั้งหมด (24)" / "ย่อ" under a folding list. */
-function FoldToggle({ open, total, onToggle }: { open: boolean; total: number; onToggle: () => void }) {
+export function FoldToggle({ open, total, onToggle }: { open: boolean; total: number; onToggle: () => void }) {
     const t = useT();
     const Icon = open ? ChevronUp : ChevronDown;
 
@@ -112,6 +112,52 @@ function useLabel() {
 type StackRowData = Stacks['rows'][number] & { others?: boolean };
 
 /**
+ * A stacked bar with each piece's count printed over it, `scale` being what a full-width bar
+ * stands for. Shared with the Ticket & SLA page's department card (pages/ticket-overview.tsx).
+ */
+export function StackBar({ values, series, scale }: { values: Record<string, number>; series: ChartSeries[]; scale: number }) {
+    const t = useT();
+    const width = (value: number) => `${Math.min(100, (value / Math.max(1, scale)) * 100)}%`;
+
+    return (
+        <div className="min-w-0">
+            <div className="flex h-4 items-end">
+                {series.map((s) => {
+                    const value = values[s.key] ?? 0;
+                    if (value === 0) return null;
+                    return (
+                        <span
+                            key={s.key}
+                            className={cn(
+                                'flex shrink-0 justify-center overflow-visible font-mono text-[11px] leading-none font-semibold whitespace-nowrap',
+                                TEXT[s.tone],
+                            )}
+                            style={{ width: width(value) }}
+                        >
+                            {value}
+                        </span>
+                    );
+                })}
+            </div>
+            <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
+                {series.map((s) => {
+                    const value = values[s.key] ?? 0;
+                    if (value === 0) return null;
+                    return (
+                        <span
+                            key={s.key}
+                            title={`${t(s.label_key)}: ${value}`}
+                            className={cn('block h-full', FILL[s.tone])}
+                            style={{ width: width(value) }}
+                        />
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+/**
  * One row: name, the stacked bar with each piece's count over it, the total. `scale` is what a
  * full-width bar stands for — the largest department, or for an apart row its own total.
  */
@@ -128,9 +174,7 @@ function StackRow({
     muted?: boolean;
     note?: string;
 }) {
-    const t = useT();
     const label = useLabel();
-    const width = (value: number) => `${Math.min(100, (value / Math.max(1, scale)) * 100)}%`;
 
     return (
         <div className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3rem] items-center gap-3 px-5 py-2.5 text-sm">
@@ -140,40 +184,7 @@ function StackRow({
                 </span>
                 {note && <span className="text-muted-foreground block truncate text-[11px]">{note}</span>}
             </span>
-            <div className="min-w-0">
-                <div className="flex h-4 items-end">
-                    {series.map((s) => {
-                        const value = row.values[s.key] ?? 0;
-                        if (value === 0) return null;
-                        return (
-                            <span
-                                key={s.key}
-                                className={cn(
-                                    'flex shrink-0 justify-center overflow-visible font-mono text-[11px] leading-none font-semibold whitespace-nowrap',
-                                    TEXT[s.tone],
-                                )}
-                                style={{ width: width(value) }}
-                            >
-                                {value}
-                            </span>
-                        );
-                    })}
-                </div>
-                <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
-                    {series.map((s) => {
-                        const value = row.values[s.key] ?? 0;
-                        if (value === 0) return null;
-                        return (
-                            <span
-                                key={s.key}
-                                title={`${t(s.label_key)}: ${value}`}
-                                className={cn('block h-full', FILL[s.tone])}
-                                style={{ width: width(value) }}
-                            />
-                        );
-                    })}
-                </div>
-            </div>
+            <StackBar values={row.values} series={series} scale={scale} />
             <span className="text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
         </div>
     );

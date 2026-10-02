@@ -216,7 +216,124 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame('Operations', $data['by_department'][0]['name']);
         $this->assertSame('ปฏิบัติการ', $data['by_department'][0]['name_th']);
         $this->assertSame(2, $data['by_department'][0]['count']);
-        $this->assertEquals(['assignee_id' => $tech->id, 'name' => 'Tech One', 'completed' => 1, 'median_resolve_hours' => 1.0], $data['by_assignee'][0]);
+        $this->assertSame($tech->id, $data['by_assignee'][0]['assignee_id']);
+        $this->assertSame('Tech One', $data['by_assignee'][0]['name']);
+        $this->assertSame(1, $data['by_assignee'][0]['completed']);
+        $this->assertEquals(1.0, $data['by_assignee'][0]['median_resolve_hours']);
+    }
+
+    /**
+     * The set the department and staff cards are checked against — September, as of the 25th 10:00:
+     *  t1 hw  IT     kan  completed 5th→6th (24h)    met
+     *  t7 hw  IT     kan  completed 1st→3rd (48h)    met
+     *  t8 hw  IT     kan  canceled 8th
+     *  t2 sw  IT     kan  in progress, resolve due 20th (breached)
+     *  t3 hw  Sales  som  completed 12th→20th (192h) breached
+     *  t5 hw  —      —    open, response due 26th (on track)
+     *  t4 nw  IT     som  in progress — outside the reader's levels
+     *  t6 hw  IT     old  completed in August — outside the range
+     *  t9 hw  IT     late opened in August, completed 2nd (counts for staff, not for departments)
+     *
+     * @return array<string, User>
+     */
+    private function seedDeskSet(): array
+    {
+        $it = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
+        $sales = Department::create(['name' => 'Sales', 'name_th' => 'ฝ่ายขาย']);
+        $a = Employee::create(['first_name' => 'Anan', 'status' => 'active', 'department_id' => $it->id]);
+        $b = Employee::create(['first_name' => 'Bua', 'status' => 'active', 'department_id' => $sales->id]);
+        $c = Employee::create(['first_name' => 'Chai', 'status' => 'active']);
+        $staff = [
+            'kan' => User::factory()->create(['name' => 'Kankanok']),
+            'som' => User::factory()->create(['name' => 'Somsak']),
+            'old' => User::factory()->create(['name' => 'Old timer']),
+            'late' => User::factory()->create(['name' => 'Latecomer']),
+        ];
+
+        $this->ticket(['requester_id' => $a->id, 'status' => 'completed', 'assignee_id' => $staff['kan']->id, 'created_at' => '2026-09-05 10:00', 'resolved_at' => '2026-09-06 10:00', 'sla_resolve_due_at' => '2026-09-07 10:00']);
+        $this->ticket(['requester_id' => $a->id, 'status' => 'completed', 'assignee_id' => $staff['kan']->id, 'created_at' => '2026-09-01 10:00', 'resolved_at' => '2026-09-03 10:00', 'sla_resolve_due_at' => '2026-09-04 10:00']);
+        $this->ticket(['requester_id' => $a->id, 'status' => 'canceled', 'assignee_id' => $staff['kan']->id, 'created_at' => '2026-09-07 10:00', 'resolved_at' => '2026-09-08 10:00']);
+        $this->ticket(['requester_id' => $a->id, 'category' => 'software', 'status' => 'in_progress', 'assignee_id' => $staff['kan']->id, 'created_at' => '2026-09-10 10:00', 'responded_at' => '2026-09-10 11:00', 'sla_resolve_due_at' => '2026-09-20 10:00']);
+        $this->ticket(['requester_id' => $b->id, 'status' => 'completed', 'assignee_id' => $staff['som']->id, 'created_at' => '2026-09-12 10:00', 'resolved_at' => '2026-09-20 10:00', 'sla_resolve_due_at' => '2026-09-15 10:00']);
+        $this->ticket(['requester_id' => $c->id, 'status' => 'open', 'created_at' => '2026-09-13 10:00', 'sla_response_due_at' => '2026-09-26 10:00']);
+        $this->ticket(['requester_id' => $a->id, 'category' => 'network', 'status' => 'in_progress', 'assignee_id' => $staff['som']->id, 'created_at' => '2026-09-12 10:00', 'sla_resolve_due_at' => '2026-09-13 10:00']);
+        $this->ticket(['requester_id' => $a->id, 'status' => 'completed', 'assignee_id' => $staff['old']->id, 'created_at' => '2026-08-20 10:00', 'resolved_at' => '2026-08-21 10:00']);
+        $this->ticket(['requester_id' => $a->id, 'status' => 'completed', 'assignee_id' => $staff['late']->id, 'created_at' => '2026-08-30 10:00', 'resolved_at' => '2026-09-02 10:00', 'sla_resolve_due_at' => '2026-09-03 10:00']);
+
+        return $staff;
+    }
+
+    public function test_departments_split_by_category_with_what_is_still_open(): void
+    {
+        $this->seedDeskSet();
+
+        $rows = collect($this->summary($this->deskMember())['by_department']);
+
+        // Busiest first; requesters with no department share one row.
+        $this->assertSame(['IT', 'Sales', null], $rows->pluck('name')->all());
+        $it = $rows->firstWhere('name', 'IT');
+        $this->assertSame(4, $it['count']);
+        // The reader has no network level, so that ticket is not counted anywhere.
+        $this->assertSame(['hardware' => 3, 'software' => 1], $it['categories']);
+        $this->assertSame(1, $it['open']);
+        $this->assertSame(2, $it['sla_measured']);
+        $this->assertSame(2, $it['sla_met']);
+        $this->assertEquals(100.0, $it['sla_rate']);
+        $this->assertEquals(0.0, $rows->firstWhere('name', 'Sales')['sla_rate']);
+        $none = $rows->firstWhere('department_id', null);
+        $this->assertSame(1, $none['count']);
+        $this->assertSame(1, $none['open']);
+    }
+
+    public function test_departments_list_every_department_not_just_the_busiest(): void
+    {
+        foreach (range(1, 12) as $n) {
+            $department = Department::create(['name' => "Dept {$n}"]);
+            $requester = Employee::create(['first_name' => "E{$n}", 'status' => 'active', 'department_id' => $department->id]);
+            $this->ticket(['requester_id' => $requester->id, 'created_at' => '2026-09-02 08:00']);
+        }
+
+        $this->assertCount(12, $this->summary($this->deskMember())['by_department']);
+    }
+
+    public function test_staff_count_what_they_closed_in_the_range_and_hold_now(): void
+    {
+        $staff = $this->seedDeskSet();
+
+        $rows = collect($this->summary($this->deskMember())['by_assignee']);
+
+        // Most closed first; "Old timer" closed only in August and holds nothing.
+        $this->assertSame(['Kankanok', 'Latecomer', 'Somsak'], $rows->pluck('name')->all());
+        $kan = $rows->firstWhere('assignee_id', $staff['kan']->id);
+        $this->assertSame(2, $kan['completed']);
+        $this->assertSame(1, $kan['canceled']);
+        // Nearest-rank median of [24, 48] — the page's own measure.
+        $this->assertEquals(24.0, $kan['median_resolve_hours']);
+        $this->assertEquals(100.0, $kan['sla_rate']);
+        $this->assertSame(1, $kan['in_hand']);
+        $this->assertSame(1, $kan['breached_in_hand']);
+        // Opened in August, closed in September: counts by when it was closed.
+        $this->assertSame(1, $rows->firstWhere('assignee_id', $staff['late']->id)['completed']);
+        $som = $rows->firstWhere('assignee_id', $staff['som']->id);
+        $this->assertEquals(192.0, $som['median_resolve_hours']);
+        $this->assertEquals(0.0, $som['sla_rate']);
+        // Somsak's network ticket sits outside the reader's levels.
+        $this->assertSame(0, $som['in_hand']);
+    }
+
+    public function test_staff_follow_the_category_filter(): void
+    {
+        $staff = $this->seedDeskSet();
+        $user = $this->deskMember();
+
+        $software = $this->summary($user, ['categories' => ['software']])['by_assignee'];
+        $this->assertSame([$staff['kan']->id], array_column($software, 'assignee_id'));
+        $this->assertSame(0, $software[0]['completed']);
+        $this->assertNull($software[0]['median_resolve_hours']);
+        $this->assertSame(1, $software[0]['in_hand']);
+
+        // A category outside the reader's levels shows nobody.
+        $this->assertSame([], $this->summary($user, ['categories' => ['network']])['by_assignee']);
     }
 
     public function test_previous_period_is_the_same_length_right_before(): void
