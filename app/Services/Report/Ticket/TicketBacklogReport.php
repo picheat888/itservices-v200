@@ -31,7 +31,7 @@ class TicketBacklogReport extends TabularReport
 
     private const DUE_KIND_KEYS = ['response' => 'rep_due_kind_response', 'resolve' => 'rep_due_kind_resolve'];
 
-    private const DUE_KIND_TH = ['response' => 'กำหนดตอบรับ', 'resolve' => 'กำหนดแก้ไข'];
+    private const DUE_KIND_TH = ['response' => 'รอรับเรื่อง', 'resolve' => 'รอแก้ไขเสร็จ'];
 
     /** "Due soon" reaches this far ahead. */
     private const SOON_HOURS = 24;
@@ -93,13 +93,14 @@ class TicketBacklogReport extends TabularReport
             ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, self::categoryKeys(), self::categoryTh()),
             ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, self::priorityKeys(), self::priorityTh()),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),
-            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null),
+            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null)
+                ->labelKey('rep_c_ticket_requester'),
             ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
             ReportColumn::date('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::number('age_days', 'ค้างมา (วัน)', fn (Ticket $t) => $t->created_at === null ? null : round($t->created_at->diffInHours(now(), true) / 24, 1)),
             ReportColumn::date('due_at', 'ครบกำหนด SLA', fn (Ticket $t) => TicketMetrics::activeDue($t)),
-            ReportColumn::enum('due_kind', 'กำหนดที่ใช้', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
+            ReportColumn::enum('due_kind', 'รออะไร', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
             ReportColumn::hoursLeft('hours_left', 'เหลือ (ชม.)', fn (Ticket $t) => self::hoursLeft($t)),
         ];
     }

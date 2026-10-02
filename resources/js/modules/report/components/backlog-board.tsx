@@ -288,8 +288,9 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                     {name || t('rep_opt_unassigned')}
                 </span>
                 <span className="text-muted-foreground block truncate text-xs">
-                    {r.breached > 0 && `${t('rep_bl_owner_over').replace('{n}', String(r.breached))} · `}
+                    {/* The total first, then how many of them are past SLA. */}
                     {t('rep_bl_owner_count').replace('{n}', String(r.n))}
+                    {r.breached > 0 && ` · ${t('rep_bl_owner_over').replace('{n}', String(r.breached))}`}
                 </span>
             </span>
             <span className="bg-muted flex h-2.5 overflow-hidden rounded-full">

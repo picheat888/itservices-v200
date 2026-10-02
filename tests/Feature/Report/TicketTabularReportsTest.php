@@ -121,6 +121,10 @@ class TicketTabularReportsTest extends TestCase
 
         $columns = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns'))->keyBy('key');
         $this->assertSame('hours_left', $columns['hours_left']['type']);
+        // A ticket is reported ("ผู้แจ้ง"), not requested: its own heading key, the shared one stays for requests.
+        $this->assertSame('rep_c_ticket_requester', $columns['requester']['label_key']);
+        $this->assertSame('rep_c_ticket_no', $columns['ticket_no']['label_key']);
+        $this->assertSame(['response' => 'rep_due_kind_response', 'resolve' => 'rep_due_kind_resolve'], $columns['due_kind']['labels']);
     }
 
     /** A ticket number opens the case: the column says it links, each row carries where to. */
