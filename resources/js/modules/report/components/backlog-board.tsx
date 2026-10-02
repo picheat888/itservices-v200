@@ -10,6 +10,7 @@
  * Hours left follow TicketBacklogReport: negative = past due; inside 24 h = due soon.
  */
 import { useT } from '@/lang';
+import { toneDots } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -22,6 +23,7 @@ import type { BacklogBoardTicket, ChartSeries, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { FILL } from './chart-tones';
 import { fold, FoldToggle, StackBar } from './tabular-charts';
+import { TICKET_PRIORITY_TONE } from './ticket-badges';
 import { categoryKey, priorityKey } from './ticket-labels';
 
 export type SlaState = 'breached' | 'due_soon' | 'on_track';
@@ -41,13 +43,12 @@ export function backlogRowClass(row: Record<string, unknown>): string {
           : '';
 }
 
-const PRIORITY_DOT: Record<string, string> = {
-    critical: 'bg-red-500',
-    high: 'bg-amber-500',
-    medium: 'bg-blue-500',
-    low: 'bg-emerald-500',
-};
-const NO_PRIORITY_DOT = 'bg-slate-400 dark:bg-slate-500';
+/** Priority dots in the very hues of the table's priority pills (ticket-badges.tsx), low = grey. */
+const PRIORITY_DOT: Record<string, string> = Object.fromEntries(
+    Object.entries(TICKET_PRIORITY_TONE).map(([priority, tone]) => [priority, toneDots[tone]]),
+);
+/** No priority yet: a hollow ring, so it never reads as the grey "low". */
+const NO_PRIORITY_DOT = 'border-muted-foreground border bg-transparent';
 
 const LANES: { key: string; label: string; test: (h: number | null) => boolean; tone: string; count: string }[] = [
     {
@@ -226,7 +227,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
             />
             {/* Six lanes stay side by side; a narrow screen scrolls them rather than stacking. */}
             <div className="overflow-x-auto">
-                <div className="grid min-w-[52rem] grid-cols-[repeat(3,minmax(0,1fr))_0_repeat(3,minmax(0,1fr))] gap-x-2.5 px-5 pt-2 pb-5">
+                <div className="grid min-w-[52rem] grid-cols-[repeat(3,minmax(0,1fr))_0_repeat(3,minmax(0,1fr))] gap-x-2.5 px-5 pt-3 pb-5">
                     {LANES.map((lane, i) => {
                         const items = tickets.filter((ticket) => lane.test(ticket.hours_left));
                         const open = openLanes.includes(lane.key);
@@ -240,7 +241,8 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                         </span>
                                     </div>
                                 )}
-                                <div className="flex min-w-0 flex-col gap-2 pt-3">
+                                {/* pt-7 keeps the lane headings clear of the "ตอนนี้" pill riding the top of the line. */}
+                                <div className="flex min-w-0 flex-col gap-2 pt-7">
                                     <div className={cn('flex items-baseline justify-between gap-1.5 border-b-2 pb-1.5', lane.tone)}>
                                         <span className="text-muted-foreground text-xs font-semibold">{t(lane.label)}</span>
                                         <b className={cn('font-mono text-lg', lane.count)}>{items.length}</b>
