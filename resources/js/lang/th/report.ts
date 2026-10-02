@@ -375,7 +375,7 @@ export const report: Dict = {
     rep_c_stock_value: 'มูลค่าคงคลัง',
     rep_c_monthly_cost: 'ต่อเดือน',
     rep_c_yearly_cost: 'ต่อปี',
-    rep_fl_from: 'ตั้งแต่',
+    rep_fl_from: 'ช่วงวันที่',
     rep_fl_to: 'ถึง',
     rep_fl_warehouse_id: 'คลัง',
     rep_fl_as_of: 'ณ วันที่',
