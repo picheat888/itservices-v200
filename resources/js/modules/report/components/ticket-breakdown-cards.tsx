@@ -8,7 +8,7 @@
  *   "อื่น ๆ (n)" row (with a true SLA rate from summed met/measured) until "แสดงทั้งหมด"; the
  *   no-department row sits apart under a dashed rule, scaled to its own total.
  * - StaffPerformanceCard ("ผลงานเจ้าหน้าที่ IT", was the report of that name) — every IT staff
- *   member who closed something in the range: closed / canceled, typical (median) resolve time and
+ *   member who closed something in the range: closed / canceled, average resolve time and
  *   SLA hit rate — the chosen period only, nothing about what is in hand now. The shared DataTable, inset and paged like the "รายการ Ticket" card, so a desk of 30+
  *   keeps the page short.
  *
@@ -201,12 +201,12 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
             render: (r) => <Count value={r.canceled} className="text-muted-foreground" />,
         },
         {
-            key: 'median',
-            // The median: half the cases closed faster — the hint says so on hover.
+            key: 'avg',
+            // The mean over the cases closed in the range — the hint says so on hover.
             header: <span title={t('rep_col_time_hint')}>{t('rep_col_time')}</span>,
             align: 'right',
             className: 'whitespace-nowrap',
-            render: (r) => <span className="font-mono">{r.median_resolve_hours === null ? '—' : `${r.median_resolve_hours} ${t('rep_hours')}`}</span>,
+            render: (r) => <span className="font-mono">{r.avg_resolve_hours === null ? '—' : `${r.avg_resolve_hours} ${t('rep_hours')}`}</span>,
         },
         { key: 'sla', header: t('rep_col_sla_rate'), align: 'right', render: (r) => <SlaRate value={r.sla_rate} goal={slaGoal} /> },
     ];

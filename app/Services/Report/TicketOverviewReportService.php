@@ -25,7 +25,8 @@ use Illuminate\Support\Collection;
  *
  * - SLA: completed tickets with both resolved_at and a resolve deadline are "measured";
  *   met = resolved on or before the deadline. Rates are null when nothing was measured.
- * - Resolve hours: calendar hours opened → resolved; median / P90 by nearest rank.
+ * - Resolve hours: calendar hours opened → resolved; the mean (to one decimal) and P90 by
+ *   nearest rank. (Median until 2026-10-02 — the user chose the mean.)
  * - Backlog: live tickets matching the filters, ignoring the date range.
  * - Weekly: Monday-start weeks; "closed" counts completions whose resolved_at is in range.
  * - Previous: the same-length window immediately before `from`.
@@ -83,7 +84,7 @@ class TicketOverviewReportService
                 'completed' => $completed->count(),
                 'canceled' => $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Canceled)->count(),
                 ...$this->slaCounts($completed),
-                'median_resolve_hours' => $this->percentile($hours, 0.5),
+                'avg_resolve_hours' => $this->average($hours),
                 'p90_resolve_hours' => $this->percentile($hours, 0.9),
             ],
             'previous' => $this->previous($viewer, $filters),
@@ -187,6 +188,12 @@ class TicketOverviewReportService
             ->values();
     }
 
+    /** Mean of the resolve hours, to one decimal; null when there are none. */
+    private function average(Collection $hours): ?float
+    {
+        return $hours->isEmpty() ? null : round((float) $hours->avg(), 1);
+    }
+
     /** Nearest-rank percentile of an ascending list; null when empty. */
     private function percentile(Collection $sorted, float $p): ?float
     {
@@ -194,7 +201,7 @@ class TicketOverviewReportService
     }
 
     /**
-     * @return array{from: string, to: string, total: int, sla_rate: ?float, median_resolve_hours: ?float}
+     * @return array{from: string, to: string, total: int, sla_rate: ?float, avg_resolve_hours: ?float}
      */
     private function previous(User $viewer, array $filters): array
     {
@@ -212,7 +219,7 @@ class TicketOverviewReportService
             'total' => $tickets->count(),
             'sla_rate' => $this->slaCounts($completed)['sla_rate'],
             // The resolve-time KPI's "▼ 0.6 ชม." against the period before.
-            'median_resolve_hours' => $this->percentile($this->sortedHours($completed), 0.5),
+            'avg_resolve_hours' => $this->average($this->sortedHours($completed)),
         ];
     }
 
@@ -357,7 +364,7 @@ class TicketOverviewReportService
      * here. Most closed first.
      *
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
-     * @return list<array{assignee_id: int, name: ?string, completed: int, canceled: int, median_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
+     * @return list<array{assignee_id: int, name: ?string, completed: int, canceled: int, avg_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
      */
     private function byAssignee(User $viewer, array $filters): array
     {
@@ -377,7 +384,7 @@ class TicketOverviewReportService
                     'name' => $group->first()->assignee?->name,
                     'completed' => $completed->count(),
                     'canceled' => $group->filter(fn (Ticket $t) => $t->status === TicketStatus::Canceled)->count(),
-                    'median_resolve_hours' => $this->percentile($this->sortedHours($completed), 0.5),
+                    'avg_resolve_hours' => $this->average($this->sortedHours($completed)),
                     ...$this->slaCounts($completed),
                 ];
             })

@@ -41,7 +41,7 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
             ['ยกเลิก', $k['canceled']],
             ['ปิดตาม SLA (%)', $k['sla_rate']],
             ['วัด SLA ได้ / ตรง SLA', $k['sla_measured'].' / '.$k['sla_met']],
-            ['เวลาแก้ไขโดยมัธยฐาน (ชม.)', $k['median_resolve_hours']],
+            ['เวลาแก้ไขโดยเฉลี่ย (ชม.)', $k['avg_resolve_hours']],
             ['เวลาแก้ไข P90 (ชม.)', $k['p90_resolve_hours']],
             ['ค้างอยู่ตอนนี้', $s['backlog']['open'] + $s['backlog']['in_progress']],
             ['ค้างเกิน SLA', $s['backlog']['breached']],
@@ -70,9 +70,9 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
         }
         $rows[] = [];
         $rows[] = ['ผลงานเจ้าหน้าที่ IT (นับเคสที่ปิดในช่วงวันที่)'];
-        $rows[] = ['ผู้รับผิดชอบ', 'ปิดสำเร็จ', 'ยกเลิก', 'เวลาแก้ไขโดยมัธยฐาน (ชม.)', 'ทัน SLA %'];
+        $rows[] = ['ผู้รับผิดชอบ', 'ปิดสำเร็จ', 'ยกเลิก', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', 'ทัน SLA %'];
         foreach ($s['by_assignee'] as $a) {
-            $rows[] = [$a['name'], $a['completed'], $a['canceled'], $a['median_resolve_hours'], $a['sla_rate']];
+            $rows[] = [$a['name'], $a['completed'], $a['canceled'], $a['avg_resolve_hours'], $a['sla_rate']];
         }
 
         return $rows;

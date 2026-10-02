@@ -37,7 +37,7 @@
     <td>Ticket ทั้งหมด<b>{{ $k['total'] }}</b></td>
     <td>ปิดสำเร็จ<b>{{ $k['completed'] }}</b></td>
     <td>ปิดตาม SLA<b>{{ $k['sla_rate'] === null ? '—' : $k['sla_rate'].'%' }}</b></td>
-    <td>เวลาแก้ไขโดยมัธยฐาน<b>{{ $k['median_resolve_hours'] === null ? '—' : $k['median_resolve_hours'].' ชม.' }}</b></td>
+    <td>เวลาแก้ไขโดยเฉลี่ย<b>{{ $k['avg_resolve_hours'] === null ? '—' : $k['avg_resolve_hours'].' ชม.' }}</b></td>
     <td>ค้างอยู่ตอนนี้<b>{{ $summary['backlog']['open'] + $summary['backlog']['in_progress'] }}</b></td>
 </tr></table>
 
@@ -69,9 +69,9 @@
 
 <h2>ผลงานเจ้าหน้าที่ IT</h2>
 <div class="muted">นับเคสที่ปิดในช่วงวันที่</div>
-<table class="data"><thead><tr><th>ผู้รับผิดชอบ</th><th>ปิดสำเร็จ</th><th>ยกเลิก</th><th>เวลาแก้ไขโดยมัธยฐาน (ชม.)</th><th>ทัน SLA %</th></tr></thead><tbody>
+<table class="data"><thead><tr><th>ผู้รับผิดชอบ</th><th>ปิดสำเร็จ</th><th>ยกเลิก</th><th>เวลาแก้ไขโดยเฉลี่ย (ชม.)</th><th>ทัน SLA %</th></tr></thead><tbody>
 @foreach ($summary['by_assignee'] as $a)
-    <tr><td>{{ $a['name'] ?? '—' }}</td><td>{{ $a['completed'] }}</td><td>{{ $a['canceled'] }}</td><td>{{ $a['median_resolve_hours'] ?? '—' }}</td><td>{{ $a['sla_rate'] ?? '—' }}</td></tr>
+    <tr><td>{{ $a['name'] ?? '—' }}</td><td>{{ $a['completed'] }}</td><td>{{ $a['canceled'] }}</td><td>{{ $a['avg_resolve_hours'] ?? '—' }}</td><td>{{ $a['sla_rate'] ?? '—' }}</td></tr>
 @endforeach
 </tbody></table>
 

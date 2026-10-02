@@ -101,8 +101,8 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame(2, $kpi['sla_measured']);
         $this->assertSame(1, $kpi['sla_met']);
         $this->assertEquals(50.0, $kpi['sla_rate']);
-        // Nearest-rank median of [2, 10] is 2; P90 is 10.
-        $this->assertEquals(2.0, $kpi['median_resolve_hours']);
+        // Mean of [2, 10] is 6; nearest-rank P90 is 10.
+        $this->assertEquals(6.0, $kpi['avg_resolve_hours']);
         $this->assertEquals(10.0, $kpi['p90_resolve_hours']);
     }
 
@@ -112,7 +112,7 @@ class TicketOverviewReportTest extends TestCase
 
         $this->assertSame(0, $kpi['total']);
         $this->assertNull($kpi['sla_rate']);
-        $this->assertNull($kpi['median_resolve_hours']);
+        $this->assertNull($kpi['avg_resolve_hours']);
     }
 
     public function test_categories_outside_the_viewers_levels_are_invisible(): void
@@ -219,7 +219,7 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame($tech->id, $data['by_assignee'][0]['assignee_id']);
         $this->assertSame('Tech One', $data['by_assignee'][0]['name']);
         $this->assertSame(1, $data['by_assignee'][0]['completed']);
-        $this->assertEquals(1.0, $data['by_assignee'][0]['median_resolve_hours']);
+        $this->assertEquals(1.0, $data['by_assignee'][0]['avg_resolve_hours']);
     }
 
     /**
@@ -310,8 +310,8 @@ class TicketOverviewReportTest extends TestCase
         $kan = $rows->firstWhere('assignee_id', $staff['kan']->id);
         $this->assertSame(2, $kan['completed']);
         $this->assertSame(1, $kan['canceled']);
-        // Nearest-rank median of [24, 48] — the page's own measure.
-        $this->assertEquals(24.0, $kan['median_resolve_hours']);
+        // Mean of [24, 48] — the same measure as the KPI tile.
+        $this->assertEquals(36.0, $kan['avg_resolve_hours']);
         $this->assertEquals(100.0, $kan['sla_rate']);
         // Nothing about what is in hand now.
         $this->assertArrayNotHasKey('in_hand', $kan);
@@ -319,7 +319,7 @@ class TicketOverviewReportTest extends TestCase
         // Opened in August, closed in September: counts by when it was closed.
         $this->assertSame(1, $rows->firstWhere('assignee_id', $staff['late']->id)['completed']);
         $som = $rows->firstWhere('assignee_id', $staff['som']->id);
-        $this->assertEquals(192.0, $som['median_resolve_hours']);
+        $this->assertEquals(192.0, $som['avg_resolve_hours']);
         $this->assertEquals(0.0, $som['sla_rate']);
     }
 
@@ -350,8 +350,8 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame('2026-08-02', $previous['from']);
         $this->assertSame('2026-08-31', $previous['to']);
         $this->assertSame(3, $previous['total']);
-        // Nearest-rank median of [2h, 4h].
-        $this->assertEquals(2.0, $previous['median_resolve_hours']);
+        // Mean of [2h, 4h].
+        $this->assertEquals(3.0, $previous['avg_resolve_hours']);
     }
 
     public function test_rows_are_paginated_newest_first_with_sla_state(): void

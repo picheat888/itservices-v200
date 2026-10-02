@@ -120,10 +120,10 @@ export interface TicketOverviewSummary {
         sla_measured: number;
         sla_met: number;
         sla_rate: number | null;
-        median_resolve_hours: number | null;
+        avg_resolve_hours: number | null;
         p90_resolve_hours: number | null;
     };
-    previous: { from: string; to: string; total: number; sla_rate: number | null; median_resolve_hours: number | null };
+    previous: { from: string; to: string; total: number; sla_rate: number | null; avg_resolve_hours: number | null };
     backlog: { open: number; in_progress: number; breached: number; aging: { d1: number; d3: number; d7: number; older: number } };
     weekly: { week_start: string; opened: number; closed: number; backlog: number }[];
     sla_by_priority: { priority: string; measured: number; met: number; rate: number | null }[];
@@ -148,7 +148,7 @@ export interface TicketOverviewSummary {
         name: string | null;
         completed: number;
         canceled: number;
-        median_resolve_hours: number | null;
+        avg_resolve_hours: number | null;
         sla_measured: number;
         sla_met: number;
         sla_rate: number | null;
