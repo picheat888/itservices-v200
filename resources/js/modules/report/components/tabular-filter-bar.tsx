@@ -65,11 +65,17 @@ export function TabularFilterBar({
     filters,
     onChange,
     onReset,
+    hidden = [],
+    leading,
 }: {
     definition: TabularDefinition;
     filters: TabularFilters;
     onChange: (next: TabularFilters) => void;
     onReset: () => void;
+    /** Filters the page draws itself (e.g. the backlog's SLA segments) — left out of the bar. */
+    hidden?: string[];
+    /** Drawn first in the bar. */
+    leading?: React.ReactNode;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -78,58 +84,65 @@ export function TabularFilterBar({
 
     return (
         <FilterRow>
-            {definition.filters.map((filter) => {
-                const id = `rep-fl-${filter.name}`;
-                const label = t(filter.label_key);
-                const value = filters[filter.name];
-                const active = differs(filter, filters);
+            {leading}
+            {definition.filters
+                .filter((filter) => !hidden.includes(filter.name))
+                .map((filter) => {
+                    const id = `rep-fl-${filter.name}`;
+                    const label = t(filter.label_key);
+                    const value = filters[filter.name];
+                    const active = differs(filter, filters);
 
-                if (filter.type === 'select') {
-                    return (
-                        <FilterField key={filter.name} htmlFor={id} label={label}>
-                            <div className="w-48">
-                                <SearchableSelect
+                    if (filter.type === 'select') {
+                        return (
+                            <FilterField key={filter.name} htmlFor={id} label={label}>
+                                <div className="w-48">
+                                    <SearchableSelect
+                                        id={id}
+                                        active={active}
+                                        value={normalize(value) ?? ALL}
+                                        onChange={(v) => onChange({ [filter.name]: v === ALL ? null : v })}
+                                        options={withAll(
+                                            filter.options.map((o) => {
+                                                const text = optionLabel(t, lang, o);
+                                                // Master data stores mixed TH/EN names — search both.
+                                                return {
+                                                    value: String(o.value),
+                                                    label: text,
+                                                    search: `${text} ${o.label ?? ''} ${o.label_th ?? ''}`,
+                                                };
+                                            }),
+                                        )}
+                                    />
+                                </div>
+                            </FilterField>
+                        );
+                    }
+
+                    if (filter.type === 'date') {
+                        return (
+                            <FilterField key={filter.name} htmlFor={id} label={label}>
+                                <DateInput
                                     id={id}
-                                    active={active}
-                                    value={normalize(value) ?? ALL}
-                                    onChange={(v) => onChange({ [filter.name]: v === ALL ? null : v })}
-                                    options={withAll(
-                                        filter.options.map((o) => {
-                                            const text = optionLabel(t, lang, o);
-                                            // Master data stores mixed TH/EN names — search both.
-                                            return { value: String(o.value), label: text, search: `${text} ${o.label ?? ''} ${o.label_th ?? ''}` };
-                                        }),
-                                    )}
+                                    value={value ? String(value) : ''}
+                                    onChange={(v) => onChange({ [filter.name]: v || null })}
+                                    className={cn('w-36', active && FILTER_ACTIVE)}
                                 />
-                            </div>
-                        </FilterField>
-                    );
-                }
+                            </FilterField>
+                        );
+                    }
 
-                if (filter.type === 'date') {
                     return (
                         <FilterField key={filter.name} htmlFor={id} label={label}>
-                            <DateInput
+                            <SearchField
                                 id={id}
                                 value={value ? String(value) : ''}
+                                active={active}
                                 onChange={(v) => onChange({ [filter.name]: v || null })}
-                                className={cn('w-36', active && FILTER_ACTIVE)}
                             />
                         </FilterField>
                     );
-                }
-
-                return (
-                    <FilterField key={filter.name} htmlFor={id} label={label}>
-                        <SearchField
-                            id={id}
-                            value={value ? String(value) : ''}
-                            active={active}
-                            onChange={(v) => onChange({ [filter.name]: v || null })}
-                        />
-                    </FilterField>
-                );
-            })}
+                })}
 
             <ClearFiltersBadge active={anySet} onClear={onReset} />
         </FilterRow>

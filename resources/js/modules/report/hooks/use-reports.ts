@@ -89,6 +89,18 @@ export function useExportTicketOverview() {
     });
 }
 
+/** The backlog page's due board — keyed without the SLA filter, which the page applies itself. */
+export const useBacklogBoard = (filters: TabularFilters) => {
+    const { sla: _sla, ...rest } = filters;
+    void _sla;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'tickets.backlog', 'board', rest],
+        queryFn: () => reportApi.backlogBoard(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 export const useTabularDefinition = (key: string, enabled = true) =>
     useQuery({
         queryKey: ['reports', 'tabular', key, 'definition'],

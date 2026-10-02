@@ -4153,3 +4153,22 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ยังไม่ได้ทำ: dialog แก้ไขรายการที่ตั้งเวลาไว้ในหน้า "รายงาน"
 
 ตรวจใน Chrome: กดส่งออก → `dialog=export` → Back → ปิด อยู่หน้าเดิม · กดตั้งเวลาส่ง → ยกเลิก → param หาย · เปิด `/reports/stock-movements?dialog=schedule` → dialog เปิด → ยกเลิก → อยู่หน้าเดิม ตัวกรองครบ · tsc + eslint ผ่าน
+
+## หน้า "Ticket ค้างและเกิน SLA" ทำใหม่ตาม mockup (2026-10-02)
+
+ตาม mockup ที่ผู้ใช้อนุมัติ (artifact Report · Design แท็บ "Ticket ค้างและเกิน SLA") — `/reports/tickets-backlog`
+
+**Backend** (`TicketBacklogReport`)
+- ตัวกรอง SLA 3 สถานะ: `breached` เกิน SLA · `due_soon` ครบใน 24 ชม. (ใหม่) · `on_track` ยังมีเวลา (= เกิน 24 ชม. หรือไม่มีกำหนด — เดิมรวม "ใกล้ครบ" ด้วย; ตรวจแล้วไม่มีรายงานตั้งเวลา/ไฟล์ที่ใช้ค่าเดิม)
+- ตัวกรองผู้รับผิดชอบใหม่ `assignee` (คนที่เคยรับ Ticket + `none` = ยังไม่มีผู้รับ)
+- เรียง**เลยกำหนดนานสุดก่อน** (ตามกำหนดที่ใช้อยู่ตอนนี้ — `TicketMetrics::activeDue`) แทนเปิดเก่าสุดก่อน · ไม่มีกำหนดไปท้าย
+- คอลัมน์ใหม่ `due_kind` (กำหนดตอบรับ / กำหนดแก้ไข) · `hours_left` เป็นชนิดคอลัมน์ใหม่ `hours_left` (`ReportColumn::hoursLeft`) — หน้าจอแสดงป้าย "เกิน 3 วัน" / "อีก 5 ชม." · Excel ยังเป็นตัวเลขชั่วโมง
+- การ์ดสรุป: ทั้งหมด (แยก รอรับเรื่อง/กำลังดำเนินการ) · เกิน SLA · ครบกำหนดใน 24 ชม. · ยังไม่มีผู้รับ
+- `GET /api/reports/tickets/backlog/board` (`TicketBacklogBoardController` → `TicketBacklogReport::board()`) — Ticket ค้างทุกใบตามตัวกรองอื่น ไม่แบ่งหน้า ไม่ใช้ตัวกรอง SLA (หน้าเว็บนับ/กรองเอง) · route ตรึง `{key}=tickets.backlog` จึงตรวจสิทธิ์/validate เหมือน rows
+
+**Frontend**
+- `pages/tickets-backlog.tsx` — ใช้ `TabularReportView` + `extras` ใหม่ (ซ่อนตัวกรองบางตัวจากแถบ, ของหัวแถบตัวกรอง, การ์ดก่อนตาราง, class ต่อแถว)
+- `components/backlog-board.tsx` — ปุ่มกรอง SLA พร้อมจำนวน (แทน select) · กระดานครบกำหนด SLA 6 ช่องรอบเส้น "ตอนนี้" (ช่องละ 6 ใบ + "+n รายการในตาราง", จุดสีตามความสำคัญ, ยังไม่มีผู้รับ = สีส้ม, กดเปิด Ticket) · ค้างอยู่กับใคร (เกิน/ใกล้/ยังมีเวลา, "ยังไม่มีผู้รับ" แยกใต้เส้นประ) · ค้างตามหมวด (ส่วนแดง = เกิน SLA) · แถวตารางมีแถบแดง/ส้มตามสถานะ SLA
+- `tabular-cell.tsx` `HoursLeftBadge` · คำอธิบายหน้า "งานที่ยังไม่ปิด เรียงจากเลยกำหนดนานสุดก่อน ใช้ไล่ตามงานรายวัน"
+
+**Tests**: `TicketTabularReportsTest` — เรียงตามเลยกำหนด (เคสเปิดเก่ากว่าแต่ยังมีเวลาไปท้าย), `due_kind`, ชนิด `hours_left`, การ์ดสรุปใหม่, SLA 3 สถานะ, ตัวกรองผู้รับผิดชอบ + `none` + ค่าที่ไม่มี = 422, board API (ไม่แบ่งหน้า ไม่ใช้ SLA, ตามหมวด, ไม่มีสิทธิ์ = 403) · `tests/Feature/Report` + `SidebarRouteGateTest` = **136 passed** · tsc + eslint + pint + `npm run build` ผ่าน · ตรวจใน Chrome กับข้อมูลจริง

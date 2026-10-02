@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
 use App\Http\Controllers\Api\Report\TabularReportController;
+use App\Http\Controllers\Api\Report\TicketBacklogBoardController;
 use App\Http\Controllers\Api\Report\TicketOverviewReportController;
 use App\Http\Controllers\Api\Request\RequestController;
 use App\Http\Controllers\Api\Request\RequestOptionsController;
@@ -97,6 +98,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('reports/tickets/overview/schedule', [ReportScheduleController::class, 'storeTicketOverview'])->name('api.reports.tickets.overview.schedule');
     Route::post('reports/r/{key}/schedule', [ReportScheduleController::class, 'storeTabular'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.schedule');
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');
+    // The backlog page's due board — {key} pinned so TabularReportRequest gates it as the report.
+    Route::get('reports/tickets/backlog/board', TicketBacklogBoardController::class)->defaults('key', 'tickets.backlog')->name('api.reports.tickets.backlog.board');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');

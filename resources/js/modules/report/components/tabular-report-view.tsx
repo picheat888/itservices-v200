@@ -71,8 +71,10 @@ function TabularReportRows({
     hasCharts,
     showsTable,
     onTotalChange,
+    extras,
 }: {
     reportKey: string;
+    extras: TabularReportExtras;
     /** TabularDefinition.has_charts — holds the charts' place until the first rows arrive. */
     hasCharts: boolean;
     /** TabularDefinition.shows_table — a chart-led report lists no rows on screen. */
@@ -101,7 +103,7 @@ function TabularReportRows({
     const columns: Column<Record<string, unknown> & { id: number; _links?: Record<string, string> }>[] = visibleColumns.map((column) => ({
         key: column.key,
         header: t(column.label_key),
-        align: column.type === 'number' || column.type === 'money' ? 'right' : undefined,
+        align: column.type === 'number' || column.type === 'money' || column.type === 'hours_left' ? 'right' : undefined,
         className: column.type === 'text' || column.type === 'localized' ? 'max-w-[22rem] truncate whitespace-nowrap' : 'whitespace-nowrap',
         render: (row) => {
             const href = row._links?.[column.key];
@@ -114,6 +116,7 @@ function TabularReportRows({
             {/* Tiles pulse until the first rows arrive, so the table does not jump down when they do. */}
             {data ? <SummaryStrip items={data.summary} /> : <KpiRowSkeleton count={4} className="lg:grid-cols-4" />}
             {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
+            {extras.beforeTable?.({ filters })}
             {/* The rows in a headed card with the table inset, as the Ticket & SLA page's
                 "รายการ Ticket" — the same heading tint, "ข้อมูล ณ" line and padding. */}
             {showsTable && (
@@ -137,6 +140,7 @@ function TabularReportRows({
                             columns={columns}
                             rows={data?.data ?? []}
                             rowKey={(r) => r.id}
+                            rowClassName={extras.rowClassName}
                             loading={isLoading || isFetching}
                             server={{
                                 page,
@@ -163,7 +167,17 @@ function TabularReportRows({
  * seeds synchronously from a real definition, and switching to a different report key
  * remounts this fresh rather than reusing the previous report's filter state.
  */
-function TabularReportBody({ reportKey, stem, definition }: { reportKey: string; stem: string; definition: TabularDefinition }) {
+function TabularReportBody({
+    reportKey,
+    stem,
+    definition,
+    extras,
+}: {
+    reportKey: string;
+    stem: string;
+    definition: TabularDefinition;
+    extras: TabularReportExtras;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTabularFilters(definition);
@@ -201,7 +215,14 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                     </>
                 }
             />
-            <TabularFilterBar definition={definition} filters={filters} onChange={patch} onReset={reset} />
+            <TabularFilterBar
+                definition={definition}
+                filters={filters}
+                onChange={patch}
+                onReset={reset}
+                hidden={extras.hiddenFilters}
+                leading={extras.filterLead?.({ filters, patch })}
+            />
             <TabularReportRows
                 key={JSON.stringify(filters)}
                 reportKey={reportKey}
@@ -210,6 +231,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 hasCharts={definition.has_charts}
                 showsTable={definition.shows_table}
                 onTotalChange={setRowsTotal}
+                extras={extras}
             />
             <ExportReportDialog
                 open={exportOpen}
@@ -245,7 +267,19 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
 }
 
 /** One tabular report, by its backend key ("assets.by_status_department"). */
-export function TabularReportView({ reportKey: key }: { reportKey: string }) {
+/**
+ * What a report's own page can add around the shared body (pages/tickets-backlog.tsx does):
+ * filters it draws itself instead of the bar, something at the head of the bar, cards between
+ * the summary and the table, and a class per table row.
+ */
+export interface TabularReportExtras {
+    hiddenFilters?: string[];
+    filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
+    beforeTable?: (ctx: { filters: TabularFilters }) => React.ReactNode;
+    rowClassName?: (row: Record<string, unknown>) => string | undefined;
+}
+
+export function TabularReportView({ reportKey: key, extras = {} }: { reportKey: string; extras?: TabularReportExtras }) {
     const t = useT();
     const stem = key.replace('.', '_');
     const defQuery = useTabularDefinition(key);
@@ -274,7 +308,7 @@ export function TabularReportView({ reportKey: key }: { reportKey: string }) {
                     </Card>
                 </div>
             ) : (
-                <TabularReportBody key={definition.key} reportKey={key} stem={stem} definition={definition} />
+                <TabularReportBody key={definition.key} reportKey={key} stem={stem} definition={definition} extras={extras} />
             )}
         </div>
     );
