@@ -15,12 +15,23 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { CalendarClock, Clock, Mail, Pencil, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useDeleteSchedule, useReportCatalogue, useReportSchedules, useSendScheduleNow, useUpdateSchedule } from '../hooks/use-reports';
-import type { ReportScheduleItem } from '../types';
+import {
+    useDeleteSchedule,
+    useReportCatalogue,
+    useReportSchedules,
+    useSendScheduleNow,
+    useTabularDefinition,
+    useTicketOverview,
+    useUpdateSchedule,
+} from '../hooks/use-reports';
+import { defaultTicketReportFilters } from '../hooks/use-ticket-report-filters';
+import type { ReportScheduleItem, TicketReportFilters } from '../types';
 import { RailHeading, RailHeadingSkeleton, RailRowsSkeleton } from './my-exports';
 import { reportStem } from './report-catalogue';
+import { tabularFilterChips, ticketFilterChips } from './schedule-filter-summary';
 import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
 
 function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () => void }) {
@@ -158,6 +169,21 @@ export function ScheduledReports() {
 
     const formats = (key: string) => catalogue.find((r) => r.key === key)?.formats ?? ['pdf'];
 
+    // Names for the filters the open schedule keeps: a tabular report labels them from its
+    // definition, the Ticket & SLA page from its own department / assignee options.
+    const lang = useUiStore((s) => s.lang);
+    const isTicket = shown?.report_key === 'tickets.overview';
+    const definition = useTabularDefinition(shown && !isTicket ? shown.report_key : '', !!shown && !isTicket).data;
+    const ticketFilters = { ...defaultTicketReportFilters(), ...(isTicket ? shown?.filters : {}) } as TicketReportFilters;
+    const ticketOptions = useTicketOverview(ticketFilters, !!shown && isTicket).data?.options;
+    const filterChips = !shown
+        ? undefined
+        : isTicket
+          ? ticketFilterChips(shown.filters, ticketOptions, t, lang)
+          : definition
+            ? tabularFilterChips(definition, shown.filters, t, lang)
+            : undefined;
+
     // One card either way — the same heading, then the schedules or a line saying there are none
     // (as the exports card above does).
     return (
@@ -185,6 +211,7 @@ export function ScheduledReports() {
                     formats={formats(shown.report_key)}
                     // The ticket overview keeps from/to too, so the stored filter names answer for every report.
                     coverage={scheduleCoverage(Object.keys(shown.filters))}
+                    filterChips={filterChips}
                     initial={shown}
                     onSubmit={(input) => update.mutateAsync({ id: shown.id, patch: input })}
                     isPending={update.isPending}

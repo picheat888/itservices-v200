@@ -59,14 +59,14 @@ export function useToggleReportPin() {
     });
 }
 
-export const useTicketOverview = (filters: TicketReportFilters) =>
+export const useTicketOverview = (filters: TicketReportFilters, enabled = true) =>
     useQuery({
         queryKey: ['reports', 'tickets-overview', filters],
         queryFn: () => reportApi.ticketOverview(filters),
         // Keep the last numbers on screen while a filter change refetches.
         placeholderData: keepPreviousData,
         // An invalid range (to before from) is caught client-side instead of being sent.
-        enabled: filters.from <= filters.to,
+        enabled: enabled && filters.from <= filters.to,
         retry: noRetryOn4xx,
     });
 
@@ -89,10 +89,11 @@ export function useExportTicketOverview() {
     });
 }
 
-export const useTabularDefinition = (key: string) =>
+export const useTabularDefinition = (key: string, enabled = true) =>
     useQuery({
         queryKey: ['reports', 'tabular', key, 'definition'],
         queryFn: () => reportApi.tabularDefinition(key),
+        enabled,
         staleTime: 5 * 60 * 1000,
         retry: noRetryOn4xx,
     });

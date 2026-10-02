@@ -29,6 +29,7 @@ import {
     DataTableSkeleton,
     KpiRowSkeleton,
 } from '../components/report-skeletons';
+import { ticketFilterChips } from '../components/schedule-filter-summary';
 import { ScheduleReportDialog } from '../components/schedule-report-dialog';
 import { DepartmentStacksCard, StaffPerformanceCard } from '../components/ticket-breakdown-cards';
 import { categoryKey, priorityKey } from '../components/ticket-labels';
@@ -358,6 +359,7 @@ export default function TicketOverviewReportPage() {
                 title={t('rep_tickets_overview_title')}
                 formats={['xlsx', 'pdf']}
                 coverage="range"
+                filterChips={ticketFilterChips(filters, data?.options, t, lang)}
                 onSubmit={(input) =>
                     scheduleMut
                         .mutateAsync({ kind: 'tickets', filters, input })

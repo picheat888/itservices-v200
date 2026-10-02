@@ -1,7 +1,10 @@
 /**
  * "ตั้งเวลาส่ง" dialog shared by every report page and by the hub's scheduled-reports panel
  * (edit). Picks the file format, how often (daily / weekly / monthly — each run covers the
- * period that just closed), the hour, and the recipients (any addresses). Centered focus
+ * period that just closed), the hour, and the recipients (any addresses). A summary at the foot
+ * says when it goes out and what period it covers, lists the filters each send keeps
+ * (`filterChips`, from schedule-filter-summary.ts) and warns that recipients read with the
+ * scheduler's access. The choice cards are radio groups to assistive tech. Centered focus
  * dialog (FocusDialogHeader) per the app's dialog standard; the caller owns the mutation
  * (isPending/error/reset) and gets the input through `onSubmit`.
  */
@@ -16,9 +19,17 @@ import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { isAxiosError } from 'axios';
-import { CalendarClock, Loader2, X } from 'lucide-react';
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { CalendarClock, Loader2, ShieldAlert, X } from 'lucide-react';
+import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 import type { ExportFormat, ScheduleFrequency, ScheduleInput } from '../types';
+import type { FilterChip } from './schedule-filter-summary';
+
+/** A 422 on one of these fields gets its own line; anything else falls back to the generic refusal. */
+const FIELD_ERRORS: Record<string, string> = {
+    send_hour: 'rep_schedule_invalid_send_hour',
+    frequency: 'rep_schedule_invalid_frequency',
+    format: 'rep_schedule_invalid_format',
+};
 
 /** Mirrors ReportSchedule::MAX_RECIPIENTS. */
 const MAX_RECIPIENTS = 10;
@@ -51,6 +62,7 @@ export function ScheduleReportDialog({
     subtitle,
     formats,
     coverage,
+    filterChips,
     initial,
     onSubmit,
     isPending,
@@ -63,6 +75,8 @@ export function ScheduleReportDialog({
     subtitle?: string;
     formats: ExportFormat[];
     coverage: ScheduleCoverage;
+    /** The filters each send keeps (dates excluded — they roll); [] = the whole report, undefined = not known yet. */
+    filterChips?: FilterChip[];
     /** An existing schedule being edited; a new one starts from the reader's own address. */
     initial?: ScheduleInput;
     onSubmit: (input: ScheduleInput) => Promise<unknown>;
@@ -146,6 +160,13 @@ export function ScheduleReportDialog({
             .map(Number),
     );
     const recipientsError = draftError ?? (badIndexes.size > 0 || fieldErrors.recipients ? t('rep_schedule_email_invalid') : null);
+    // Which field a non-recipient 422 is about, so the line says what to fix.
+    const fieldError = Object.keys(FIELD_ERRORS).find((field) => fieldErrors[field]);
+    const ids = useId();
+    const frequencyLabelId = `${ids}-frequency`;
+    const formatLabelId = `${ids}-format`;
+    const recipientsInputId = `${ids}-recipients`;
+    const recipientsNoteId = `${ids}-recipients-note`;
 
     const formatChoices: Record<ExportFormat, { title: string; tone: string }> = {
         xlsx: { title: t('rep_export_xlsx'), tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
@@ -164,14 +185,23 @@ export function ScheduleReportDialog({
                 />
                 <div className="space-y-5 px-6 pb-2">
                     <div className="space-y-2">
-                        <div className="text-muted-foreground text-xs font-semibold">{t('rep_schedule_frequency')}</div>
-                        <div className="grid gap-2 sm:grid-cols-3">
+                        <div id={frequencyLabelId} className="text-muted-foreground text-xs font-semibold">
+                            {t('rep_schedule_frequency')}
+                        </div>
+                        {/* A radio group to assistive tech — the cards are one choice of three. */}
+                        <div role="radiogroup" aria-labelledby={frequencyLabelId} className="grid gap-2 sm:grid-cols-3">
                             {FREQUENCIES.map((f) => (
-                                <ChoiceCard key={f} selected={frequency === f} onClick={() => setFrequency(f)} className="rounded-lg p-3 text-left">
+                                <ChoiceCard
+                                    key={f}
+                                    role="radio"
+                                    aria-checked={frequency === f}
+                                    selected={frequency === f}
+                                    onClick={() => setFrequency(f)}
+                                    className="rounded-lg p-3 text-left"
+                                >
                                     <span className="block text-sm font-semibold">{t(`rep_schedule_freq_${f}`)}</span>
-                                    <span className="text-muted-foreground text-xs">
-                                        {t(coverage === 'range' ? `rep_schedule_freq_${f}_desc` : `rep_schedule_freq_${f}_when`)}
-                                    </span>
+                                    {/* Only when it goes out; what each send covers is said once, in the summary below. */}
+                                    <span className="text-muted-foreground text-xs">{t(`rep_schedule_freq_${f}_when`)}</span>
                                 </ChoiceCard>
                             ))}
                         </div>
@@ -194,11 +224,15 @@ export function ScheduleReportDialog({
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <div className="text-muted-foreground text-xs font-semibold">{t('rep_export_format')}</div>
-                            <div className="flex gap-2">
+                            <div id={formatLabelId} className="text-muted-foreground text-xs font-semibold">
+                                {t('rep_export_format')}
+                            </div>
+                            <div role="radiogroup" aria-labelledby={formatLabelId} className="flex gap-2">
                                 {formats.map((f) => (
                                     <ChoiceCard
                                         key={f}
+                                        role="radio"
+                                        aria-checked={format === f}
                                         selected={format === f}
                                         onClick={() => setFormat(f)}
                                         className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left"
@@ -215,7 +249,7 @@ export function ScheduleReportDialog({
 
                     <div className="space-y-2">
                         <div className="text-muted-foreground flex items-baseline justify-between text-xs font-semibold">
-                            <span>{t('rep_schedule_recipients')}</span>
+                            <label htmlFor={recipientsInputId}>{t('rep_schedule_recipients')}</label>
                             <span className="font-mono normal-case">
                                 {recipients.length}/{MAX_RECIPIENTS}
                             </span>
@@ -246,6 +280,7 @@ export function ScheduleReportDialog({
                                 </span>
                             ))}
                             <Input
+                                id={recipientsInputId}
                                 value={draft}
                                 onChange={(e) => {
                                     setDraft(e.target.value);
@@ -254,27 +289,48 @@ export function ScheduleReportDialog({
                                 onKeyDown={onDraftKey}
                                 onBlur={() => draft.trim() && commitDraft()}
                                 placeholder={recipients.length === 0 ? t('rep_schedule_recipients_placeholder') : ''}
-                                aria-label={t('rep_schedule_recipients')}
                                 aria-invalid={!!recipientsError}
+                                aria-describedby={recipientsNoteId}
                                 className="h-7 min-w-40 flex-1 border-0 px-1 shadow-none focus-visible:ring-0"
                             />
                         </div>
-                        {recipientsError ? (
-                            <div className="text-destructive text-xs">{recipientsError}</div>
-                        ) : (
-                            <div className="text-muted-foreground text-xs">{t('rep_schedule_recipients_hint')}</div>
-                        )}
-                    </div>
-
-                    <div className="bg-brand/5 rounded-lg px-3 py-2 text-sm">
-                        {t(`rep_schedule_when_${frequency}`).replace('{time}', hourLabel(hour))}{' '}
-                        {t(coverage === 'now' ? 'rep_schedule_cover_now' : `rep_schedule_cover_${coverage}_${frequency}`)}
-                        <div className="text-muted-foreground mt-1 text-xs">
-                            {t(coverage === 'now' ? 'rep_schedule_filters_note_now' : 'rep_schedule_filters_note')}
+                        <div id={recipientsNoteId} className={cn('text-xs', recipientsError ? 'text-destructive' : 'text-muted-foreground')}>
+                            {recipientsError ?? t('rep_schedule_recipients_hint')}
                         </div>
                     </div>
+
+                    {/* What will actually go out: when and what period, the filters kept, then whose access it reads with. */}
+                    <div className="bg-brand/5 space-y-2 rounded-lg px-3 py-2.5 text-sm">
+                        <div>
+                            {t(`rep_schedule_when_${frequency}`).replace('{time}', hourLabel(hour))}{' '}
+                            {t(coverage === 'now' ? 'rep_schedule_cover_now' : `rep_schedule_cover_${coverage}_${frequency}`)}
+                        </div>
+                        {filterChips && (
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">{t('rep_schedule_filters_label')}</span>
+                                {filterChips.length === 0 ? (
+                                    <span className="text-muted-foreground">{t('rep_schedule_filters_none')}</span>
+                                ) : (
+                                    filterChips.map((chip) => (
+                                        <span key={chip.label} className="bg-background border-border rounded-full border px-2 py-0.5">
+                                            <span className="text-muted-foreground">{chip.label}:</span>{' '}
+                                            <span className="font-medium">{chip.value}</span>
+                                        </span>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                        {coverage !== 'now' && <div className="text-muted-foreground text-xs">{t('rep_schedule_dates_roll')}</div>}
+                    </div>
+                    {/* Recipients outside the desk read with the scheduler's access — worth its own line. */}
+                    <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400">
+                        <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
+                        <span>{t('rep_schedule_permission_note')}</span>
+                    </div>
                     {error != null && badIndexes.size === 0 && !fieldErrors.recipients && (
-                        <div className="text-destructive text-sm">{refusalText(error, t, 'rep_schedule_refusal_')}</div>
+                        <div className="text-destructive text-sm">
+                            {fieldError ? t(FIELD_ERRORS[fieldError]) : refusalText(error, t, 'rep_schedule_refusal_')}
+                        </div>
                     )}
                 </div>
                 <DialogFooter className="border-border border-t px-6 py-4">

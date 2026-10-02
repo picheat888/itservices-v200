@@ -11,6 +11,7 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -20,6 +21,7 @@ import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { ReportHeader } from '../components/report-header';
 import { CardHeadingSkeleton, DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from '../components/report-skeletons';
+import { tabularFilterChips } from '../components/schedule-filter-summary';
 import { ScheduleReportDialog, scheduleCoverage } from '../components/schedule-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
@@ -159,6 +161,7 @@ function TabularReportRows({
  */
 function TabularReportBody({ reportKey, stem, definition }: { reportKey: string; stem: string; definition: TabularDefinition }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTabularFilters(definition);
     const { hidden, visibleColumns, toggle, showAll } = useHiddenColumns(definition);
     const [exportOpen, setExportOpen] = useState(false);
@@ -218,6 +221,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 title={t(`rep_${stem}_title`)}
                 formats={definition.formats}
                 coverage={scheduleCoverage(definition.filters.filter((f) => f.type === 'date').map((f) => f.name))}
+                filterChips={tabularFilterChips(definition, filters, t, lang)}
                 onSubmit={(input) =>
                     scheduleMut
                         .mutateAsync({ kind: 'tabular', key: reportKey, filters, columns: exportColumns, input })
