@@ -271,6 +271,16 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
     );
 }
 
+/** The owner card's three parts by SLA state, in the report palette — the board's lanes in short. */
+const OWNER_SERIES: ChartSeries[] = [
+    { key: 'breached', label_key: 'rep_sla_breached', tone: 'red' },
+    { key: 'due_soon', label_key: 'rep_sla_due_soon', tone: 'amber' },
+    { key: 'on_track', label_key: 'rep_sla_on_track', tone: 'blue' },
+];
+
+/** Name / bar / total — shared by the header row and every owner row so the columns line up. */
+const OWNER_GRID = 'grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_2.5rem] gap-3';
+
 function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
     const t = useT();
     const by = new Map<string, { breached: number; due_soon: number; on_track: number; n: number }>();
@@ -284,13 +294,13 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
     const max = Math.max(1, ...[...by.values()].map((r) => r.n));
     const named = [...by.entries()].filter(([name]) => name !== '').sort(([, a], [, b]) => b.breached - a.breached || b.n - a.n);
     const unassigned = by.get('');
-    const width = (v: number) => `${(v / max) * 100}%`;
 
     const row = (name: string, r: { breached: number; due_soon: number; on_track: number; n: number }, apart = false) => (
         <div
             key={name || 'none'}
             className={cn(
-                'border-border/60 grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_2.5rem] items-center gap-3 border-b px-5 py-2.5 text-sm last:border-b-0',
+                OWNER_GRID,
+                'border-border/60 items-center border-b px-5 py-2.5 text-sm last:border-b-0',
                 apart && 'border-border border-t-2 border-dashed',
             )}
         >
@@ -304,11 +314,8 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                     {r.breached > 0 && ` · ${t('rep_bl_owner_over').replace('{n}', String(r.breached))}`}
                 </span>
             </span>
-            <span className="bg-muted flex h-2.5 overflow-hidden rounded-full">
-                <span className="block h-full bg-red-500" style={{ width: width(r.breached) }} />
-                <span className="block h-full bg-amber-500" style={{ width: width(r.due_soon) }} />
-                <span className="bg-brand/70 block h-full" style={{ width: width(r.on_track) }} />
-            </span>
+            {/* Each part's count over it, as "ค้างตามหมวด"; the length against whoever holds the most. */}
+            <StackBar values={{ breached: r.breached, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
             <span className="text-right font-mono font-semibold">{r.n}</span>
         </div>
     );
@@ -319,9 +326,9 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 title={t('rep_bl_owners_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone="bg-red-500">{t('rep_sla_breached')}</Swatch>
-                        <Swatch tone="bg-amber-500">{t('rep_sla_due_soon')}</Swatch>
-                        <Swatch tone="bg-brand/70">{t('rep_sla_on_track')}</Swatch>
+                        <Swatch tone={FILL.red}>{t('rep_sla_breached')}</Swatch>
+                        <Swatch tone={FILL.amber}>{t('rep_sla_due_soon')}</Swatch>
+                        <Swatch tone={FILL.blue}>{t('rep_sla_on_track')}</Swatch>
                     </span>
                 }
             />
@@ -329,6 +336,10 @@ function Owners({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_bl_empty')}</div>
             ) : (
                 <div>
+                    {/* Names the right-hand count, as in "ค้างตามหมวด". */}
+                    <div className={cn(OWNER_GRID, 'text-muted-foreground px-5 pt-3 text-xs')}>
+                        <span className="col-start-3 text-right">{t('rep_col_total')}</span>
+                    </div>
                     {named.map(([name, r]) => row(name, r))}
                     {/* The queue nobody has taken yet sits apart — it needs handing out, not chasing. */}
                     {unassigned && row('', unassigned, true)}
