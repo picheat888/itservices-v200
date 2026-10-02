@@ -536,7 +536,7 @@ export const report: Dict = {
     rep_bl_cats_title: 'By category',
     rep_sla_not_breached: 'Not over SLA',
     rep_bl_empty: 'No open tickets match these filters',
-    rep_k_open: 'Waiting',
+    rep_k_open: 'Waiting to take',
     rep_k_in_progress: 'In progress',
     rep_k_breached: 'Over SLA',
     rep_k_handovers: 'Handovers',
