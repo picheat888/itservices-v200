@@ -9,11 +9,10 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
-import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
+import { AlertCircle, CalendarClock, Download } from 'lucide-react';
 import { useState } from 'react';
 import { BacklogAging } from '../components/backlog-aging';
 import { CARD_HEADING_TINT } from '../components/card-heading';
@@ -29,7 +28,6 @@ import {
     ChartSkeleton,
     DataTableSkeleton,
     KpiRowSkeleton,
-    TableRowsSkeleton,
 } from '../components/report-skeletons';
 import { ScheduleReportDialog } from '../components/schedule-report-dialog';
 import { DepartmentStacksCard, StaffPerformanceCard } from '../components/ticket-breakdown-cards';
@@ -186,12 +184,13 @@ export default function TicketOverviewReportPage() {
                     </Card>
                     <Card className="overflow-hidden">
                         <CardHeadingSkeleton />
-                        <TableRowsSkeleton rows={5} />
+                        <div className="p-5">
+                            <DataTableSkeleton cols={7} />
+                        </div>
                     </Card>
                     <Card className="overflow-hidden">
                         <CardHeadingSkeleton note={false} />
-                        <div className="space-y-3 p-5">
-                            <Skeleton className="h-3 w-40" />
+                        <div className="p-5">
                             <DataTableSkeleton cols={8} />
                         </div>
                     </Card>
@@ -330,11 +329,7 @@ export default function TicketOverviewReportPage() {
 
                     <Section title={t('rep_rows_title')} sub={undefined}>
                         {/* The table sits inset in the card, as the contracts "ทั้งหมด" tab does. */}
-                        <div className="space-y-3 p-5">
-                            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                                <Clock className="h-3.5 w-3.5" />
-                                {t('rep_generated_at').replace('{t}', data.generated_at)}
-                            </div>
+                        <div className="p-5">
                             <TicketReportTable key={JSON.stringify(filters)} filters={filters} />
                         </div>
                     </Section>
