@@ -1,5 +1,5 @@
 /**
- * Generic tabular report page (/reports/r/:key): fetches the report's own definition
+ * Generic tabular report page (/reports/:slug, e.g. /reports/assets-by-status-department): fetches the report's own definition
  * (filters/columns/formats), then its rows (with summary + pagination), and renders them
  * through the shared filter bar, summary strip, cell formatter and export dialog — one
  * page serves every report declared as a `TabularReport` on the backend.
@@ -19,6 +19,7 @@ import { useParams } from 'react-router-dom';
 import { CARD_HEADING_TINT } from '../components/card-heading';
 import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
+import { reportKeyFromSlug } from '../components/report-catalogue';
 import { ReportHeader } from '../components/report-header';
 import { CardHeadingSkeleton, DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from '../components/report-skeletons';
 import { tabularFilterChips } from '../components/schedule-filter-summary';
@@ -238,7 +239,9 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
 
 export default function TabularReportPage() {
     const t = useT();
-    const { key = '' } = useParams<{ key: string }>();
+    // The page address is the slug (/reports/assets-by-status-department); the API wants the key.
+    const { slug = '' } = useParams<{ slug: string }>();
+    const key = reportKeyFromSlug(slug);
     const stem = key.replace('.', '_');
     const defQuery = useTabularDefinition(key);
     const definition = defQuery.data;

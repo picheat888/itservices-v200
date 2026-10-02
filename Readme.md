@@ -4120,3 +4120,10 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ลิงก์จากหน้า "รายงาน" (ช่วง 7 วัน/เดือน/ไตรมาส/ปี) ใช้กลไกเดียวกัน
 
 ตรวจใน Chrome: เปิดจากเมนูได้ URL พร้อมวันที่ · ลิงก์ ก.ย. + 2 หมวด + ความสำคัญสูง เปิดตรงทุกค่าและไม่แตะ localStorage · กด "ล้างทั้งหมด" URL อัปเดตตาม · `assets.warranty_expiring?within=` = "ทั้งหมด" · `tickets.backlog?priority=high` = สูง · คืนค่า localStorage เดิมหลังทดสอบ · tsc + eslint ผ่าน
+## รายงาน: URL อ่านง่าย `/reports/<ชื่อ-รายงาน>` (2026-10-02)
+
+- ทุกรายงานเปิดที่ `/reports/<slug>` — slug = key ที่เปลี่ยน "." และ "_" เป็น "-" เช่น `assets.by_status_department` → `/reports/assets-by-status-department` (Ticket & SLA ยังเป็น `/reports/tickets-overview` ตรงกันพอดี) · `reportSlug` / `reportKeyFromSlug` ใน `report-catalogue.tsx` แปลงกลับได้แน่นอนเพราะชื่อหมวดไม่มี "-" หรือ "_"
+- API ไม่เปลี่ยน (`/api/reports/r/{key}`) — เปลี่ยนเฉพาะ URL ของหน้าเว็บ
+- ลิงก์เก่า `/reports/r/<key>` redirect ไป URL ใหม่ (คง query ตัวกรองไว้) · `tickets-by-department` / `tickets-staff-performance` (รายงานที่รวมเข้าภาพรวมแล้ว) → `/reports/tickets-overview`
+
+ตรวจใน Chrome: `/reports/assets-by-status-department` เปิดได้ · `/reports/r/assets.transfer_history?from=2026-09-01&to=2026-09-30` → `/reports/assets-transfer-history?from=…&to=…` ตัวกรองตรง · tsc + eslint ผ่าน

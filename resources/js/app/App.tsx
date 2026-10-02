@@ -11,7 +11,7 @@ import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
 import { PermissionsPage } from '@/modules/permission';
-import { ReportsPage, TabularReportPage, TicketOverviewReportPage } from '@/modules/report';
+import { reportSlug, ReportsPage, TabularReportPage, TicketOverviewReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, StockPage } from '@/modules/stock';
@@ -24,7 +24,7 @@ import type { Role } from '@/shared/types';
 import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 
 // Placeholder ("coming soon") modules and how their routes are gated.
 const modules: { path: string; titleKey: string; anyOf?: string[]; roles?: Role[] }[] = [];
@@ -39,6 +39,13 @@ function RedirectPreservingQuery({ to }: { to: string }) {
     const { search, hash } = useLocation();
 
     return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
+/** /reports/r/assets.by_status_department (the old report address) → /reports/assets-by-status-department, query kept. */
+function OldReportRedirect() {
+    const { key = '' } = useParams<{ key: string }>();
+
+    return <RedirectPreservingQuery to={`/reports/${reportSlug(key)}`} />;
 }
 
 function App() {
@@ -190,10 +197,12 @@ function App() {
                             }
                         />
                         {/* Merged into the Ticket & SLA page's cards (2026-10-02) — old links land there. */}
-                        <Route path="reports/r/tickets.by_department" element={<Navigate to="/reports/tickets-overview" replace />} />
-                        <Route path="reports/r/tickets.staff_performance" element={<Navigate to="/reports/tickets-overview" replace />} />
+                        <Route path="reports/tickets-by-department" element={<Navigate to="/reports/tickets-overview" replace />} />
+                        <Route path="reports/tickets-staff-performance" element={<Navigate to="/reports/tickets-overview" replace />} />
+                        {/* The old /reports/r/<dotted key> addresses keep working (2026-10-02). */}
+                        <Route path="reports/r/:key" element={<OldReportRedirect />} />
                         <Route
-                            path="reports/r/:key"
+                            path="reports/:slug"
                             element={
                                 <RequirePermission
                                     anyOf={[
