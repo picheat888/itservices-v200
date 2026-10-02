@@ -1,5 +1,6 @@
 import { cn } from '@/shared/lib/utils';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { useUiStore } from '@/stores/ui';
 import { type LucideIcon } from 'lucide-react';
 
 /**
@@ -7,6 +8,9 @@ import { type LucideIcon } from 'lucide-react';
  * Manage, …): a type-icon tile, an uppercase eyebrow, the title with an optional
  * mono code chip and title-suffix slot, an optional sub-line, an optional
  * right-edge slot, and an sr-only description.
+ *
+ * The eyebrow is tracked-out capitals in English only: Thai has no case, and letter-spacing
+ * pulls its vowels and tone marks away from their consonants, so in Thai it is plain small text.
  *
  * The tile + code chip use the brand accent by default; pass `accent` (a hex) to
  * tint them with a resource-type colour instead (e.g. email-group violet).
@@ -46,6 +50,7 @@ export function FocusDialogHeader({
     /** Icon-tile size: `md` (default, 40px) or `lg` (56px). */
     tileSize?: 'md' | 'lg';
 }) {
+    const lang = useUiStore((s) => s.lang);
     const tintStyle = accent ? { background: `${accent}18`, color: accent } : undefined;
     const boxCls = tileSize === 'lg' ? 'h-14 w-14' : 'h-10 w-10';
     const iconCls = tileSize === 'lg' ? 'h-7 w-7' : 'h-5 w-5';
@@ -67,7 +72,14 @@ export function FocusDialogHeader({
                 </div>
             )}
             <div className="min-w-0">
-                <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{eyebrow}</div>
+                <div
+                    className={cn(
+                        'text-muted-foreground',
+                        lang === 'th' ? 'text-xs font-semibold' : 'text-[10.5px] font-bold tracking-[0.14em] uppercase',
+                    )}
+                >
+                    {eyebrow}
+                </div>
                 <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                     <span className="truncate">{title}</span>
                     {code && (

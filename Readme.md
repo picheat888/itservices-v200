@@ -4076,3 +4076,14 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 - ลบ `StaffPerformanceReport`, `TicketsByDepartmentReport`, helper ที่ไม่มีใครใช้ใน `TicketReportScope` (`metSql`/`measuredSql`/`percent`) และคีย์ภาษาที่ใช้เฉพาะ 2 รายงานนี้ · ยกเลิกการรับ filter จาก URL ที่เพิ่มไว้ก่อนหน้าใน `use-tabular-filters.ts` (ไม่มีลิงก์ใช้แล้ว)
 
 **Tests**: `TicketOverviewReportTest` +4 (แผนกแยกหมวด/ยังไม่ปิด/ไม่ระบุแผนก, ทุกแผนกไม่ตัด top, เจ้าหน้าที่นับตามวันที่ปิด + ในมือ + เกิน SLA, กรองหมวด) — ย้ายมาจากเทสต์ของ 2 รายงานที่ถูกถอดใน `TicketTabularReportsTest` · `TicketOverviewExportTest` +2 (ชีตสรุป, PDF มีข้อมูล) · `ReportCatalogueTest` 19 → 17 · `tests/Feature/Report` + `SidebarRouteGateTest` = **133 passed** · pint + tsc + eslint + `npm run build` ผ่าน · ตรวจในเบราว์เซอร์กับข้อมูลจริงแล้ว
+
+## Dialog "ส่งรายงานทางอีเมลอัตโนมัติ": รีวิว UX/UI + ภาษา (2026-10-02)
+
+- **บอกตัวกรองที่จะใช้จริง** — กล่องสรุปแสดงตัวกรองที่แต่ละรอบส่งจะใช้เป็น chip ("หมวด: ฮาร์ดแวร์ · ความสำคัญ: สูง") หรือ "ไม่มี (ส่งข้อมูลทั้งหมด)" · `components/schedule-filter-summary.ts` (ใหม่): `tabularFilterChips` (จาก definition ของรายงาน) / `ticketFilterChips` (enum + options แผนก/ผู้รับผิดชอบ) · ส่งจากหน้า Ticket & SLA, หน้ารายงานแบบตาราง และตอนแก้ไขในหน้า "รายงาน" (`useTabularDefinition`/`useTicketOverview` รับ `enabled` ใหม่ ดึงเฉพาะตอนเปิดแก้ไข)
+- **เรื่องสิทธิ์แยกบรรทัด** — "ผู้รับจะเห็นข้อมูลตามสิทธิ์ของคุณ" พร้อมไอคอนโล่สีส้ม · "ช่วงวันที่จะเลื่อนตามรอบส่งเอง" เป็นบรรทัดของตัวเองในกล่องสรุป
+- **ไม่พูดซ้ำ** — การ์ดความถี่บอกแค่วันที่ส่ง ("ทุกวันจันทร์") ส่วนช่วงข้อมูลอยู่ในกล่องสรุปที่เดียว · ลบคีย์ `rep_schedule_freq_*_desc`, `rep_schedule_filters_note(_now)`
+- **`FocusDialogHeader`** (ใช้ทุก dialog) — eyebrow ภาษาไทยไม่ uppercase/ไม่ถ่างตัวอักษร (สระ/วรรณยุกต์ไม่ลอย) ขนาด text-xs · ภาษาอังกฤษคงเดิม
+- **Accessibility** — การ์ดความถี่/รูปแบบไฟล์เป็น `radiogroup` + `role="radio"` `aria-checked` · หัวข้อผูก `aria-labelledby` · ช่องผู้รับมี `<label htmlFor>` และ `aria-describedby` ไปที่คำแนะนำ/ข้อความ error
+- **ภาษา** — หัว "ส่งรายงานทางอีเมลตามเวลา" → "ส่งรายงานทางอีเมลอัตโนมัติ" · สรุป "ส่งทุกวันจันทร์ เวลา 07:00 น. พร้อมข้อมูลของสัปดาห์ที่แล้ว (จันทร์–อาทิตย์)" · คำแนะนำผู้รับ "ใส่ได้ทั้งอีเมลในและนอกระบบ กด Enter หรือจุลภาค (,) เพื่อเพิ่ม" · toast บอกที่อยู่ชัด (เมนู "รายงาน" หัวข้อ "รายงานที่ตั้งส่งอัตโนมัติ") · error 422 บอกช่องที่ผิด (เวลาส่ง/ความถี่/รูปแบบไฟล์) · ภาษาอังกฤษแก้ตามกัน
+
+tsc + eslint ผ่าน · ตรวจใน Chrome: radio/aria ถูก, chip ตัวกรองขึ้นตามตัวกรองจริง (ทดสอบผ่าน localStorage แล้วคืนค่าเดิม) · ไม่ได้กดสร้างรายการจริง
