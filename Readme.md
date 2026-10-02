@@ -4087,3 +4087,7 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 - **ภาษา** — หัว "ส่งรายงานทางอีเมลตามเวลา" → "ส่งรายงานทางอีเมลอัตโนมัติ" · สรุป "ส่งทุกวันจันทร์ เวลา 07:00 น. พร้อมข้อมูลของสัปดาห์ที่แล้ว (จันทร์–อาทิตย์)" · คำแนะนำผู้รับ "ใส่ได้ทั้งอีเมลในและนอกระบบ กด Enter หรือจุลภาค (,) เพื่อเพิ่ม" · toast บอกที่อยู่ชัด (เมนู "รายงาน" หัวข้อ "รายงานที่ตั้งส่งอัตโนมัติ") · error 422 บอกช่องที่ผิด (เวลาส่ง/ความถี่/รูปแบบไฟล์) · ภาษาอังกฤษแก้ตามกัน
 
 tsc + eslint ผ่าน · ตรวจใน Chrome: radio/aria ถูก, chip ตัวกรองขึ้นตามตัวกรองจริง (ทดสอบผ่าน localStorage แล้วคืนค่าเดิม) · ไม่ได้กดสร้างรายการจริง
+
+## ภาษาอังกฤษหน้า Ticket & SLA ใช้คำง่ายขึ้น (2026-10-02)
+
+ผู้ใช้ขอให้ใช้คำง่าย ๆ — แก้เฉพาะ `lang/en/report.ts`: "Volume … SLA compliance" → "Tickets opened, time to fix and SLA results…" · "Open right now" → "Open now" · "past SLA" → "over SLA" · "vs {n} in the previous period" → "from {n} last period" · "Average resolve time" → "Average time to fix" · คอลัมน์ "Resolution" → "Time to fix" · "Outcome" → "Result" · "{n} open" (หัวการ์ด Ticket ที่ค้าง) → "Total {n}" · "Share within this group" → "Shown on its own scale" · "The 'to' date is before the 'from' date" → "The end date is before the start date" · tooltip ใช้ประโยคสั้นลง
