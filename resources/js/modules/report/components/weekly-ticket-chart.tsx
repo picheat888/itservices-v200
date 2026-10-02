@@ -108,7 +108,6 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                         y1={y(v)}
                         y2={y(v)}
                         className="stroke-border"
-                        strokeOpacity={0.5}
                         strokeDasharray="3 4"
                         strokeWidth={1}
                     />
