@@ -198,6 +198,20 @@ export function RailHeading({ icon: Icon, title, note }: { icon: typeof Clock; t
     );
 }
 
+/** RailHeading while its card loads — pulsing bars where the icon, title and note go, as the
+ *  catalogue's group headings pulse beside it. */
+export function RailHeadingSkeleton({ note = true }: { note?: boolean }) {
+    return (
+        <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-[18px] py-3.5')} aria-hidden="true">
+            <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-32" />
+            </div>
+            {note && <Skeleton className="h-3 w-14" />}
+        </div>
+    );
+}
+
 /**
  * Rail rows while a rail card loads, shaped like its rows — the file tile, then three lines —
  * so the card pulses in place rather than saying "none" before the list arrives.
@@ -227,7 +241,11 @@ export function MyExports() {
 
     return (
         <Card id="my-exports" className="overflow-hidden">
-            <RailHeading icon={Download} title={t('rep_my_exports_title')} note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))} />
+            {isLoading ? (
+                <RailHeadingSkeleton />
+            ) : (
+                <RailHeading icon={Download} title={t('rep_my_exports_title')} note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))} />
+            )}
             {isLoading ? (
                 <RailRowsSkeleton />
             ) : items.length === 0 ? (

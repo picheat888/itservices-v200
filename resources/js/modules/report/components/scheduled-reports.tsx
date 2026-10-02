@@ -19,7 +19,7 @@ import { CalendarClock, Clock, Mail, Pencil, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useDeleteSchedule, useReportCatalogue, useReportSchedules, useSendScheduleNow, useUpdateSchedule } from '../hooks/use-reports';
 import type { ReportScheduleItem } from '../types';
-import { RailHeading, RailRowsSkeleton } from './my-exports';
+import { RailHeading, RailHeadingSkeleton, RailRowsSkeleton } from './my-exports';
 import { reportStem } from './report-catalogue';
 import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
 
@@ -162,7 +162,7 @@ export function ScheduledReports() {
     // (as the exports card above does).
     return (
         <Card id="scheduled-reports" className="overflow-hidden">
-            <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} />
+            {isLoading ? <RailHeadingSkeleton note={false} /> : <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} />}
             {isLoading && <RailRowsSkeleton rows={2} />}
             {!isLoading && items.length === 0 && (
                 <p className="text-muted-foreground px-[18px] py-8 text-center text-sm">{t('rep_schedules_empty')}</p>
