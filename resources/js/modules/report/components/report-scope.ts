@@ -59,23 +59,24 @@ export function reportScope(filters: Record<string, unknown>, columnsCount: numb
     return parts.length > 0 ? parts.join(' · ') : t('rep_scope_all');
 }
 
+/** Days each preset period looks back over, today included — ReportSnapshotService::PRESET_DAYS. */
+const PRESET_DAYS = { '7d': 7, '30d': 30, '90d': 90 } as const;
+
+/** A local date as "YYYY-MM-DD". */
+export const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 /**
  * The dates a Report Center period covers, worked out as ReportSnapshotService::range does:
- * 7 days = today and the six before it; month / quarter / year = from its first day; all to
- * today. Local dates, so a link from the hub opens a report on the very days its tiles count.
+ * a preset counts back from today (7 days = today and the six before it); custom is the
+ * reader's own from / to. Local dates, so a link from the hub opens a report on the very days
+ * its tiles count.
  */
-export function periodRange(period: '7d' | 'month' | 'quarter' | 'year', today = new Date()): { from: string; to: string } {
-    const y = today.getFullYear();
-    const m = today.getMonth();
-    const start =
-        period === '7d'
-            ? new Date(y, m, today.getDate() - 6)
-            : period === 'quarter'
-              ? new Date(y, m - (m % 3), 1)
-              : period === 'year'
-                ? new Date(y, 0, 1)
-                : new Date(y, m, 1);
-    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export function periodRange(
+    range: { period: '7d' | '30d' | '90d' } | { period: 'custom'; from: string; to: string },
+    today = new Date(),
+): { from: string; to: string } {
+    if (range.period === 'custom') return { from: range.from, to: range.to };
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (PRESET_DAYS[range.period] - 1));
 
-    return { from: iso(start), to: iso(today) };
+    return { from: isoDate(start), to: isoDate(today) };
 }

@@ -7,7 +7,7 @@ import { downloadBlob } from '@/shared/lib/utils';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { reportApi } from '../api/reportApi';
-import type { ExportFormat, ReportDefinition, ReportExportItem, ScheduleInput, SnapshotPeriod, TabularFilters, TicketReportFilters } from '../types';
+import type { ExportFormat, ReportDefinition, ReportExportItem, ScheduleInput, SnapshotRange, TabularFilters, TicketReportFilters } from '../types';
 
 /**
  * A 4xx (422 invalid filters, 403 no access, 404 unknown report) answers the same however
@@ -27,10 +27,10 @@ export const REPORT_SCHEDULES_KEY = ['reports', 'schedules'] as const;
 
 export const useReportCatalogue = () => useQuery({ queryKey: CATALOGUE_KEY, queryFn: reportApi.catalogue });
 
-export const useReportSnapshot = (period: SnapshotPeriod) =>
+export const useReportSnapshot = (range: SnapshotRange) =>
     useQuery({
-        queryKey: ['reports', 'snapshot', period],
-        queryFn: () => reportApi.snapshot(period),
+        queryKey: ['reports', 'snapshot', range],
+        queryFn: () => reportApi.snapshot(range),
         // Keep the last numbers on screen while another period loads.
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,

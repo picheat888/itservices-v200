@@ -3,9 +3,9 @@
  * cells: one per snapshot figure the reader may see (GET /api/reports/snapshot), each opening
  * the report its number comes from. A cell reads label / number / footer, the footer carrying
  * the change over the period with a small trend line where the history exists (open tickets,
- * SLA rate), or the figure's call to act (renew, reorder). The period (7 days / month /
- * quarter / year) is the page's — PeriodSwitch beside the heading, held by useSnapshotPeriod
- * and remembered in localStorage (`reports.snapshot.period`).
+ * SLA rate), or the figure's call to act (renew, reorder). The period (the last 7 / 30 / 90
+ * days, or a range the reader picks) is the page's — PeriodSwitch beside the heading
+ * (period-switch.tsx), held by useSnapshotRange (hooks/use-snapshot-range.ts).
  *
  * Only some numbers follow the period — the SLA rate and requests submitted — the rest are
  * states as of now (ReportSnapshotService). The ones that follow it say which period in
@@ -15,26 +15,11 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useReportCatalogue, useReportSnapshot } from '../hooks/use-reports';
-import type { SnapshotPeriod, SnapshotTile } from '../types';
+import type { SnapshotPeriod, SnapshotRange, SnapshotTile } from '../types';
 import { reportRoute } from './report-catalogue';
 import { periodRange } from './report-scope';
-
-const PERIODS: SnapshotPeriod[] = ['7d', 'month', 'quarter', 'year'];
-const STORAGE_KEY = 'reports.snapshot.period';
-
-const isPeriod = (value: unknown): value is SnapshotPeriod => typeof value === 'string' && (PERIODS as string[]).includes(value);
-
-function loadPeriod(): SnapshotPeriod {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        return isPeriod(stored) ? stored : 'month';
-    } catch {
-        return 'month';
-    }
-}
 
 /** Tiles whose main number is counted over the chosen period rather than as of now. */
 const PERIOD_TILES = new Set(['sla_rate']);
@@ -54,7 +39,7 @@ const BAD = 'text-red-600 dark:text-red-400';
  */
 const DELTA_BASE: Record<string, 'since' | 'prev'> = { tickets_open: 'since', sla_rate: 'prev' };
 
-/** "▲ 6 จากต้นเดือน" / "▼ 1.8% จากเดือนก่อน" — coloured by whether the move is good for this figure. */
+/** "▲ 6 ตั้งแต่ 30 วันก่อน" / "▼ 1.8% จาก 30 วันก่อนหน้า" — coloured by whether the move is good for this figure. */
 function Delta({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) {
     const t = useT();
     const value = tile.delta ?? 0;
@@ -143,7 +128,8 @@ function Footer({ tile, period, periodWords }: { tile: SnapshotTile; period: Sna
     }
 }
 
-function Tile({ tile, period, hasRange }: { tile: SnapshotTile; period: SnapshotPeriod; hasRange: boolean }) {
+function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRange; hasRange: boolean }) {
+    const period = range.period;
     const t = useT();
     const value = tile.value === null ? '—' : tile.unit === 'percent' ? tile.value.toLocaleString() : tile.value.toLocaleString();
     const periodWords = t(`rep_period_in_${period}`);
@@ -157,7 +143,7 @@ function Tile({ tile, period, hasRange }: { tile: SnapshotTile; period: Snapshot
     return (
         <Link
             // Opens the report on the strip's own period, so it shows the days this number counts.
-            to={reportRoute({ key: tile.report_key, range: hasRange }, periodRange(period))}
+            to={reportRoute({ key: tile.report_key, range: hasRange }, periodRange(range))}
             className="bg-card hover:bg-accent focus-visible:ring-brand/30 flex min-w-0 flex-col gap-1 px-4 py-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
             <span className="text-muted-foreground truncate text-xs" title={label}>
@@ -176,57 +162,8 @@ function Tile({ tile, period, hasRange }: { tile: SnapshotTile; period: Snapshot
     );
 }
 
-/** The chosen period, remembered in localStorage like a list filter. */
-export function useSnapshotPeriod(): [SnapshotPeriod, (period: SnapshotPeriod) => void] {
-    const [period, setPeriod] = useState<SnapshotPeriod>(loadPeriod);
-
-    useEffect(() => {
-        try {
-            localStorage.setItem(STORAGE_KEY, period);
-        } catch {
-            // Storage blocked — the period still holds for this visit.
-        }
-    }, [period]);
-
-    return [period, setPeriod];
-}
-
-/**
- * Segmented period control beside the Reports heading. On the light page ground a muted track
- * vanished, so in light it is a bordered card with the chosen period in brand (as the Ticket
- * page's range switch); dark keeps its muted track, which already reads.
- */
-export function PeriodSwitch({ period, onChange }: { period: SnapshotPeriod; onChange: (period: SnapshotPeriod) => void }) {
-    const t = useT();
-
-    return (
-        <div
-            className="border-border bg-card dark:bg-muted inline-flex gap-0.5 rounded-lg border p-0.5 shadow-xs dark:border-transparent dark:shadow-none"
-            role="group"
-            aria-label={t('rep_period_label')}
-        >
-            {PERIODS.map((p) => (
-                <button
-                    key={p}
-                    type="button"
-                    aria-pressed={period === p}
-                    onClick={() => onChange(p)}
-                    className={cn(
-                        'focus-visible:ring-brand/30 h-7 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                        period === p
-                            ? 'bg-brand text-brand-foreground dark:bg-background dark:text-foreground dark:shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent dark:hover:bg-transparent',
-                    )}
-                >
-                    {t(`rep_period_${p}`)}
-                </button>
-            ))}
-        </div>
-    );
-}
-
-export function SnapshotStrip({ period }: { period: SnapshotPeriod }) {
-    const { data, isLoading } = useReportSnapshot(period);
+export function SnapshotStrip({ range }: { range: SnapshotRange }) {
+    const { data, isLoading } = useReportSnapshot(range);
     // Which tiles' reports take a date range — the hub already holds the catalogue.
     const { data: catalogue = [] } = useReportCatalogue();
 
@@ -245,7 +182,7 @@ export function SnapshotStrip({ period }: { period: SnapshotPeriod }) {
                       </div>
                   ))
                 : data.tiles.map((tile) => (
-                      <Tile key={tile.key} tile={tile} period={period} hasRange={!!catalogue.find((r) => r.key === tile.report_key)?.range} />
+                      <Tile key={tile.key} tile={tile} range={range} hasRange={!!catalogue.find((r) => r.key === tile.report_key)?.range} />
                   ))}
         </Card>
     );
