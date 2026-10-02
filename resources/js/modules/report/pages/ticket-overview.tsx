@@ -296,7 +296,11 @@ export default function TicketOverviewReportPage() {
                         </Section>
                         {/* One card, as in the design: SLA by priority, backlog age, then tickets by category. */}
                         <Card className="flex flex-col overflow-hidden">
-                            <SectionHeading title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub')} />
+                            {/* The goal is Settings → SLA (TicketSla::goalPercent), the marker drawn on each bar. */}
+                            <SectionHeading
+                                title={t('rep_sla_priority_title')}
+                                sub={t('rep_sla_priority_sub').replace('{n}', String(data.sla_goal))}
+                            />
                             <HorizontalBars
                                 bars={data.sla_by_priority.map((p) => ({
                                     key: p.priority,
