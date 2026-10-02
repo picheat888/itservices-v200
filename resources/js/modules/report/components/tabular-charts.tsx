@@ -4,14 +4,18 @@
  * mix as a stacked bar against the largest row with each piece's count over it, the row total
  * after it — and, in the right card,
  * the 'donut' (shares of the whole, a headline percent in its hole, a legend with counts and
- * shares) over the 'bars'. Used by pages/tabular-report.tsx; ChartsSkeleton holds the place
- * while rows load.
+ * shares) over the 'bars'. A long list (departments past 10, categories past 8) shows its top
+ * rows and folds the rest into one "อื่น ๆ (n)" row, so the bars still add up to the whole, with
+ * "แสดงทั้งหมด (n)" under it to open every row in place. Used by pages/tabular-report.tsx;
+ * ChartsSkeleton holds the place while rows load.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 import type { ChartLabel, ChartTone, TabularChart } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { HorizontalBars } from './horizontal-bars';
@@ -47,6 +51,41 @@ const STROKE: Record<ChartTone, string> = {
     gray: 'stroke-slate-400 dark:stroke-slate-500',
 };
 
+/** How many rows a long list shows before folding the rest into "อื่น ๆ". */
+const TOP_STACKS = 10;
+const TOP_BARS = 8;
+
+/**
+ * The rows a list shows: all of them, or — past `top` and until opened — the first `top` with
+ * the rest handed back to be summed into one "อื่น ๆ" row. One extra row is shown rather than
+ * folded, since "อื่น ๆ (1)" would only hide a name.
+ */
+function useFold<T>(rows: T[], top: number) {
+    const [open, setOpen] = useState(false);
+    const folds = rows.length > top + 1;
+    const folded = folds && !open;
+
+    return { open, setOpen, folds, shown: folded ? rows.slice(0, top) : rows, rest: folded ? rows.slice(top) : [] };
+}
+
+/** "แสดงทั้งหมด (24)" / "ย่อ" under a folding list. */
+function FoldToggle({ open, total, onToggle }: { open: boolean; total: number; onToggle: () => void }) {
+    const t = useT();
+    const Icon = open ? ChevronUp : ChevronDown;
+
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors"
+        >
+            <Icon className="h-3.5 w-3.5" />
+            {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', String(total))}
+        </button>
+    );
+}
+
 type Stacks = Extract<TabularChart, { type: 'stacks' }>;
 type Donut = Extract<TabularChart, { type: 'donut' }>;
 type Bars = Extract<TabularChart, { type: 'bars' }>;
@@ -75,9 +114,22 @@ function useLabel() {
 function StacksCard({ chart }: { chart: Stacks }) {
     const t = useT();
     const label = useLabel();
-    const max = Math.max(1, ...chart.rows.map((r) => r.total));
     // Only the series that appear anywhere get a legend entry.
     const legend = chart.legend.filter((s) => chart.rows.some((r) => (r.values[s.key] ?? 0) > 0));
+    const fold = useFold(chart.rows, TOP_STACKS);
+    const rows: (Stacks['rows'][number] & { others?: boolean })[] = [...fold.shown];
+    if (fold.rest.length > 0) {
+        const values: Record<string, number> = {};
+        for (const s of chart.legend) values[s.key] = fold.rest.reduce((sum, r) => sum + (r.values[s.key] ?? 0), 0);
+        rows.push({
+            label: { name: t('rep_chart_others').replace('{n}', String(fold.rest.length)), name_th: null },
+            values,
+            total: fold.rest.reduce((sum, r) => sum + r.total, 0),
+            others: true,
+        });
+    }
+    // Widths against the largest row on show — "อื่น ๆ" included, since it can outgrow the rest.
+    const max = Math.max(1, ...rows.map((r) => r.total));
 
     return (
         <Card className="overflow-hidden">
@@ -98,9 +150,9 @@ function StacksCard({ chart }: { chart: Stacks }) {
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
             ) : (
                 <div className="divide-border/60 divide-y">
-                    {chart.rows.map((row, i) => (
+                    {rows.map((row, i) => (
                         <div key={i} className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3rem] items-center gap-3 px-5 py-2.5 text-sm">
-                            <span className="truncate" title={label(row.label)}>
+                            <span className={cn('truncate', row.others && 'text-muted-foreground')} title={label(row.label)}>
                                 {label(row.label)}
                             </span>
                             {/* Width against the largest row, so rows compare by size as well as mix;
@@ -144,6 +196,7 @@ function StacksCard({ chart }: { chart: Stacks }) {
                     ))}
                 </div>
             )}
+            {fold.folds && <FoldToggle open={fold.open} total={chart.rows.length} onToggle={() => fold.setOpen(!fold.open)} />}
         </Card>
     );
 }
@@ -221,15 +274,21 @@ function DonutSection({ chart }: { chart: Donut }) {
 function BarsSection({ chart, className }: { chart: Bars; className?: string }) {
     const t = useT();
     const label = useLabel();
+    const fold = useFold(chart.rows, TOP_BARS);
+    const bars = fold.shown.map((r, i) => ({ key: String(i), label: label(r.label), value: r.value }));
+    if (fold.rest.length > 0) {
+        bars.push({
+            key: 'others',
+            label: t('rep_chart_others').replace('{n}', String(fold.rest.length)),
+            value: fold.rest.reduce((sum, r) => sum + r.value, 0),
+        });
+    }
 
     return (
         <>
             <Heading title={t(chart.title_key)} className={className} />
-            <HorizontalBars
-                bars={chart.rows.map((r, i) => ({ key: String(i), label: label(r.label), value: r.value }))}
-                max={Math.max(1, ...chart.rows.map((r) => r.value))}
-                emptyLabel={t('rep_no_data')}
-            />
+            <HorizontalBars bars={bars} max={Math.max(1, ...bars.map((b) => b.value))} emptyLabel={t('rep_no_data')} />
+            {fold.folds && <FoldToggle open={fold.open} total={chart.rows.length} onToggle={() => fold.setOpen(!fold.open)} />}
         </>
     );
 }
