@@ -8,14 +8,27 @@
  * row filters by that assignee or category), and each row
  * striped by its SLA state. Routed by ../routes.tsx.
  */
+import { useT } from '@/lang';
 import { BacklogBoardCards, BacklogSlaSegments, backlogRowClass } from '../components/backlog-board';
 import { TabularReportView } from '../components/tabular-report-view';
 import { TicketPriorityBadge, TicketStatusBadge } from '../components/ticket-badges';
 
-/** Priority and status wear the same pills as the Ticket & SLA page's ticket list. */
+/** "39 วัน" — or "5 ชม." under a day — rather than 39.4 days, as the time-left pills count. */
+function AgeCell({ days }: { days: number | null }) {
+    const t = useT();
+    if (days === null) return <>—</>;
+    const text =
+        days < 1
+            ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(days * 24))))
+            : t('rep_days_n').replace('{n}', String(Math.round(days)));
+    return <span className="font-mono">{text}</span>;
+}
+
+/** Priority and status wear the same pills as the Ticket & SLA page's ticket list; age reads in days. */
 function backlogCell(key: string, row: Record<string, unknown>) {
     if (key === 'priority') return <TicketPriorityBadge priority={row.priority as string | null} />;
     if (key === 'ticket_status') return <TicketStatusBadge status={row.ticket_status as string | null} />;
+    if (key === 'age_days') return <AgeCell days={typeof row.age_days === 'number' ? row.age_days : null} />;
     return undefined;
 }
 

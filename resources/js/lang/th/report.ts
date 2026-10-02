@@ -488,7 +488,7 @@ export const report: Dict = {
     rep_c_subject: 'เรื่อง',
     rep_c_priority: 'ความสำคัญ',
     rep_c_opened_at: 'วันที่แจ้ง',
-    rep_c_age_days: 'ค้างมา (วัน)',
+    rep_c_age_days: 'ค้างมา',
     rep_c_due_at: 'ครบกำหนด SLA',
     rep_c_hours_left: 'เหลือเวลา',
     rep_c_st_ready: 'พร้อมส่งมอบ',

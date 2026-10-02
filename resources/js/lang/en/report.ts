@@ -489,7 +489,7 @@ export const report: Dict = {
     rep_c_subject: 'Subject',
     rep_c_priority: 'Priority',
     rep_c_opened_at: 'Opened on',
-    rep_c_age_days: 'Open for (days)',
+    rep_c_age_days: 'Open for',
     rep_c_due_at: 'Due',
     rep_c_hours_left: 'Time left',
     rep_c_st_ready: 'Ready',
