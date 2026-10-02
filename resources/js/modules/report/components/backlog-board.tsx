@@ -372,6 +372,10 @@ function Categories({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_bl_empty')}</div>
             ) : (
                 <div className="space-y-2.5 px-5 py-4">
+                    {/* Names the right-hand count, as the staff card's "ทั้งหมด" column. */}
+                    <div className="text-muted-foreground grid grid-cols-[92px_minmax(0,1fr)_40px] gap-2.5 text-xs">
+                        <span className="col-start-3 text-right">{t('rep_col_total')}</span>
+                    </div>
                     {rows.map(([category, r]) => (
                         <div key={category} className="grid grid-cols-[92px_minmax(0,1fr)_40px] items-center gap-2.5 text-sm">
                             <span className="truncate">{t(categoryKey(category))}</span>
