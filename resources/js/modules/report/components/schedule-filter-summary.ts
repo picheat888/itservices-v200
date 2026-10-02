@@ -8,7 +8,7 @@
  * - tabularFilterChips: a generic tabular report, labelled from its own definition.
  * - ticketFilterChips: the Ticket & SLA page, labelled from the ticket enums and the page's
  *   own department / assignee options.
- * Used by pages/ticket-overview.tsx, pages/tabular-report.tsx and scheduled-reports.tsx.
+ * Used by pages/tickets-overview.tsx, components/tabular-report-view.tsx and scheduled-reports.tsx.
  */
 import type { TabularDefinition, TicketOverviewSummary } from '../types';
 import { compactRange } from './report-scope';

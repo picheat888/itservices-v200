@@ -4127,3 +4127,13 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ลิงก์เก่า `/reports/r/<key>` redirect ไป URL ใหม่ (คง query ตัวกรองไว้) · `tickets-by-department` / `tickets-staff-performance` (รายงานที่รวมเข้าภาพรวมแล้ว) → `/reports/tickets-overview`
 
 ตรวจใน Chrome: `/reports/assets-by-status-department` เปิดได้ · `/reports/r/assets.transfer_history?from=2026-09-01&to=2026-09-30` → `/reports/assets-transfer-history?from=…&to=…` ตัวกรองตรง · tsc + eslint ผ่าน
+
+## รายงาน: แต่ละรายงานมีไฟล์หน้า frontend + route ของตัวเอง (2026-10-02)
+
+ผู้ใช้เลือกแยกหน้า (เดิม 16 รายงานแบบตารางใช้ route กลาง `/reports/:slug` → หน้าเดียว):
+- **`modules/report/pages/<slug>.tsx`** — 1 ไฟล์ต่อ 1 รายงาน ชื่อไฟล์ตรงกับ URL (เช่น `pages/assets-by-status-department.tsx` = `/reports/assets-by-status-department`) · หน้า Ticket & SLA เปลี่ยนชื่อไฟล์เป็น `pages/tickets-overview.tsx` ให้ตรงกัน · ทุกไฟล์มี comment ชื่อรายงานภาษาไทย + report key
+- **`modules/report/routes.tsx`** — รายการ route ทั้งหมดของโมดูลรายงาน (path / สิทธิ์ / หน้า) บรรทัดละรายงาน · App.tsx map รายการนี้ · แต่ละ route ใช้สิทธิ์ของรายงานนั้นเอง (เช่น สต็อกเคลื่อนไหว = `stock.view_events`) แทนการรวมทุกสิทธิ์ไว้ที่ route เดียว
+- **`components/tabular-report-view.tsx`** (ย้ายจาก `pages/tabular-report.tsx`) — ส่วนกลางที่หน้ารายงานแบบตารางเรียกใช้ (`<TabularReportView reportKey="…" />`) · คอลัมน์/ตัวกรอง/กราฟยังมาจาก definition ฝั่ง backend ที่เดียว หน้าจอ, Excel, PDF และอีเมลตั้งเวลาจึงตรงกันเสมอ — ถ้ารายงานไหนต้องการหน้าตาพิเศษ แก้ในไฟล์หน้าของรายงานนั้น
+- **`pages/unknown-report.tsx`** — URL `/reports/…` ที่ไม่มีในรายการ ขึ้น "ไม่พบรายงานนี้" + ปุ่ม "กลับไปหน้ารายงาน" · ลิงก์เก่า `/reports/r/<key>` ยัง redirect ได้
+
+ตรวจใน Chrome: `/reports/stock-below-min` · `/reports/tickets-overview` · `/reports/nope-nothing` → ไม่พบรายงาน · `/reports/r/tickets.backlog` → `/reports/tickets-backlog` · tsc + eslint + `npm run build` ผ่าน · `SidebarRouteGateTest` + `RequestPermissionGateTest` ผ่าน

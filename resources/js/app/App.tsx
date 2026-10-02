@@ -11,7 +11,7 @@ import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
 import { PermissionsPage } from '@/modules/permission';
-import { reportSlug, ReportsPage, TabularReportPage, TicketOverviewReportPage } from '@/modules/report';
+import { reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, StockPage } from '@/modules/stock';
@@ -188,14 +188,18 @@ function App() {
                                 </RequirePermission>
                             }
                         />
-                        <Route
-                            path="reports/tickets-overview"
-                            element={
-                                <RequirePermission anyOf={['tickets.view_all']}>
-                                    <TicketOverviewReportPage />
-                                </RequirePermission>
-                            }
-                        />
+                        {/* One route per report page, each with its own gate — modules/report/routes.tsx. */}
+                        {reportPageRoutes.map(({ path, anyOf, Page }) => (
+                            <Route
+                                key={path}
+                                path={`reports/${path}`}
+                                element={
+                                    <RequirePermission anyOf={anyOf}>
+                                        <Page />
+                                    </RequirePermission>
+                                }
+                            />
+                        ))}
                         {/* Merged into the Ticket & SLA page's cards (2026-10-02) — old links land there. */}
                         <Route path="reports/tickets-by-department" element={<Navigate to="/reports/tickets-overview" replace />} />
                         <Route path="reports/tickets-staff-performance" element={<Navigate to="/reports/tickets-overview" replace />} />
@@ -216,7 +220,7 @@ function App() {
                                         'access.software_view',
                                     ]}
                                 >
-                                    <TabularReportPage />
+                                    <UnknownReportPage />
                                 </RequirePermission>
                             }
                         />

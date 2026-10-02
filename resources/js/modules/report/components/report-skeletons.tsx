@@ -2,7 +2,7 @@
  * Loading shapes for the report module's pages, each mirroring the piece it stands in for so
  * a page pulses in place and its content lands where the bars were — the pattern of the hub
  * (ReportCatalogueSkeleton, RailHeadingSkeleton) and the other modules' dashboards.
- * Used by pages/ticket-overview.tsx and pages/tabular-report.tsx.
+ * Used by pages/tickets-overview.tsx and components/tabular-report-view.tsx.
  */
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { cn } from '@/shared/lib/utils';

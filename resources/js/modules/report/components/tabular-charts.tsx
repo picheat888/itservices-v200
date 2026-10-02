@@ -10,7 +10,7 @@
  * so the two cards grow together. Rows marked `apart` (assets in no department) come last under
  * a dashed rule, drawn as a share of their own total so they never set the departments' scale.
  * The chosen view (สถานะ / ที่มา) lives in the URL (?view=), as the app keeps tabs.
- * Used by pages/tabular-report.tsx; ChartsSkeleton holds the place while rows load.
+ * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -113,7 +113,7 @@ type StackRowData = Stacks['rows'][number] & { others?: boolean };
 
 /**
  * A stacked bar with each piece's count printed over it, `scale` being what a full-width bar
- * stands for. Shared with the Ticket & SLA page's department card (pages/ticket-overview.tsx).
+ * stands for. Shared with the Ticket & SLA page's department card (pages/tickets-overview.tsx).
  */
 export function StackBar({ values, series, scale }: { values: Record<string, number>; series: ChartSeries[]; scale: number }) {
     const t = useT();

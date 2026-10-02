@@ -54,7 +54,7 @@ export const report: Dict = {
     rep_tickets_overview_title: 'Ticket & SLA overview',
     rep_tickets_overview_desc: 'Tickets opened, time to fix and SLA results by category, priority and department',
 
-    // pages/ticket-overview.tsx — header, KPI tiles
+    // pages/tickets-overview.tsx — header, KPI tiles
     rep_export: 'Export',
     rep_kpi_total: 'Total tickets',
     rep_kpi_completed: 'Completed',
@@ -76,7 +76,7 @@ export const report: Dict = {
     rep_err_range_invalid: 'Check the date range (at most 366 days)',
     rep_err_load_failed: 'The report could not be loaded. Try again.',
 
-    // pages/ticket-overview.tsx — charts and breakdowns
+    // pages/tickets-overview.tsx — charts and breakdowns
     rep_weekly_title: 'Ticket overview',
     rep_weekly_opened: 'Opened',
     rep_weekly_closed: 'Closed',
@@ -263,12 +263,13 @@ export const report: Dict = {
     rep_schedules_delete: 'Delete',
     rep_schedules_deleted: 'Schedule deleted',
 
-    // pages/tabular-report.tsx — generic table report
+    // components/tabular-report-view.tsx — generic table report
     rep_days_left: '{n} days',
     rep_err_not_found: 'This report does not exist',
+    rep_back_to_reports: 'Back to Reports',
     rep_err_filter_invalid: 'Check the filters',
 
-    // pages/tabular-report.tsx — definition-driven labels (titles, columns, filters, summaries)
+    // components/tabular-report-view.tsx — definition-driven labels (titles, columns, filters, summaries)
     rep_domain_assets: 'Assets',
     rep_domain_contracts: 'Contracts & rentals',
     rep_contracts_expiring_title: 'Expiring contracts',
