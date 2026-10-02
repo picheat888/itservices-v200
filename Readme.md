@@ -4049,3 +4049,14 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 - เครื่องจริง (production) ให้รัน worker เป็น Windows service / Task Scheduler ไม่ใช่ผ่าน `composer run dev`
 
 `MailConfigTimeoutTest` (2: ตั้งค่า SMTP แล้ว + fallback .env — ตรวจถึง timeout ของ socket จริง) · pint ผ่าน
+
+## ภาพรวม Ticket & SLA: การ์ดผลงานเจ้าหน้าที่ IT ลิงก์ไปรายงานเต็ม (2026-10-02)
+
+การ์ด "ผลงานเจ้าหน้าที่ IT" แสดงแค่ 5 อันดับแรก (`byAssignee()->take(5)`) แต่ไม่ได้บอก คนดูอาจเข้าใจว่ามีเจ้าหน้าที่แค่นั้น · รายงานเต็ม `tickets.staff_performance` แบ่งหน้าฝั่ง server อยู่แล้ว (รองรับเจ้าหน้าที่ 30+ คน) จึงไม่ต้องทำตารางใหม่
+
+- หัวการ์ดแสดง "N อันดับแรก · ดูทั้งหมด →" (เหมือนการ์ดแผนก) แทน "ปิดแล้ว / เวลาแก้ไขมัธยฐาน" ที่ซ้ำกับหัวคอลัมน์ · ลบคีย์ `rep_by_assignee_sub` (en/th)
+- ลิงก์ส่ง `from`/`to` ของหน้าภาพรวมไปด้วย และส่ง `category` เมื่อเลือกหมวดเดียว (รายงานเต็มกรองได้ทีละหมวด)
+- **`useTabularFilters`** — รายงานแบบตารางทุกตัวรับ filter เริ่มต้นจาก query string ได้: ค่าจาก URL ชนะค่าที่จำไว้ ตรวจกับ definition (วันที่ต้องเป็น YYYY-MM-DD, select ต้องเป็นตัวเลือกที่มี) แล้วลบออกจาก URL (`replace`) — filter ยังจำใน localStorage ตามเดิม
+- ตัวเลขในการ์ดกับรายงานเต็มอาจต่างกันได้ตามนิยามเดิม: การ์ดนับ Ticket ที่ **เปิด** ในช่วงและปิดแล้ว · รายงานเต็มนับตาม **`resolved_at`** ในช่วง
+
+tsc + eslint + prettier ผ่าน · ทดสอบในเบราว์เซอร์: กดลิงก์แล้วรายงานเต็มเปิดด้วยช่วง 2026-08-01 – 2026-10-02 และ URL ถูกล้าง · ไม่มี console error
