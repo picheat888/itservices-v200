@@ -14,10 +14,12 @@ import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import type { TabularColumnDef } from '../types';
 
+/** Days to an end date as a pill, said in words — "เลยมา 5 วัน" / "วันนี้" / "อีก 9 วัน" — never a minus sign. */
 function DaysLeftBadge({ value }: { value: number }) {
     const t = useT();
     const tone = value < 0 || value <= 30 ? 'red' : value <= 60 ? 'amber' : 'gray';
-    return <StatusBadge tone={tone}>{t('rep_days_left').replace('{n}', String(value))}</StatusBadge>;
+    const label = value === 0 ? t('rep_days_today') : t(value < 0 ? 'rep_days_over' : 'rep_days_in').replace('{n}', String(Math.abs(value)));
+    return <StatusBadge tone={tone}>{label}</StatusBadge>;
 }
 
 /**
