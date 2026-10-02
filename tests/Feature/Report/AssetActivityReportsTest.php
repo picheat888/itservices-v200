@@ -153,6 +153,11 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame(['purchased' => 0, 'rented' => 1], $split['ready']);
         $this->assertSame(['purchased' => 1, 'rented' => 0], $split['pending_return']);
         $this->assertSame('rep_src_rented', $body['summary'][0]['split'][1]['label_key']);
+        $this->assertSame('violet', $body['summary'][0]['split'][1]['tone']);
+
+        // Status tiles carry their share of the whole; the whole itself does not.
+        $share = array_column($body['summary'], 'share', 'key');
+        $this->assertSame(['total' => null, 'in_use' => 50, 'ready' => 25, 'pending_return' => 25], $share);
 
         // The department bars carry a source view beside the status one.
         $department = collect($body['charts'])->firstWhere('key', 'department');
