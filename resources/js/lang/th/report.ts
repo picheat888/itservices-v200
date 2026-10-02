@@ -535,7 +535,7 @@ export const report: Dict = {
     rep_bl_cats_title: 'ค้างตามหมวด',
     rep_sla_not_breached: 'ยังไม่เกิน',
     rep_bl_empty: 'ไม่มีงานค้างในตัวกรองนี้',
-    rep_k_open: 'รอรับเรื่อง',
+    rep_k_open: 'รอรับเคส',
     rep_k_in_progress: 'กำลังดำเนินการ',
     rep_k_breached: 'เกิน SLA',
     rep_k_handovers: 'ส่งมอบ',
