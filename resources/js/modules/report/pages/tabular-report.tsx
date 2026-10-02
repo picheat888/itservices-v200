@@ -63,11 +63,14 @@ function TabularReportRows({
     visibleColumns,
     filters,
     hasCharts,
+    showsTable,
     onTotalChange,
 }: {
     reportKey: string;
     /** TabularDefinition.has_charts — holds the charts' place until the first rows arrive. */
     hasCharts: boolean;
+    /** TabularDefinition.shows_table — a chart-led report lists no rows on screen. */
+    showsTable: boolean;
     /** The definition's columns minus the ones hidden with the column picker. */
     visibleColumns: TabularColumnDef[];
     filters: TabularFilters;
@@ -107,38 +110,42 @@ function TabularReportRows({
             {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
             {/* The rows in a headed card with the table inset, as the Ticket & SLA page's
                 "รายการ Ticket" — the same heading tint, "ข้อมูล ณ" line and padding. */}
-            <Card className="overflow-hidden">
-                <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
-                    <span className="text-sm font-semibold">{t('rep_rows_generic')}</span>
-                    {data && (
-                        <span className="text-muted-foreground text-xs">{t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString())}</span>
-                    )}
-                </div>
-                <div className="space-y-3 p-5">
-                    {dataUpdatedAt > 0 && (
-                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                            <Clock className="h-3.5 w-3.5" />
-                            {t('rep_generated_at').replace('{t}', stamp(dataUpdatedAt))}
-                        </div>
-                    )}
-                    <DataTable
-                        columns={columns}
-                        rows={data?.data ?? []}
-                        rowKey={(r) => r.id}
-                        loading={isLoading || isFetching}
-                        server={{
-                            page,
-                            pageSize: perPage,
-                            total: data?.meta.total ?? 0,
-                            onPageChange: setPage,
-                            onPageSizeChange: (s) => {
-                                setPerPage(s);
-                                setPage(1);
-                            },
-                        }}
-                    />
-                </div>
-            </Card>
+            {showsTable && (
+                <Card className="overflow-hidden">
+                    <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
+                        <span className="text-sm font-semibold">{t('rep_rows_generic')}</span>
+                        {data && (
+                            <span className="text-muted-foreground text-xs">
+                                {t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString())}
+                            </span>
+                        )}
+                    </div>
+                    <div className="space-y-3 p-5">
+                        {dataUpdatedAt > 0 && (
+                            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                                <Clock className="h-3.5 w-3.5" />
+                                {t('rep_generated_at').replace('{t}', stamp(dataUpdatedAt))}
+                            </div>
+                        )}
+                        <DataTable
+                            columns={columns}
+                            rows={data?.data ?? []}
+                            rowKey={(r) => r.id}
+                            loading={isLoading || isFetching}
+                            server={{
+                                page,
+                                pageSize: perPage,
+                                total: data?.meta.total ?? 0,
+                                onPageChange: setPage,
+                                onPageSizeChange: (s) => {
+                                    setPerPage(s);
+                                    setPage(1);
+                                },
+                            }}
+                        />
+                    </div>
+                </Card>
+            )}
         </div>
     );
 }
@@ -188,6 +195,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 visibleColumns={visibleColumns}
                 filters={filters}
                 hasCharts={definition.has_charts}
+                showsTable={definition.shows_table}
                 onTotalChange={setRowsTotal}
             />
             <ExportReportDialog

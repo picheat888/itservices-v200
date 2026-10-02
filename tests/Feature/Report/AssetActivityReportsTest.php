@@ -98,7 +98,10 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null, 'category_id' => $laptops->id]);
 
         $viewer = $this->userWith(['assets.view']);
-        $this->assertTrue($this->actingAs($viewer)->getJson('/api/reports/r/assets.by_status_department')->assertOk()->json('data.has_charts'));
+        $definition = $this->actingAs($viewer)->getJson('/api/reports/r/assets.by_status_department')->assertOk()->json('data');
+        $this->assertTrue($definition['has_charts']);
+        // The department bars stand in for the table on screen.
+        $this->assertFalse($definition['shows_table']);
 
         $charts = collect($this->actingAs($viewer)
             ->getJson('/api/reports/r/assets.by_status_department/rows')->assertOk()->json('charts'))->keyBy('key');
@@ -132,6 +135,8 @@ class AssetActivityReportsTest extends TestCase
             ->getJson('/api/reports/r/assets.transfer_history/rows')->assertOk()->json();
 
         $this->assertSame([], $body['charts']);
+        $this->assertTrue($this->actingAs($this->userWith(['assets.view']))
+            ->getJson('/api/reports/r/assets.transfer_history')->json('data.shows_table'));
     }
 
     // ── assets.transfer_history ─────────────────────────────────────────────────────

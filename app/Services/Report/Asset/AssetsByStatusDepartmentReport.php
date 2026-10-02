@@ -15,8 +15,9 @@ use Illuminate\Database\Eloquent\Builder;
  * "ทรัพย์สินตามสถานะและแผนก" (Report Center → Assets): one row per department — the department
  * of the employee holding the asset — with how many sit in each status. Assets nobody holds
  * (ready stock, shared/common use, written off) share one "no department" row. Largest first.
- * Above the table, as the design draws it: each department's status mix as a stacked bar, the
- * statuses as a donut (in use at its centre) and the categories as bars.
+ * On screen it is drawn, as the design does: each department's status mix as a stacked bar with
+ * its counts, the statuses as a donut (in use at its centre) and the categories as bars — the
+ * department bars say what the table would, so the page shows no table; the export keeps it.
  */
 class AssetsByStatusDepartmentReport extends TabularReport
 {
@@ -107,6 +108,11 @@ class AssetsByStatusDepartmentReport extends TabularReport
     public function hasCharts(): bool
     {
         return true;
+    }
+
+    public function showsTable(): bool
+    {
+        return false;
     }
 
     public function charts(Builder $query, array $filters): array
