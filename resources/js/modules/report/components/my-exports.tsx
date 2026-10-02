@@ -20,6 +20,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Clock, Download, Loader2, RotateCcw, Trash2 } from 'lucide-react';
 import { useDeleteExport, useDownloadExport, useMyExports, useRetryExport } from '../hooks/use-reports';
 import type { ReportExportItem, ReportExportStatus } from '../types';
+import { CARD_HEADING_TINT } from './card-heading';
 import { reportStem } from './report-catalogue';
 import { reportScope } from './report-scope';
 
@@ -187,7 +188,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
 /** The design's rail card heading: muted icon + title, a note on the right. */
 export function RailHeading({ icon: Icon, title, note }: { icon: typeof Clock; title: string; note?: string }) {
     return (
-        <div className="border-border flex items-center justify-between gap-3 border-b px-[18px] py-3.5">
+        <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-[18px] py-3.5')}>
             <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Icon className="text-muted-foreground h-4 w-4" />
                 {title}
