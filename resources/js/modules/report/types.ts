@@ -192,6 +192,8 @@ export interface TabularDefinition {
     formats: ExportFormat[];
     filters: TabularFilterDef[];
     columns: TabularColumnDef[];
+    /** The rows response carries charts — the page holds their place while it loads. */
+    has_charts: boolean;
 }
 
 /** Filter values keyed by `TabularFilterDef.name`; null/'' means "not set". */
@@ -206,8 +208,43 @@ export interface SummaryItem {
     format: 'count' | 'money';
 }
 
+/** A chart colour, drawn by tabular-charts.tsx. */
+export type ChartTone = 'green' | 'blue' | 'violet' | 'orange' | 'amber' | 'red' | 'gray';
+
+/** A row's name from master data — the reader's language when it has one. */
+export interface ChartLabel {
+    name: string | null;
+    name_th: string | null;
+}
+
+export interface ChartSeries {
+    key: string;
+    label_key: string;
+    tone: ChartTone;
+}
+
+/** Charts a tabular report draws above its table (TabularReport::charts()). */
+export type TabularChart =
+    | {
+          type: 'stacks';
+          key: string;
+          title_key: string;
+          legend: ChartSeries[];
+          rows: { label: ChartLabel; values: Record<string, number>; total: number }[];
+      }
+    | {
+          type: 'donut';
+          key: string;
+          title_key: string;
+          center: { value: number | null; label_key: string };
+          total: number;
+          segments: (ChartSeries & { value: number })[];
+      }
+    | { type: 'bars'; key: string; title_key: string; rows: { label: ChartLabel; value: number }[] };
+
 export interface TabularRows {
     data: Array<Record<string, unknown> & { id: number }>;
     meta: PagedRows<unknown>['meta'];
     summary: SummaryItem[];
+    charts: TabularChart[];
 }

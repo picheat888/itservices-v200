@@ -15,12 +15,26 @@ use Illuminate\Database\Eloquent\Builder;
  * "ทรัพย์สินตามสถานะและแผนก" (Report Center → Assets): one row per department — the department
  * of the employee holding the asset — with how many sit in each status. Assets nobody holds
  * (ready stock, shared/common use, written off) share one "no department" row. Largest first.
+ * Above the table, as the design draws it: each department's status mix as a stacked bar, the
+ * statuses as a donut (in use at its centre) and the categories as bars.
  */
 class AssetsByStatusDepartmentReport extends TabularReport
 {
     use AssetColumns;
 
     private const SOURCE_KEYS = ['purchased' => 'asset_purchase', 'rented' => 'asset_lease'];
+
+    /**
+     * The charts' status order and colours (tabular-charts.tsx draws each tone): in use first,
+     * as the design orders them, written off last in gray.
+     */
+    private const CHART_TONES = [
+        'deployed' => 'green', 'common' => 'blue', 'ready' => 'violet',
+        'pending_acceptance' => 'orange', 'pending_return' => 'amber', 'writeoff' => 'gray',
+    ];
+
+    /** The category chart's longest list; the rest fold into the table below it. */
+    private const CATEGORY_BARS = 8;
 
     public function key(): string
     {
@@ -59,8 +73,7 @@ class AssetsByStatusDepartmentReport extends TabularReport
                 'COUNT(*) as total_count',
                 ...$perStatus,
             ]))
-            ->when($filters['category_id'], fn (Builder $q, $id) => $q->where('assets.category_id', (int) $id))
-            ->when($filters['source'], fn (Builder $q, string $source) => $q->where('assets.source', $source))
+            ->tap(fn (Builder $q) => $this->filtered($q, $filters))
             // MariaDB has no functional-dependency check: every selected department column is grouped.
             ->groupBy('departments.id', 'departments.name', 'departments.name_th')
             ->orderByDesc('total_count')
@@ -80,6 +93,82 @@ class AssetsByStatusDepartmentReport extends TabularReport
                 : ['name' => $a->getAttribute('department_name'), 'name_th' => $a->getAttribute('department_name_th')]),
             ReportColumn::number('total_count', 'ทั้งหมด', fn (Asset $a) => (int) $a->getAttribute('total_count')),
             ...$statuses,
+        ];
+    }
+
+    /** The category and source filters, shared by the table's query and the category chart. */
+    private function filtered(Builder $query, array $filters): Builder
+    {
+        return $query
+            ->when($filters['category_id'], fn (Builder $q, $id) => $q->where('assets.category_id', (int) $id))
+            ->when($filters['source'], fn (Builder $q, string $source) => $q->where('assets.source', $source));
+    }
+
+    public function hasCharts(): bool
+    {
+        return true;
+    }
+
+    public function charts(Builder $query, array $filters): array
+    {
+        $rows = (clone $query)->get();
+        $statuses = array_keys(self::CHART_TONES);
+        $totals = array_combine($statuses, array_map(
+            fn (string $status) => (int) $rows->sum(fn (Asset $a) => (int) $a->getAttribute("st_{$status}")),
+            $statuses,
+        ));
+        $all = array_sum($totals);
+        $legend = array_map(fn (string $status) => [
+            'key' => $status,
+            'label_key' => self::STATUS_KEYS[$status],
+            'tone' => self::CHART_TONES[$status],
+        ], $statuses);
+
+        $categories = $this->filtered(Asset::query(), $filters)
+            ->leftJoin('categories', 'categories.id', '=', 'assets.category_id')
+            ->selectRaw('categories.id as category_id, categories.name as category_name, categories.name_th as category_name_th, COUNT(*) as total_count')
+            ->groupBy('categories.id', 'categories.name', 'categories.name_th')
+            ->orderByDesc('total_count')
+            ->limit(self::CATEGORY_BARS)
+            ->get();
+
+        return [
+            [
+                'type' => 'stacks',
+                'key' => 'department',
+                'title_key' => 'rep_chart_by_department',
+                'legend' => $legend,
+                'rows' => $rows->map(fn (Asset $a) => [
+                    'label' => $a->getAttribute('department_id') === null
+                        ? ['name' => 'No department', 'name_th' => 'ไม่ระบุแผนก']
+                        : ['name' => $a->getAttribute('department_name'), 'name_th' => $a->getAttribute('department_name_th')],
+                    'values' => array_combine($statuses, array_map(fn (string $s) => (int) $a->getAttribute("st_{$s}"), $statuses)),
+                    'total' => (int) $a->getAttribute('total_count'),
+                ])->values()->all(),
+            ],
+            [
+                'type' => 'donut',
+                'key' => 'status',
+                'title_key' => 'rep_chart_status',
+                // "In use" is what the asset is for: someone's, or shared.
+                'center' => [
+                    'value' => $all === 0 ? null : (int) round(($totals['deployed'] + $totals['common']) / $all * 100),
+                    'label_key' => 'rep_chart_in_use',
+                ],
+                'total' => $all,
+                'segments' => array_map(fn (array $item) => [...$item, 'value' => $totals[$item['key']]], $legend),
+            ],
+            [
+                'type' => 'bars',
+                'key' => 'category',
+                'title_key' => 'rep_chart_by_category',
+                'rows' => $categories->map(fn (Asset $a) => [
+                    'label' => $a->getAttribute('category_id') === null
+                        ? ['name' => 'No category', 'name_th' => 'ไม่ระบุหมวด']
+                        : ['name' => $a->getAttribute('category_name'), 'name_th' => $a->getAttribute('category_name_th')],
+                    'value' => (int) $a->getAttribute('total_count'),
+                ])->values()->all(),
+            ],
         ];
     }
 

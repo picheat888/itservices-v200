@@ -23,6 +23,7 @@ import { CardHeadingSkeleton, DataTableSkeleton, FilterBarSkeleton, KpiRowSkelet
 import { ScheduleReportDialog, scheduleCoverage } from '../components/schedule-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
+import { ChartsSkeleton, TabularCharts } from '../components/tabular-charts';
 import { TabularFilterBar } from '../components/tabular-filter-bar';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
@@ -61,9 +62,12 @@ function TabularReportRows({
     reportKey,
     visibleColumns,
     filters,
+    hasCharts,
     onTotalChange,
 }: {
     reportKey: string;
+    /** TabularDefinition.has_charts — holds the charts' place until the first rows arrive. */
+    hasCharts: boolean;
     /** The definition's columns minus the ones hidden with the column picker. */
     visibleColumns: TabularColumnDef[];
     filters: TabularFilters;
@@ -100,6 +104,7 @@ function TabularReportRows({
         <div className="space-y-4">
             {/* Tiles pulse until the first rows arrive, so the table does not jump down when they do. */}
             {data ? <SummaryStrip items={data.summary} /> : <KpiRowSkeleton count={4} className="lg:grid-cols-4" />}
+            {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
             {/* The rows in a headed card with the table inset, as the Ticket & SLA page's
                 "รายการ Ticket" — the same heading tint, "ข้อมูล ณ" line and padding. */}
             <Card className="overflow-hidden">
@@ -182,6 +187,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 reportKey={reportKey}
                 visibleColumns={visibleColumns}
                 filters={filters}
+                hasCharts={definition.has_charts}
                 onTotalChange={setRowsTotal}
             />
             <ExportReportDialog
