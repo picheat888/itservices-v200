@@ -4,7 +4,7 @@
  *
  * - DepartmentStacksCard ("แยกตามแผนก", was "Ticket ตามแผนกและหมวด") — one row per requesting
  *   department, its tickets stacked by category with each piece's count over it, then its total,
- *   SLA hit rate and how many are still open. The top 10 show and the rest fold into one
+ *   SLA hit rate and how many are still open. At most 10 show and the rest fold into one
  *   "อื่น ๆ (n)" row (with a true SLA rate from summed met/measured) until "แสดงทั้งหมด"; the
  *   no-department row sits apart under a dashed rule, scaled to its own total.
  * - StaffPerformanceCard ("ผลงานเจ้าหน้าที่ IT", was the report of that name) — every IT staff
@@ -82,7 +82,8 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
 
     const departments = rows.filter((r) => r.department_id !== null);
     const apart = rows.filter((r) => r.department_id === null);
-    const folding = fold(departments, TOP_ROWS, expanded);
+    // Never more than 10 departments before "แสดงทั้งหมด" — even an 11th folds into "อื่น ๆ".
+    const folding = fold(departments, TOP_ROWS, expanded, 0);
     const shown: (DepartmentRow & { others?: boolean })[] = [...folding.shown];
     if (folding.rest.length > 0) {
         const sum = (pick: (r: DepartmentRow) => number) => folding.rest.reduce((total, r) => total + pick(r), 0);

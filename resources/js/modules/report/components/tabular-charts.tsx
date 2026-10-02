@@ -32,11 +32,11 @@ const TOP_BARS = 8;
 
 /**
  * The rows a list shows: all of them, or — past `top` and while not `open` — the first `top`
- * with the rest handed back to be summed into one "อื่น ๆ" row. One extra row is shown rather
- * than folded, since "อื่น ๆ (1)" would only hide a name.
+ * with the rest handed back to be summed into one "อื่น ๆ" row. By default one extra row is shown
+ * rather than folded, since "อื่น ๆ (1)" would only hide a name; `spare: 0` folds at exactly `top`.
  */
-export function fold<T>(rows: T[], top: number, open: boolean) {
-    const folds = rows.length > top + 1;
+export function fold<T>(rows: T[], top: number, open: boolean, spare = 1) {
+    const folds = rows.length > top + spare;
     const folded = folds && !open;
 
     return { folds, shown: folded ? rows.slice(0, top) : rows, rest: folded ? rows.slice(top) : [] };
