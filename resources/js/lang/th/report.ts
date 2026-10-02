@@ -142,6 +142,7 @@ export const report: Dict = {
     rep_rows_count: 'ทั้งหมด {n} รายการ',
     rep_rows_title: 'รายการ Ticket',
     rep_col_no: 'เลขที่',
+    rep_col_opened: 'วันที่แจ้ง',
     rep_col_subject: 'เรื่อง',
     rep_col_category: 'หมวด',
     rep_col_priority: 'ความสำคัญ',

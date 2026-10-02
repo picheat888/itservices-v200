@@ -191,7 +191,7 @@ export default function TicketOverviewReportPage() {
                     <Card className="overflow-hidden">
                         <CardHeadingSkeleton note={false} />
                         <div className="p-5">
-                            <DataTableSkeleton cols={8} />
+                            <DataTableSkeleton cols={9} />
                         </div>
                     </Card>
                 </div>
