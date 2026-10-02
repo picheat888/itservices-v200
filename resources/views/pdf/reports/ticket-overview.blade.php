@@ -37,7 +37,7 @@
     <td>Ticket ทั้งหมด<b>{{ $k['total'] }}</b></td>
     <td>ปิดสำเร็จ<b>{{ $k['completed'] }}</b></td>
     <td>ปิดตาม SLA<b>{{ $k['sla_rate'] === null ? '—' : $k['sla_rate'].'%' }}</b></td>
-    <td>เวลาแก้ไขมัธยฐาน<b>{{ $k['median_resolve_hours'] === null ? '—' : $k['median_resolve_hours'].' ชม.' }}</b></td>
+    <td>เวลาแก้ไขโดยทั่วไป<b>{{ $k['median_resolve_hours'] === null ? '—' : $k['median_resolve_hours'].' ชม.' }}</b></td>
     <td>ค้างอยู่ตอนนี้<b>{{ $summary['backlog']['open'] + $summary['backlog']['in_progress'] }}</b></td>
 </tr></table>
 

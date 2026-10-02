@@ -41,7 +41,7 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
             ['ยกเลิก', $k['canceled']],
             ['ปิดตาม SLA (%)', $k['sla_rate']],
             ['วัด SLA ได้ / ตรง SLA', $k['sla_measured'].' / '.$k['sla_met']],
-            ['เวลาแก้ไขมัธยฐาน (ชม.)', $k['median_resolve_hours']],
+            ['เวลาแก้ไขโดยทั่วไป (มัธยฐาน, ชม.)', $k['median_resolve_hours']],
             ['เวลาแก้ไข P90 (ชม.)', $k['p90_resolve_hours']],
             ['ค้างอยู่ตอนนี้', $s['backlog']['open'] + $s['backlog']['in_progress']],
             ['ค้างเกิน SLA', $s['backlog']['breached']],

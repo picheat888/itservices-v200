@@ -8,6 +8,7 @@ import { Card } from '@/shared/ui/card';
 
 export function KpiTile({
     label,
+    hint,
     badge,
     value,
     unit,
@@ -17,6 +18,8 @@ export function KpiTile({
     bar,
 }: {
     label: string;
+    /** Shown on hover over the label — what a plain-worded figure really measures. */
+    hint?: string;
     badge?: React.ReactNode;
     value: string;
     unit?: string;
@@ -30,7 +33,9 @@ export function KpiTile({
     return (
         <Card className={cn('flex min-w-0 flex-col gap-1.5 p-4', alert && 'border-amber-500/50')}>
             <div className="text-muted-foreground flex items-center justify-between gap-2 text-sm">
-                <span className="truncate">{label}</span>
+                <span className="truncate" title={hint}>
+                    {label}
+                </span>
                 {badge}
             </div>
             <div className="font-mono text-2xl font-bold">
