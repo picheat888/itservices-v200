@@ -11,6 +11,8 @@ use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Services\Report\TicketMetrics;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * "Ticket ค้างและเกิน SLA" (Report Center → Tickets, /reports/tickets-backlog): every ticket still
@@ -114,15 +116,27 @@ class TicketBacklogReport extends TabularReport
         $bare = fn () => (clone $query)->setEagerLoads([])->reorder();
         $due = self::dueSql();
         $soon = self::soonSql();
+        $total = $bare()->count();
+        $hoursSince = fn (?string $moment) => $moment === null ? null : round(Carbon::parse($moment)->diffInMinutes(now(), true) / 60, 1);
+        // How bad each tile is: the longest past its deadline, the next deadline still ahead, the longest waiting to be taken.
+        $mostOverdue = $bare()->whereRaw(self::breachedSql())->select(DB::raw("MIN({$due}) as due"))->value('due');
+        $nextDue = $bare()->whereRaw('NOT '.self::breachedSql())->whereRaw("{$due} IS NOT NULL")->select(DB::raw("MIN({$due}) as due"))->value('due');
+        $oldestUnassigned = $bare()->whereNull('assignee_id')->min('created_at');
 
         return [
-            ReportSummary::make('total', 'ทั้งหมด', $bare()->count())->withSplit([
+            ReportSummary::make('total', 'ทั้งหมด', $total)->withSplit([
                 ['key' => 'open', 'label_key' => 'rep_k_open', 'tone' => 'blue', 'value' => $bare()->where('status', 'open')->count()],
                 ['key' => 'in_progress', 'label_key' => 'rep_k_in_progress', 'tone' => 'amber', 'value' => $bare()->where('status', 'in_progress')->count()],
             ]),
-            ReportSummary::make('breached', 'เกิน SLA', $bare()->whereRaw(self::breachedSql())->count(), 'red'),
-            ReportSummary::make('due_soon', 'ครบกำหนดใน 24 ชม.', $bare()->whereRaw('NOT '.self::breachedSql())->whereRaw("{$due} <= {$soon}")->count(), 'amber'),
-            ReportSummary::make('unassigned', 'ยังไม่มีผู้รับ', $bare()->whereNull('assignee_id')->count(), 'amber'),
+            ReportSummary::make('breached', 'เกิน SLA', $bare()->whereRaw(self::breachedSql())->count(), 'red')
+                ->withShareOf($total)
+                ->withNote($mostOverdue === null ? null : ['label_key' => 'rep_bl_note_most_overdue', 'hours' => $hoursSince($mostOverdue)]),
+            ReportSummary::make('due_soon', 'ครบกำหนดใน 24 ชม.', $bare()->whereRaw('NOT '.self::breachedSql())->whereRaw("{$due} <= {$soon}")->count(), 'amber')
+                ->withShareOf($total)
+                ->withNote($nextDue === null ? null : ['label_key' => 'rep_bl_note_next_due', 'at' => Carbon::parse($nextDue)->format('Y-m-d H:i')]),
+            ReportSummary::make('unassigned', 'ยังไม่มีผู้รับ', $bare()->whereNull('assignee_id')->count(), 'amber')
+                ->withShareOf($total)
+                ->withNote($oldestUnassigned === null ? null : ['label_key' => 'rep_bl_note_longest_wait', 'hours' => $hoursSince((string) $oldestUnassigned)]),
         ];
     }
 

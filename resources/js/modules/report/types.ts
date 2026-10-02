@@ -246,6 +246,8 @@ export interface SummaryItem {
     split?: { key: string; label_key: string; tone: ChartTone; value: number }[];
     /** The value as a percent of the report's whole — a badge and a meter in the tile's tone. */
     share?: number | null;
+    /** One line for the tile's foot when it has no split: a key with {n} (hours, shown as days / hours) and/or {at} ("Y-m-d H:i"). */
+    note?: { label_key: string; hours?: number | null; at?: string | null } | null;
 }
 
 /** A chart colour, drawn by tabular-charts.tsx. */

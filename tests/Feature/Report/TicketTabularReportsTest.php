@@ -119,6 +119,12 @@ class TicketTabularReportsTest extends TestCase
         $this->assertSame(1, $summary['breached']['value']);
         $this->assertSame(1, $summary['due_soon']['value']);
         $this->assertSame(1, $summary['unassigned']['value']);
+        // Each warning tile: its share of the backlog, and how bad it is.
+        $this->assertSame(33, $summary['breached']['share']);
+        $this->assertEquals(['label_key' => 'rep_bl_note_most_overdue', 'hours' => 120.0], $summary['breached']['note']);
+        $this->assertSame(['label_key' => 'rep_bl_note_next_due', 'at' => '2026-09-26 10:00'], $summary['due_soon']['note']);
+        $this->assertEquals(['label_key' => 'rep_bl_note_longest_wait', 'hours' => 288.0], $summary['unassigned']['note']);
+        $this->assertNull($summary['total']['note']);
 
         $columns = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns'))->keyBy('key');
         $this->assertSame('hours_left', $columns['hours_left']['type']);
