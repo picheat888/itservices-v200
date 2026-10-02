@@ -1,6 +1,7 @@
 /**
  * "Ticket & SLA overview" report page (/reports/tickets-overview): filters, KPI tiles,
- * weekly chart, SLA by priority, backlog age, breakdowns and the row table, plus Export.
+ * weekly chart, SLA by priority, backlog age and category, the department and staff cards
+ * (ticket-breakdown-cards.tsx) and the row table, plus Export.
  * Layout follows the "รายงาน Ticket & SLA" screen of docs/mockup/report-module.html.
  */
 import { useT } from '@/lang';
@@ -14,7 +15,6 @@ import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { BacklogAging } from '../components/backlog-aging';
 import { CARD_HEADING_TINT } from '../components/card-heading';
 import { ExportReportDialog } from '../components/export-report-dialog';
@@ -32,6 +32,7 @@ import {
     TableRowsSkeleton,
 } from '../components/report-skeletons';
 import { ScheduleReportDialog } from '../components/schedule-report-dialog';
+import { DepartmentStacksCard, StaffPerformanceCard } from '../components/ticket-breakdown-cards';
 import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
 import { TicketReportTable } from '../components/ticket-report-table';
@@ -67,17 +68,6 @@ function Section({
             <SectionHeading title={title} sub={sub} />
             {children}
         </Card>
-    );
-}
-
-/** A breakdown table's row when the range has nothing to break down. */
-function EmptyRow({ label }: { label: string }) {
-    return (
-        <tr>
-            <td colSpan={3} className="text-muted-foreground py-6 text-center text-sm">
-                {label}
-            </td>
-        </tr>
     );
 }
 
@@ -172,8 +162,8 @@ export default function TicketOverviewReportPage() {
                     <p className="text-muted-foreground text-sm">{errorMessage}</p>
                 </Card>
             ) : isLoading || !data ? (
-                // The page's own shape — tiles, chart + SLA/age card, three breakdowns, the
-                // ticket table — so each piece lands where its bars were.
+                // The page's own shape — tiles, chart + SLA/age/category card, the department and
+                // staff cards, the ticket table — so each piece lands where its bars were.
                 <div className="space-y-4" aria-hidden="true">
                     <KpiRowSkeleton count={5} className="lg:grid-cols-5" />
                     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
@@ -186,20 +176,18 @@ export default function TicketOverviewReportPage() {
                             <BarRowsSkeleton rows={4} />
                             <CardHeadingSkeleton className="border-t" />
                             <AgingSkeleton />
-                        </Card>
-                    </div>
-                    <div className="grid gap-3 xl:grid-cols-3">
-                        <Card className="overflow-hidden">
-                            <CardHeadingSkeleton />
+                            <CardHeadingSkeleton className="border-t" />
                             <BarRowsSkeleton rows={5} />
                         </Card>
-                        {[0, 1].map((i) => (
-                            <Card key={i} className="overflow-hidden">
-                                <CardHeadingSkeleton />
-                                <TableRowsSkeleton rows={5} />
-                            </Card>
-                        ))}
                     </div>
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <BarRowsSkeleton rows={6} />
+                    </Card>
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <TableRowsSkeleton rows={5} />
+                    </Card>
                     <Card className="overflow-hidden">
                         <CardHeadingSkeleton note={false} />
                         <div className="space-y-3 p-5">
@@ -272,6 +260,7 @@ export default function TicketOverviewReportPage() {
 
                     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                         <Section
+                            className="flex flex-col"
                             // The range in the title, so the weeks read as the chosen period's, not the latest ones.
                             title={
                                 <>
@@ -299,12 +288,13 @@ export default function TicketOverviewReportPage() {
                                 </span>
                             }
                         >
-                            <div className="px-4 py-3">
+                            {/* The SLA/age/category card beside it is the taller one; the chart keeps its
+                                shape and sits centred in the height, as the design's "meet" does. */}
+                            <div className="flex flex-1 flex-col justify-center px-4 py-3">
                                 <WeeklyTicketChart weeks={data.weekly} range={data.range} />
                             </div>
                         </Section>
-                        {/* One card, as in the design: SLA by priority, then backlog age. The card is as
-                            tall as the chart beside it and the age chart takes what is left. */}
+                        {/* One card, as in the design: SLA by priority, backlog age, then tickets by category. */}
                         <Card className="flex flex-col overflow-hidden">
                             <SectionHeading title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub')} />
                             <HorizontalBars
@@ -325,102 +315,18 @@ export default function TicketOverviewReportPage() {
                                 sub={t('rep_aging_total').replace('{n}', String(Object.values(data.backlog.aging).reduce((sum, n) => sum + n, 0)))}
                             />
                             <BacklogAging aging={data.backlog.aging} />
-                        </Card>
-                    </div>
-
-                    <div className="grid gap-3 xl:grid-cols-3">
-                        <Section title={t('rep_by_category')} sub={t('rep_by_category_sub')}>
+                            <SectionHeading className="border-t" title={t('rep_by_category')} sub={t('rep_by_category_sub')} />
                             <HorizontalBars
                                 bars={data.by_category.map((c) => ({ key: c.category, label: t(categoryKey(c.category)), value: c.count }))}
                                 max={Math.max(1, ...data.by_category.map((c) => c.count))}
                                 emptyLabel={t('rep_no_data')}
                             />
-                        </Section>
-                        <Section title={t('rep_by_department')} sub={t('rep_top_n').replace('{n}', String(data.by_department.length))}>
-                            <table className="w-full text-sm">
-                                <thead className="bg-muted text-muted-foreground text-xs">
-                                    <tr>
-                                        <th className="px-4 py-2 text-left">{t('rep_col_department')}</th>
-                                        <th className="px-4 py-2 text-right">{t('rep_col_tickets')}</th>
-                                        <th className="px-4 py-2 text-right">{t('rep_col_sla')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.by_department.length === 0 && <EmptyRow label={t('rep_no_data')} />}
-                                    {data.by_department.map((d) => (
-                                        <tr key={d.department_id ?? 'none'} className="border-border border-t">
-                                            <td className="px-4 py-2">{(lang === 'th' && d.name_th) || d.name || t('rep_no_department')}</td>
-                                            <td className="px-4 py-2">
-                                                {/* Bar against the busiest department, so the ranking reads at a glance. */}
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <span
-                                                        className="bg-brand/70 block h-1.5 rounded-full"
-                                                        style={{
-                                                            width: `${(d.count / Math.max(1, ...data.by_department.map((x) => x.count))) * 48}px`,
-                                                        }}
-                                                    />
-                                                    <span className="font-mono">{d.count}</span>
-                                                </div>
-                                            </td>
-                                            <td
-                                                className={`px-4 py-2 text-right font-mono ${
-                                                    d.sla_rate !== null && d.sla_rate < data.sla_goal
-                                                        ? 'font-bold text-red-600 dark:text-red-400'
-                                                        : ''
-                                                }`}
-                                            >
-                                                {d.sla_rate === null ? '—' : `${d.sla_rate}%`}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </Section>
-                        {/* Only the top five fit here; "ดูทั้งหมด" opens the full, paginated staff
-                            report on the same dates (and the category, when just one is picked —
-                            that report filters one category at a time). */}
-                        <Section
-                            title={t('rep_by_assignee')}
-                            sub={
-                                <span className="flex items-center gap-2">
-                                    {t('rep_top_n').replace('{n}', String(data.by_assignee.length))}
-                                    <span aria-hidden>·</span>
-                                    <Link
-                                        to={`/reports/r/tickets.staff_performance?${new URLSearchParams({
-                                            from: filters.from,
-                                            to: filters.to,
-                                            ...(filters.categories.length === 1 ? { category: filters.categories[0] } : {}),
-                                        })}`}
-                                        className="text-brand font-medium hover:underline"
-                                    >
-                                        {t('view_all')} →
-                                    </Link>
-                                </span>
-                            }
-                        >
-                            <table className="w-full text-sm">
-                                <thead className="bg-muted text-muted-foreground text-xs">
-                                    <tr>
-                                        <th className="px-4 py-2 text-left">{t('rep_col_staff')}</th>
-                                        <th className="px-4 py-2 text-right">{t('rep_col_closed')}</th>
-                                        <th className="px-4 py-2 text-right">{t('rep_col_time')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.by_assignee.length === 0 && <EmptyRow label={t('rep_no_data')} />}
-                                    {data.by_assignee.map((a) => (
-                                        <tr key={a.assignee_id} className="border-border border-t">
-                                            <td className="px-4 py-2">{a.name ?? '—'}</td>
-                                            <td className="px-4 py-2 text-right font-mono">{a.completed}</td>
-                                            <td className="px-4 py-2 text-right font-mono">
-                                                {a.median_resolve_hours === null ? '—' : `${a.median_resolve_hours} ${t('rep_hours')}`}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </Section>
+                        </Card>
                     </div>
+
+                    {/* Merged in from the former "Ticket ตามแผนกและหมวด" and "ผลงานเจ้าหน้าที่ IT" reports. */}
+                    <DepartmentStacksCard rows={data.by_department} slaGoal={data.sla_goal} />
+                    <StaffPerformanceCard rows={data.by_assignee} slaGoal={data.sla_goal} />
 
                     <Section title={t('rep_rows_title')} sub={undefined}>
                         {/* The table sits inset in the card, as the contracts "ทั้งหมด" tab does. */}

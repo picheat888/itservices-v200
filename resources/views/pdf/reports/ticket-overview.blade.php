@@ -2,6 +2,7 @@
 @php
     $slaLabel = ['met' => 'ตรง SLA', 'breached' => 'เกิน SLA'];
     $k = $summary['kpi'];
+    $categories = \App\Enums\Ticket\TicketCategory::cases();
 @endphp
 <!DOCTYPE html>
 <html>
@@ -19,7 +20,7 @@
         table { width: 100%; border-collapse: collapse; }
         .kpi td { border: 0.5px solid #999; padding: 6px; text-align: center; }
         .kpi b { display: block; font-size: 16px; }
-        .grid td.col { vertical-align: top; width: 33%; padding-right: 8px; }
+        .grid td.col { vertical-align: top; width: 50%; padding-right: 8px; }
         table.data th { background: #f0f0f0; border: 0.5px solid #999; padding: 4px 5px; text-align: left; font-size: 10px; }
         table.data td { border: 0.5px solid #ccc; padding: 4px 5px; font-size: 10px; }
         thead { display: table-header-group; }
@@ -57,15 +58,22 @@
         @endforeach
         </tbody></table>
     </td>
-    <td class="col">
-        <h2>แผนกที่แจ้งมากที่สุด</h2>
-        <table class="data"><thead><tr><th>แผนก</th><th>จำนวน</th><th>SLA %</th></tr></thead><tbody>
-        @foreach ($summary['by_department'] as $d)
-            <tr><td>{{ $d['name_th'] ?: ($d['name'] ?? 'ไม่ระบุแผนก') }}</td><td>{{ $d['count'] }}</td><td>{{ $d['sla_rate'] ?? '—' }}</td></tr>
-        @endforeach
-        </tbody></table>
-    </td>
 </tr></table>
+
+<h2>แยกตามแผนก</h2>
+<table class="data"><thead><tr><th>แผนก</th><th>Ticket</th>@foreach ($categories as $cat)<th>{{ \App\Services\Report\TicketLabels::category($cat->value) }}</th>@endforeach<th>ยังไม่ปิด</th><th>ทัน SLA %</th></tr></thead><tbody>
+@foreach ($summary['by_department'] as $d)
+    <tr><td>{{ $d['name_th'] ?: ($d['name'] ?? 'ไม่ระบุแผนก') }}</td><td>{{ $d['count'] }}</td>@foreach ($categories as $cat)<td>{{ $d['categories'][$cat->value] ?? 0 }}</td>@endforeach<td>{{ $d['open'] }}</td><td>{{ $d['sla_rate'] ?? '—' }}</td></tr>
+@endforeach
+</tbody></table>
+
+<h2>ผลงานเจ้าหน้าที่ IT</h2>
+<div class="muted">นับเคสที่ปิดในช่วงวันที่ · "ในมือ" คือ ณ ตอนพิมพ์</div>
+<table class="data"><thead><tr><th>ผู้รับผิดชอบ</th><th>ปิดสำเร็จ</th><th>ยกเลิก</th><th>มัธยฐาน (ชม.)</th><th>ทัน SLA %</th><th>ในมือตอนนี้</th><th>ในมือที่เกิน SLA</th></tr></thead><tbody>
+@foreach ($summary['by_assignee'] as $a)
+    <tr><td>{{ $a['name'] ?? '—' }}</td><td>{{ $a['completed'] }}</td><td>{{ $a['canceled'] }}</td><td>{{ $a['median_resolve_hours'] ?? '—' }}</td><td>{{ $a['sla_rate'] ?? '—' }}</td><td>{{ $a['in_hand'] }}</td><td>{{ $a['breached_in_hand'] }}</td></tr>
+@endforeach
+</tbody></table>
 
 <h2>รายการ Ticket</h2>
 @if ($truncated)

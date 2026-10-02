@@ -189,6 +189,9 @@ function App() {
                                 </RequirePermission>
                             }
                         />
+                        {/* Merged into the Ticket & SLA page's cards (2026-10-02) — old links land there. */}
+                        <Route path="reports/r/tickets.by_department" element={<Navigate to="/reports/tickets-overview" replace />} />
+                        <Route path="reports/r/tickets.staff_performance" element={<Navigate to="/reports/tickets-overview" replace />} />
                         <Route
                             path="reports/r/:key"
                             element={

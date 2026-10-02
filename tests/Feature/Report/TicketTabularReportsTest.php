@@ -13,9 +13,9 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * The three ticket tabular reports — "Ticket ตามแผนกและหมวด" (tickets.by_department),
- * "ผลงานเจ้าหน้าที่ IT" (tickets.staff_performance) and "Ticket ค้างและเกิน SLA"
- * (tickets.backlog) — over one shared set of tickets. The reader holds hardware and software
+ * The ticket tabular report "Ticket ค้างและเกิน SLA" (tickets.backlog) over one set of
+ * tickets. (Its former siblings, by department and staff performance, are now cards on the
+ * Ticket & SLA overview — see TicketOverviewReportTest.) The reader holds hardware and software
  * levels only, so the network ticket in the set must never be counted.
  */
 class TicketTabularReportsTest extends TestCase
@@ -89,88 +89,6 @@ class TicketTabularReportsTest extends TestCase
         ];
     }
 
-    // ── tickets.by_department ───────────────────────────────────────────────────────
-
-    public function test_by_department_splits_categories_within_the_readers_levels(): void
-    {
-        $this->seedTickets();
-
-        $body = $this->actingAs($this->reader())->getJson('/api/reports/r/tickets.by_department/rows')->assertOk()->json();
-
-        $this->assertSame(3, $body['meta']['total']);
-        $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที'], $body['data'][0]['department']);
-        $rows = collect($body['data'])->keyBy(fn (array $r) => $r['department']['name']);
-        $it = $rows['IT'];
-        $this->assertEquals(4, $it['total_count']);
-        $this->assertEquals(3, $it['cat_hardware']);
-        $this->assertEquals(1, $it['cat_software']);
-        // No network level: the column is unknown, not zero.
-        $this->assertNull($it['cat_network']);
-        $this->assertEquals(1, $it['live_count']);
-        $this->assertEquals(100, $it['sla_rate']);
-        $this->assertEquals(0, $rows['Sales']['sla_rate']);
-        $this->assertEquals(1, $rows['No department']['total_count']);
-
-        $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(6, $summary['total']['value']);
-        $this->assertSame(3, $summary['departments']['value']);
-        $this->assertSame(2, $summary['live']['value']);
-        $this->assertSame(67, $summary['sla_rate']['value']);
-    }
-
-    public function test_by_department_follows_the_date_range(): void
-    {
-        $this->seedTickets();
-
-        $body = $this->actingAs($this->reader())
-            ->getJson('/api/reports/r/tickets.by_department/rows?from=2026-08-01&to=2026-08-31')->assertOk()->json();
-
-        $this->assertCount(1, $body['data']);
-        $this->assertEquals(1, $body['data'][0]['total_count']);
-    }
-
-    // ── tickets.staff_performance ───────────────────────────────────────────────────
-
-    public function test_staff_performance_counts_what_each_person_closed_and_holds(): void
-    {
-        $this->seedTickets();
-
-        $body = $this->actingAs($this->reader())->getJson('/api/reports/r/tickets.staff_performance/rows')->assertOk()->json();
-
-        $this->assertSame(['Kankanok', 'Somsak'], array_column($body['data'], 'staff'));
-        [$kan, $som] = $body['data'];
-        $this->assertEquals(2, $kan['completed_count']);
-        $this->assertEquals(1, $kan['canceled_count']);
-        // Nearest-rank median of [24, 48] — the Ticket & SLA overview's own measure.
-        $this->assertEquals(24.0, $kan['median_resolve_hours']);
-        $this->assertEquals(100, $kan['sla_rate']);
-        $this->assertEquals(1, $kan['in_hand']);
-        $this->assertEquals(1, $kan['breached_in_hand']);
-        $this->assertEquals(192.0, $som['median_resolve_hours']);
-        $this->assertEquals(0, $som['sla_rate']);
-        // Somsak's network ticket sits outside the reader's levels.
-        $this->assertEquals(0, $som['in_hand']);
-
-        $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(2, $summary['total']['value']);
-        $this->assertSame(3, $summary['completed']['value']);
-        $this->assertSame(67, $summary['sla_rate']['value']);
-    }
-
-    public function test_staff_performance_filters_by_category(): void
-    {
-        $this->seedTickets();
-        $user = $this->reader();
-
-        $software = $this->actingAs($user)->getJson('/api/reports/r/tickets.staff_performance/rows?category=software')->assertOk()->json('data');
-        $this->assertSame(['Kankanok'], array_column($software, 'staff'));
-        $this->assertEquals(0, $software[0]['completed_count']);
-        $this->assertNull($software[0]['median_resolve_hours']);
-
-        $network = $this->actingAs($user)->getJson('/api/reports/r/tickets.staff_performance/rows?category=network')->assertOk()->json('data');
-        $this->assertSame([], $network);
-    }
-
     // ── tickets.backlog ─────────────────────────────────────────────────────────────
 
     public function test_backlog_lists_live_tickets_oldest_first_with_time_left(): void
@@ -227,7 +145,7 @@ class TicketTabularReportsTest extends TestCase
     {
         $viewer = $this->userWith(['tickets.view_all', 'tickets.level_hardware']);
 
-        foreach (['tickets.by_department', 'tickets.staff_performance', 'tickets.backlog'] as $key) {
+        foreach (['tickets.backlog'] as $key) {
             $this->actingAs($viewer)->getJson("/api/reports/r/{$key}/rows")->assertForbidden();
         }
     }
@@ -237,7 +155,7 @@ class TicketTabularReportsTest extends TestCase
         $this->seedTickets();
         $user = $this->reader();
 
-        foreach (['tickets.by_department', 'tickets.staff_performance', 'tickets.backlog'] as $key) {
+        foreach (['tickets.backlog'] as $key) {
             $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);

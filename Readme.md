@@ -4050,13 +4050,21 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 
 `MailConfigTimeoutTest` (2: ตั้งค่า SMTP แล้ว + fallback .env — ตรวจถึง timeout ของ socket จริง) · pint ผ่าน
 
-## ภาพรวม Ticket & SLA: การ์ดผลงานเจ้าหน้าที่ IT ลิงก์ไปรายงานเต็ม (2026-10-02)
+## ภาพรวม Ticket & SLA: รวม "แยกตามแผนก" + "ผลงานเจ้าหน้าที่ IT" เข้าหน้าเดียวตาม Mockup (2026-10-02)
 
-การ์ด "ผลงานเจ้าหน้าที่ IT" แสดงแค่ 5 อันดับแรก (`byAssignee()->take(5)`) แต่ไม่ได้บอก คนดูอาจเข้าใจว่ามีเจ้าหน้าที่แค่นั้น · รายงานเต็ม `tickets.staff_performance` แบ่งหน้าฝั่ง server อยู่แล้ว (รองรับเจ้าหน้าที่ 30+ คน) จึงไม่ต้องทำตารางใหม่
+ตาม `docs/mockup/report-module.html` (หน้า Ticket): รายงาน **"Ticket ตามแผนกและหมวด"** (`tickets.by_department`) และ **"ผลงานเจ้าหน้าที่ IT"** (`tickets.staff_performance`) ย้ายมาเป็นการ์ดเต็มความกว้างในหน้าภาพรวม และถอดออกจากศูนย์รายงาน · หมวด Ticket เหลือ 2 รายงาน (ภาพรวม + Ticket ค้างและเกิน SLA) · รวมทั้งหมดเหลือ 17 รายงาน · ตรวจ DB จริงแล้ว ไม่มีหมุด/ไฟล์ส่งออก/รายงานตั้งเวลาที่ผูกกับ 2 key นี้
 
-- หัวการ์ดแสดง "N อันดับแรก · ดูทั้งหมด →" (เหมือนการ์ดแผนก) แทน "ปิดแล้ว / เวลาแก้ไขมัธยฐาน" ที่ซ้ำกับหัวคอลัมน์ · ลบคีย์ `rep_by_assignee_sub` (en/th)
-- ลิงก์ส่ง `from`/`to` ของหน้าภาพรวมไปด้วย และส่ง `category` เมื่อเลือกหมวดเดียว (รายงานเต็มกรองได้ทีละหมวด)
-- **`useTabularFilters`** — รายงานแบบตารางทุกตัวรับ filter เริ่มต้นจาก query string ได้: ค่าจาก URL ชนะค่าที่จำไว้ ตรวจกับ definition (วันที่ต้องเป็น YYYY-MM-DD, select ต้องเป็นตัวเลือกที่มี) แล้วลบออกจาก URL (`replace`) — filter ยังจำใน localStorage ตามเดิม
-- ตัวเลขในการ์ดกับรายงานเต็มอาจต่างกันได้ตามนิยามเดิม: การ์ดนับ Ticket ที่ **เปิด** ในช่วงและปิดแล้ว · รายงานเต็มนับตาม **`resolved_at`** ในช่วง
+**หน้าจอ**
+- การ์ดขวา = ปิดตาม SLA แยกความสำคัญ → อายุ Ticket ที่ค้าง → **แยกตามหมวด** (ย้ายมาจากแถวล่าง) · กราฟรายสัปดาห์คงสัดส่วนและอยู่กลางความสูงของการ์ด
+- **แยกตามแผนก** (`components/ticket-breakdown-cards.tsx` → `DepartmentStacksCard`): ทุกแผนก แท่ง stacked ตามหมวดพร้อมตัวเลขบนแต่ละชิ้น · Ticket / ทัน SLA (แดงเมื่อต่ำกว่าเป้า) / ยังไม่ปิด · 10 แผนกแรก + แถว "อื่น ๆ (n)" (SLA คิดจาก met/measured รวม) + ปุ่ม "แสดงทั้งหมด" · "ไม่ระบุแผนก" แยกใต้เส้นประ สเกลของตัวเอง
+- **ผลงานเจ้าหน้าที่ IT** (`StaffPerformanceCard`): ทุกคน 7 คอลัมน์ — ปิดสำเร็จ (แถบเทียบคนที่ปิดมากสุด) / ยกเลิก / มัธยฐาน / ทัน SLA / ในมือตอนนี้ / ในมือที่เกิน SLA (ป้ายแดง) · เกิน 10 คนพับไว้ + "แสดงทั้งหมด" (ไม่มีแถว "อื่น ๆ" เพราะรวมคนไม่มีความหมาย) — รองรับเจ้าหน้าที่ 30+ คนโดยหน้าไม่ยาว
+- แท่ง stacked + fold ใช้ของ `tabular-charts.tsx` ร่วมกับรายงานทรัพย์สิน (export `StackBar`, `fold`, `FoldToggle`)
+- ลิงก์เก่า `/reports/r/tickets.by_department` และ `/reports/r/tickets.staff_performance` redirect ไปหน้าภาพรวม
 
-tsc + eslint + prettier ผ่าน · ทดสอบในเบราว์เซอร์: กดลิงก์แล้วรายงานเต็มเปิดด้วยช่วง 2026-08-01 – 2026-10-02 และ URL ถูกล้าง · ไม่มี console error
+**Backend** (`TicketOverviewReportService`)
+- `by_department`: ทุกแผนก (เดิม top 6) + `categories` ต่อหมวด + `open` + `sla_measured/sla_met` · ไม่ระบุแผนกอยู่ท้ายเสมอ
+- `by_assignee`: ทุกคน (เดิม top 5) — นับที่**ปิด**ในช่วง (`resolved_at`) ไม่ใช่ที่เปิดในช่วง จึงตรงกับรายงานเดิม · บวกงานในมือ ณ ตอนนี้ + ที่เกิน SLA (`TicketMetrics::slaState`) · ตาม filter หมวด/ความสำคัญ/แผนก/ผู้รับผิดชอบ และ level ของผู้อ่าน
+- Excel ชีต "สรุป" และ PDF แสดงแผนกแยกหมวด + ตารางเจ้าหน้าที่ครบ
+- ลบ `StaffPerformanceReport`, `TicketsByDepartmentReport`, helper ที่ไม่มีใครใช้ใน `TicketReportScope` (`metSql`/`measuredSql`/`percent`) และคีย์ภาษาที่ใช้เฉพาะ 2 รายงานนี้ · ยกเลิกการรับ filter จาก URL ที่เพิ่มไว้ก่อนหน้าใน `use-tabular-filters.ts` (ไม่มีลิงก์ใช้แล้ว)
+
+**Tests**: `TicketOverviewReportTest` +4 (แผนกแยกหมวด/ยังไม่ปิด/ไม่ระบุแผนก, ทุกแผนกไม่ตัด top, เจ้าหน้าที่นับตามวันที่ปิด + ในมือ + เกิน SLA, กรองหมวด) — ย้ายมาจากเทสต์ของ 2 รายงานที่ถูกถอดใน `TicketTabularReportsTest` · `TicketOverviewExportTest` +2 (ชีตสรุป, PDF มีข้อมูล) · `ReportCatalogueTest` 19 → 17 · `tests/Feature/Report` + `SidebarRouteGateTest` = **133 passed** · pint + tsc + eslint + `npm run build` ผ่าน · ตรวจในเบราว์เซอร์กับข้อมูลจริงแล้ว

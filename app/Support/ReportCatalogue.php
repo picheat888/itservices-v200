@@ -19,9 +19,7 @@ use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Stock\StockMovementReport;
 use App\Services\Report\Stock\StockValuationReport;
 use App\Services\Report\Tabular\TabularReport;
-use App\Services\Report\Ticket\StaffPerformanceReport;
 use App\Services\Report\Ticket\TicketBacklogReport;
-use App\Services\Report\Ticket\TicketsByDepartmentReport;
 
 /**
  * Registry of every report in the Report Center (/reports).
@@ -38,10 +36,6 @@ use App\Services\Report\Ticket\TicketsByDepartmentReport;
 class ReportCatalogue
 {
     public const TICKETS_OVERVIEW = 'tickets.overview';
-
-    public const TICKETS_BY_DEPARTMENT = 'tickets.by_department';
-
-    public const TICKETS_STAFF_PERFORMANCE = 'tickets.staff_performance';
 
     public const TICKETS_BACKLOG = 'tickets.backlog';
 
@@ -89,22 +83,9 @@ class ReportCatalogue
                 'requires' => ['tickets.view_all', 'tickets.resolve'],
                 'formats' => ['xlsx', 'pdf'],
             ],
-            // The tabular ticket reports all carry SLA verdicts, so they ask what the overview
-            // asks; within that, each counts only the reader's `tickets.level_*` categories.
-            self::TICKETS_BY_DEPARTMENT => [
-                'domain' => 'tickets',
-                'kind' => 'tabular',
-                'class' => TicketsByDepartmentReport::class,
-                'requires' => ['tickets.view_all', 'tickets.resolve'],
-                'formats' => ['xlsx', 'pdf'],
-            ],
-            self::TICKETS_STAFF_PERFORMANCE => [
-                'domain' => 'tickets',
-                'kind' => 'tabular',
-                'class' => StaffPerformanceReport::class,
-                'requires' => ['tickets.view_all', 'tickets.resolve'],
-                'formats' => ['xlsx', 'pdf'],
-            ],
+            // The backlog carries SLA verdicts, so it asks what the overview asks; within that,
+            // it counts only the reader's `tickets.level_*` categories. ("Ticket ตามแผนกและหมวด"
+            // and "ผลงานเจ้าหน้าที่ IT" were merged into the overview's cards on 2026-10-02.)
             self::TICKETS_BACKLOG => [
                 'domain' => 'tickets',
                 'kind' => 'tabular',

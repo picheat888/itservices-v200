@@ -12,12 +12,12 @@ use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * What the ticket tabular reports share with the Ticket & SLA overview:
+ * What the ticket tabular report ("Ticket ค้างและเกิน SLA") shares with the Ticket & SLA overview:
  *
  * - scoping: a reader only ever counts tickets in the categories their `tickets.level_*`
  *   permissions open (Permissions::ticketLevelsFor), exactly like TicketOverviewReportService;
  * - wording: the Ticket module's own i18n keys on the page, TicketLabels' Thai in the file;
- * - the SLA verdict as SQL, mirroring TicketMetrics::slaState / activeDue.
+ * - the "past SLA" verdict as SQL, mirroring TicketMetrics::slaState / activeDue.
  */
 trait TicketReportScope
 {
@@ -73,21 +73,6 @@ trait TicketReportScope
     }
 
     /**
-     * SQL: a completed ticket resolved by its deadline (only tickets that had one count).
-     * Same rule as TicketMetrics::slaState for completed tickets.
-     */
-    private static function metSql(): string
-    {
-        return "(tickets.status = 'completed' AND tickets.resolved_at IS NOT NULL AND tickets.sla_resolve_due_at IS NOT NULL AND tickets.resolved_at <= tickets.sla_resolve_due_at)";
-    }
-
-    /** SQL: a completed ticket that had a deadline to measure against. */
-    private static function measuredSql(): string
-    {
-        return "(tickets.status = 'completed' AND tickets.resolved_at IS NOT NULL AND tickets.sla_resolve_due_at IS NOT NULL)";
-    }
-
-    /**
      * SQL: a live ticket already past the deadline it is running against now — first response
      * while it waits to be taken, resolution afterwards (TicketMetrics::activeDue). "Now" is
      * the app clock, inlined: generated here, never reader input.
@@ -99,12 +84,6 @@ trait TicketReportScope
         return "((tickets.status = 'open' AND tickets.responded_at IS NULL AND tickets.sla_response_due_at IS NOT NULL AND tickets.sla_response_due_at < {$now})"
             ." OR (tickets.status IN ('open', 'in_progress') AND NOT (tickets.status = 'open' AND tickets.responded_at IS NULL)"
             ." AND tickets.sla_resolve_due_at IS NOT NULL AND tickets.sla_resolve_due_at < {$now}))";
-    }
-
-    /** Percent, whole number; null when there is nothing to measure. */
-    private static function percent(int|float $part, int|float $whole): ?int
-    {
-        return $whole > 0 ? (int) round($part / $whole * 100) : null;
     }
 
     /**

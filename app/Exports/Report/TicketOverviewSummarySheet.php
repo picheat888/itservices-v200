@@ -2,13 +2,15 @@
 
 namespace App\Exports\Report;
 
+use App\Enums\Ticket\TicketCategory;
 use App\Services\Report\TicketLabels;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
 /**
- * "สรุป" sheet of the ticket report workbook: headline numbers and the breakdowns.
+ * "สรุป" sheet of the ticket report workbook: headline numbers and the breakdowns, down to
+ * every department by category and every IT staff member, as the page shows them.
  */
 class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
 {
@@ -54,10 +56,23 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
         foreach ($s['by_category'] as $c) {
             $rows[] = [TicketLabels::category($c['category']), $c['count']];
         }
+        $categories = TicketCategory::cases();
         $rows[] = [];
-        $rows[] = ['แผนก', 'จำนวน', 'SLA %'];
+        $rows[] = ['แผนก', 'Ticket', ...array_map(fn (TicketCategory $c) => TicketLabels::category($c->value), $categories), 'ยังไม่ปิด', 'ทัน SLA %'];
         foreach ($s['by_department'] as $d) {
-            $rows[] = [$d['name_th'] ?: ($d['name'] ?? 'ไม่ระบุแผนก'), $d['count'], $d['sla_rate']];
+            $rows[] = [
+                $d['name_th'] ?: ($d['name'] ?? 'ไม่ระบุแผนก'),
+                $d['count'],
+                ...array_map(fn (TicketCategory $c) => $d['categories'][$c->value] ?? 0, $categories),
+                $d['open'],
+                $d['sla_rate'],
+            ];
+        }
+        $rows[] = [];
+        $rows[] = ['ผลงานเจ้าหน้าที่ IT (นับเคสที่ปิดในช่วงวันที่ · "ในมือ" คือ ณ ตอนส่งออก)'];
+        $rows[] = ['ผู้รับผิดชอบ', 'ปิดสำเร็จ', 'ยกเลิก', 'มัธยฐาน (ชม.)', 'ทัน SLA %', 'ในมือตอนนี้', 'ในมือที่เกิน SLA'];
+        foreach ($s['by_assignee'] as $a) {
+            $rows[] = [$a['name'], $a['completed'], $a['canceled'], $a['median_resolve_hours'], $a['sla_rate'], $a['in_hand'], $a['breached_in_hand']];
         }
 
         return $rows;

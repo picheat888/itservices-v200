@@ -4,6 +4,8 @@ namespace Tests\Feature\Report;
 
 use App\Exports\Report\TicketOverviewExport;
 use App\Exports\Report\TicketOverviewRowsSheet;
+use App\Exports\Report\TicketOverviewSummarySheet;
+use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -76,6 +78,46 @@ class TicketOverviewExportTest extends TestCase
                 && $row[5] === 'สูง' // priority
                 && $row[6] === 'กำลังดำเนินการ'; // status
         });
+    }
+
+    /** The "สรุป" sheet carries the page's department-by-category and staff cards in full. */
+    public function test_the_summary_sheet_lists_departments_by_category_and_every_staff_member(): void
+    {
+        Excel::fake();
+        $user = $this->deskMember();
+        $ops = Department::create(['name' => 'Operations', 'name_th' => 'ปฏิบัติการ']);
+        $worker = Employee::create(['first_name' => 'W', 'department_id' => $ops->id]);
+        $tech = User::factory()->create(['name' => 'Tech One']);
+        Ticket::factory()->create(['category' => 'hardware', 'status' => 'completed', 'requester_id' => $worker->id, 'assignee_id' => $tech->id,
+            'created_at' => '2026-09-05 08:00', 'resolved_at' => '2026-09-05 10:00', 'sla_resolve_due_at' => '2026-09-06 08:00']);
+        Ticket::factory()->create(['category' => 'hardware', 'status' => 'in_progress', 'requester_id' => $worker->id, 'assignee_id' => $tech->id,
+            'created_at' => '2026-09-06 08:00']);
+
+        $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertAccepted();
+
+        $this->assertExportStored('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) {
+            $rows = (new TicketOverviewSummarySheet($export->summary))->array();
+            $department = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'ปฏิบัติการ');
+            $staff = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'Tech One');
+
+            // แผนก, Ticket, ฮาร์ดแวร์ … อื่น ๆ (6 categories), ยังไม่ปิด, ทัน SLA %
+            return $department === ['ปฏิบัติการ', 2, 2, 0, 0, 0, 0, 0, 1, 100.0]
+                // ผู้รับผิดชอบ, ปิดสำเร็จ, ยกเลิก, มัธยฐาน, ทัน SLA %, ในมือ, ในมือที่เกิน SLA
+                && $staff === ['Tech One', 1, 0, 2.0, 100.0, 1, 0];
+        });
+    }
+
+    public function test_pdf_renders_the_department_and_staff_tables(): void
+    {
+        $user = $this->deskMember();
+        $tech = User::factory()->create(['name' => 'Tech One']);
+        Ticket::factory()->create(['category' => 'hardware', 'status' => 'completed', 'assignee_id' => $tech->id,
+            'created_at' => '2026-09-05 08:00', 'resolved_at' => '2026-09-05 10:00']);
+
+        $response = $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=pdf');
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
     }
 
     /** The workbook is Thai throughout — the requester too, when the record has a Thai name. */
