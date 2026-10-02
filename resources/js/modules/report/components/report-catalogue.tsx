@@ -129,12 +129,16 @@ function ReportRow({ report, latest }: { report: ReportDefinition; latest?: Repo
     );
 }
 
+/**
+ * A module group: a tinted heading (icon, name, count) over its report rows. The tint is a
+ * faint brand wash in light — muted gray matched the page ground and sank — and muted in dark.
+ */
 function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; title: string; count: number; children: React.ReactNode }) {
     const t = useT();
 
     return (
         <Card className="overflow-hidden">
-            <div className="bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
+            <div className="bg-brand/[0.04] dark:bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
                 <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
                     <Icon className="h-[15px] w-[15px]" />
                 </span>
@@ -162,10 +166,10 @@ export function ReportCatalogueSkeleton() {
             </div>
             {[4, 3].map((rows, g) => (
                 <Card key={g} className="overflow-hidden">
-                    <div className="bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
-                        <Skeleton className="bg-background/70 h-7 w-7" />
-                        <Skeleton className="bg-background/70 h-4 w-28" />
-                        <Skeleton className="bg-background/70 h-3 w-14" />
+                    <div className="bg-brand/[0.04] dark:bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
+                        <Skeleton className="bg-muted dark:bg-background/70 h-7 w-7" />
+                        <Skeleton className="bg-muted dark:bg-background/70 h-4 w-28" />
+                        <Skeleton className="bg-muted dark:bg-background/70 h-3 w-14" />
                     </div>
                     {Array.from({ length: rows }, (_, i) => (
                         <div key={i} className="border-border flex items-center gap-4 border-b py-3 pr-4 pl-[18px] last:border-b-0">
