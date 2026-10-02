@@ -14,6 +14,7 @@ import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BacklogAging } from '../components/backlog-aging';
 import { CARD_HEADING_TINT } from '../components/card-heading';
 import { ExportReportDialog } from '../components/export-report-dialog';
@@ -375,7 +376,28 @@ export default function TicketOverviewReportPage() {
                                 </tbody>
                             </table>
                         </Section>
-                        <Section title={t('rep_by_assignee')} sub={t('rep_by_assignee_sub')}>
+                        {/* Only the top five fit here; "ดูทั้งหมด" opens the full, paginated staff
+                            report on the same dates (and the category, when just one is picked —
+                            that report filters one category at a time). */}
+                        <Section
+                            title={t('rep_by_assignee')}
+                            sub={
+                                <span className="flex items-center gap-2">
+                                    {t('rep_top_n').replace('{n}', String(data.by_assignee.length))}
+                                    <span aria-hidden>·</span>
+                                    <Link
+                                        to={`/reports/r/tickets.staff_performance?${new URLSearchParams({
+                                            from: filters.from,
+                                            to: filters.to,
+                                            ...(filters.categories.length === 1 ? { category: filters.categories[0] } : {}),
+                                        })}`}
+                                        className="text-brand font-medium hover:underline"
+                                    >
+                                        {t('view_all')} →
+                                    </Link>
+                                </span>
+                            }
+                        >
                             <table className="w-full text-sm">
                                 <thead className="bg-muted text-muted-foreground text-xs">
                                     <tr>

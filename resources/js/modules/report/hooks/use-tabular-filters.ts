@@ -11,8 +11,14 @@
  * That way the `useState` initialiser below always has a real definition to seed from:
  * no `{}` render, no "seed effect" running a tick after the first fetch already fired
  * with no filters, and no risk of report A's filters bleeding into report B.
+ *
+ * A link may hand a report its starting filters in the query string (the Ticket & SLA
+ * page's "ดูทั้งหมด" → `/reports/r/tickets.staff_performance?from=…&to=…`). Those win over
+ * the remembered ones, are checked against the definition like stored values are, and are
+ * then taken off the URL — filters still live in localStorage, not the address bar.
  */
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { TabularDefinition, TabularFilters } from '../types';
 
 function defaultsFrom(definition: TabularDefinition): TabularFilters {
@@ -52,6 +58,23 @@ function load(definition: TabularDefinition): TabularFilters {
 }
 
 /**
+ * Filters a link put in the query string, kept only where the definition has that filter
+ * and the value is one it would take: a real YYYY-MM-DD for a date, an offered option for
+ * a select. Anything else is ignored rather than sent on to a 422.
+ */
+function fromUrl(definition: TabularDefinition, params: URLSearchParams): TabularFilters {
+    const given: TabularFilters = {};
+    for (const filter of definition.filters) {
+        const value = params.get(filter.name);
+        if (value === null || value === '') continue;
+        if (filter.type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(value)) continue;
+        if (filter.type === 'select' && !filter.options.some((o) => String(o.value) === value)) continue;
+        given[filter.name] = value;
+    }
+    return given;
+}
+
+/**
  * What gets remembered. A date filter still on its default ("today", "start of this month")
  * is left out so it rolls forward with the calendar on the next visit instead of freezing
  * on the day it was first opened; a date the reader picked is kept.
@@ -65,7 +88,22 @@ function toStore(definition: TabularDefinition, filters: TabularFilters): Tabula
 }
 
 export function useTabularFilters(definition: TabularDefinition) {
-    const [filters, setFilters] = useState<TabularFilters>(() => load(definition));
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [filters, setFilters] = useState<TabularFilters>(() => ({ ...load(definition), ...fromUrl(definition, searchParams) }));
+
+    // Once seeded, the link's filters leave the URL, so a reload shows what the reader has
+    // picked since rather than snapping back to what the link carried.
+    useEffect(() => {
+        const names = definition.filters.map((f) => f.name).filter((name) => searchParams.has(name));
+        if (names.length === 0) return;
+        setSearchParams(
+            (params) => {
+                names.forEach((name) => params.delete(name));
+                return params;
+            },
+            { replace: true },
+        );
+    }, [definition, searchParams, setSearchParams]);
 
     useEffect(() => {
         try {

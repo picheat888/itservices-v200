@@ -94,7 +94,6 @@ export const report: Dict = {
     rep_by_category: 'แยกตามหมวด',
     rep_by_category_sub: 'จำนวน Ticket',
     rep_top_n: '{n} อันดับแรก',
-    rep_by_assignee_sub: 'ปิดแล้ว / เวลาแก้ไขมัธยฐาน',
     rep_by_department: 'แผนกที่แจ้งมากที่สุด',
     rep_by_assignee: 'ผลงานเจ้าหน้าที่ IT',
     rep_col_requester: 'ผู้แจ้ง',
