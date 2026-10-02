@@ -97,9 +97,9 @@ class TicketBacklogReport extends TabularReport
                 ->labelKey('rep_c_ticket_requester'),
             ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
-            ReportColumn::date('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
+            ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::number('age_days', 'ค้างมา (วัน)', fn (Ticket $t) => $t->created_at === null ? null : round($t->created_at->diffInHours(now(), true) / 24, 1)),
-            ReportColumn::date('due_at', 'ครบกำหนด SLA', fn (Ticket $t) => TicketMetrics::activeDue($t)),
+            ReportColumn::dateTime('due_at', 'ครบกำหนด SLA', fn (Ticket $t) => TicketMetrics::activeDue($t)),
             ReportColumn::enum('due_kind', 'เงื่อนไข SLA', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
             ReportColumn::hoursLeft('hours_left', 'เหลือ (ชม.)', fn (Ticket $t) => self::hoursLeft($t)),
         ];

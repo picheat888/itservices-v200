@@ -4,7 +4,6 @@
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
-import { StatusBadge } from '@/shared/components/status-badge';
 import { formatDateTime } from '@/shared/lib/datetime';
 import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
@@ -12,10 +11,8 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useTicketOverviewRows } from '../hooks/use-reports';
 import type { TicketReportFilters, TicketReportRow } from '../types';
-import { categoryKey, priorityKey, statusKey } from './ticket-labels';
-
-const STATUS_TONE: Record<string, 'blue' | 'amber' | 'green' | 'gray'> = { open: 'blue', in_progress: 'amber', completed: 'green', canceled: 'gray' };
-const PRIORITY_TONE: Record<string, 'red' | 'amber' | 'blue' | 'gray'> = { critical: 'red', high: 'amber', medium: 'blue', low: 'gray' };
+import { TicketPriorityBadge, TicketStatusBadge } from './ticket-badges';
+import { categoryKey } from './ticket-labels';
 
 export function TicketReportTable({ filters }: { filters: TicketReportFilters }) {
     const t = useT();
@@ -71,13 +68,13 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             key: 'prio',
             header: t('rep_col_priority'),
             width: '110px',
-            render: (r) => (r.priority ? <StatusBadge tone={PRIORITY_TONE[r.priority]}>{t(priorityKey(r.priority))}</StatusBadge> : '—'),
+            render: (r) => <TicketPriorityBadge priority={r.priority} />,
         },
         {
             key: 'status',
             header: t('rep_col_status'),
             width: '130px',
-            render: (r) => <StatusBadge tone={STATUS_TONE[r.status]}>{t(statusKey(r.status))}</StatusBadge>,
+            render: (r) => <TicketStatusBadge status={r.status} />,
         },
         {
             key: 'assignee',

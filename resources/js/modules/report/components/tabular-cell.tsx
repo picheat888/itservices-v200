@@ -73,6 +73,7 @@ function CellValue({ column, value }: { column: TabularColumnDef; value: unknown
                 <span className={cn('font-mono', Number(value) === 0 && ZERO)}>{value === null || value === undefined ? '—' : String(value)}</span>
             );
         case 'date':
+        case 'datetime':
             return <span className="font-mono">{(value as string | null) ?? '—'}</span>;
         case 'days_left':
             return value === null || value === undefined ? <>—</> : <DaysLeftBadge value={value as number} />;
