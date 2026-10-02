@@ -531,8 +531,6 @@ export const report: Dict = {
     rep_bl_more: 'Show {n} more',
     rep_bl_none: 'None',
     rep_bl_owners_title: 'Who has them',
-    rep_bl_owner_count: '{n} open',
-    rep_bl_owner_over: '{n} over SLA',
     rep_bl_cats_title: 'By category',
     rep_sla_not_breached: 'Not over SLA',
     rep_bl_empty: 'No open tickets match these filters',
