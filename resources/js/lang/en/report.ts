@@ -70,7 +70,6 @@ export const report: Dict = {
     rep_vs_previous: 'from {n} last period',
     rep_vs_previous_sla: 'Last period {n}%',
     rep_hours: 'h',
-    rep_generated_at: 'Data as of {t}',
     rep_err_range_order: 'The end date is before the start date',
     rep_err_no_access: 'You do not have access to this report',
     rep_err_range_invalid: 'Check the date range (at most 366 days)',
