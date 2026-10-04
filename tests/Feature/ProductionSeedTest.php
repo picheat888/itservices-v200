@@ -144,6 +144,27 @@ class ProductionSeedTest extends TestCase
         $this->assertSame((string) GroupRole::where('name', 'User')->value('id'), AppSetting::get('default_employee_group_id'));
     }
 
+    public function test_it_seeds_the_asset_status_colors(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $colors = json_decode((string) AppSetting::get('asset_status_colors'), true);
+        $this->assertSame(DatabaseSeeder::ASSET_STATUS_COLORS, $colors);
+        $this->assertSame('#7c3aed', $colors['pending_return']);
+    }
+
+    /** Colours an administrator saved in Settings → Assets survive a re-seed. */
+    public function test_re_seeding_keeps_the_administrators_asset_status_colors(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $own = json_encode(['deployed' => '#111111'] + DatabaseSeeder::ASSET_STATUS_COLORS);
+        AppSetting::put('asset_status_colors', $own);
+
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame($own, AppSetting::get('asset_status_colors'));
+    }
+
     /** An administrator's own choice of default group, and their renamed groups, survive a re-seed. */
     public function test_re_seeding_keeps_the_administrators_group_choices(): void
     {
