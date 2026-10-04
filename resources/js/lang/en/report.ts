@@ -168,7 +168,6 @@ export const report: Dict = {
     rep_empty_last30: 'Show the last 30 days',
     rep_empty_clear: 'Clear filters',
     rep_rows_title: 'Tickets',
-    rep_col_no: 'No.',
     rep_col_opened: 'Opened',
     rep_col_subject: 'Subject',
     rep_col_category: 'Category',
