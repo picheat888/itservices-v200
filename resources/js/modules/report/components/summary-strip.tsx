@@ -50,6 +50,7 @@ function noteText(t: (key: string) => string, lang: string, note: NonNullable<Su
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const assetStatusColors = useUiStore((s) => s.assetStatusColors);
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', WIDE_COLUMNS[items.length] ?? 'lg:grid-cols-4')}>
@@ -69,6 +70,8 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                 // A soft tone ("soft-red") fills in its lighter shade; the badge and the warning keep
                 // the base meaning (red = gone wrong, amber = needs watching).
                 const base = tone.replace(/^soft-/, '') as 'amber' | 'red' | 'green' | 'violet' | 'blue' | 'gray';
+                // An asset-status tile wears the badge colour chosen in Settings → Assets.
+                const assetColor = tone.startsWith('asset-') ? assetStatusColors[tone.slice(6).replace(/-/g, '_')] : undefined;
                 const share = item.share ?? null;
                 const split = item.split ?? [];
                 const splitTotal = split.reduce((sum, part) => sum + part.value, 0);
@@ -89,7 +92,11 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         unit={unit}
                         badge={
                             share !== null ? (
-                                <StatusBadge tone={base}>{`${share}%`}</StatusBadge>
+                                assetColor ? (
+                                    <StatusBadge color={assetColor}>{`${share}%`}</StatusBadge>
+                                ) : (
+                                    <StatusBadge tone={base}>{`${share}%`}</StatusBadge>
+                                )
                             ) : goal !== null ? (
                                 <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
                             ) : undefined

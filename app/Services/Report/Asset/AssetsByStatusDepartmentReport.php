@@ -47,11 +47,12 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
     /**
      * The charts' status order and colours (tabular-charts.tsx draws each tone): in use first,
-     * as the design orders them, written off last in gray — in the soft shades.
+     * as the design orders them, written off last — each status in the colour chosen in
+     * Settings → Assets (the same as its badge everywhere), softened for the report (app.css).
      */
     private const CHART_TONES = [
-        'deployed' => 'soft-green', 'common' => 'soft-blue', 'ready' => 'soft-violet',
-        'pending_acceptance' => 'soft-orange', 'pending_return' => 'soft-amber', 'writeoff' => 'gray',
+        'deployed' => 'asset-deployed', 'common' => 'asset-common', 'ready' => 'asset-ready',
+        'pending_acceptance' => 'asset-pending-acceptance', 'pending_return' => 'asset-pending-return', 'writeoff' => 'asset-writeoff',
     ];
 
     public function key(): string
@@ -258,10 +259,10 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
         return [
             ReportSummary::make('total', 'ทรัพย์สินทั้งหมด', $all)->withSplit($split([])),
-            ReportSummary::make('in_use', 'ใช้งาน (รวมส่วนกลาง)', $sum('st_deployed') + $sum('st_common'), 'soft-green')
+            ReportSummary::make('in_use', 'ใช้งาน (รวมส่วนกลาง)', $sum('st_deployed') + $sum('st_common'), 'asset-deployed')
                 ->withSplit($split(['deployed', 'common']))->withShareOf($all),
-            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'), 'soft-violet')->withSplit($split(['ready']))->withShareOf($all),
-            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'soft-amber')
+            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'), 'asset-ready')->withSplit($split(['ready']))->withShareOf($all),
+            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'asset-pending-return')
                 ->withSplit($split(['pending_return']))->withShareOf($all),
         ];
     }

@@ -243,7 +243,25 @@ export interface SummaryItem {
     label_key: string;
     value: number | null;
     /** Amber / red also mark the tile as needing attention. */
-    tone: 'amber' | 'red' | 'green' | 'violet' | 'blue' | 'soft-amber' | 'soft-red' | 'soft-green' | 'soft-violet' | 'soft-blue' | null;
+    tone:
+        | 'amber'
+        | 'red'
+        | 'green'
+        | 'violet'
+        | 'blue'
+        | 'soft-amber'
+        | 'soft-red'
+        | 'soft-green'
+        | 'soft-violet'
+        | 'soft-blue'
+        // an asset status — its badge takes the Settings colour itself
+        | 'asset-deployed'
+        | 'asset-ready'
+        | 'asset-pending-acceptance'
+        | 'asset-common'
+        | 'asset-pending-return'
+        | 'asset-writeoff'
+        | null;
     /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping) | 'percent' (whole %) | 'hours' (one decimal). */
     format: 'count' | 'money' | 'percent' | 'hours';
     /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
@@ -277,6 +295,13 @@ export type ChartTone =
     | 'soft-orange'
     | 'soft-violet'
     | 'soft-pink'
+    // Asset statuses, in the colours chosen in Settings → Assets (softened for reports, app.css).
+    | 'asset-deployed'
+    | 'asset-ready'
+    | 'asset-pending-acceptance'
+    | 'asset-common'
+    | 'asset-pending-return'
+    | 'asset-writeoff'
     | 'pair-orange'
     | 'pair-green'
     | 'pair-rose'

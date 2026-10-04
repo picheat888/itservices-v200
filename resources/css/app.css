@@ -68,6 +68,21 @@
     --color-chart-pair-rose-ink: var(--chart-pair-rose-ink);
     --color-chart-pair-violet-ink: var(--chart-pair-violet-ink);
 
+    /* Asset statuses in the reports: the colours chosen in Settings → Assets (--asset-status-*, set by
+       useApplyTheme), mixed with white so a chart reads softer than the badges; "-ink" is the colour itself. */
+    --color-asset-deployed: color-mix(in oklch, var(--asset-status-deployed) var(--asset-soft), white);
+    --color-asset-ready: color-mix(in oklch, var(--asset-status-ready) var(--asset-soft), white);
+    --color-asset-pending-acceptance: color-mix(in oklch, var(--asset-status-pending-acceptance) var(--asset-soft), white);
+    --color-asset-common: color-mix(in oklch, var(--asset-status-common) var(--asset-soft), white);
+    --color-asset-pending-return: color-mix(in oklch, var(--asset-status-pending-return) var(--asset-soft), white);
+    --color-asset-writeoff: color-mix(in oklch, var(--asset-status-writeoff) var(--asset-soft), white);
+    --color-asset-deployed-ink: var(--asset-status-deployed);
+    --color-asset-ready-ink: var(--asset-status-ready);
+    --color-asset-pending-acceptance-ink: var(--asset-status-pending-acceptance);
+    --color-asset-common-ink: var(--asset-status-common);
+    --color-asset-pending-return-ink: var(--asset-status-pending-return);
+    --color-asset-writeoff-ink: var(--asset-status-writeoff);
+
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -100,6 +115,15 @@
     /* Tell the browser this is a light UI so native scrollbars, form controls and
        the like render in light tones. `.dark` flips this to `dark`. */
     color-scheme: light;
+    /* Settings → Assets status colours (the defaults until useApplyTheme sets the saved ones), and how
+       much of each a report chart keeps — the rest is white, for the softer report look. */
+    --asset-status-deployed: #0284c7;
+    --asset-status-ready: #059669;
+    --asset-status-pending-acceptance: #d97706;
+    --asset-status-common: #64748b;
+    --asset-status-pending-return: #d97706;
+    --asset-status-writeoff: #dc2626;
+    --asset-soft: 72%;
 
     /* Blue brand accent (overridable from Settings → Branding via JS) */
     --brand: #2563eb;
@@ -170,6 +194,7 @@
 }
 
 .dark {
+    --asset-soft: 82%;
     /* Dark UI → native scrollbars & form controls switch to their dark rendering. */
     color-scheme: dark;
 

@@ -8,6 +8,7 @@ export function useApplyTheme() {
     const dark = useUiStore((s) => s.dark);
     const radius = useUiStore((s) => s.radius);
     const accent = useUiStore((s) => s.accent);
+    const assetStatusColors = useUiStore((s) => s.assetStatusColors);
 
     useEffect(() => {
         document.documentElement.classList.toggle('dark', dark);
@@ -24,4 +25,12 @@ export function useApplyTheme() {
         document.documentElement.style.setProperty('--brand', brand);
         document.documentElement.style.setProperty('--brand-foreground', brandForeground(brand));
     }, [accent, dark]);
+
+    useEffect(() => {
+        // Settings → Assets status colours as CSS variables (--asset-status-pending-return …), so the
+        // reports' charts follow them the moment an administrator changes one (app.css --color-asset-*).
+        for (const [status, color] of Object.entries(assetStatusColors)) {
+            document.documentElement.style.setProperty(`--asset-status-${status.replace(/_/g, '-')}`, color);
+        }
+    }, [assetStatusColors]);
 }
