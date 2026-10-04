@@ -80,7 +80,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                             share !== null ? (
                                 <StatusBadge tone={tone}>{`${share}%`}</StatusBadge>
                             ) : goal !== null ? (
-                                <StatusBadge tone="gray">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
+                                <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
                             ) : undefined
                         }
                         // A 0-valued tile has nothing to warn about — only flag it once there's actually
