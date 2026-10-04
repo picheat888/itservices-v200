@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * "SLA ตามประเภทคำขอ" (Report Center → Tickets, /reports/tickets-request-sla): the tickets the
+ * "สรุปผล SLA ของ Ticket จากคำขอ" (Report Center → Tickets, /reports/tickets-request-sla): the tickets the
  * system opened from approved requests (tickets.source = auto_request), measured per request
  * type — how many, how many were taken in time (first response), how many were closed in time
  * (resolution), and how long both took on average.
@@ -50,7 +50,7 @@ class TicketRequestSlaReport extends TabularReport
 
     public function title(): string
     {
-        return 'SLA ตามประเภทคำขอ';
+        return 'สรุปผล SLA ของ Ticket จากคำขอ';
     }
 
     public function filters(): array

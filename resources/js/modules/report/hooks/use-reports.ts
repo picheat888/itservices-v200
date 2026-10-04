@@ -101,7 +101,7 @@ export const useBacklogBoard = (filters: TabularFilters) => {
     });
 };
 
-/** "SLA ตามประเภทคำขอ" — keyed without the request type, which the per-type table only highlights. */
+/** "สรุปผล SLA ของ Ticket จากคำขอ" — keyed without the request type, which the per-type table only highlights. */
 export const useRequestSlaBreakdown = (filters: TabularFilters) => {
     const { request_type: _type, ...rest } = filters;
     void _type;

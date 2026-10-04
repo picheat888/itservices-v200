@@ -552,7 +552,7 @@ export const report: Dict = {
     rep_k_returns: 'รับคืน / เรียกคืน',
     rep_k_relocations: 'ย้ายที่ตั้ง',
     // pages/tickets-request-sla.tsx · components/request-sla-cards.tsx
-    rep_tickets_request_sla_title: 'SLA ตามประเภทคำขอ',
+    rep_tickets_request_sla_title: 'สรุปผล SLA ของ Ticket จากคำขอ',
     rep_tickets_request_sla_desc: 'Ticket ที่เปิดจากคำขอ รับเคสและปิดเคสทัน SLA แค่ไหน แยกตามประเภทคำขอ',
     rep_fl_request_type: 'ประเภทคำขอ',
     rep_k_rs_total: 'Ticket จากคำขอ',

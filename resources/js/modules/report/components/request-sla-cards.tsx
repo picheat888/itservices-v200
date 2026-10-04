@@ -1,5 +1,5 @@
 /**
- * The "SLA ตามประเภทคำขอ" page's own parts (pages/tickets-request-sla.tsx), from the design mockup:
+ * The "สรุปผล SLA ของ Ticket จากคำขอ" page's own parts (pages/tickets-request-sla.tsx), from the design mockup:
  *
  * - "ผลตามประเภทคำขอ": one line per request type — its ticket count split into ทั้งหมด / เสร็จสิ้น /
  *   ยกเลิก / ยังเปิด, then "taken in time" and "closed in time" each as a 0–100% bar with its

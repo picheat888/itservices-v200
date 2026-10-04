@@ -101,7 +101,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');
     // The backlog page's due board — {key} pinned so TabularReportRequest gates it as the report.
     Route::get('reports/tickets/backlog/board', TicketBacklogBoardController::class)->defaults('key', 'tickets.backlog')->name('api.reports.tickets.backlog.board');
-    // "SLA ตามประเภทคำขอ" — the per-type table, still-open list and SLA rules above its rows.
+    // "สรุปผล SLA ของ Ticket จากคำขอ" — the per-type table, still-open list and SLA rules above its rows.
     Route::get('reports/tickets/request-sla/breakdown', TicketRequestSlaBreakdownController::class)->defaults('key', 'tickets.request_sla')->name('api.reports.tickets.request-sla.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');

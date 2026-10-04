@@ -553,7 +553,7 @@ export const report: Dict = {
     rep_k_returns: 'Returns / recalls',
     rep_k_relocations: 'Relocations',
     // pages/tickets-request-sla.tsx · components/request-sla-cards.tsx
-    rep_tickets_request_sla_title: 'SLA by request type',
+    rep_tickets_request_sla_title: 'SLA summary of tickets from requests',
     rep_tickets_request_sla_desc: 'Tickets opened from requests: how many were taken and closed within SLA, by request type',
     rep_fl_request_type: 'Request type',
     rep_k_rs_total: 'Tickets from requests',
