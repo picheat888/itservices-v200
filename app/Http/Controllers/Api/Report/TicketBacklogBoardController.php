@@ -8,7 +8,7 @@ use App\Services\Report\Ticket\TicketBacklogReport;
 use Illuminate\Http\JsonResponse;
 
 /**
- * GET /api/reports/tickets/backlog/board — every live ticket the "Ticket ค้างและเกิน SLA" filters
+ * GET /api/reports/tickets/backlog/board — every live ticket the "Ticket ค้าง และเกิน SLA" filters
  * keep (the SLA filter aside), unpaged, for the page's due board and its owner / category cards.
  * The route pins {key} to tickets.backlog, so TabularReportRequest gates and validates it exactly
  * as it does the report's rows; TicketBacklogReport::board() builds the list.

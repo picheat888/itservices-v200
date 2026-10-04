@@ -12,7 +12,7 @@ use App\Services\Report\Tabular\TabularReport;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * "ทรัพย์สินตามสถานะและแผนก" (Report Center → Assets): one row per department — the department
+ * "ทรัพย์สินตามสถานะ และแผนก" (Report Center → Assets): one row per department — the department
  * of the employee holding the asset — with how many sit in each status. Assets nobody holds
  * (ready stock, shared/common use, written off) share one "no department" row. Largest first.
  * On screen it is drawn, as the design does: each department's status mix as a stacked bar with
@@ -29,11 +29,14 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
     private const SOURCE_KEYS = ['purchased' => 'asset_purchase', 'rented' => 'asset_lease'];
 
-    /** Short source names and colours for the tiles' footers and the department bars' source view. */
+    /**
+     * Short source names and colours for the tiles' footers and the department bars' source view —
+     * the soft shades (chart-tones.ts soft-*), as on the Ticket & SLA overview.
+     */
     private const SOURCE_CHART = [
-        'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'blue'],
+        'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'soft-blue'],
         // Pink, not violet: violet already means พร้อมส่งมอบ in the same tiles and charts.
-        'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'pink'],
+        'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'soft-pink'],
     ];
 
     /** The one row for assets in no department — in store, shared, written off, or held by someone without one. */
@@ -44,11 +47,11 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
     /**
      * The charts' status order and colours (tabular-charts.tsx draws each tone): in use first,
-     * as the design orders them, written off last in gray.
+     * as the design orders them, written off last in gray — in the soft shades.
      */
     private const CHART_TONES = [
-        'deployed' => 'green', 'common' => 'blue', 'ready' => 'violet',
-        'pending_acceptance' => 'orange', 'pending_return' => 'amber', 'writeoff' => 'gray',
+        'deployed' => 'soft-green', 'common' => 'soft-blue', 'ready' => 'soft-violet',
+        'pending_acceptance' => 'soft-orange', 'pending_return' => 'soft-amber', 'writeoff' => 'gray',
     ];
 
     public function key(): string
@@ -58,7 +61,7 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
     public function title(): string
     {
-        return 'ทรัพย์สินตามสถานะและแผนก';
+        return 'ทรัพย์สินตามสถานะ และแผนก';
     }
 
     public function filters(): array
@@ -255,10 +258,10 @@ class AssetsByStatusDepartmentReport extends TabularReport
 
         return [
             ReportSummary::make('total', 'ทรัพย์สินทั้งหมด', $all)->withSplit($split([])),
-            ReportSummary::make('in_use', 'ใช้งาน (รวมส่วนกลาง)', $sum('st_deployed') + $sum('st_common'), 'green')
+            ReportSummary::make('in_use', 'ใช้งาน (รวมส่วนกลาง)', $sum('st_deployed') + $sum('st_common'), 'soft-green')
                 ->withSplit($split(['deployed', 'common']))->withShareOf($all),
-            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'), 'violet')->withSplit($split(['ready']))->withShareOf($all),
-            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'amber')
+            ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'), 'soft-violet')->withSplit($split(['ready']))->withShareOf($all),
+            ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'soft-amber')
                 ->withSplit($split(['pending_return']))->withShareOf($all),
         ];
     }

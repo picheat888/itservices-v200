@@ -1,5 +1,5 @@
 /**
- * The "Ticket ค้างและเกิน SLA" page's own parts (pages/tickets-backlog.tsx), from the design
+ * The "Ticket ค้าง และเกิน SLA" page's own parts (pages/tickets-backlog.tsx), from the design
  * mockup: the SLA segments at the head of the filter bar (with how many tickets each holds),
  * the SLA due board — every live ticket in six lanes by the time left on the deadline it runs
  * against now, past-due on the left of a "ตอนนี้" line; a long lane folds and opens on its own —
@@ -37,9 +37,9 @@ export function slaState(hoursLeft: number | null): SlaState {
 export function backlogRowClass(row: Record<string, unknown>): string {
     const state = slaState(typeof row.hours_left === 'number' ? row.hours_left : null);
     return state === 'over_sla'
-        ? '[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-red-500)]'
+        ? '[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-red-400)]'
         : state === 'due_soon'
-          ? '[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-amber-500)]'
+          ? '[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-amber-400)]'
           : '';
 }
 
@@ -55,28 +55,28 @@ const LANES: { key: string; label: string; test: (h: number | null) => boolean; 
         key: 'over7',
         label: 'rep_bl_lane_over7',
         test: (h) => h !== null && h < -168,
-        tone: 'border-red-500',
+        tone: 'border-red-400',
         count: 'text-red-600 dark:text-red-400',
     },
     {
         key: 'over1',
         label: 'rep_bl_lane_over1',
         test: (h) => h !== null && h >= -168 && h < -24,
-        tone: 'border-red-500/60',
+        tone: 'border-red-400/60',
         count: 'text-red-600 dark:text-red-400',
     },
     {
         key: 'over0',
         label: 'rep_bl_lane_over0',
         test: (h) => h !== null && h >= -24 && h < 0,
-        tone: 'border-red-500/35',
+        tone: 'border-red-400/35',
         count: 'text-red-600 dark:text-red-400',
     },
     {
         key: 'soon',
         label: 'rep_bl_lane_soon',
         test: (h) => h !== null && h >= 0 && h <= 24,
-        tone: 'border-amber-500',
+        tone: 'border-amber-400',
         count: 'text-amber-600 dark:text-amber-400',
     },
     { key: 'later', label: 'rep_bl_lane_later', test: (h) => h !== null && h > 24 && h <= 72, tone: 'border-border', count: '' },
@@ -275,9 +275,9 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
 
 /** The owner card's three parts by SLA state, in the report palette — the board's lanes in short. */
 const OWNER_SERIES: ChartSeries[] = [
-    { key: 'over_sla', label_key: 'rep_sla_over_sla', tone: 'red' },
-    { key: 'due_soon', label_key: 'rep_sla_due_soon', tone: 'amber' },
-    { key: 'on_track', label_key: 'rep_sla_on_track', tone: 'blue' },
+    { key: 'over_sla', label_key: 'rep_sla_over_sla', tone: 'soft-red' },
+    { key: 'due_soon', label_key: 'rep_sla_due_soon', tone: 'soft-amber' },
+    { key: 'on_track', label_key: 'rep_sla_on_track', tone: 'soft-blue' },
 ];
 
 /**
@@ -380,9 +380,9 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
                 title={t('rep_bl_owners_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone={FILL.red}>{t('rep_sla_over_sla')}</Swatch>
-                        <Swatch tone={FILL.amber}>{t('rep_sla_due_soon')}</Swatch>
-                        <Swatch tone={FILL.blue}>{t('rep_sla_on_track')}</Swatch>
+                        <Swatch tone={FILL['soft-red']}>{t('rep_sla_over_sla')}</Swatch>
+                        <Swatch tone={FILL['soft-amber']}>{t('rep_sla_due_soon')}</Swatch>
+                        <Swatch tone={FILL['soft-blue']}>{t('rep_sla_on_track')}</Swatch>
                     </span>
                 }
             />
@@ -411,8 +411,8 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
 
 /** The category card's two parts — past SLA, and the rest — in the report palette. */
 const CATEGORY_SERIES: ChartSeries[] = [
-    { key: 'over_sla', label_key: 'rep_sla_over_sla', tone: 'red' },
-    { key: 'not_over_sla', label_key: 'rep_sla_not_over_sla', tone: 'blue' },
+    { key: 'over_sla', label_key: 'rep_sla_over_sla', tone: 'soft-red' },
+    { key: 'not_over_sla', label_key: 'rep_sla_not_over_sla', tone: 'soft-blue' },
 ];
 
 function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
@@ -439,8 +439,8 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
                 title={t('rep_bl_cats_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone={FILL.red}>{t('rep_sla_over_sla')}</Swatch>
-                        <Swatch tone={FILL.blue}>{t('rep_sla_not_over_sla')}</Swatch>
+                        <Swatch tone={FILL['soft-red']}>{t('rep_sla_over_sla')}</Swatch>
+                        <Swatch tone={FILL['soft-blue']}>{t('rep_sla_not_over_sla')}</Swatch>
                     </span>
                 }
             />

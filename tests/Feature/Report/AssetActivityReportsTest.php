@@ -17,7 +17,7 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * "ทรัพย์สินตามสถานะและแผนก" (assets.by_status_department) and "ประวัติโอนย้ายและรับคืน"
+ * "ทรัพย์สินตามสถานะ และแผนก" (assets.by_status_department) and "ประวัติโอนย้ายและรับคืน"
  * (assets.transfer_history) through /reports/r/{key}.
  */
 class AssetActivityReportsTest extends TestCase
@@ -120,7 +120,7 @@ class AssetActivityReportsTest extends TestCase
 
         $segments = collect($charts['status']['segments'])->keyBy('key');
         $this->assertSame(2, $segments['deployed']['value']);
-        $this->assertSame('green', $segments['deployed']['tone']);
+        $this->assertSame('soft-green', $segments['deployed']['tone']);
         $this->assertSame(4, $charts['status']['total']);
         // Deployed 2 + common 1 of 4.
         $this->assertSame(75, $charts['status']['center']['value']);
@@ -153,7 +153,7 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame(['purchased' => 0, 'rented' => 1], $split['ready']);
         $this->assertSame(['purchased' => 1, 'rented' => 0], $split['pending_return']);
         $this->assertSame('rep_src_rented', $body['summary'][0]['split'][1]['label_key']);
-        $this->assertSame('pink', $body['summary'][0]['split'][1]['tone']);
+        $this->assertSame('soft-pink', $body['summary'][0]['split'][1]['tone']);
 
         // Status tiles carry their share of the whole; the whole itself does not.
         $share = array_column($body['summary'], 'share', 'key');

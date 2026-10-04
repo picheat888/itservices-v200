@@ -105,9 +105,9 @@ class TicketRequestSlaReport extends TabularReport
 
         return [
             ReportSummary::make('rs_total', 'Ticket จากคำขอ', $tally['total'])->withSplit([
-                ['key' => 'completed', 'label_key' => 'rep_rs_completed', 'tone' => 'green', 'value' => $tally['completed']],
+                ['key' => 'completed', 'label_key' => 'rep_rs_completed', 'tone' => 'soft-green', 'value' => $tally['completed']],
                 ['key' => 'canceled', 'label_key' => 'rep_rs_canceled', 'tone' => 'gray', 'value' => $tally['canceled']],
-                ['key' => 'open', 'label_key' => 'rep_rs_open', 'tone' => 'blue', 'value' => $tally['open']],
+                ['key' => 'open', 'label_key' => 'rep_rs_open', 'tone' => 'soft-blue', 'value' => $tally['open']],
             ]),
             ReportSummary::make('rs_close_rate', 'ปิดทัน SLA (%)', self::percent($tally['close_met'], $tally['close_total']), null, 'percent')
                 ->withGoal($goal)
@@ -119,16 +119,16 @@ class TicketRequestSlaReport extends TabularReport
             // the same completed cases, so the two parts add up to the tile's number.
             ReportSummary::make('rs_fix_avg', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
                 ->withSplit($tally['fix_avg_hours'] === null || $tally['wait_avg_hours'] === null ? [] : [
-                    ['key' => 'wait', 'label_key' => 'rep_rs_split_wait', 'tone' => 'amber', 'value' => $tally['wait_avg_hours']],
-                    ['key' => 'work', 'label_key' => 'rep_rs_split_work', 'tone' => 'blue', 'value' => round(max(0, $tally['fix_avg_hours'] - $tally['wait_avg_hours']), 1)],
+                    ['key' => 'wait', 'label_key' => 'rep_rs_split_wait', 'tone' => 'soft-amber', 'value' => $tally['wait_avg_hours']],
+                    ['key' => 'work', 'label_key' => 'rep_rs_split_work', 'tone' => 'soft-blue', 'value' => round(max(0, $tally['fix_avg_hours'] - $tally['wait_avg_hours']), 1)],
                 ]),
             // Its share of the cases still open, and which deadline each one missed — nobody has
             // taken it yet, or it was taken but not closed in time — so the reader knows whom to chase.
-            ReportSummary::make('rs_over_sla', 'เกิน SLA ตอนนี้', $tally['over_now'], 'red')
+            ReportSummary::make('rs_over_sla', 'เกิน SLA ตอนนี้', $tally['over_now'], 'soft-red')
                 ->withShareOf($tally['open'])
                 ->withSplit([
-                    ['key' => 'untaken', 'label_key' => 'rep_rs_over_untaken', 'tone' => 'red', 'value' => $tally['over_untaken']],
-                    ['key' => 'taken', 'label_key' => 'rep_rs_over_taken', 'tone' => 'orange', 'value' => $tally['over_taken']],
+                    ['key' => 'untaken', 'label_key' => 'rep_rs_over_untaken', 'tone' => 'soft-red', 'value' => $tally['over_untaken']],
+                    ['key' => 'taken', 'label_key' => 'rep_rs_over_taken', 'tone' => 'soft-orange', 'value' => $tally['over_taken']],
                 ]),
         ];
     }

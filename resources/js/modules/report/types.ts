@@ -243,7 +243,7 @@ export interface SummaryItem {
     label_key: string;
     value: number | null;
     /** Amber / red also mark the tile as needing attention. */
-    tone: 'amber' | 'red' | 'green' | 'violet' | 'blue' | null;
+    tone: 'amber' | 'red' | 'green' | 'violet' | 'blue' | 'soft-amber' | 'soft-red' | 'soft-green' | 'soft-violet' | 'soft-blue' | null;
     /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping) | 'percent' (whole %) | 'hours' (one decimal). */
     format: 'count' | 'money' | 'percent' | 'hours';
     /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
@@ -269,6 +269,14 @@ export type ChartTone =
     // The Ticket & SLA overview (app.css --chart-soft-blue / --chart-pair-*): its blue, and the department
     // card's complementary pairs — blue ↔ orange, green ↔ rose — plus violet.
     | 'soft-blue'
+    // The same meanings as the base tones, one step lighter (Tailwind 400) — the reports moved to the
+    // overview's soft look (assets by status and department, backlog, SLA of tickets from requests).
+    | 'soft-green'
+    | 'soft-red'
+    | 'soft-amber'
+    | 'soft-orange'
+    | 'soft-violet'
+    | 'soft-pink'
     | 'pair-orange'
     | 'pair-green'
     | 'pair-rose'

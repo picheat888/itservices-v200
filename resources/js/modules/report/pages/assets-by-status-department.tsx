@@ -1,5 +1,5 @@
 /**
- * "ทรัพย์สินตามสถานะและแผนก" — /reports/assets-by-status-department
+ * "ทรัพย์สินตามสถานะ และแผนก" — /reports/assets-by-status-department
  *
  * Report key assets.by_status_department. Its filters, columns and charts come from the backend definition
  * (one source for the screen, Excel, PDF and scheduled mail); anything particular to this
