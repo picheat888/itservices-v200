@@ -5,13 +5,14 @@
  *   it, and a switch between the chart's views (status / source) — and, in the right card, the 'donut'
  *   (shares of the whole, a headline percent in its hole, a legend with counts and shares) over the
  *   'buckets' (categories as the /assets card draws them, bucket-rows-card.tsx);
- * - the row under it: the 'stacks' marked `compact` (compact-stacks-card.tsx: warehouses, locations),
- *   side by side;
+ * - the row under it, side by side: the 'places' card (places-card.tsx: ready stock by warehouse — how
+ *   many in each, then each one's bought / rented share) and the 'stacks' marked `compact`
+ *   (compact-stacks-card.tsx: shared use by location);
  * - then each 'list' (asset-list-card.tsx: the written-off assets) across the whole width.
  * A long list (departments past 10, categories past 5) shows its top rows and folds the rest into one
  * "อื่น ๆ (n)" row, with "แสดงทั้งหมด (n)" under it to open every row in place — its own switch for
- * the departments, the categories and the list, one shared by the compact cards so the two grow
- * together. Rows marked `apart` (assets in no department) come last under a dashed rule, drawn as a
+ * the departments, the categories and the list, one shared by the two cards of the middle row so
+ * they grow together. Rows marked `apart` (assets in no department) come last under a dashed rule, drawn as a
  * share of their own total so they never set the departments' scale.
  * The chosen view (สถานะ / ที่มา) lives in the URL (?view=), as the app keeps tabs.
  * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
@@ -28,6 +29,7 @@ import { BucketsSection } from './bucket-rows-card';
 import { fold, FoldToggle, ChartHeading as Heading, useChartLabel as useLabel } from './chart-parts';
 import { FILL, STROKE, TEXT } from './chart-tones';
 import { CompactStacksCard } from './compact-stacks-card';
+import { PlacesCard } from './places-card';
 import { BarRowsSkeleton, CardHeadingSkeleton } from './report-skeletons';
 
 /** How many rows a long list shows before folding the rest into "อื่น ๆ". */
@@ -37,6 +39,7 @@ type Stacks = Extract<TabularChart, { type: 'stacks' }>;
 type Donut = Extract<TabularChart, { type: 'donut' }>;
 type Buckets = Extract<TabularChart, { type: 'buckets' }>;
 type List = Extract<TabularChart, { type: 'list' }>;
+type Places = Extract<TabularChart, { type: 'places' }>;
 
 /** A small segmented switch between a chart's views, styled as the hub's period switch. */
 function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; active: string; onChange: (key: string) => void }) {
@@ -319,12 +322,12 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
     const stacks = charts.filter((c): c is Stacks => c.type === 'stacks' && !c.compact);
     const donuts = charts.filter((c): c is Donut => c.type === 'donut');
     const buckets = charts.filter((c): c is Buckets => c.type === 'buckets');
-    // The compact cards and the lists keep their order from the report (warehouses, locations; written off).
-    const compact = charts.filter((c): c is Stacks => c.type === 'stacks' && !!c.compact);
+    // The middle row and the lists keep their order from the report (warehouses, locations; written off).
+    const middle = charts.filter((c): c is Places | Stacks => c.type === 'places' || (c.type === 'stacks' && !!c.compact));
     const lists = charts.filter((c): c is List => c.type === 'list');
     const side = donuts.length + buckets.length > 0;
     // One "show all" for the departments, one for the categories, one for the list, and one for the
-    // compact cards (so opening one card's list fills its neighbour's height too).
+    // middle row (so opening one card's list fills its neighbour's height too).
     const [expanded, setExpanded] = useState(false);
     const [bucketsExpanded, setBucketsExpanded] = useState(false);
     const [compactExpanded, setCompactExpanded] = useState(false);
@@ -363,11 +366,15 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
                     </Card>
                 )}
             </div>
-            {compact.length > 0 && (
+            {middle.length > 0 && (
                 <div className="grid gap-3 md:grid-cols-2">
-                    {compact.map((c) => (
-                        <CompactStacksCard key={c.key} chart={c} expanded={compactExpanded} onToggle={toggleCompact} />
-                    ))}
+                    {middle.map((c) =>
+                        c.type === 'places' ? (
+                            <PlacesCard key={c.key} chart={c} expanded={compactExpanded} onToggle={toggleCompact} />
+                        ) : (
+                            <CompactStacksCard key={c.key} chart={c} expanded={compactExpanded} onToggle={toggleCompact} />
+                        ),
+                    )}
                 </div>
             )}
             {lists.map((c) => (

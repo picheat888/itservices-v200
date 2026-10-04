@@ -112,12 +112,16 @@ class AssetActivityReportsTest extends TestCase
         $charts = collect($this->actingAs($this->userWith(['assets.view']))
             ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
 
+        // How many sit in each store, in the ready colour, with each store's bought / rented share.
+        $this->assertSame('places', $charts['warehouse']['type']);
+        $this->assertSame('asset-ready', $charts['warehouse']['tone']);
+        $this->assertSame(['purchased', 'rented'], array_column($charts['warehouse']['series'], 'key'));
         $warehouses = collect($charts['warehouse']['rows'])->keyBy(fn (array $r) => $r['label']['name']);
         $this->assertSame(3, $charts['warehouse']['total']);
         $this->assertSame(['purchased' => 1, 'rented' => 1], $warehouses['Main store']['values']);
         $this->assertSame(2, $warehouses['Main store']['total']);
         $this->assertTrue($warehouses['No warehouse']['apart']);
-        $this->assertTrue($charts['warehouse']['compact']);
+        $this->assertTrue($charts['location']['compact']);
 
         $this->assertSame(1, $charts['location']['total']);
         $this->assertSame(['name' => 'Meeting room 1', 'name_th' => null], $charts['location']['rows'][0]['label']);
@@ -248,7 +252,7 @@ class AssetActivityReportsTest extends TestCase
             $titles = array_map(fn ($sheet) => $sheet->title(), array_slice($export->sheets(), 1, 4));
             $warehouseRows = $export->sheets()[2]->array();
 
-            return $titles === ['ทรัพย์สินแยกตามแผนก', 'คลัง (พร้อมส่งมอบ)', 'ส่วนกลาง (ตามสถานที่)', 'ตัดจำหน่าย']
+            return $titles === ['ทรัพย์สินแยกตามแผนก', 'ทรัพย์สินในคลัง (พร้อมใช้งาน)', 'ส่วนกลาง (ตามสถานที่)', 'ตัดจำหน่าย']
                 && $warehouseRows === [['Main store', 1, 1, 0]]
                 && $export->sheets()[4]->array()[0][4] === 'Broken'
                 && count($export->sheets()) === 6;

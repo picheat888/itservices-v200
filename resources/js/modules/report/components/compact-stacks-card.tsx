@@ -1,6 +1,6 @@
 /**
- * A 'stacks' chart marked `compact` — a small card in the row under the department card (ready
- * stock by warehouse, shared use by location on the asset overview). Each place is one SplitLine
+ * A 'stacks' chart marked `compact` — a small card in the row under the department card (shared use
+ * by location on the asset overview, beside the warehouse card). Each place is one SplitLine
  * as on the /assets card: its name, how many were bought and rented with their dots, its total,
  * and the split bar under it. A row with no place recorded comes last under a dashed rule. Past
  * `TOP_COMPACT` the rest fold into one "อื่น ๆ (n)" row. Drawn by tabular-charts.tsx.
