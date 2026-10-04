@@ -143,4 +143,7 @@ export const common: Dict = {
     new_ticket: 'Open ticket',
     submit_ticket: 'Submit',
     pick_date: 'Pick a date',
+    date_range_pick_start: 'Click a start date',
+    date_range_pick_end: 'Click an end date',
+    apply: 'Apply',
 };

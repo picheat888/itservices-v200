@@ -143,4 +143,7 @@ export const common: Dict = {
     new_ticket: 'เปิด Ticket',
     submit_ticket: 'ส่งคำขอ',
     pick_date: 'เลือกวันที่',
+    date_range_pick_start: 'คลิกวันเริ่มต้น',
+    date_range_pick_end: 'คลิกวันสิ้นสุด',
+    apply: 'นำไปใช้',
 };

@@ -13,12 +13,12 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Checkbox } from '@/shared/ui/checkbox';
+import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useUiStore } from '@/stores/ui';
 import { ChevronsUpDown } from 'lucide-react';
 import { defaultTicketReportFilters, TICKET_SOURCES } from '../hooks/use-ticket-report-filters';
 import type { TicketOverviewSummary, TicketReportFilters } from '../types';
-import { DateRangeInput } from './date-range-input';
 import { ClearFiltersBadge, FILTER_ACTIVE, FilterField, FilterRow, useWithAllOption } from './filter-row';
 import { FILTER_SELECT_ALL as ALL } from './filter-select';
 import { categoryKey, priorityKey } from './ticket-labels';
@@ -78,7 +78,8 @@ export function TicketReportFilterBar({
                             id="rep-category"
                             type="button"
                             className={cn(
-                                'flex h-10 w-36 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors',
+                                // Focus ring as SearchableSelect's trigger, so every field in the row answers Tab alike.
+                                'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-36 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
                                 filters.categories.length > 0 ? FILTER_ACTIVE : 'border-input bg-background hover:border-brand/50',
                             )}
                         >
@@ -87,7 +88,7 @@ export function TicketReportFilterBar({
                                     ? t('rep_f_any')
                                     : t('rep_f_n_selected').replace('{n}', String(filters.categories.length))}
                             </span>
-                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
                         </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-48 space-y-1 p-2" align="start">

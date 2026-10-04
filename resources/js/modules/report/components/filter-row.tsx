@@ -41,7 +41,7 @@ export function useWithAllOption() {
     ];
 }
 
-/** The gray clear badge at the row's end — rendered only while `active`. */
+/** The gray clear badge right after the last field (not pushed to the far edge) — rendered only while `active`. */
 export function ClearFiltersBadge({ active, onClear }: { active: boolean; onClear: () => void }) {
     const t = useT();
     if (!active) return null;
@@ -50,9 +50,9 @@ export function ClearFiltersBadge({ active, onClear }: { active: boolean; onClea
         <button
             type="button"
             onClick={onClear}
-            className="bg-muted text-muted-foreground hover:bg-accent hover:text-foreground ml-auto inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
+            className="bg-muted text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-brand/30 inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
         >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
             {t('rep_f_clear')}
         </button>
     );

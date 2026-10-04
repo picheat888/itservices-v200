@@ -22,12 +22,6 @@ export const report: Dict = {
     rep_period_30d: '30 วัน',
     rep_period_90d: '90 วัน',
     rep_period_custom: 'กำหนดเอง',
-    rep_period_custom_title: 'เลือกช่วงวันที่',
-    rep_period_custom_from: 'ตั้งแต่',
-    rep_period_custom_to: 'ถึง',
-    rep_period_custom_apply: 'ใช้ช่วงนี้',
-    rep_period_custom_order: 'วันที่สิ้นสุดต้องไม่ก่อนวันเริ่ม',
-    rep_period_custom_future: 'เลือกได้ถึงวันนี้',
     rep_period_label: 'ช่วงเวลา',
     rep_period_in_7d: 'ใน 7 วัน',
     rep_period_in_30d: 'ใน 30 วัน',
@@ -139,10 +133,6 @@ export const report: Dict = {
     rep_f_any: 'ทั้งหมด',
     rep_f_n_selected: '{n} หมวด',
     rep_f_clear: 'ล้างทั้งหมด',
-
-    // components/date-range-input.tsx — date range picker
-    rep_f_pick_end: 'คลิกวันสิ้นสุด',
-    rep_f_apply: 'นำไปใช้',
 
     // components/ticket-report-table.tsx — ticket rows
     rep_chart_by_department: 'แยกตามแผนก',

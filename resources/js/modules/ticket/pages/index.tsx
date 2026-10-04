@@ -7,18 +7,17 @@ import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
+import { formatDateTime as fmtDateTime, formatRangeShort } from '@/shared/lib/datetime';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { DateInput } from '@/shared/ui/date-input';
+import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { Input } from '@/shared/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import { useUiStore } from '@/stores/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Activity,
-    AlertCircle,
     AlertTriangle,
     ArrowDown,
     ArrowUp,
@@ -227,23 +226,14 @@ function NowRow({
     return <div className={cn('flex items-start gap-3 rounded-lg px-3 py-2.5', rowTint)}>{body}</div>;
 }
 
-/** 7 / 30 / 90-day window selector for the dashboard, plus a custom from–to date pair. */
+/**
+ * 7 / 30 / 90-day window selector for the dashboard, plus a custom from–to range. "กำหนดเอง"
+ * opens the shared two-month range calendar (as the reports do), which applies only on
+ * "นำไปใช้" — so a half-picked range never fetches — and can't pick an end before the start.
+ */
 function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v: SummaryRange) => void; t: (k: string) => string }) {
+    const lang = useUiStore((s) => s.lang);
     const custom = typeof value === 'object';
-    const [open, setOpen] = useState(false);
-    // Draft dates live locally and only apply on confirm, so half-picked ranges never fetch.
-    const [from, setFrom] = useState('');
-    const [to, setTo] = useState('');
-    // Inverted order gets a loud red message — a silently disabled button explains nothing.
-    const inverted = !!from && !!to && from > to;
-
-    const handleOpenChange = (o: boolean) => {
-        if (o) {
-            setFrom(custom ? value.from : '');
-            setTo(custom ? value.to : '');
-        }
-        setOpen(o);
-    };
 
     return (
         <div className="border-border inline-flex rounded-lg border p-0.5">
@@ -259,48 +249,17 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
                     {d} {t('ticket_days')}
                 </button>
             ))}
-            <Popover open={open} onOpenChange={handleOpenChange}>
-                <PopoverTrigger asChild>
-                    <button
-                        className={cn(
-                            'rounded-md px-3 py-1 font-mono text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
-                            custom ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground font-sans',
-                        )}
-                    >
-                        {custom ? `${value.from} – ${value.to}` : t('ticket_range_custom')}
-                    </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-auto space-y-3 p-3">
-                    <div className="flex items-end gap-2">
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('ticket_range_from')}</div>
-                            <DateInput value={from} onChange={setFrom} className={cn('h-9 w-36', inverted && 'border-destructive')} />
-                        </div>
-                        <span className="text-muted-foreground pb-2.5 text-xs">–</span>
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('ticket_range_to')}</div>
-                            <DateInput value={to} onChange={setTo} className={cn('h-9 w-36', inverted && 'border-destructive')} />
-                        </div>
-                    </div>
-                    {inverted && (
-                        <p className="text-destructive flex items-center gap-1.5 text-xs">
-                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                            {t('ticket_range_err_order')}
-                        </p>
+            <DateRangeInput from={custom ? value.from : ''} to={custom ? value.to : ''} align="end" onChange={(from, to) => onChange({ from, to })}>
+                <button
+                    type="button"
+                    className={cn(
+                        'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
+                        custom ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground',
                     )}
-                    <Button
-                        size="sm"
-                        className="w-full"
-                        disabled={!from || !to || inverted}
-                        onClick={() => {
-                            onChange({ from, to });
-                            setOpen(false);
-                        }}
-                    >
-                        {t('ticket_range_apply')}
-                    </Button>
-                </PopoverContent>
-            </Popover>
+                >
+                    {custom ? formatRangeShort(value.from, value.to, lang) : t('ticket_range_custom')}
+                </button>
+            </DateRangeInput>
         </div>
     );
 }

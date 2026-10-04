@@ -7,6 +7,8 @@
  * other range as "1 ก.ค. – 25 ก.ย. 2026". Gregorian years in both languages, like the rest
  * of the app's dates.
  */
+import { formatRangeShort } from '@/shared/lib/datetime';
+
 type Translate = (key: string) => string;
 
 const DATE_KEYS = new Set(['from', 'to', 'as_of']);
@@ -25,20 +27,9 @@ function locale(lang: string): string {
 
 const format = (date: Date, lang: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale(lang), options).format(date);
 
+/** The shared short range ("1 ก.ค. – 25 ก.ย. 2026"), kept under its report name for the report's callers. */
 export function compactRange(fromValue: string, toValue: string, lang: string): string {
-    const from = parse(fromValue);
-    const to = parse(toValue);
-    if (!from || !to) return `${fromValue} – ${toValue}`;
-
-    const lastOfMonth = new Date(to.getFullYear(), to.getMonth() + 1, 0).getDate();
-    const sameMonth = from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth();
-    if (sameMonth && from.getDate() === 1 && to.getDate() === lastOfMonth) {
-        return format(from, lang, { month: 'short', year: 'numeric' });
-    }
-    const sameYear = from.getFullYear() === to.getFullYear();
-    const start = format(from, lang, sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
-
-    return `${start} – ${format(to, lang, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    return formatRangeShort(fromValue, toValue, lang);
 }
 
 export function reportScope(filters: Record<string, unknown>, columnsCount: number | null, t: Translate, lang: string): string {
