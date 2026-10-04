@@ -159,16 +159,14 @@ class TicketRequestSlaReport extends TabularReport
             ReportSummary::make('rs_take_rate', 'รับเคสทัน SLA (%)', self::percent($tally['take_met'], $tally['take_total']), null, 'percent')
                 ->withGoal($goal)
                 ->withNote(['label_key' => 'rep_rs_note_take', 'values' => ['met' => $tally['take_met'], 'n' => $tally['take_total']]]),
-            // Where the average time went: waiting to be taken, then the work after it — both over
-            // the same completed cases, so the two parts add up to the tile's number.
+            // Where the average time went: waiting to be taken — the same figure as the per-type table's
+            // "เวลารับเคสโดยเฉลี่ย", over every case taken — then the work from taking to closing, over the
+            // completed cases. Each part is its own average, so the two need not add up to the tile.
             ReportSummary::make('rs_fix_avg', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
-                ->withSplit($tally['fix_avg_hours'] === null || $tally['wait_avg_hours'] === null ? [] : [
-                    ['key' => 'wait', 'label_key' => 'rep_rs_split_wait', 'tone' => 'soft-amber', 'value' => $tally['wait_avg_hours']],
-                    ['key' => 'work', 'label_key' => 'rep_rs_split_work', 'tone' => 'soft-blue', 'value' => round(max(0, $tally['fix_avg_hours'] - $tally['wait_avg_hours']), 1)],
-                ])
-                // The average is over the completed cases only — the table's "เวลารับเคสโดยเฉลี่ย" is over every
-                // case taken, so the tile names its base to keep the two apart.
-                ->withNote($tally['fix_n'] === 0 ? null : ['label_key' => 'rep_rs_note_fix_base', 'values' => ['n' => $tally['fix_n']]]),
+                ->withSplit($tally['take_avg_hours'] === null || $tally['work_avg_hours'] === null ? [] : [
+                    ['key' => 'wait', 'label_key' => 'rep_rs_split_wait', 'tone' => 'soft-amber', 'value' => round($tally['take_avg_hours'], 1)],
+                    ['key' => 'work', 'label_key' => 'rep_rs_split_work', 'tone' => 'soft-blue', 'value' => $tally['work_avg_hours']],
+                ]),
             // Its share of the cases still open, and which deadline each one missed — nobody has
             // taken it yet, or it was taken but not closed in time — so the reader knows whom to chase.
             ReportSummary::make('rs_over_sla', 'เกิน SLA ตอนนี้', $tally['over_now'], 'soft-red')
@@ -256,7 +254,7 @@ class TicketRequestSlaReport extends TabularReport
      * lines and the file all read.
      *
      * @param  Collection<int, Ticket>  $tickets
-     * @return array{total: int, completed: int, canceled: int, open: int, take_met: int, take_total: int, close_met: int, close_total: int, take_avg_hours: ?float, fix_avg_hours: ?float, fix_n: int, wait_avg_hours: ?float, over_now: int, over_untaken: int, over_taken: int}
+     * @return array{total: int, completed: int, canceled: int, open: int, take_met: int, take_total: int, close_met: int, close_total: int, take_avg_hours: ?float, fix_avg_hours: ?float, work_avg_hours: ?float, over_now: int, over_untaken: int, over_taken: int}
      */
     private static function tally(Collection $tickets): array
     {
@@ -280,10 +278,9 @@ class TicketRequestSlaReport extends TabularReport
             'close_total' => $close->filter(fn (?string $s) => $s === 'met' || $s === 'missed')->count(),
             'take_avg_hours' => $takeHours->isEmpty() ? null : round($takeHours->avg(), 2),
             'fix_avg_hours' => $fixHours->isEmpty() ? null : round($fixHours->avg(), 1),
-            'fix_n' => $fixHours->count(),
-            // Completed cases only, like fix_avg_hours, so wait + work = the average time to fix.
-            'wait_avg_hours' => ($wait = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->responded_at !== null)
-                ->map(fn (Ticket $t) => $t->created_at->diffInMinutes($t->responded_at, true) / 60))->isEmpty() ? null : round($wait->avg(), 1),
+            // From taking the case to closing it, over the completed cases taken.
+            'work_avg_hours' => ($work = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->responded_at !== null && $t->resolved_at !== null)
+                ->map(fn (Ticket $t) => $t->responded_at->diffInMinutes($t->resolved_at, true) / 60))->isEmpty() ? null : round($work->avg(), 1),
             'over_now' => $tickets->filter(fn (Ticket $t) => self::isOverNow($t))->count(),
             'over_untaken' => $take->filter(fn (?string $s) => $s === 'over')->count(),
             'over_taken' => $close->filter(fn (?string $s) => $s === 'over')->count(),

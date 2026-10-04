@@ -567,7 +567,6 @@ export const report: Dict = {
     rep_rs_open: 'ยังเปิด',
     rep_rs_note_close: '{met} จาก {n} เคสที่เสร็จสิ้น',
     rep_rs_note_take: '{met} จาก {n} เคสที่รับแล้ว',
-    rep_rs_note_fix_base: 'จาก {n} เคสที่เสร็จสิ้น',
     rep_rs_split_wait: 'รอรับเคส',
     rep_rs_split_work: 'หลังรับเคส',
     rep_rs_sla_met: 'ทัน',
