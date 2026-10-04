@@ -11,6 +11,7 @@ use App\Models\Permission\GroupRole;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Support\CsvReader;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -382,7 +383,7 @@ class EmployeeImportService
                 }
                 $managerId = $idByCode[strtoupper($entry['report_to'])] ?? null;
                 if ($managerId) {
-                    Employee::whereKey($entry['id'])->update(['manager_id' => $managerId]);
+                    Employee::whereKey($entry['id'])->update(['manager_id' => $managerId, 'updated_by' => Auth::id()]);
                 }
             }
         });

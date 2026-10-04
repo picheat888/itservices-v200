@@ -222,6 +222,20 @@ class EmployeeImportTest extends TestCase
         $this->assertSame($senior->id, $junior->manager_id);
     }
 
+    public function test_imported_employees_record_who_imported_them(): void
+    {
+        $importer = User::factory()->create(['role' => 'super']);
+        $this->actingAs($importer);
+
+        $this->service->importRows([$this->row(['first_name' => 'Imported'])]);
+
+        // The reporting line is linked by a second, query-level write after the insert; it stamps too.
+        $employee = Employee::where('first_name', 'Imported')->firstOrFail();
+        $this->assertSame($this->boss->id, $employee->manager_id);
+        $this->assertSame($importer->id, $employee->created_by);
+        $this->assertSame($importer->id, $employee->updated_by);
+    }
+
     public function test_report_to_pointing_at_an_unknown_code_is_reported(): void
     {
         $result = $this->service->importRows([

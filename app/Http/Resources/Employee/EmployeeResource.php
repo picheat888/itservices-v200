@@ -5,6 +5,7 @@ namespace App\Http\Resources\Employee;
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Employee;
 use App\Services\Employee\EmployeeService;
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -60,6 +61,11 @@ class EmployeeResource extends JsonResource
             'last_day' => $personal($this->last_day?->toDateString()),
             'has_account' => (bool) $linkedUser,
             'is_super_admin' => (bool) $linkedUser?->isSuper(),
+            // When and by whom it was added / last changed. The names ride on the single-record endpoint only.
+            'created_at' => SystemTime::date($this->created_at),
+            'updated_at' => SystemTime::date($this->updated_at),
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
             // Why this record cannot be deleted — empty means it is a clean mis-entry. Costs a
             // handful of existence checks, so it rides along only on the single-employee
             // endpoint, which is what the detail drawer (and its Delete button) reads.

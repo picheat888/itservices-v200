@@ -2,10 +2,13 @@
 
 namespace App\Models\Stock;
 
+use App\Models\Concerns\RecordsActors;
 use Illuminate\Database\Eloquent\Model;
 
 class Warehouse extends Model
 {
+    use RecordsActors;
+
     protected $fillable = ['name', 'description'];
 
     /**

@@ -209,6 +209,8 @@ class StockItemController extends Controller
             'brand',
             'model',
             'category',
+            'creator',
+            'updater',
         ]);
 
         return (new StockItemResource($stockItem))->response();

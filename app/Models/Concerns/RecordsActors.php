@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Auth;
  * writes that way sets updated_by itself. The full history — what changed, from what — stays in
  * audit_logs; these two columns answer "who" at a glance.
  *
- * Used by App\Models\Asset\Asset and App\Models\Contract\Contract.
+ * Used by assets, contracts, employees, stock items and the master data: brands, asset models,
+ * categories, vendors, warehouses, locations, units, warranty types, departments, positions, sections.
  */
 trait RecordsActors
 {

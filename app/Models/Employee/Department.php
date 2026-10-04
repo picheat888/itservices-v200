@@ -2,11 +2,14 @@
 
 namespace App\Models\Employee;
 
+use App\Models\Concerns\RecordsActors;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Model
 {
+    use RecordsActors;
+
     protected $fillable = ['code', 'tag', 'name', 'name_th'];
 
     protected static function booted(): void

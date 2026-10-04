@@ -622,7 +622,7 @@ class EmployeeController extends Controller
             403,
         );
 
-        return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->response();
+        return (new EmployeeResource($employee->load(['department', 'position', 'section', 'creator', 'updater'])))->response();
     }
 
     /**

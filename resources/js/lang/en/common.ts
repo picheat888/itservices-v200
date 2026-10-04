@@ -146,4 +146,9 @@ export const common: Dict = {
     date_range_pick_start: 'Click a start date',
     date_range_pick_end: 'Click an end date',
     apply: 'Apply',
+
+    // record-stamps.tsx — when and by whom a record was added / last changed
+    record_added: 'Added',
+    record_updated: 'Last updated',
+    record_by: 'by',
 };

@@ -4471,3 +4471,25 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - API/UI: หน้ารายละเอียดทรัพย์สินและสัญญาแสดง "… โดย <ชื่อ>" ที่วันที่ลงทะเบียน/สร้าง และอัปเดตล่าสุด, กล่อง "ตัดจำหน่ายแล้ว · โดย …", ช่อง "ยกเลิกโดย" (ส่งชื่อเฉพาะ endpoint รายตัว ไม่ส่งใน list)
 - ไม่ทำ soft delete / deleted_by — snapshot ใน audit log ใช้แทน
 - Tests: `ActorStampsTest` ใหม่ 11 tests; `AssetRelocateTest` ปรับให้ตรวจ log รายเครื่อง; ทั้งระบบ 1606 passed (ก่อนเพิ่ม test ชื่อใน API) · ตรวจใน Chrome แล้ว
+
+### created_by / updated_by: พนักงาน, อะไหล่ และ master data — 2026-10-04
+- migration `2026_10_04_230214_add_actor_columns_to_employees_stock_items_and_master_data` (**รันบน DB จริงแล้ว**):
+  - เพิ่ม `created_by` / `updated_by` (FK → users แบบ null on delete) ใน 13 ตาราง:
+    - `employees`, `stock_items`
+    - แท็บ Master Data: brands, asset_models, categories, vendors, warehouses, locations, units, warranty_types
+    - โครงสร้างองค์กร: departments, positions, sections
+- เติมค่าย้อนหลังจาก audit log:
+  - อะไหล่ได้ updated_by ครบ 25/25 จาก log รับเข้า/คืน/โอน
+  - พนักงานได้ 2/40 จาก log บันทึกการลาออก
+  - ไม่มี created_by เลย เพราะ DB ถูก reset แล้วข้อมูลมาจาก seeder/import ที่ไม่มีหลักฐานว่าใครเพิ่ม
+  - log ที่จับคู่ได้ถูกผูก subject ด้วย (พนักงาน 2, อะไหล่ 34)
+- ทั้ง 13 model ใช้ `RecordsActors` แล้ว
+  - การเคลื่อนไหวสต็อกนับเป็นการแก้ไขอะไหล่ ตรงกับ `updated_at`
+  - การนำเข้าพนักงานที่ผูกหัวหน้าด้วย query update จะเติม updated_by เอง
+- API/UI:
+  - `EmployeeResource` / `StockItemResource` เพิ่ม `created_at`, `updated_at` และชื่อผู้เพิ่ม/แก้ไข (ชื่อส่งเฉพาะ endpoint รายตัว)
+  - component ใหม่ `shared/components/record-stamps.tsx` แสดง "เพิ่มเมื่อ … โดย … / แก้ไขล่าสุด … โดย …" ที่หัวรายละเอียดอะไหล่ และใต้การ์ดภาพรวมพนักงาน
+- Tests:
+  - `ActorStampsTest` เพิ่ม master data 11 ตาราง (data provider), พนักงาน, อะไหล่ (รับเข้าแล้ว updated_by เปลี่ยน)
+  - `EmployeeImportTest` เพิ่ม 1 test
+  - ทั้งระบบ 1621 passed · ตรวจใน Chrome แล้ว
