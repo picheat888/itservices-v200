@@ -257,7 +257,21 @@ export interface SummaryItem {
 }
 
 /** A chart colour, drawn by tabular-charts.tsx. */
-export type ChartTone = 'green' | 'blue' | 'violet' | 'orange' | 'amber' | 'red' | 'pink' | 'gray';
+export type ChartTone =
+    | 'green'
+    | 'blue'
+    | 'violet'
+    | 'orange'
+    | 'amber'
+    | 'red'
+    | 'pink'
+    | 'gray'
+    // The soft run of the Ticket & SLA overview (app.css --chart-soft-*): a calm blue and its analogous neighbours.
+    | 'soft-sky'
+    | 'soft-blue'
+    | 'soft-indigo'
+    | 'soft-violet'
+    | 'soft-orchid';
 
 /** A row's name from master data — the reader's language when it has one. */
 export interface ChartLabel {

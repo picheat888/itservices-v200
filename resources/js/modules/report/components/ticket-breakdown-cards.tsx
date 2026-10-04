@@ -31,13 +31,17 @@ import { categoryKey } from './ticket-labels';
 /** Rows a list shows before folding, as the asset report's department chart. */
 const TOP_ROWS = 10;
 
-/** Category order and colours of the design's department card. */
+/**
+ * Category order and colours of the department card: an analogous run on the colour wheel around
+ * the soft blue (software) — sky · blue · indigo · violet · orchid, 30° apart at one lightness — so
+ * the bar reads as one calm ramp; "other" stays grey.
+ */
 const CATEGORY_TONES: [string, ChartTone][] = [
-    ['hardware', 'blue'],
-    ['software', 'violet'],
-    ['network', 'green'],
-    ['telephone', 'amber'],
-    ['cctv', 'pink'],
+    ['hardware', 'soft-sky'],
+    ['software', 'soft-blue'],
+    ['network', 'soft-indigo'],
+    ['telephone', 'soft-violet'],
+    ['cctv', 'soft-orchid'],
     ['other', 'gray'],
 ];
 

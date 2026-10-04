@@ -41,7 +41,8 @@ import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
 const REPORT_DIALOGS = ['export', 'schedule'] as const;
 
-const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
+// The page's soft palette: today's hues one step lighter (Tailwind 400), the same meanings.
+const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-400', high: 'bg-amber-400', medium: 'bg-emerald-400', low: 'bg-emerald-400' };
 
 /** A card's heading row: title on the left, a short note (legend, unit, "Top 6") on the right. */
 function SectionHeading({ title, sub, className }: { title: React.ReactNode; sub?: React.ReactNode; className?: string }) {
@@ -262,12 +263,12 @@ export default function TicketOverviewReportPage() {
                                 // In the status badges' colours (open blue, in progress amber), as in the ticket list.
                                 <span className="inline-flex items-center gap-3">
                                     <span className="inline-flex items-center gap-1.5">
-                                        <i className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+                                        <i className="inline-block h-2 w-2 rounded-full bg-blue-400" />
                                         {t('rep_kpi_backlog_open')}
                                         <b className="font-mono text-blue-600 dark:text-blue-400">{data.backlog.open}</b>
                                     </span>
                                     <span className="inline-flex items-center gap-1.5">
-                                        <i className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                                        <i className="inline-block h-2 w-2 rounded-full bg-amber-400" />
                                         {t('rep_kpi_backlog_in_progress')}
                                         <b className="font-mono text-amber-600 dark:text-amber-400">{data.backlog.in_progress}</b>
                                     </span>
@@ -293,15 +294,15 @@ export default function TicketOverviewReportPage() {
                                 // Swatches in the bars' own fills (weekly-ticket-chart.tsx), so the key reads.
                                 <span className="inline-flex items-center gap-3">
                                     <span className="inline-flex items-center gap-1.5">
-                                        <i className="bg-brand inline-block h-2.5 w-2.5 rounded-sm" />
+                                        <i className="bg-chart-soft-blue inline-block h-2.5 w-2.5 rounded-sm" />
                                         {t('rep_weekly_opened')}
                                     </span>
                                     <span className="inline-flex items-center gap-1.5">
-                                        <i className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500" />
+                                        <i className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-400" />
                                         {t('rep_weekly_closed')}
                                     </span>
                                     <span className="inline-flex items-center gap-1.5">
-                                        <i className="inline-block h-0.5 w-3 rounded-full bg-red-500" />
+                                        <i className="inline-block h-0.5 w-3 rounded-full bg-red-400" />
                                         {t('rep_weekly_backlog')}
                                     </span>
                                 </span>
@@ -340,7 +341,12 @@ export default function TicketOverviewReportPage() {
                             <BacklogAging aging={data.backlog.aging} />
                             <SectionHeading className="border-t" title={t('rep_by_category')} sub={t('rep_by_category_sub')} />
                             <HorizontalBars
-                                bars={data.by_category.map((c) => ({ key: c.category, label: t(categoryKey(c.category)), value: c.count }))}
+                                bars={data.by_category.map((c) => ({
+                                    key: c.category,
+                                    label: t(categoryKey(c.category)),
+                                    value: c.count,
+                                    tone: 'bg-chart-soft-blue',
+                                }))}
                                 max={Math.max(1, ...data.by_category.map((c) => c.count))}
                                 emptyLabel={t('rep_no_data')}
                             />

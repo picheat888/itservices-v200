@@ -142,8 +142,15 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                             </title>
                             {/* The whole week column answers the hover, not just its bars. */}
                             <rect x={x - gw / 2} y={PAD.t} width={gw} height={ch} className="fill-transparent" />
-                            <rect x={x - bw - 1} y={y(w.opened)} width={bw} height={ch - (y(w.opened) - PAD.t)} rx={2.5} className="fill-brand" />
-                            <rect x={x + 1} y={y(w.closed)} width={bw} height={ch - (y(w.closed) - PAD.t)} rx={2.5} className="fill-emerald-500" />
+                            <rect
+                                x={x - bw - 1}
+                                y={y(w.opened)}
+                                width={bw}
+                                height={ch - (y(w.opened) - PAD.t)}
+                                rx={2.5}
+                                className="fill-chart-soft-blue"
+                            />
+                            <rect x={x + 1} y={y(w.closed)} width={bw} height={ch - (y(w.closed) - PAD.t)} rx={2.5} className="fill-emerald-400" />
                             {i % labelEvery === 0 && (
                                 <text x={x} y={H - 9} textAnchor="middle" className="fill-muted-foreground font-mono text-[10.5px]">
                                     {label}
@@ -152,13 +159,13 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                         </g>
                     );
                 })}
-                <path d={line} fill="none" strokeWidth={2} strokeLinejoin="round" className="pointer-events-none stroke-red-500" />
+                <path d={line} fill="none" strokeWidth={2} strokeLinejoin="round" className="pointer-events-none stroke-red-400" />
                 <circle
                     cx={xOf(weeks.length - 1)}
                     cy={yBacklog(last.backlog)}
                     r={4}
                     strokeWidth={2}
-                    className="stroke-card pointer-events-none fill-red-500"
+                    className="stroke-card pointer-events-none fill-red-400"
                 />
                 <text
                     x={xOf(weeks.length - 1) - 8}
