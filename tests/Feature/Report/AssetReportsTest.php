@@ -68,7 +68,7 @@ class AssetReportsTest extends TestCase
         $this->assertSame(1, $summary['ready']['value']);
     }
 
-    public function test_overview_list_filters_by_status_source_and_search(): void
+    public function test_overview_list_filters_by_status_and_source(): void
     {
         $user = $this->userWith(['assets.view']);
         $ready = Asset::factory()->create(['status' => 'ready']);
@@ -87,27 +87,25 @@ class AssetReportsTest extends TestCase
         // assertSame): a whole-number float round-trips through JSON as an int.
         $this->assertEquals((float) $rented->contract->value, $bySource['data'][0]['value']);
 
-        $bySearch = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search='.$ready->serial)->assertOk()->json();
-        $this->assertSame(1, $bySearch['meta']['total']);
-        $this->assertSame([$ready->id], array_column($bySearch['data'], 'id'));
-
         $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?status=bogus')->assertUnprocessable();
     }
 
-    public function test_overview_list_search_matches_the_holder_employee(): void
+    /**
+     * The overview reads the whole picture, so it has no free-text search (finding one asset is
+     * /assets' job): the bar offers none, and a stray ?search= narrows nothing.
+     */
+    public function test_overview_has_no_search(): void
     {
         $user = $this->userWith(['assets.view']);
         $employee = Employee::create(['code' => 'EMP-8123', 'first_name' => 'Kanya', 'last_name' => 'Holder']);
-        $held = Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
+        Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
         Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
 
-        $byCode = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search='.$employee->code)->assertOk()->json();
-        $this->assertSame(1, $byCode['meta']['total']);
-        $this->assertSame([$held->id], array_column($byCode['data'], 'id'));
+        $filters = $this->actingAs($user)->getJson('/api/reports/r/assets.overview')->assertOk()->json('data.filters');
+        $this->assertNotContains('search', array_column($filters, 'name'));
 
-        $byName = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search=Kanya')->assertOk()->json();
-        $this->assertSame(1, $byName['meta']['total']);
-        $this->assertSame([$held->id], array_column($byName['data'], 'id'));
+        $rows = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search=Kanya')->assertOk()->json();
+        $this->assertSame(2, $rows['meta']['total']);
     }
 
     public function test_warranty_expiring_window_excludes_lifetime_rented_and_written_off(): void
