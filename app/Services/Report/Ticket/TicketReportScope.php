@@ -77,7 +77,7 @@ trait TicketReportScope
      * while it waits to be taken, resolution afterwards (TicketMetrics::activeDue). "Now" is
      * the app clock, inlined: generated here, never reader input.
      */
-    private static function breachedSql(): string
+    private static function overSlaSql(): string
     {
         $now = "'".now()->toDateTimeString()."'";
 

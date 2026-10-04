@@ -224,7 +224,7 @@ class TicketOverviewReportService
     }
 
     /**
-     * @return array{open: int, in_progress: int, breached: int, aging: array{d1: int, d3: int, d7: int, older: int}}
+     * @return array{open: int, in_progress: int, over_sla: int, aging: array{d1: int, d3: int, d7: int, older: int}}
      */
     private function backlog(User $viewer, array $filters, CarbonInterface $now): array
     {
@@ -247,7 +247,7 @@ class TicketOverviewReportService
         return [
             'open' => $live->filter(fn (Ticket $t) => $t->status === TicketStatus::Open)->count(),
             'in_progress' => $live->filter(fn (Ticket $t) => $t->status === TicketStatus::InProgress)->count(),
-            'breached' => $live->filter(fn (Ticket $t) => TicketMetrics::slaState($t, $now) === 'over_sla')->count(),
+            'over_sla' => $live->filter(fn (Ticket $t) => TicketMetrics::slaState($t, $now) === 'over_sla')->count(),
             'aging' => $aging,
         ];
     }

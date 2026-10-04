@@ -116,12 +116,12 @@ class TicketTabularReportsTest extends TestCase
         $summary = collect($body['summary'])->keyBy('key');
         $this->assertSame(3, $summary['total']['value']);
         $this->assertSame([1, 2], array_column($summary['total']['split'], 'value'));
-        $this->assertSame(1, $summary['breached']['value']);
+        $this->assertSame(1, $summary['over_sla']['value']);
         $this->assertSame(1, $summary['due_soon']['value']);
         $this->assertSame(1, $summary['unassigned']['value']);
         // Each warning tile: its share of the backlog, and how bad it is.
-        $this->assertSame(33, $summary['breached']['share']);
-        $this->assertEquals(['label_key' => 'rep_bl_note_most_overdue', 'hours' => 120.0], $summary['breached']['note']);
+        $this->assertSame(33, $summary['over_sla']['share']);
+        $this->assertEquals(['label_key' => 'rep_bl_note_most_overdue', 'hours' => 120.0], $summary['over_sla']['note']);
         $this->assertSame(['label_key' => 'rep_bl_note_next_due', 'at' => '2026-09-26 10:00'], $summary['due_soon']['note']);
         $this->assertEquals(['label_key' => 'rep_bl_note_longest_wait', 'hours' => 288.0], $summary['unassigned']['note']);
         $this->assertNull($summary['total']['note']);

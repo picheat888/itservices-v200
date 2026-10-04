@@ -253,8 +253,8 @@ export default function TicketOverviewReportPage() {
                         <KpiTile
                             label={t('rep_kpi_backlog')}
                             badge={
-                                data.backlog.breached > 0 ? (
-                                    <StatusBadge tone="amber">{t('rep_kpi_breached').replace('{n}', String(data.backlog.breached))}</StatusBadge>
+                                data.backlog.over_sla > 0 ? (
+                                    <StatusBadge tone="amber">{t('rep_kpi_over_sla').replace('{n}', String(data.backlog.over_sla))}</StatusBadge>
                                 ) : undefined
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
@@ -273,7 +273,7 @@ export default function TicketOverviewReportPage() {
                                     </span>
                                 </span>
                             }
-                            alert={data.backlog.breached > 0}
+                            alert={data.backlog.over_sla > 0}
                         />
                     </div>
 

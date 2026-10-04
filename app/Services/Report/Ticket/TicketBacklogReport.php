@@ -18,9 +18,9 @@ use Illuminate\Support\Facades\DB;
  * "Ticket ค้างและเกิน SLA" (Report Center → Tickets, /reports/tickets-backlog): every ticket still
  * open or in progress, most overdue first, with its age, the deadline it is running against now
  * (first response while waiting to be taken, resolution afterwards — TicketMetrics::activeDue),
- * which of the two that is, and how many hours are left on it (negative = already breached).
+ * which of the two that is, and how many hours are left on it (negative = already over SLA).
  *
- * SLA states: breached (past the deadline), due_soon (inside the next 24 hours), on_track (more
+ * SLA states: over_sla (past the deadline), due_soon (inside the next 24 hours), on_track (more
  * than 24 hours to go, or no deadline). `board()` gives the page's due board, owner and category
  * cards every live ticket the other filters keep, unpaged and without the SLA filter, so the
  * page can count each state and narrow them itself.
@@ -72,9 +72,9 @@ class TicketBacklogReport extends TabularReport
                 ? $q->whereNull('assignee_id')
                 : $q->where('assignee_id', (int) $assignee))
             ->when($filters['sla'], fn (Builder $q, string $sla) => match ($sla) {
-                'over_sla' => $q->whereRaw(self::breachedSql()),
-                'due_soon' => $q->whereRaw('NOT '.self::breachedSql())->whereRaw("{$due} <= {$soon}"),
-                default => $q->whereRaw('NOT '.self::breachedSql())->whereRaw("({$due} IS NULL OR {$due} > {$soon})"),
+                'over_sla' => $q->whereRaw(self::overSlaSql()),
+                'due_soon' => $q->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} <= {$soon}"),
+                default => $q->whereRaw('NOT '.self::overSlaSql())->whereRaw("({$due} IS NULL OR {$due} > {$soon})"),
             })
             ->when($filters['search'], function (Builder $q, string $search) {
                 $like = '%'.$search.'%';
@@ -119,8 +119,8 @@ class TicketBacklogReport extends TabularReport
         $total = $bare()->count();
         $hoursSince = fn (?string $moment) => $moment === null ? null : round(Carbon::parse($moment)->diffInMinutes(now(), true) / 60, 1);
         // How bad each tile is: the longest past its deadline, the next deadline still ahead, the longest waiting to be taken.
-        $mostOverdue = $bare()->whereRaw(self::breachedSql())->select(DB::raw("MIN({$due}) as due"))->value('due');
-        $nextDue = $bare()->whereRaw('NOT '.self::breachedSql())->whereRaw("{$due} IS NOT NULL")->select(DB::raw("MIN({$due}) as due"))->value('due');
+        $mostOverdue = $bare()->whereRaw(self::overSlaSql())->select(DB::raw("MIN({$due}) as due"))->value('due');
+        $nextDue = $bare()->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} IS NOT NULL")->select(DB::raw("MIN({$due}) as due"))->value('due');
         $oldestUnassigned = $bare()->whereNull('assignee_id')->min('created_at');
 
         return [
@@ -128,10 +128,10 @@ class TicketBacklogReport extends TabularReport
                 ['key' => 'open', 'label_key' => 'rep_k_open', 'tone' => 'blue', 'value' => $bare()->where('status', 'open')->count()],
                 ['key' => 'in_progress', 'label_key' => 'rep_k_in_progress', 'tone' => 'amber', 'value' => $bare()->where('status', 'in_progress')->count()],
             ]),
-            ReportSummary::make('breached', 'เกิน SLA', $bare()->whereRaw(self::breachedSql())->count(), 'red')
+            ReportSummary::make('over_sla', 'เกิน SLA', $bare()->whereRaw(self::overSlaSql())->count(), 'red')
                 ->withShareOf($total)
                 ->withNote($mostOverdue === null ? null : ['label_key' => 'rep_bl_note_most_overdue', 'hours' => $hoursSince($mostOverdue)]),
-            ReportSummary::make('due_soon', 'ครบกำหนดใน 24 ชม.', $bare()->whereRaw('NOT '.self::breachedSql())->whereRaw("{$due} <= {$soon}")->count(), 'amber')
+            ReportSummary::make('due_soon', 'ครบกำหนดใน 24 ชม.', $bare()->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} <= {$soon}")->count(), 'amber')
                 ->withShareOf($total)
                 ->withNote($nextDue === null ? null : ['label_key' => 'rep_bl_note_next_due', 'at' => Carbon::parse($nextDue)->format('Y-m-d H:i')]),
             ReportSummary::make('unassigned', 'ยังไม่มีผู้รับ', $bare()->whereNull('assignee_id')->count(), 'amber')

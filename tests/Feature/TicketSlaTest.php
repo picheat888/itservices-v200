@@ -65,7 +65,7 @@ class TicketSlaTest extends TestCase
         // Already closed tickets never count, however old their deadline.
         Ticket::factory()->create(['status' => 'completed', 'sla_resolve_due_at' => now()->subDay()]);
 
-        $this->getJson('/api/tickets/summary')->assertOk()->assertJsonPath('sla_breached_now', 1);
+        $this->getJson('/api/tickets/summary')->assertOk()->assertJsonPath('over_sla_now', 1);
     }
 
     public function test_sla_target_is_configurable_in_settings(): void
@@ -433,8 +433,7 @@ class TicketSlaTest extends TestCase
         // Most-urgent first: the breached ticket leads even though it's older.
         $this->getJson('/api/tickets?sort=sla_due')->assertOk()->assertJsonPath('data.0.id', $breached->id);
 
-        // The over-SLA filter returns only the overdue one — and the pre-rename value still does.
-        $this->getJson('/api/tickets?sla=breached')->assertOk()->assertJsonCount(1, 'data');
+        // The over-SLA filter returns only the overdue one.
         $this->getJson('/api/tickets?sla=over_sla')->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $breached->id);
