@@ -29,8 +29,7 @@ type T = (key: string) => string;
 
 /** The backlog page, narrowed to tickets from requests that are past SLA — where "ยังเปิดอยู่" continues. */
 const BACKLOG_HREF = '/reports/tickets-backlog?source=auto_request&sla=over_sla';
-/** The Settings page names its section in the hash (settings/pages/index.tsx). */
-const SLA_SETTINGS_HREF = '/settings#tickets';
+const SLA_SETTINGS_HREF = '/settings?tab=tickets';
 
 const percent = (met: number, n: number) => (n === 0 ? null : Math.round((met / n) * 100));
 
@@ -317,7 +316,7 @@ function RulesCard({ rules }: { rules: RequestSlaBreakdown['rules'] }) {
             <Heading
                 title={t('rep_rs_rules_title')}
                 sub={
-                    canOpen('/settings') ? (
+                    canOpen(SLA_SETTINGS_HREF) ? (
                         <Link to={SLA_SETTINGS_HREF} className="text-brand hover:underline">
                             {t('rep_rs_rules_settings')}
                         </Link>
