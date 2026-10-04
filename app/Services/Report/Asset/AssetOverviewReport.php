@@ -252,6 +252,8 @@ class AssetOverviewReport extends TabularReport
         return $this->filtered($filters)
             ->where('assets.status', 'writeoff')
             ->with(['category:id,name,name_th', 'model:id,name', 'warehouse:id,name'])
+            // Latest write-off first; the assets.writeoffs report lists them by date range.
+            ->orderByDesc('assets.written_off_at')
             ->orderBy('asset_code')
             ->get();
     }
@@ -438,6 +440,7 @@ class AssetOverviewReport extends TabularReport
                 'model' => $a->model?->name,
                 'place' => $a->warehouse?->name,
                 'reason' => $a->last_reason,
+                'at' => $a->written_off_at?->format('Y-m-d H:i'),
             ])->values()->all(),
         ];
     }
@@ -528,8 +531,9 @@ class AssetOverviewReport extends TabularReport
             ],
             [
                 'title' => 'ตัดจำหน่าย',
-                'headings' => ['รหัสทรัพย์สิน', 'หมวดหมู่', 'รุ่น', 'คลัง', 'เหตุผล'],
+                'headings' => ['วันที่ตัดจำหน่าย', 'รหัสทรัพย์สิน', 'หมวดหมู่', 'รุ่น', 'คลัง', 'เหตุผล'],
                 'rows' => $this->writtenOff($filters)->map(fn (Asset $a) => [
+                    $a->written_off_at?->format('Y-m-d H:i'),
                     $a->asset_code,
                     $a->category ? ($a->category->name_th ?: $a->category->name) : null,
                     $a->model?->name,

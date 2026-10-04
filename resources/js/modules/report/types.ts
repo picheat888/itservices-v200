@@ -376,7 +376,16 @@ export type TabularChart =
           key: string;
           title_key: string;
           total: number;
-          rows: { id: number; code: string; label: ChartLabel | null; model: string | null; place: string | null; reason: string | null }[];
+          /** `at`: when it was written off ("Y-m-d H:i"). */
+          rows: {
+              id: number;
+              code: string;
+              label: ChartLabel | null;
+              model: string | null;
+              place: string | null;
+              reason: string | null;
+              at: string | null;
+          }[];
       };
 
 /** One live ticket on the backlog page's due board (TicketBacklogReport::board). */

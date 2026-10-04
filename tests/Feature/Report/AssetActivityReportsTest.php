@@ -151,7 +151,7 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame('list', $writeoff['type']);
         $this->assertSame(1, $writeoff['total']);
         $this->assertSame(
-            ['id' => $gone->id, 'code' => $gone->asset_code, 'label' => ['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], 'place' => 'Main store', 'reason' => 'Beyond repair'],
+            ['id' => $gone->id, 'code' => $gone->asset_code, 'label' => ['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], 'place' => 'Main store', 'reason' => 'Beyond repair', 'at' => '2026-09-25 10:00'],
             collect($writeoff['rows'][0])->except('model')->all(),
         );
     }
@@ -262,7 +262,7 @@ class AssetActivityReportsTest extends TestCase
 
             return $titles === ['ทรัพย์สินแยกตามแผนก', 'ทรัพย์สินในคลัง (พร้อมใช้งาน)', 'ทรัพย์สินในส่วนกลาง', 'ตัดจำหน่าย']
                 && $warehouseRows === [['Main store', 1, 1, 0]]
-                && $export->sheets()[4]->array()[0][4] === 'Broken'
+                && $export->sheets()[4]->array()[0][5] === 'Broken'
                 && count($export->sheets()) === 6;
         });
     }

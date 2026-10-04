@@ -1,11 +1,12 @@
 /**
  * The 'list' chart — a few records by name in a card across the page (the written-off assets on the
  * asset overview): the card counts them in its heading, and each asset is one line on a wide screen —
- * its code (opening it on /assets for a reader who may), its category and model, where it is kept and
- * why it went — stacked under one another on a narrower one.
+ * when it was written off, its code (opening it on /assets for a reader who may), its category and
+ * model, where it is kept and why it went — stacked under one another on a narrower one.
  * Past `TOP_LIST` the rest fold away behind "แสดงทั้งหมด (n)". Drawn by tabular-charts.tsx.
  */
 import { useT } from '@/lang';
+import { formatDateTime } from '@/shared/lib/datetime';
 import { Card } from '@/shared/ui/card';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -24,7 +25,8 @@ function ListLine({ row }: { row: List['rows'][number] }) {
     const what = [row.label ? label(row.label) : null, row.model].filter(Boolean).join(' · ');
 
     return (
-        <div className="grid gap-x-4 gap-y-0.5 px-5 py-2.5 text-sm lg:grid-cols-[10rem_minmax(0,1fr)_10rem_minmax(0,1.4fr)] lg:items-baseline">
+        <div className="grid gap-x-4 gap-y-0.5 px-5 py-2.5 text-sm lg:grid-cols-[9rem_10rem_minmax(0,1fr)_10rem_minmax(0,1.4fr)] lg:items-baseline">
+            <span className="text-muted-foreground font-mono text-xs">{formatDateTime(row.at)}</span>
             {canOpen(href) ? (
                 <Link to={href} className="text-brand font-mono font-medium hover:underline">
                     {row.code}

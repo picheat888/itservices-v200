@@ -107,10 +107,10 @@ class ReportCatalogueTest extends TestCase
             $keysFor(['tickets.view_all', 'tickets.resolve']),
         );
         $this->assertSame(
-            ['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history'],
+            ['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history', 'assets.writeoffs'],
             $keysFor(['assets.view']),
         );
-        $this->assertCount(18, $keysFor([
+        $this->assertCount(19, $keysFor([
             'tickets.view_all', 'tickets.resolve', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events',
             'requests.view_all', 'employees.view', 'access.software_view',
         ]));
