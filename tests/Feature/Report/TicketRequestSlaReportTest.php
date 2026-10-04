@@ -171,14 +171,17 @@ class TicketRequestSlaReportTest extends TestCase
         $this->assertSame(75, $summary['rs_take_rate']['value']);
         $this->assertSame(['met' => 3, 'n' => 4], $summary['rs_take_rate']['note']['values']);
 
-        // (24 + 120) / 2; taken after (0.5 + 23 + 1 + 0.5) / 4 hours on average.
+        // (24 + 120) / 2, split over the same completed cases: waiting to be taken (0.5 + 23) / 2,
+        // then the work after it — the two parts add up to the tile.
         $this->assertEquals(72.0, $summary['rs_fix_avg']['value']);
         $this->assertSame('hours', $summary['rs_fix_avg']['format']);
-        $this->assertEquals(6.3, $summary['rs_fix_avg']['note']['values']['avg']);
+        $this->assertSame(['wait', 'work'], array_column($summary['rs_fix_avg']['split'], 'key'));
+        $this->assertEquals([11.8, 60.2], array_column($summary['rs_fix_avg']['split'], 'value'));
 
-        // Past SLA right now: t3 (not taken in time), out of the 2 still open.
+        // Past SLA right now: t3 (not taken in time) — half of the 2 still open.
         $this->assertSame(1, $summary['rs_over_sla']['value']);
-        $this->assertSame(['n' => 2], $summary['rs_over_sla']['note']['values']);
+        $this->assertSame(50, $summary['rs_over_sla']['share']);
+        $this->assertSame([1, 0], array_column($summary['rs_over_sla']['split'], 'value'));
     }
 
     public function test_breakdown_lists_every_type_with_its_tally_the_open_tickets_and_the_rules(): void
@@ -228,7 +231,10 @@ class TicketRequestSlaReportTest extends TestCase
         $body = $this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
         $row = collect($body['data'])->firstWhere('id', $late->id);
         $this->assertSame(['met', 'over'], [$row['take_sla'], $row['close_sla']]);
-        $this->assertSame(2, collect($body['summary'])->firstWhere('key', 'rs_over_sla')['value']);
+        $over = collect($body['summary'])->firstWhere('key', 'rs_over_sla');
+        $this->assertSame(2, $over['value']);
+        // One not taken yet (t3), one taken but not closed in time.
+        $this->assertSame([1, 1], array_column($over['split'], 'value'));
 
         $open = $this->actingAs($user)->getJson('/api/reports/tickets/request-sla/breakdown?'.self::RANGE)->assertOk()->json('data.open');
         // Most overdue first: t3 missed its taking deadline on the 20th 10:00, this one its resolve deadline on the 18th.
