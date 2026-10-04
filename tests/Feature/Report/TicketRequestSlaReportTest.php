@@ -171,12 +171,12 @@ class TicketRequestSlaReportTest extends TestCase
         $this->assertSame(75, $summary['rs_take_rate']['value']);
         $this->assertSame(['met' => 3, 'n' => 4], $summary['rs_take_rate']['note']['values']);
 
-        // (24 + 120) / 2. Its split: waiting to be taken over every case taken, as the per-type table
-        // (0.5 + 23 + 1 + 0.5) / 4 = 6.25, then taking to closing over the completed ones (23.5 + 97) / 2.
+        // (24 + 120) / 2, split over the same completed cases: waiting to be taken (0.5 + 23) / 2 — the
+        // per-type table's take time too — then the work after it; the two parts add up to the tile.
         $this->assertEquals(72.0, $summary['rs_fix_avg']['value']);
         $this->assertSame('hours', $summary['rs_fix_avg']['format']);
         $this->assertSame(['wait', 'work'], array_column($summary['rs_fix_avg']['split'], 'key'));
-        $this->assertEquals([6.3, 60.3], array_column($summary['rs_fix_avg']['split'], 'value'));
+        $this->assertEquals([11.8, 60.2], array_column($summary['rs_fix_avg']['split'], 'value'));
         $this->assertNull($summary['rs_fix_avg']['note']);
 
         // Past SLA right now: t3 (not taken in time) — half of the 2 still open.
