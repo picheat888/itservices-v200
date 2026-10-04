@@ -54,6 +54,19 @@
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
+    /* Soft report palette (Ticket & SLA overview): a soft blue and the analogous run around it,
+       each with a darker "ink" for counts printed over the bars. */
+    --color-chart-soft-sky: var(--chart-soft-sky);
+    --color-chart-soft-blue: var(--chart-soft-blue);
+    --color-chart-soft-indigo: var(--chart-soft-indigo);
+    --color-chart-soft-violet: var(--chart-soft-violet);
+    --color-chart-soft-orchid: var(--chart-soft-orchid);
+    --color-chart-soft-sky-ink: var(--chart-soft-sky-ink);
+    --color-chart-soft-blue-ink: var(--chart-soft-blue-ink);
+    --color-chart-soft-indigo-ink: var(--chart-soft-indigo-ink);
+    --color-chart-soft-violet-ink: var(--chart-soft-violet-ink);
+    --color-chart-soft-orchid-ink: var(--chart-soft-orchid-ink);
+
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -132,6 +145,18 @@
     --chart-3: hsl(38, 92%, 50%);
     --chart-4: hsl(0, 72%, 51%);
     --chart-5: hsl(262, 68%, 58%);
+    /* Soft report palette — the brand blue lighter and calmer (255°), and 30° steps around it at the
+       same lightness and chroma: sky 225° · blue 255° · indigo 285° · violet 315° · orchid 345°. */
+    --chart-soft-sky: oklch(0.74 0.09 225);
+    --chart-soft-blue: oklch(0.74 0.09 255);
+    --chart-soft-indigo: oklch(0.74 0.09 285);
+    --chart-soft-violet: oklch(0.74 0.09 315);
+    --chart-soft-orchid: oklch(0.74 0.09 345);
+    --chart-soft-sky-ink: oklch(0.52 0.1 225);
+    --chart-soft-blue-ink: oklch(0.52 0.12 255);
+    --chart-soft-indigo-ink: oklch(0.52 0.12 285);
+    --chart-soft-violet-ink: oklch(0.52 0.12 315);
+    --chart-soft-orchid-ink: oklch(0.52 0.12 345);
     --radius: 0.625rem;
     --sidebar-background: hsl(0, 0%, 100%);
     --sidebar-foreground: hsl(215, 20%, 35%);
@@ -183,6 +208,16 @@
     --chart-3: hsl(38, 92%, 50%);
     --chart-4: hsl(0, 72%, 55%);
     --chart-5: hsl(262, 68%, 64%);
+    --chart-soft-sky: oklch(0.66 0.09 225);
+    --chart-soft-blue: oklch(0.66 0.09 255);
+    --chart-soft-indigo: oklch(0.66 0.09 285);
+    --chart-soft-violet: oklch(0.66 0.09 315);
+    --chart-soft-orchid: oklch(0.66 0.09 345);
+    --chart-soft-sky-ink: oklch(0.8 0.08 225);
+    --chart-soft-blue-ink: oklch(0.8 0.08 255);
+    --chart-soft-indigo-ink: oklch(0.8 0.08 285);
+    --chart-soft-violet-ink: oklch(0.8 0.08 315);
+    --chart-soft-orchid-ink: oklch(0.8 0.08 345);
     --sidebar-background: hsl(222, 24%, 10%);
     --sidebar-foreground: hsl(215, 16%, 70%);
     --sidebar-primary: var(--brand);
