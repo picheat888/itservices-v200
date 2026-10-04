@@ -140,6 +140,10 @@ export const report: Dict = {
     rep_f_n_selected: '{n} selected',
     rep_f_clear: 'Clear all',
 
+    // components/date-range-input.tsx — date range picker
+    rep_f_pick_end: 'Click an end date',
+    rep_f_apply: 'Apply',
+
     // components/ticket-report-table.tsx — ticket rows
     rep_chart_by_department: 'By department',
     rep_chart_status: 'Asset status',

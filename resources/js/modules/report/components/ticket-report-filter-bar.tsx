@@ -1,6 +1,7 @@
 /**
  * Filter row of the Ticket & SLA report, in one line of "name [field]" pairs: date range
- * (from ถึง to), categories (multi), priority, department, assignee. A field turns brand-tinted
+ * (one field, date-range-input.tsx), categories (multi), priority, department, assignee, source.
+ * Widths are kept tight so the row and its clear badge fit one line on a 1920px screen. A field turns brand-tinted
  * once it differs from the default — the field look of the app's Filter popover
  * (SearchableSelect `active`, gray dot for "all"). "ล้างทั้งหมด" is a gray badge at the end,
  * shown only while something is filtered — all from filter-row.tsx, shared with the tabular
@@ -12,12 +13,12 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Checkbox } from '@/shared/ui/checkbox';
-import { DateInput } from '@/shared/ui/date-input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useUiStore } from '@/stores/ui';
 import { ChevronsUpDown } from 'lucide-react';
 import { defaultTicketReportFilters, TICKET_SOURCES } from '../hooks/use-ticket-report-filters';
 import type { TicketOverviewSummary, TicketReportFilters } from '../types';
+import { DateRangeInput } from './date-range-input';
 import { ClearFiltersBadge, FILTER_ACTIVE, FilterField, FilterRow, useWithAllOption } from './filter-row';
 import { FILTER_SELECT_ALL as ALL } from './filter-select';
 import { categoryKey, priorityKey } from './ticket-labels';
@@ -59,26 +60,16 @@ export function TicketReportFilterBar({
 
     return (
         <FilterRow>
-            <div className="flex items-center gap-2">
-                <label htmlFor="rep-from" className="text-muted-foreground shrink-0 text-sm">
-                    {t('rep_f_range')}
-                </label>
-                <DateInput
-                    id="rep-from"
-                    value={filters.from}
-                    onChange={(v) => v && onChange({ from: v })}
-                    className={cn('w-36', rangeSet && FILTER_ACTIVE)}
+            <FilterField htmlFor="rep-range" label={t('rep_f_range')}>
+                <DateRangeInput
+                    id="rep-range"
+                    from={filters.from}
+                    to={filters.to}
+                    onChange={(from, to) => onChange({ from, to })}
+                    // Sized to the range text; the floor keeps a whole-month range ("ก.ย. 2026") from looking stubby.
+                    className={cn('min-w-40', rangeSet && FILTER_ACTIVE)}
                 />
-                <label htmlFor="rep-to" className="text-muted-foreground shrink-0 text-sm">
-                    {t('rep_f_to')}
-                </label>
-                <DateInput
-                    id="rep-to"
-                    value={filters.to}
-                    onChange={(v) => v && onChange({ to: v })}
-                    className={cn('w-36', rangeSet && FILTER_ACTIVE)}
-                />
-            </div>
+            </FilterField>
 
             <FilterField htmlFor="rep-category" label={t('rep_f_category')}>
                 <Popover>
@@ -130,7 +121,7 @@ export function TicketReportFilterBar({
             </FilterField>
 
             <FilterField htmlFor="rep-department" label={t('rep_f_department')}>
-                <div className="w-48">
+                <div className="w-40">
                     <SearchableSelect
                         id="rep-department"
                         active={!!filters.department_id}
@@ -148,7 +139,7 @@ export function TicketReportFilterBar({
             </FilterField>
 
             <FilterField htmlFor="rep-assignee" label={t('rep_f_assignee')}>
-                <div className="w-48">
+                <div className="w-40">
                     <SearchableSelect
                         id="rep-assignee"
                         active={!!filters.assignee_id}
@@ -161,7 +152,7 @@ export function TicketReportFilterBar({
 
             {/* Who opened the ticket: a person, or an approved request (tickets.source). */}
             <FilterField htmlFor="rep-source" label={t('rep_fl_source')}>
-                <div className="w-48">
+                <div className="w-36">
                     <SearchableSelect
                         id="rep-source"
                         active={!!filters.source}
