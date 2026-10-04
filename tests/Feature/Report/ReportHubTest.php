@@ -125,7 +125,7 @@ class ReportHubTest extends TestCase
         $this->assertSame(['tickets_open', 'sla_rate', 'assets_in_use', 'stock_below_min'], $tiles->keys()->all());
 
         $this->assertSame(1, $tiles['tickets_open']['value']);
-        $this->assertSame(['key' => 'breached', 'value' => 1], $tiles['tickets_open']['secondary']);
+        $this->assertSame(['key' => 'over_sla', 'value' => 1], $tiles['tickets_open']['secondary']);
         $this->assertSame('tickets.backlog', $tiles['tickets_open']['report_key']);
         $this->assertEquals(100.0, $tiles['sla_rate']['value']);
         // Against 0% in the 30 days before.

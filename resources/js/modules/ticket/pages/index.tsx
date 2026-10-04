@@ -845,19 +845,19 @@ export default function TicketsPage() {
                                                 <span className="text-sm font-semibold">{t('ticket_dash_now_title')}</span>
                                             </div>
                                             <span className="text-muted-foreground flex items-center gap-2 text-xs">
-                                                {((summary?.sla_breached_now ?? 0) > 0 || (summary?.backlog_open ?? 0) > 0) && (
+                                                {((summary?.over_sla_now ?? 0) > 0 || (summary?.backlog_open ?? 0) > 0) && (
                                                     // Blinking dot = something below needs attention (red beats amber).
                                                     <span className="relative flex h-2 w-2">
                                                         <span
                                                             className={cn(
                                                                 'absolute inline-flex h-full w-full animate-ping rounded-full motion-reduce:hidden',
-                                                                (summary?.sla_breached_now ?? 0) > 0 ? 'bg-destructive/60' : 'bg-amber-500/60',
+                                                                (summary?.over_sla_now ?? 0) > 0 ? 'bg-destructive/60' : 'bg-amber-500/60',
                                                             )}
                                                         />
                                                         <span
                                                             className={cn(
                                                                 'relative inline-flex h-2 w-2 rounded-full',
-                                                                (summary?.sla_breached_now ?? 0) > 0 ? 'bg-destructive' : 'bg-amber-500',
+                                                                (summary?.over_sla_now ?? 0) > 0 ? 'bg-destructive' : 'bg-amber-500',
                                                             )}
                                                         />
                                                     </span>
@@ -866,13 +866,13 @@ export default function TicketsPage() {
                                             </span>
                                         </div>
                                         <div className="divide-border/60 divide-y p-2">
-                                            {(summary?.sla_breached_now ?? 0) > 0 ? (
+                                            {(summary?.over_sla_now ?? 0) > 0 ? (
                                                 <NowRow
                                                     icon={AlertTriangle}
                                                     tone="red"
-                                                    title={t('ticket_dash_breached')}
-                                                    sub={t('ticket_dash_breached_sub')}
-                                                    value={summary?.sla_breached_now ?? 0}
+                                                    title={t('ticket_dash_over_sla')}
+                                                    sub={t('ticket_dash_over_sla_sub')}
+                                                    value={summary?.over_sla_now ?? 0}
                                                     onClick={() => {
                                                         resetFilters();
                                                         setSlaFilter('over_sla');
@@ -883,8 +883,8 @@ export default function TicketsPage() {
                                                 <NowRow
                                                     icon={CheckCircle2}
                                                     tone="green"
-                                                    title={t('ticket_dash_breached_ok')}
-                                                    sub={t('ticket_dash_breached_ok_sub')}
+                                                    title={t('ticket_dash_over_sla_ok')}
+                                                    sub={t('ticket_dash_over_sla_ok_sub')}
                                                     value="✓"
                                                 />
                                             )}

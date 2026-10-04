@@ -157,7 +157,7 @@ class TicketOverviewReportTest extends TestCase
 
         $this->assertSame(1, $backlog['open']);
         $this->assertSame(1, $backlog['in_progress']);
-        $this->assertSame(1, $backlog['breached']);
+        $this->assertSame(1, $backlog['over_sla']);
         $this->assertSame(['d1' => 1, 'd3' => 0, 'd7' => 0, 'older' => 1], $backlog['aging']);
     }
 

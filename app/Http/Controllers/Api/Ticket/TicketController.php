@@ -131,9 +131,8 @@ class TicketController extends Controller
             default => $query->latest('id'),
         };
 
-        // SLA filter (?sla=over_sla): active tickets whose current deadline has passed. The old value
-        // "breached" still works, so a link or bookmark made before the rename keeps its filter.
-        if ($canSeeInternals && in_array($request->query('sla'), ['over_sla', 'breached'], true)) {
+        // SLA filter (?sla=over_sla): active tickets whose current deadline has passed.
+        if ($canSeeInternals && $request->query('sla') === 'over_sla') {
             $query->whereIn('status', TicketStatus::liveValues())
                 ->whereRaw("{$activeDue} < ?", [now()->toDateTimeString()]);
         }
@@ -261,7 +260,7 @@ class TicketController extends Controller
 
         // Cases currently past their active SLA deadline (response clock while open
         // and untaken, resolution clock afterwards) — the dashboard's red status row.
-        $breachedNow = $tickets
+        $overSlaNow = $tickets
             ->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::live(), true))
             ->filter(function (Ticket $t) {
                 $due = ($t->status === TicketStatus::Open && $t->responded_at === null)
@@ -313,7 +312,7 @@ class TicketController extends Controller
             'backlog' => $open + $inProgress,
             'backlog_open' => $open,
             'backlog_in_progress' => $inProgress,
-            'sla_breached_now' => $breachedNow,
+            'over_sla_now' => $overSlaNow,
 
             'sla_met_pct' => $slaCur,
             'sla_delta_pts' => ($slaCur === null || $slaPrev === null) ? null : $slaCur - $slaPrev,

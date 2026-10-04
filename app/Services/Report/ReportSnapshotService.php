@@ -106,7 +106,7 @@ class ReportSnapshotService
      */
     private function ticketsOpen(User $viewer, CarbonImmutable $from, CarbonImmutable $to): ?array
     {
-        $tile = $this->fromTabular($viewer, 'tickets_open', ReportCatalogue::TICKETS_BACKLOG, [], 'breached', 'breached');
+        $tile = $this->fromTabular($viewer, 'tickets_open', ReportCatalogue::TICKETS_BACKLOG, [], 'over_sla', 'over_sla');
         if ($tile === null) {
             return null;
         }

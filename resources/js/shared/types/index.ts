@@ -502,7 +502,7 @@ export interface TicketSummary {
     backlog_open: number;
     backlog_in_progress: number;
     // Active cases currently past their SLA deadline (right now, not window-scoped).
-    sla_breached_now: number;
+    over_sla_now: number;
     // Window SLA % and its change in percentage points vs the previous window.
     sla_met_pct: number | null;
     sla_delta_pts: number | null;
@@ -510,7 +510,7 @@ export interface TicketSummary {
     // from sla_met_pct above. Null until a repair case has actually closed in the window.
     repair_kpi_met_pct: number | null;
     repair_kpi_delta_pts: number | null;
-    // Repair cases still open right now (not window-scoped, mirrors sla_breached_now).
+    // Repair cases still open right now (not window-scoped, mirrors over_sla_now).
     repair_backlog: number;
     // Whether any enabled work-class target exists — gates whether the KPI card renders.
     has_repair_rules: boolean;
