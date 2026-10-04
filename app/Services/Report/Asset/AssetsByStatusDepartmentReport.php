@@ -264,6 +264,8 @@ class AssetsByStatusDepartmentReport extends TabularReport
                 ->withSplit($split(['deployed', 'common']))->withShareOf($all),
             ReportSummary::make('ready', 'พร้อมส่งมอบ', $sum('st_ready'), 'asset-ready')->withSplit($split(['ready']))->withShareOf($all),
             ReportSummary::make('pending_return', 'รอรับคืน', $sum('st_pending_return'), 'asset-pending-return')
+                // Machines still to come back (mostly from leavers) are work IT has to chase — amber frame.
+                ->withAttention('amber')
                 ->withSplit($split(['pending_return']))->withShareOf($all),
         ];
     }
