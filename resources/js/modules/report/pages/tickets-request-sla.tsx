@@ -1,5 +1,5 @@
 /**
- * "SLA ตามประเภทคำขอ" — /reports/tickets-request-sla
+ * "สรุปผล SLA ของ Ticket จากคำขอ" — /reports/tickets-request-sla
  *
  * Report key tickets.request_sla, laid out as the design mockup: the shared tabular body (filters,
  * summary tiles, the server-paged list of tickets opened from requests, export and schedule) plus

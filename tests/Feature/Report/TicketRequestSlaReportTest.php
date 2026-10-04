@@ -18,7 +18,7 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * "SLA ตามประเภทคำขอ" (tickets.request_sla): tickets the system opened from approved requests,
+ * "สรุปผล SLA ของ Ticket จากคำขอ" (tickets.request_sla): tickets the system opened from approved requests,
  * judged per request type. The reader holds hardware and software levels only.
  *
  * September 2026, as of the 25th 10:00 (response target due 2 h after opening):
@@ -253,6 +253,7 @@ class TicketRequestSlaReportTest extends TestCase
         $this->assertExportStored('Report_tickets-request_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();
             $this->assertCount(3, $sheets);
+            $this->assertSame('สรุปผล SLA ของ Ticket จากคำขอ', $sheets[0]->array()[0][0]);
             $this->assertInstanceOf(TabularSectionSheet::class, $sheets[1]);
             $this->assertSame('ตามประเภทคำขอ', $sheets[1]->title());
 

@@ -4291,7 +4291,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **ภาพรวม Ticket & SLA**: `TicketOverviewReportRequest` รับ `source` (enum) → `TicketOverviewReportService::scoped()` กรองทุกส่วนของหน้า (KPI, กราฟ, SLA, แผนก, เจ้าหน้าที่, รายการ) และไฟล์ส่งออก/ตั้งเวลาส่ง · `ReportSnapshotService` ส่ง `source => null` · หน้าเว็บ: `TicketReportFilters.source`, `use-ticket-report-filters` (URL `?source=`, ค่าที่จำไว้), ช่อง "ที่มา" ใน `ticket-report-filter-bar` (นับเป็นตัวกรองที่ใช้), chip ใน `ticketFilterChips` · ตาราง "รายการ Ticket" มีคอลัมน์ "ที่มา" (API `source`) · Excel แผ่นรายการเพิ่มคอลัมน์ "ที่มา" (`TicketLabels::source()`); PDF ยังไม่เพิ่ม (หน้ากระดาษแคบ)
 - **Tests**: overview — KPI/รายการกรองตาม manual / auto_request, ค่าผิด 422 · backlog — กรอง, ค่าผิด 422, คอลัมน์+ป้าย, กระดานกรองตาม · **ทั้งชุด 1560 passed** · ตรวจใน Chrome ทั้งสองหน้า (`?source=auto_request`: Ticket & SLA 6 ใบ, Ticket ค้าง 3 ใบ)
 
-## รายงานใหม่ "SLA ตามประเภทคำขอ" (2026-10-04)
+## รายงานใหม่ "สรุปผล SLA ของ Ticket จากคำขอ" (2026-10-04)
 
 `/reports/tickets-request-sla` · key `tickets.request_sla` · กลุ่ม Ticket · สิทธิ์เหมือนรายงาน Ticket อื่น (`tickets.view_all` + `tickets.resolve`, นับเฉพาะหมวดตาม `tickets.level_*`) · ทำตาม mockup ที่ตกลงกัน (artifact "Report Design" หน้า SLA ตามประเภทคำขอ)
 
@@ -4314,3 +4314,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `Heading` / `Swatch` ใน `backlog-board.tsx` export ให้ใช้ร่วม · `useRequestSlaBreakdown` · route + ข้อความ TH/EN (`rep_rs_*`, `rep_k_rs_*`, `rep_c_*`, `rep_tickets_request_sla_*`)
 
 **Tests**: `TicketRequestSlaReportTest` ใหม่ 7 ตัว (เฉพาะ auto_request + หมวดตามสิทธิ์ + ช่วงวันที่, ทัน/ไม่ทัน/เกิน SLA ต่อเคส, การ์ดสรุป + เป้า, breakdown + เกณฑ์จาก `sla_targets`, ตัวกรองประเภท/ผู้รับผิดชอบ, สิทธิ์ 403, Excel 3 แผ่น, PDF) · `ReportCatalogueTest` เพิ่มรายงานในรายการ (18) · **ทั้งชุด 1567 passed** · tsc + eslint + prettier + pint ผ่าน · ตรวจใน Chrome กับข้อมูลจริง (17 Ticket: ปิดทัน 100%, รับเคสทัน 47%, เกิน SLA 3 — ตรงกับ mockup), กดกรองประเภท, โหมดมืด, ลิงก์ไป Ticket ค้าง, การ์ดในศูนย์รายงาน
+- **ชื่อรายงาน** (เปลี่ยนหลังทำเสร็จ): "SLA ตามประเภทคำขอ" → **"สรุปผล SLA ของ Ticket จากคำขอ"** · EN "SLA summary of tickets from requests" — หัวหน้า, breadcrumb, การ์ดในศูนย์รายงาน (`rep_tickets_request_sla_title`) และหัวไฟล์ Excel/PDF (`title()`) · key / URL เดิม (`tickets.request_sla`, `/reports/tickets-request-sla`)

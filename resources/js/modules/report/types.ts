@@ -325,7 +325,7 @@ export interface RequestSlaTally {
     over_now: number;
 }
 
-/** What the "SLA ตามประเภทคำขอ" page draws above its rows (TicketRequestSlaReport::breakdown). */
+/** What the "สรุปผล SLA ของ Ticket จากคำขอ" page draws above its rows (TicketRequestSlaReport::breakdown). */
 export interface RequestSlaBreakdown {
     /** One line per request type with a ticket, busiest first. */
     types: Array<RequestSlaTally & { type: string }>;
