@@ -16,6 +16,7 @@ use App\Models\Report\ReportSchedule;
 use App\Models\User;
 use App\Services\Report\ReportScheduleService;
 use Carbon\CarbonImmutable;
+use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Mail;
@@ -41,6 +42,8 @@ class ReportScheduleTest extends TestCase
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
         Storage::fake('local');
         Mail::fake();
+        // The `report.scheduled` mail comes from the template catalogue, as on a fresh install.
+        $this->seed(EmailTemplateSeeder::class);
         // A Wednesday.
         $this->travelTo('2026-09-30 10:00:00');
     }

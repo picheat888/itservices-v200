@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 15/17 — resolution targets as rows an administrator can add to, instead of one JSON blob.
+ * Baseline 15/18 — resolution targets as rows an administrator can add to, instead of one JSON blob.
  *
  * The per-priority map lived in app_settings as a JSON string whose shape was fixed by
  * TicketSla::defaults() — fine while the only question was "how urgent", impossible the moment

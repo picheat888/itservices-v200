@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 6/17 — IT assets and the hand-over trail behind them.
+ * Baseline 6/18 — IT assets and the hand-over trail behind them.
  *
  * An asset holds both `owner` (the label shown, which may name a shared use
  * rather than a person) and `owner_employee_id` (the FK, set only when a person

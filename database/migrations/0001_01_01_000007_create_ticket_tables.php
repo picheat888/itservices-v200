@@ -5,13 +5,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 8/17 — the IT help desk.
+ * Baseline 8/18 — the IT help desk.
  *
  * The two SLA clocks are stored as due timestamps rather than recomputed on read,
  * so a change to the working-hours setting cannot silently move the target on
  * tickets already open. The *_alert_level columns record how far each clock has
  * been escalated, which is what stops the ten-minute sweep re-alerting the same
- * stage. A ticket points at an asset only when the case is about one.
+ * stage. A ticket points at an asset only when the case is about one. `source` says who
+ * opened it (App\Enums\Ticket\TicketSource): a person ('manual') or an approved service
+ * request ('auto_request'). created_at is indexed for the reports' date ranges.
  */
 return new class extends Migration
 {
@@ -28,6 +30,7 @@ return new class extends Migration
             // vendor repair runs on calendar time, standard work on business hours.
             $table->string('work_class', 32)->default('standard');
             $table->string('status')->default('open');
+            $table->string('source', 20)->default('manual');
             $table->unsignedBigInteger('requester_id');
             $table->unsignedBigInteger('assignee_id')->nullable();
             $table->string('callback_phone')->nullable();
@@ -49,6 +52,8 @@ return new class extends Migration
             $table->foreign('requester_id')->references('id')->on('employees')->restrictOnDelete();
             $table->foreign('assignee_id')->references('id')->on('users')->nullOnDelete();
             $table->foreign('related_asset_id')->references('id')->on('assets')->nullOnDelete();
+            $table->index('created_at', 'tickets_created_at_idx');
+            $table->index('source');
         });
 
         Schema::create('ticket_attachments', function (Blueprint $table) {
