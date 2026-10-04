@@ -266,12 +266,13 @@ export type ChartTone =
     | 'red'
     | 'pink'
     | 'gray'
-    // The soft run of the Ticket & SLA overview (app.css --chart-soft-*): a calm blue and its analogous neighbours.
-    | 'soft-sky'
+    // The Ticket & SLA overview (app.css --chart-soft-blue / --chart-pair-*): its blue, and the department
+    // card's complementary pairs — blue ↔ orange, green ↔ rose — plus violet.
     | 'soft-blue'
-    | 'soft-indigo'
-    | 'soft-violet'
-    | 'soft-orchid';
+    | 'pair-orange'
+    | 'pair-green'
+    | 'pair-rose'
+    | 'pair-violet';
 
 /** A row's name from master data — the reader's language when it has one. */
 export interface ChartLabel {
