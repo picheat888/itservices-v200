@@ -142,6 +142,7 @@ export const report: Dict = {
     rep_chart_in_store: 'ทรัพย์สินในคลัง',
     rep_chart_in_store_status: 'สถานะพร้อมใช้งาน',
     rep_chart_store_source: 'ซื้อ / เช่า ในแต่ละคลัง',
+    rep_chart_ring_center: 'กลางวง = % {name}',
     rep_chart_by_location: 'ส่วนกลาง (ตามสถานที่)',
     rep_chart_writeoff: 'ตัดจำหน่าย',
     rep_chart_items: '{n} รายการ',

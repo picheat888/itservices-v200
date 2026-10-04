@@ -116,6 +116,7 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame('places', $charts['warehouse']['type']);
         $this->assertSame('asset-ready', $charts['warehouse']['tone']);
         $this->assertSame(['purchased', 'rented'], array_column($charts['warehouse']['series'], 'key'));
+        $this->assertSame('rented', $charts['warehouse']['center_key']);
         $warehouses = collect($charts['warehouse']['rows'])->keyBy(fn (array $r) => $r['label']['name']);
         $this->assertSame(3, $charts['warehouse']['total']);
         $this->assertSame(['purchased' => 1, 'rented' => 1], $warehouses['Main store']['values']);
