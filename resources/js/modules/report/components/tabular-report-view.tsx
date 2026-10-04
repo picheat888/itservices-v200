@@ -202,6 +202,9 @@ function TabularReportBody({
     // no table on screen has no column picker either, so its files always carry every column —
     // even if columns were hidden in this browser before the table went.
     const exportColumns = definition.shows_table && hidden.length > 0 ? visibleColumns.map((c) => c.key) : undefined;
+    // View settings (ReportFilter::viewOnly — what a table groups by) live on the page's own control:
+    // out of the filter bar, never "filtered", and kept when the filters are cleared.
+    const viewFilters = definition.filters.filter((f) => f.view).map((f) => f.name);
     // Columns a page draws inside another cell stay in the rows and the files, but get no column of their own.
     const inner = extras.innerColumns ?? [];
     const drawnColumns = visibleColumns.filter((c) => !inner.includes(c.key));
@@ -231,12 +234,12 @@ function TabularReportBody({
                 onChange={patch}
                 onReset={() => {
                     // Clearing the filters keeps how the page is shown (the view filters) as it is.
-                    const keep = Object.fromEntries((extras.viewFilters ?? []).map((name) => [name, filters[name]]));
+                    const keep = Object.fromEntries(viewFilters.map((name) => [name, filters[name]]));
                     reset();
                     patch(keep);
                 }}
-                hidden={extras.hiddenFilters}
-                viewOnly={extras.viewFilters}
+                hidden={[...(extras.hiddenFilters ?? []), ...viewFilters]}
+                viewOnly={viewFilters}
                 leading={extras.filterLead?.({ filters, patch })}
             />
             <TabularReportRows
@@ -293,9 +296,6 @@ function TabularReportBody({
  */
 export interface TabularReportExtras {
     hiddenFilters?: string[];
-    /** Filters that only set how the page is shown (e.g. what a table groups by) — never "filtered", so
-     *  they do not raise the clear badge. */
-    viewFilters?: string[];
     /** Columns the page draws inside another column's cell (a ticket number under its subject) — kept in
      *  each row and in the files, left out of the table's own columns and the column picker. */
     innerColumns?: string[];

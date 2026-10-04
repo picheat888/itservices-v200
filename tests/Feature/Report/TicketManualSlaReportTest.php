@@ -207,6 +207,16 @@ class TicketManualSlaReportTest extends TestCase
         $this->assertSame($this->ids(['m3']), array_column($rows, 'id'));
     }
 
+    /** "แยกตาม" only sets how the table groups — a view setting, not a filter. */
+    public function test_the_group_by_is_declared_a_view_setting_not_a_filter(): void
+    {
+        $filters = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.manual_sla')->assertOk()->json('data.filters'))->keyBy('name');
+
+        $this->assertTrue($filters['by']['view']);
+        $this->assertSame('category', $filters['by']['default']);
+        $this->assertFalse($filters['category']['view']);
+    }
+
     public function test_it_needs_the_same_permissions_as_the_other_ticket_reports(): void
     {
         $this->seedTickets();

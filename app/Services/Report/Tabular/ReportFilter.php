@@ -6,7 +6,8 @@ namespace App\Services\Report\Tabular;
  * One filter of a tabular report (Report Center → "table" reports): what the page draws,
  * how the request validates it, and its default when the reader leaves it empty.
  * `labelKey()` gives the filter its own i18n key when the shared `rep_fl_{name}` reads wrong
- * for this report (an asset's "หมวดหมู่" against a ticket's "หมวด").
+ * for this report (an asset's "หมวดหมู่" against a ticket's "หมวด"). `viewOnly()` marks one that only
+ * sets how the page is shown (what a table groups by) — never listed or counted as a filter.
  */
 final class ReportFilter
 {
@@ -27,6 +28,20 @@ final class ReportFilter
     public function labelKey(string $key): self
     {
         $this->labelKey = $key;
+
+        return $this;
+    }
+
+    /** Only sets how the page is shown, not which rows it keeps. */
+    private bool $view = false;
+
+    /**
+     * Mark the filter as a view setting: the page draws it on its own control (not the filter bar),
+     * and it is never listed, counted or cleared as a filter — the export/schedule chips, "ล้างทั้งหมด".
+     */
+    public function viewOnly(): self
+    {
+        $this->view = true;
 
         return $this;
     }
@@ -65,7 +80,7 @@ final class ReportFilter
     }
 
     /**
-     * @return array{name: string, type: string, options: list<array<string, mixed>>, default: string|int|null, label_key: string}
+     * @return array{name: string, type: string, options: list<array<string, mixed>>, default: string|int|null, label_key: string, view: bool}
      */
     public function toArray(): array
     {
@@ -75,6 +90,7 @@ final class ReportFilter
             'options' => $this->options,
             'default' => $this->default,
             'label_key' => $this->labelKey ?? "rep_fl_{$this->name}",
+            'view' => $this->view,
         ];
     }
 }
