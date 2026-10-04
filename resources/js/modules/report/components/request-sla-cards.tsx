@@ -33,10 +33,15 @@ const SLA_SETTINGS_HREF = '/settings?tab=tickets';
 
 const percent = (met: number, n: number) => (n === 0 ? null : Math.round((met / n) * 100));
 
+/** One decimal in the reader's locale ("10.1"), the way every time on this page reads. */
+export function oneDecimal(value: number, lang: 'th' | 'en'): string {
+    return new Intl.NumberFormat(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
+}
+
 /** "9.7 ชม." / "20 นาที" — an average time under an hour reads in minutes. */
-function hoursText(t: T, hours: number | null): string {
+function hoursText(t: T, lang: 'th' | 'en', hours: number | null): string {
     if (hours === null) return '—';
-    return hours < 1 ? t('rep_rs_minutes').replace('{n}', String(Math.round(hours * 60))) : `${hours.toFixed(1)} ${t('rep_hours')}`;
+    return hours < 1 ? t('rep_rs_minutes').replace('{n}', String(Math.round(hours * 60))) : `${oneDecimal(hours, lang)} ${t('rep_hours')}`;
 }
 
 /** "25 วัน" / "5 ชม." — the same rule as the time-left pills. */
@@ -108,6 +113,7 @@ function SlaCells({ met, n, goal, label }: { met: number; n: number; goal: numbe
 
 function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const goal = data.rules.goal;
     const active = (filters.request_type as string | null | undefined) ?? null;
     const pick = (type: string) => patch({ request_type: active === type ? null : type });
@@ -117,8 +123,8 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
             <CountCells tally={tally} />
             <SlaCells met={tally.take_met} n={tally.take_total} goal={goal} label={t('rep_rs_col_take')} />
             <SlaCells met={tally.close_met} n={tally.close_total} goal={goal} label={t('rep_rs_col_close')} />
-            <td className={cn(TD, GROUP, 'text-right')}>{hoursText(t, tally.take_avg_hours)}</td>
-            <td className={cn(TD, 'text-right')}>{hoursText(t, tally.fix_avg_hours)}</td>
+            <td className={cn(TD, GROUP, 'text-right')}>{hoursText(t, lang, tally.take_avg_hours)}</td>
+            <td className={cn(TD, 'text-right')}>{hoursText(t, lang, tally.fix_avg_hours)}</td>
         </>
     );
 
@@ -145,15 +151,16 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-muted/40">
-                                <th rowSpan={2} className={cn(TH, 'border-border border-b text-left align-bottom')}>
+                                <th rowSpan={2} scope="col" className={cn(TH, 'border-border border-b text-left align-bottom')}>
                                     {t('rep_c_request_type')}
                                 </th>
-                                <th colSpan={4} className={cn(TH, GROUP, 'border-border border-b text-left')}>
+                                <th colSpan={4} scope="colgroup" className={cn(TH, GROUP, 'border-border border-b text-left')}>
                                     {t('rep_rs_col_count')}
                                 </th>
                                 <th
                                     rowSpan={2}
                                     colSpan={3}
+                                    scope="colgroup"
                                     title={t('rep_rs_col_take_hint')}
                                     className={cn(TH, GROUP, 'border-border border-b text-left align-bottom')}
                                 >
@@ -162,55 +169,68 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                                 <th
                                     rowSpan={2}
                                     colSpan={3}
+                                    scope="colgroup"
                                     title={t('rep_rs_col_close_hint')}
                                     className={cn(TH, GROUP, 'border-border border-b text-left align-bottom')}
                                 >
                                     {t('rep_rs_col_close')}
                                 </th>
-                                <th rowSpan={2} className={cn(TH, GROUP, 'border-border border-b text-right align-bottom')}>
+                                <th rowSpan={2} scope="col" className={cn(TH, GROUP, 'border-border border-b text-right align-bottom')}>
                                     {t('rep_rs_col_take_avg')}
                                 </th>
-                                <th rowSpan={2} className={cn(TH, 'border-border border-b text-right align-bottom')}>
+                                <th rowSpan={2} scope="col" className={cn(TH, 'border-border border-b text-right align-bottom')}>
                                     {t('rep_rs_col_fix_avg')}
                                 </th>
                             </tr>
                             <tr className="bg-muted/40 border-border border-b">
-                                <th className={cn(TH, GROUP, 'pt-1 text-right')}>{t('rep_rs_col_all')}</th>
-                                <th className={cn(TH, 'pt-1 text-right')}>{t('rep_rs_completed')}</th>
-                                <th className={cn(TH, 'pt-1 text-right')}>{t('rep_rs_canceled')}</th>
-                                <th className={cn(TH, 'pt-1 text-right')}>{t('rep_rs_open')}</th>
+                                <th scope="col" className={cn(TH, GROUP, 'pt-1 text-right')}>
+                                    {t('rep_rs_col_all')}
+                                </th>
+                                <th scope="col" className={cn(TH, 'pt-1 text-right')}>
+                                    {t('rep_rs_completed')}
+                                </th>
+                                <th scope="col" className={cn(TH, 'pt-1 text-right')}>
+                                    {t('rep_rs_canceled')}
+                                </th>
+                                <th scope="col" className={cn(TH, 'pt-1 text-right')}>
+                                    {t('rep_rs_open')}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {data.types.map((row) => {
                                 const selected = active === row.type;
                                 return (
+                                    // The row filters the page; keyboard and screen readers reach it through the
+                                    // button in its name cell, whose click bubbles up to the row (one handler).
                                     <tr
                                         key={row.type}
-                                        tabIndex={0}
-                                        aria-selected={selected}
-                                        title={t(selected ? 'rep_bl_filter_clear' : 'rep_bl_filter_hint')}
                                         onClick={() => pick(row.type)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault();
-                                                pick(row.type);
-                                            }
-                                        }}
                                         className={cn(
-                                            'border-border/60 focus-visible:ring-brand cursor-pointer border-b outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                                            'border-border/60 cursor-pointer border-b',
                                             selected
-                                                ? 'bg-brand/10 [&>td:first-child]:shadow-[inset_3px_0_0_var(--color-brand)]'
+                                                ? 'bg-brand/10 [&>th:first-child]:shadow-[inset_3px_0_0_var(--color-brand)]'
                                                 : 'hover:bg-accent/50',
                                         )}
                                     >
-                                        <td className={cn(TD, 'font-semibold')}>{t(`req_${row.type}`)}</td>
+                                        <th scope="row" className={cn(TD, 'text-left font-semibold')}>
+                                            <button
+                                                type="button"
+                                                aria-pressed={selected}
+                                                title={t(selected ? 'rep_bl_filter_clear' : 'rep_bl_filter_hint')}
+                                                className="focus-visible:ring-brand rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                            >
+                                                {t(`req_${row.type}`)}
+                                            </button>
+                                        </th>
                                         {line(row)}
                                     </tr>
                                 );
                             })}
                             <tr className="bg-muted/40 font-semibold">
-                                <td className={TD}>{t('rep_rs_total_row').replace('{n}', String(data.types.length))}</td>
+                                <th scope="row" className={cn(TD, 'text-left')}>
+                                    {t('rep_rs_total_row').replace('{n}', String(data.types.length))}
+                                </th>
                                 {line(data.overall)}
                             </tr>
                         </tbody>
@@ -307,9 +327,13 @@ function RulesCard({ rules }: { rules: RequestSlaBreakdown['rules'] }) {
         minutes % 60 === 0
             ? t('rep_rs_hours_business').replace('{n}', String(minutes / 60))
             : t('rep_rs_minutes_business').replace('{n}', String(minutes));
-    // One sentence when every type has the same target; otherwise each type's own.
+    // One sentence when every type has the same target; otherwise the types grouped by target
+    // ("24 ชม. ทำการ: คอมพิวเตอร์, กู้คืนข้อมูล"), the most shared target first.
     const targets = rules.resolve.map((r) => (r.hours === null ? t('rep_rs_by_priority') : targetText(t, r.hours, r.clock)));
     const same = new Set(targets).size === 1 && rules.resolve[0]?.hours !== null;
+    const groups = new Map<string, string[]>();
+    rules.resolve.forEach((r, i) => groups.set(targets[i], [...(groups.get(targets[i]) ?? []), t(`req_${r.type}`)]));
+    const grouped = [...groups.entries()].sort(([, a], [, b]) => b.length - a.length);
 
     return (
         <Card className="overflow-hidden">
@@ -336,13 +360,13 @@ function RulesCard({ rules }: { rules: RequestSlaBreakdown['rules'] }) {
                         ) : (
                             <>
                                 {t('rep_rs_rule_close_varied')}
-                                <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                                    {rules.resolve.map((r, i) => (
-                                        <span key={r.type}>
-                                            {t(`req_${r.type}`)} <b className="text-foreground font-medium">{targets[i]}</b>
-                                        </span>
+                                <ul className="mt-1.5 space-y-1">
+                                    {grouped.map(([target, names]) => (
+                                        <li key={target}>
+                                            <b className="text-foreground font-semibold">{target}</b>: {names.join(', ')}
+                                        </li>
                                     ))}
-                                </span>
+                                </ul>
                             </>
                         )}
                     </dd>

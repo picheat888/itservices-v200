@@ -116,8 +116,10 @@ class TicketRequestSlaReport extends TabularReport
                 ->withGoal($goal)
                 ->withNote(['label_key' => 'rep_rs_note_take', 'values' => ['met' => $tally['take_met'], 'n' => $tally['take_total']]]),
             ReportSummary::make('rs_fix_avg', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
-                ->withNote($tally['take_avg_hours'] === null ? null : ['label_key' => 'rep_rs_note_take_avg', 'hours' => $tally['take_avg_hours']]),
-            ReportSummary::make('rs_over_sla', 'เกิน SLA ตอนนี้', $tally['over_now'], 'red'),
+                // One decimal, as the per-type table prints it ("10.1 ชม."), not rounded to whole hours.
+                ->withNote($tally['take_avg_hours'] === null ? null : ['label_key' => 'rep_rs_note_take_avg', 'values' => ['avg' => round($tally['take_avg_hours'], 1)]]),
+            ReportSummary::make('rs_over_sla', 'เกิน SLA ตอนนี้', $tally['over_now'], 'red')
+                ->withNote(['label_key' => 'rep_rs_note_over', 'values' => ['n' => $tally['open']]]),
         ];
     }
 
@@ -142,7 +144,7 @@ class TicketRequestSlaReport extends TabularReport
             ->all();
 
         $open = $tickets
-            ->filter(fn (Ticket $t) => self::closeState($t) === 'over')
+            ->filter(fn (Ticket $t) => self::isOverNow($t))
             ->map(fn (Ticket $t) => [
                 'id' => $t->id,
                 'ticket_no' => $t->ticket_no,
@@ -221,7 +223,7 @@ class TicketRequestSlaReport extends TabularReport
             'close_total' => $close->filter(fn (?string $s) => $s === 'met' || $s === 'missed')->count(),
             'take_avg_hours' => $takeHours->isEmpty() ? null : round($takeHours->avg(), 2),
             'fix_avg_hours' => $fixHours->isEmpty() ? null : round($fixHours->avg(), 1),
-            'over_now' => $close->filter(fn (?string $s) => $s === 'over')->count(),
+            'over_now' => $tickets->filter(fn (Ticket $t) => self::isOverNow($t))->count(),
         ];
     }
 
@@ -243,19 +245,31 @@ class TicketRequestSlaReport extends TabularReport
     }
 
     /**
-     * Closing the case — TicketMetrics::slaState read for this page: a completed case is in time
-     * or late; a live one past its current deadline is "over"; canceled ones are not judged.
+     * Closing the case: a completed case is in time or late (TicketMetrics::slaState); a live one is
+     * "over" once its resolve deadline has passed — but only after someone has taken it, because the
+     * resolve clock starts when the case is taken. A case nobody has taken yet is late on *taking*
+     * (takeState), not on closing. Canceled ones are not judged.
      */
     private static function closeState(Ticket $ticket): ?string
     {
-        $state = TicketMetrics::slaState($ticket, now());
+        if ($ticket->status === TicketStatus::Completed) {
+            return match (TicketMetrics::slaState($ticket, now())) {
+                'met' => 'met',
+                'over_sla' => 'missed',
+                default => null,
+            };
+        }
 
-        return match (true) {
-            $state === 'met' => 'met',
-            $state === 'over_sla' && $ticket->status === TicketStatus::Completed => 'missed',
-            $state === 'over_sla' => 'over',
-            default => null,
-        };
+        $resolveRunning = in_array($ticket->status, TicketStatus::live(), true)
+            && ! ($ticket->status === TicketStatus::Open && $ticket->responded_at === null);
+
+        return $resolveRunning && $ticket->sla_resolve_due_at !== null && $ticket->sla_resolve_due_at->lt(now()) ? 'over' : null;
+    }
+
+    /** Still open and already past an SLA — not taken in time, or taken but not closed in time. */
+    private static function isOverNow(Ticket $ticket): bool
+    {
+        return self::takeState($ticket) === 'over' || self::closeState($ticket) === 'over';
     }
 
     private static function percent(int $part, int $whole): ?int
