@@ -131,8 +131,9 @@ class TicketController extends Controller
             default => $query->latest('id'),
         };
 
-        // SLA filter (?sla=breached): active tickets whose current deadline has passed.
-        if ($canSeeInternals && $request->query('sla') === 'breached') {
+        // SLA filter (?sla=over_sla): active tickets whose current deadline has passed. The old value
+        // "breached" still works, so a link or bookmark made before the rename keeps its filter.
+        if ($canSeeInternals && in_array($request->query('sla'), ['over_sla', 'breached'], true)) {
             $query->whereIn('status', TicketStatus::liveValues())
                 ->whereRaw("{$activeDue} < ?", [now()->toDateTimeString()]);
         }

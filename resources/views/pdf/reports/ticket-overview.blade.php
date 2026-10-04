@@ -1,6 +1,6 @@
 {{-- PDF of the "Ticket & SLA overview" report (Report Center). Rendered by TicketOverviewExporter. --}}
 @php
-    $slaLabel = ['met' => 'ตรง SLA', 'breached' => 'เกิน SLA'];
+    $slaLabel = ['met' => 'ตรง SLA', 'over_sla' => 'เกิน SLA'];
     $k = $summary['kpi'];
     $categories = \App\Enums\Ticket\TicketCategory::cases();
 @endphp

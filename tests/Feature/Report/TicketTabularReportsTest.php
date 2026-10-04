@@ -151,7 +151,7 @@ class TicketTabularReportsTest extends TestCase
         }
     }
 
-    /** breached = past the deadline · due_soon = inside 24 hours · on_track = further out (or none). */
+    /** over_sla = past the deadline · due_soon = inside 24 hours · on_track = further out (or none). */
     public function test_backlog_sla_filter(): void
     {
         $this->seedTickets();
@@ -160,7 +160,7 @@ class TicketTabularReportsTest extends TestCase
         $user = $this->reader();
         $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
 
-        $this->assertSame([$this->set['t2']->id], $ids('sla=breached'));
+        $this->assertSame([$this->set['t2']->id], $ids('sla=over_sla'));
         $this->assertSame([$this->set['t5']->id], $ids('sla=due_soon'));
         $this->assertSame([$far->id], $ids('sla=on_track'));
         $this->assertSame([$this->set['t2']->id], $ids('category=software'));
@@ -187,7 +187,7 @@ class TicketTabularReportsTest extends TestCase
         $this->seedTickets();
         $user = $this->reader();
 
-        $board = $this->actingAs($user)->getJson('/api/reports/tickets/backlog/board?sla=breached')->assertOk()->json('data');
+        $board = $this->actingAs($user)->getJson('/api/reports/tickets/backlog/board?sla=over_sla')->assertOk()->json('data');
 
         $this->assertSame([$this->set['t2']->id, $this->set['t5']->id], array_column($board, 'id'));
         $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที'], $board[0]['department']);

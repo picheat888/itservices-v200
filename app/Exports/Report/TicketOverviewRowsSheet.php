@@ -18,7 +18,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
  */
 class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
 {
-    private const SLA_LABELS = ['met' => 'ตรง SLA', 'breached' => 'เกิน SLA'];
+    private const SLA_LABELS = ['met' => 'ตรง SLA', 'over_sla' => 'เกิน SLA'];
 
     /** @param Collection<int, Ticket> $rows */
     public function __construct(private Collection $rows) {}

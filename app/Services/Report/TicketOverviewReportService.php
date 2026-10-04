@@ -247,7 +247,7 @@ class TicketOverviewReportService
         return [
             'open' => $live->filter(fn (Ticket $t) => $t->status === TicketStatus::Open)->count(),
             'in_progress' => $live->filter(fn (Ticket $t) => $t->status === TicketStatus::InProgress)->count(),
-            'breached' => $live->filter(fn (Ticket $t) => TicketMetrics::slaState($t, $now) === 'breached')->count(),
+            'breached' => $live->filter(fn (Ticket $t) => TicketMetrics::slaState($t, $now) === 'over_sla')->count(),
             'aging' => $aging,
         ];
     }

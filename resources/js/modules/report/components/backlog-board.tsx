@@ -26,17 +26,17 @@ import { fold, FoldToggle, StackBar } from './tabular-charts';
 import { TICKET_PRIORITY_TONE } from './ticket-badges';
 import { categoryKey, priorityKey } from './ticket-labels';
 
-export type SlaState = 'breached' | 'due_soon' | 'on_track';
+export type SlaState = 'over_sla' | 'due_soon' | 'on_track';
 
 export function slaState(hoursLeft: number | null): SlaState {
     if (hoursLeft === null) return 'on_track';
-    return hoursLeft < 0 ? 'breached' : hoursLeft <= 24 ? 'due_soon' : 'on_track';
+    return hoursLeft < 0 ? 'over_sla' : hoursLeft <= 24 ? 'due_soon' : 'on_track';
 }
 
 /** The table's left stripe per row, from the row's own hours_left. */
 export function backlogRowClass(row: Record<string, unknown>): string {
     const state = slaState(typeof row.hours_left === 'number' ? row.hours_left : null);
-    return state === 'breached'
+    return state === 'over_sla'
         ? '[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-red-500)]'
         : state === 'due_soon'
           ? '[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-amber-500)]'
@@ -88,7 +88,7 @@ const LANE_CARDS = 6;
 
 const SEGMENTS: { value: SlaState | null; label: string }[] = [
     { value: null, label: 'rep_f_any' },
-    { value: 'breached', label: 'rep_sla_breached' },
+    { value: 'over_sla', label: 'rep_sla_over_sla' },
     { value: 'due_soon', label: 'rep_sla_due_soon' },
     { value: 'on_track', label: 'rep_sla_on_track' },
 ];
@@ -275,7 +275,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
 
 /** The owner card's three parts by SLA state, in the report palette — the board's lanes in short. */
 const OWNER_SERIES: ChartSeries[] = [
-    { key: 'breached', label_key: 'rep_sla_breached', tone: 'red' },
+    { key: 'over_sla', label_key: 'rep_sla_over_sla', tone: 'red' },
     { key: 'due_soon', label_key: 'rep_sla_due_soon', tone: 'amber' },
     { key: 'on_track', label_key: 'rep_sla_on_track', tone: 'blue' },
 ];
@@ -335,10 +335,10 @@ function FilterRow({
 function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
     // Keyed by the assignee's id, the value the page's assignee filter takes ('' = nobody yet).
-    const by = new Map<string, { name: string; breached: number; due_soon: number; on_track: number; n: number }>();
+    const by = new Map<string, { name: string; over_sla: number; due_soon: number; on_track: number; n: number }>();
     for (const ticket of tickets) {
         const key = ticket.assignee_id === null ? '' : String(ticket.assignee_id);
-        const row = by.get(key) ?? { name: ticket.assignee ?? '', breached: 0, due_soon: 0, on_track: 0, n: 0 };
+        const row = by.get(key) ?? { name: ticket.assignee ?? '', over_sla: 0, due_soon: 0, on_track: 0, n: 0 };
         row[slaState(ticket.hours_left)]++;
         row.n++;
         by.set(key, row);
@@ -347,13 +347,13 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
     // Most past SLA, then most open; a tie goes by name, so the order never shuffles on a refresh.
     const named = [...by.entries()]
         .filter(([id]) => id !== '')
-        .sort(([, a], [, b]) => b.breached - a.breached || b.n - a.n || a.name.localeCompare(b.name));
+        .sort(([, a], [, b]) => b.over_sla - a.over_sla || b.n - a.n || a.name.localeCompare(b.name));
     const unassigned = by.get('');
     const [open, setOpen] = useState(false);
     const folding = fold(named, OWNER_ROWS, open);
     const active = filters.assignee === null || filters.assignee === undefined ? null : String(filters.assignee);
 
-    const row = (id: string, r: { name: string; breached: number; due_soon: number; on_track: number; n: number }, apart = false) => {
+    const row = (id: string, r: { name: string; over_sla: number; due_soon: number; on_track: number; n: number }, apart = false) => {
         // The filter's own values: the user id, or "none" for the unassigned queue.
         const value = apart ? 'none' : id;
         const label = r.name || t('rep_opt_unassigned');
@@ -368,7 +368,7 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
             >
                 <span className={cn('min-w-0 truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>{label}</span>
                 {/* Each part's count over it, as "ค้างตามหมวด"; the length against whoever holds the most. */}
-                <StackBar values={{ breached: r.breached, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
+                <StackBar values={{ over_sla: r.over_sla, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
                 <span className="text-right font-mono font-semibold">{r.n}</span>
             </FilterRow>
         );
@@ -380,7 +380,7 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
                 title={t('rep_bl_owners_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone={FILL.red}>{t('rep_sla_breached')}</Swatch>
+                        <Swatch tone={FILL.red}>{t('rep_sla_over_sla')}</Swatch>
                         <Swatch tone={FILL.amber}>{t('rep_sla_due_soon')}</Swatch>
                         <Swatch tone={FILL.blue}>{t('rep_sla_on_track')}</Swatch>
                     </span>
@@ -411,24 +411,24 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
 
 /** The category card's two parts — past SLA, and the rest — in the report palette. */
 const CATEGORY_SERIES: ChartSeries[] = [
-    { key: 'breached', label_key: 'rep_sla_breached', tone: 'red' },
-    { key: 'not_breached', label_key: 'rep_sla_not_breached', tone: 'blue' },
+    { key: 'over_sla', label_key: 'rep_sla_over_sla', tone: 'red' },
+    { key: 'not_over_sla', label_key: 'rep_sla_not_over_sla', tone: 'blue' },
 ];
 
 function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
-    const by = new Map<string, { n: number; breached: number }>();
+    const by = new Map<string, { n: number; over_sla: number }>();
     for (const ticket of tickets) {
         const key = ticket.category ?? 'other';
-        const row = by.get(key) ?? { n: 0, breached: 0 };
+        const row = by.get(key) ?? { n: 0, over_sla: 0 };
         row.n++;
-        if (slaState(ticket.hours_left) === 'breached') row.breached++;
+        if (slaState(ticket.hours_left) === 'over_sla') row.over_sla++;
         by.set(key, row);
     }
     // Most past SLA first, then the most open (as "ค้างอยู่กับใคร"); the catch-all "อื่น ๆ" always last;
     // a tie goes by the category's key, so the order never shuffles on a refresh.
     const rows = [...by.entries()].sort(
-        ([ka, a], [kb, b]) => Number(ka === 'other') - Number(kb === 'other') || b.breached - a.breached || b.n - a.n || ka.localeCompare(kb),
+        ([ka, a], [kb, b]) => Number(ka === 'other') - Number(kb === 'other') || b.over_sla - a.over_sla || b.n - a.n || ka.localeCompare(kb),
     );
     const max = Math.max(1, ...rows.map(([, r]) => r.n));
     const active = filters.category ?? null;
@@ -439,8 +439,8 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
                 title={t('rep_bl_cats_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone={FILL.red}>{t('rep_sla_breached')}</Swatch>
-                        <Swatch tone={FILL.blue}>{t('rep_sla_not_breached')}</Swatch>
+                        <Swatch tone={FILL.red}>{t('rep_sla_over_sla')}</Swatch>
+                        <Swatch tone={FILL.blue}>{t('rep_sla_not_over_sla')}</Swatch>
                     </span>
                 }
             />
@@ -466,7 +466,7 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
                                 <span className="truncate">{label}</span>
                                 {/* Past SLA in red, the rest in blue, each count over its part (as the staff card),
                                     the bar's length against the largest category. */}
-                                <StackBar values={{ breached: r.breached, not_breached: r.n - r.breached }} series={CATEGORY_SERIES} scale={max} />
+                                <StackBar values={{ over_sla: r.over_sla, not_over_sla: r.n - r.over_sla }} series={CATEGORY_SERIES} scale={max} />
                                 {/* Same size and weight as the totals of "ค้างอยู่กับใคร" beside it. */}
                                 <span className="text-right font-mono font-semibold">{r.n}</span>
                             </FilterRow>

@@ -52,20 +52,20 @@ class TicketSlaAlertTest extends TestCase
 
         $sent = $this->sweep();
 
-        $this->assertSame(1, $sent['breached']);
+        $this->assertSame(1, $sent['over_sla']);
         $this->assertSame(1, $staff->notifications()->count());
         $this->assertSame('ticket_sla', $staff->notifications()->first()->data['type']);
-        $this->assertSame('response_breached', $staff->notifications()->first()->data['subtype']);
+        $this->assertSame('response_over_sla', $staff->notifications()->first()->data['subtype']);
         // Non-staff users never receive SLA alerts.
         $this->assertSame(0, $regular->notifications()->count());
 
         // A second sweep must not re-fire the same warning.
         $again = $this->sweep();
-        $this->assertSame(0, $again['breached']);
+        $this->assertSame(0, $again['over_sla']);
         $this->assertSame(1, $staff->notifications()->count());
     }
 
-    public function test_at_risk_in_progress_ticket_nudges_only_the_assignee(): void
+    public function test_near_due_in_progress_ticket_nudges_only_the_assignee(): void
     {
         $assignee = $this->staff('Assignee');
         $other = $this->staff('Bystander');
@@ -78,13 +78,13 @@ class TicketSlaAlertTest extends TestCase
 
         $sent = $this->sweep();
 
-        $this->assertSame(1, $sent['at_risk']);
-        $this->assertSame('resolve_at_risk', $assignee->notifications()->first()->data['subtype']);
+        $this->assertSame(1, $sent['near_due']);
+        $this->assertSame('resolve_near_due', $assignee->notifications()->first()->data['subtype']);
         // An at-risk nudge stays with the assignee — no escalation yet.
         $this->assertSame(0, $other->notifications()->count());
     }
 
-    public function test_breached_resolution_escalates_and_the_stages_fire_once_each(): void
+    public function test_over_sla_resolution_escalates_and_the_stages_fire_once_each(): void
     {
         $assignee = $this->staff('Assignee');
         $other = $this->staff('Assigner');
@@ -103,14 +103,14 @@ class TicketSlaAlertTest extends TestCase
         // Past the deadline: breach fires once and escalates to assigners too.
         $this->travelTo('2026-01-14 14:00:00');
         $sent = $this->sweep();
-        $this->assertSame(1, $sent['breached']);
-        $this->assertSame(2, $assignee->notifications()->count()); // at_risk + breached
-        $this->assertSame(1, $other->notifications()->count());    // breached escalation only
-        $this->assertSame('breached', $ticket->fresh()->sla_resolve_alert_level);
+        $this->assertSame(1, $sent['over_sla']);
+        $this->assertSame(2, $assignee->notifications()->count()); // near_due + over_sla
+        $this->assertSame(1, $other->notifications()->count());    // over_sla escalation only
+        $this->assertSame('over_sla', $ticket->fresh()->sla_resolve_alert_level);
 
         // Nothing new on the next pass.
         $again = $this->sweep();
-        $this->assertSame(['at_risk' => 0, 'breached' => 0], $again);
+        $this->assertSame(['near_due' => 0, 'over_sla' => 0], $again);
     }
 
     public function test_taking_the_ticket_resets_the_resolution_alert_stage(): void
@@ -120,7 +120,7 @@ class TicketSlaAlertTest extends TestCase
         // Breached response: alert stage recorded for the response clock.
         $ticket = Ticket::factory()->create(['status' => 'open', 'created_at' => '2026-01-13 08:00:00']);
         $this->sweep();
-        $this->assertSame('breached', $ticket->fresh()->sla_response_alert_level);
+        $this->assertSame('over_sla', $ticket->fresh()->sla_response_alert_level);
 
         // Taking it pins a fresh resolution deadline — its alert stage starts clean.
         $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])->assertOk();
