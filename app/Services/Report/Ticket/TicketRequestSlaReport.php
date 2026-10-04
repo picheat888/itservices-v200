@@ -68,7 +68,11 @@ class TicketRequestSlaReport extends TabularReport
         [$from, $to] = $this->dayRange($filters);
 
         return $this->scopedTickets($viewer)
-            ->with(['serviceRequest:id,ticket_id,reference,type', 'assignee:id,name'])
+            ->with([
+                'serviceRequest:id,ticket_id,reference,type', 'assignee:id,name',
+                // The raw-data sheet's who: the person behind the request and their department.
+                'requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,name,name_th',
+            ])
             ->where('tickets.source', TicketSource::AutoRequest->value)
             ->whereBetween('tickets.created_at', [$from, $to])
             ->when($filters['request_type'] ?? null, fn (Builder $q, string $type) => $q->whereHas('serviceRequest', fn (Builder $r) => $r->where('type', $type)))
@@ -95,6 +99,46 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::dateTime('closed_at', 'ปิดเคสเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Completed ? $t->resolved_at : null),
             ReportColumn::enum('close_sla', 'ปิดทัน SLA', fn (Ticket $t) => self::closeState($t), self::SLA_KEYS, self::SLA_TH),
             ReportColumn::number('fix_hours', 'เวลาแก้ไข (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed ? TicketMetrics::resolveHours($t) : null),
+            // The Excel sheet only ("ข้อมูลดิบ") — every field for working the cases over in a spreadsheet.
+            ReportColumn::text('subject', 'เรื่อง', fn (Ticket $t) => $t->subject)->sheetOnly(),
+            ReportColumn::text('description', 'รายละเอียด', fn (Ticket $t) => $t->description === null ? null : trim($t->description))->sheetOnly(),
+            ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, [], self::categoryTh())->sheetOnly(),
+            ReportColumn::enum('work_class', 'ลักษณะงาน', fn (Ticket $t) => $t->work_class, [], self::workClassTh())->sheetOnly(),
+            ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, [], self::priorityTh())->sheetOnly(),
+            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null)->sheetOnly(),
+            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null)->sheetOnly(),
+            // "2026-09" — a column to pivot the cases by month.
+            ReportColumn::text('opened_month', 'เดือนที่แจ้ง', fn (Ticket $t) => $t->created_at?->format('Y-m'))->sheetOnly(),
+            ReportColumn::dateTime('canceled_at', 'ยกเลิกเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Canceled ? $t->resolved_at : null)->sheetOnly(),
+            ReportColumn::dateTime('response_due_at', 'วันที่ครบกำหนด SLA รับเคส', fn (Ticket $t) => $t->sla_response_due_at)->sheetOnly(),
+            ReportColumn::number('take_hours', 'เวลารอรับเคส (ชม.)', fn (Ticket $t) => $t->responded_at === null || $t->created_at === null
+                ? null
+                : round($t->created_at->diffInMinutes($t->responded_at, true) / 60, 2))->sheetOnly(),
+            ReportColumn::dateTime('resolve_due_at', 'วันที่ครบกำหนด SLA ปิดเคส', fn (Ticket $t) => $t->sla_resolve_due_at)->sheetOnly(),
+        ];
+    }
+
+    /** The rows sheet carries every field, so it is the raw data. */
+    public function sheetTitle(): string
+    {
+        return 'ข้อมูลดิบ';
+    }
+
+    /**
+     * The raw-data sheet grouped for analysis: the case and its request, who, where it stands and
+     * when, then each SLA — taking (its deadline, the verdict, the hours it waited) and closing (its
+     * deadline, the verdict, the hours to fix). Rows keep the page's order, newest first.
+     *
+     * @return list<string>
+     */
+    protected function sheetOrder(): array
+    {
+        return [
+            'ticket_no', 'request_no', 'request_type', 'subject', 'description', 'category', 'work_class', 'priority',
+            'requester', 'department', 'assignee',
+            'ticket_status', 'opened_at', 'opened_month', 'taken_at', 'closed_at', 'canceled_at',
+            'response_due_at', 'take_sla', 'take_hours',
+            'resolve_due_at', 'close_sla', 'fix_hours',
         ];
     }
 

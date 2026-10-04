@@ -295,6 +295,50 @@ class TicketRequestSlaReportTest extends TestCase
         });
     }
 
+    /** The rows tab is the raw data: every field, grouped — the case, who, when, then each SLA. */
+    public function test_excel_rows_tab_is_raw_data_grouped_for_analysis(): void
+    {
+        Excel::fake();
+        $this->seedTickets();
+        $user = $this->reader();
+
+        // The page and its rows keep to their own columns.
+        $screen = array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla')->assertOk()->json('data.columns'), 'key');
+        $this->assertNotContains('description', $screen);
+        $this->assertNotContains('take_hours', $screen);
+
+        $this->actingAs($user)->exportReport('/api/reports/r/tickets.request_sla/export?format=xlsx&'.self::RANGE)->assertAccepted();
+
+        $this->assertExportStored('Report_tickets-request_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
+            $sheet = last($export->sheets());
+            $this->assertSame('ข้อมูลดิบ', $sheet->title());
+            $headings = $sheet->headings();
+            $this->assertSame([
+                'เลขที่ Ticket', 'เลขที่คำขอ', 'ประเภทคำขอ', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ลักษณะงาน', 'ความสำคัญ',
+                'ผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
+                'สถานะ', 'วันที่แจ้ง', 'เดือนที่แจ้ง', 'รับเคสเมื่อ', 'ปิดเคสเมื่อ', 'ยกเลิกเมื่อ',
+                'วันที่ครบกำหนด SLA รับเคส', 'รับเคสทัน SLA', 'เวลารอรับเคส (ชม.)',
+                'วันที่ครบกำหนด SLA ปิดเคส', 'ปิดทัน SLA', 'เวลาแก้ไข (ชม.)',
+            ], $headings);
+
+            $rows = $export->rows->map(fn (Ticket $t) => array_combine($headings, $sheet->map($t)))->keyBy('เลขที่ Ticket');
+            // t2: opened the 5th 10:00, taken the 6th 09:00 (23 h), closed the 10th after a resolve due of the 8th.
+            $t2 = $rows[$this->set['t2']->ticket_no];
+            $this->assertSame('2026-09', $t2['เดือนที่แจ้ง']);
+            $this->assertEquals(23.0, $t2['เวลารอรับเคส (ชม.)']);
+            $this->assertSame('2026-09-08 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
+            $this->assertSame('ไม่ทัน', $t2['ปิดทัน SLA']);
+            $this->assertSame('งานปกติ', $t2['ลักษณะงาน']);
+            $this->assertSame(trim($this->set['t2']->description), $t2['รายละเอียด']);
+            // t4 was canceled the 4th: it has a cancel time and no close time.
+            $t4 = $rows[$this->set['t4']->ticket_no];
+            $this->assertSame('2026-09-04 10:00', $t4['ยกเลิกเมื่อ']);
+            $this->assertNull($t4['ปิดเคสเมื่อ']);
+
+            return true;
+        });
+    }
+
     public function test_pdf_export_streams_a_pdf(): void
     {
         $this->seedTickets();

@@ -105,6 +105,12 @@ abstract class TabularReport
         return array_column($ranked, 1);
     }
 
+    /** The Excel rows sheet's tab name. A report whose sheet carries every field for analysis calls it "ข้อมูลดิบ". */
+    public function sheetTitle(): string
+    {
+        return 'รายการ';
+    }
+
     /**
      * The Excel sheet's column order, as column keys — grouped for analysis rather than for the
      * screen. None by default: the sheet keeps the report's own order.
