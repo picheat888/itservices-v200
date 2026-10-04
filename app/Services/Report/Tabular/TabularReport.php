@@ -153,6 +153,19 @@ abstract class TabularReport
         return [];
     }
 
+    /**
+     * Extra tables the file export carries between the summary and the rows — each one its own
+     * sheet in Excel and its own block in the PDF. For a report whose page draws a breakdown the
+     * rows do not (one line per request type above a list of tickets). None by default.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
+     */
+    public function exportSections(User $viewer, array $filters): array
+    {
+        return [];
+    }
+
     /** Whether charts() draws anything — lets the page hold their place while rows load. */
     public function hasCharts(): bool
     {

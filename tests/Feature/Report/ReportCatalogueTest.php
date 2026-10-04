@@ -103,14 +103,14 @@ class ReportCatalogueTest extends TestCase
             $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
         $this->assertSame(
-            ['tickets.overview', 'tickets.backlog'],
+            ['tickets.overview', 'tickets.backlog', 'tickets.request_sla'],
             $keysFor(['tickets.view_all', 'tickets.resolve']),
         );
         $this->assertSame(
             ['assets.register', 'assets.warranty_expiring', 'assets.by_status_department', 'assets.transfer_history'],
             $keysFor(['assets.view']),
         );
-        $this->assertCount(17, $keysFor([
+        $this->assertCount(18, $keysFor([
             'tickets.view_all', 'tickets.resolve', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events',
             'requests.view_all', 'employees.view', 'access.software_view',
         ]));

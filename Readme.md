@@ -4290,3 +4290,27 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **Ticket ค้างและเกิน SLA** (`TicketBacklogReport`): `ReportFilter::select('source')` + คอลัมน์ enum `source` (ต่อจากผู้รับผิดชอบ, ซ่อนได้ด้วยปุ่มคอลัมน์) — ระบบรายงานแบบตารางให้ช่องในแถบ, `?source=`, Excel/PDF, ตั้งเวลาส่ง, chip ในหน้าต่างส่งออก มาเอง · กระดาน/การ์ดกรองตาม
 - **ภาพรวม Ticket & SLA**: `TicketOverviewReportRequest` รับ `source` (enum) → `TicketOverviewReportService::scoped()` กรองทุกส่วนของหน้า (KPI, กราฟ, SLA, แผนก, เจ้าหน้าที่, รายการ) และไฟล์ส่งออก/ตั้งเวลาส่ง · `ReportSnapshotService` ส่ง `source => null` · หน้าเว็บ: `TicketReportFilters.source`, `use-ticket-report-filters` (URL `?source=`, ค่าที่จำไว้), ช่อง "ที่มา" ใน `ticket-report-filter-bar` (นับเป็นตัวกรองที่ใช้), chip ใน `ticketFilterChips` · ตาราง "รายการ Ticket" มีคอลัมน์ "ที่มา" (API `source`) · Excel แผ่นรายการเพิ่มคอลัมน์ "ที่มา" (`TicketLabels::source()`); PDF ยังไม่เพิ่ม (หน้ากระดาษแคบ)
 - **Tests**: overview — KPI/รายการกรองตาม manual / auto_request, ค่าผิด 422 · backlog — กรอง, ค่าผิด 422, คอลัมน์+ป้าย, กระดานกรองตาม · **ทั้งชุด 1560 passed** · ตรวจใน Chrome ทั้งสองหน้า (`?source=auto_request`: Ticket & SLA 6 ใบ, Ticket ค้าง 3 ใบ)
+
+## รายงานใหม่ "SLA ตามประเภทคำขอ" (2026-10-04)
+
+`/reports/tickets-request-sla` · key `tickets.request_sla` · กลุ่ม Ticket · สิทธิ์เหมือนรายงาน Ticket อื่น (`tickets.view_all` + `tickets.resolve`, นับเฉพาะหมวดตาม `tickets.level_*`) · ทำตาม mockup ที่ตกลงกัน (artifact "Report Design" หน้า SLA ตามประเภทคำขอ)
+
+วัด Ticket ที่ระบบเปิดเองจากคำขอที่อนุมัติครบ (`tickets.source = auto_request`, ประเภทจาก `service_requests.ticket_id`) แยกตามประเภทคำขอ
+- **ปิดทัน SLA** = กฎเดียวกับ `TicketMetrics::slaState` นับเฉพาะเคสที่เสร็จสิ้น (ไม่นับยกเลิก/ยังเปิด) · **รับเคสทัน SLA** = เคสที่รับแล้ว เทียบ `responded_at` กับ `sla_response_due_at` · ยังไม่รับและเลยกำหนด = "เกิน SLA"
+- ตัดสินทุกแถวเทียบเป้า `ticket_sla_goal` (90%) แม้มี 1 เคส — ตัวเลข N/N บอกว่ามาจากกี่เคส · เวลาแก้ไขโดยเฉลี่ยนับชั่วโมงจริง (`TicketMetrics::resolveHours`) ตรงกับรายงานภาพรวม
+
+**Backend**
+- `App\Services\Report\Ticket\TicketRequestSlaReport` (รายงานแบบตาราง): ตัวกรอง ช่วงวันที่แจ้ง (ต้นปี–วันนี้) · ประเภทคำขอ · ผู้รับผิดชอบ — แถว = Ticket จากคำขอทีละเคส (เลขที่, คำขอ, ประเภท, สถานะ, ผู้รับผิดชอบ, วันที่แจ้ง, รับเคสเมื่อ + ทัน/ไม่ทัน/เกิน SLA, ปิดเคสเมื่อ + ทัน/ไม่ทัน/เกิน SLA, เวลาแก้ไข) · การ์ดสรุป 5 ใบ: Ticket จากคำขอ (เสร็จสิ้น/ยกเลิก/ยังเปิด), ปิดทัน SLA %, รับเคสทัน SLA %, เวลาแก้ไขโดยเฉลี่ย (+ รับเคสเฉลี่ย), เกิน SLA ตอนนี้
+- `breakdown()` + `GET /api/reports/tickets/request-sla/breakdown` (`TicketRequestSlaBreakdownController`, gate ผ่าน `TabularReportRequest` แบบเดียวกับกระดาน Ticket ค้าง): ตารางตามประเภทคำขอ (ไม่กรองตามประเภท เพื่อให้เห็นประเภทที่เลือกเทียบกับที่เหลือ) · ประเภทที่ไม่มี Ticket · Ticket ที่ยังเปิดและเกิน SLA · เกณฑ์ SLA (เป้า, รับเคส `ticket_sla_response`, เป้าปิดเคสของแต่ละประเภทจาก `sla_targets`)
+- ลงทะเบียนใน `ReportCatalogue::TICKETS_REQUEST_SLA` (`range => true`) → ศูนย์รายงาน, ส่งออก, ตั้งเวลาส่งอีเมล ใช้ได้ทันที
+
+**เพิ่มในระบบรายงานกลาง (ใช้ร่วมได้)**
+- `ReportSummary`: รูปแบบ `percent` / `hours` · `withGoal()` (แถบมีขีดเป้า, การ์ดเตือนเมื่อต่ำกว่าเป้า) · note รับตัวเลขตามชื่อ (`values` → `{met}`, `{n}`)
+- `TabularReport::exportSections()`: ตารางเสริมในไฟล์ — Excel เป็นแผ่นของตัวเอง (`TabularSectionSheet`) ระหว่าง "สรุป" กับรายการ · PDF พิมพ์ก่อนรายการ · รายงานนี้ใส่แผ่น "ตามประเภทคำขอ" (ทั้งหมด/เสร็จสิ้น/ยกเลิก/ยังเปิด, ทัน/รับแล้ว + %, ทัน/เสร็จสิ้น + %, เวลาเฉลี่ย, แถวรวม)
+- `SummaryStrip` (หน้าเว็บ): แสดง % / ชม. / แถบเป้า · การ์ด 5 ใบอยู่แถวเดียวบนจอกว้างมาก (`xl:grid-cols-5`, จอ lg = 3 คอลัมน์) — มีผลกับ "การใช้ License ซอฟต์แวร์" ที่มี 5 การ์ดด้วย
+
+**Frontend**
+- `pages/tickets-request-sla.tsx` (ใช้ `TabularReportView` + pill สถานะ / ทัน-ไม่ทัน) · `components/request-sla-cards.tsx`: การ์ด "ผลตามประเภทคำขอ" (หัวตาราง 2 ชั้น: จำนวน Ticket ทั้งหมด/เสร็จสิ้น/ยกเลิก/ยังเปิด · แท่ง 0–100% + N/N + % สีเทียบเป้า · เวลาเฉลี่ย · เส้นแบ่งกลุ่มคอลัมน์ · กดแถว = กรองทั้งหน้า `?request_type=`) · "ยังเปิดอยู่" (3 เคสที่เกินนานสุด + ลิงก์ Ticket ค้าง `?source=auto_request&sla=over_sla`) · "เกณฑ์ SLA ที่ใช้วัด" (+ ลิงก์ตั้งค่า SLA)
+- `Heading` / `Swatch` ใน `backlog-board.tsx` export ให้ใช้ร่วม · `useRequestSlaBreakdown` · route + ข้อความ TH/EN (`rep_rs_*`, `rep_k_rs_*`, `rep_c_*`, `rep_tickets_request_sla_*`)
+
+**Tests**: `TicketRequestSlaReportTest` ใหม่ 7 ตัว (เฉพาะ auto_request + หมวดตามสิทธิ์ + ช่วงวันที่, ทัน/ไม่ทัน/เกิน SLA ต่อเคส, การ์ดสรุป + เป้า, breakdown + เกณฑ์จาก `sla_targets`, ตัวกรองประเภท/ผู้รับผิดชอบ, สิทธิ์ 403, Excel 3 แผ่น, PDF) · `ReportCatalogueTest` เพิ่มรายงานในรายการ (18) · **ทั้งชุด 1567 passed** · tsc + eslint + prettier + pint ผ่าน · ตรวจใน Chrome กับข้อมูลจริง (17 Ticket: ปิดทัน 100%, รับเคสทัน 47%, เกิน SLA 3 — ตรงกับ mockup), กดกรองประเภท, โหมดมืด, ลิงก์ไป Ticket ค้าง, การ์ดในศูนย์รายงาน

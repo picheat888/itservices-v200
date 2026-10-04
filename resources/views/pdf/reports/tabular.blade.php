@@ -29,9 +29,35 @@
 
 <table class="kpi"><tr>
     @foreach ($summary as $item)
-        <td>{{ $item->heading }}<b>{{ $item->value === null ? '—' : ($item->format === 'money' ? number_format($item->value, 2) : $item->value) }}</b></td>
+        <td>{{ $item->heading }}<b>{{ $item->value === null ? '—' : match ($item->format) {
+            'money' => number_format($item->value, 2),
+            'percent' => $item->value.'%',
+            'hours' => number_format($item->value, 1).' ชม.',
+            default => $item->value,
+        } }}</b></td>
     @endforeach
 </tr></table>
+
+{{-- Extra tables a report adds above its rows (TabularReport::exportSections). --}}
+@foreach ($sections ?? [] as $section)
+    <h2>{{ $section['title'] }}</h2>
+    <table class="data">
+        <thead><tr>
+            @foreach ($section['headings'] as $heading)
+                <th>{{ $heading }}</th>
+            @endforeach
+        </tr></thead>
+        <tbody>
+        @foreach ($section['rows'] as $cells)
+            <tr>
+                @foreach ($cells as $cell)
+                    <td>{{ $cell ?? '—' }}</td>
+                @endforeach
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+@endforeach
 
 <h2>รายการ</h2>
 @if ($truncated)
