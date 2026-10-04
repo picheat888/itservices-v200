@@ -88,6 +88,7 @@ export const asset: Dict = {
     asset_type_others: 'Other {n} types',
     asset_types_show_all: 'Show all ({n})',
     asset_types_show_less: 'Show fewer',
+    asset_types_total: 'Total',
     asset_activity_title: 'Transfers / returns',
     asset_handover: 'Transferred',
     asset_returned: 'Returned',

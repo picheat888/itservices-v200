@@ -20,8 +20,8 @@ type Buckets = Extract<TabularChart, { type: 'buckets' }>;
 const TOP_BUCKETS = 5;
 
 /**
- * One row: an icon (optional), the name and the total, then the split bar on its own line — full
- * width, each part's count over its piece.
+ * One line: an icon (optional) and the name, the split bar — full width, each part's count over its
+ * piece — then the total, name and total level with the bar itself.
  */
 export function SplitLine({
     name,
@@ -42,15 +42,13 @@ export function SplitLine({
     const title = `${name}: ${series.map((s) => `${values[s.key] ?? 0} ${t(s.label_key)}`).join(', ')}`;
 
     return (
-        <div className="space-y-1" role="img" aria-label={title} title={title}>
-            <div className="flex items-baseline gap-3">
-                <div className={cn('flex min-w-0 flex-1 items-center gap-2 text-sm', muted && 'text-muted-foreground')}>
-                    {Icon && <Icon className="text-muted-foreground h-4 w-4 shrink-0" />}
-                    <span className="truncate">{name}</span>
-                </div>
-                <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{total.toLocaleString()}</span>
+        <div className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3" role="img" aria-label={title} title={title}>
+            <div className={cn('flex min-w-0 items-center gap-2 text-sm leading-none', muted && 'text-muted-foreground')}>
+                {Icon && <Icon className="text-muted-foreground h-4 w-4 shrink-0" />}
+                <span className="truncate">{name}</span>
             </div>
             <StackBar values={values} series={series} scale={total} />
+            <span className="text-right font-mono text-sm leading-none font-semibold">{total.toLocaleString()}</span>
         </div>
     );
 }
@@ -91,7 +89,17 @@ export function BucketsSection({
 
     return (
         <>
-            <ChartHeading title={t(chart.title_key)} className={className} sub={<SplitLegend series={chart.series} />} />
+            <ChartHeading
+                title={t(chart.title_key)}
+                className={className}
+                sub={
+                    // The colours, then what the number closing each line is.
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <SplitLegend series={chart.series} />
+                        <span className="border-border border-l pl-3">{t('rep_k_total')}</span>
+                    </span>
+                }
+            />
             {chart.rows.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
             ) : (
