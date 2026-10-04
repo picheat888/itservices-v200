@@ -99,9 +99,12 @@ class TicketOverviewExportTest extends TestCase
             $rows = (new TicketOverviewSummarySheet($export->summary))->array();
             $department = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'ปฏิบัติการ');
             $staff = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'Tech One');
+            // The 90th percentile reads as a ceiling ("ไม่เกิน"), never as an average of the 90%.
+            $p90 = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === '90% ปิดได้ไม่เกิน (ชม.)');
 
             // แผนก, Ticket, ฮาร์ดแวร์ … อื่น ๆ (6 categories), ยังไม่ปิด, ทัน SLA %
-            return $department === ['ปฏิบัติการ', 2, 2, 0, 0, 0, 0, 0, 1, 100.0]
+            return $p90 === ['90% ปิดได้ไม่เกิน (ชม.)', 2.0]
+                && $department === ['ปฏิบัติการ', 2, 2, 0, 0, 0, 0, 0, 1, 100.0]
                 // ผู้รับผิดชอบ, ทั้งหมด, ปิดสำเร็จ, ยกเลิก, เวลาแก้ไขโดยเฉลี่ย, ทัน SLA % — the period only
                 && $staff === ['Tech One', 1, 1, 0, 2.0, 100.0];
         });
