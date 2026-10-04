@@ -73,7 +73,7 @@ class AssetOverviewReport extends TabularReport
 
     private const NO_DEPARTMENT = ['name' => 'No department', 'name_th' => 'ไม่ระบุแผนก'];
 
-    private const NO_CATEGORY = ['name' => 'No category', 'name_th' => 'ไม่ระบุหมวด'];
+    private const NO_CATEGORY = ['name' => 'No category', 'name_th' => 'ไม่ระบุหมวดหมู่'];
 
     private const NO_WAREHOUSE = ['name' => 'No warehouse', 'name_th' => 'ไม่ระบุคลัง'];
 
@@ -94,7 +94,8 @@ class AssetOverviewReport extends TabularReport
         return [
             ReportFilter::select('status', Options::fromLabels(self::STATUS_KEYS)),
             ReportFilter::select('source', Options::fromLabels(self::SOURCE_KEYS)),
-            ReportFilter::select('category_id', Options::categories()),
+            // "หมวดหมู่" here, as asset categories are called in Master Data; the shared label says "หมวด".
+            ReportFilter::select('category_id', Options::categories())->labelKey('rep_fl_asset_category'),
             ReportFilter::select('department_id', Options::departments()),
             ReportFilter::search(),
         ];
@@ -141,7 +142,8 @@ class AssetOverviewReport extends TabularReport
         return [
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
             ReportColumn::text('tag', 'Tag', fn (Asset $a) => $a->tag),
-            ReportColumn::localized('category', 'หมวด', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null),
+            ReportColumn::localized('category', 'หมวดหมู่', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null)
+                ->labelKey('rep_c_asset_category'),
             ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name),
             ReportColumn::text('model', 'รุ่น', fn (Asset $a) => $a->model?->name),
             ReportColumn::text('serial', 'Serial', fn (Asset $a) => $a->serial),
@@ -491,7 +493,7 @@ class AssetOverviewReport extends TabularReport
 
         return [
             [
-                'title' => 'แยกตามแผนก',
+                'title' => 'ทรัพย์สินแยกตามแผนก',
                 'headings' => ['แผนก', 'ทั้งหมด', ...$sourceHeadings, ...array_map(fn (string $s) => self::STATUS_TH[$s], self::HELD_STATUSES)],
                 'rows' => $this->departmentLines($filters)->map(fn (Asset $a) => [
                     $a->getAttribute('department_id') === null ? self::NO_DEPARTMENT['name_th'] : ($a->getAttribute('department_name_th') ?: $a->getAttribute('department_name')),
@@ -514,7 +516,7 @@ class AssetOverviewReport extends TabularReport
             ],
             [
                 'title' => 'ตัดจำหน่าย',
-                'headings' => ['รหัสทรัพย์สิน', 'หมวด', 'รุ่น', 'คลัง', 'เหตุผล'],
+                'headings' => ['รหัสทรัพย์สิน', 'หมวดหมู่', 'รุ่น', 'คลัง', 'เหตุผล'],
                 'rows' => $this->writtenOff($filters)->map(fn (Asset $a) => [
                     $a->asset_code,
                     $a->category ? ($a->category->name_th ?: $a->category->name) : null,

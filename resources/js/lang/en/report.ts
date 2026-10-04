@@ -135,7 +135,7 @@ export const report: Dict = {
     rep_f_clear: 'Clear all',
 
     // components/ticket-report-table.tsx — ticket rows
-    rep_chart_by_department: 'By department',
+    rep_chart_by_department: 'Assets by department',
     rep_chart_status: 'Asset status',
     rep_chart_in_use: 'in use\n+ common',
     rep_chart_by_category: 'By category',
@@ -310,6 +310,7 @@ export const report: Dict = {
     rep_c_asset_code: 'Asset code',
     rep_c_tag: 'Tag',
     rep_c_category: 'Category',
+    rep_c_asset_category: 'Category',
     rep_c_brand: 'Brand',
     rep_c_model: 'Model',
     rep_c_serial: 'Serial',
@@ -328,6 +329,7 @@ export const report: Dict = {
     rep_fl_status: 'Status',
     rep_fl_source: 'Source',
     rep_fl_category_id: 'Category',
+    rep_fl_asset_category: 'Category',
     rep_fl_department_id: 'Department',
     rep_fl_search: 'Search',
     rep_k_total: 'Total',

@@ -4408,3 +4408,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `chart-parts.tsx` รวม fold / FoldToggle / ChartHeading / useChartLabel · ลบ chart type `bars`
 - Tests: `AssetActivityReportsTest` (overview 6 tests ใหม่), register tests → overview, key ในชุด Report tests — ทั้งระบบ 1573 passed · ตรวจใน Chrome แล้ว
 - **แยกตามหมวด: แสดงทั้งหมด** — แสดง 5 หมวดแรก ที่เหลือรวมเป็น "อื่น ๆ (n)" พร้อมปุ่ม "แสดงทั้งหมด (n)" · ปุ่มแยกจากของการ์ดแผนก (กดแล้วการ์ดแผนกไม่กางตาม) · ตรวจใน Chrome แล้ว
+- **คำในภาพรวมของทรัพย์สิน** — "แยกตามแผนก" → "ทรัพย์สินแยกตามแผนก", "แยกตามหมวด" → "แยกตามหมวดหมู่", ตัวกรอง/คอลัมน์/ไฟล์ส่งออก "หมวด" → "หมวดหมู่" (เฉพาะรายงานนี้; รายงาน Ticket/คลังอะไหล่ยังเป็น "หมวด") · `ReportFilter::labelKey()` ใหม่ (ตั้งชื่อตัวกรองเฉพาะรายงาน แบบ `ReportColumn::labelKey()`) · Report tests 148 passed · ตรวจใน Chrome แล้ว
