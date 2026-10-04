@@ -91,6 +91,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/exports/{export}/download', [ReportExportController::class, 'download'])->whereNumber('export')->name('api.reports.exports.download');
     Route::post('reports/exports/{export}/retry', [ReportExportController::class, 'retry'])->whereNumber('export')->name('api.reports.exports.retry');
     Route::delete('reports/exports/{export}', [ReportExportController::class, 'destroy'])->whereNumber('export')->name('api.reports.exports.destroy');
+    Route::delete('reports/exports', [ReportExportController::class, 'destroyAll'])->name('api.reports.exports.destroy-all');
     // Scheduled report emails — set from a report page (the two POSTs below), managed on the hub.
     Route::get('reports/schedules', [ReportScheduleController::class, 'index'])->name('api.reports.schedules.index');
     Route::put('reports/schedules/{schedule}', [ReportScheduleController::class, 'update'])->whereNumber('schedule')->name('api.reports.schedules.update');

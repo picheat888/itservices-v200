@@ -51,6 +51,14 @@ class ReportExportController extends Controller
         return response()->json(['message' => 'success']);
     }
 
+    /** "ลบทั้งหมด": every finished file of the reader's own; ones still being built stay. */
+    public function destroyAll(Request $request): JsonResponse
+    {
+        $deleted = $this->exports->deleteAllFor($request->user());
+
+        return response()->json(['data' => ['deleted' => $deleted], 'message' => 'success']);
+    }
+
     private function owned(Request $request, int $export): ReportExport
     {
         return ReportExport::query()->where('user_id', $request->user()->id)->current()->findOrFail($export);

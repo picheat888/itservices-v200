@@ -176,6 +176,16 @@ export function useDeleteExport() {
     });
 }
 
+/** "ลบทั้งหมด" on the panel. */
+export function useDeleteAllExports() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => reportApi.deleteAllExports(),
+        onSettled: () => queryClient.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY }),
+    });
+}
+
 export const useReportSchedules = () => useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules });
 
 /** Set a schedule from a report page — a tabular one (key given) or the ticket overview. */

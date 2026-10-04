@@ -222,6 +222,11 @@ export const report: Dict = {
     rep_my_exports_retry: 'Retry',
     rep_my_exports_delete: 'Remove file',
     rep_my_exports_deleted: 'File removed',
+    rep_my_exports_delete_all: 'Delete all',
+    rep_my_exports_delete_all_title: 'Delete every export?',
+    rep_my_exports_delete_all_desc: 'Finished and failed files are deleted; files still queued or being built stay.',
+    rep_my_exports_files: '{n} files',
+    rep_my_exports_deleted_all: 'Every export deleted',
     rep_my_exports_download_failed: 'Download failed. The file may have expired.',
 
     // components/schedule-report-dialog.tsx — schedule dialog
