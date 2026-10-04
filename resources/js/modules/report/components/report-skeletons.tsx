@@ -50,18 +50,21 @@ export function FilterBarSkeleton({ fields }: { fields: number }) {
 export function CardHeadingSkeleton({ note = true, className }: { note?: boolean; className?: string }) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3', className)}>
-            <Skeleton className="h-4 w-36" />
+            {/* In a text-sm line's height, so the placeholder heading stands as tall as the real one. */}
+            <div className="flex h-5 items-center">
+                <Skeleton className="h-4 w-36" />
+            </div>
             {note && <Skeleton className="h-3 w-20" />}
         </div>
     );
 }
 
-/** Label | track | value rows, as HorizontalBars draws them. */
+/** Label | track | value rows, as HorizontalBars draws them — the same row height and spacing. */
 export function BarRowsSkeleton({ rows }: { rows: number }) {
     return (
-        <div className="space-y-3 px-5 py-4">
+        <div className="space-y-2.5 px-5 py-4">
             {Array.from({ length: rows }, (_, i) => (
-                <div key={i} className="grid grid-cols-[92px_minmax(0,1fr)_52px] items-center gap-2.5">
+                <div key={i} className="grid h-5 grid-cols-[92px_minmax(0,1fr)_52px] items-center gap-2.5">
                     <Skeleton className="h-3.5 w-16" />
                     <Skeleton className="h-2.5 rounded-full" />
                     <Skeleton className="ml-auto h-3.5 w-9" />
@@ -116,14 +119,16 @@ export function DataTableSkeleton({ rows = 6, cols = 6 }: { rows?: number; cols?
     return <TableSkeleton rows={rows} cols={cols} />;
 }
 
-/** BacklogAging's four tiles, each with its age label under it. */
+/** BacklogAging's four tiles, each with its age label under it — the tiles' and labels' own heights. */
 export function AgingSkeleton() {
     return (
         <div className="grid grid-cols-2 gap-2 px-5 pt-3.5 pb-4 sm:grid-cols-4">
             {Array.from({ length: 4 }, (_, i) => (
                 <div key={i} className="flex min-w-0 flex-col items-center gap-1.5">
-                    <Skeleton className="h-11 w-full rounded-lg" />
-                    <Skeleton className="h-3 w-14" />
+                    <Skeleton className="h-[45px] w-full rounded-lg" />
+                    <div className="flex h-4 items-center">
+                        <Skeleton className="h-3 w-14" />
+                    </div>
                 </div>
             ))}
         </div>
