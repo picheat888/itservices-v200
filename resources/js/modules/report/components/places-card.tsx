@@ -2,12 +2,14 @@
  * The 'places' chart — one card in two sections, as the status donut and the categories share one:
  * - how many sit in each place (ready stock by warehouse): a column chart, one column each in the
  *   chart's tone with its count on top and the place under the axis, measured against the fullest
- *   place, so the fullest and emptiest read at a glance;
+ *   place, so the fullest and emptiest read at a glance. Opened past `TOP_PLACES` it turns into
+ *   horizontal bars, one line per place with its name and count — fifty columns would not read;
  * - under a ruled heading, each place's share by the chart's series (bought / rented) as a bar
  *   that always fills the width, its counts beside it.
  * Both sections list the same places — the first `TOP_PLACES`, then "แสดงทั้งหมด (n)" opens the
- * rest; a place not recorded comes last (a faded column, and under a dashed rule in the shares). The title is followed by its
- * subtitle in a lighter weight ("ทรัพย์สินในคลัง สถานะพร้อมใช้งาน"), the count on the right.
+ * rest; a place not recorded comes last (a faded column, else under a dashed rule). The title is
+ * followed by its subtitle in a lighter weight ("ทรัพย์สินในคลัง สถานะพร้อมใช้งาน"), the count on
+ * the right.
  * Drawn by tabular-charts.tsx beside the compact location card.
  */
 import { useT } from '@/lang';
@@ -69,6 +71,43 @@ function CountColumns({ rows, tone, max }: { rows: PlaceRow[]; tone: string; max
     );
 }
 
+/** One place's count as a horizontal bar against the fullest place — the opened list's line. */
+function CountLine({ row, tone, max }: { row: PlaceRow; tone: string; max: number }) {
+    const label = useChartLabel();
+
+    return (
+        <div className={ROW}>
+            <span className={cn('truncate', row.apart && 'text-muted-foreground')} title={label(row.label)}>
+                {label(row.label)}
+            </span>
+            <div className="bg-muted h-2.5 overflow-hidden rounded-full">
+                <span className={cn('block h-full rounded-full', tone, row.apart && 'opacity-50')} style={{ width: `${(row.total / max) * 100}%` }} />
+            </div>
+            <span className="w-8 text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
+        </div>
+    );
+}
+
+/** Every place's count as horizontal bars, a place not recorded last under a dashed rule. */
+function CountList({ rows, apart, tone, max }: { rows: PlaceRow[]; apart: PlaceRow[]; tone: string; max: number }) {
+    return (
+        <>
+            <div className="space-y-3 px-5 py-4">
+                {rows.map((row, i) => (
+                    <CountLine key={i} row={row} tone={tone} max={max} />
+                ))}
+            </div>
+            {apart.length > 0 && (
+                <div className="border-border space-y-3 border-t-2 border-dashed px-5 py-4">
+                    {apart.map((row, i) => (
+                        <CountLine key={i} row={row} tone={tone} max={max} />
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
 /** One place's share by series, as a bar that fills the width, with each part's count and dot. */
 function ShareLine({ row, series, muted }: { row: PlaceRow; series: ChartSeries[]; muted?: boolean }) {
     const t = useT();
@@ -124,7 +163,12 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
             ) : (
                 <>
-                    <CountColumns rows={[...folding.shown, ...apart]} tone={FILL[chart.tone]} max={max} />
+                    {/* Columns while a handful show; opened past TOP_PLACES, one line per place. */}
+                    {folding.folds && expanded ? (
+                        <CountList rows={folding.shown} apart={apart} tone={FILL[chart.tone]} max={max} />
+                    ) : (
+                        <CountColumns rows={[...folding.shown, ...apart]} tone={FILL[chart.tone]} max={max} />
+                    )}
                     <ChartHeading title={t(chart.split_title_key)} sub={<SplitLegend series={chart.series} />} className="border-t" />
                     <div className="space-y-3 px-5 py-4">
                         {folding.shown.map((row, i) => (
