@@ -1,7 +1,8 @@
 /**
- * The 'list' chart — a few records by name in a small card (the written-off assets on the asset
- * overview): the card counts them in its heading, and each line gives the asset's code (opening it
- * on /assets for a reader who may), its category and model, where it is kept and why it went.
+ * The 'list' chart — a few records by name in a card across the page (the written-off assets on the
+ * asset overview): the card counts them in its heading, and each asset is one line on a wide screen —
+ * its code (opening it on /assets for a reader who may), its category and model, where it is kept and
+ * why it went — stacked under one another on a narrower one.
  * Past `TOP_LIST` the rest fold away behind "แสดงทั้งหมด (n)". Drawn by tabular-charts.tsx.
  */
 import { useT } from '@/lang';
@@ -24,23 +25,19 @@ function ListLine({ row }: { row: List['rows'][number] }) {
     const what = [row.label ? label(row.label) : null, row.model].filter(Boolean).join(' · ');
 
     return (
-        <div className="space-y-0.5 px-5 py-2.5 text-sm">
-            <div className="flex items-baseline justify-between gap-3">
-                {canOpen(href) ? (
-                    <Link to={href} className="text-brand font-mono font-medium hover:underline">
-                        {row.code}
-                    </Link>
-                ) : (
-                    <span className="font-mono font-medium">{row.code}</span>
-                )}
-                {row.place && <span className="text-muted-foreground truncate text-xs">{row.place}</span>}
-            </div>
-            {what && <div className="truncate">{what}</div>}
-            {row.reason && (
-                <div className="text-muted-foreground truncate text-xs" title={row.reason}>
-                    {row.reason}
-                </div>
+        <div className="grid gap-x-4 gap-y-0.5 px-5 py-2.5 text-sm lg:grid-cols-[10rem_minmax(0,1fr)_10rem_minmax(0,1.4fr)] lg:items-baseline">
+            {canOpen(href) ? (
+                <Link to={href} className="text-brand font-mono font-medium hover:underline">
+                    {row.code}
+                </Link>
+            ) : (
+                <span className="font-mono font-medium">{row.code}</span>
             )}
+            <span className="truncate">{what || '—'}</span>
+            <span className="text-muted-foreground truncate">{row.place ?? '—'}</span>
+            <span className="text-muted-foreground truncate" title={row.reason ?? undefined}>
+                {row.reason ?? '—'}
+            </span>
         </div>
     );
 }
