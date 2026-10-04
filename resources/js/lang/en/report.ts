@@ -568,6 +568,7 @@ export const report: Dict = {
     rep_rs_open: 'Still open',
     rep_rs_note_close: '{met} of {n} completed cases',
     rep_rs_note_take: '{met} of {n} cases taken',
+    rep_rs_note_fix_base: 'over {n} completed cases',
     rep_rs_split_wait: 'Waiting to be taken',
     rep_rs_split_work: 'After taken',
     rep_rs_sla_met: 'In time',

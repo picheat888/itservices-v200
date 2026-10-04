@@ -5,7 +5,7 @@
  * the whole as a badge and a meter in the tile's tone, and its `split` as a stacked meter (when
  * there is no share) and as coloured dots in the footer ("● ซื้อ 62 · ● เช่า 18"). Two or three
  * tiles share the row between them on wide screens, so a short strip leaves no empty slot; five fit one row on extra-wide screens.
- * A tile with a `note` and no split carries that line at its foot instead — a duration in days
+ * A tile with a `note` carries that line at its foot (after the split's dots when it has both) — a duration in days
  * (hours under a day, as the time-left pills) and/or a short date and time, and any plain numbers
  * it names. A 'percent' tile with a `goal` draws the Ticket & SLA meter (goal marked, amber below
  * it) and flags itself while short of the goal; 'hours' reads "58.8 ชม.".
@@ -137,6 +137,8 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                             {partUnit}
                                         </span>
                                     ))}
+                                    {/* What the split is over ("จาก 7 เคสที่เสร็จสิ้น"), when the report says. */}
+                                    {item.note && <span>{noteText(t, lang, item.note)}</span>}
                                 </span>
                             ) : item.note ? (
                                 <span className="truncate">{noteText(t, lang, item.note)}</span>
