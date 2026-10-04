@@ -255,7 +255,7 @@ export default function TicketOverviewReportPage() {
                             label={t('rep_kpi_backlog')}
                             badge={
                                 data.backlog.over_sla > 0 ? (
-                                    <StatusBadge tone="amber">{t('rep_kpi_over_sla').replace('{n}', String(data.backlog.over_sla))}</StatusBadge>
+                                    <StatusBadge tone="red">{t('rep_kpi_over_sla').replace('{n}', String(data.backlog.over_sla))}</StatusBadge>
                                 ) : undefined
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
