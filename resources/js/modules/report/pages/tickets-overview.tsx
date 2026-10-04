@@ -173,9 +173,10 @@ export default function TicketOverviewReportPage() {
                 <div className="space-y-4" aria-hidden="true">
                     <KpiRowSkeleton count={5} className="lg:grid-cols-5" />
                     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                        <Card className="overflow-hidden">
+                        {/* As the loaded chart does, the placeholder grows into the row the card beside it sets. */}
+                        <Card className="flex flex-col overflow-hidden">
                             <CardHeadingSkeleton />
-                            <ChartSkeleton className="h-64" />
+                            <ChartSkeleton className="h-auto min-h-64 flex-1" />
                         </Card>
                         <Card className="flex flex-col overflow-hidden">
                             <CardHeadingSkeleton />
@@ -183,7 +184,8 @@ export default function TicketOverviewReportPage() {
                             <CardHeadingSkeleton className="border-t" />
                             <AgingSkeleton />
                             <CardHeadingSkeleton className="border-t" />
-                            <BarRowsSkeleton rows={5} />
+                            {/* One row per ticket category (App\Enums\Ticket\TicketCategory has six). */}
+                            <BarRowsSkeleton rows={6} />
                         </Card>
                     </div>
                     <Card className="overflow-hidden">
