@@ -5,15 +5,30 @@ namespace Tests\Feature;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
+use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
+use App\Models\Employee\Section;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
+use App\Models\Settings\Location;
+use App\Models\Settings\Unit;
 use App\Models\Settings\Vendor;
+use App\Models\Settings\WarrantyType;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Contract\ContractService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Who did it: created_by / updated_by on assets and contracts (App\Models\Concerns\RecordsActors),
+ * Who did it: created_by / updated_by on assets, contracts, employees, stock items and the master data
+ * (App\Models\Concerns\RecordsActors),
  * written_off_by and cancelled_by, and audit_logs entries tied to the record they are about
  * (subject_type / subject_id, a full-row snapshot on delete, one entry per asset on bulk actions).
  */
@@ -170,6 +185,83 @@ class ActorStampsTest extends TestCase
 
         // The lists stay lean: the names come with the single record only.
         $this->getJson('/api/contracts')->assertOk()->assertJsonMissingPath('data.0.created_by_name');
+    }
+
+    /** @return array<string, array{class-string<Model>, array<string, mixed>, array<string, mixed>}> */
+    public static function masterData(): array
+    {
+        return [
+            'brand' => [Brand::class, ['name' => 'Acme'], ['description' => 'Printers']],
+            'asset model' => [AssetModel::class, ['name' => 'X1'], ['description' => 'Gen 2']],
+            'category' => [Category::class, ['name' => 'Scanner'], ['name_th' => 'สแกนเนอร์']],
+            'vendor' => [Vendor::class, ['name' => 'Supplier Co'], ['phone' => '02-000-0000']],
+            'warehouse' => [Warehouse::class, ['name' => 'Annex'], ['description' => 'Back room']],
+            'location' => [Location::class, ['name' => 'HQ - 2nd floor'], ['name' => 'HQ - 3rd floor']],
+            'unit' => [Unit::class, ['name' => 'Box'], ['description' => '10 pcs']],
+            'warranty type' => [WarrantyType::class, ['name' => '3y onsite'], ['description' => 'Next day']],
+            'department' => [Department::class, ['code' => 'DEP-9001', 'tag' => 'LOG', 'name' => 'Logistics'], ['name_th' => 'โลจิสติกส์']],
+            'position' => [Position::class, ['code' => 'PST-9001', 'title' => 'Driver'], ['title' => 'Senior driver']],
+            'section' => [Section::class, ['code' => 'SEC-9001', 'name' => 'Fleet'], ['name_th' => 'ยานพาหนะ']],
+        ];
+    }
+
+    /**
+     * @param  class-string<Model>  $class
+     * @param  array<string, mixed>  $create
+     * @param  array<string, mixed>  $change
+     */
+    #[DataProvider('masterData')]
+    public function test_master_data_records_who_added_it_and_who_changed_it_last(string $class, array $create, array $change): void
+    {
+        $adder = $this->super();
+        $this->actingAs($adder);
+        if ($class === Section::class) {
+            $create['department_id'] = Department::create(['code' => 'DEP-9002', 'tag' => 'OPS', 'name' => 'Operations'])->id;
+        }
+        $record = $class::create($create);
+
+        $editor = $this->super();
+        $this->actingAs($editor);
+        $record->update($change);
+
+        $record->refresh();
+        $this->assertSame($adder->id, $record->created_by);
+        $this->assertSame($editor->id, $record->updated_by);
+    }
+
+    public function test_an_employee_records_who_added_it_and_the_detail_names_them(): void
+    {
+        $adder = User::factory()->create(['role' => 'super', 'name' => 'HR Adder']);
+        $this->actingAs($adder);
+        $employee = Employee::create(['code' => 'EMP-9001', 'first_name' => 'New', 'last_name' => 'Hire']);
+
+        $editor = User::factory()->create(['role' => 'super', 'name' => 'HR Editor']);
+        $this->actingAs($editor);
+        $employee->update(['phone' => '080-000-0000']);
+
+        $this->getJson("/api/employees/{$employee->id}")
+            ->assertOk()
+            ->assertJsonPath('data.created_by_name', 'HR Adder')
+            ->assertJsonPath('data.updated_by_name', 'HR Editor')
+            ->assertJsonPath('data.created_at', now()->toDateString());
+    }
+
+    public function test_a_stock_item_records_who_added_it_and_who_last_moved_it(): void
+    {
+        $adder = User::factory()->create(['role' => 'super', 'name' => 'Store Adder']);
+        $this->actingAs($adder);
+        $item = StockItem::create([
+            'sku' => 'SKU-9000001', 'name' => 'Toner', 'current_stock' => 0, 'min_stock' => 0, 'max_stock' => 10,
+        ]);
+
+        $receiver = User::factory()->create(['role' => 'super', 'name' => 'Store Receiver']);
+        $this->actingAs($receiver);
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 4])->assertCreated();
+
+        $this->getJson("/api/stock-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('data.created_by_name', 'Store Adder')
+            ->assertJsonPath('data.updated_by_name', 'Store Receiver');
     }
 
     public function test_an_audit_entry_is_tied_to_the_record_it_is_about(): void

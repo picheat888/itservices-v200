@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Stock;
 
 use App\Models\Stock\StockItem;
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -46,6 +47,11 @@ class StockItemResource extends JsonResource
             // Qty committed by approved-but-unfulfilled requests (present on the list
             // endpoint via withSum). available-to-request = current_stock − reserved.
             'reserved' => (int) ($this->reserved_qty ?? 0),
+            // When and by whom it was added / last changed. The names ride on the single-record endpoint only.
+            'created_at' => SystemTime::date($this->created_at),
+            'updated_at' => SystemTime::date($this->updated_at),
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
             // Per-unit serials are only attached when the relation is eager-loaded
             // (i.e. on the show endpoint), so list/summary payloads stay lean.
             'serials' => $this->whenLoaded('serials', fn () => $this->serials->map(fn ($s) => [

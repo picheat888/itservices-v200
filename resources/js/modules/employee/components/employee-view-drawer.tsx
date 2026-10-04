@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { TicketCategoryIcon, TicketStatusBadge } from '@/modules/ticket';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
 import { formatDateTime } from '@/shared/lib/datetime';
@@ -929,24 +930,33 @@ function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: 
         { icon: <ShieldCheck className="h-[17px] w-[17px]" />, val: emp.has_account ? '✓' : '—', lbl: t('emp_v_account') },
     ];
     return (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {cards.map((c, i) => (
-                <div
-                    key={i}
-                    className="border-border bg-muted/40 hover:border-border flex items-center gap-3 rounded-xl border p-3.5 transition hover:shadow-sm"
-                >
+        <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                {cards.map((c, i) => (
                     <div
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
-                        style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}
+                        key={i}
+                        className="border-border bg-muted/40 hover:border-border flex items-center gap-3 rounded-xl border p-3.5 transition hover:shadow-sm"
                     >
-                        {c.icon}
+                        <div
+                            className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
+                            style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}
+                        >
+                            {c.icon}
+                        </div>
+                        <div className="min-w-0">
+                            <div className="text-xl leading-none font-extrabold tracking-tight tabular-nums">{c.val}</div>
+                            <div className="text-muted-foreground mt-1 text-[10.5px] font-semibold tracking-wide uppercase">{c.lbl}</div>
+                        </div>
                     </div>
-                    <div className="min-w-0">
-                        <div className="text-xl leading-none font-extrabold tracking-tight tabular-nums">{c.val}</div>
-                        <div className="text-muted-foreground mt-1 text-[10.5px] font-semibold tracking-wide uppercase">{c.lbl}</div>
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
+            <RecordStamps
+                className="text-right"
+                createdAt={emp.created_at}
+                createdBy={emp.created_by_name}
+                updatedAt={emp.updated_at}
+                updatedBy={emp.updated_by_name}
+            />
         </div>
     );
 }

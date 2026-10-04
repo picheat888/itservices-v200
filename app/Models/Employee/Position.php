@@ -2,11 +2,14 @@
 
 namespace App\Models\Employee;
 
+use App\Models\Concerns\RecordsActors;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Position extends Model
 {
+    use RecordsActors;
+
     protected $fillable = ['code', 'title', 'allow_special_position'];
 
     protected $casts = [

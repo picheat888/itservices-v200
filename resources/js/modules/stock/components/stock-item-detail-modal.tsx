@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
@@ -221,8 +222,15 @@ export function StockItemDetailModal({
                                     {item.sku} · {[item.brand, item.model].filter(Boolean).join(' ')}
                                 </DialogDescription>
                             </div>
-                            <div className="ml-auto flex shrink-0 items-center gap-2 pr-8">
+                            <div className="ml-auto flex shrink-0 flex-col items-end gap-1 pr-8">
                                 <StatusBadge tone={ITEM_TONE[item.status]}>{t(`stock_st_${item.status}` as Parameters<typeof t>[0])}</StatusBadge>
+                                <RecordStamps
+                                    className="text-right"
+                                    createdAt={item.created_at}
+                                    createdBy={item.created_by_name}
+                                    updatedAt={item.updated_at}
+                                    updatedBy={item.updated_by_name}
+                                />
                             </div>
                         </div>
 

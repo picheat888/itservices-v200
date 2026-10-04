@@ -2,6 +2,7 @@
 
 namespace App\Models\Stock;
 
+use App\Models\Concerns\RecordsActors;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockItem extends Model
 {
+    use RecordsActors;
+
     protected $fillable = [
         'sku', 'name', 'serial', 'track_serial', 'category_id', 'brand_id', 'model_id', 'unit_id',
         'cost', 'current_stock', 'min_stock', 'max_stock',

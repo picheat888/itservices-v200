@@ -3,6 +3,7 @@
 namespace App\Models\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
+use App\Models\Concerns\RecordsActors;
 use App\Models\Permission\GroupRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Storage;
 
 class Employee extends Model
 {
+    use RecordsActors;
+
     protected $fillable = [
         'code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'photo_path',
         'department_id', 'section_id', 'position_id',

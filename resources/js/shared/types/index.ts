@@ -149,6 +149,11 @@ export interface Employee {
      * Present only on the single-employee endpoint, so it is undefined on list rows.
      */
     delete_blockers?: string[];
+    created_at?: string | null;
+    updated_at?: string | null;
+    /** Who added / last changed it — only on the single-employee endpoint. */
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
 }
 
 export type ContractType = 'software' | 'hardware' | 'service' | 'connectivity' | 'other';
@@ -660,6 +665,11 @@ export interface StockItem {
     total_value: number;
     /** Qty committed by approved-but-unfulfilled requests (list endpoint). */
     reserved?: number;
+    created_at?: string | null;
+    updated_at?: string | null;
+    /** Who added / last changed it — only on the single-item (show) response. */
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
     /** Per-unit serials — only present on the single-item (show) response. */
     serials?: StockItemSerial[];
     /** FIFO cost lots — only present on the single-item (show) response. */
