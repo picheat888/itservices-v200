@@ -98,7 +98,7 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::enum('take_sla', 'รับเคสทัน SLA', fn (Ticket $t) => self::takeState($t), self::SLA_KEYS, self::SLA_TH),
             ReportColumn::dateTime('closed_at', 'ปิดเคสเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Completed ? $t->resolved_at : null),
             ReportColumn::enum('close_sla', 'ปิดทัน SLA', fn (Ticket $t) => self::closeState($t), self::SLA_KEYS, self::SLA_TH),
-            ReportColumn::number('fix_hours', 'เวลาแก้ไข (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed ? TicketMetrics::resolveHours($t) : null),
+            ReportColumn::number('fix_hours', 'เวลาปิดเคส (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed ? TicketMetrics::resolveHours($t) : null),
             // The Excel sheet only ("ข้อมูลดิบ") — every field for working the cases over in a spreadsheet.
             ReportColumn::text('subject', 'เรื่อง', fn (Ticket $t) => $t->subject)->sheetOnly(),
             ReportColumn::text('description', 'รายละเอียด', fn (Ticket $t) => $t->description === null ? null : trim($t->description))->sheetOnly(),
@@ -111,10 +111,14 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::text('opened_month', 'เดือนที่แจ้ง', fn (Ticket $t) => $t->created_at?->format('Y-m'))->sheetOnly(),
             ReportColumn::dateTime('canceled_at', 'ยกเลิกเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Canceled ? $t->resolved_at : null)->sheetOnly(),
             ReportColumn::dateTime('response_due_at', 'วันที่ครบกำหนด SLA รับเคส', fn (Ticket $t) => $t->sla_response_due_at)->sheetOnly(),
-            ReportColumn::number('take_hours', 'เวลารอรับเคส (ชม.)', fn (Ticket $t) => $t->responded_at === null || $t->created_at === null
+            ReportColumn::number('take_hours', 'รอคนรับ (ชม.)', fn (Ticket $t) => $t->responded_at === null || $t->created_at === null
                 ? null
                 : round($t->created_at->diffInMinutes($t->responded_at, true) / 60, 2))->sheetOnly(),
             ReportColumn::dateTime('resolve_due_at', 'วันที่ครบกำหนด SLA ปิดเคส', fn (Ticket $t) => $t->sla_resolve_due_at)->sheetOnly(),
+            // From taking the case to closing it — with รอคนรับ, it makes up เวลาปิดเคส.
+            ReportColumn::number('work_hours', 'ลงมือแก้ (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->responded_at !== null && $t->resolved_at !== null
+                ? round($t->responded_at->diffInMinutes($t->resolved_at, true) / 60, 2)
+                : null)->sheetOnly(),
         ];
     }
 
@@ -138,7 +142,7 @@ class TicketRequestSlaReport extends TabularReport
             'requester', 'department', 'assignee',
             'ticket_status', 'opened_at', 'opened_month', 'taken_at', 'closed_at', 'canceled_at',
             'response_due_at', 'take_sla', 'take_hours',
-            'resolve_due_at', 'close_sla', 'fix_hours',
+            'resolve_due_at', 'close_sla', 'work_hours', 'fix_hours',
         ];
     }
 
@@ -160,8 +164,8 @@ class TicketRequestSlaReport extends TabularReport
                 ->withGoal($goal)
                 ->withNote(['label_key' => 'rep_rs_note_take', 'values' => ['met' => $tally['take_met'], 'n' => $tally['take_total']]]),
             // Where the average time went, all over the same completed cases: waiting to be taken (the
-            // per-type table's "เวลารับเคสโดยเฉลี่ย" too), then the work after it — the two add up to the tile.
-            ReportSummary::make('rs_fix_avg', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
+            // per-type table's "รอคนรับ (เฉลี่ย)" too), then the work after it — the two add up to the tile.
+            ReportSummary::make('rs_fix_avg', 'เวลาปิดเคสเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
                 ->withSplit($tally['take_avg_hours'] === null || $tally['fix_avg_hours'] === null ? [] : [
                     ['key' => 'wait', 'label_key' => 'rep_rs_split_wait', 'tone' => 'soft-amber', 'value' => round($tally['take_avg_hours'], 1)],
                     ['key' => 'work', 'label_key' => 'rep_rs_split_work', 'tone' => 'soft-blue', 'value' => round(max(0, $tally['fix_avg_hours'] - round($tally['take_avg_hours'], 1)), 1)],
@@ -242,7 +246,7 @@ class TicketRequestSlaReport extends TabularReport
             'headings' => [
                 'ประเภทคำขอ', 'ทั้งหมด', 'เสร็จสิ้น', 'ยกเลิก', 'ยังเปิด',
                 'รับเคสทัน SLA (ทัน/รับแล้ว)', 'รับเคสทัน SLA (%)', 'ปิดทัน SLA (ทัน/เสร็จสิ้น)', 'ปิดทัน SLA (%)',
-                'เวลารับเคสโดยเฉลี่ย (ชม.)', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)',
+                'รอคนรับเฉลี่ย (ชม.)', 'ปิดเคสเฉลี่ย (ชม.)',
             ],
             'rows' => $rows,
         ]];

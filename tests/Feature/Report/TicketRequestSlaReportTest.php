@@ -318,15 +318,18 @@ class TicketRequestSlaReportTest extends TestCase
                 'เลขที่ Ticket', 'เลขที่คำขอ', 'ประเภทคำขอ', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ลักษณะงาน', 'ความสำคัญ',
                 'ผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
                 'สถานะ', 'วันที่แจ้ง', 'เดือนที่แจ้ง', 'รับเคสเมื่อ', 'ปิดเคสเมื่อ', 'ยกเลิกเมื่อ',
-                'วันที่ครบกำหนด SLA รับเคส', 'รับเคสทัน SLA', 'เวลารอรับเคส (ชม.)',
-                'วันที่ครบกำหนด SLA ปิดเคส', 'ปิดทัน SLA', 'เวลาแก้ไข (ชม.)',
+                'วันที่ครบกำหนด SLA รับเคส', 'รับเคสทัน SLA', 'รอคนรับ (ชม.)',
+                'วันที่ครบกำหนด SLA ปิดเคส', 'ปิดทัน SLA', 'ลงมือแก้ (ชม.)', 'เวลาปิดเคส (ชม.)',
             ], $headings);
 
             $rows = $export->rows->map(fn (Ticket $t) => array_combine($headings, $sheet->map($t)))->keyBy('เลขที่ Ticket');
             // t2: opened the 5th 10:00, taken the 6th 09:00 (23 h), closed the 10th after a resolve due of the 8th.
             $t2 = $rows[$this->set['t2']->ticket_no];
             $this->assertSame('2026-09', $t2['เดือนที่แจ้ง']);
-            $this->assertEquals(23.0, $t2['เวลารอรับเคส (ชม.)']);
+            $this->assertEquals(23.0, $t2['รอคนรับ (ชม.)']);
+            // Taken the 6th 09:00, closed the 10th 10:00: 97 h of work; with the 23 h wait, the 120 h to close.
+            $this->assertEquals(97.0, $t2['ลงมือแก้ (ชม.)']);
+            $this->assertEquals(120.0, $t2['เวลาปิดเคส (ชม.)']);
             $this->assertSame('2026-09-08 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
             $this->assertSame('ไม่ทัน', $t2['ปิดทัน SLA']);
             $this->assertSame('งานปกติ', $t2['ลักษณะงาน']);
