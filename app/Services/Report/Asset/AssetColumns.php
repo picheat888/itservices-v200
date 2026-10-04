@@ -6,7 +6,7 @@ use App\Models\Asset\Asset;
 
 /**
  * Shared "who holds it" / "which department" column resolvers and asset status wording used
- * by the asset tabular reports (AssetRegisterReport, WarrantyExpiringReport) and the
+ * by the asset tabular reports (AssetOverviewReport, WarrantyExpiringReport) and the
  * employee "leaver assets" report, so none of them drift on how an asset reads.
  */
 trait AssetColumns

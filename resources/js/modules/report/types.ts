@@ -9,7 +9,7 @@
 /** 'custom' = a hand-built report (Ticket & SLA overview); 'tabular' = the generic table engine. */
 export type ReportKind = 'custom' | 'tabular';
 // Widened to `string` because the catalogue now also carries tabular report keys
-// (e.g. 'contracts.expiring', 'assets.register', 'assets.warranty_expiring').
+// (e.g. 'contracts.expiring', 'assets.overview', 'assets.warranty_expiring').
 export type ReportKey = string;
 export type ReportDomain = 'tickets' | 'assets' | 'contracts' | 'stock' | 'requests' | 'employees' | 'access';
 export type ExportFormat = 'xlsx' | 'pdf';
@@ -331,6 +331,9 @@ export type TabularChart =
           views: { key: string; label_key: string; series: ChartSeries[] }[];
           /** `apart`: not one of the grouped things (assets in no department) — listed last, on its own scale. */
           rows: { label: ChartLabel; values: Record<string, number>; total: number; apart?: boolean }[];
+          /** A small card in the row under the main one (warehouses, locations), with `total` in its heading. */
+          compact?: boolean;
+          total?: number;
       }
     | {
           type: 'donut';
@@ -340,7 +343,23 @@ export type TabularChart =
           total: number;
           segments: (ChartSeries & { value: number })[];
       }
-    | { type: 'bars'; key: string; title_key: string; rows: { label: ChartLabel; value: number }[] };
+    | {
+          // Rows as the /assets overview card draws its categories: icon, a count per group, a split bar.
+          type: 'buckets';
+          key: string;
+          title_key: string;
+          series: ChartSeries[];
+          /** `icon`: a Lucide icon name from Master Data, or null. */
+          rows: { label: ChartLabel; icon: string | null; values: Record<string, number>; total: number }[];
+      }
+    | {
+          // A few records by name (the written-off assets), each opening on /assets.
+          type: 'list';
+          key: string;
+          title_key: string;
+          total: number;
+          rows: { id: number; code: string; label: ChartLabel | null; model: string | null; place: string | null; reason: string | null }[];
+      };
 
 /** One live ticket on the backlog page's due board (TicketBacklogReport::board). */
 export interface BacklogBoardTicket {

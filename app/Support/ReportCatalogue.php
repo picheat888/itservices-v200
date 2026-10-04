@@ -4,8 +4,7 @@ namespace App\Support;
 
 use App\Models\User;
 use App\Services\Report\Access\SoftwareLicenseReport;
-use App\Services\Report\Asset\AssetRegisterReport;
-use App\Services\Report\Asset\AssetsByStatusDepartmentReport;
+use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
 use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
@@ -42,13 +41,11 @@ class ReportCatalogue
 
     public const TICKETS_REQUEST_SLA = 'tickets.request_sla';
 
-    public const ASSETS_BY_STATUS_DEPARTMENT = 'assets.by_status_department';
+    public const ASSETS_OVERVIEW = 'assets.overview';
 
     public const ASSETS_TRANSFER_HISTORY = 'assets.transfer_history';
 
     public const CONTRACTS_EXPIRING = 'contracts.expiring';
-
-    public const ASSETS_REGISTER = 'assets.register';
 
     public const ASSETS_WARRANTY_EXPIRING = 'assets.warranty_expiring';
 
@@ -122,10 +119,10 @@ class ReportCatalogue
                 'requires' => ['contracts.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
-            self::ASSETS_REGISTER => [
+            self::ASSETS_OVERVIEW => [
                 'domain' => 'assets',
                 'kind' => 'tabular',
-                'class' => AssetRegisterReport::class,
+                'class' => AssetOverviewReport::class,
                 'requires' => ['assets.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
@@ -133,13 +130,6 @@ class ReportCatalogue
                 'domain' => 'assets',
                 'kind' => 'tabular',
                 'class' => WarrantyExpiringReport::class,
-                'requires' => ['assets.view'],
-                'formats' => ['xlsx', 'pdf'],
-            ],
-            self::ASSETS_BY_STATUS_DEPARTMENT => [
-                'domain' => 'assets',
-                'kind' => 'tabular',
-                'class' => AssetsByStatusDepartmentReport::class,
                 'requires' => ['assets.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],

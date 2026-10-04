@@ -34,7 +34,7 @@ class ReportScheduleTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const REGISTER = '/api/reports/r/assets.register/schedule';
+    private const OVERVIEW = '/api/reports/r/assets.overview/schedule';
 
     protected function setUp(): void
     {
@@ -64,7 +64,7 @@ class ReportScheduleTest extends TestCase
     {
         return ReportSchedule::create(array_merge([
             'user_id' => $owner->id,
-            'report_key' => 'assets.register',
+            'report_key' => 'assets.overview',
             'format' => 'pdf',
             'filters' => [],
             'frequency' => ReportSchedule::WEEKLY,
@@ -123,7 +123,7 @@ class ReportScheduleTest extends TestCase
         $owner = $this->userWith(['assets.view', 'stock.view', 'stock.view_events']);
         $range = $this->schedule($owner, ['report_key' => 'stock.movements']);
         $point = $this->schedule($owner, ['report_key' => 'stock.valuation']);
-        $now = $this->schedule($owner, ['report_key' => 'assets.register']);
+        $now = $this->schedule($owner, ['report_key' => 'assets.overview']);
 
         foreach ([$range, $point, $now] as $schedule) {
             (new SendScheduledReport($schedule->id, '2026-10-05T07:00:00+07:00'))->handle(app(ReportScheduleService::class));
@@ -142,7 +142,7 @@ class ReportScheduleTest extends TestCase
     {
         $owner = $this->userWith(['assets.view']);
 
-        $this->actingAs($owner)->postJson(self::REGISTER, [
+        $this->actingAs($owner)->postJson(self::OVERVIEW, [
             'format' => 'xlsx',
             'status' => 'ready',
             'columns' => ['asset_code', 'status'],
@@ -156,7 +156,7 @@ class ReportScheduleTest extends TestCase
         $schedule = ReportSchedule::sole();
         $this->assertSame(['status' => 'ready'], $schedule->filters);
         $this->assertSame(['asset_code', 'status'], $schedule->columns);
-        $this->assertSame([$owner->id, 'assets.register', 'xlsx'], [$schedule->user_id, $schedule->report_key, $schedule->format]);
+        $this->assertSame([$owner->id, 'assets.overview', 'xlsx'], [$schedule->user_id, $schedule->report_key, $schedule->format]);
     }
 
     public function test_the_ticket_overview_is_scheduled_through_its_own_endpoint(): void
@@ -174,22 +174,22 @@ class ReportScheduleTest extends TestCase
         $owner = $this->userWith(['assets.view']);
         $tooMany = array_map(fn ($i) => "p{$i}@example.com", range(1, ReportSchedule::MAX_RECIPIENTS + 1));
 
-        $this->actingAs($owner)->postJson(self::REGISTER, [
+        $this->actingAs($owner)->postJson(self::OVERVIEW, [
             'format' => 'docx', 'frequency' => 'hourly', 'send_hour' => 24, 'recipients' => ['not-an-address'],
         ])->assertUnprocessable()->assertJsonValidationErrors(['format', 'frequency', 'send_hour', 'recipients.0']);
 
-        $this->actingAs($owner)->postJson(self::REGISTER, [
+        $this->actingAs($owner)->postJson(self::OVERVIEW, [
             'format' => 'pdf', 'frequency' => 'daily', 'send_hour' => 7, 'recipients' => $tooMany,
         ])->assertUnprocessable()->assertJsonValidationErrors(['recipients']);
 
-        $this->actingAs($owner)->postJson(self::REGISTER, [
+        $this->actingAs($owner)->postJson(self::OVERVIEW, [
             'format' => 'pdf', 'frequency' => 'daily', 'send_hour' => 7, 'recipients' => ['a@example.com', 'A@example.com'],
         ])->assertUnprocessable()->assertJsonValidationErrors(['recipients.1']);
     }
 
     public function test_only_someone_who_can_open_the_report_may_schedule_it(): void
     {
-        $this->actingAs($this->userWith(['tickets.view_all']))->postJson(self::REGISTER, [
+        $this->actingAs($this->userWith(['tickets.view_all']))->postJson(self::OVERVIEW, [
             'format' => 'pdf', 'frequency' => 'daily', 'send_hour' => 7, 'recipients' => ['a@example.com'],
         ])->assertForbidden();
     }
@@ -201,7 +201,7 @@ class ReportScheduleTest extends TestCase
             $this->schedule($owner);
         }
 
-        $this->actingAs($owner)->postJson(self::REGISTER, [
+        $this->actingAs($owner)->postJson(self::OVERVIEW, [
             'format' => 'pdf', 'frequency' => 'daily', 'send_hour' => 7, 'recipients' => ['a@example.com'],
         ])->assertUnprocessable()->assertJsonPath('message', 'schedule_limit')->assertJsonPath('limit', ReportSchedule::MAX_PER_USER);
     }
@@ -219,8 +219,8 @@ class ReportScheduleTest extends TestCase
 
         foreach (['boss@example.com', 'auditor@partner.co.th'] as $address) {
             Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo($address)
-                && $mail->attachmentName === 'Report_assets-register_2026-09-30.pdf'
-                && str_contains($mail->subjectLine, 'ทะเบียนทรัพย์สิน')
+                && $mail->attachmentName === 'Report_assets-overview_2026-09-30.pdf'
+                && str_contains($mail->subjectLine, 'ภาพรวมของทรัพย์สิน')
                 && str_contains($mail->bodyHtml, 'The report file is attached.'));
         }
         Mail::assertSentCount(2);

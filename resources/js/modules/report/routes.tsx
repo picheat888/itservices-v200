@@ -9,8 +9,7 @@
  */
 import type { ComponentType } from 'react';
 import AccessSoftwareLicensesReportPage from './pages/access-software-licenses';
-import AssetsByStatusDepartmentReportPage from './pages/assets-by-status-department';
-import AssetsRegisterReportPage from './pages/assets-register';
+import AssetsOverviewReportPage from './pages/assets-overview';
 import AssetsTransferHistoryReportPage from './pages/assets-transfer-history';
 import AssetsWarrantyExpiringReportPage from './pages/assets-warranty-expiring';
 import ContractsExpiringReportPage from './pages/contracts-expiring';
@@ -40,9 +39,8 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'tickets-backlog', anyOf: ['tickets.view_all'], Page: TicketsBacklogReportPage },
     { path: 'tickets-request-sla', anyOf: ['tickets.view_all'], Page: TicketsRequestSlaReportPage },
     // Assets
-    { path: 'assets-register', anyOf: ['assets.view'], Page: AssetsRegisterReportPage },
     { path: 'assets-warranty-expiring', anyOf: ['assets.view'], Page: AssetsWarrantyExpiringReportPage },
-    { path: 'assets-by-status-department', anyOf: ['assets.view'], Page: AssetsByStatusDepartmentReportPage },
+    { path: 'assets-overview', anyOf: ['assets.view'], Page: AssetsOverviewReportPage },
     { path: 'assets-transfer-history', anyOf: ['assets.view'], Page: AssetsTransferHistoryReportPage },
     // Contracts
     { path: 'contracts-expiring', anyOf: ['contracts.view'], Page: ContractsExpiringReportPage },

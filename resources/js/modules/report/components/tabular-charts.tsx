@@ -1,14 +1,16 @@
 /**
- * Charts a tabular report draws above its table (TabularRows.charts), laid out as the design's
- * asset screen: the 'stacks' chart in the wide left card — one row per department, its status
- * mix as a stacked bar against the largest row with each piece's count over it, the row total
- * after it, and a switch between the chart's views (status / source) — and, in the right card,
- * the 'donut' (shares of the whole, a headline percent in its hole, a legend with counts and
- * shares) over the 'bars'. A long list (departments past 10, categories past 8) shows its top
- * rows and folds the rest into one "อื่น ๆ (n)" row, so the bars still add up to the whole, with
- * "แสดงทั้งหมด (n)" under it to open every row in place — one switch for every list on the page,
- * so the two cards grow together. Rows marked `apart` (assets in no department) come last under
- * a dashed rule, drawn as a share of their own total so they never set the departments' scale.
+ * Charts a tabular report draws above its table (TabularRows.charts), laid out as the asset overview:
+ * - the first row: the 'stacks' chart in the wide left card — one row per department, its status
+ *   mix as a stacked bar against the largest row with each piece's count over it, the row total after
+ *   it, and a switch between the chart's views (status / source) — and, in the right card, the 'donut'
+ *   (shares of the whole, a headline percent in its hole, a legend with counts and shares) over the
+ *   'buckets' (categories as the /assets card draws them, bucket-rows-card.tsx);
+ * - the row under it: the small cards — 'stacks' marked `compact` (compact-stacks-card.tsx) and
+ *   'list' (asset-list-card.tsx) — three across on a wide screen.
+ * A long list (departments past 10) shows its top rows and folds the rest into one "อื่น ๆ (n)" row,
+ * with "แสดงทั้งหมด (n)" under it to open every row in place — one switch for each row of cards, so
+ * cards side by side grow together. Rows marked `apart` (assets in no department) come last under a
+ * dashed rule, drawn as a share of their own total so they never set the departments' scale.
  * The chosen view (สถานะ / ที่มา) lives in the URL (?view=), as the app keeps tabs.
  * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
  */
@@ -16,68 +18,23 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { useUiStore } from '@/stores/ui';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ChartLabel, ChartSeries, TabularChart } from '../types';
-import { CARD_HEADING_TINT } from './card-heading';
+import type { ChartSeries, TabularChart } from '../types';
+import { AssetListCard } from './asset-list-card';
+import { BucketsSection } from './bucket-rows-card';
+import { fold, FoldToggle, ChartHeading as Heading, useChartLabel as useLabel } from './chart-parts';
 import { FILL, STROKE, TEXT } from './chart-tones';
-import { HorizontalBars } from './horizontal-bars';
+import { CompactStacksCard } from './compact-stacks-card';
 import { BarRowsSkeleton, CardHeadingSkeleton } from './report-skeletons';
 
 /** How many rows a long list shows before folding the rest into "อื่น ๆ". */
 const TOP_STACKS = 10;
-const TOP_BARS = 8;
-
-/**
- * The rows a list shows: all of them, or — past `top` and while not `open` — the first `top`
- * with the rest handed back to be summed into one "อื่น ๆ" row. By default one extra row is shown
- * rather than folded, since "อื่น ๆ (1)" would only hide a name; `spare: 0` folds at exactly `top`.
- */
-export function fold<T>(rows: T[], top: number, open: boolean, spare = 1) {
-    const folds = rows.length > top + spare;
-    const folded = folds && !open;
-
-    return { folds, shown: folded ? rows.slice(0, top) : rows, rest: folded ? rows.slice(top) : [] };
-}
-
-/** "แสดงทั้งหมด (24)" / "ย่อ" under a folding list. */
-export function FoldToggle({ open, total, onToggle }: { open: boolean; total: number; onToggle: () => void }) {
-    const t = useT();
-    const Icon = open ? ChevronUp : ChevronDown;
-
-    return (
-        <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={open}
-            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground mt-auto flex w-full items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors"
-        >
-            <Icon className="h-3.5 w-3.5" />
-            {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', String(total))}
-        </button>
-    );
-}
 
 type Stacks = Extract<TabularChart, { type: 'stacks' }>;
 type Donut = Extract<TabularChart, { type: 'donut' }>;
-type Bars = Extract<TabularChart, { type: 'bars' }>;
-
-function Heading({ title, sub, className }: { title: React.ReactNode; sub?: React.ReactNode; className?: string }) {
-    return (
-        <div
-            className={cn(
-                CARD_HEADING_TINT,
-                'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3',
-                className,
-            )}
-        >
-            <span className="text-sm font-semibold">{title}</span>
-            {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
-        </div>
-    );
-}
+type Buckets = Extract<TabularChart, { type: 'buckets' }>;
+type List = Extract<TabularChart, { type: 'list' }>;
 
 /** A small segmented switch between a chart's views, styled as the hub's period switch. */
 function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; active: string; onChange: (key: string) => void }) {
@@ -101,12 +58,6 @@ function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; activ
             ))}
         </span>
     );
-}
-
-function useLabel() {
-    const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    return (label: ChartLabel) => (lang === 'th' && label.name_th) || label.name || t('rep_no_data');
 }
 
 type StackRowData = Stacks['rows'][number] & { others?: boolean };
@@ -362,94 +313,92 @@ function DonutSection({ chart }: { chart: Donut }) {
     );
 }
 
-/**
- * The category bars are counts, not one of the status or source colours — one soft blue for all of
- * them, the same as "Ticket ตามหมวด" on the Ticket & SLA overview.
- */
-const NEUTRAL_BAR = 'bg-chart-soft-blue';
-
-function BarsSection({ chart, className, expanded, onToggle }: { chart: Bars; className?: string; expanded: boolean; onToggle: () => void }) {
-    const t = useT();
-    const label = useLabel();
-    const folding = fold(chart.rows, TOP_BARS, expanded);
-    const bars = folding.shown.map((r, i) => ({ key: String(i), label: label(r.label), value: r.value, tone: NEUTRAL_BAR }));
-    if (folding.rest.length > 0) {
-        bars.push({
-            key: 'others',
-            label: t('rep_chart_others').replace('{n}', String(folding.rest.length)),
-            value: folding.rest.reduce((sum, r) => sum + r.value, 0),
-            tone: NEUTRAL_BAR,
-        });
-    }
-
-    return (
-        <>
-            <Heading title={t(chart.title_key)} className={className} />
-            <HorizontalBars bars={bars} max={Math.max(1, ...bars.map((b) => b.value))} emptyLabel={t('rep_no_data')} />
-            {folding.folds && <FoldToggle open={expanded} total={chart.rows.length} onToggle={onToggle} />}
-        </>
-    );
-}
-
 export function TabularCharts({ charts }: { charts: TabularChart[] }) {
-    const stacks = charts.filter((c): c is Stacks => c.type === 'stacks');
+    const stacks = charts.filter((c): c is Stacks => c.type === 'stacks' && !c.compact);
     const donuts = charts.filter((c): c is Donut => c.type === 'donut');
-    const bars = charts.filter((c): c is Bars => c.type === 'bars');
-    const side = donuts.length + bars.length > 0;
-    // One "show all" for every list, so opening one card's list fills the other card's height too.
+    const buckets = charts.filter((c): c is Buckets => c.type === 'buckets');
+    // The small cards keep their order from the report (warehouses, locations, written off).
+    const small = charts.filter((c): c is Stacks | List => (c.type === 'stacks' && !!c.compact) || c.type === 'list');
+    const side = donuts.length + buckets.length > 0;
+    // One "show all" per row of cards, so opening one card's list fills its neighbour's height too.
     const [expanded, setExpanded] = useState(false);
+    const [smallExpanded, setSmallExpanded] = useState(false);
     const toggle = () => setExpanded((open) => !open);
+    const toggleSmall = () => setSmallExpanded((open) => !open);
 
     return (
-        <div className={cn('grid gap-3', stacks.length > 0 && side && 'xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]')}>
-            {stacks.length > 0 && (
-                <div className="flex flex-col gap-3">
-                    {stacks.map((c) => (
-                        <StacksCard key={c.key} chart={c} expanded={expanded} onToggle={toggle} />
-                    ))}
+        <div className="space-y-3">
+            <div className={cn('grid gap-3', stacks.length > 0 && side && 'xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]')}>
+                {stacks.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                        {stacks.map((c) => (
+                            <StacksCard key={c.key} chart={c} expanded={expanded} onToggle={toggle} />
+                        ))}
+                    </div>
+                )}
+                {side && (
+                    // One card, as the design's: the donut, then the categories under a ruled heading. Both
+                    // cards stretch to the row, so their bottoms line up however long either list runs.
+                    <Card className="flex flex-col overflow-hidden">
+                        {donuts.map((c) => (
+                            <DonutSection key={c.key} chart={c} />
+                        ))}
+                        {buckets.map((c, i) => (
+                            <BucketsSection
+                                key={c.key}
+                                chart={c}
+                                className={donuts.length + i > 0 ? 'border-t' : undefined}
+                                expanded={expanded}
+                                onToggle={toggle}
+                            />
+                        ))}
+                    </Card>
+                )}
+            </div>
+            {small.length > 0 && (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {small.map((c) =>
+                        c.type === 'list' ? (
+                            <AssetListCard key={c.key} chart={c} expanded={smallExpanded} onToggle={toggleSmall} />
+                        ) : (
+                            <CompactStacksCard key={c.key} chart={c} expanded={smallExpanded} onToggle={toggleSmall} />
+                        ),
+                    )}
                 </div>
-            )}
-            {side && (
-                // One card, as the design's: the donut, then the bars under a ruled heading. Both cards
-                // stretch to the row, so their bottoms line up however long either list runs.
-                <Card className="flex flex-col overflow-hidden">
-                    {donuts.map((c) => (
-                        <DonutSection key={c.key} chart={c} />
-                    ))}
-                    {bars.map((c, i) => (
-                        <BarsSection
-                            key={c.key}
-                            chart={c}
-                            className={donuts.length + i > 0 ? 'border-t' : undefined}
-                            expanded={expanded}
-                            onToggle={toggle}
-                        />
-                    ))}
-                </Card>
             )}
         </div>
     );
 }
 
-/** The charts' shape while rows load: the wide card of rows beside the donut-and-bars card. */
+/** The charts' shape while rows load: the wide card of rows beside the donut card, then the row of small cards. */
 export function ChartsSkeleton() {
     return (
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]" aria-hidden="true">
-            <Card className="overflow-hidden">
-                <CardHeadingSkeleton />
-                <BarRowsSkeleton rows={6} />
-            </Card>
-            <Card className="overflow-hidden">
-                <CardHeadingSkeleton />
-                <div className="flex items-center gap-5 px-5 py-4">
-                    <Skeleton className="h-[150px] w-[150px] shrink-0 rounded-full" />
-                    <div className="flex-1 space-y-2.5">
-                        {Array.from({ length: 5 }, (_, i) => (
-                            <Skeleton key={i} className="h-3.5 w-full" />
-                        ))}
+        <div className="space-y-3" aria-hidden="true">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+                <Card className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <BarRowsSkeleton rows={6} />
+                </Card>
+                <Card className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <div className="flex items-center gap-5 px-5 py-4">
+                        <Skeleton className="h-[150px] w-[150px] shrink-0 rounded-full" />
+                        <div className="flex-1 space-y-2.5">
+                            {Array.from({ length: 5 }, (_, i) => (
+                                <Skeleton key={i} className="h-3.5 w-full" />
+                            ))}
+                        </div>
                     </div>
-                </div>
-            </Card>
+                </Card>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 3 }, (_, i) => (
+                    <Card key={i} className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <BarRowsSkeleton rows={3} />
+                    </Card>
+                ))}
+            </div>
         </div>
     );
 }

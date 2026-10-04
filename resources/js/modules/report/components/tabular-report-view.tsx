@@ -1,5 +1,5 @@
 /**
- * The body of every tabular report page (pages/<slug>.tsx, e.g. pages/assets-by-status-department.tsx):
+ * The body of every tabular report page (pages/<slug>.tsx, e.g. pages/assets-overview.tsx):
  * fetches the report's own definition (filters/columns/formats) from the backend, then its rows
  * (with summary + pagination), and renders them through the shared filter bar, summary strip,
  * cell formatter and export / schedule dialogs. The columns and filters stay defined once, in the
@@ -275,7 +275,7 @@ function TabularReportBody({
     );
 }
 
-/** One tabular report, by its backend key ("assets.by_status_department"). */
+/** One tabular report, by its backend key ("assets.overview"). */
 /**
  * What a report's own page can add around the shared body (pages/tickets-backlog.tsx does):
  * filters it draws itself instead of the bar, something at the head of the bar, cards between

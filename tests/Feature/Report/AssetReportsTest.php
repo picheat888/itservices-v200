@@ -15,7 +15,7 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * The two asset tabular reports — "ทะเบียนทรัพย์สิน" (assets.register) and
+ * Two asset tabular reports — "ภาพรวมของทรัพย์สิน" (assets.overview — its list, the old register) and
  * "ประกันใกล้หมดอายุ" (assets.warranty_expiring) — exercised end to end through the
  * generic /reports/r/{key} endpoints, the same way TabularReportEngineTest covers
  * contracts.expiring.
@@ -42,7 +42,7 @@ class AssetReportsTest extends TestCase
         return User::factory()->create(['role' => $role->key]);
     }
 
-    public function test_register_lists_every_asset_with_holder_and_department(): void
+    public function test_overview_list_lists_every_asset_with_holder_and_department(): void
     {
         $department = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
         $employee = Employee::create([
@@ -52,7 +52,7 @@ class AssetReportsTest extends TestCase
         $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.register/rows')->assertOk()->json();
+            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json();
 
         $this->assertSame(2, $body['meta']['total']);
         $expectedOrder = collect([$deployed, $ready])->sortBy('asset_code')->pluck('id')->all();
@@ -68,18 +68,18 @@ class AssetReportsTest extends TestCase
         $this->assertSame(1, $summary['ready']['value']);
     }
 
-    public function test_register_filters_by_status_source_and_search(): void
+    public function test_overview_list_filters_by_status_source_and_search(): void
     {
         $user = $this->userWith(['assets.view']);
         $ready = Asset::factory()->create(['status' => 'ready']);
         Asset::factory()->create(['status' => 'deployed']);
         $rented = Asset::factory()->rented()->create(['status' => 'common']);
 
-        $byStatus = $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?status=ready')->assertOk()->json();
+        $byStatus = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?status=ready')->assertOk()->json();
         $this->assertSame(1, $byStatus['meta']['total']);
         $this->assertSame([$ready->id], array_column($byStatus['data'], 'id'));
 
-        $bySource = $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?source=rented')->assertOk()->json();
+        $bySource = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?source=rented')->assertOk()->json();
         $this->assertSame(1, $bySource['meta']['total']);
         $this->assertSame([$rented->id], array_column($bySource['data'], 'id'));
         // Rented assets store no value of their own — the register must show the linked
@@ -87,25 +87,25 @@ class AssetReportsTest extends TestCase
         // assertSame): a whole-number float round-trips through JSON as an int.
         $this->assertEquals((float) $rented->contract->value, $bySource['data'][0]['value']);
 
-        $bySearch = $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?search='.$ready->serial)->assertOk()->json();
+        $bySearch = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search='.$ready->serial)->assertOk()->json();
         $this->assertSame(1, $bySearch['meta']['total']);
         $this->assertSame([$ready->id], array_column($bySearch['data'], 'id'));
 
-        $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?status=bogus')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?status=bogus')->assertUnprocessable();
     }
 
-    public function test_register_search_matches_the_holder_employee(): void
+    public function test_overview_list_search_matches_the_holder_employee(): void
     {
         $user = $this->userWith(['assets.view']);
         $employee = Employee::create(['code' => 'EMP-8123', 'first_name' => 'Kanya', 'last_name' => 'Holder']);
         $held = Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
         Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
 
-        $byCode = $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?search='.$employee->code)->assertOk()->json();
+        $byCode = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search='.$employee->code)->assertOk()->json();
         $this->assertSame(1, $byCode['meta']['total']);
         $this->assertSame([$held->id], array_column($byCode['data'], 'id'));
 
-        $byName = $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?search=Kanya')->assertOk()->json();
+        $byName = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search=Kanya')->assertOk()->json();
         $this->assertSame(1, $byName['meta']['total']);
         $this->assertSame([$held->id], array_column($byName['data'], 'id'));
     }
@@ -134,24 +134,24 @@ class AssetReportsTest extends TestCase
     public function test_asset_reports_need_assets_view(): void
     {
         $limited = $this->userWith(['contracts.view']);
-        $this->actingAs($limited)->getJson('/api/reports/r/assets.register/rows')->assertForbidden();
+        $this->actingAs($limited)->getJson('/api/reports/r/assets.overview/rows')->assertForbidden();
         $this->actingAs($limited)->getJson('/api/reports/r/assets.warranty_expiring/rows')->assertForbidden();
 
         $viewer = $this->userWith(['assets.view']);
         $keys = collect($this->actingAs($viewer)->getJson('/api/reports')->assertOk()->json('data'))->pluck('key')->all();
-        $this->assertSame(['assets.register', 'assets.warranty_expiring', 'assets.by_status_department', 'assets.transfer_history'], $keys);
+        $this->assertSame(['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history'], $keys);
     }
 
-    public function test_register_export_translates_status_to_thai(): void
+    public function test_overview_list_export_translates_status_to_thai(): void
     {
         Excel::fake();
         Asset::factory()->create(['status' => 'ready']);
 
         $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.register/export?format=xlsx')->assertAccepted();
+            ->exportReport('/api/reports/r/assets.overview/export?format=xlsx')->assertAccepted();
 
-        $this->assertExportStored('Report_assets-register_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheet = $export->sheets()[1];
+        $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
+            $sheet = last($export->sheets());
             $row = $sheet->map($export->rows->first());
 
             return in_array('พร้อมส่งมอบ', $row, true);
