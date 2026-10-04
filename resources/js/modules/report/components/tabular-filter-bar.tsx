@@ -1,7 +1,8 @@
 /**
  * Filter row of a generic tabular report: one "name [field]" pair per `TabularFilterDef`
  * (select, date or debounced search), built from filter-row.tsx so it reads like the Ticket &
- * SLA bar — a field turns brand-tinted once it differs from the report's default, and the gray
+ * SLA bar — a from/to pair is one date-range field, selects are w-36 (fixed lists) or w-40
+ * (master data), a field turns brand-tinted once it differs from the report's default, and the gray
  * "ล้างทั้งหมด" badge shows only while something differs. Options and labels come from the
  * report's own definition, so the bar never needs another module's permissions.
  */
@@ -9,6 +10,7 @@ import { useT } from '@/lang';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { cn } from '@/shared/lib/utils';
 import { DateInput } from '@/shared/ui/date-input';
+import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { Search } from 'lucide-react';
@@ -50,6 +52,7 @@ function SearchField({ id, value, active, onChange }: { id: string; value: strin
     return (
         <div className="relative w-48">
             <Search
+                aria-hidden="true"
                 className={cn(
                     'pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2',
                     active ? 'text-brand' : 'text-muted-foreground',
@@ -81,6 +84,10 @@ export function TabularFilterBar({
     const lang = useUiStore((s) => s.lang);
     const withAll = useWithAllOption();
     const anySet = definition.filters.some((filter) => differs(filter, filters));
+    const shown = (name: string) => definition.filters.find((f) => f.name === name && f.type === 'date' && !hidden.includes(name));
+    const rangeFrom = shown('from');
+    const rangeTo = shown('to');
+    const range = rangeFrom && rangeTo ? { from: rangeFrom, to: rangeTo } : null;
 
     return (
         <FilterRow>
@@ -93,10 +100,28 @@ export function TabularFilterBar({
                     const value = filters[filter.name];
                     const active = differs(filter, filters);
 
+                    // A from/to pair is one field, as on the Ticket & SLA page: drawn at "from", skipped at "to".
+                    if (range && filter.name === 'to') return null;
+                    if (range && filter.name === 'from') {
+                        return (
+                            <FilterField key="range" htmlFor="rep-fl-range" label={t('rep_f_range')}>
+                                <DateRangeInput
+                                    id="rep-fl-range"
+                                    from={String(filters.from ?? range.from.default ?? '')}
+                                    to={String(filters.to ?? range.to.default ?? '')}
+                                    onChange={(from, to) => onChange({ from, to })}
+                                    className={cn('min-w-40', (active || differs(range.to, filters)) && FILTER_ACTIVE)}
+                                />
+                            </FilterField>
+                        );
+                    }
+
                     if (filter.type === 'select') {
+                        // Widths as on the Ticket & SLA page: short fixed lists w-36, master data (names) w-40.
+                        const fixedList = filter.options.every((o) => o.label_key);
                         return (
                             <FilterField key={filter.name} htmlFor={id} label={label}>
-                                <div className="w-48">
+                                <div className={fixedList ? 'w-36' : 'w-40'}>
                                     <SearchableSelect
                                         id={id}
                                         active={active}
@@ -126,7 +151,7 @@ export function TabularFilterBar({
                                     id={id}
                                     value={value ? String(value) : ''}
                                     onChange={(v) => onChange({ [filter.name]: v || null })}
-                                    className={cn('w-36', active && FILTER_ACTIVE)}
+                                    className={cn('w-40', active && FILTER_ACTIVE)}
                                 />
                             </FilterField>
                         );

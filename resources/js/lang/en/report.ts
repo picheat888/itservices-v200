@@ -22,12 +22,6 @@ export const report: Dict = {
     rep_period_30d: '30 days',
     rep_period_90d: '90 days',
     rep_period_custom: 'Custom',
-    rep_period_custom_title: 'Pick dates',
-    rep_period_custom_from: 'From',
-    rep_period_custom_to: 'To',
-    rep_period_custom_apply: 'Use these dates',
-    rep_period_custom_order: 'The end date is before the start date',
-    rep_period_custom_future: 'Pick a date up to today',
     rep_period_label: 'Period',
     rep_period_in_7d: 'in 7 days',
     rep_period_in_30d: 'in 30 days',
@@ -139,10 +133,6 @@ export const report: Dict = {
     rep_f_any: 'All',
     rep_f_n_selected: '{n} selected',
     rep_f_clear: 'Clear all',
-
-    // components/date-range-input.tsx — date range picker
-    rep_f_pick_end: 'Click an end date',
-    rep_f_apply: 'Apply',
 
     // components/ticket-report-table.tsx — ticket rows
     rep_chart_by_department: 'By department',

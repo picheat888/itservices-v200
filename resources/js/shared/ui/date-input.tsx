@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { useT } from '@/lang';
+import { formatDateShort } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Calendar } from '@/shared/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
@@ -34,8 +35,8 @@ function toDate(value: string): Date | undefined {
 
 /**
  * Date field: a field-styled trigger button that opens a brand calendar in a popover.
- * The stored value stays a plain "YYYY-MM-DD" string (matching the API + the rest of the
- * app's date display), and conversion is done with local getters so the day never shifts
+ * The stored value stays a plain "YYYY-MM-DD" string (matching the API); the button reads it
+ * as "4 ต.ค. 2026" (formatDateShort), and conversion is done with local getters so the day never shifts
  * across timezones. The trigger keeps the canonical field states and latches the brand
  * ring while the calendar is open (data-[state=open]).
  */
@@ -74,8 +75,8 @@ export function DateInput({ value, onChange, id, disabled, className, placeholde
                         className,
                     )}
                 >
-                    <span className={cn('truncate', value && 'font-mono')}>{value || placeholder || t('pick_date')}</span>
-                    <CalendarIcon className="h-4 w-4 shrink-0 opacity-60" />
+                    <span className="truncate tabular-nums">{value ? formatDateShort(value, lang) : placeholder || t('pick_date')}</span>
+                    <CalendarIcon className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
                 </button>
             </PopoverTrigger>
             <PopoverContent container={container} align="start" className="w-auto">
