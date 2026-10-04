@@ -1,11 +1,12 @@
 /**
  * The 'places' chart — one card in two sections, as the status donut and the categories share one:
- * - how many sit in each place (ready stock by warehouse): one bar each in the chart's tone,
- *   measured against the fullest place, so the fullest and emptiest read at a glance;
+ * - how many sit in each place (ready stock by warehouse): a column chart, one column each in the
+ *   chart's tone with its count on top and the place under the axis, measured against the fullest
+ *   place, so the fullest and emptiest read at a glance;
  * - under a ruled heading, each place's share by the chart's series (bought / rented) as a bar
  *   that always fills the width, its counts beside it.
  * Both sections list the same places — the first `TOP_PLACES`, then "แสดงทั้งหมด (n)" opens the
- * rest; a row with no place recorded comes last under a dashed rule. The title is followed by its
+ * rest; a place not recorded comes last (a faded column, and under a dashed rule in the shares). The title is followed by its
  * subtitle in a lighter weight ("ทรัพย์สินในคลัง สถานะพร้อมใช้งาน"), the count on the right.
  * Drawn by tabular-charts.tsx beside the compact location card.
  */
@@ -25,19 +26,45 @@ const TOP_PLACES = 5;
 
 const ROW = 'grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm';
 
-/** One place's count as a bar against the fullest place. */
-function CountLine({ row, tone, max, muted }: { row: PlaceRow; tone: string; max: number; muted?: boolean }) {
+/** The tallest a column may stand, as a share of the plot — room is left for its count on top. */
+const COLUMN_MAX = 85;
+
+/**
+ * How many sit in each place, as columns against the fullest place: the count over each column, the
+ * place's name under the axis. A place not recorded is the last column, faded.
+ */
+function CountColumns({ rows, tone, max }: { rows: PlaceRow[]; tone: string; max: number }) {
     const label = useChartLabel();
 
     return (
-        <div className={ROW}>
-            <span className={cn('truncate', muted && 'text-muted-foreground')} title={label(row.label)}>
-                {label(row.label)}
-            </span>
-            <div className="bg-muted h-2.5 overflow-hidden rounded-full">
-                <span className={cn('block h-full rounded-full', tone)} style={{ width: `${(row.total / max) * 100}%` }} />
+        <div className="px-5 pt-4 pb-3">
+            <div className="border-border flex h-40 items-end gap-3 border-b">
+                {rows.map((row, i) => (
+                    <div key={i} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
+                        <span className={cn('font-mono text-xs font-semibold', row.apart && 'text-muted-foreground')}>
+                            {row.total.toLocaleString()}
+                        </span>
+                        <span
+                            role="img"
+                            aria-label={`${label(row.label)}: ${row.total}`}
+                            title={`${label(row.label)}: ${row.total}`}
+                            className={cn('block w-full max-w-14 rounded-t-md', tone, row.apart && 'opacity-50')}
+                            style={{ height: `${(row.total / max) * COLUMN_MAX}%` }}
+                        />
+                    </div>
+                ))}
             </div>
-            <span className="w-8 text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
+            <div className="mt-2 flex gap-3">
+                {rows.map((row, i) => (
+                    <span
+                        key={i}
+                        className={cn('min-w-0 flex-1 truncate text-center text-xs', row.apart ? 'text-muted-foreground' : 'text-foreground')}
+                        title={label(row.label)}
+                    >
+                        {label(row.label)}
+                    </span>
+                ))}
+            </div>
         </div>
     );
 }
@@ -97,27 +124,20 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
             ) : (
                 <>
-                    <div className="space-y-3 px-5 py-4">
-                        {folding.shown.map((row, i) => (
-                            <CountLine key={i} row={row} tone={FILL[chart.tone]} max={max} />
-                        ))}
-                    </div>
-                    {apart.length > 0 && (
-                        <div className="border-border space-y-3 border-t-2 border-dashed px-5 py-4">
-                            {apart.map((row, i) => (
-                                <CountLine key={i} row={row} tone={FILL[chart.tone]} max={max} muted />
-                            ))}
-                        </div>
-                    )}
+                    <CountColumns rows={[...folding.shown, ...apart]} tone={FILL[chart.tone]} max={max} />
                     <ChartHeading title={t(chart.split_title_key)} sub={<SplitLegend series={chart.series} />} className="border-t" />
                     <div className="space-y-3 px-5 py-4">
                         {folding.shown.map((row, i) => (
                             <ShareLine key={i} row={row} series={chart.series} />
                         ))}
-                        {apart.map((row, i) => (
-                            <ShareLine key={`apart-${i}`} row={row} series={chart.series} muted />
-                        ))}
                     </div>
+                    {apart.length > 0 && (
+                        <div className="border-border space-y-3 border-t-2 border-dashed px-5 py-4">
+                            {apart.map((row, i) => (
+                                <ShareLine key={i} row={row} series={chart.series} muted />
+                            ))}
+                        </div>
+                    )}
                 </>
             )}
             {folding.folds && <FoldToggle open={expanded} total={places.length} onToggle={onToggle} />}
