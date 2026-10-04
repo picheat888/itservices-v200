@@ -4248,8 +4248,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 ## Ticket: ที่มา `tickets.source` (2026-10-04)
 
 เดิม Ticket ไม่มีฟิลด์บอกว่าเปิดเองหรือเปิดอัตโนมัติจากคำขอ (ร่องรอยเดียวคือ `service_requests.ticket_id`)
-- **enum** `App\Enums\Ticket\TicketSource`: `manual` (ผู้ใช้/IT เปิดเอง) · `request` (เปิดอัตโนมัติเมื่อคำขอที่ตั้ง `auto_ticket` อนุมัติครบ)
-- **migration** `2026_10_04_090505_add_source_to_tickets_table`: คอลัมน์ `source` (string 20, default `manual`, index) + เติมค่าย้อนหลังจาก `service_requests.ticket_id` — **รันบนฐานข้อมูลจริงแล้ว**: request 17 · manual 203 (ตรงกับคำขอที่ผูก Ticket 17 รายการ)
-- **ตอนสร้าง**: `TicketService::create()` ตั้ง `manual` เป็นค่าเริ่มต้น · `RequestService` (เปิดจากคำขอ) ส่ง `request` · ฟอร์มเปิด Ticket ส่ง `source` มาเองไม่ได้ (ไม่อยู่ใน validated input) · Model cast + factory
-- **Tests**: `RequestAutoTicketTest` (Ticket จากคำขอ = request) · `TicketApiTest` (เปิดเอง = manual แม้ส่ง source มาใน payload) — 56 passed
+- **enum** `App\Enums\Ticket\TicketSource`: `manual` (ผู้ใช้/IT เปิดเอง) · `auto_request` (เปิดอัตโนมัติเมื่อคำขอที่ตั้ง `auto_ticket` อนุมัติครบ)
+- **migration** `2026_10_04_090505_add_source_to_tickets_table`: คอลัมน์ `source` (string 20, default `manual`, index) + เติมค่าย้อนหลังจาก `service_requests.ticket_id` — **รันบนฐานข้อมูลจริงแล้ว**: auto_request 17 · manual 203 (ตรงกับคำขอที่ผูก Ticket 17 รายการ)
+- **ตอนสร้าง**: `TicketService::create()` ตั้ง `manual` เป็นค่าเริ่มต้น · `RequestService` (เปิดจากคำขอ) ส่ง `auto_request` · ฟอร์มเปิด Ticket ส่ง `source` มาเองไม่ได้ (ไม่อยู่ใน validated input) · Model cast + factory
+- ค่าเดิม `request` เปลี่ยนชื่อเป็น `auto_request` (migration `2026_10_04_091022_rename_ticket_source_request_to_auto_request` แก้ 17 แถวในฐานข้อมูลจริงแล้ว; migration แรกเติม `auto_request` ตรง ๆ สำหรับฐานข้อมูลใหม่)
+- **Tests**: `RequestAutoTicketTest` (Ticket จากคำขอ = auto_request) · `TicketApiTest` (เปิดเอง = manual แม้ส่ง source มาใน payload) — 56 passed
 - ยังไม่ได้ใช้ในรายงาน — ขั้นต่อไป: ตัวกรอง "ที่มา" / รายงาน SLA ของ Ticket จากคำขอ
