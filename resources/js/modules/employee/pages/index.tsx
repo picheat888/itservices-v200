@@ -6,7 +6,7 @@ import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { readTabParam } from '@/shared/lib/tab-param';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -40,7 +40,7 @@ import {
     UserPlus,
     Users,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AddEmployeeDrawer } from '../components/add-employee-drawer';
 import { DepartmentMembersDialog } from '../components/department-members-dialog';
@@ -67,12 +67,6 @@ const isTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).inc
 
 /** One entry on the sub-tab bar; `count` renders as a small badge with `countTitle` as its tooltip. */
 type TabItem = PageTab<Tab>;
-
-/** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
-function initialTab(): Tab {
-    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
-    return isTab(fromUrl) ? fromUrl : 'overview';
-}
 
 export default function EmployeesPage() {
     const t = useT();
@@ -106,7 +100,8 @@ export default function EmployeesPage() {
     const canPosDelete = can('employees.position_delete');
     const canPosSpecial = can('employees.position_special');
 
-    const [tab, setTab] = useState<Tab>(initialTab);
+    // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
+    const [tab, setTab] = useTabParam(isTab, 'overview');
     const { data: summary, isLoading: summaryLoading } = useEmployeeSummary();
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
@@ -212,20 +207,7 @@ export default function EmployeesPage() {
     }, [highlightId]);
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = useCallback(
-        (next: Tab) => {
-            setTab(next);
-            setSearchParams(
-                (prev) => {
-                    const sp = new URLSearchParams(prev);
-                    sp.set('tab', next);
-                    return sp;
-                },
-                { replace: true },
-            );
-        },
-        [setSearchParams],
-    );
+    const changeTab = (next: Tab) => setTab(next);
 
     // The Directory badge counts active staff still waiting for a login account — work left to do,
     // not a headcount — so it is tinted amber and hidden once everyone has one.
@@ -244,13 +226,14 @@ export default function EmployeesPage() {
         canViewOrg && { id: 'orgchart' as Tab, label: t('sub_org_chart') },
     ].filter(Boolean) as TabItem[];
 
-    // If the persisted/landing tab isn't visible (permission removed), fall back to first visible tab.
+    // If the landing tab isn't visible (permission removed), fall back to the first visible tab —
+    // replace, so Back does not bounce the reader into it again.
     useEffect(() => {
         if (tabs.length > 0 && !tabs.some((tb) => tb.id === tab)) {
-            changeTab(tabs[0].id);
+            setTab(tabs[0].id, { replace: true });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tabs.map((tb) => tb.id).join(',')]);
+    }, [tabs.map((tb) => tb.id).join(','), tab]);
 
     // A position can only be deleted when no employee holds it; otherwise show a notice.
     const handleDeletePos = (p: Position) => {

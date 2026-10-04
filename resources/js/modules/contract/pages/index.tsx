@@ -6,7 +6,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
-import { readTabParam } from '@/shared/lib/tab-param';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -31,7 +31,7 @@ import {
     TrendingUp,
     X,
 } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
@@ -42,12 +42,6 @@ const TAB_IDS = ['overview', 'all'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isContractTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
-
-/** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
-function initialContractTab(): Tab {
-    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
-    return isContractTab(fromUrl) ? fromUrl : 'overview';
-}
 
 function StatCard({
     label,
@@ -104,7 +98,8 @@ export default function ContractsPage() {
     const canExpire = can('contracts.expire');
     const canReactivate = can('contracts.reactivate');
 
-    const [tab, setTab] = useState<Tab>(initialContractTab);
+    // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
+    const [tab, setTab] = useTabParam(isContractTab, 'overview');
     const [search, setSearch] = useState('');
     const ALL_TYPES = '__all__';
     const [typeFilter, setTypeFilter] = useState<ContractType | ''>('');
@@ -170,20 +165,7 @@ export default function ContractsPage() {
     const lastPage = meta?.last_page ?? 1;
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = useCallback(
-        (next: Tab) => {
-            setTab(next);
-            setSearchParams(
-                (prev) => {
-                    const sp = new URLSearchParams(prev);
-                    sp.set('tab', next);
-                    return sp;
-                },
-                { replace: true },
-            );
-        },
-        [setSearchParams],
-    );
+    const changeTab = (next: Tab) => setTab(next);
 
     // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;

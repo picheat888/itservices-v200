@@ -6,8 +6,8 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
-import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -44,7 +44,7 @@ import {
     X,
     Zap,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ticketApi, type SummaryRange } from '../api/ticketApi';
 import { AssignTicketModal } from '../components/assign-ticket-modal';
@@ -85,14 +85,6 @@ const SORT_LABEL: Record<(typeof SORT_OPTIONS)[number], string> = {
 };
 
 const isTicketTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
-
-/** Resolve the starting tab from the URL (?tab=), falling back to the first visible tab. */
-function initialTicketTab(visibleTabs: readonly Tab[]): Tab {
-    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
-    if (isTicketTab(fromUrl) && visibleTabs.includes(fromUrl)) return fromUrl;
-    // A role with no ticket tabs at all still lands somewhere harmless.
-    return visibleTabs[0] ?? 'my';
-}
 
 /**
  * A ↑/↓ change pill spelled out in words ("เพิ่มขึ้น 33%" / "ลดลง 33%"), colored by
@@ -400,7 +392,11 @@ export default function TicketsPage() {
     ];
 
     const [searchParams, setSearchParams] = useSearchParams();
-    const [tab, setTab] = useState<Tab>(() => initialTicketTab(visibleTabs));
+    // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
+    // Only a tab this reader can see counts; otherwise the first visible one (a role with no
+    // ticket tabs at all still lands somewhere harmless).
+    const isVisibleTab = (v: string | null): v is Tab => isTicketTab(v) && visibleTabs.includes(v);
+    const [tab, setTab] = useTabParam(isVisibleTab, visibleTabs[0] ?? 'my');
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('');
     const [catFilter, setCatFilter] = useState<TicketCategory | ''>('');
@@ -489,21 +485,11 @@ export default function TicketsPage() {
         !shownTicket.from_request;
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = useCallback(
-        (next: Tab) => {
-            setTab(next);
-            setPage(1);
-            setSearchParams(
-                (prev) => {
-                    const sp = new URLSearchParams(prev);
-                    sp.set('tab', next);
-                    return sp;
-                },
-                { replace: true },
-            );
-        },
-        [setSearchParams],
-    );
+    const changeTab = (next: Tab) => setTab(next);
+    // Each tab starts on page 1 — also when Back / Forward switches it.
+    useEffect(() => {
+        setPage(1);
+    }, [tab]);
 
     const { data: summary, isLoading: summaryLoading } = useTicketSummary(canOverview, range);
     // Not just `has_repair_rules`: a case can be classified repair before an administrator

@@ -5,6 +5,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import {
     isOnBehalfRequest,
     onboardingRowClass,
@@ -17,7 +18,6 @@ import {
     REQUEST_TYPES,
     requestTitle,
 } from '@/shared/lib/request-meta';
-import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -84,24 +84,11 @@ export default function RequestsPage() {
     // Active tab lives in the URL and nowhere else, so a reload or a shared link is
     // exact. Validated rather than cast: `?tab=` with a slug this page does not have used
     // to leave the whole card empty, since no branch below matched it.
-    const tabParam = readTabParam(searchParams.get('tab'));
-    const [tab, setTabState] = useState<Tab>(() => (isTab(tabParam) ? tabParam : 'overview'));
-    useEffect(() => {
-        if (isTab(tabParam) && tabParam !== tab) setTabState(tabParam);
-    }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Read on every render (useTabParam), and each tab press is a history entry, so Back
+    // steps back through the tabs pressed.
+    const [tab, setTab] = useTabParam(isTab, 'overview');
     // Either list scope means the list tab is the one on screen.
     const isListTab = tab !== 'overview';
-    const setTab = (next: Tab) => {
-        setTabState(next);
-        setSearchParams(
-            (p) => {
-                const sp = new URLSearchParams(p);
-                sp.set('tab', next);
-                return sp;
-            },
-            { replace: true },
-        );
-    };
 
     // List controls (all/approvals tabs).
     const [searchInput, setSearchInput] = useState('');

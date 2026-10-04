@@ -133,23 +133,23 @@ export default function AccessControlPage() {
     // ?add=1 is a presence flag — the create form's kind comes from the active (?tab) registry.
     const adding = searchParams.get('add') != null && tab !== 'overview';
 
-    // Switch tab — mirror it in the URL (?tab=) and close any open drawer / create form.
+    // Switch tab — mirror it in the URL (?tab=) and close any open drawer / create form. Each
+    // press is its own history entry (as useTabParam does on the other pages), so Back steps
+    // back through the tabs pressed; pressing the open tab adds nothing.
     const setTab = (next: Tab) => {
         setEditing(null);
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('view');
-                p.delete('add');
-                if (next === 'overview') {
-                    p.delete('tab');
-                } else {
-                    p.set('tab', next);
-                }
-                return p;
-            },
-            { replace: true },
-        );
+        if (next === tab && searchParams.get('view') == null && searchParams.get('add') == null) return;
+        setSearchParams((sp) => {
+            const p = new URLSearchParams(sp);
+            p.delete('view');
+            p.delete('add');
+            if (next === 'overview') {
+                p.delete('tab');
+            } else {
+                p.set('tab', next);
+            }
+            return p;
+        });
     };
 
     // Open a resource's manage drawer by (kind, id) — deep-linked as ?tab=<kind>&view=<id>.

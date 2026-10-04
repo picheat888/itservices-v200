@@ -11,6 +11,7 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { SettingToggle } from '@/shared/components/setting-toggle';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useRecordView } from '@/shared/hooks/use-record-view';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -22,7 +23,6 @@ import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { Bold, Check, CornerDownLeft, Italic, Link2, List, Loader2, Mail, PenLine, Pilcrow, RotateCcw, Save, Search, Send } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
 //
@@ -284,19 +284,9 @@ export default function EmailTemplatesPage() {
     const [pageTesting, setPageTesting] = useState(false);
 
     // The active tab lives in the URL only (?tab=), so a reload or a shared link lands on
-    // the same half of the screen. List filters keep using localStorage; a tab is a place.
-    const [searchParams, setSearchParams] = useSearchParams();
-    const fromUrl = searchParams.get('tab');
-    const tab: EmailTab = isEmailTab(fromUrl) ? fromUrl : 'email';
-    const changeTab = (next: EmailTab) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('tab', next);
-                return p;
-            },
-            { replace: true },
-        );
+    // the same half of the screen, and Back steps through the tabs pressed (useTabParam).
+    // List filters keep using localStorage; a tab is a place.
+    const [tab, changeTab] = useTabParam(isEmailTab, 'email');
 
     // Remember search + module across reloads.
     useEffect(() => {

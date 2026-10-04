@@ -4,6 +4,7 @@ import { useDepartments, useEmployees, usePositions, useSections } from '@/modul
 import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
@@ -33,7 +34,6 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { AccessPermissionTree } from '../components/access-permission-tree';
 import { AssetPermissionTree } from '../components/asset-permission-tree';
@@ -81,36 +81,15 @@ const TAB_PERMISSION: Record<Tab, string> = {
 export default function PermissionsPage() {
     const t = useT();
     const { can } = useAuth();
-    const [searchParams, setSearchParams] = useSearchParams();
     const allowed = TABS.filter((id) => can(TAB_PERMISSION[id]));
     const isAllowedTab = (v: string | null): v is Tab => isTab(v) && allowed.includes(v);
 
     // Active tab lives in the URL and nowhere else — the same as every other page with
-    // sub-tabs, so a reload or a shared link is exact. Validated rather than cast: a ?tab=
-    // this page does not have (or this reader may not open) would otherwise leave the card
-    // with no usable tab inside it at all.
-    const tabParam = searchParams.get('tab');
-    const [tabState, setTabState] = useState<Tab>(() => (isAllowedTab(tabParam) ? tabParam : (allowed[0] ?? 'templates')));
-    const tab: Tab | null = allowed.includes(tabState) ? tabState : (allowed[0] ?? null);
-    // Follows the URL while the page stays mounted: browser back/forward, and a link into
-    // another tab from somewhere else in the app.
-    useEffect(() => {
-        if (isAllowedTab(tabParam) && tabParam !== tab) {
-            setTabState(tabParam);
-        }
-    }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
-    const setTab = (next: Tab) => {
-        setTabState(next);
-        setSearchParams(
-            (p) => {
-                const sp = new URLSearchParams(p);
-                sp.set('tab', next);
-
-                return sp;
-            },
-            { replace: true },
-        );
-    };
+    // sub-tabs, so a reload or a shared link is exact, and each press is a history entry so
+    // Back steps through the tabs pressed (useTabParam). Validated rather than cast: a ?tab=
+    // this page does not have (or this reader may not open) falls back to the first allowed tab.
+    const [allowedTab, setTab] = useTabParam(isAllowedTab, allowed[0] ?? 'templates');
+    const tab: Tab | null = allowed.length > 0 ? allowedTab : null;
 
     const labels: Record<Tab, string> = { templates: t('perm_roles'), groups: t('perm_groups'), logs: t('perm_audit') };
     const tabs = allowed.map((id) => ({ id, label: labels[id] }));

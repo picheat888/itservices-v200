@@ -6,6 +6,7 @@ import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { toastDeleteError } from '@/shared/lib/api-errors';
 import { resolveBrand } from '@/shared/lib/brand-color';
 import { countryOptions, currencyOptions } from '@/shared/lib/locale-data';
@@ -41,7 +42,6 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
@@ -110,23 +110,11 @@ const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v 
 export default function SettingsPage() {
     const t = useT();
     const { can } = useAuth();
-    // The active section lives in the URL (?tab=) and nowhere else — read straight from it on
-    // every render, so a reload, a shared link (/settings?tab=tickets) and the browser's Back /
-    // Forward always show the section the URL names (no ?tab= = Company).
-    const [searchParams, setSearchParams] = useSearchParams();
-    const tabParam = searchParams.get('tab');
-    const section: Section = isSection(tabParam) ? tabParam : 'company';
+    // The active section lives in the URL (?tab=) and nowhere else (useTabParam): a reload, a
+    // shared link (/settings?tab=tickets) and Back / Forward always show the section the URL
+    // names (no ?tab= = Company), and each click is a history entry.
+    const [section, changeSection] = useTabParam(isSection, 'company');
     const { data } = useSettings();
-
-    // Each section click is its own history entry, so Back steps back through the sections pressed.
-    const changeSection = (s: Section) => {
-        if (s === section) return;
-        setSearchParams((p) => {
-            const sp = new URLSearchParams(p);
-            sp.set('tab', s);
-            return sp;
-        });
-    };
     const update = useUpdateCompany();
     const [form, setForm] = useState<SettingsForm>(emptyForm);
 
