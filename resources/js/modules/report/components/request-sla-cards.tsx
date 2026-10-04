@@ -25,7 +25,7 @@ import { useRequestSlaBreakdown } from '../hooks/use-reports';
 import type { RequestSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
 
-type T = (key: string) => string;
+export type T = (key: string) => string;
 
 /** The backlog page, narrowed to tickets from requests that are past SLA — where "ยังเปิดอยู่" continues. */
 const BACKLOG_HREF = '/reports/tickets-backlog?source=auto_request&sla=over_sla';
@@ -39,20 +39,20 @@ export function oneDecimal(value: number, lang: 'th' | 'en'): string {
 }
 
 /** "9.7 ชม." / "20 นาที" — an average time under an hour reads in minutes. */
-function hoursText(t: T, lang: 'th' | 'en', hours: number | null): string {
+export function hoursText(t: T, lang: 'th' | 'en', hours: number | null): string {
     if (hours === null) return '—';
     return hours < 1 ? t('rep_rs_minutes').replace('{n}', String(Math.round(hours * 60))) : `${oneDecimal(hours, lang)} ${t('rep_hours')}`;
 }
 
 /** "25 วัน" / "5 ชม." — the same rule as the time-left pills. */
-function spanText(t: T, hours: number): string {
+export function spanText(t: T, hours: number): string {
     return hours < 24
         ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(hours))))
         : t('rep_days_n').replace('{n}', String(Math.round(hours / 24)));
 }
 
 /** "Y-m-d H:i" → "9 ก.ย. 14:20". */
-function shortMoment(value: string | null, lang: 'th' | 'en'): string {
+export function shortMoment(value: string | null, lang: 'th' | 'en'): string {
     if (!value) return '—';
     const [date, time = ''] = value.split(' ');
     const [y, m, d] = date.split('-').map(Number);
@@ -62,13 +62,13 @@ function shortMoment(value: string | null, lang: 'th' | 'en'): string {
     return `${day} ${time}`.trim();
 }
 
-const TH = 'text-muted-foreground px-3 py-2.5 text-[11.5px] font-semibold tracking-wide whitespace-nowrap';
-const TD = 'px-3 py-2.5 whitespace-nowrap';
+export const TH = 'text-muted-foreground px-3 py-2.5 text-[11.5px] font-semibold tracking-wide whitespace-nowrap';
+export const TD = 'px-3 py-2.5 whitespace-nowrap';
 /** A rule before each column group: จำนวน Ticket | รับเคสทัน SLA | ปิดทัน SLA | average times. */
-const GROUP = 'border-border border-l';
+export const GROUP = 'border-border border-l';
 
 /** The ticket count, split — one cell each; a zero reads faint. */
-function CountCells({ tally }: { tally: RequestSlaTally }) {
+export function CountCells({ tally }: { tally: RequestSlaTally }) {
     return (
         <>
             {[tally.total, tally.completed, tally.canceled, tally.open].map((value, i) => (
@@ -81,7 +81,7 @@ function CountCells({ tally }: { tally: RequestSlaTally }) {
 }
 
 /** One SLA: the 0–100% bar, met/n, and the % — green at or above the goal, red below it. */
-function SlaCells({ met, n, goal, label }: { met: number; n: number; goal: number; label: string }) {
+export function SlaCells({ met, n, goal, label }: { met: number; n: number; goal: number; label: string }) {
     const pct = percent(met, n);
     const ok = pct !== null && pct >= goal;
     return (
@@ -315,7 +315,7 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
 }
 
 /** "24 ชม. ทำการ" / "24 ชม." — a target in its own clock. */
-function targetText(t: T, hours: number, clock: 'business' | 'calendar' | null): string {
+export function targetText(t: T, hours: number, clock: 'business' | 'calendar' | null): string {
     return t(clock === 'calendar' ? 'rep_rs_hours_calendar' : 'rep_rs_hours_business').replace('{n}', String(hours));
 }
 

@@ -113,6 +113,21 @@ export const useRequestSlaBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/**
+ * "สรุปผล SLA ของ Ticket ที่ผู้ใช้เปิดเอง" — keyed without the picked dimension's own filter, which the
+ * grouped table only highlights (the server sets it aside too).
+ */
+export const useManualSlaBreakdown = (filters: TabularFilters) => {
+    const by = (filters.by as string | null | undefined) ?? 'category';
+    const rest = Object.fromEntries(Object.entries(filters).filter(([name]) => name !== by));
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'tickets.manual_sla', 'breakdown', rest],
+        queryFn: () => reportApi.manualSlaBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 export const useTabularDefinition = (key: string, enabled = true) =>
     useQuery({
         queryKey: ['reports', 'tabular', key, 'definition'],

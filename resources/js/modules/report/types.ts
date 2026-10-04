@@ -434,6 +434,36 @@ export interface RequestSlaBreakdown {
     };
 }
 
+/** What the "สรุปผล SLA ของ Ticket ที่ผู้ใช้เปิดเอง" page draws above its rows (TicketManualSlaReport::breakdown). */
+export interface ManualSlaBreakdown {
+    /** The dimension the groups split by. */
+    by: 'category' | 'priority' | 'work_class' | 'assignee';
+    /** One line per group; `key` is the dimension's value ('none' = not set), `label` names an assignee. */
+    groups: Array<RequestSlaTally & { key: string; label: string | null }>;
+    overall: RequestSlaTally;
+    /** Live tickets already past their SLA, most overdue first. */
+    open: {
+        id: number;
+        ticket_no: string;
+        category: string | null;
+        assignee: string | null;
+        due_kind: 'response' | 'resolve';
+        due_at: string | null;
+        over_hours: number | null;
+    }[];
+    /** How late the late closes were (calendar hours past the resolve deadline). */
+    late: { total: number; bands: { key: string; n: number }[]; median_hours: number | null; near: number };
+    rules: {
+        goal: number;
+        response_minutes: number;
+        /** Each priority's resolution target. */
+        resolve: { priority: string; hours: number; clock: 'business' | 'calendar' }[];
+        /** How many repair (work class) targets are set — 0 = repairs use their priority's target. */
+        repair_rules: number;
+        hours: { days: number[]; start: string; end: string; break_start: string | null; break_end: string | null };
+    };
+}
+
 export interface TabularRows {
     data: Array<Record<string, unknown> & { id: number }>;
     meta: PagedRows<unknown>['meta'];

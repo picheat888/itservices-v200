@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
 use App\Http\Controllers\Api\Report\TabularReportController;
 use App\Http\Controllers\Api\Report\TicketBacklogBoardController;
+use App\Http\Controllers\Api\Report\TicketManualSlaBreakdownController;
 use App\Http\Controllers\Api\Report\TicketOverviewReportController;
 use App\Http\Controllers\Api\Report\TicketRequestSlaBreakdownController;
 use App\Http\Controllers\Api\Request\RequestController;
@@ -104,6 +105,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/tickets/backlog/board', TicketBacklogBoardController::class)->defaults('key', 'tickets.backlog')->name('api.reports.tickets.backlog.board');
     // "สรุปผล SLA ของ Ticket จากคำขอ" — the per-type table, still-open list and SLA rules above its rows.
     Route::get('reports/tickets/request-sla/breakdown', TicketRequestSlaBreakdownController::class)->defaults('key', 'tickets.request_sla')->name('api.reports.tickets.request-sla.breakdown');
+    Route::get('reports/tickets/manual-sla/breakdown', TicketManualSlaBreakdownController::class)->defaults('key', 'tickets.manual_sla')->name('api.reports.tickets.manual-sla.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
