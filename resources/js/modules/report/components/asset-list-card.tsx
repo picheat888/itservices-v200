@@ -10,8 +10,7 @@ import { Card } from '@/shared/ui/card';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import type { TabularChart } from '../types';
-import { ChartHeading, fold, FoldToggle, useChartLabel } from './chart-parts';
-import { TitleWithCount } from './compact-stacks-card';
+import { ChartHeading, fold, FoldToggle, TitleWithCount, useChartLabel } from './chart-parts';
 
 type List = Extract<TabularChart, { type: 'list' }>;
 

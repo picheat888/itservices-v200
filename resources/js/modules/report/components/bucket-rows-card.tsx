@@ -4,7 +4,7 @@
  * the group's dot, its total, then a bar on its own line split into the groups. Bars are measured
  * against the largest category, so lengths compare across rows; the legend in the heading names
  * the colours. Past `TOP_BUCKETS` the rest fold into one "อื่น ๆ (n)" row.
- * Drawn under the status donut by tabular-charts.tsx; SplitLine is shared with compact-stacks-card.tsx.
+ * Drawn under the status donut by tabular-charts.tsx; SplitLegend is shared with places-card.tsx.
  */
 import { useT } from '@/lang';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';

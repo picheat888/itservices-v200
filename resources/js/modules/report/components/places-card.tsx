@@ -13,7 +13,7 @@
  * rest; a place not recorded comes last, faded (under a dashed rule in the opened lists). The title is
  * followed by its subtitle in a lighter weight ("ทรัพย์สินในคลัง สถานะพร้อมใช้งาน"), the counts on
  * the right — the assets, then the places ("746 รายการ | 53 คลัง").
- * Drawn by tabular-charts.tsx beside the compact location card.
+ * Drawn by tabular-charts.tsx across the page — ready stock by warehouse, then shared use by location.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -27,7 +27,7 @@ type Places = Extract<TabularChart, { type: 'places' }>;
 type PlaceRow = Places['rows'][number];
 
 /** How many places each section shows before "แสดงทั้งหมด". */
-const TOP_PLACES = 5;
+const TOP_PLACES = 10;
 
 const ROW = 'grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm';
 
@@ -263,7 +263,7 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                 title={
                     <span className="flex flex-wrap items-baseline gap-x-2">
                         {t(chart.title_key)}
-                        <span className="text-muted-foreground font-normal">{t(chart.subtitle_key)}</span>
+                        {chart.subtitle_key && <span className="text-muted-foreground font-normal">{t(chart.subtitle_key)}</span>}
                     </span>
                 }
                 sub={
@@ -299,7 +299,11 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                     {opened ? (
                         <ShareList rows={folding.shown} apart={apart} series={chart.series} />
                     ) : (
-                        <div className="grid grid-cols-3 gap-x-3 gap-y-4 px-5 py-4 sm:grid-cols-5">
+                        // On a wide screen, one track per column above, so each ring sits under its place's column.
+                        <div
+                            className="grid grid-cols-3 gap-x-3 gap-y-4 px-5 py-4 sm:grid-cols-5 xl:[grid-template-columns:var(--ring-tracks)]"
+                            style={{ '--ring-tracks': `repeat(${folding.shown.length + apart.length}, minmax(0, 1fr))` } as React.CSSProperties}
+                        >
                             {[...folding.shown, ...apart].map((row, i) => (
                                 <ShareRing key={i} row={row} series={chart.series} centerKey={chart.center_key} />
                             ))}

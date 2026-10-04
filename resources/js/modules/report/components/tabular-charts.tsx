@@ -5,14 +5,12 @@
  *   it, and a switch between the chart's views (status / source) — and, in the right card, the 'donut'
  *   (shares of the whole, a headline percent in its hole, a legend with counts and shares) over the
  *   'buckets' (categories as the /assets card draws them, bucket-rows-card.tsx);
- * - the row under it, side by side: the 'places' card (places-card.tsx: ready stock by warehouse — how
- *   many in each, then each one's bought / rented share) and the 'stacks' marked `compact`
- *   (compact-stacks-card.tsx: shared use by location);
+ * - then each 'places' card across the page (places-card.tsx: ready stock by warehouse, shared use
+ *   by location — how many in each place, then each one's bought / rented share);
  * - then each 'list' (asset-list-card.tsx: the written-off assets) across the whole width.
  * A long list (departments past 10, categories past 5) shows its top rows and folds the rest into one
  * "อื่น ๆ (n)" row, with "แสดงทั้งหมด (n)" under it to open every row in place — its own switch for
- * the departments, the categories and the list, one shared by the two cards of the middle row so
- * they grow together. Rows marked `apart` (assets in no department) come last under a dashed rule, drawn as a
+ * the departments, the categories, each places card and the list. Rows marked `apart` (assets in no department) come last under a dashed rule, drawn as a
  * share of their own total so they never set the departments' scale.
  * The chosen view (สถานะ / ที่มา) lives in the URL (?view=), as the app keeps tabs.
  * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
@@ -28,7 +26,6 @@ import { AssetListCard } from './asset-list-card';
 import { BucketsSection } from './bucket-rows-card';
 import { fold, FoldToggle, ChartHeading as Heading, useChartLabel as useLabel } from './chart-parts';
 import { FILL, STROKE, TEXT } from './chart-tones';
-import { CompactStacksCard } from './compact-stacks-card';
 import { PlacesCard } from './places-card';
 import { BarRowsSkeleton, CardHeadingSkeleton } from './report-skeletons';
 
@@ -319,22 +316,21 @@ function DonutSection({ chart }: { chart: Donut }) {
 }
 
 export function TabularCharts({ charts }: { charts: TabularChart[] }) {
-    const stacks = charts.filter((c): c is Stacks => c.type === 'stacks' && !c.compact);
+    const stacks = charts.filter((c): c is Stacks => c.type === 'stacks');
     const donuts = charts.filter((c): c is Donut => c.type === 'donut');
     const buckets = charts.filter((c): c is Buckets => c.type === 'buckets');
-    // The middle row and the lists keep their order from the report (warehouses, locations; written off).
-    const middle = charts.filter((c): c is Places | Stacks => c.type === 'places' || (c.type === 'stacks' && !!c.compact));
+    // The places cards and the lists keep their order from the report (warehouses, locations; written off).
+    const places = charts.filter((c): c is Places => c.type === 'places');
     const lists = charts.filter((c): c is List => c.type === 'list');
     const side = donuts.length + buckets.length > 0;
-    // One "show all" for the departments, one for the categories, one for the list, and one for the
-    // middle row (so opening one card's list fills its neighbour's height too).
+    // One "show all" for the departments, one for the categories, one per places card and one for the list.
     const [expanded, setExpanded] = useState(false);
     const [bucketsExpanded, setBucketsExpanded] = useState(false);
-    const [compactExpanded, setCompactExpanded] = useState(false);
+    const [openPlaces, setOpenPlaces] = useState<Record<string, boolean>>({});
     const [listExpanded, setListExpanded] = useState(false);
     const toggle = () => setExpanded((open) => !open);
     const toggleBuckets = () => setBucketsExpanded((open) => !open);
-    const toggleCompact = () => setCompactExpanded((open) => !open);
+    const togglePlaces = (key: string) => setOpenPlaces((open) => ({ ...open, [key]: !open[key] }));
     const toggleList = () => setListExpanded((open) => !open);
 
     return (
@@ -366,17 +362,9 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
                     </Card>
                 )}
             </div>
-            {middle.length > 0 && (
-                <div className="grid gap-3 md:grid-cols-2">
-                    {middle.map((c) =>
-                        c.type === 'places' ? (
-                            <PlacesCard key={c.key} chart={c} expanded={compactExpanded} onToggle={toggleCompact} />
-                        ) : (
-                            <CompactStacksCard key={c.key} chart={c} expanded={compactExpanded} onToggle={toggleCompact} />
-                        ),
-                    )}
-                </div>
-            )}
+            {places.map((c) => (
+                <PlacesCard key={c.key} chart={c} expanded={!!openPlaces[c.key]} onToggle={() => togglePlaces(c.key)} />
+            ))}
             {lists.map((c) => (
                 <AssetListCard key={c.key} chart={c} expanded={listExpanded} onToggle={toggleList} />
             ))}
@@ -384,7 +372,7 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
     );
 }
 
-/** The charts' shape while rows load: the wide card of rows beside the donut card, the two compact cards, then the list. */
+/** The charts' shape while rows load: the wide card of rows beside the donut card, the two places cards, then the list. */
 export function ChartsSkeleton() {
     return (
         <div className="space-y-3" aria-hidden="true">
@@ -405,14 +393,12 @@ export function ChartsSkeleton() {
                     </div>
                 </Card>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-                {Array.from({ length: 2 }, (_, i) => (
-                    <Card key={i} className="overflow-hidden">
-                        <CardHeadingSkeleton />
-                        <BarRowsSkeleton rows={3} />
-                    </Card>
-                ))}
-            </div>
+            {Array.from({ length: 2 }, (_, i) => (
+                <Card key={i} className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <BarRowsSkeleton rows={3} />
+                </Card>
+            ))}
             <Card className="overflow-hidden">
                 <CardHeadingSkeleton />
                 <BarRowsSkeleton rows={3} />

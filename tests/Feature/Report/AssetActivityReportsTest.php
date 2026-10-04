@@ -123,7 +123,12 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame(['purchased' => 1, 'rented' => 1], $warehouses['Main store']['values']);
         $this->assertSame(2, $warehouses['Main store']['total']);
         $this->assertTrue($warehouses['No warehouse']['apart']);
-        $this->assertTrue($charts['location']['compact']);
+        // Shared use by location: the same card, counted in locations.
+        $this->assertSame('places', $charts['location']['type']);
+        $this->assertSame('asset-ready', $charts['location']['tone']);
+        $this->assertSame('rep_chart_locations_n', $charts['location']['count_key']);
+        $this->assertNull($charts['location']['subtitle_key']);
+        $this->assertSame(['purchased' => 1, 'rented' => 0], $charts['location']['rows'][0]['values']);
 
         $this->assertSame(1, $charts['location']['total']);
         $this->assertSame(['name' => 'Meeting room 1', 'name_th' => null], $charts['location']['rows'][0]['label']);
@@ -254,7 +259,7 @@ class AssetActivityReportsTest extends TestCase
             $titles = array_map(fn ($sheet) => $sheet->title(), array_slice($export->sheets(), 1, 4));
             $warehouseRows = $export->sheets()[2]->array();
 
-            return $titles === ['ทรัพย์สินแยกตามแผนก', 'ทรัพย์สินในคลัง (พร้อมใช้งาน)', 'ส่วนกลาง (ตามสถานที่)', 'ตัดจำหน่าย']
+            return $titles === ['ทรัพย์สินแยกตามแผนก', 'ทรัพย์สินในคลัง (พร้อมใช้งาน)', 'ทรัพย์สินในส่วนกลาง', 'ตัดจำหน่าย']
                 && $warehouseRows === [['Main store', 1, 1, 0]]
                 && $export->sheets()[4]->array()[0][4] === 'Broken'
                 && count($export->sheets()) === 6;
