@@ -60,6 +60,17 @@ trait TicketReportScope
         return self::thai(TicketPriority::cases(), fn (string $v) => TicketLabels::priority($v));
     }
 
+    /**
+     * Kind of work (tickets.work_class, App\Enums\Ticket\TicketWorkClass) in the file's Thai —
+     * the files only; the page never shows it.
+     *
+     * @return array<string, string>
+     */
+    private static function workClassTh(): array
+    {
+        return ['standard' => 'งานปกติ', 'repair_internal' => 'งานซ่อม (ช่างภายในองค์กร)', 'repair_vendor' => 'งานซ่อม (ช่างภายนอก)'];
+    }
+
     /** @return array<string, string> */
     private static function statusKeys(): array
     {

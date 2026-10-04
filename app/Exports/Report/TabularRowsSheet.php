@@ -24,7 +24,7 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, 
 
     public function title(): string
     {
-        return 'รายการ';
+        return $this->report->sheetTitle();
     }
 
     public function collection(): Collection
