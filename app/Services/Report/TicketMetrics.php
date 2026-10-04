@@ -23,6 +23,51 @@ final class TicketMetrics
         return round($ticket->created_at->diffInMinutes($ticket->resolved_at, true) / 60, 1);
     }
 
+    /** Calendar hours from opening to the first response (the case being taken), one decimal; null until then. */
+    public static function responseHours(Ticket $ticket): ?float
+    {
+        if ($ticket->created_at === null || $ticket->responded_at === null) {
+            return null;
+        }
+
+        return round($ticket->created_at->diffInMinutes($ticket->responded_at, true) / 60, 1);
+    }
+
+    /**
+     * The first-response verdict: 'met' when the case was taken by its response deadline,
+     * 'over_sla' when taken late — or still waiting past it — and null with no deadline to
+     * measure, or a case canceled before anyone took it.
+     */
+    public static function responseSlaState(Ticket $ticket, CarbonInterface $now): ?string
+    {
+        if ($ticket->sla_response_due_at === null) {
+            return null;
+        }
+        if ($ticket->responded_at !== null) {
+            return $ticket->responded_at->lte($ticket->sla_response_due_at) ? 'met' : 'over_sla';
+        }
+
+        return in_array($ticket->status, TicketStatus::live(), true) && $ticket->sla_response_due_at->lt($now) ? 'over_sla' : null;
+    }
+
+    /**
+     * The resolution verdict alone — unlike slaState(), which judges a case still waiting to be
+     * taken by its response deadline: 'met' when closed (completed) by the resolve deadline,
+     * 'over_sla' when closed late or still open past it, null otherwise (canceled, no deadline,
+     * or not due yet).
+     */
+    public static function resolveSlaState(Ticket $ticket, CarbonInterface $now): ?string
+    {
+        if ($ticket->sla_resolve_due_at === null) {
+            return null;
+        }
+        if ($ticket->status === TicketStatus::Completed) {
+            return $ticket->resolved_at === null ? null : ($ticket->resolved_at->lte($ticket->sla_resolve_due_at) ? 'met' : 'over_sla');
+        }
+
+        return in_array($ticket->status, TicketStatus::live(), true) && $ticket->sla_resolve_due_at->lt($now) ? 'over_sla' : null;
+    }
+
     /**
      * Nearest-rank percentile of an ascending list of hours, one decimal; null when empty.
      * The one "median resolve time" of the ticket reports (p = 0.5).
