@@ -55,6 +55,10 @@ class TicketApiTest extends TestCase
             ->assertJsonPath('data.priority', null)
             ->assertJsonPath('data.assignee_id', null)
             ->assertJsonPath('data.ticket_no', fn ($no) => is_string($no) && str_starts_with($no, 'TKT-'));
+
+        // Opened by a person — and a "source" in the form cannot make it look request-made.
+        $this->postJson('/api/tickets', $this->payload(['source' => 'request']))->assertCreated();
+        $this->assertSame(['manual', 'manual'], Ticket::query()->orderBy('id')->pluck('source')->map->value->all());
     }
 
     public function test_ticket_number_uses_the_category_dated_running_format(): void

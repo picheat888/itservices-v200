@@ -4244,3 +4244,12 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **กระดาน: ป้าย "ตอนนี้" มีที่ว่าง** — หัวช่องเลื่อนลง (pt-7) ป้ายห่างหัวช่อง 10px
 - **ชื่อการ์ดตารางเปลี่ยนตามปุ่ม SLA**: ทั้งหมด "รายการ Ticket ครบกำหนด SLA และยังพอมีเวลา" · เกิน SLA "รายการ Ticket เกิน SLA" · ครบกำหนดใน 24 ชม. "รายการ Ticket ครบกำหนดใน 24 ชม." · ยังมีเวลา "รายการ Ticket ที่ยังมีเวลา" — `rowsTitle` รับฟังก์ชันของตัวกรองได้
 - **การ์ดสรุป เกิน SLA / ครบกำหนดใน 24 ชม. / ยังไม่มีผู้รับ ไม่โล่งแล้ว** — จังหวะเดียวกับการ์ด "ทั้งหมด" (ตัวเลข · แถบ · บรรทัดล่าง): แถบ + % ของงานค้างทั้งหมดในสีการ์ด (`withShareOf`) และบรรทัดบอกความหนัก "เกินนานสุด 38 วัน" · "ใบถัดไปครบ 5 ต.ค. 13:13" · "รอนานสุด 17 วัน" — `ReportSummary::withNote()` ใหม่ (i18n key + ชั่วโมง `{n}` / เวลา `{at}`, จอเท่านั้น) · `SummaryStrip` แสดง note เมื่อไม่มี split (ระยะเวลาใช้กติกาเดียวกับป้ายเหลือเวลา; วันที่แบบสั้น) · test ตรวจ share และ note ทั้งสามใบ
+
+## Ticket: ที่มา `tickets.source` (2026-10-04)
+
+เดิม Ticket ไม่มีฟิลด์บอกว่าเปิดเองหรือเปิดอัตโนมัติจากคำขอ (ร่องรอยเดียวคือ `service_requests.ticket_id`)
+- **enum** `App\Enums\Ticket\TicketSource`: `manual` (ผู้ใช้/IT เปิดเอง) · `request` (เปิดอัตโนมัติเมื่อคำขอที่ตั้ง `auto_ticket` อนุมัติครบ)
+- **migration** `2026_10_04_090505_add_source_to_tickets_table`: คอลัมน์ `source` (string 20, default `manual`, index) + เติมค่าย้อนหลังจาก `service_requests.ticket_id` — **รันบนฐานข้อมูลจริงแล้ว**: request 17 · manual 203 (ตรงกับคำขอที่ผูก Ticket 17 รายการ)
+- **ตอนสร้าง**: `TicketService::create()` ตั้ง `manual` เป็นค่าเริ่มต้น · `RequestService` (เปิดจากคำขอ) ส่ง `request` · ฟอร์มเปิด Ticket ส่ง `source` มาเองไม่ได้ (ไม่อยู่ใน validated input) · Model cast + factory
+- **Tests**: `RequestAutoTicketTest` (Ticket จากคำขอ = request) · `TicketApiTest` (เปิดเอง = manual แม้ส่ง source มาใน payload) — 56 passed
+- ยังไม่ได้ใช้ในรายงาน — ขั้นต่อไป: ตัวกรอง "ที่มา" / รายงาน SLA ของ Ticket จากคำขอ

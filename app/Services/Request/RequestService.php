@@ -7,6 +7,7 @@ use App\Enums\Request\RequestOrigin;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\WorkflowStepKind;
+use App\Enums\Ticket\TicketSource;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
@@ -506,6 +507,7 @@ class RequestService
             'subject' => $subject,
             'description' => $this->ticketDescription($request),
             'category' => $request->type->ticketCategory()->value,
+            'source' => TicketSource::Request,
         ], $employee);
 
         $request->update(['ticket_id' => $ticket->id]);

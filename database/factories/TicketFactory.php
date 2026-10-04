@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\Ticket\TicketCategory;
+use App\Enums\Ticket\TicketSource;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Employee\Employee;
 use App\Models\Ticket\Ticket;
@@ -35,6 +36,7 @@ class TicketFactory extends Factory
             'category' => fake()->randomElement(TicketCategory::cases()),
             'priority' => null,
             'status' => TicketStatus::Open,
+            'source' => TicketSource::Manual,
             'callback_phone' => fake()->numerify('+66 8# ### ####'),
             'requester_id' => fn () => Employee::create([
                 'first_name' => fake()->firstName(),

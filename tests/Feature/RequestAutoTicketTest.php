@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Request\RequestStatus;
 use App\Enums\Ticket\TicketCategory;
+use App\Enums\Ticket\TicketSource;
 use App\Enums\Ticket\TicketStatus;
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Employee\Employee;
@@ -95,6 +96,8 @@ class RequestAutoTicketTest extends TestCase
 
         $ticket = $request->ticket;
         $this->assertSame(TicketCategory::Hardware, $ticket->category);
+        // Marked as opened by the request, so reports need not join service_requests to tell.
+        $this->assertSame(TicketSource::Request, $ticket->source);
         $this->assertStringContainsString($request->reference, $ticket->subject);
         $this->assertSame($request->employee_id, $ticket->requester_id);
         // One fact per line, and the typed fields among them: a case that says only

@@ -3,6 +3,7 @@
 namespace App\Services\Ticket;
 
 use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketSource;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Employee\Employee;
@@ -41,6 +42,8 @@ class TicketService
             'related_asset_id' => $data['related_asset_id'] ?? null,
             'priority' => null,
             'status' => TicketStatus::Open,
+            // Only the auto-ticket step passes this; a form's validated input never carries it.
+            'source' => $data['source'] ?? TicketSource::Manual,
             'requester_id' => $requester->id,
             'assignee_id' => null,
         ]);
