@@ -202,6 +202,10 @@ function TabularReportBody({
     // no table on screen has no column picker either, so its files always carry every column —
     // even if columns were hidden in this browser before the table went.
     const exportColumns = definition.shows_table && hidden.length > 0 ? visibleColumns.map((c) => c.key) : undefined;
+    // Columns a page draws inside another cell stay in the rows and the files, but get no column of their own.
+    const inner = extras.innerColumns ?? [];
+    const drawnColumns = visibleColumns.filter((c) => !inner.includes(c.key));
+    const pickable = inner.length > 0 ? { ...definition, columns: definition.columns.filter((c) => !inner.includes(c.key)) } : definition;
 
     return (
         <>
@@ -225,21 +229,27 @@ function TabularReportBody({
                 definition={definition}
                 filters={filters}
                 onChange={patch}
-                onReset={reset}
+                onReset={() => {
+                    // Clearing the filters keeps how the page is shown (the view filters) as it is.
+                    const keep = Object.fromEntries((extras.viewFilters ?? []).map((name) => [name, filters[name]]));
+                    reset();
+                    patch(keep);
+                }}
                 hidden={extras.hiddenFilters}
+                viewOnly={extras.viewFilters}
                 leading={extras.filterLead?.({ filters, patch })}
             />
             <TabularReportRows
                 key={JSON.stringify(filters)}
                 reportKey={reportKey}
-                visibleColumns={visibleColumns}
+                visibleColumns={drawnColumns}
                 filters={filters}
                 hasCharts={definition.has_charts}
                 showsTable={definition.shows_table}
                 onTotalChange={setRowsTotal}
                 onPatch={patch}
                 extras={extras}
-                columnPicker={<ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
+                columnPicker={<ColumnPicker definition={pickable} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
                 emptyState={<TabularEmptyState definition={definition} filters={filters} onPatch={patch} />}
             />
             <ExportReportDialog
@@ -283,6 +293,12 @@ function TabularReportBody({
  */
 export interface TabularReportExtras {
     hiddenFilters?: string[];
+    /** Filters that only set how the page is shown (e.g. what a table groups by) — never "filtered", so
+     *  they do not raise the clear badge. */
+    viewFilters?: string[];
+    /** Columns the page draws inside another column's cell (a ticket number under its subject) — kept in
+     *  each row and in the files, left out of the table's own columns and the column picker. */
+    innerColumns?: string[];
     filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     beforeTable?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     rowClassName?: (row: Record<string, unknown>) => string | undefined;

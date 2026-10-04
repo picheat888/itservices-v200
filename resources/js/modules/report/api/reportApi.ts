@@ -7,6 +7,7 @@ import { http } from '@/shared/lib/http';
 import type {
     BacklogBoardTicket,
     ExportFormat,
+    ManualSlaBreakdown,
     PagedRows,
     ReportDefinition,
     ReportExportItem,
@@ -82,6 +83,10 @@ export const reportApi = {
         http
             .get<{ data: RequestSlaBreakdown }>('/reports/tickets/request-sla/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
+
+    /** "สรุปผล SLA ของ Ticket ที่ผู้ใช้เปิดเอง": the grouped table, the still-open list, lateness and the SLA rules. */
+    manualSlaBreakdown: (filters: TabularFilters) =>
+        http.get<{ data: ManualSlaBreakdown }>('/reports/tickets/manual-sla/breakdown', { params: tabularParams(filters) }).then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 

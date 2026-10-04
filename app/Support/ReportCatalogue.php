@@ -19,6 +19,7 @@ use App\Services\Report\Stock\StockMovementReport;
 use App\Services\Report\Stock\StockValuationReport;
 use App\Services\Report\Tabular\TabularReport;
 use App\Services\Report\Ticket\TicketBacklogReport;
+use App\Services\Report\Ticket\TicketManualSlaReport;
 use App\Services\Report\Ticket\TicketRequestSlaReport;
 
 /**
@@ -40,6 +41,8 @@ class ReportCatalogue
     public const TICKETS_BACKLOG = 'tickets.backlog';
 
     public const TICKETS_REQUEST_SLA = 'tickets.request_sla';
+
+    public const TICKETS_MANUAL_SLA = 'tickets.manual_sla';
 
     public const ASSETS_OVERVIEW = 'assets.overview';
 
@@ -101,6 +104,16 @@ class ReportCatalogue
                 'domain' => 'tickets',
                 'kind' => 'tabular',
                 'class' => TicketRequestSlaReport::class,
+                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'formats' => ['xlsx', 'pdf'],
+                'range' => true,
+            ],
+            // Tickets employees opened themselves, judged by the same verdicts and grouped by a
+            // dimension the reader picks — the twin of the request report above.
+            self::TICKETS_MANUAL_SLA => [
+                'domain' => 'tickets',
+                'kind' => 'tabular',
+                'class' => TicketManualSlaReport::class,
                 'requires' => ['tickets.view_all', 'tickets.resolve'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,

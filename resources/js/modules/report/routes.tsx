@@ -23,6 +23,7 @@ import StockBelowMinReportPage from './pages/stock-below-min';
 import StockMovementsReportPage from './pages/stock-movements';
 import StockValuationReportPage from './pages/stock-valuation';
 import TicketsBacklogReportPage from './pages/tickets-backlog';
+import TicketsManualSlaReportPage from './pages/tickets-manual-sla';
 import TicketsOverviewReportPage from './pages/tickets-overview';
 import TicketsRequestSlaReportPage from './pages/tickets-request-sla';
 
@@ -38,6 +39,7 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'tickets-overview', anyOf: ['tickets.view_all'], Page: TicketsOverviewReportPage },
     { path: 'tickets-backlog', anyOf: ['tickets.view_all'], Page: TicketsBacklogReportPage },
     { path: 'tickets-request-sla', anyOf: ['tickets.view_all'], Page: TicketsRequestSlaReportPage },
+    { path: 'tickets-manual-sla', anyOf: ['tickets.view_all'], Page: TicketsManualSlaReportPage },
     // Assets
     { path: 'assets-warranty-expiring', anyOf: ['assets.view'], Page: AssetsWarrantyExpiringReportPage },
     { path: 'assets-overview', anyOf: ['assets.view'], Page: AssetsOverviewReportPage },

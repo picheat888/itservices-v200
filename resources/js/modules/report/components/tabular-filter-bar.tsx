@@ -69,6 +69,7 @@ export function TabularFilterBar({
     onChange,
     onReset,
     hidden = [],
+    viewOnly = [],
     leading,
 }: {
     definition: TabularDefinition;
@@ -77,13 +78,15 @@ export function TabularFilterBar({
     onReset: () => void;
     /** Filters the page draws itself (e.g. the backlog's SLA segments) — left out of the bar. */
     hidden?: string[];
+    /** Filters that only set how the page is shown — left out of the clear badge. */
+    viewOnly?: string[];
     /** Drawn first in the bar. */
     leading?: React.ReactNode;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const withAll = useWithAllOption();
-    const anySet = definition.filters.some((filter) => differs(filter, filters));
+    const anySet = definition.filters.some((filter) => !viewOnly.includes(filter.name) && differs(filter, filters));
     const shown = (name: string) => definition.filters.find((f) => f.name === name && f.type === 'date' && !hidden.includes(name));
     const rangeFrom = shown('from');
     const rangeTo = shown('to');
