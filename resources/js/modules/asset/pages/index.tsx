@@ -580,10 +580,10 @@ export default function AssetsPage() {
                             <StatCard label={t('asset_pending_return')} value={summary?.pending_return ?? 0} icon={RefreshCcw} />
                         </div>
 
-                        {/* By type grows a row per category while the activity chart is a fixed
-                            height — items-start lets each card end where its content does instead
-                            of stretching the shorter one to fake a matching height. */}
-                        <div className="grid items-start gap-4 lg:grid-cols-2">
+                        {/* The two cards stand the same height: the row stretches both to the taller,
+                            and the activity chart grows into whatever height "By type" takes —
+                            folded or opened to every category. */}
+                        <div className="grid gap-4 lg:grid-cols-2">
                             <Card className="overflow-hidden">
                                 <div className="border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-3.5">
                                     <div className="flex items-center gap-2">
