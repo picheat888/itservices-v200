@@ -24,6 +24,7 @@ class AssetStatusColorsTest extends TestCase
         $this->getJson('/api/settings')
             ->assertOk()
             ->assertJsonPath('data.asset_status_colors.deployed', '#0284c7')
+            ->assertJsonPath('data.asset_status_colors.pending_return', '#7c3aed')
             ->assertJsonPath('data.asset_status_colors.writeoff', '#dc2626');
     }
 

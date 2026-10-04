@@ -54,7 +54,7 @@ class SettingsController extends Controller
         'deployed' => '#0284c7',
         'ready' => '#059669',
         'pending_acceptance' => '#d97706',
-        'pending_return' => '#d97706',
+        'pending_return' => '#7c3aed',
         'common' => '#64748b',
         'writeoff' => '#dc2626',
     ];
