@@ -747,6 +747,26 @@ class AssetApiTest extends TestCase
         $this->assertSame('writeoff', $a->fresh()->status->value);
     }
 
+    /** A write-off is dated (assets.written_off_at), for the write-off report; cancelling it clears the date. */
+    public function test_a_writeoff_is_dated_and_a_cancel_clears_the_date(): void
+    {
+        $this->travelTo('2026-10-04 14:30:00');
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+        $this->assertNull($asset->written_off_at);
+
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'reason' => 'EOL'])->assertOk();
+        $this->assertSame('2026-10-04 14:30:00', $asset->fresh()->written_off_at->toDateTimeString());
+        $this->getJson("/api/assets/{$asset->id}")->assertOk()->assertJsonPath('data.written_off_at', '2026-10-04 14:30');
+
+        $this->travelTo('2026-10-05 09:00:00');
+        $this->postJson("/api/assets/{$asset->id}/cancel-writeoff")->assertOk();
+        $this->assertNull($asset->fresh()->written_off_at);
+
+        // Any save that makes it written off dates it too (created written off).
+        $this->assertSame('2026-10-05 09:00:00', Asset::factory()->create(['status' => 'writeoff'])->written_off_at->toDateTimeString());
+    }
+
     public function test_bulk_writeoff_requires_a_note(): void
     {
         $this->actingAs($this->super());

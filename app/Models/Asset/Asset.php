@@ -38,7 +38,7 @@ class Asset extends Model
         'asset_code', 'tag', 'category_id', 'brand_id', 'model_id', 'serial', 'source', 'status',
         'owner', 'owner_employee_id', 'location_id', 'warehouse_id', 'value', 'vendor_id',
         'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id',
-        'owned_since', 'notes', 'last_reason',
+        'owned_since', 'notes', 'last_reason', 'written_off_at',
     ];
 
     protected function casts(): array
@@ -51,6 +51,7 @@ class Asset extends Model
             'warranty_end' => 'date',
             'warranty_lifetime' => 'boolean',
             'owned_since' => 'date',
+            'written_off_at' => 'datetime',
         ];
     }
 
@@ -118,12 +119,28 @@ class Asset extends Model
         return $this->hasMany(Ticket::class, 'related_asset_id')->latest();
     }
 
-    /** Auto-generate an INK-IT-YY-NNNN Asset code on create. */
+    /**
+     * Auto-generate an INK-IT-YY-NNNN Asset code on create, and stamp the write-off:
+     * written_off_at is set when the status becomes writeoff (created written off, retired, or
+     * edited to it) and cleared when it leaves it (a write-off cancelled). The bulk write-off is a
+     * query update, so AssetService::bulkSetStatus stamps it itself.
+     */
     protected static function booted(): void
     {
         static::creating(function (Asset $asset) {
             if (blank($asset->asset_code)) {
                 $asset->asset_code = $asset->generateAssetCode();
+            }
+        });
+
+        static::saving(function (Asset $asset) {
+            if (! $asset->isDirty('status')) {
+                return;
+            }
+            if ($asset->status === AssetStatus::Writeoff) {
+                $asset->written_off_at ??= now();
+            } else {
+                $asset->written_off_at = null;
             }
         });
     }
