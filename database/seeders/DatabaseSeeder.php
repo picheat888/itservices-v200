@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
         $this->seedRolesAndPermissions();
         $this->seedRoleGroups();
         $this->seedAdministrator();
+        $this->seedAssetStatusColors();
 
         // Each of these reads its own catalogue class and is itself idempotent.
         $this->call(MailSettingSeeder::class);      // the single editable SMTP row
@@ -124,6 +125,29 @@ class DatabaseSeeder extends Seeder
             if ($defaultId !== null) {
                 AppSetting::put('default_employee_group_id', (string) $defaultId);
             }
+        }
+    }
+
+    /**
+     * The asset status colours a fresh install starts on (Settings → Assets) — the company's own
+     * choice (2026-10-04): pending return in violet, apart from the blue of in use.
+     *
+     * @var array<string, string>
+     */
+    public const ASSET_STATUS_COLORS = [
+        'deployed' => '#0284c7',
+        'ready' => '#059669',
+        'pending_acceptance' => '#d97706',
+        'pending_return' => '#7c3aed',
+        'common' => '#64748b',
+        'writeoff' => '#dc2626',
+    ];
+
+    /** Only when no colours are saved yet, so an administrator's own colours survive a re-seed. */
+    private function seedAssetStatusColors(): void
+    {
+        if (AppSetting::get('asset_status_colors') === null) {
+            AppSetting::put('asset_status_colors', json_encode(self::ASSET_STATUS_COLORS));
         }
     }
 
