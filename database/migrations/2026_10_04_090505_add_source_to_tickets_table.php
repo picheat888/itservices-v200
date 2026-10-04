@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * tickets.source — where a ticket came from (App\Enums\Ticket\TicketSource): 'manual' (opened
- * by someone) or 'request' (opened by an approved service request). Before this a ticket had
+ * by someone) or 'auto_request' (opened by an approved service request). Before this a ticket had
  * no field for it; the only trace was service_requests.ticket_id, which the auto-ticket step is
  * the one place to write. Existing tickets are filled from that link, so the column is right
  * from the first report.
@@ -22,7 +22,7 @@ return new class extends Migration
 
         DB::table('tickets')
             ->whereIn('id', DB::table('service_requests')->whereNotNull('ticket_id')->select('ticket_id'))
-            ->update(['source' => 'request']);
+            ->update(['source' => 'auto_request']);
     }
 
     public function down(): void

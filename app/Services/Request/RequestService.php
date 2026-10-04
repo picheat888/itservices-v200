@@ -507,7 +507,7 @@ class RequestService
             'subject' => $subject,
             'description' => $this->ticketDescription($request),
             'category' => $request->type->ticketCategory()->value,
-            'source' => TicketSource::Request,
+            'source' => TicketSource::AutoRequest,
         ], $employee);
 
         $request->update(['ticket_id' => $ticket->id]);
