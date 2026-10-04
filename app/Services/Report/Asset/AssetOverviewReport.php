@@ -97,8 +97,8 @@ class AssetOverviewReport extends TabularReport
             ReportFilter::select('source', Options::fromLabels(self::SOURCE_KEYS)),
             // "หมวดหมู่" here, as asset categories are called in Master Data; the shared label says "หมวด".
             ReportFilter::select('category_id', Options::categories())->labelKey('rep_fl_asset_category'),
+            // No free-text search: this page reads the whole picture, and finding one asset is /assets' job.
             ReportFilter::select('department_id', Options::departments()),
-            ReportFilter::search(),
         ];
     }
 
@@ -115,17 +115,7 @@ class AssetOverviewReport extends TabularReport
             ->when($filters['status'], fn (Builder $q, string $status) => $q->where('assets.status', $status))
             ->when($filters['source'], fn (Builder $q, string $source) => $q->where('assets.source', $source))
             ->when($filters['category_id'], fn (Builder $q, $id) => $q->where('assets.category_id', (int) $id))
-            ->when($filters['department_id'], fn (Builder $q, $id) => $q->whereHas('ownerEmployee', fn (Builder $e) => $e->where('department_id', (int) $id)))
-            ->when($filters['search'], fn (Builder $q, string $search) => $q->where(function (Builder $w) use ($search) {
-                $like = "%{$search}%";
-                $w->where('assets.asset_code', 'like', $like)
-                    ->orWhere('assets.tag', 'like', $like)
-                    ->orWhere('assets.serial', 'like', $like)
-                    ->orWhereHas('model', fn (Builder $m) => $m->where('name', 'like', $like))
-                    // Owner is a shared label on the asset, or the holding employee's code.
-                    ->orWhere('assets.owner', 'like', $like)
-                    ->orWhereHas('ownerEmployee', fn (Builder $e) => $e->where('code', 'like', $like)->orWhere('first_name', 'like', $like)->orWhere('last_name', 'like', $like));
-            }));
+            ->when($filters['department_id'], fn (Builder $q, $id) => $q->whereHas('ownerEmployee', fn (Builder $e) => $e->where('department_id', (int) $id)));
     }
 
     public function query(User $viewer, array $filters): Builder
