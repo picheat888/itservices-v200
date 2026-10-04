@@ -590,8 +590,8 @@ export default function AssetsPage() {
                                         <Layers className="text-muted-foreground h-4 w-4" />
                                         <span className="text-sm font-semibold">{t('asset_by_type')}</span>
                                     </div>
-                                    {/* Legend — the one place the three colors are named. The rows below
-                                        mark their counts with the same dots and lean on this. */}
+                                    {/* Legend — the one place the three colors are named (the counts over the bars
+                                        wear them), then what the number closing each row is. */}
                                     <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
                                         {TYPE_BUCKETS.map((s) => (
                                             <span key={s.key} className="text-muted-foreground flex items-center gap-1.5 text-xs">
@@ -599,23 +599,21 @@ export default function AssetsPage() {
                                                 {t(s.labelKey)}
                                             </span>
                                         ))}
+                                        <span className="text-muted-foreground border-border border-l pl-3 text-xs">{t('asset_types_total')}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-4 p-5">
                                     {typeBars.map((b) => (
-                                        // Two lines per type: name + total, then the bar on its own full-width line
-                                        // with each bucket's count over its piece.
-                                        <div key={b.type} className="space-y-1.5">
-                                            <div className="flex items-baseline gap-3">
-                                                <div className="flex min-w-0 flex-1 items-center gap-2 text-sm" title={typeLabel(b)}>
-                                                    {b.type === OTHER_TYPES ? (
-                                                        <MoreHorizontal className="text-muted-foreground h-4 w-4 shrink-0" />
-                                                    ) : (
-                                                        <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
-                                                    )}
-                                                    <span className="truncate">{typeLabel(b)}</span>
-                                                </div>
-                                                <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
+                                        // One line per type: icon + name, the bar with each bucket's count over its
+                                        // piece, then the total — name and total sit level with the bar itself.
+                                        <div key={b.type} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3">
+                                            <div className="flex min-w-0 items-center gap-2 text-sm leading-none" title={typeLabel(b)}>
+                                                {b.type === OTHER_TYPES ? (
+                                                    <MoreHorizontal className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                ) : (
+                                                    <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                )}
+                                                <span className="truncate">{typeLabel(b)}</span>
                                             </div>
                                             {/* A full-width bar per type, split by its own total — as the reports' IT staff
                                                 card draws a person's split — with each bucket's count over its piece. Measured
@@ -650,6 +648,7 @@ export default function AssetsPage() {
                                                     ))}
                                                 </div>
                                             </div>
+                                            <span className="text-right font-mono text-sm leading-none font-semibold">{b.count}</span>
                                         </div>
                                     ))}
                                     {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}

@@ -88,6 +88,7 @@ export const asset: Dict = {
     asset_type_others: 'อื่น ๆ {n} ประเภท',
     asset_types_show_all: 'แสดงทั้งหมด ({n})',
     asset_types_show_less: 'แสดงน้อยลง',
+    asset_types_total: 'ทั้งหมด',
     asset_activity_title: 'การส่งมอบ / รับคืน',
     asset_handover: 'ส่งมอบ',
     asset_returned: 'รับคืน',
