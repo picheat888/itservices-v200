@@ -25,7 +25,7 @@ final class ReportSummary
         public readonly int|float|null $value,
         public readonly ?string $tone,
         public readonly string $format = 'count',
-        /** @var list<array{key: string, label_key: string, tone: string, value: int}> */
+        /** @var list<array{key: string, label_key: string, tone: string, value: int|float}> */
         public readonly array $split = [],
         public readonly ?int $share = null,
         /** @var array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>}|null */
@@ -41,7 +41,7 @@ final class ReportSummary
     /**
      * The same tile with a breakdown for its footer.
      *
-     * @param  list<array{key: string, label_key: string, tone: string, value: int}>  $split
+     * @param  list<array{key: string, label_key: string, tone: string, value: int|float}>  $split
      */
     public function withSplit(array $split): self
     {
@@ -73,7 +73,7 @@ final class ReportSummary
     }
 
     /**
-     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>}|null, goal: ?int}
+     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int|float}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>}|null, goal: ?int}
      */
     public function toArray(): array
     {
