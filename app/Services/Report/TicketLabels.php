@@ -42,6 +42,29 @@ final class TicketLabels
         'other' => 'อื่น ๆ',
     ];
 
+    /** @var array<string, string> Kind of work (tickets.work_class, App\Enums\Ticket\TicketWorkClass). */
+    private const WORK_CLASS_TH = [
+        'standard' => 'งานปกติ',
+        'repair_internal' => 'งานซ่อม (ช่างภายในองค์กร)',
+        'repair_vendor' => 'งานซ่อม (ช่างภายนอก)',
+    ];
+
+    /** @var array<string, string> An SLA verdict (TicketMetrics::slaState / responseSlaState). */
+    private const SLA_TH = [
+        'met' => 'ทัน SLA',
+        'over_sla' => 'เกิน SLA',
+    ];
+
+    public static function workClass(?string $value): ?string
+    {
+        return $value === null ? null : (self::WORK_CLASS_TH[$value] ?? $value);
+    }
+
+    public static function sla(?string $value): ?string
+    {
+        return $value === null ? null : (self::SLA_TH[$value] ?? $value);
+    }
+
     public static function priority(?string $value): ?string
     {
         return $value === null ? null : (self::PRIORITY_TH[$value] ?? $value);

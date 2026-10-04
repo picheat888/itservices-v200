@@ -22,7 +22,7 @@ class TicketOverviewExporter
     /** A PDF past this many rows stops being readable; the workbook carries everything. */
     public const PDF_ROW_LIMIT = 1000;
 
-    public function __construct(private TicketOverviewReportService $reports) {}
+    public function __construct(private TicketOverviewReportService $reports, private TicketHistory $history) {}
 
     /**
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
@@ -64,9 +64,12 @@ class TicketOverviewExporter
         $name = DocumentName::make('TicketReport', [$summary['range']['from'], $summary['range']['to']], $format);
 
         if ($format === 'xlsx') {
-            $rows = $this->reports->exportRows($viewer, $filters);
+            // The workbook also carries the raw data sheets, which read further than the list does.
+            $rows = $this->reports->exportRows($viewer, $filters)
+                ->load(['relatedAsset:id,asset_code', 'serviceRequest:id,ticket_id,reference'])
+                ->loadCount(['updates', 'attachments']);
 
-            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TicketOverviewExport($summary, $rows)];
+            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TicketOverviewExport($summary, $rows, $this->history->for($rows))];
         }
 
         $rows = $this->reports->exportRows($viewer, $filters, self::PDF_ROW_LIMIT);
