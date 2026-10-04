@@ -4407,3 +4407,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ส่งออก: แผ่นสรุป → แยกตามแผนก → คลัง → ส่วนกลาง → ตัดจำหน่าย → รายการ (`exportSections`)
 - `chart-parts.tsx` รวม fold / FoldToggle / ChartHeading / useChartLabel · ลบ chart type `bars`
 - Tests: `AssetActivityReportsTest` (overview 6 tests ใหม่), register tests → overview, key ในชุด Report tests — ทั้งระบบ 1573 passed · ตรวจใน Chrome แล้ว
+- **แยกตามหมวด: แสดงทั้งหมด** — แสดง 5 หมวดแรก ที่เหลือรวมเป็น "อื่น ๆ (n)" พร้อมปุ่ม "แสดงทั้งหมด (n)" · ปุ่มแยกจากของการ์ดแผนก (กดแล้วการ์ดแผนกไม่กางตาม) · ตรวจใน Chrome แล้ว

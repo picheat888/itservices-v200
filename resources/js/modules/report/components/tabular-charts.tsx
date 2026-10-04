@@ -7,9 +7,9 @@
  *   'buckets' (categories as the /assets card draws them, bucket-rows-card.tsx);
  * - the row under it: the small cards — 'stacks' marked `compact` (compact-stacks-card.tsx) and
  *   'list' (asset-list-card.tsx) — three across on a wide screen.
- * A long list (departments past 10) shows its top rows and folds the rest into one "อื่น ๆ (n)" row,
- * with "แสดงทั้งหมด (n)" under it to open every row in place — one switch for each row of cards, so
- * cards side by side grow together. Rows marked `apart` (assets in no department) come last under a
+ * A long list (departments past 10, categories past 5) shows its top rows and folds the rest into one
+ * "อื่น ๆ (n)" row, with "แสดงทั้งหมด (n)" under it to open every row in place — its own switch for
+ * the departments and for the categories, one shared by the row of small cards so they grow together. Rows marked `apart` (assets in no department) come last under a
  * dashed rule, drawn as a share of their own total so they never set the departments' scale.
  * The chosen view (สถานะ / ที่มา) lives in the URL (?view=), as the app keeps tabs.
  * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
@@ -320,10 +320,13 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
     // The small cards keep their order from the report (warehouses, locations, written off).
     const small = charts.filter((c): c is Stacks | List => (c.type === 'stacks' && !!c.compact) || c.type === 'list');
     const side = donuts.length + buckets.length > 0;
-    // One "show all" per row of cards, so opening one card's list fills its neighbour's height too.
+    // One "show all" for the departments, one for the categories, and one for the row of small cards
+    // (so opening one small card's list fills its neighbours' height too).
     const [expanded, setExpanded] = useState(false);
+    const [bucketsExpanded, setBucketsExpanded] = useState(false);
     const [smallExpanded, setSmallExpanded] = useState(false);
     const toggle = () => setExpanded((open) => !open);
+    const toggleBuckets = () => setBucketsExpanded((open) => !open);
     const toggleSmall = () => setSmallExpanded((open) => !open);
 
     return (
@@ -348,8 +351,8 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
                                 key={c.key}
                                 chart={c}
                                 className={donuts.length + i > 0 ? 'border-t' : undefined}
-                                expanded={expanded}
-                                onToggle={toggle}
+                                expanded={bucketsExpanded}
+                                onToggle={toggleBuckets}
                             />
                         ))}
                     </Card>
