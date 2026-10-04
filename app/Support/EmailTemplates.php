@@ -171,8 +171,7 @@ You can tracking progress in {{app.name}}.</p>
                 'cadence' => 'realtime',
             ],
             [
-                // Sits where ticket.sla_breach used to. The SLA sweep is bell-only now, and a
-                // case closed WITHOUT being fixed is the outcome the requester most needs told.
+                // A case closed WITHOUT being fixed is the outcome the requester most needs told.
                 'key' => 'ticket.cancelled',
                 'name' => 'Ticket has been Cancelled (Ticket ถูกยกเลิก)',
                 'subject' => 'The ticket {{ticket.id}} has been Cancelled',

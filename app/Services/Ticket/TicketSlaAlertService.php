@@ -16,15 +16,14 @@ use Illuminate\Support\Facades\Notification;
  * - at 80% of the target (near_due) → a bell nudge
  * - past the target (over_sla)      → a bell alert
  *
- * Bell only, on both stages. The breach used to mail everyone it belled as well; that was
- * withdrawn along with the ticket.sla_breach template. This sweep runs every ten minutes
+ * Bell only, on both stages — never email. This sweep runs every ten minutes
  * across every open case, so it is the one notifier in the system that can produce a lot of
  * messages without anybody doing anything — and the people it reaches are IT staff who are
  * already in the portal, where the tray is.
  *
  * Recipients follow the workflow: while a ticket waits for a take (response
  * clock) everyone who can take it (tickets.resolve) is warned; once it's in
- * progress (resolution clock) the assignee is warned, and a breach additionally
+ * progress (resolution clock) the assignee is warned, and going over SLA additionally
  * escalates to everyone who can re-assign (tickets.assign).
  *
  * Each warning fires ONCE per clock, tracked by the sla_*_alert_level columns
