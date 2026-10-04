@@ -15,7 +15,10 @@ namespace App\Services\Report\Tabular;
  * a badge and a meter in the tile's tone. `note` is one line for the tile's foot when it has no
  * split — an i18n key plus a duration in hours ({n}) and/or a moment "Y-m-d H:i" ({at}) the
  * page formats ("เกินนานสุด 38 วัน", "ใบถัดไปครบ 2 ต.ค. 17:00"), and any plain numbers under
- * `values` filled in by name ({met} → "13 จาก 13 เคส"). All of these are screen only.
+ * `values` filled in by name ({met} → "13 จาก 13 เคส"). `attention` frames the tile apart from its
+ * colour once the value is above zero — 'amber' (needs watching) or 'red' (gone wrong) — for a tile
+ * whose colour comes from elsewhere (an asset status in its Settings colour). All of these are
+ * screen only.
  */
 final class ReportSummary
 {
@@ -31,6 +34,7 @@ final class ReportSummary
         /** @var array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>}|null */
         public readonly ?array $note = null,
         public readonly ?int $goal = null,
+        public readonly ?string $attention = null,
     ) {}
 
     public static function make(string $key, string $heading, int|float|null $value, ?string $tone = null, string $format = 'count'): self
@@ -45,7 +49,7 @@ final class ReportSummary
      */
     public function withSplit(array $split): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $split, $this->share, $this->note, $this->goal);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $split, $this->share, $this->note, $this->goal, $this->attention);
     }
 
     /** The same tile as a share of `$whole` — a whole percent, null when the whole is empty. */
@@ -53,7 +57,7 @@ final class ReportSummary
     {
         $share = $whole > 0 && $this->value !== null ? (int) round($this->value / $whole * 100) : null;
 
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $share, $this->note, $this->goal);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $share, $this->note, $this->goal, $this->attention);
     }
 
     /**
@@ -63,24 +67,30 @@ final class ReportSummary
      */
     public function withNote(?array $note): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $note, $this->goal);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $note, $this->goal, $this->attention);
     }
 
     /** The same percent tile measured against a percent goal (see the class note). */
     public function withGoal(int $goal): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $goal);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $goal, $this->attention);
+    }
+
+    /** The same tile framed as needing watching ('amber') or gone wrong ('red') while above zero. */
+    public function withAttention(string $attention): self
+    {
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $attention);
     }
 
     /**
-     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int|float}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>}|null, goal: ?int}
+     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int|float}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>}|null, goal: ?int, attention: ?string}
      */
     public function toArray(): array
     {
         return [
             'key' => $this->key, 'label_key' => "rep_k_{$this->key}", 'heading' => $this->heading, 'value' => $this->value,
             'tone' => $this->tone, 'format' => $this->format, 'split' => $this->split, 'share' => $this->share, 'note' => $this->note,
-            'goal' => $this->goal,
+            'goal' => $this->goal, 'attention' => $this->attention,
         ];
     }
 }

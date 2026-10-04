@@ -105,9 +105,9 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         // something behind its tone: red for a rate short of its goal or a red tile (past SLA),
                         // amber for an amber one (due soon, nobody assigned).
                         alert={
-                            (goal !== null && (item.value ?? 0) < goal) || (base === 'red' && (item.value ?? 0) > 0)
+                            (goal !== null && (item.value ?? 0) < goal) || ((base === 'red' || item.attention === 'red') && (item.value ?? 0) > 0)
                                 ? 'red'
-                                : base === 'amber' && (item.value ?? 0) > 0
+                                : (base === 'amber' || item.attention === 'amber') && (item.value ?? 0) > 0
                                   ? 'amber'
                                   : false
                         }

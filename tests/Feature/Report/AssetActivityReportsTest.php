@@ -84,6 +84,9 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame(2, $summary['in_use']['value']);
         $this->assertSame(2, $summary['ready']['value']);
         $this->assertSame(1, $summary['pending_return']['value']);
+        // Pending returns wear the Settings colour but keep the amber frame; the other tiles have none.
+        $this->assertSame('amber', $summary['pending_return']['attention']);
+        $this->assertNull($summary['in_use']['attention']);
     }
 
     public function test_by_status_department_draws_department_status_and_category_charts(): void

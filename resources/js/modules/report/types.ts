@@ -272,6 +272,8 @@ export interface SummaryItem {
     note?: { label_key: string; hours?: number | null; at?: string | null; values?: Record<string, number> } | null;
     /** Percent tiles: the goal the value is measured against — a meter with the goal marked. */
     goal?: number | null;
+    /** Frames the tile apart from its colour once the value is above zero: amber = needs watching, red = gone wrong. */
+    attention?: 'amber' | 'red' | null;
 }
 
 /** A chart colour, drawn by tabular-charts.tsx. */
