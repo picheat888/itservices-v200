@@ -6,8 +6,8 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
-import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -34,7 +34,7 @@ import {
     X,
 } from 'lucide-react';
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MovementDrawer } from '../components/movement-drawer';
 import { RequestDrawer } from '../components/request-drawer';
@@ -49,6 +49,7 @@ import { RequestsTab } from './tabs/requests-tab';
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const STOCK_TABS = ['overview', 'items', 'movements', 'requests', 'audit'] as const;
 type StockTab = (typeof STOCK_TABS)[number];
+const isStockTab = (v: string | null): v is StockTab => STOCK_TABS.includes(v as StockTab);
 
 // localStorage key for the Items-tab filters (search + category + warehouse + status).
 // Kept out of the URL so personal filters survive a reload without cluttering shareable links.
@@ -216,27 +217,9 @@ export default function StockPage() {
     const canManage = can('manage_items');
 
     const [searchParams, setSearchParams] = useSearchParams();
-    // Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard.
-    const isStockTab = (v: string | null): v is StockTab => STOCK_TABS.includes(v as StockTab);
-    const urlTab = readTabParam(searchParams.get('tab'));
-    const initialTab: StockTab = isStockTab(urlTab) ? urlTab : 'overview';
-    const [tab, setTab] = useState<StockTab>(initialTab);
-
-    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = useCallback(
-        (next: StockTab) => {
-            setTab(next);
-            setSearchParams(
-                (prev) => {
-                    const sp = new URLSearchParams(prev);
-                    sp.set('tab', next);
-                    return sp;
-                },
-                { replace: true },
-            );
-        },
-        [setSearchParams],
-    );
+    // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
+    const [tab, setTab] = useTabParam(isStockTab, 'overview');
+    const changeTab = (next: StockTab) => setTab(next);
 
     // Restore the last-used Items-tab filters so a reload lands on the same view.
     const savedFilters = useMemo<{ search?: string; cat?: string; wh?: string; status?: string; sort?: string }>(() => {
@@ -458,12 +441,13 @@ export default function StockPage() {
     ];
     const tabs = allTabs.filter((tb) => can(tb.view));
 
-    // If the currently active tab is filtered out (user lost permission), fall back to the first available tab.
+    // If the currently active tab is filtered out (user lost permission), fall back to the first
+    // available tab — replace, so Back does not bounce the reader into it again.
     useEffect(() => {
         if (tabs.length > 0 && !tabs.some((tb) => tb.id === tab)) {
-            changeTab(tabs[0].id);
+            setTab(tabs[0].id, { replace: true });
         }
-    }, [tabs, tab, changeTab]);
+    }, [tabs, tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Active item filters surfaced as removable chips (search stays in its own box).
     const statusChipLabel = statusFilter === 'alerts' ? t('stock_st_alerts') : t(`stock_st_${statusFilter}` as Parameters<typeof t>[0]);

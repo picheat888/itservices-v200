@@ -7,7 +7,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
-import { readTabParam } from '@/shared/lib/tab-param';
+import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -65,12 +65,6 @@ const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isAssetTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
-
-/** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
-function initialAssetTab(): Tab {
-    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
-    return isAssetTab(fromUrl) ? fromUrl : 'overview';
-}
 
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof Box }) {
     return (
@@ -216,33 +210,21 @@ export default function AssetsPage() {
     const myEmpCode = user?.employee_code ?? null;
 
     const [searchParams, setSearchParams] = useSearchParams();
-    const [tab, setTab] = useState<Tab>(initialAssetTab);
+    // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
+    const [tab, setTab] = useTabParam(isAssetTab, 'overview');
     // Unfolds the "Assets in the system" card — a way of looking at one card, so component
     // state rather than a URL parameter.
     const [showAllTypes, setShowAllTypes] = useState(false);
 
-    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = useCallback(
-        (next: Tab) => {
-            setTab(next);
-            setSearchParams(
-                (prev) => {
-                    const sp = new URLSearchParams(prev);
-                    sp.set('tab', next);
-                    return sp;
-                },
-                { replace: true },
-            );
-        },
-        [setSearchParams],
-    );
+    const changeTab = (next: Tab) => setTab(next);
 
-    // The Overview tab is gated by assets.view_dashboard — bounce a role without it to Inventory.
+    // The Overview tab is gated by assets.view_dashboard — bounce a role without it to Inventory
+    // (replace: the reader never chose Overview, so Back must not bounce them into it again).
     useEffect(() => {
         if (tab === 'overview' && !canViewOverview) {
-            changeTab('inventory');
+            setTab('inventory', { replace: true });
         }
-    }, [tab, canViewOverview, changeTab]);
+    }, [tab, canViewOverview]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<AssetType | ''>('');
