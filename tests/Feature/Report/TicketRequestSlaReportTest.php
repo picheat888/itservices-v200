@@ -177,6 +177,8 @@ class TicketRequestSlaReportTest extends TestCase
         $this->assertSame('hours', $summary['rs_fix_avg']['format']);
         $this->assertSame(['wait', 'work'], array_column($summary['rs_fix_avg']['split'], 'key'));
         $this->assertEquals([11.8, 60.2], array_column($summary['rs_fix_avg']['split'], 'value'));
+        // The tile names its base — the completed cases — apart from the table's "every case taken".
+        $this->assertSame(['label_key' => 'rep_rs_note_fix_base', 'values' => ['n' => 2]], $summary['rs_fix_avg']['note']);
 
         // Past SLA right now: t3 (not taken in time) — half of the 2 still open.
         $this->assertSame(1, $summary['rs_over_sla']['value']);
