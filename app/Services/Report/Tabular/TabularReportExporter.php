@@ -59,13 +59,14 @@ class TabularReportExporter
     {
         $query = $report->query($viewer, $filters);
         $summary = $report->summary($query, $filters);
+        $sections = $report->exportSections($viewer, $filters);
         $name = DocumentName::make('Report', [str_replace('.', '-', $report->key())], $format);
 
         if ($format === 'xlsx') {
             $rows = (clone $query)->get();
             $report->hydrateRows($rows, $viewer, $filters);
 
-            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TabularReportExport($report, $summary, $rows)];
+            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TabularReportExport($report, $summary, $rows, $sections)];
         }
 
         $rows = (clone $query)->limit(self::PDF_ROW_LIMIT)->get();
@@ -77,6 +78,7 @@ class TabularReportExporter
         $pdf = Pdf::loadView('pdf.reports.tabular', [
             'report' => $report,
             'summary' => $summary,
+            'sections' => $sections,
             'rows' => $rows,
             'truncated' => $total > $rows->count(),
             'total' => $total,

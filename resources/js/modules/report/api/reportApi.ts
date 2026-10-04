@@ -12,6 +12,7 @@ import type {
     ReportExportItem,
     ReportScheduleItem,
     ReportSnapshot,
+    RequestSlaBreakdown,
     ScheduleInput,
     SnapshotRange,
     TabularDefinition,
@@ -75,6 +76,12 @@ export const reportApi = {
     /** Every live ticket the backlog filters keep (SLA filter aside), unpaged — the due board. */
     backlogBoard: (filters: TabularFilters) =>
         http.get<{ data: BacklogBoardTicket[] }>('/reports/tickets/backlog/board', { params: tabularParams(filters) }).then((r) => r.data.data),
+
+    /** "SLA ตามประเภทคำขอ": the per-type table, the still-open list and the SLA rules (request type filter aside). */
+    requestSlaBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: RequestSlaBreakdown }>('/reports/tickets/request-sla/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 

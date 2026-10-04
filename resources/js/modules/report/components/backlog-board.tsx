@@ -93,7 +93,7 @@ const SEGMENTS: { value: SlaState | null; label: string }[] = [
     { value: 'on_track', label: 'rep_sla_on_track' },
 ];
 
-function Heading({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode }) {
+export function Heading({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode }) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3')}>
             <span className="text-sm font-semibold">{title}</span>
@@ -103,7 +103,7 @@ function Heading({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode
 }
 
 /** A legend entry: a small square in the bar's colour, then what it means. */
-function Swatch({ tone, children }: { tone: string; children: React.ReactNode }) {
+export function Swatch({ tone, children }: { tone: string; children: React.ReactNode }) {
     return (
         <span className="inline-flex items-center gap-1.5">
             <i className={cn('inline-block h-2.5 w-2.5 rounded-sm', tone)} />

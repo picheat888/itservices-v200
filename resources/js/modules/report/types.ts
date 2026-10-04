@@ -244,14 +244,16 @@ export interface SummaryItem {
     value: number | null;
     /** Amber / red also mark the tile as needing attention. */
     tone: 'amber' | 'red' | 'green' | 'violet' | 'blue' | null;
-    /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping). */
-    format: 'count' | 'money';
+    /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping) | 'percent' (whole %) | 'hours' (one decimal). */
+    format: 'count' | 'money' | 'percent' | 'hours';
     /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
     split?: { key: string; label_key: string; tone: ChartTone; value: number }[];
     /** The value as a percent of the report's whole — a badge and a meter in the tile's tone. */
     share?: number | null;
-    /** One line for the tile's foot when it has no split: a key with {n} (hours, shown as days / hours) and/or {at} ("Y-m-d H:i"). */
-    note?: { label_key: string; hours?: number | null; at?: string | null } | null;
+    /** One line for the tile's foot when it has no split: a key with {n} (hours, shown as days / hours) and/or {at} ("Y-m-d H:i"), plus plain numbers by name (`values` — {met}, {n}). */
+    note?: { label_key: string; hours?: number | null; at?: string | null; values?: Record<string, number> } | null;
+    /** Percent tiles: the goal the value is measured against — a meter with the goal marked. */
+    goal?: number | null;
 }
 
 /** A chart colour, drawn by tabular-charts.tsx. */
@@ -306,6 +308,45 @@ export interface BacklogBoardTicket {
     due_kind: 'response' | 'resolve' | null;
     /** Negative = already past the deadline. */
     hours_left: number | null;
+}
+
+/** Counts and averages over a set of tickets opened from requests (TicketRequestSlaReport::tally). */
+export interface RequestSlaTally {
+    total: number;
+    completed: number;
+    canceled: number;
+    open: number;
+    take_met: number;
+    take_total: number;
+    close_met: number;
+    close_total: number;
+    take_avg_hours: number | null;
+    fix_avg_hours: number | null;
+    over_now: number;
+}
+
+/** What the "SLA ตามประเภทคำขอ" page draws above its rows (TicketRequestSlaReport::breakdown). */
+export interface RequestSlaBreakdown {
+    /** One line per request type with a ticket, busiest first. */
+    types: Array<RequestSlaTally & { type: string }>;
+    overall: RequestSlaTally;
+    /** Request types with no ticket in the range. */
+    empty_types: string[];
+    /** Live tickets already past their SLA, most overdue first. */
+    open: {
+        id: number;
+        ticket_no: string;
+        request_type: string | null;
+        due_kind: 'response' | 'resolve';
+        due_at: string | null;
+        over_hours: number | null;
+    }[];
+    rules: {
+        goal: number;
+        response_minutes: number;
+        /** Each request type's resolution target — null hours = none set (its priority's target applies). */
+        resolve: { type: string; hours: number | null; clock: 'business' | 'calendar' | null }[];
+    };
 }
 
 export interface TabularRows {

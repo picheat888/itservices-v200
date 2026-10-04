@@ -20,6 +20,7 @@ use App\Services\Report\Stock\StockMovementReport;
 use App\Services\Report\Stock\StockValuationReport;
 use App\Services\Report\Tabular\TabularReport;
 use App\Services\Report\Ticket\TicketBacklogReport;
+use App\Services\Report\Ticket\TicketRequestSlaReport;
 
 /**
  * Registry of every report in the Report Center (/reports).
@@ -38,6 +39,8 @@ class ReportCatalogue
     public const TICKETS_OVERVIEW = 'tickets.overview';
 
     public const TICKETS_BACKLOG = 'tickets.backlog';
+
+    public const TICKETS_REQUEST_SLA = 'tickets.request_sla';
 
     public const ASSETS_BY_STATUS_DEPARTMENT = 'assets.by_status_department';
 
@@ -93,6 +96,17 @@ class ReportCatalogue
                 'class' => TicketBacklogReport::class,
                 'requires' => ['tickets.view_all', 'tickets.resolve'],
                 'formats' => ['xlsx', 'pdf'],
+            ],
+            // Tickets opened from approved requests, judged per request type — the same SLA
+            // verdicts as the overview, so it asks what the overview asks (and keeps to the
+            // reader's `tickets.level_*` categories).
+            self::TICKETS_REQUEST_SLA => [
+                'domain' => 'tickets',
+                'kind' => 'tabular',
+                'class' => TicketRequestSlaReport::class,
+                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             self::CONTRACTS_EXPIRING => [
                 'domain' => 'contracts',

@@ -4,9 +4,11 @@
  * Ticket & SLA tiles, a tile carries colour when the report gives it the means: its `share` of
  * the whole as a badge and a meter in the tile's tone, and its `split` as a stacked meter (when
  * there is no share) and as coloured dots in the footer ("● ซื้อ 62 · ● เช่า 18"). Two or three
- * tiles share the row between them on wide screens, so a short strip leaves no empty slot.
+ * tiles share the row between them on wide screens, so a short strip leaves no empty slot; five fit one row on extra-wide screens.
  * A tile with a `note` and no split carries that line at its foot instead — a duration in days
- * (hours under a day, as the time-left pills) and/or a short date and time.
+ * (hours under a day, as the time-left pills) and/or a short date and time, and any plain numbers
+ * it names. A 'percent' tile with a `goal` draws the Ticket & SLA meter (goal marked, amber below
+ * it) and flags itself while short of the goal; 'hours' reads "58.8 ชม.".
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -17,7 +19,7 @@ import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 
 /** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
-const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3' };
+const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 5: 'lg:grid-cols-3 xl:grid-cols-5' };
 
 /** "38 วัน" / "5 ชม." — the same rule as HoursLeftBadge. */
 function duration(t: (key: string) => string, hours: number): string {
@@ -39,9 +41,10 @@ function shortMoment(value: string, lang: string): string {
 }
 
 function noteText(t: (key: string) => string, lang: string, note: NonNullable<SummaryItem['note']>): string {
-    return t(note.label_key)
-        .replace('{n}', note.hours === null || note.hours === undefined ? '—' : duration(t, note.hours))
-        .replace('{at}', note.at ? shortMoment(note.at, lang) : '—');
+    // Named numbers first, so a {n} among them is not read as the duration below.
+    let text = Object.entries(note.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), t(note.label_key));
+    if (note.hours !== undefined) text = text.replace('{n}', note.hours === null ? '—' : duration(t, note.hours));
+    return text.replace('{at}', note.at ? shortMoment(note.at, lang) : '—');
 }
 
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
@@ -57,7 +60,11 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         ? '—'
                         : item.format === 'money'
                           ? item.value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          : item.value.toLocaleString(locale);
+                          : item.format === 'hours'
+                            ? item.value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                            : item.value.toLocaleString(locale);
+                const unit = item.value === null ? undefined : item.format === 'percent' ? '%' : item.format === 'hours' ? t('rep_hours') : undefined;
+                const goal = item.format === 'percent' && item.goal != null && item.value !== null ? item.goal : null;
                 const tone = item.tone ?? 'gray';
                 const share = item.share ?? null;
                 const split = item.split ?? [];
@@ -68,21 +75,33 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         key={item.key}
                         label={t(item.label_key)}
                         value={value}
-                        badge={share !== null ? <StatusBadge tone={tone}>{`${share}%`}</StatusBadge> : undefined}
+                        unit={unit}
+                        badge={
+                            share !== null ? (
+                                <StatusBadge tone={tone}>{`${share}%`}</StatusBadge>
+                            ) : goal !== null ? (
+                                <StatusBadge tone="gray">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
+                            ) : undefined
+                        }
                         // A 0-valued tile has nothing to warn about — only flag it once there's
-                        // actually something overdue/expiring behind the amber/red tone.
-                        alert={(item.tone === 'amber' || item.tone === 'red') && (item.value ?? 0) > 0}
+                        // actually something overdue/expiring behind the amber/red tone, or a rate short of its goal.
+                        alert={
+                            ((item.tone === 'amber' || item.tone === 'red') && (item.value ?? 0) > 0) || (goal !== null && (item.value ?? 0) < goal)
+                        }
+                        meter={goal !== null ? { value: item.value ?? 0, goal } : undefined}
                         bar={
-                            share !== null
-                                ? [{ key: 'share', percent: share, className: FILL[tone] }]
-                                : splitTotal > 0
-                                  ? split.map((part) => ({
-                                        key: part.key,
-                                        percent: (part.value / splitTotal) * 100,
-                                        className: FILL[part.tone],
-                                        title: `${t(part.label_key)}: ${part.value.toLocaleString(locale)}`,
-                                    }))
-                                  : undefined
+                            goal !== null
+                                ? undefined
+                                : share !== null
+                                  ? [{ key: 'share', percent: share, className: FILL[tone] }]
+                                  : splitTotal > 0
+                                    ? split.map((part) => ({
+                                          key: part.key,
+                                          percent: (part.value / splitTotal) * 100,
+                                          className: FILL[part.tone],
+                                          title: `${t(part.label_key)}: ${part.value.toLocaleString(locale)}`,
+                                      }))
+                                    : undefined
                         }
                         footer={
                             split.length > 0 ? (

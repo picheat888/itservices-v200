@@ -25,6 +25,7 @@ import StockMovementsReportPage from './pages/stock-movements';
 import StockValuationReportPage from './pages/stock-valuation';
 import TicketsBacklogReportPage from './pages/tickets-backlog';
 import TicketsOverviewReportPage from './pages/tickets-overview';
+import TicketsRequestSlaReportPage from './pages/tickets-request-sla';
 
 export interface ReportPageRoute {
     /** Under /reports — "tickets-overview" opens /reports/tickets-overview. */
@@ -37,6 +38,7 @@ export const reportPageRoutes: ReportPageRoute[] = [
     // Tickets
     { path: 'tickets-overview', anyOf: ['tickets.view_all'], Page: TicketsOverviewReportPage },
     { path: 'tickets-backlog', anyOf: ['tickets.view_all'], Page: TicketsBacklogReportPage },
+    { path: 'tickets-request-sla', anyOf: ['tickets.view_all'], Page: TicketsRequestSlaReportPage },
     // Assets
     { path: 'assets-register', anyOf: ['assets.view'], Page: AssetsRegisterReportPage },
     { path: 'assets-warranty-expiring', anyOf: ['assets.view'], Page: AssetsWarrantyExpiringReportPage },

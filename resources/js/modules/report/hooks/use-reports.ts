@@ -101,6 +101,18 @@ export const useBacklogBoard = (filters: TabularFilters) => {
     });
 };
 
+/** "SLA ตามประเภทคำขอ" — keyed without the request type, which the per-type table only highlights. */
+export const useRequestSlaBreakdown = (filters: TabularFilters) => {
+    const { request_type: _type, ...rest } = filters;
+    void _type;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'tickets.request_sla', 'breakdown', rest],
+        queryFn: () => reportApi.requestSlaBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 export const useTabularDefinition = (key: string, enabled = true) =>
     useQuery({
         queryKey: ['reports', 'tabular', key, 'definition'],
