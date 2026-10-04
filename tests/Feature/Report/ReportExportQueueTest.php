@@ -133,6 +133,28 @@ class ReportExportQueueTest extends TestCase
         Storage::disk('local')->assertMissing($path);
     }
 
+    /** "ลบทั้งหมด": every finished file of the owner's goes, with its file; one still waiting stays, and nobody else's is touched. */
+    public function test_the_owner_removes_every_finished_export_at_once(): void
+    {
+        $user = $this->userWith(['assets.view']);
+        $other = $this->userWith(['assets.view']);
+        $ready = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
+        $failed = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
+        ReportExport::whereKey($failed)->update(['status' => ReportExport::FAILED]);
+        $queued = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
+        ReportExport::whereKey($queued)->update(['status' => ReportExport::QUEUED, 'file_path' => null, 'expires_at' => null]);
+        $theirs = $this->actingAs($other)->postJson(self::OVERVIEW)->json('data.id');
+        $path = ReportExport::findOrFail($ready)->file_path;
+
+        $this->actingAs($user)->deleteJson('/api/reports/exports')->assertOk()->assertJsonPath('data.deleted', 2);
+
+        $this->assertDatabaseMissing('report_exports', ['id' => $ready]);
+        $this->assertDatabaseMissing('report_exports', ['id' => $failed]);
+        Storage::disk('local')->assertMissing($path);
+        $this->assertDatabaseHas('report_exports', ['id' => $queued]);
+        $this->assertDatabaseHas('report_exports', ['id' => $theirs]);
+    }
+
     public function test_a_file_still_waiting_in_the_queue_cannot_be_downloaded(): void
     {
         Queue::fake();

@@ -18,7 +18,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Clock, Download, Loader2, RotateCcw, Trash2 } from 'lucide-react';
-import { useDeleteExport, useDownloadExport, useMyExports, useRetryExport } from '../hooks/use-reports';
+import { useDeleteAllExports, useDeleteExport, useDownloadExport, useMyExports, useRetryExport } from '../hooks/use-reports';
 import type { ReportExportItem, ReportExportStatus } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { reportStem } from './report-catalogue';
@@ -186,15 +186,51 @@ function ExportRow({ item }: { item: ReportExportItem }) {
 }
 
 /** The design's rail card heading: muted icon + title, a note on the right. */
-export function RailHeading({ icon: Icon, title, note }: { icon: typeof Clock; title: string; note?: string }) {
+export function RailHeading({ icon: Icon, title, note, action }: { icon: typeof Clock; title: string; note?: string; action?: React.ReactNode }) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-[18px] py-3.5')}>
             <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <Icon className="text-muted-foreground h-4 w-4" />
+                <Icon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                 {title}
             </h3>
-            {note && <span className="text-muted-foreground text-xs">{note}</span>}
+            {(note || action) && (
+                <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                    {note}
+                    {/* A card-wide action after the note, set apart by a rule ("เก็บไว้ 7 วัน | ลบทั้งหมด"). */}
+                    {note && action && <span className="bg-border h-3 w-px" aria-hidden="true" />}
+                    {action}
+                </span>
+            )}
         </div>
+    );
+}
+
+/** "ลบทั้งหมด": every finished file at once, after a confirm; ones still being built stay. */
+function DeleteAllButton({ count }: { count: number }) {
+    const t = useT();
+    const confirm = useConfirm();
+    const removeAll = useDeleteAllExports();
+
+    const onDeleteAll = async () => {
+        const ok = await confirm({
+            variant: 'danger',
+            title: t('rep_my_exports_delete_all_title'),
+            description: t('rep_my_exports_delete_all_desc'),
+            entity: { name: t('rep_my_exports_title'), sub: t('rep_my_exports_files').replace('{n}', String(count)) },
+            confirmText: t('rep_my_exports_delete_all'),
+            action: () => removeAll.mutateAsync(),
+        });
+        if (ok) useToastStore.getState().push(t('rep_my_exports_deleted_all'), 'error', undefined, 'trash', { duration: 4000 });
+    };
+
+    return (
+        <button
+            type="button"
+            onClick={onDeleteAll}
+            className="focus-visible:ring-brand/30 rounded-sm font-medium text-red-600 transition-colors hover:text-red-700 hover:underline focus-visible:ring-2 focus-visible:outline-none dark:text-red-400 dark:hover:text-red-300"
+        >
+            {t('rep_my_exports_delete_all')}
+        </button>
     );
 }
 
@@ -238,13 +274,20 @@ export function RailRowsSkeleton({ rows = 3 }: { rows?: number }) {
 export function MyExports() {
     const t = useT();
     const { data: items = [], isLoading } = useMyExports();
+    // What "ลบทั้งหมด" would take: the finished files — ones still being built are left to finish.
+    const finished = items.filter((item) => item.status === 'ready' || item.status === 'failed').length;
 
     return (
         <Card id="my-exports" className="overflow-hidden">
             {isLoading ? (
                 <RailHeadingSkeleton />
             ) : (
-                <RailHeading icon={Download} title={t('rep_my_exports_title')} note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))} />
+                <RailHeading
+                    icon={Download}
+                    title={t('rep_my_exports_title')}
+                    note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))}
+                    action={finished > 0 ? <DeleteAllButton count={finished} /> : undefined}
+                />
             )}
             {isLoading ? (
                 <RailRowsSkeleton />

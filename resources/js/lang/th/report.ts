@@ -221,6 +221,11 @@ export const report: Dict = {
     rep_my_exports_retry: 'ลองใหม่',
     rep_my_exports_delete: 'ลบไฟล์',
     rep_my_exports_deleted: 'ลบไฟล์แล้ว',
+    rep_my_exports_delete_all: 'ลบทั้งหมด',
+    rep_my_exports_delete_all_title: 'ลบไฟล์ส่งออกทั้งหมด?',
+    rep_my_exports_delete_all_desc: 'ไฟล์ที่สร้างเสร็จและที่ไม่สำเร็จจะถูกลบ ไฟล์ที่ยังรอคิวหรือกำลังสร้างจะยังอยู่',
+    rep_my_exports_files: '{n} ไฟล์',
+    rep_my_exports_deleted_all: 'ลบไฟล์ส่งออกทั้งหมดแล้ว',
     rep_my_exports_download_failed: 'ดาวน์โหลดไม่สำเร็จ ไฟล์อาจหมดอายุแล้ว',
 
     // components/schedule-report-dialog.tsx — schedule dialog

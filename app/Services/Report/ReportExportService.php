@@ -164,6 +164,24 @@ class ReportExportService
     }
 
     /**
+     * "ลบทั้งหมด" on the panel: remove every finished file of this person — ready or failed, with its
+     * file. One still queued or being built is left to finish, so no worker writes into a deleted
+     * export. Returns how many went.
+     */
+    public function deleteAllFor(User $user): int
+    {
+        $finished = ReportExport::query()
+            ->where('user_id', $user->id)
+            ->current()
+            ->whereIn('status', [ReportExport::READY, ReportExport::FAILED])
+            ->get();
+
+        $finished->each(fn (ReportExport $export) => $this->delete($export));
+
+        return $finished->count();
+    }
+
+    /**
      * Remove every export past its expiry, and any left queued/running long after its worker
      * should have finished. Returns how many rows went.
      */

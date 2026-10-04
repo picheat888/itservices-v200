@@ -105,6 +105,8 @@ export const reportApi = {
     retryExport: (id: number) => http.post<{ data: ReportExportItem }>(`/reports/exports/${id}/retry`).then((r) => r.data.data),
 
     deleteExport: (id: number) => http.delete(`/reports/exports/${id}`),
+    /** Every finished file of the reader's own ("ลบทั้งหมด"); ones still being built stay. */
+    deleteAllExports: () => http.delete('/reports/exports'),
 
     /** Set a schedule from a tabular report page — its filters and column picker travel with it. */
     scheduleTabular: (key: string, filters: TabularFilters, input: ScheduleInput, columns?: string[]) =>
