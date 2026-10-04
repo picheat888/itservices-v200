@@ -137,7 +137,7 @@ export const report: Dict = {
     // components/ticket-report-table.tsx — ticket rows
     rep_chart_by_department: 'แยกตามแผนก',
     rep_chart_status: 'สถานะทรัพย์สิน',
-    rep_chart_in_use: 'ใช้งานรวมส่วนกลาง',
+    rep_chart_in_use: 'ใช้งาน\nรวมส่วนกลาง',
     rep_chart_by_category: 'แยกตามหมวด',
     rep_chart_items: '{n} รายการ',
     rep_chart_others: 'อื่น ๆ ({n})',

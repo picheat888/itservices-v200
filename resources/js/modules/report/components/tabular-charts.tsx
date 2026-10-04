@@ -272,6 +272,35 @@ function StacksCard({ chart, expanded, onToggle }: { chart: Stacks; expanded: bo
     );
 }
 
+/**
+ * The figure in the middle of the donut and what it counts. A label too wide for the hole is written
+ * in the lang file with a line break ("ใช้งาน\nรวมส่วนกลาง") and drawn as two smaller lines, the
+ * whole block kept centred on the hole; a one-line label sits as before.
+ */
+function DonutCenter({ value, label }: { value: number; label: string }) {
+    const lines = label.split('\n');
+    const twoLines = lines.length > 1;
+    return (
+        <>
+            <text x={85} y={twoLines ? 80 : 87} textAnchor="middle" className="fill-foreground font-mono text-[24px] font-bold">
+                {`${value}%`}
+            </text>
+            <text
+                x={85}
+                y={twoLines ? 98 : 106}
+                textAnchor="middle"
+                className={cn('fill-muted-foreground', twoLines ? 'text-[12px]' : 'text-[13.5px]')}
+            >
+                {lines.map((line, i) => (
+                    <tspan key={i} x={85} dy={i === 0 ? 0 : 14}>
+                        {line}
+                    </tspan>
+                ))}
+            </text>
+        </>
+    );
+}
+
 const R = 62;
 const STROKE_WIDTH = 20;
 const C = 2 * Math.PI * R;
@@ -313,16 +342,7 @@ function DonutSection({ chart }: { chart: Donut }) {
                             offset += length;
                             return arc;
                         })}
-                        {chart.center.value !== null && (
-                            <>
-                                <text x={85} y={87} textAnchor="middle" className="fill-foreground font-mono text-[24px] font-bold">
-                                    {`${chart.center.value}%`}
-                                </text>
-                                <text x={85} y={106} textAnchor="middle" className="fill-muted-foreground text-[13.5px]">
-                                    {t(chart.center.label_key)}
-                                </text>
-                            </>
-                        )}
+                        {chart.center.value !== null && <DonutCenter value={chart.center.value} label={t(chart.center.label_key)} />}
                     </svg>
                     <div className="space-y-2 text-sm">
                         {chart.segments.map((s) => (
