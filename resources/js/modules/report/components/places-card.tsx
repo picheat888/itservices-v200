@@ -5,8 +5,8 @@
  *   place, so the fullest and emptiest read at a glance. Opened past `TOP_PLACES` it turns into
  *   horizontal bars, one line per place with its name and count — fifty columns would not read;
  * - under a ruled heading, each place's share by the chart's series (bought / rented) as a small
- *   ring — the share of `center_key` (rented) written in its hole in that part's colour — with the
- *   place and each part's count under it. Opened past `TOP_PLACES` it too turns into one line per
+ *   ring — its hole says "เช่า" over the share of `center_key` (rented) in that part's colour —
+ *   with the place and each part's count under it. Opened past `TOP_PLACES` it too turns into one line per
  *   place: a bar that fills the width, split by series, its counts beside it.
  * Both sections list the same places — the first `TOP_PLACES`, then "แสดงทั้งหมด (n)" opens the
  * rest; a place not recorded comes last, faded (under a dashed rule in the opened lists). The title is
@@ -181,7 +181,7 @@ function ShareRing({ row, series, centerKey }: { row: PlaceRow; series: ChartSer
 
     return (
         <div className={cn('flex min-w-0 flex-col items-center gap-1 text-center', row.apart && 'opacity-60')}>
-            <svg viewBox="0 0 60 60" className="h-16 w-16" role="img" aria-label={title}>
+            <svg viewBox="0 0 60 60" className="h-[72px] w-[72px]" role="img" aria-label={title}>
                 <title>{title}</title>
                 <circle cx={30} cy={30} r={RING_R} fill="none" strokeWidth={RING_WIDTH} className="stroke-muted" />
                 {parts.map((s) => {
@@ -205,11 +205,17 @@ function ShareRing({ row, series, centerKey }: { row: PlaceRow; series: ChartSer
                     offset += length;
                     return arc;
                 })}
+                {/* Two lines in the hole: what the share is of ("เช่า"), then the share itself. */}
+                {center && (
+                    <text x={30} y={27} textAnchor="middle" className="fill-muted-foreground text-[9px]">
+                        {t(center.label_key)}
+                    </text>
+                )}
                 <text
                     x={30}
-                    y={34.5}
+                    y={center ? 38.5 : 34.5}
                     textAnchor="middle"
-                    className={cn('font-mono text-[12px] font-bold', center ? cn('fill-current', TEXT[center.tone]) : 'fill-foreground')}
+                    className={cn('font-mono text-[11.5px] font-bold', center ? cn('fill-current', TEXT[center.tone]) : 'fill-foreground')}
                 >
                     {share === null ? '—' : `${share}%`}
                 </text>
@@ -240,7 +246,6 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
     // No "อื่น ๆ" row: the count in the heading already says how many there are in all.
     const folding = fold(places, TOP_PLACES, expanded, 0);
     const max = Math.max(1, ...chart.rows.map((r) => r.total));
-    const centerSeries = chart.series.find((s) => s.key === chart.center_key);
     // Opened past TOP_PLACES: both sections turn into one line per place.
     const opened = folding.folds && expanded;
 
@@ -265,16 +270,7 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                     ) : (
                         <CountColumns rows={[...folding.shown, ...apart]} tone={FILL[chart.tone]} max={max} />
                     )}
-                    <ChartHeading
-                        title={t(chart.split_title_key)}
-                        sub={
-                            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                <SplitLegend series={chart.series} />
-                                {centerSeries && !opened && <span>{t('rep_chart_ring_center').replace('{name}', t(centerSeries.label_key))}</span>}
-                            </span>
-                        }
-                        className="border-t"
-                    />
+                    <ChartHeading title={t(chart.split_title_key)} sub={<SplitLegend series={chart.series} />} className="border-t" />
                     {/* Rings while a handful show; opened, one bar per place reads easier down a long list. */}
                     {opened ? (
                         <ShareList rows={folding.shown} apart={apart} series={chart.series} />
