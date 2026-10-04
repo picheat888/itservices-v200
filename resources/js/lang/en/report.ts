@@ -137,7 +137,7 @@ export const report: Dict = {
     // components/ticket-report-table.tsx — ticket rows
     rep_chart_by_department: 'By department',
     rep_chart_status: 'Asset status',
-    rep_chart_in_use: 'in use + common',
+    rep_chart_in_use: 'in use\n+ common',
     rep_chart_by_category: 'By category',
     rep_chart_items: '{n} items',
     rep_chart_others: 'Others ({n})',
