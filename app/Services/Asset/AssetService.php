@@ -524,6 +524,8 @@ class AssetService
         return Asset::whereIn('id', $ids)->update([
             'status' => $status->value,
             'last_reason' => $reason,
+            // A query update skips the model's saving hook, so the write-off is stamped here.
+            'written_off_at' => $status === AssetStatus::Writeoff ? now() : null,
         ]);
     }
 }

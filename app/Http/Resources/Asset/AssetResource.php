@@ -78,6 +78,8 @@ class AssetResource extends JsonResource
             'owned_since' => $this->owned_since?->toDateString(),
             'notes' => $this->notes,
             'last_reason' => $this->last_reason,
+            // When it was written off (null unless it is), for the write-off report.
+            'written_off_at' => $this->written_off_at?->format('Y-m-d H:i'),
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),
 
