@@ -31,7 +31,7 @@ class ReportSnapshotService
     public const TREND_POINTS = 7;
 
     /** The Ticket & SLA report's filters with nothing narrowed — the viewer's levels only. */
-    private const NO_TICKET_FILTERS = ['categories' => [], 'priority' => null, 'department_id' => null, 'assignee_id' => null];
+    private const NO_TICKET_FILTERS = ['categories' => [], 'priority' => null, 'department_id' => null, 'assignee_id' => null, 'source' => null];
 
     public function __construct(private TicketOverviewReportService $tickets) {}
 
@@ -81,7 +81,7 @@ class ReportSnapshotService
         }
 
         $summary = $this->tickets->summary($viewer, [
-            'from' => $from, 'to' => $to, 'categories' => [], 'priority' => null, 'department_id' => null, 'assignee_id' => null,
+            'from' => $from, 'to' => $to, 'categories' => [], 'priority' => null, 'department_id' => null, 'assignee_id' => null, 'source' => null,
         ]);
         $rate = $summary['kpi']['sla_rate'];
         $previous = $summary['previous']['sla_rate'];

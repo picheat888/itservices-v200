@@ -4,6 +4,7 @@ namespace App\Http\Requests\Report;
 
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketSource;
 use App\Services\Report\TicketOverviewReportService;
 use App\Support\ReportCatalogue;
 use Carbon\CarbonImmutable;
@@ -38,6 +39,7 @@ class TicketOverviewReportRequest extends FormRequest
             'priority' => ['nullable', Rule::enum(TicketPriority::class)],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'source' => ['nullable', Rule::enum(TicketSource::class)],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
         ];
     }
@@ -63,7 +65,7 @@ class TicketOverviewReportRequest extends FormRequest
     }
 
     /**
-     * @return array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}
+     * @return array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}
      */
     public function filters(): array
     {

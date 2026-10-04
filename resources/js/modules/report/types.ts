@@ -115,6 +115,8 @@ export interface TicketReportFilters {
     priority: string;
     department_id: number | null;
     assignee_id: number | null;
+    /** '' = every ticket · 'manual' = opened by a person · 'auto_request' = opened by an approved request */
+    source: string;
 }
 
 export interface TicketOverviewSummary {
@@ -181,6 +183,8 @@ export interface TicketReportRow {
     category: string | null;
     priority: string | null;
     status: string;
+    /** tickets.source — 'manual' | 'auto_request' */
+    source: string | null;
     assignee_name: string | null;
     created_at: string | null;
     resolved_at: string | null;

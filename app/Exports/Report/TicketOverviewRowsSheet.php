@@ -38,7 +38,7 @@ class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHea
      */
     public function headings(): array
     {
-        return ['เลขที่', 'เรื่อง', 'ผู้แจ้ง', 'แผนก', 'หมวด', 'ความสำคัญ', 'สถานะ', 'ผู้รับผิดชอบ', 'เปิดเมื่อ', 'ปิดเมื่อ', 'เวลาแก้ไข (ชม.)', 'SLA'];
+        return ['เลขที่', 'เรื่อง', 'ผู้แจ้ง', 'แผนก', 'หมวด', 'ความสำคัญ', 'สถานะ', 'ที่มา', 'ผู้รับผิดชอบ', 'เปิดเมื่อ', 'ปิดเมื่อ', 'เวลาแก้ไข (ชม.)', 'SLA'];
     }
 
     /**
@@ -58,6 +58,7 @@ class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHea
             TicketLabels::category($ticket->category?->value),
             TicketLabels::priority($ticket->priority?->value),
             TicketLabels::status($ticket->status?->value),
+            TicketLabels::source($ticket->source?->value),
             $ticket->assignee?->name,
             SystemTime::dateTime($ticket->created_at),
             SystemTime::dateTime($ticket->resolved_at),

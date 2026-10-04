@@ -37,8 +37,13 @@ export function defaultTicketReportFilters(today = new Date()): TicketReportFilt
         priority: '',
         department_id: null,
         assignee_id: null,
+        source: '',
     };
 }
+
+/** tickets.source values the "ที่มา" filter takes (App\Enums\Ticket\TicketSource). */
+export const TICKET_SOURCES = ['manual', 'auto_request'];
+const SOURCES = TICKET_SOURCES;
 
 const isDate = (x: unknown) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
 
@@ -56,6 +61,7 @@ function fromStorage(value: unknown): Partial<TicketReportFilters> {
     if (typeof v.priority === 'string') kept.priority = v.priority;
     if (idOrNull(v.department_id)) kept.department_id = v.department_id as number | null;
     if (idOrNull(v.assignee_id)) kept.assignee_id = v.assignee_id as number | null;
+    if (typeof v.source === 'string' && (v.source === '' || SOURCES.includes(v.source))) kept.source = v.source;
     return kept;
 }
 
@@ -74,7 +80,7 @@ export function ticketFiltersToStore(filters: TicketReportFilters, today = new D
     return from === defaults.from && to === defaults.to ? rest : filters;
 }
 
-const URL_NAMES = ['from', 'to', 'categories', 'priority', 'department_id', 'assignee_id'];
+const URL_NAMES = ['from', 'to', 'categories', 'priority', 'department_id', 'assignee_id', 'source'];
 const ID = /^\d+$/;
 const SLUG = /^[a-z_]+$/;
 
@@ -96,6 +102,8 @@ function fromUrl(params: URLSearchParams): TicketReportFilters | null {
     if (ID.test(department)) filters.department_id = Number(department);
     const assignee = params.get('assignee_id') ?? '';
     if (ID.test(assignee)) filters.assignee_id = Number(assignee);
+    const source = params.get('source') ?? '';
+    if (SOURCES.includes(source)) filters.source = source;
     return filters;
 }
 
@@ -106,6 +114,7 @@ function toUrl(filters: TicketReportFilters): Record<string, string> {
     if (filters.priority) out.priority = filters.priority;
     if (filters.department_id !== null) out.department_id = String(filters.department_id);
     if (filters.assignee_id !== null) out.assignee_id = String(filters.assignee_id);
+    if (filters.source) out.source = filters.source;
     return out;
 }
 

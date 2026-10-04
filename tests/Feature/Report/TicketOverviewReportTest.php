@@ -377,6 +377,27 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame($met->ticket_no, $body['data'][1]['ticket_no']);
     }
 
+    /** "ที่มา": tickets a person opened vs those an approved request opened — the page and its rows follow. */
+    public function test_source_filter_narrows_the_page_and_its_rows(): void
+    {
+        $user = $this->deskMember();
+        $mine = $this->ticket(['created_at' => '2026-09-05 09:00']);
+        $auto = $this->ticket(['created_at' => '2026-09-06 09:00', 'source' => 'auto_request']);
+
+        $this->assertSame(2, $this->summary($user)['kpi']['total']);
+        $this->assertSame(1, $this->summary($user, ['source' => 'auto_request'])['kpi']['total']);
+        $this->assertSame(1, $this->summary($user, ['source' => 'manual'])['kpi']['total']);
+
+        $rows = fn (string $source) => $this->actingAs($user)
+            ->getJson('/api/reports/tickets/overview/rows?'.http_build_query([...self::RANGE, 'source' => $source]))
+            ->assertOk()->json('data');
+        $this->assertSame([[$auto->id, 'auto_request']], array_map(fn (array $r) => [$r['id'], $r['source']], $rows('auto_request')));
+        $this->assertSame([[$mine->id, 'manual']], array_map(fn (array $r) => [$r['id'], $r['source']], $rows('manual')));
+
+        $this->actingAs($user)->getJson('/api/reports/tickets/overview?'.http_build_query([...self::RANGE, 'source' => 'request']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['source']);
+    }
+
     public function test_rows_respect_the_same_access_rule(): void
     {
         Role::create(['key' => 'plain', 'name' => 'Plain', 'is_system' => false]);

@@ -31,6 +31,7 @@ class TicketReportRowResource extends JsonResource
             'category' => $this->category?->value,
             'priority' => $this->priority?->value,
             'status' => $this->status?->value,
+            'source' => $this->source?->value,
             'assignee_name' => $this->assignee?->name,
             'created_at' => SystemTime::dateTime($this->created_at),
             'resolved_at' => SystemTime::dateTime($this->resolved_at),

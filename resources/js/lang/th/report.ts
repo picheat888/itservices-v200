@@ -509,6 +509,9 @@ export const report: Dict = {
     rep_due_kind_resolve: 'รอปิดเคส',
     rep_opt_unassigned: 'ยังไม่มีผู้รับ',
     rep_fl_assignee: 'ผู้รับผิดชอบ',
+    // tickets.source — the "ที่มา" filter / column on the ticket reports
+    rep_source_manual: 'ผู้ใช้เปิดเอง',
+    rep_source_auto_request: 'จากคำขอ (อัตโนมัติ)',
     rep_c_due_kind: 'เงื่อนไข SLA',
     rep_k_due_soon: 'ครบกำหนดใน 24 ชม.',
     rep_k_unassigned: 'ยังไม่มีผู้รับ',
