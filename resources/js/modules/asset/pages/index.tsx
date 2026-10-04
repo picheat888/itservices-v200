@@ -137,38 +137,38 @@ function AssetOverviewSkeleton() {
                     </Card>
                 ))}
             </div>
-            <div className="grid items-start gap-4 lg:grid-cols-2">
+            {/* The pair stretches to one height, as the loaded cards do. */}
+            <div className="grid gap-4 lg:grid-cols-2">
                 <Card className="overflow-hidden">
                     <div className="border-border border-b px-5 py-3.5">
                         <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                     </div>
-                    {/* By type: two lines per row — name + counts, then the split bar. */}
+                    {/* By type: one line per row — name, the split bar under its counts, the total —
+                        for the rows shown folded (TYPE_ROWS_SHOWN and the "others" row), then the toggle. */}
                     <div className="space-y-4 p-5">
-                        {Array.from({ length: 7 }).map((_, i) => (
-                            <div key={i} className="space-y-1.5">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-muted h-4 flex-1 animate-pulse rounded" />
-                                    <div className="bg-muted h-3 w-16 shrink-0 animate-pulse rounded" />
-                                    <div className="bg-muted h-4 w-6 shrink-0 animate-pulse rounded" />
-                                </div>
-                                <div className="bg-muted h-2 animate-pulse rounded-full" />
+                        {Array.from({ length: TYPE_ROWS_SHOWN + 1 }).map((_, i) => (
+                            <div key={i} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3">
+                                <div className="bg-muted h-4 animate-pulse rounded" />
+                                <div className="bg-muted mt-5 h-2 animate-pulse rounded-full" />
+                                <div className="bg-muted ml-auto h-4 w-8 animate-pulse rounded" />
                             </div>
                         ))}
+                        <div className="bg-muted mx-auto h-3 w-24 animate-pulse rounded" />
                     </div>
                 </Card>
                 {/* Activity chart: header with its view switch, then twelve bars of
                     staggered height so the placeholder reads as a chart, not a block. */}
-                <Card className="overflow-hidden">
+                <Card className="flex flex-col overflow-hidden">
                     <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
                         <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                         <div className="bg-muted h-6 w-28 animate-pulse rounded-lg" />
                     </div>
-                    <div className="px-5 pt-5 pb-3.5">
+                    <div className="flex flex-1 flex-col px-5 pt-5 pb-3.5">
                         <div className="mb-2.5 flex items-center justify-between gap-3">
                             <div className="bg-muted h-3 w-48 animate-pulse rounded" />
                             <div className="bg-muted h-3 w-16 animate-pulse rounded" />
                         </div>
-                        <div className="flex h-[172px] items-end gap-2.5 pt-[22px]">
+                        <div className="flex min-h-[172px] flex-1 items-end gap-2.5 pt-[22px]">
                             {[40, 65, 30, 80, 55, 45, 70, 35, 60, 50, 75, 90].map((h, i) => (
                                 <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
                                     <div className="bg-muted w-full max-w-[32px] animate-pulse rounded-t-md" style={{ height: `${h}%` }} />
