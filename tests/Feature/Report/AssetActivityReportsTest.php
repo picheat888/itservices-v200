@@ -125,7 +125,8 @@ class AssetActivityReportsTest extends TestCase
         $this->assertTrue($warehouses['No warehouse']['apart']);
         // Shared use by location: the same card, counted in locations.
         $this->assertSame('places', $charts['location']['type']);
-        $this->assertSame('asset-ready', $charts['location']['tone']);
+        // Each card in its status colour: shared use in the common one.
+        $this->assertSame('asset-common', $charts['location']['tone']);
         $this->assertSame('rep_chart_locations_n', $charts['location']['count_key']);
         $this->assertNull($charts['location']['subtitle_key']);
         $this->assertSame(['purchased' => 1, 'rented' => 0], $charts['location']['rows'][0]['values']);
