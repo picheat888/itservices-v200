@@ -94,8 +94,6 @@ export default function TicketsManualSlaReportPage() {
         <TabularReportView
             reportKey="tickets.manual_sla"
             extras={{
-                hiddenFilters: ['by'],
-                viewFilters: ['by'],
                 // Drawn inside the subject and requester cells, as on the Ticket & SLA page.
                 innerColumns: ['ticket_no', 'department'],
                 beforeTable: ({ filters, patch }) => <ManualSlaCards filters={filters} patch={patch} />,

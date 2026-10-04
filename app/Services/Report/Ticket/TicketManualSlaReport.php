@@ -68,7 +68,7 @@ class TicketManualSlaReport extends TabularReport
             ReportFilter::select('work_class', Options::fromLabels(self::workClassKeys())),
             ReportFilter::select('assignee', self::assigneeOptions()),
             // What the grouped table splits by — drawn as a switch on the table, not in the filter bar.
-            ReportFilter::select('by', Options::fromLabels(array_combine(self::DIMENSIONS, array_map(fn (string $d) => "rep_ms_by_{$d}", self::DIMENSIONS))), 'category'),
+            ReportFilter::select('by', Options::fromLabels(array_combine(self::DIMENSIONS, array_map(fn (string $d) => "rep_ms_by_{$d}", self::DIMENSIONS))), 'category')->viewOnly(),
         ];
     }
 

@@ -212,6 +212,8 @@ export interface TabularFilterDef {
     options: FilterOption[];
     default: string | number | null;
     label_key: string;
+    /** Only sets how the page is shown (ReportFilter::viewOnly) — never listed, counted or cleared as a filter. */
+    view?: boolean;
 }
 
 export type ColumnType = 'text' | 'localized' | 'number' | 'money' | 'date' | 'datetime' | 'days_left' | 'hours_left' | 'enum';

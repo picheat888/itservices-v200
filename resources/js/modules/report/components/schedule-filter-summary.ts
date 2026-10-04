@@ -53,18 +53,21 @@ export function tabularFilterChips(
 }
 
 function narrowing(definition: TabularDefinition, filters: Record<string, unknown>, t: Translate, lang: string): FilterChip[] {
-    return definition.filters
-        .filter((f) => f.type !== 'date' && isSet(filters[f.name]))
-        .map((f) => {
-            const raw = filters[f.name];
-            const option = f.options.find((o) => String(o.value) === String(raw));
-            const value = option
-                ? option.label_key
-                    ? t(option.label_key)
-                    : (lang === 'th' && option.label_th) || option.label || String(raw)
-                : String(raw);
-            return { label: t(f.label_key), value };
-        });
+    return (
+        definition.filters
+            // A view setting (what a table groups by) narrows nothing, so it is no chip.
+            .filter((f) => !f.view && f.type !== 'date' && isSet(filters[f.name]))
+            .map((f) => {
+                const raw = filters[f.name];
+                const option = f.options.find((o) => String(o.value) === String(raw));
+                const value = option
+                    ? option.label_key
+                        ? t(option.label_key)
+                        : (lang === 'th' && option.label_th) || option.label || String(raw)
+                    : String(raw);
+                return { label: t(f.label_key), value };
+            })
+    );
 }
 
 export function ticketFilterChips(

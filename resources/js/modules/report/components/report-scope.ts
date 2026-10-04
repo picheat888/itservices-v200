@@ -13,6 +13,9 @@ type Translate = (key: string) => string;
 
 const DATE_KEYS = new Set(['from', 'to', 'as_of']);
 
+/** View settings saved with a file (ReportFilter::viewOnly — what a table groups by): no filter to count. */
+const VIEW_KEYS = new Set(['by']);
+
 const isSet = (value: unknown) => value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
 
 /** "YYYY-MM-DD" as a local date (no timezone shift). */
@@ -43,7 +46,7 @@ export function reportScope(filters: Record<string, unknown>, columnsCount: numb
         );
     }
 
-    const narrowed = Object.entries(filters).filter(([key, value]) => !DATE_KEYS.has(key) && isSet(value)).length;
+    const narrowed = Object.entries(filters).filter(([key, value]) => !DATE_KEYS.has(key) && !VIEW_KEYS.has(key) && isSet(value)).length;
     if (narrowed > 0) parts.push(t('rep_scope_filters').replace('{n}', String(narrowed)));
     if (columnsCount) parts.push(t('rep_scope_columns').replace('{n}', String(columnsCount)));
 
