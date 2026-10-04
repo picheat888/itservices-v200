@@ -1,4 +1,4 @@
-import { format, setMonth, setYear, type Locale } from 'date-fns';
+import { format, isSameDay, setMonth, setYear, type Locale } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import * as React from 'react';
 import { DayPicker, getDefaultClassNames } from 'react-day-picker';
@@ -121,7 +121,24 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                     onSelect={onSelect}
                     locale={locale}
                     captionLayout="label"
+                    // Weekends in bold red, like a wall calendar (same look as the reports' date range
+                    // picker). The red skips the picked day (white-on-brand) and other months' days (faded).
+                    modifiers={{
+                        weekend: { dayOfWeek: [0, 6] },
+                        weekendText: (date: Date) =>
+                            (date.getDay() === 0 || date.getDay() === 6) &&
+                            date.getMonth() === month.getMonth() &&
+                            !(selected && isSameDay(date, selected)),
+                    }}
+                    modifiersClassNames={{
+                        weekend: '[&>button]:font-semibold',
+                        weekendText: '[&>button]:text-destructive!',
+                    }}
                     classNames={{
+                        weekdays: cn(
+                            base.weekdays,
+                            '[&>th:first-child]:text-destructive [&>th:last-child]:text-destructive [&>th:first-child]:font-bold [&>th:last-child]:font-bold',
+                        ),
                         months: cn(base.months, 'relative'),
                         month: cn(base.month, 'space-y-3'),
                         month_caption: cn(base.month_caption, 'flex h-8 items-center justify-center'),

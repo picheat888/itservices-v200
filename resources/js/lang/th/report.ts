@@ -140,6 +140,10 @@ export const report: Dict = {
     rep_f_n_selected: '{n} หมวด',
     rep_f_clear: 'ล้างทั้งหมด',
 
+    // components/date-range-input.tsx — date range picker
+    rep_f_pick_end: 'คลิกวันสิ้นสุด',
+    rep_f_apply: 'นำไปใช้',
+
     // components/ticket-report-table.tsx — ticket rows
     rep_chart_by_department: 'แยกตามแผนก',
     rep_chart_status: 'สถานะทรัพย์สิน',
