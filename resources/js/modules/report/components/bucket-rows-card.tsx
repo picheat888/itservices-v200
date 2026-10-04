@@ -1,9 +1,9 @@
 /**
  * The 'buckets' chart — the categories drawn as the /assets overview card "ทรัพย์สินทั้งหมดในระบบ"
- * is: each category's icon and name, its count in each group (ready / in use / written off) with
- * the group's dot, its total, then a bar on its own line split into the groups. Bars are measured
- * against the largest category, so lengths compare across rows; the legend in the heading names
- * the colours. Past `TOP_BUCKETS` the rest fold into one "อื่น ๆ (n)" row.
+ * is: each category's icon, name and total, then a bar on its own line that always fills the width,
+ * split into the groups (ready / in use / written off) with each group's count over its piece — as
+ * the IT staff card draws a person's split. A full bar per category keeps a single written-off
+ * asset visible beside hundreds in use; the legend in the heading names the colours. Past `TOP_BUCKETS` the rest fold into one "อื่น ๆ (n)" row.
  * Drawn under the status donut by tabular-charts.tsx; SplitLegend is shared with places-card.tsx.
  */
 import { useT } from '@/lang';
@@ -11,7 +11,7 @@ import { getLucideIcon } from '@/shared/lib/lucide-icons';
 import { cn } from '@/shared/lib/utils';
 import { Box, MoreHorizontal } from 'lucide-react';
 import type { ChartSeries, TabularChart } from '../types';
-import { ChartHeading, fold, FoldToggle, useChartLabel } from './chart-parts';
+import { ChartHeading, fold, FoldToggle, StackBar, useChartLabel } from './chart-parts';
 import { FILL } from './chart-tones';
 
 type Buckets = Extract<TabularChart, { type: 'buckets' }>;
@@ -20,8 +20,8 @@ type Buckets = Extract<TabularChart, { type: 'buckets' }>;
 const TOP_BUCKETS = 5;
 
 /**
- * One row as the /assets card draws it: an icon (optional) and the name, each part's count with
- * its dot, the total, then the split bar on its own line, measured against `max`.
+ * One row: an icon (optional), the name and the total, then the split bar on its own line — full
+ * width, each part's count over its piece.
  */
 export function SplitLine({
     name,
@@ -29,7 +29,6 @@ export function SplitLine({
     values,
     total,
     series,
-    max,
     muted,
 }: {
     name: string;
@@ -37,39 +36,21 @@ export function SplitLine({
     values: Record<string, number>;
     total: number;
     series: ChartSeries[];
-    max: number;
     muted?: boolean;
 }) {
     const t = useT();
     const title = `${name}: ${series.map((s) => `${values[s.key] ?? 0} ${t(s.label_key)}`).join(', ')}`;
 
     return (
-        <div className="space-y-1.5">
+        <div className="space-y-1" role="img" aria-label={title} title={title}>
             <div className="flex items-baseline gap-3">
-                <div className={cn('flex min-w-0 flex-1 items-center gap-2 text-sm', muted && 'text-muted-foreground')} title={name}>
+                <div className={cn('flex min-w-0 flex-1 items-center gap-2 text-sm', muted && 'text-muted-foreground')}>
                     {Icon && <Icon className="text-muted-foreground h-4 w-4 shrink-0" />}
                     <span className="truncate">{name}</span>
                 </div>
-                {/* Each count carries its part's dot; an empty part fades out. */}
-                <div className="flex shrink-0 items-center gap-2.5 font-mono text-xs">
-                    {series.map((s) => (
-                        <span
-                            key={s.key}
-                            title={t(s.label_key)}
-                            className={cn('flex items-center gap-1', (values[s.key] ?? 0) === 0 && 'opacity-40')}
-                        >
-                            <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', FILL[s.tone])} />
-                            {values[s.key] ?? 0}
-                        </span>
-                    ))}
-                </div>
                 <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{total.toLocaleString()}</span>
             </div>
-            <div role="img" aria-label={title} title={title} className="bg-muted flex h-2 overflow-hidden rounded-full">
-                {series.map((s) => (
-                    <div key={s.key} className={FILL[s.tone]} style={{ width: `${((values[s.key] ?? 0) / max) * 100}%` }} />
-                ))}
-            </div>
+            <StackBar values={values} series={series} scale={total} />
         </div>
     );
 }
@@ -107,7 +88,6 @@ export function BucketsSection({
     const rest: Record<string, number> = {};
     for (const s of chart.series) rest[s.key] = folding.rest.reduce((sum, r) => sum + (r.values[s.key] ?? 0), 0);
     const restTotal = folding.rest.reduce((sum, r) => sum + r.total, 0);
-    const max = Math.max(1, restTotal, ...folding.shown.map((r) => r.total));
 
     return (
         <>
@@ -124,7 +104,6 @@ export function BucketsSection({
                             values={row.values}
                             total={row.total}
                             series={chart.series}
-                            max={max}
                         />
                     ))}
                     {folding.rest.length > 0 && (
@@ -134,7 +113,6 @@ export function BucketsSection({
                             values={rest}
                             total={restTotal}
                             series={chart.series}
-                            max={max}
                             muted
                         />
                     )}
