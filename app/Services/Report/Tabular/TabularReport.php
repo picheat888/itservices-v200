@@ -55,18 +55,65 @@ abstract class TabularReport
     }
 
     /**
-     * The columns an export prints: every column, or the chosen ones in their report order.
+     * The columns the page shows (and the API rows carry): all but the sheet-only ones.
+     *
+     * @return list<ReportColumn>
+     */
+    public function screenColumns(): array
+    {
+        return array_values(array_filter($this->columns(), fn (ReportColumn $c) => ! $c->isSheetOnly()));
+    }
+
+    /**
+     * The columns the PDF prints: the page's columns, or the chosen ones in their report order.
      *
      * @return list<ReportColumn>
      */
     public function exportColumns(): array
     {
-        $columns = $this->columns();
+        $columns = $this->screenColumns();
         if ($this->shownColumns === null) {
             return $columns;
         }
 
         return array_values(array_filter($columns, fn (ReportColumn $c) => in_array($c->key, $this->shownColumns, true)));
+    }
+
+    /**
+     * The columns the Excel sheet carries: the PDF's, plus every sheet-only column (the page's
+     * column picker never hides those), in sheetOrder() when the report sets one.
+     *
+     * @return list<ReportColumn>
+     */
+    public function sheetColumns(): array
+    {
+        $picked = array_map(fn (ReportColumn $c) => $c->key, $this->exportColumns());
+        $columns = array_values(array_filter(
+            $this->columns(),
+            fn (ReportColumn $c) => $c->isSheetOnly() || in_array($c->key, $picked, true),
+        ));
+
+        $order = array_flip($this->sheetOrder());
+        if ($order === []) {
+            return $columns;
+        }
+        // Listed keys first, in the listed order; any column the list leaves out keeps its place after them.
+        $rank = fn (ReportColumn $c, int $i) => $order[$c->key] ?? count($order) + $i;
+        $ranked = array_map(fn (ReportColumn $c, int $i) => [$rank($c, $i), $c], $columns, array_keys($columns));
+        usort($ranked, fn (array $a, array $b) => $a[0] <=> $b[0]);
+
+        return array_column($ranked, 1);
+    }
+
+    /**
+     * The Excel sheet's column order, as column keys — grouped for analysis rather than for the
+     * screen. None by default: the sheet keeps the report's own order.
+     *
+     * @return list<string>
+     */
+    protected function sheetOrder(): array
+    {
+        return [];
     }
 
     /**
@@ -192,7 +239,7 @@ abstract class TabularReport
         return [
             'key' => $this->key(),
             'filters' => array_map(fn (ReportFilter $f) => $f->toArray(), $this->filters()),
-            'columns' => array_map(fn (ReportColumn $c) => $c->toArray(), $this->columns()),
+            'columns' => array_map(fn (ReportColumn $c) => $c->toArray(), $this->screenColumns()),
             'has_charts' => $this->hasCharts(),
             'shows_table' => $this->showsTable(),
         ];
@@ -207,7 +254,7 @@ abstract class TabularReport
     {
         $row = ['id' => $model->getKey()];
         $links = [];
-        foreach ($this->columns() as $column) {
+        foreach ($this->screenColumns() as $column) {
             $row[$column->key] = $column->value($model);
             if (($link = $column->link($model)) !== null) {
                 $links[$column->key] = $link;

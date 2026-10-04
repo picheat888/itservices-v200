@@ -20,7 +20,7 @@ class ExportTabularReportRequest extends TabularReportRequest
     public function rules(): array
     {
         $formats = ReportCatalogue::definitions()[$this->report()->key()]['formats'];
-        $columnKeys = array_map(fn (ReportColumn $c) => $c->key, $this->report()->columns());
+        $columnKeys = array_map(fn (ReportColumn $c) => $c->key, $this->report()->screenColumns());
 
         return [
             ...parent::rules(),
