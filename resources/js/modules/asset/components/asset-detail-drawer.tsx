@@ -217,9 +217,11 @@ export function AssetDetailDrawer({
                             <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
                                 <div>
                                     {t('asset_registered')}: {a.registered_date ?? '—'}
+                                    {a.created_by_name && ` ${t('asset_by')} ${a.created_by_name}`}
                                 </div>
                                 <div>
                                     {t('asset_last_update')}: {a.updated_at ?? '—'}
+                                    {a.updated_by_name && ` ${t('asset_by')} ${a.updated_by_name}`}
                                 </div>
                             </div>
                         </div>
@@ -236,7 +238,15 @@ export function AssetDetailDrawer({
                                 {/* How a written-off asset left — the note typed at write-off (disposal, scrap sale, donation, lease end). */}
                                 {a.status === 'writeoff' && a.last_reason && (
                                     <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
-                                        <div className="text-destructive text-xs font-semibold">{t('asset_writeoff_note_label')}</div>
+                                        <div className="text-destructive text-xs font-semibold">
+                                            {t('asset_writeoff_note_label')}
+                                            {a.written_off_by_name && (
+                                                <span className="text-muted-foreground font-normal">
+                                                    {' · '}
+                                                    {t('asset_by')} {a.written_off_by_name}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="mt-1 text-sm whitespace-pre-wrap">{a.last_reason}</div>
                                     </div>
                                 )}

@@ -110,6 +110,7 @@ export const asset: Dict = {
     asset_owner_name: 'Name',
     asset_position: 'Position',
     asset_last_update: 'Last update',
+    asset_by: 'by',
     asset_contract_no: 'Contract No.',
     asset_receive_title: 'Receive to warehouse',
     asset_receive_sub: 'Return the asset to the pool and set it Ready to deploy.',

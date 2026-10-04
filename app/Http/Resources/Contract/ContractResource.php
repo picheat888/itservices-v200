@@ -72,6 +72,10 @@ class ContractResource extends JsonResource
             'cancelled_at' => SystemTime::date($this->cancelled_at),
             'expired_at' => SystemTime::date($this->expired_at),
             'cancel_reason' => $this->cancel_reason,
+            // Who added it, who changed it last, who cancelled it — names, on the single-contract responses only.
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
+            'cancelled_by_name' => $this->whenLoaded('canceller', fn () => $this->canceller?->name),
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),
         ];

@@ -26,7 +26,7 @@ class FileShareController extends Controller
     public function store(StoreFileShareRequest $request): JsonResponse
     {
         $fs = FileShare::create($request->validated());
-        AuditLog::record('Created file share', $fs->name);
+        AuditLog::record('Created file share', $fs->name, subject: $fs);
 
         return (new FileShareResource($fs))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -36,7 +36,7 @@ class FileShareController extends Controller
     {
         $before = $fileShare->getOriginal();
         $fileShare->update($request->validated());
-        AuditLog::record('Updated file share', $fileShare->name, AuditLog::changes($before, $fileShare));
+        AuditLog::record('Updated file share', $fileShare->name, AuditLog::changes($before, $fileShare), subject: $fileShare);
 
         return (new FileShareResource($fileShare))->additional(['message' => 'success'])->response();
     }
@@ -47,7 +47,7 @@ class FileShareController extends Controller
         if ($fileShare->memberships()->active()->exists()) {
             return response()->json(['message' => 'resource_has_members'], 422);
         }
-        AuditLog::record('Deleted file share', $fileShare->name);
+        AuditLog::recordDeleted('Deleted file share', $fileShare->name, $fileShare);
         $fileShare->delete();
 
         return response()->json(['message' => 'success']);
@@ -66,7 +66,7 @@ class FileShareController extends Controller
         ]);
         $svc->setOwner($fileShare, $data['owner_employee_id'] ?? null);
         $fileShare->load('owner');
-        AuditLog::record('Changed file share owner', $fileShare->name, ['owner' => $fileShare->owner?->name]);
+        AuditLog::record('Changed file share owner', $fileShare->name, ['owner' => $fileShare->owner?->name], subject: $fileShare);
 
         return (new FileShareResource($fileShare))->additional(['message' => 'success'])->response();
     }
@@ -82,7 +82,7 @@ class FileShareController extends Controller
     {
         $data = $request->validated();
         $m = $svc->grant($fileShare, (int) $data['employee_id'], $data);
-        AuditLog::record('Added member to file share', $fileShare->name, ['employee' => $m->employee?->name]);
+        AuditLog::record('Added member to file share', $fileShare->name, ['employee' => $m->employee?->name], subject: $fileShare);
 
         return (new AccessMembershipResource($m->load('employee', 'grantedBy')))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -90,7 +90,7 @@ class FileShareController extends Controller
     /** Soft-revoke a member's access to the file share. */
     public function revokeMember(FileShare $fileShare, AccessMembership $membership, AccessService $svc): JsonResponse
     {
-        AuditLog::record('Removed member from file share', $fileShare->name, ['employee' => $membership->employee?->name]);
+        AuditLog::record('Removed member from file share', $fileShare->name, ['employee' => $membership->employee?->name], subject: $fileShare);
         $svc->revoke($membership);
 
         return response()->json(['message' => 'success']);

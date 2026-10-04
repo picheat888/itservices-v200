@@ -7,6 +7,7 @@ use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class ContractService
@@ -90,13 +91,14 @@ class ContractService
         // detaches all when the selection is empty).
         Asset::where('contract_id', $contract->id)
             ->whereNotIn('id', $assetIds ?: [0])
-            ->update(['contract_id' => null]);
+            ->update(['contract_id' => null, 'updated_by' => Auth::id()]);
 
-        // Attach the selected, link-free (or already-ours) assets.
+        // Attach the selected, link-free assets (already-ours ones are left alone, so editing a
+        // contract does not stamp every asset it holds as just changed).
         if ($assetIds !== []) {
             Asset::whereIn('id', $assetIds)
-                ->where(fn ($q) => $q->whereNull('contract_id')->orWhere('contract_id', $contract->id))
-                ->update(['contract_id' => $contract->id]);
+                ->whereNull('contract_id')
+                ->update(['contract_id' => $contract->id, 'updated_by' => Auth::id()]);
         }
     }
 

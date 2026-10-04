@@ -341,7 +341,7 @@ class AssetController extends Controller
     public function store(StoreAssetRequest $request): JsonResponse
     {
         $asset = $this->service->create($request->validated());
-        AuditLog::record('Registered asset', "{$asset->asset_code} - {$asset->model?->name}");
+        AuditLog::record('Registered asset', "{$asset->asset_code} - {$asset->model?->name}", subject: $asset);
 
         return (new AssetResource($asset->load('contract.vendor', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department')))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -351,7 +351,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department']);
+        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator', 'updater', 'writtenOffBy']);
 
         return (new AssetResource($asset))->response();
     }
@@ -382,7 +382,7 @@ class AssetController extends Controller
 
         $before = $asset->getOriginal();
         $asset = $this->service->update($asset, $request->validated());
-        AuditLog::record('Updated asset', "{$asset->asset_code} - {$asset->model?->name}", AuditLog::changes($before, $asset));
+        AuditLog::record('Updated asset', "{$asset->asset_code} - {$asset->model?->name}", AuditLog::changes($before, $asset), subject: $asset);
 
         return (new AssetResource($asset->load('contract.vendor', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department')))
             ->additional(['message' => 'success'])->response();
@@ -398,7 +398,7 @@ class AssetController extends Controller
         abort_unless($asset->status === AssetStatus::Writeoff, 422, 'This asset is not written off.');
 
         $asset = $this->service->cancelWriteoff($asset);
-        AuditLog::record('Cancelled asset write-off', $asset->asset_code);
+        AuditLog::record('Cancelled asset write-off', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
@@ -427,7 +427,7 @@ class AssetController extends Controller
             return response()->json(['message' => 'has_history', 'transfers_count' => $transfers], 422);
         }
 
-        AuditLog::record('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}");
+        AuditLog::recordDeleted('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}", $asset);
         $asset->delete();
 
         return response()->json(['message' => 'success']);
@@ -454,7 +454,7 @@ class AssetController extends Controller
         abort_unless($asset->status === AssetStatus::Ready, 422, 'Only a Ready asset can be handed over.');
 
         $asset = $this->service->transfer($asset, $data, $request->user()?->name);
-        AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}");
+        AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
@@ -469,7 +469,7 @@ class AssetController extends Controller
         // would flip the asset back to in use behind IT's back.
         abort_unless($asset->status === AssetStatus::PendingAcceptance, 422, 'Only a pending hand-over can be accepted.');
         $asset = $this->service->accept($asset);
-        AuditLog::record('Accepted asset', $asset->asset_code);
+        AuditLog::record('Accepted asset', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
@@ -487,7 +487,7 @@ class AssetController extends Controller
         abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id && $asset->status === AssetStatus::Deployed, 403);
         $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
         $asset = $this->service->requestReturn($asset, $data['reason'] ?? null);
-        AuditLog::record('Requested asset return', $asset->asset_code);
+        AuditLog::record('Requested asset return', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
@@ -506,7 +506,7 @@ class AssetController extends Controller
             'warehouse' => ['required', 'string', 'max:120'],
         ]);
         $asset = $this->service->markReceived($asset, $request->user()?->name, $data['warehouse']);
-        AuditLog::record('Received asset', $asset->asset_code);
+        AuditLog::record('Received asset', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
@@ -547,7 +547,7 @@ class AssetController extends Controller
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
         $asset = $this->service->recall($asset, $user?->name, $data['warehouse'], $data['reason'] ?? null);
-        AuditLog::record($normallyRecallable ? 'Recalled asset' : 'Force-recalled asset', $asset->asset_code);
+        AuditLog::record($normallyRecallable ? 'Recalled asset' : 'Force-recalled asset', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
@@ -567,7 +567,10 @@ class AssetController extends Controller
         ]);
 
         $count = $this->service->bulkSetStatus($data['ids'], AssetStatus::Writeoff, $data['reason'] ?? null);
-        AuditLog::record('Bulk asset '.$data['op'], "{$count} assets");
+        // One entry per asset, so each asset's own history shows its write-off and who did it.
+        foreach (Asset::whereIn('id', $data['ids'])->get() as $asset) {
+            AuditLog::record('Wrote off asset', $asset->asset_code, ['facts' => ['reason' => $data['reason']]], subject: $asset);
+        }
 
         return response()->json(['message' => 'success', 'updated' => $count]);
     }
@@ -604,15 +607,10 @@ class AssetController extends Controller
         foreach ($assets as $asset) {
             $this->service->relocate($asset, $location, $request->user()?->name, $data['note'] ?? null);
         }
-        AuditLog::record(
-            'Updated asset location',
-            $assets->count() === 1
-                ? "{$assets->first()->asset_code} → {$location->name}"
-                : "{$assets->count()} assets → {$location->name}",
-            // Which ones, by code. A line reading "5 assets → HQ" is not an answer on its own,
-            // and the per-asset trail is only reachable if you already know where to look.
-            ['items' => $assets->pluck('asset_code')->all()],
-        );
+        // One entry per asset, so each asset's own history carries the move.
+        foreach ($assets as $asset) {
+            AuditLog::record('Updated asset location', "{$asset->asset_code} → {$location->name}", subject: $asset);
+        }
 
         return response()->json(['message' => 'success', 'updated' => $assets->count()]);
     }
@@ -650,7 +648,9 @@ class AssetController extends Controller
                 'reason' => $data['reason'] ?? null,
             ], $request->user()?->name);
         }
-        AuditLog::record('Bulk transferred assets', $assets->count().' assets');
+        foreach ($assets as $asset) {
+            AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
+        }
 
         return response()->json(['message' => 'success', 'updated' => $assets->count()]);
     }
@@ -673,19 +673,20 @@ class AssetController extends Controller
 
         $assets = Asset::whereIn('id', $data['ids'])->get();
         $normalStatuses = [AssetStatus::PendingAcceptance, AssetStatus::Common];
-        $forced = false;
+        $forcedIds = [];
         foreach ($assets as $asset) {
             $normal = in_array($asset->status, $normalStatuses, true);
             $forceable = $canForce && ! in_array($asset->status, [AssetStatus::Ready, AssetStatus::Writeoff], true);
             abort_unless($normal || $forceable, 422, 'Some selected assets cannot be recalled.');
             if (! $normal) {
-                $forced = true;
+                $forcedIds[] = $asset->id;
             }
         }
         foreach ($assets as $asset) {
             $this->service->recall($asset, $user?->name, $data['warehouse'], $data['reason'] ?? null);
+            // Named per asset, as the single recall does: only the ones outside the normal states were forced.
+            AuditLog::record(in_array($asset->id, $forcedIds, true) ? 'Force-recalled asset' : 'Recalled asset', $asset->asset_code, subject: $asset);
         }
-        AuditLog::record($forced ? 'Bulk force-recalled assets' : 'Bulk recalled assets', $assets->count().' assets');
 
         return response()->json(['message' => 'success', 'updated' => $assets->count()]);
     }
@@ -706,7 +707,9 @@ class AssetController extends Controller
         foreach ($assets as $asset) {
             $this->service->markReceived($asset, $request->user()?->name, $data['warehouse']);
         }
-        AuditLog::record('Bulk received assets', $assets->count().' assets');
+        foreach ($assets as $asset) {
+            AuditLog::record('Received asset', $asset->asset_code, subject: $asset);
+        }
 
         return response()->json(['message' => 'success', 'updated' => $assets->count()]);
     }

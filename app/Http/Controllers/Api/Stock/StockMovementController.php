@@ -386,7 +386,7 @@ class StockMovementController extends Controller
                 }
             }
 
-            AuditLog::record('Stock '.$type, "{$item->sku} ×{$qty}");
+            AuditLog::record('Stock '.$type, "{$item->sku} ×{$qty}", subject: $item);
 
             return $movement;
         });

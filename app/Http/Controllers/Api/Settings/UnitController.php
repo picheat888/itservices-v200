@@ -25,7 +25,7 @@ class UnitController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $unit = Unit::create($data);
-        AuditLog::record('Created unit', $unit->name);
+        AuditLog::record('Created unit', $unit->name, subject: $unit);
 
         return response()->json(['data' => $unit, 'message' => 'success'], 201);
     }
@@ -39,7 +39,7 @@ class UnitController extends Controller
         ]);
         $before = $unit->getOriginal();
         $unit->update($data);
-        AuditLog::record('Updated unit', $unit->name, AuditLog::changes($before, $unit));
+        AuditLog::record('Updated unit', $unit->name, AuditLog::changes($before, $unit), subject: $unit);
 
         return response()->json(['data' => $unit, 'message' => 'success']);
     }
@@ -51,7 +51,7 @@ class UnitController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted unit', $unit->name);
+        AuditLog::recordDeleted('Deleted unit', $unit->name, $unit);
         $unit->delete();
 
         return response()->json(['message' => 'success']);

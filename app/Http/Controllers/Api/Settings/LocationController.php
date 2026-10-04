@@ -20,7 +20,7 @@ class LocationController extends Controller
     {
         $data = $request->validate(['name' => ['required', 'string', 'max:120', 'unique:locations,name']]);
         $location = Location::create($data);
-        AuditLog::record('Created location', $location->name);
+        AuditLog::record('Created location', $location->name, subject: $location);
 
         return response()->json(['data' => $location, 'message' => 'success'], 201);
     }
@@ -32,7 +32,7 @@ class LocationController extends Controller
         ]);
         $before = $location->getOriginal();
         $location->update($data);
-        AuditLog::record('Updated location', $location->name, AuditLog::changes($before, $location));
+        AuditLog::record('Updated location', $location->name, AuditLog::changes($before, $location), subject: $location);
 
         return response()->json(['data' => $location, 'message' => 'success']);
     }
@@ -44,7 +44,7 @@ class LocationController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted location', $location->name);
+        AuditLog::recordDeleted('Deleted location', $location->name, $location);
         $location->delete();
 
         return response()->json(['message' => 'success']);

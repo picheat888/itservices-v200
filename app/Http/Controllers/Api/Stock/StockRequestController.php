@@ -94,7 +94,7 @@ class StockRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        AuditLog::record('Submitted stock request', "#{$stockRequest->id} ×{$data['qty']}");
+        AuditLog::record('Submitted stock request', "#{$stockRequest->id} ×{$data['qty']}", subject: $stockRequest);
         app(StockNotificationService::class)->requestCreated($stockRequest->load('item'));
 
         return (new StockRequestResource($stockRequest->load('item')))->response()->setStatusCode(201);
@@ -121,7 +121,7 @@ class StockRequestController extends Controller
                 'approved_at' => now(),
             ]);
         });
-        AuditLog::record('Approved stock request', "#{$stockRequest->id}");
+        AuditLog::record('Approved stock request', "#{$stockRequest->id}", subject: $stockRequest);
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'approved');
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
@@ -139,7 +139,7 @@ class StockRequestController extends Controller
             'approver_name' => $request->user()->name,
             'rejected_at' => now(),
         ]);
-        AuditLog::record('Rejected stock request', "#{$stockRequest->id}");
+        AuditLog::record('Rejected stock request', "#{$stockRequest->id}", subject: $stockRequest);
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'rejected');
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
@@ -248,7 +248,7 @@ class StockRequestController extends Controller
         // Fire a real-time stock-level alert now that on-hand has been decremented.
         app(StockNotificationService::class)->alert(StockItem::find($stockRequest->stock_item_id));
 
-        AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}");
+        AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}", subject: $stockRequest);
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'fulfilled');
 
         return (new StockRequestResource($stockRequest->load('item')))->response();

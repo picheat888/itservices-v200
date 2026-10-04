@@ -4,15 +4,26 @@ namespace App\Models\Contract;
 
 use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
+use App\Models\Concerns\RecordsActors;
 use App\Models\Settings\Vendor;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class Contract extends Model
 {
+    use RecordsActors;
+
+    /** Who cancelled the contract (cancelled_by, stamped with cancelled_at); null while it is not cancelled. */
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
     /** Uploaded PDF documents for this contract (newest first). */
     public function attachments(): HasMany
     {
@@ -57,12 +68,21 @@ class Contract extends Model
         ];
     }
 
-    /** Auto-generate a CT-YYYY-NNN code when one isn't supplied. */
+    /**
+     * Auto-generate a CT-YYYY-NNN code when one isn't supplied, and stamp who cancelled it: set with
+     * cancelled_at (ContractService::cancel), cleared when it is reactivated.
+     */
     protected static function booted(): void
     {
         static::creating(function (Contract $contract) {
             if (blank($contract->code)) {
                 $contract->code = static::nextFreeCode($contract->start_date?->toDateString());
+            }
+        });
+
+        static::saving(function (Contract $contract) {
+            if ($contract->isDirty('cancelled_at')) {
+                $contract->cancelled_by = $contract->cancelled_at === null ? null : Auth::id();
             }
         });
     }

@@ -36,6 +36,8 @@ export const contract: Dict = {
     contract_created: 'สร้างเมื่อ',
     contract_updated: 'อัปเดตล่าสุด',
     contract_cancelled_on: 'ยกเลิกเมื่อ',
+    contract_cancelled_by: 'ยกเลิกโดย',
+    contract_by: 'โดย',
     contract_expired_on: 'สิ้นสุดเมื่อ',
     expiring_soon: 'ใกล้หมดอายุ',
     expired_contracts: 'เกินกำหนด',

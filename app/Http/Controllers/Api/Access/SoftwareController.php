@@ -54,7 +54,7 @@ class SoftwareController extends Controller
     public function store(StoreSoftwareRequest $request): JsonResponse
     {
         $sw = Software::create($this->handleLogo($request, $request->validated()));
-        AuditLog::record('Created software', $sw->name);
+        AuditLog::record('Created software', $sw->name, subject: $sw);
 
         return (new SoftwareResource($sw))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -64,7 +64,7 @@ class SoftwareController extends Controller
     {
         $before = $software->getOriginal();
         $software->update($this->handleLogo($request, $request->validated(), $software->logo_path));
-        AuditLog::record('Updated software', $software->name, AuditLog::changes($before, $software));
+        AuditLog::record('Updated software', $software->name, AuditLog::changes($before, $software), subject: $software);
 
         return (new SoftwareResource($software))->additional(['message' => 'success'])->response();
     }
@@ -75,7 +75,7 @@ class SoftwareController extends Controller
         if ($software->memberships()->active()->exists()) {
             return response()->json(['message' => 'resource_has_members'], 422);
         }
-        AuditLog::record('Deleted software', $software->name);
+        AuditLog::recordDeleted('Deleted software', $software->name, $software);
         $software->delete();
 
         return response()->json(['message' => 'success']);
@@ -92,7 +92,7 @@ class SoftwareController extends Controller
     {
         $data = $request->validated();
         $m = $svc->grant($software, (int) $data['employee_id'], $data);
-        AuditLog::record('Added member to software', $software->name, ['employee' => $m->employee?->name]);
+        AuditLog::record('Added member to software', $software->name, ['employee' => $m->employee?->name], subject: $software);
 
         return (new AccessMembershipResource($m->load('employee', 'grantedBy')))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -100,7 +100,7 @@ class SoftwareController extends Controller
     /** Soft-revoke an employee's licence. */
     public function revokeMember(Software $software, AccessMembership $membership, AccessService $svc): JsonResponse
     {
-        AuditLog::record('Removed member from software', $software->name, ['employee' => $membership->employee?->name]);
+        AuditLog::record('Removed member from software', $software->name, ['employee' => $membership->employee?->name], subject: $software);
         $svc->revoke($membership);
 
         return response()->json(['message' => 'success']);

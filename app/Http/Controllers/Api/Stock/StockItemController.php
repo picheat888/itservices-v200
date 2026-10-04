@@ -190,7 +190,7 @@ class StockItemController extends Controller
         $data = $request->validated();
         $data['sku'] = StockItem::nextSku();
         $item = StockItem::create($data);
-        AuditLog::record('Created stock item', "{$item->sku} - {$item->name}");
+        AuditLog::record('Created stock item', "{$item->sku} - {$item->name}", subject: $item);
 
         return (new StockItemResource($item))->response()->setStatusCode(201);
     }
@@ -338,7 +338,7 @@ class StockItemController extends Controller
     {
         $before = $stockItem->getOriginal();
         $stockItem->update($request->validated());
-        AuditLog::record('Updated stock item', "{$stockItem->sku} - {$stockItem->name}", AuditLog::changes($before, $stockItem));
+        AuditLog::record('Updated stock item', "{$stockItem->sku} - {$stockItem->name}", AuditLog::changes($before, $stockItem), subject: $stockItem);
 
         return (new StockItemResource($stockItem))->response();
     }
@@ -363,7 +363,7 @@ class StockItemController extends Controller
             return response()->json(['message' => 'has_history', 'movements_count' => $movements], 422);
         }
 
-        AuditLog::record('Deleted stock item', "{$stockItem->sku} - {$stockItem->name}");
+        AuditLog::recordDeleted('Deleted stock item', "{$stockItem->sku} - {$stockItem->name}", $stockItem);
         $stockItem->delete();
 
         return response()->json(['message' => 'success']);

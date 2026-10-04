@@ -27,7 +27,7 @@ class WarehouseController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $warehouse = Warehouse::create($data);
-        AuditLog::record('Created warehouse', $warehouse->name);
+        AuditLog::record('Created warehouse', $warehouse->name, subject: $warehouse);
 
         return response()->json(['data' => $warehouse, 'message' => 'success'], 201);
     }
@@ -41,7 +41,7 @@ class WarehouseController extends Controller
         ]);
         $before = $warehouse->getOriginal();
         $warehouse->update($data);
-        AuditLog::record('Updated warehouse', $warehouse->name, AuditLog::changes($before, $warehouse));
+        AuditLog::record('Updated warehouse', $warehouse->name, AuditLog::changes($before, $warehouse), subject: $warehouse);
 
         return response()->json(['data' => $warehouse, 'message' => 'success']);
     }
@@ -55,7 +55,7 @@ class WarehouseController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted warehouse', $warehouse->name);
+        AuditLog::recordDeleted('Deleted warehouse', $warehouse->name, $warehouse);
         $warehouse->delete();
 
         return response()->json(['message' => 'success']);

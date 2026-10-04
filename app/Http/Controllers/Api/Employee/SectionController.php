@@ -43,7 +43,7 @@ class SectionController extends Controller
     public function store(StoreSectionRequest $request): JsonResponse
     {
         $section = Section::create($request->validated());
-        AuditLog::record('Created section', $section->name);
+        AuditLog::record('Created section', $section->name, subject: $section);
 
         return (new SectionResource($section->load('department')->loadCount('employees')))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -55,7 +55,7 @@ class SectionController extends Controller
     {
         $before = $section->getOriginal();
         $section->update($request->validated());
-        AuditLog::record('Updated section', $section->name, AuditLog::changes($before, $section));
+        AuditLog::record('Updated section', $section->name, AuditLog::changes($before, $section), subject: $section);
 
         return (new SectionResource($section->load('department')->loadCount('employees')))->additional(['message' => 'success'])->response();
     }
@@ -77,7 +77,7 @@ class SectionController extends Controller
             ], 422);
         }
 
-        AuditLog::record('Deleted section', $section->name);
+        AuditLog::recordDeleted('Deleted section', $section->name, $section);
         $section->delete();
 
         return response()->json(['message' => 'success']);

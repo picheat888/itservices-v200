@@ -35,7 +35,7 @@ class RoleController extends Controller
             'is_system' => false,
         ]);
 
-        AuditLog::record('Created role', $role->name);
+        AuditLog::record('Created role', $role->name, subject: $role);
 
         return response()->json(['data' => $role, 'message' => 'success'], 201);
     }
@@ -54,7 +54,7 @@ class RoleController extends Controller
         $before = $role->getOriginal();
         $role->update($data);
 
-        AuditLog::record('Updated role', $role->name, AuditLog::changes($before, $role));
+        AuditLog::record('Updated role', $role->name, AuditLog::changes($before, $role), subject: $role);
 
         return response()->json(['data' => $role, 'message' => 'success']);
     }
@@ -71,7 +71,7 @@ class RoleController extends Controller
         $name = $role->name;
         $role->delete();
 
-        AuditLog::record('Deleted role', $name);
+        AuditLog::recordDeleted('Deleted role', $name, $role);
 
         return response()->json(['message' => 'success']);
     }

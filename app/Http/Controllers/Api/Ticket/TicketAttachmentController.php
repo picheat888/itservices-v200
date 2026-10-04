@@ -62,7 +62,7 @@ class TicketAttachmentController extends Controller
             ]);
         }
 
-        AuditLog::record('Uploaded ticket attachment', count($files)." ไฟล์ - {$ticket->ticket_no}");
+        AuditLog::record('Uploaded ticket attachment', count($files)." ไฟล์ - {$ticket->ticket_no}", subject: $ticket);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
@@ -87,7 +87,7 @@ class TicketAttachmentController extends Controller
         Storage::disk('local')->delete($attachment->path);
         $attachment->delete();
 
-        AuditLog::record('Deleted ticket attachment', "{$attachment->original_name} - {$ticket->ticket_no}");
+        AuditLog::recordDeleted('Deleted ticket attachment', "{$attachment->original_name} - {$ticket->ticket_no}", $attachment);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();

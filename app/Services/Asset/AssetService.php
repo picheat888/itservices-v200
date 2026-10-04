@@ -18,6 +18,7 @@ use App\Notifications\AssetReturnRequestedNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Support\EmailTable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 
 class AssetService
@@ -524,8 +525,10 @@ class AssetService
         return Asset::whereIn('id', $ids)->update([
             'status' => $status->value,
             'last_reason' => $reason,
-            // A query update skips the model's saving hook, so the write-off is stamped here.
+            // A query update skips the model's hooks, so the write-off and the editor are stamped here.
             'written_off_at' => $status === AssetStatus::Writeoff ? now() : null,
+            'written_off_by' => $status === AssetStatus::Writeoff ? Auth::id() : null,
+            'updated_by' => Auth::id(),
         ]);
     }
 }

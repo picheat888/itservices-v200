@@ -166,7 +166,7 @@ class RequestController extends Controller
         AuditLog::record('Submitted service request', $serviceRequest->reference, [
             'service_request_id' => $serviceRequest->id,
             'type' => $serviceRequest->type->value,
-        ]);
+        ], subject: $serviceRequest);
 
         return (new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS)))
             ->response()->setStatusCode(201);
@@ -187,7 +187,7 @@ class RequestController extends Controller
         $data = $request->validate(['note' => ['nullable', 'string', 'max:2000']]);
         $serviceRequest = $this->service->approve($serviceRequest, $request->user(), $data['note'] ?? null);
 
-        AuditLog::record('Approved service request step', $serviceRequest->reference);
+        AuditLog::record('Approved service request step', $serviceRequest->reference, subject: $serviceRequest);
 
         return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
@@ -198,7 +198,7 @@ class RequestController extends Controller
         $data = $request->validate(['note' => ['required', 'string', 'max:2000']]);
         $serviceRequest = $this->service->reject($serviceRequest, $request->user(), $data['note']);
 
-        AuditLog::record('Rejected service request', $serviceRequest->reference);
+        AuditLog::record('Rejected service request', $serviceRequest->reference, subject: $serviceRequest);
 
         return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
@@ -208,7 +208,7 @@ class RequestController extends Controller
     {
         $serviceRequest = $this->service->complete($serviceRequest, $request->user());
 
-        AuditLog::record('Completed service request', $serviceRequest->reference);
+        AuditLog::record('Completed service request', $serviceRequest->reference, subject: $serviceRequest);
 
         return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
@@ -218,7 +218,7 @@ class RequestController extends Controller
     {
         $serviceRequest = $this->service->cancel($serviceRequest, $request->user());
 
-        AuditLog::record('Cancelled service request', $serviceRequest->reference);
+        AuditLog::record('Cancelled service request', $serviceRequest->reference, subject: $serviceRequest);
 
         return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }

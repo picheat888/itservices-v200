@@ -36,6 +36,8 @@ export const contract: Dict = {
     contract_created: 'Created',
     contract_updated: 'Last updated',
     contract_cancelled_on: 'Cancelled on',
+    contract_cancelled_by: 'Cancelled by',
+    contract_by: 'by',
     contract_expired_on: 'Expired on',
     expiring_soon: 'Expiring soon',
     expired_contracts: 'Overdue',

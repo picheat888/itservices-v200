@@ -27,7 +27,7 @@ class BrandController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $brand = Brand::create($data);
-        AuditLog::record('Created brand', $brand->name);
+        AuditLog::record('Created brand', $brand->name, subject: $brand);
 
         return response()->json(['data' => $brand, 'message' => 'success'], 201);
     }
@@ -41,7 +41,7 @@ class BrandController extends Controller
         ]);
         $before = $brand->getOriginal();
         $brand->update($data);
-        AuditLog::record('Updated brand', $brand->name, AuditLog::changes($before, $brand));
+        AuditLog::record('Updated brand', $brand->name, AuditLog::changes($before, $brand), subject: $brand);
 
         return response()->json(['data' => $brand, 'message' => 'success']);
     }
@@ -55,7 +55,7 @@ class BrandController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted brand', $brand->name);
+        AuditLog::recordDeleted('Deleted brand', $brand->name, $brand);
         $brand->delete();
 
         return response()->json(['message' => 'success']);
