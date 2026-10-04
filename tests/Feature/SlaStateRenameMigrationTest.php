@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Support\NotificationCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -82,5 +83,27 @@ class SlaStateRenameMigrationTest extends TestCase
         $this->assertSame('notif_ticket_sla_response_breached', $this->bellData($testBell)['source_key']);
         $this->assertSame(1, DB::table('notification_templates')->where('key', 'notif_ticket_sla_resolve_breached')->count());
         $this->assertSame(['sla' => 'breached', 'category' => null], json_decode(DB::table('report_schedules')->where('id', $schedule)->value('filters'), true));
+    }
+
+    /** NT-35's standard wording moves to plain words; a language an administrator reworded is left alone. */
+    public function test_nt35_rewords_only_the_standard_text(): void
+    {
+        $migration = require database_path('migrations/2026_10_04_095621_reword_ticket_sla_resolve_over_sla_notification.php');
+        DB::table('notification_templates')->insert([
+            'key' => 'notif_ticket_sla_resolve_over_sla', 'message_en' => 'Resolution overdue - SLA breached', 'message_th' => 'ข้อความที่แอดมินเขียนเอง',
+            'enabled' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $row = fn () => DB::table('notification_templates')->where('key', 'notif_ticket_sla_resolve_over_sla')->first();
+
+        $migration->up();
+        $this->assertSame('Resolution overdue - this case is past its SLA', $row()->message_en);
+        $this->assertSame('ข้อความที่แอดมินเขียนเอง', $row()->message_th);
+        // The catalogue's standard text says the same, so the row reads as not reworded.
+        $this->assertSame($row()->message_en, NotificationCatalogue::find('notif_ticket_sla_resolve_over_sla')['message_en']);
+        $this->assertStringNotContainsString('breach', NotificationCatalogue::find('notif_ticket_sla_resolve_over_sla')['message_th']);
+
+        $migration->down();
+        $this->assertSame('Resolution overdue - SLA breached', $row()->message_en);
+        $this->assertSame('ข้อความที่แอดมินเขียนเอง', $row()->message_th);
     }
 }

@@ -50,7 +50,7 @@ export const notification: Dict = {
     notif_ticket_sla_response_near_due: 'ใกล้เกินเวลารับเคส - รีบกดรับ',
     notif_ticket_sla_response_over_sla: 'เกินเวลารับเคสแล้ว - ยังไม่มีใครรับ Ticket นี้',
     notif_ticket_sla_resolve_near_due: 'ใกล้ครบกำหนดปิดเคส',
-    notif_ticket_sla_resolve_over_sla: 'เกินกำหนดปิดเคส - SLA breach แล้ว',
+    notif_ticket_sla_resolve_over_sla: 'เกินกำหนดปิดเคสแล้ว - เคสนี้เกิน SLA',
     notif_ticket_forwarded: 'ส่งต่อเคสมาให้คุณ จาก {from}',
     notif_ticket_forwarded_away: 'เคสของคุณถูกส่งต่อให้ {to}',
     notif_ticket_new: 'เคสใหม่รอการรับ - แตะเพื่อดู',

@@ -378,8 +378,8 @@ class NotificationCatalogue
                 'name' => 'SLA - resolution overdue',
                 'trigger' => 'A case passes its resolution deadline',
                 'audience' => 'IT staff',
-                'message_en' => 'Resolution overdue - SLA breached',
-                'message_th' => 'เกินกำหนดปิดเคส - SLA breach แล้ว',
+                'message_en' => 'Resolution overdue - this case is past its SLA',
+                'message_th' => 'เกินกำหนดปิดเคสแล้ว - เคสนี้เกิน SLA',
                 'enabled' => true,
             ],
             [
