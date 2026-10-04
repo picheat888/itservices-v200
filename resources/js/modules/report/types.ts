@@ -331,9 +331,6 @@ export type TabularChart =
           views: { key: string; label_key: string; series: ChartSeries[] }[];
           /** `apart`: not one of the grouped things (assets in no department) — listed last, on its own scale. */
           rows: { label: ChartLabel; values: Record<string, number>; total: number; apart?: boolean }[];
-          /** A small card in the row under the main one (warehouses, locations), with `total` in its heading. */
-          compact?: boolean;
-          total?: number;
       }
     | {
           type: 'donut';
@@ -358,8 +355,8 @@ export type TabularChart =
           type: 'places';
           key: string;
           title_key: string;
-          /** Said after the title in a lighter weight ("สถานะพร้อมใช้งาน"). */
-          subtitle_key: string;
+          /** Said after the title in a lighter weight ("สถานะพร้อมใช้งาน"), if anything. */
+          subtitle_key: string | null;
           tone: ChartTone;
           total: number;
           split_title_key: string;

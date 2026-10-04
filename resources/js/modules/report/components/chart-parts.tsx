@@ -1,7 +1,7 @@
 /**
  * Small pieces every report card shares: the card heading, a master-data name in the reader's
  * language, and folding a long list ("อื่น ๆ (n)" with "แสดงทั้งหมด (n)" under it).
- * Used by tabular-charts.tsx, its cards (bucket-rows-card, compact-stacks-card, asset-list-card)
+ * Used by tabular-charts.tsx, its cards (bucket-rows-card, places-card, asset-list-card)
  * and the Ticket pages' cards (backlog-board, ticket-breakdown-cards).
  */
 import { useT } from '@/lang';
@@ -54,6 +54,18 @@ export function ChartHeading({ title, sub, className }: { title: React.ReactNode
             <span className="text-sm font-semibold">{title}</span>
             {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
         </div>
+    );
+}
+
+/** A card's title with how many it counts beside it ("ตัดจำหน่าย 3 รายการ"). */
+export function TitleWithCount({ title, count }: { title: string; count: number }) {
+    const t = useT();
+
+    return (
+        <span className="flex items-baseline gap-2">
+            {title}
+            <span className="text-muted-foreground text-xs font-normal">{t('rep_chart_items').replace('{n}', count.toLocaleString())}</span>
+        </span>
     );
 }
 
