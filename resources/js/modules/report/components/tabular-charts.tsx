@@ -21,11 +21,11 @@ import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ChartSeries, TabularChart } from '../types';
+import type { TabularChart } from '../types';
 import { AssetListCard } from './asset-list-card';
 import { BucketsSection } from './bucket-rows-card';
-import { fold, FoldToggle, ChartHeading as Heading, useChartLabel as useLabel } from './chart-parts';
-import { FILL, STROKE, TEXT } from './chart-tones';
+import { fold, FoldToggle, ChartHeading as Heading, StackBar, useChartLabel as useLabel } from './chart-parts';
+import { FILL, STROKE } from './chart-tones';
 import { PlacesCard } from './places-card';
 import { BarRowsSkeleton, CardHeadingSkeleton } from './report-skeletons';
 
@@ -63,52 +63,6 @@ function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; activ
 }
 
 type StackRowData = Stacks['rows'][number] & { others?: boolean };
-
-/**
- * A stacked bar with each piece's count printed over it, `scale` being what a full-width bar
- * stands for. Shared with the Ticket & SLA page's department card (pages/tickets-overview.tsx).
- */
-export function StackBar({ values, series, scale }: { values: Record<string, number>; series: ChartSeries[]; scale: number }) {
-    const t = useT();
-    const width = (value: number) => `${Math.min(100, (value / Math.max(1, scale)) * 100)}%`;
-
-    return (
-        <div className="min-w-0">
-            <div className="flex h-4 items-end">
-                {series.map((s) => {
-                    const value = values[s.key] ?? 0;
-                    if (value === 0) return null;
-                    return (
-                        <span
-                            key={s.key}
-                            className={cn(
-                                'flex shrink-0 justify-center overflow-visible font-mono text-xs leading-none font-semibold whitespace-nowrap',
-                                TEXT[s.tone],
-                            )}
-                            style={{ width: width(value) }}
-                        >
-                            {value}
-                        </span>
-                    );
-                })}
-            </div>
-            <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
-                {series.map((s) => {
-                    const value = values[s.key] ?? 0;
-                    if (value === 0) return null;
-                    return (
-                        <span
-                            key={s.key}
-                            title={`${t(s.label_key)}: ${value}`}
-                            className={cn('block h-full', FILL[s.tone])}
-                            style={{ width: width(value) }}
-                        />
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
 
 /**
  * One row: name, the stacked bar with each piece's count over it, the total. `scale` is what a

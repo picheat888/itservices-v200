@@ -469,7 +469,6 @@ export default function AssetsPage() {
     const typeBars: TypeBar[] = foldTypes
         ? [...allTypeBars.slice(0, TYPE_ROWS_SHOWN), foldTypeBars(allTypeBars.slice(TYPE_ROWS_SHOWN))]
         : allTypeBars;
-    const maxTypeCount = Math.max(1, ...typeBars.map((b) => b.count));
     // Same status palette the badges use, so the chart and the table below it agree.
     const statusColors = useUiStore((s) => s.assetStatusColors);
     // Localize the asset-type name from Master Data (categories carry both name + name_th).
@@ -604,9 +603,8 @@ export default function AssetsPage() {
                                 </div>
                                 <div className="space-y-4 p-5">
                                     {typeBars.map((b) => (
-                                        // Two lines per type: name + counts + total, then the bar on its own
-                                        // full-width line. Sharing one line left the bar too narrow for a
-                                        // three-way split — a single unit of write-off came out a few pixels wide.
+                                        // Two lines per type: name + total, then the bar on its own full-width line
+                                        // with each bucket's count over its piece.
                                         <div key={b.type} className="space-y-1.5">
                                             <div className="flex items-baseline gap-3">
                                                 <div className="flex min-w-0 flex-1 items-center gap-2 text-sm" title={typeLabel(b)}>
@@ -617,43 +615,40 @@ export default function AssetsPage() {
                                                     )}
                                                     <span className="truncate">{typeLabel(b)}</span>
                                                 </div>
-                                                {/* Each count carries its bucket's dot, so it reads without
-                                                    counting columns against the legend. An empty bucket fades
-                                                    out — its dot promises a segment that isn't in the bar. */}
-                                                <div className="flex shrink-0 items-center gap-2.5 font-mono text-xs">
-                                                    {TYPE_BUCKETS.map((s) => (
+                                                <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
+                                            </div>
+                                            {/* A full-width bar per type, split by its own total — as the reports' IT staff
+                                                card draws a person's split — with each bucket's count over its piece. Measured
+                                                against the biggest type, a single write-off beside hundreds in use came out
+                                                narrower than a pixel. An empty bucket draws nothing. */}
+                                            <div role="img" aria-label={typeBarTitle(b)} title={typeBarTitle(b)}>
+                                                <div className="flex h-4 items-end">
+                                                    {TYPE_BUCKETS.filter((s) => b[s.key] > 0).map((s) => (
                                                         <span
                                                             key={s.key}
-                                                            title={t(s.labelKey)}
-                                                            className={cn('flex items-center gap-1', b[s.key] === 0 && 'opacity-40')}
+                                                            className="flex shrink-0 justify-center font-mono text-xs leading-none font-semibold whitespace-nowrap"
+                                                            style={{
+                                                                width: `${(b[s.key] / Math.max(1, b.count)) * 100}%`,
+                                                                color: statusColors[s.status],
+                                                            }}
                                                         >
-                                                            <span
-                                                                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                                                style={{ backgroundColor: statusColors[s.status] }}
-                                                            />
                                                             {b[s.key]}
                                                         </span>
                                                     ))}
                                                 </div>
-                                                <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
-                                            </div>
-                                            {/* Segment widths stay relative to the biggest type, not to this type's
-                                                own total, so bar lengths still compare across rows. */}
-                                            <div
-                                                role="img"
-                                                aria-label={typeBarTitle(b)}
-                                                title={typeBarTitle(b)}
-                                                className="bg-secondary flex h-2 overflow-hidden rounded-full"
-                                            >
-                                                {TYPE_BUCKETS.map((s) => (
-                                                    <div
-                                                        key={s.key}
-                                                        style={{
-                                                            width: `${(b[s.key] / maxTypeCount) * 100}%`,
-                                                            backgroundColor: statusColors[s.status],
-                                                        }}
-                                                    />
-                                                ))}
+                                                <div className="bg-secondary mt-1 flex h-2 overflow-hidden rounded-full">
+                                                    {TYPE_BUCKETS.filter((s) => b[s.key] > 0).map((s) => (
+                                                        <div
+                                                            key={s.key}
+                                                            // Never thinner than 3px, so 3 written off among a thousand still shows.
+                                                            className="min-w-[3px]"
+                                                            style={{
+                                                                width: `${(b[s.key] / Math.max(1, b.count)) * 100}%`,
+                                                                backgroundColor: statusColors[s.status],
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}

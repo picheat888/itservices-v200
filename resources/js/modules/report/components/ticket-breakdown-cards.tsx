@@ -13,7 +13,7 @@
  *   The shared DataTable, inset and paged like the "รายการ Ticket" card, so a desk of 30+ keeps
  *   the page short.
  *
- * The stacked bar and the fold come from tabular-charts.tsx, so these read like the asset report.
+ * The stacked bar and the fold come from chart-parts.tsx, so these read like the asset report.
  * Used by pages/tickets-overview.tsx.
  */
 import { useT } from '@/lang';
@@ -24,9 +24,8 @@ import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
 import type { ChartSeries, ChartTone, TicketOverviewSummary } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
-import { fold, FoldToggle } from './chart-parts';
+import { fold, FoldToggle, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
-import { StackBar } from './tabular-charts';
 import { categoryKey } from './ticket-labels';
 
 /** Rows a list shows before folding, as the asset report's department chart. */
