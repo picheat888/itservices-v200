@@ -34,8 +34,9 @@ class AssetsByStatusDepartmentReport extends TabularReport
      * the soft shades (chart-tones.ts soft-*), as on the Ticket & SLA overview.
      */
     private const SOURCE_CHART = [
-        'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'soft-blue'],
-        // Pink, not violet: violet already means พร้อมส่งมอบ in the same tiles and charts.
+        // Violet, not blue: blue is ใช้งานอยู่ in the default Settings colours, and the two sit side by
+        // side in the same tiles. No status uses violet by default.
+        'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'soft-violet'],
         'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'soft-pink'],
     ];
 
