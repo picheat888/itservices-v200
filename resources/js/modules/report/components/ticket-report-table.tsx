@@ -97,8 +97,8 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             render: (r) =>
                 r.sla === 'met' ? (
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">{t('rep_sla_met')}</span>
-                ) : r.sla === 'breached' ? (
-                    <span className="font-semibold text-red-600 dark:text-red-400">{t('rep_sla_breached')}</span>
+                ) : r.sla === 'over_sla' ? (
+                    <span className="font-semibold text-red-600 dark:text-red-400">{t('rep_sla_over_sla')}</span>
                 ) : (
                     '—'
                 ),

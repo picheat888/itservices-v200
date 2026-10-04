@@ -370,7 +370,7 @@ class TicketOverviewReportTest extends TestCase
 
         $this->assertSame(2, $body['meta']['total']);
         $this->assertSame($late->id, $body['data'][0]['id']);
-        $this->assertSame('breached', $body['data'][0]['sla']);
+        $this->assertSame('over_sla', $body['data'][0]['sla']);
         $this->assertNull($body['data'][0]['resolve_hours']);
         $this->assertSame('met', $body['data'][1]['sla']);
         $this->assertEquals(2.0, $body['data'][1]['resolve_hours']);

@@ -405,8 +405,8 @@ export default function TicketsPage() {
     const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('');
     const [catFilter, setCatFilter] = useState<TicketCategory | ''>('');
     const [priFilter, setPriFilter] = useState<TicketPriority | ''>('');
-    // '' = all · 'breached' = only tickets whose current SLA deadline has passed.
-    const [slaFilter, setSlaFilter] = useState<'' | 'breached'>('');
+    // '' = all · 'over_sla' = only tickets whose current SLA deadline has passed.
+    const [slaFilter, setSlaFilter] = useState<'' | 'over_sla'>('');
     const [sort, setSort] = useState(DEFAULT_SORT);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
@@ -875,7 +875,7 @@ export default function TicketsPage() {
                                                     value={summary?.sla_breached_now ?? 0}
                                                     onClick={() => {
                                                         resetFilters();
-                                                        setSlaFilter('breached');
+                                                        setSlaFilter('over_sla');
                                                         changeTab('all');
                                                     }}
                                                 />
@@ -1053,7 +1053,7 @@ export default function TicketsPage() {
                                                     active={slaFilter !== ''}
                                                     value={slaFilter || ALL}
                                                     onChange={(v) => {
-                                                        setSlaFilter(v === ALL ? '' : 'breached');
+                                                        setSlaFilter(v === ALL ? '' : 'over_sla');
                                                         setPage(1);
                                                     }}
                                                     options={[
@@ -1064,7 +1064,7 @@ export default function TicketsPage() {
                                                             icon: <ToneDot tone="gray" />,
                                                         },
                                                         {
-                                                            value: 'breached',
+                                                            value: 'over_sla',
                                                             label: t('ticket_sla_filter_overdue'),
                                                             search: t('ticket_sla_filter_overdue'),
                                                             icon: <ToneDot tone="red" />,

@@ -385,7 +385,7 @@ export interface TicketAttachment {
 }
 
 /** State of the SLA clock that currently matters (backend-computed; see App\Support\TicketSla). */
-export type TicketSlaState = 'on_track' | 'at_risk' | 'breached' | 'met' | 'missed';
+export type TicketSlaState = 'on_track' | 'near_due' | 'over_sla' | 'met' | 'missed';
 
 export interface TicketSlaSnapshot {
     /** ISO instants in local wall time (APP_TIMEZONE) — display via formatDateTime. */

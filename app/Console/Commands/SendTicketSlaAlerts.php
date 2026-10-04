@@ -10,12 +10,12 @@ class SendTicketSlaAlerts extends Command
 {
     protected $signature = 'tickets:send-sla-alerts';
 
-    protected $description = 'Send SLA at-risk / breached alerts for active tickets';
+    protected $description = 'Send SLA near-due / over-SLA alerts for active tickets';
 
     public function handle(TicketSlaAlertService $service): int
     {
         $r = $service->run();
-        $this->info("Ticket SLA alerts — at risk: {$r['at_risk']}, breached: {$r['breached']}");
+        $this->info("Ticket SLA alerts — near due: {$r['near_due']}, over SLA: {$r['over_sla']}");
 
         return self::SUCCESS;
     }

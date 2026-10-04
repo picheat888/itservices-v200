@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Notification;
 /**
  * Scheduled sweep over active tickets that fires SLA alerts:
  *
- * - at 80% of the target (at_risk) → a bell nudge
- * - past the target (breached)     → a bell alert
+ * - at 80% of the target (near_due) → a bell nudge
+ * - past the target (over_sla)      → a bell alert
  *
  * Bell only, on both stages. The breach used to mail everyone it belled as well; that was
  * withdrawn along with the ticket.sla_breach template. This sweep runs every ten minutes
@@ -28,33 +28,33 @@ use Illuminate\Support\Facades\Notification;
  * escalates to everyone who can re-assign (tickets.assign).
  *
  * Each warning fires ONCE per clock, tracked by the sla_*_alert_level columns
- * (null → at_risk → breached). The columns reset whenever the deadline itself
+ * (null → near_due → over_sla). The columns reset whenever the deadline itself
  * moves (take/assign re-pins it, SLA settings recompute it).
  */
 class TicketSlaAlertService
 {
     /**
-     * @return array{at_risk: int, breached: int}
+     * @return array{near_due: int, over_sla: int}
      */
     public function run(): array
     {
-        $sent = ['at_risk' => 0, 'breached' => 0];
+        $sent = ['near_due' => 0, 'over_sla' => 0];
 
         Ticket::query()
             ->whereIn('status', TicketStatus::live())
             ->chunkById(200, function ($tickets) use (&$sent) {
                 foreach ($tickets as $ticket) {
                     $sla = TicketSla::forTicket($ticket);
-                    if ($sla === null || ! in_array($sla['state'], ['at_risk', 'breached'], true)) {
+                    if ($sla === null || ! in_array($sla['state'], ['near_due', 'over_sla'], true)) {
                         continue;
                     }
 
                     $clock = $ticket->status === TicketStatus::Open && $ticket->responded_at === null ? 'response' : 'resolve';
                     $column = "sla_{$clock}_alert_level";
 
-                    // One-way escalation, each stage sent once: null → at_risk → breached.
+                    // One-way escalation, each stage sent once: null → near_due → over_sla.
                     $already = $ticket->{$column};
-                    if ($already === 'breached' || $already === $sla['state']) {
+                    if ($already === 'over_sla' || $already === $sla['state']) {
                         continue;
                     }
 
@@ -93,7 +93,7 @@ class TicketSlaAlertService
         $assignee = User::find($ticket->assignee_id);
         $recipients = collect($assignee ? [$assignee] : []);
 
-        if ($state === 'breached') {
+        if ($state === 'over_sla') {
             // A blown resolution target escalates to everyone who can re-assign.
             $recipients = $recipients->merge(
                 User::all()->filter(fn (User $u) => $u->hasPermission('tickets.assign'))->values()

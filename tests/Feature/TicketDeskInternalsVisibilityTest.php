@@ -158,7 +158,7 @@ class TicketDeskInternalsVisibilityTest extends TestCase
         Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open', 'sla_response_due_at' => now()->addDay()]);
         $this->actingAs($me);
 
-        $this->getJson('/api/tickets?sla=breached')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson('/api/tickets?sla=over_sla')->assertOk()->assertJsonCount(2, 'data');
     }
 
     public function test_sorting_by_priority_falls_back_for_a_requester(): void

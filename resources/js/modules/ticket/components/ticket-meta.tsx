@@ -59,8 +59,8 @@ export function TicketPriorityBadge({ priority, t, className }: { priority: Tick
 /** Badge tone per SLA state — green while healthy, amber near the target, red past it. */
 const SLA_TONE: Record<TicketSlaState, 'green' | 'amber' | 'red' | 'gray'> = {
     on_track: 'green',
-    at_risk: 'amber',
-    breached: 'red',
+    near_due: 'amber',
+    over_sla: 'red',
     met: 'green',
     missed: 'red',
 };
@@ -103,7 +103,7 @@ export function TicketSlaBadge({ ticket, t, className }: { ticket: Ticket; t: T;
     } else {
         const due = ticketSlaActiveDue(ticket);
         const remain = due ? shortDuration(Date.parse(due) - Date.now(), t) : '';
-        label = (sla.state === 'breached' ? t('ticket_sla_overdue') : t('ticket_sla_left')).replace('{t}', remain);
+        label = (sla.state === 'over_sla' ? t('ticket_sla_overdue') : t('ticket_sla_left')).replace('{t}', remain);
     }
 
     return (

@@ -9,7 +9,7 @@ use Illuminate\Notifications\Notification;
 /**
  * In-app bell alert that a ticket's SLA clock is about to blow (at 80% of the
  * target) or has blown. Subtype encodes clock + severity:
- * response_at_risk | response_breached | resolve_at_risk | resolve_breached.
+ * response_near_due | response_over_sla | resolve_near_due | resolve_over_sla.
  */
 class TicketSlaAlertNotification extends Notification
 {

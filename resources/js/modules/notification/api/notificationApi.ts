@@ -23,7 +23,7 @@ export interface NotificationData {
     reference?: string;
     // Stock count notifications (stock_count)
     stock_count_id?: number;
-    // Ticket SLA alerts (ticket_sla) — subtype: response_at_risk | response_breached | resolve_at_risk | resolve_breached
+    // Ticket SLA alerts (ticket_sla) — subtype: response_near_due | response_over_sla | resolve_near_due | resolve_over_sla
     ticket_id?: number;
     ticket_no?: string;
     subject?: string;

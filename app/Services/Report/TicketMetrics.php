@@ -51,7 +51,7 @@ final class TicketMetrics
             : $ticket->sla_resolve_due_at;
     }
 
-    /** 'met' | 'breached' | null (no deadline to measure against, or canceled). */
+    /** 'met' | 'over_sla' | null (no deadline to measure against, or canceled). */
     public static function slaState(Ticket $ticket, CarbonInterface $now): ?string
     {
         if ($ticket->status === TicketStatus::Completed) {
@@ -59,13 +59,13 @@ final class TicketMetrics
                 return null;
             }
 
-            return $ticket->resolved_at->lte($ticket->sla_resolve_due_at) ? 'met' : 'breached';
+            return $ticket->resolved_at->lte($ticket->sla_resolve_due_at) ? 'met' : 'over_sla';
         }
 
         if (in_array($ticket->status, TicketStatus::live(), true)) {
             $due = self::activeDue($ticket);
 
-            return $due !== null && $due->lt($now) ? 'breached' : null;
+            return $due !== null && $due->lt($now) ? 'over_sla' : null;
         }
 
         return null;

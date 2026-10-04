@@ -305,8 +305,11 @@ class TicketSla
         return self::$responseMemo = ($stored >= 1 ? $stored : self::responseDefault());
     }
 
-    /** Share of the active clock already spent (0–100) at which a ticket turns "at risk". */
-    private const AT_RISK_PCT = 80;
+    /**
+     * Share of the active clock already spent (0–100) at which a ticket turns "near_due". Not the
+     * backlog report's "due_soon" (inside 24 hours): this one is 80% of the ticket's own target.
+     */
+    private const NEAR_DUE_PCT = 80;
 
     /** True when the instant's date falls on a configured working day. */
     private static function isWorkDay(Carbon $at): bool
@@ -522,7 +525,7 @@ class TicketSla
         );
         $pct = (int) min(100, round(($elapsed / $total) * 100));
 
-        $state = now()->greaterThan($due) ? 'breached' : ($pct >= self::AT_RISK_PCT ? 'at_risk' : 'on_track');
+        $state = now()->greaterThan($due) ? 'over_sla' : ($pct >= self::NEAR_DUE_PCT ? 'near_due' : 'on_track');
 
         return self::payload($responseDue, $resolveDue, $state, $pct, $clock);
     }

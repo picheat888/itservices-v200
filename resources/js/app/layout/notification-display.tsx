@@ -72,7 +72,7 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     }
     if (n.data.type === 'ticket_sla') {
         // Breached = red, at-risk = amber — mirrors the SLA badge tones on the list.
-        if (n.data.subtype?.endsWith('breached')) return { Icon: Gauge, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        if (n.data.subtype?.endsWith('over_sla')) return { Icon: Gauge, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         return { Icon: Gauge, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     if (n.data.type === 'ticket_forwarded' || n.data.type === 'ticket_forwarded_away') {

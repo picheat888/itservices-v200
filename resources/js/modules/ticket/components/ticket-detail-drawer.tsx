@@ -45,8 +45,8 @@ import { TICKET_WORK_CLASS_META, TicketPriorityBadge, TicketSlaBadge, TicketStat
  */
 const SLA_BAR_TONE: Record<NonNullable<Ticket['sla']>['state'], string> = {
     on_track: 'bg-emerald-500',
-    at_risk: 'bg-amber-500',
-    breached: 'bg-destructive',
+    near_due: 'bg-amber-500',
+    over_sla: 'bg-destructive',
     met: 'bg-emerald-500',
     missed: 'bg-destructive',
 };

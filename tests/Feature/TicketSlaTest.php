@@ -180,10 +180,10 @@ class TicketSlaTest extends TestCase
 
         // 110m in (92%) → at risk; 130m in → response target blown.
         $atRisk = TicketSla::forTicket(Ticket::factory()->make(['status' => 'open', 'created_at' => now()->subMinutes(110)]));
-        $this->assertSame('at_risk', $atRisk['state']);
+        $this->assertSame('near_due', $atRisk['state']);
 
         $breached = TicketSla::forTicket(Ticket::factory()->make(['status' => 'open', 'created_at' => now()->subMinutes(130)]));
-        $this->assertSame('breached', $breached['state']);
+        $this->assertSame('over_sla', $breached['state']);
     }
 
     public function test_in_progress_ticket_runs_against_the_resolution_clock(): void
@@ -196,11 +196,11 @@ class TicketSlaTest extends TestCase
         $this->assertSame('on_track', $sla['state']);
 
         $atRisk = TicketSla::forTicket(Ticket::factory()->make([...$base, 'responded_at' => now()->subMinutes(200)]));
-        $this->assertSame('at_risk', $atRisk['state']);
+        $this->assertSame('near_due', $atRisk['state']);
 
         // Taken Tuesday 16:00: 1 working hour Tuesday + 3 Wednesday → due 11:00, now past it.
         $breached = TicketSla::forTicket(Ticket::factory()->make([...$base, 'responded_at' => '2026-01-13 16:00:00']));
-        $this->assertSame('breached', $breached['state']);
+        $this->assertSame('over_sla', $breached['state']);
     }
 
     public function test_completed_ticket_reports_the_final_verdict(): void
@@ -433,8 +433,9 @@ class TicketSlaTest extends TestCase
         // Most-urgent first: the breached ticket leads even though it's older.
         $this->getJson('/api/tickets?sort=sla_due')->assertOk()->assertJsonPath('data.0.id', $breached->id);
 
-        // The breached filter returns only the overdue one.
-        $this->getJson('/api/tickets?sla=breached')->assertOk()
+        // The over-SLA filter returns only the overdue one — and the pre-rename value still does.
+        $this->getJson('/api/tickets?sla=breached')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/tickets?sla=over_sla')->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $breached->id);
     }

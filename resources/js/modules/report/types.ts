@@ -185,7 +185,7 @@ export interface TicketReportRow {
     created_at: string | null;
     resolved_at: string | null;
     resolve_hours: number | null;
-    sla: 'met' | 'breached' | null;
+    sla: 'met' | 'over_sla' | null;
 }
 
 export interface PagedRows<T> {

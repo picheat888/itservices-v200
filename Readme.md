@@ -4254,3 +4254,20 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ค่าเดิม `request` เปลี่ยนชื่อเป็น `auto_request` (migration `2026_10_04_091022_rename_ticket_source_request_to_auto_request` แก้ 17 แถวในฐานข้อมูลจริงแล้ว; migration แรกเติม `auto_request` ตรง ๆ สำหรับฐานข้อมูลใหม่)
 - **Tests**: `RequestAutoTicketTest` (Ticket จากคำขอ = auto_request) · `TicketApiTest` (เปิดเอง = manual แม้ส่ง source มาใน payload) — 56 passed
 - ยังไม่ได้ใช้ในรายงาน — ขั้นต่อไป: ตัวกรอง "ที่มา" / รายงาน SLA ของ Ticket จากคำขอ
+
+## สถานะ SLA: `at_risk` → `near_due`, `breached` → `over_sla` (2026-10-04)
+
+ให้อ่านค่าในฐานข้อมูลแล้วเข้าใจทันที — `on_track`, `met`, `missed` คงเดิม · `near_due` = ใช้เวลาไปแล้ว 80% ของ SLA เคสนั้น (คนละอย่างกับ `due_soon` ของรายงาน Ticket ค้าง = ครบกำหนดใน 24 ชม.)
+
+**ค่าสถานะที่เปลี่ยน (ทุกที่)**
+- `TicketSla` (สถานะเคสที่ยังเปิด → หน้า Ticket) · `TicketMetrics::slaState()` (รายงาน: `met` / `over_sla`) · `TicketSlaAlertService` + คำสั่ง `SendTicketSlaAlerts`
+- คอลัมน์ `tickets.sla_response_alert_level` / `sla_resolve_alert_level`: `null → near_due → over_sla`
+- การแจ้งเตือน: subtype `response_near_due` / `response_over_sla` / `resolve_near_due` / `resolve_over_sla` · key `notif_ticket_sla_*` (`NotificationCatalogue`, ไฟล์ภาษา notif_* และ notification_name/when/who_*)
+- ตัวกรอง: หน้า Ticket `?sla=over_sla` (ค่าเก่า `breached` ยังใช้ได้ — ลิงก์/bookmark เดิมไม่พัง) · Ticket ค้าง `sla=over_sla|due_soon|on_track`
+- หน้าเว็บ: `TicketSlaState`, สี SLA ใน ticket-meta / detail drawer, ตัวกรองหน้า Ticket, ไอคอนกระดิ่ง (`endsWith('over_sla')`), ตาราง Ticket & SLA, กระดาน/การ์ด Ticket ค้าง, key `rep_sla_over_sla`, `rep_sla_not_over_sla`, `rep_bl_rows_over_sla` · Excel/PDF รายงาน Ticket & SLA
+
+**คงชื่อเดิม (เป็นชื่อในโค้ด ไม่ใช่ค่าสถานะที่เก็บ)**: ฟิลด์ API `sla_breached_now`, `backlog.breached` (หน้า Ticket & SLA), key การ์ดสรุป `breached` (`rep_k_breached`, `rep_snap_sub_breached`), `breachedSql()`, key ข้อความ `ticket_dash_breached*`, `rep_kpi_breached`
+
+**ข้อมูลจริง** — migration `2026_10_04_092309_rename_sla_states_to_near_due_and_over_sla` (มี `down()` ย้อนกลับ) **รันแล้ว**: alert level response over_sla 8 · resolve near_due 1 / over_sla 11 · กระดิ่ง SLA 53 รายการ (subtype ใหม่) · `notification_templates` 4 แถวเปลี่ยน key ในที่เดิม (สวิตช์/ข้อความที่แอดมินแก้/`last_sent_at` อยู่ครบ) · ตัวกรองที่บันทึกในรายงานตั้งเวลา/ไฟล์ส่งออก (ไม่มีแถวที่ใช้ค่าเก่า) · `source_key` ของกระดิ่งทดสอบ
+
+**Tests**: `SlaStateRenameMigrationTest` ใหม่ (up แล้ว down: alert level, subtype, source_key, template key + ค่าที่แอดมินแก้, ตัวกรองที่บันทึก, แถวที่ไม่เกี่ยวไม่ถูกแตะ) · อัปเดต TicketSla / SlaAlert / DeskInternals / รายงาน · `?sla=breached` เดิมยังได้ผลเท่า `over_sla` · **ทั้งชุด 1559 passed** · tsc + eslint + pint ผ่าน · ตรวจใน Chrome: หน้า Ticket (ป้าย SLA, ตัวกรองเกิน SLA), กระดิ่ง (ข้อความ SLA), หน้าตั้งค่าการแจ้งเตือน (ชื่อ + key ใหม่ + ส่งล่าสุดเดิม), Ticket ค้าง

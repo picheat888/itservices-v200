@@ -29,7 +29,7 @@ class TicketBacklogReport extends TabularReport
 {
     use TicketReportScope;
 
-    private const SLA_KEYS = ['breached' => 'rep_sla_breached', 'due_soon' => 'rep_sla_due_soon', 'on_track' => 'rep_sla_on_track'];
+    private const SLA_KEYS = ['over_sla' => 'rep_sla_over_sla', 'due_soon' => 'rep_sla_due_soon', 'on_track' => 'rep_sla_on_track'];
 
     private const DUE_KIND_KEYS = ['response' => 'rep_due_kind_response', 'resolve' => 'rep_due_kind_resolve'];
 
@@ -72,7 +72,7 @@ class TicketBacklogReport extends TabularReport
                 ? $q->whereNull('assignee_id')
                 : $q->where('assignee_id', (int) $assignee))
             ->when($filters['sla'], fn (Builder $q, string $sla) => match ($sla) {
-                'breached' => $q->whereRaw(self::breachedSql()),
+                'over_sla' => $q->whereRaw(self::breachedSql()),
                 'due_soon' => $q->whereRaw('NOT '.self::breachedSql())->whereRaw("{$due} <= {$soon}"),
                 default => $q->whereRaw('NOT '.self::breachedSql())->whereRaw("({$due} IS NULL OR {$due} > {$soon})"),
             })

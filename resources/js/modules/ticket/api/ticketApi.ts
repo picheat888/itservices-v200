@@ -42,7 +42,7 @@ export interface TicketListParams {
     category?: string;
     priority?: string;
     sort?: string;
-    /** 'breached' = only active tickets whose current SLA deadline has passed. */
+    /** 'over_sla' = only active tickets whose current SLA deadline has passed. */
     sla?: string;
     mine?: boolean;
     /** My Tickets scope — only tickets the user filed themselves (gated by tickets.my). */

@@ -343,7 +343,7 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
-                'key' => 'notif_ticket_sla_response_at_risk',
+                'key' => 'notif_ticket_sla_response_near_due',
                 'module' => 'tickets',
                 'name' => 'SLA - pickup nearly overdue',
                 'trigger' => 'A case approaches its response deadline',
@@ -353,7 +353,7 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
-                'key' => 'notif_ticket_sla_response_breached',
+                'key' => 'notif_ticket_sla_response_over_sla',
                 'module' => 'tickets',
                 'name' => 'SLA - pickup overdue',
                 'trigger' => 'A case passes its response deadline',
@@ -363,7 +363,7 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
-                'key' => 'notif_ticket_sla_resolve_at_risk',
+                'key' => 'notif_ticket_sla_resolve_near_due',
                 'module' => 'tickets',
                 'name' => 'SLA - resolution closing in',
                 'trigger' => 'A case approaches its resolution deadline',
@@ -373,7 +373,7 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
-                'key' => 'notif_ticket_sla_resolve_breached',
+                'key' => 'notif_ticket_sla_resolve_over_sla',
                 'module' => 'tickets',
                 'name' => 'SLA - resolution overdue',
                 'trigger' => 'A case passes its resolution deadline',
