@@ -21,8 +21,9 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useBacklogBoard } from '../hooks/use-reports';
 import type { BacklogBoardTicket, ChartSeries, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
+import { fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
-import { fold, FoldToggle, StackBar } from './tabular-charts';
+import { StackBar } from './tabular-charts';
 import { TICKET_PRIORITY_TONE } from './ticket-badges';
 import { categoryKey, priorityKey } from './ticket-labels';
 

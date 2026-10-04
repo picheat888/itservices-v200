@@ -195,7 +195,7 @@ class ReportSnapshotService
      */
     private function assetsInUse(User $viewer): ?array
     {
-        if (! ReportCatalogue::allows($viewer, ReportCatalogue::ASSETS_BY_STATUS_DEPARTMENT)) {
+        if (! ReportCatalogue::allows($viewer, ReportCatalogue::ASSETS_OVERVIEW)) {
             return null;
         }
 
@@ -204,7 +204,7 @@ class ReportSnapshotService
 
         return $this->tile(
             'assets_in_use',
-            ReportCatalogue::ASSETS_BY_STATUS_DEPARTMENT,
+            ReportCatalogue::ASSETS_OVERVIEW,
             $inUse,
             total: $total,
             secondary: ['key' => 'rate', 'value' => $total > 0 ? (int) round($inUse / $total * 100) : null],

@@ -18,8 +18,8 @@ import { CARD_HEADING_TINT } from './card-heading';
 import { periodRange } from './report-scope';
 
 /**
- * A report's page address: its key with every "." and "_" made a "-" — "assets.by_status_department"
- * → "assets-by-status-department". Reversible because a domain ("assets", "tickets", …) never
+ * A report's page address: its key with every "." and "_" made a "-" — "assets.warranty_expiring"
+ * → "assets-warranty-expiring". Reversible because a domain ("assets", "tickets", …) never
  * holds a "-" or "_": the first "-" is the dot, the rest were underscores (reportKeyFromSlug).
  * The API keeps the dotted key (/api/reports/r/{key}); only the page URL reads plainly.
  */

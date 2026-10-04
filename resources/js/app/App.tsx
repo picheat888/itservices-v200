@@ -41,7 +41,7 @@ function RedirectPreservingQuery({ to }: { to: string }) {
     return <Navigate to={`${to}${search}${hash}`} replace />;
 }
 
-/** /reports/r/assets.by_status_department (the old report address) → /reports/assets-by-status-department, query kept. */
+/** /reports/r/assets.warranty_expiring (the old report address) → /reports/assets-warranty-expiring, query kept. */
 function OldReportRedirect() {
     const { key = '' } = useParams<{ key: string }>();
 

@@ -25,7 +25,7 @@ class ReportExportQueueTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const REGISTER = '/api/reports/r/assets.register/export?format=pdf';
+    private const OVERVIEW = '/api/reports/r/assets.overview/export?format=pdf';
 
     protected function setUp(): void
     {
@@ -63,15 +63,15 @@ class ReportExportQueueTest extends TestCase
         Asset::factory()->create(['status' => 'ready']);
         $user = $this->userWith(['assets.view']);
 
-        $id = $this->actingAs($user)->postJson(self::REGISTER)
+        $id = $this->actingAs($user)->postJson(self::OVERVIEW)
             ->assertAccepted()
-            ->assertJsonPath('data.report_key', 'assets.register')
+            ->assertJsonPath('data.report_key', 'assets.overview')
             ->json('data.id');
 
         // The sync queue has already run the job.
         $export = ReportExport::findOrFail($id);
         $this->assertSame(ReportExport::READY, $export->status);
-        $this->assertSame('Report_assets-register_2026-09-25.pdf', $export->file_name);
+        $this->assertSame('Report_assets-overview_2026-09-25.pdf', $export->file_name);
         $this->assertSame(1, $export->rows_count);
         $this->assertGreaterThan(0, $export->size_bytes);
         $this->assertSame('2026-10-02 10:00:00', $export->expires_at->format('Y-m-d H:i:s'));
@@ -90,7 +90,7 @@ class ReportExportQueueTest extends TestCase
 
         $bells = $this->bells($user);
         $this->assertCount(1, $bells);
-        $this->assertSame(['ready', $id, 'assets.register', 'pdf'], [$bells[0]['subtype'], $bells[0]['report_export_id'], $bells[0]['report_key'], $bells[0]['format']]);
+        $this->assertSame(['ready', $id, 'assets.overview', 'pdf'], [$bells[0]['subtype'], $bells[0]['report_export_id'], $bells[0]['report_key'], $bells[0]['format']]);
     }
 
     public function test_the_ticket_overview_is_queued_through_its_own_endpoint(): void
@@ -111,7 +111,7 @@ class ReportExportQueueTest extends TestCase
     {
         $owner = $this->userWith(['assets.view']);
         $other = $this->userWith(['assets.view']);
-        $id = $this->actingAs($owner)->postJson(self::REGISTER)->assertAccepted()->json('data.id');
+        $id = $this->actingAs($owner)->postJson(self::OVERVIEW)->assertAccepted()->json('data.id');
 
         $this->actingAs($other)->getJson('/api/reports/exports')->assertOk()->assertJsonCount(0, 'data');
         $this->actingAs($other)->get("/api/reports/exports/{$id}/download")->assertNotFound();
@@ -124,7 +124,7 @@ class ReportExportQueueTest extends TestCase
     public function test_the_owner_removes_an_export_and_its_file(): void
     {
         $user = $this->userWith(['assets.view']);
-        $id = $this->actingAs($user)->postJson(self::REGISTER)->json('data.id');
+        $id = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
         $path = ReportExport::findOrFail($id)->file_path;
 
         $this->actingAs($user)->deleteJson("/api/reports/exports/{$id}")->assertOk();
@@ -138,7 +138,7 @@ class ReportExportQueueTest extends TestCase
         Queue::fake();
         $user = $this->userWith(['assets.view']);
 
-        $id = $this->actingAs($user)->postJson(self::REGISTER)->assertAccepted()->assertJsonPath('data.status', 'queued')->json('data.id');
+        $id = $this->actingAs($user)->postJson(self::OVERVIEW)->assertAccepted()->assertJsonPath('data.status', 'queued')->json('data.id');
 
         Queue::assertPushed(GenerateReportExport::class, fn (GenerateReportExport $job) => $job->exportId === $id);
         $this->actingAs($user)->get("/api/reports/exports/{$id}/download")->assertNotFound();
@@ -148,7 +148,7 @@ class ReportExportQueueTest extends TestCase
     {
         Queue::fake();
         $user = $this->userWith(['assets.view']);
-        $id = $this->actingAs($user)->postJson(self::REGISTER)->assertAccepted()->json('data.id');
+        $id = $this->actingAs($user)->postJson(self::OVERVIEW)->assertAccepted()->json('data.id');
 
         RolePermission::query()->where('permission', 'assets.view')->update(['allowed' => false]);
         (new GenerateReportExport($id))->handle(app(ReportExportService::class));
@@ -164,7 +164,7 @@ class ReportExportQueueTest extends TestCase
         $user = $this->userWith(['assets.view']);
         $this->mock(TabularReportExporter::class)->shouldReceive('store')->once()->andThrow(new \RuntimeException('disk full'));
 
-        $id = $this->actingAs($user)->postJson(self::REGISTER)->assertAccepted()->json('data.id');
+        $id = $this->actingAs($user)->postJson(self::OVERVIEW)->assertAccepted()->json('data.id');
         $this->assertSame([ReportExport::FAILED, 'build_failed'], [ReportExport::findOrFail($id)->status, ReportExport::findOrFail($id)->error]);
 
         $this->forgetMock(TabularReportExporter::class);
@@ -181,7 +181,7 @@ class ReportExportQueueTest extends TestCase
     public function test_only_a_failed_export_can_be_retried(): void
     {
         $user = $this->userWith(['assets.view']);
-        $id = $this->actingAs($user)->postJson(self::REGISTER)->json('data.id');
+        $id = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
 
         $this->actingAs($user)->postJson("/api/reports/exports/{$id}/retry")
             ->assertUnprocessable()->assertJsonPath('message', 'export_not_failed');
@@ -193,30 +193,30 @@ class ReportExportQueueTest extends TestCase
         $user = $this->userWith(['assets.view']);
 
         for ($i = 0; $i < ReportExportService::MAX_IN_FLIGHT; $i++) {
-            $this->actingAs($user)->postJson(self::REGISTER)->assertAccepted();
+            $this->actingAs($user)->postJson(self::OVERVIEW)->assertAccepted();
         }
 
-        $this->actingAs($user)->postJson(self::REGISTER)
+        $this->actingAs($user)->postJson(self::OVERVIEW)
             ->assertUnprocessable()
             ->assertJsonPath('message', 'export_queue_full')
             ->assertJsonPath('limit', ReportExportService::MAX_IN_FLIGHT);
         // Somebody else's queue is their own.
-        $this->actingAs($this->userWith(['assets.view']))->postJson(self::REGISTER)->assertAccepted();
+        $this->actingAs($this->userWith(['assets.view']))->postJson(self::OVERVIEW)->assertAccepted();
     }
 
     public function test_the_nightly_prune_removes_expired_and_stalled_exports_only(): void
     {
         $user = $this->userWith(['assets.view']);
-        $expired = $this->actingAs($user)->postJson(self::REGISTER)->json('data.id');
+        $expired = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
         $expiredPath = ReportExport::findOrFail($expired)->file_path;
 
         $this->travelTo('2026-10-01 10:00:00');
-        $current = $this->actingAs($user)->postJson(self::REGISTER)->json('data.id');
+        $current = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
         Queue::fake();
-        $stalled = $this->actingAs($user)->postJson(self::REGISTER)->json('data.id');
+        $stalled = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
 
         $this->travelTo('2026-10-02 10:30:00');
-        $waiting = $this->actingAs($user)->postJson(self::REGISTER)->json('data.id');
+        $waiting = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
 
         // Before the prune, an expired file is no longer offered or served.
         $listed = collect($this->actingAs($user)->getJson('/api/reports/exports')->json('data'))->pluck('id')->all();
@@ -233,7 +233,7 @@ class ReportExportQueueTest extends TestCase
     public function test_the_old_direct_download_is_gone(): void
     {
         $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.register/export?format=pdf')
+            ->getJson('/api/reports/r/assets.overview/export?format=pdf')
             ->assertMethodNotAllowed();
     }
 }

@@ -24,8 +24,9 @@ import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
 import type { ChartSeries, ChartTone, TicketOverviewSummary } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
+import { fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
-import { fold, FoldToggle, StackBar } from './tabular-charts';
+import { StackBar } from './tabular-charts';
 import { categoryKey } from './ticket-labels';
 
 /** Rows a list shows before folding, as the asset report's department chart. */

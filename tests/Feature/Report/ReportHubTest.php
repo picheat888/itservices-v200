@@ -51,18 +51,18 @@ class ReportHubTest extends TestCase
         $user = $this->userWith(['assets.view']);
         $other = $this->userWith(['assets.view']);
 
-        $this->actingAs($user)->putJson('/api/reports/assets.register/pin')
+        $this->actingAs($user)->putJson('/api/reports/assets.overview/pin')
             ->assertOk()->assertJsonPath('data.pinned', true);
         // Pinning twice is still one pin.
-        $this->actingAs($user)->putJson('/api/reports/assets.register/pin')->assertOk();
+        $this->actingAs($user)->putJson('/api/reports/assets.overview/pin')->assertOk();
         $this->assertSame(1, ReportPin::query()->where('user_id', $user->id)->count());
 
         $pinned = collect($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'))->pluck('pinned', 'key');
-        $this->assertTrue($pinned['assets.register']);
+        $this->assertTrue($pinned['assets.overview']);
         $this->assertFalse($pinned['assets.warranty_expiring']);
-        $this->assertFalse(collect($this->actingAs($other)->getJson('/api/reports')->json('data'))->pluck('pinned', 'key')['assets.register']);
+        $this->assertFalse(collect($this->actingAs($other)->getJson('/api/reports')->json('data'))->pluck('pinned', 'key')['assets.overview']);
 
-        $this->actingAs($user)->deleteJson('/api/reports/assets.register/pin')
+        $this->actingAs($user)->deleteJson('/api/reports/assets.overview/pin')
             ->assertOk()->assertJsonPath('data.pinned', false);
         $this->assertSame(0, ReportPin::query()->count());
     }
@@ -72,13 +72,13 @@ class ReportHubTest extends TestCase
     {
         $user = $this->userWith(['assets.view']);
         $this->actingAs($user)->putJson('/api/reports/assets.warranty_expiring/pin')->assertOk();
-        $this->actingAs($user)->putJson('/api/reports/assets.register/pin')->assertOk();
+        $this->actingAs($user)->putJson('/api/reports/assets.overview/pin')->assertOk();
 
         $order = collect($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'))->pluck('pin_order', 'key');
 
         $this->assertSame(0, $order['assets.warranty_expiring']);
-        $this->assertSame(1, $order['assets.register']);
-        $this->assertNull($order['assets.by_status_department']);
+        $this->assertSame(1, $order['assets.overview']);
+        $this->assertNull($order['assets.transfer_history']);
     }
 
     public function test_only_a_report_the_reader_may_open_can_be_pinned(): void
@@ -224,11 +224,11 @@ class ReportHubTest extends TestCase
         $user = $this->userWith(['assets.view']);
 
         $this->actingAs($user)
-            ->exportReport('/api/reports/r/assets.register/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
+            ->exportReport('/api/reports/r/assets.overview/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
 
-        $this->assertExportStored('Report_assets-register_2026-09-25.xlsx', function (TabularReportExport $export) {
-            return $export->sheets()[1]->headings() === ['รหัสทรัพย์สิน', 'สถานะ']
-                && count($export->sheets()[1]->map($export->rows->first())) === 2;
+        $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
+            return last($export->sheets())->headings() === ['รหัสทรัพย์สิน', 'สถานะ']
+                && count(last($export->sheets())->map($export->rows->first())) === 2;
         });
     }
 
@@ -236,7 +236,7 @@ class ReportHubTest extends TestCase
     {
         $user = $this->userWith(['assets.view']);
 
-        $this->actingAs($user)->exportReport('/api/reports/r/assets.register/export?format=xlsx&columns[]=salary')->assertUnprocessable();
+        $this->actingAs($user)->exportReport('/api/reports/r/assets.overview/export?format=xlsx&columns[]=salary')->assertUnprocessable();
     }
 
     public function test_pdf_export_with_picked_columns_streams(): void
@@ -244,7 +244,7 @@ class ReportHubTest extends TestCase
         Asset::factory()->create(['status' => 'ready']);
 
         $response = $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.register/export?format=pdf&columns[]=asset_code');
+            ->exportReport('/api/reports/r/assets.overview/export?format=pdf&columns[]=asset_code');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

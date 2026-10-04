@@ -10,6 +10,8 @@ use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\Category;
+use App\Models\Settings\Location;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
@@ -17,7 +19,7 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * "ทรัพย์สินตามสถานะ และแผนก" (assets.by_status_department) and "ประวัติโอนย้ายและรับคืน"
+ * "ภาพรวมของทรัพย์สิน" (assets.overview) and "ประวัติโอนย้ายและรับคืน"
  * (assets.transfer_history) through /reports/r/{key}.
  */
 class AssetActivityReportsTest extends TestCase
@@ -55,89 +57,139 @@ class AssetActivityReportsTest extends TestCase
         return $transfer;
     }
 
-    // ── assets.by_status_department ─────────────────────────────────────────────────
+    // ── assets.overview ─────────────────────────────────────────────────────────────
 
-    public function test_by_status_department_counts_each_status_per_holder_department(): void
+    public function test_overview_department_card_counts_only_what_employees_hold(): void
     {
         $it = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
         $holder = Employee::create(['code' => 'EMP-1', 'first_name' => 'Anan', 'last_name' => 'IT', 'department_id' => $it->id]);
+        $nobody = Employee::create(['code' => 'EMP-2', 'first_name' => 'Nid', 'last_name' => 'Free']);
         Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $holder->id, 'owner' => null]);
         Asset::factory()->create(['status' => 'pending_return', 'owner_employee_id' => $holder->id, 'owner' => null]);
-        Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
+        Asset::factory()->create(['status' => 'pending_acceptance', 'owner_employee_id' => $nobody->id, 'owner' => null]);
         Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
         Asset::factory()->create(['status' => 'common', 'owner_employee_id' => null, 'owner' => 'Meeting room']);
+        Asset::factory()->create(['status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null]);
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.by_status_department/rows')->assertOk()->json();
+            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json();
 
-        $rows = collect($body['data'])->keyBy(fn (array $r) => $r['department']['name']);
-        $this->assertSame(['Store · common · no department', 'IT'], $rows->keys()->all());
-        $this->assertEquals(3, $rows['Store · common · no department']['total_count']);
-        $this->assertEquals(2, $rows['Store · common · no department']['st_ready']);
-        $this->assertEquals(1, $rows['Store · common · no department']['st_common']);
-        $this->assertEquals(1, $rows['IT']['st_deployed']);
-        $this->assertEquals(1, $rows['IT']['st_pending_return']);
-        $this->assertSame('ไอที', $rows['IT']['department']['name_th']);
+        // The list is every asset; the department card only what an employee holds.
+        $this->assertSame(6, $body['meta']['total']);
+        $department = collect($body['charts'])->firstWhere('key', 'department');
+        $rows = collect($department['rows'])->keyBy(fn (array $r) => $r['label']['name']);
+        $this->assertSame(['IT', 'No department'], $rows->keys()->all());
+        $this->assertSame(2, $rows['IT']['total']);
+        $this->assertSame(1, $rows['IT']['values']['deployed']);
+        $this->assertSame(1, $rows['IT']['values']['pending_return']);
+        $this->assertFalse($rows['IT']['apart']);
+        // Someone with no department is still an employee: one row, apart.
+        $this->assertSame(1, $rows['No department']['values']['pending_acceptance']);
+        $this->assertTrue($rows['No department']['apart']);
+        $this->assertSame(['deployed', 'pending_acceptance', 'pending_return'], array_column($department['views'][0]['series'], 'key'));
 
         $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(5, $summary['total']['value']);
+        $this->assertSame(6, $summary['total']['value']);
         $this->assertSame(2, $summary['in_use']['value']);
-        $this->assertSame(2, $summary['ready']['value']);
+        $this->assertSame(1, $summary['ready']['value']);
         $this->assertSame(1, $summary['pending_return']['value']);
         // Pending returns wear the Settings colour but keep the amber frame; the other tiles have none.
         $this->assertSame('amber', $summary['pending_return']['attention']);
         $this->assertNull($summary['in_use']['attention']);
     }
 
-    public function test_by_status_department_draws_department_status_and_category_charts(): void
+    public function test_overview_draws_ready_stock_by_warehouse_and_shared_use_by_location(): void
+    {
+        $store = Warehouse::create(['name' => 'Main store']);
+        $room = Location::create(['name' => 'Meeting room 1']);
+        Asset::factory()->create(['status' => 'ready', 'source' => 'purchased', 'warehouse_id' => $store->id, 'owner_employee_id' => null, 'owner' => null]);
+        Asset::factory()->create(['status' => 'ready', 'source' => 'rented', 'warehouse_id' => $store->id, 'owner_employee_id' => null, 'owner' => null]);
+        Asset::factory()->create(['status' => 'ready', 'source' => 'purchased', 'warehouse_id' => null, 'owner_employee_id' => null, 'owner' => null]);
+        Asset::factory()->create(['status' => 'common', 'source' => 'purchased', 'location_id' => $room->id, 'owner_employee_id' => null, 'owner' => 'Room']);
+        // Written off in the same store: not ready stock, so not in the warehouse card.
+        Asset::factory()->create(['status' => 'writeoff', 'warehouse_id' => $store->id, 'owner_employee_id' => null, 'owner' => null]);
+
+        $charts = collect($this->actingAs($this->userWith(['assets.view']))
+            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
+
+        $warehouses = collect($charts['warehouse']['rows'])->keyBy(fn (array $r) => $r['label']['name']);
+        $this->assertSame(3, $charts['warehouse']['total']);
+        $this->assertSame(['purchased' => 1, 'rented' => 1], $warehouses['Main store']['values']);
+        $this->assertSame(2, $warehouses['Main store']['total']);
+        $this->assertTrue($warehouses['No warehouse']['apart']);
+        $this->assertTrue($charts['warehouse']['compact']);
+
+        $this->assertSame(1, $charts['location']['total']);
+        $this->assertSame(['name' => 'Meeting room 1', 'name_th' => null], $charts['location']['rows'][0]['label']);
+    }
+
+    public function test_overview_lists_the_written_off_assets(): void
+    {
+        $laptops = Category::create(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป']);
+        $store = Warehouse::create(['name' => 'Main store']);
+        $gone = Asset::factory()->create([
+            'status' => 'writeoff', 'category_id' => $laptops->id, 'warehouse_id' => $store->id,
+            'owner_employee_id' => null, 'owner' => null, 'last_reason' => 'Beyond repair',
+        ]);
+        Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
+
+        $writeoff = collect($this->actingAs($this->userWith(['assets.view']))
+            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->firstWhere('key', 'writeoff');
+
+        $this->assertSame('list', $writeoff['type']);
+        $this->assertSame(1, $writeoff['total']);
+        $this->assertSame(
+            ['id' => $gone->id, 'code' => $gone->asset_code, 'label' => ['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], 'place' => 'Main store', 'reason' => 'Beyond repair'],
+            collect($writeoff['rows'][0])->except('model')->all(),
+        );
+    }
+
+    public function test_overview_draws_the_status_donut_and_the_category_card(): void
     {
         $it = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
         $holder = Employee::create(['code' => 'EMP-1', 'first_name' => 'Anan', 'last_name' => 'IT', 'department_id' => $it->id]);
-        $laptops = Category::create(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป']);
+        $laptops = Category::create(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป', 'icon' => 'Laptop']);
         $printers = Category::create(['name' => 'Printer', 'name_th' => 'เครื่องพิมพ์']);
         Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $holder->id, 'owner' => null, 'category_id' => $laptops->id]);
-        Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $holder->id, 'owner' => null, 'category_id' => $laptops->id]);
-        Asset::factory()->create(['status' => 'common', 'owner_employee_id' => null, 'owner' => 'Meeting room', 'category_id' => $printers->id]);
+        Asset::factory()->create(['status' => 'pending_return', 'owner_employee_id' => $holder->id, 'owner' => null, 'category_id' => $laptops->id]);
+        Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null, 'category_id' => $laptops->id]);
         Asset::factory()->create(['status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null, 'category_id' => $laptops->id]);
+        Asset::factory()->create(['status' => 'common', 'owner_employee_id' => null, 'owner' => 'Meeting room', 'category_id' => $printers->id]);
 
         $viewer = $this->userWith(['assets.view']);
-        $definition = $this->actingAs($viewer)->getJson('/api/reports/r/assets.by_status_department')->assertOk()->json('data');
+        $definition = $this->actingAs($viewer)->getJson('/api/reports/r/assets.overview')->assertOk()->json('data');
         $this->assertTrue($definition['has_charts']);
-        // The department bars stand in for the table on screen.
-        $this->assertFalse($definition['shows_table']);
+        // The register's list sits under the cards.
+        $this->assertTrue($definition['shows_table']);
 
         $charts = collect($this->actingAs($viewer)
-            ->getJson('/api/reports/r/assets.by_status_department/rows')->assertOk()->json('charts'))->keyBy('key');
-        $this->assertSame(['department', 'status', 'category'], $charts->keys()->all());
-
-        $departments = collect($charts['department']['rows'])->keyBy(fn (array $r) => $r['label']['name']);
-        $this->assertSame(2, $departments['IT']['values']['deployed']);
-        $this->assertSame(2, $departments['IT']['total']);
-        $this->assertSame(1, $departments['Store · common · no department']['values']['common']);
-        $this->assertSame(1, $departments['Store · common · no department']['values']['writeoff']);
-        // Assets in no department are kept apart from the departments.
-        $this->assertTrue($departments['Store · common · no department']['apart']);
-        $this->assertFalse($departments['IT']['apart']);
-
-        $this->assertSame(['status', 'source'], array_column($charts['department']['views'], 'key'));
+            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
+        $this->assertSame(['department', 'status', 'category', 'warehouse', 'location', 'writeoff'], $charts->keys()->all());
 
         $segments = collect($charts['status']['segments'])->keyBy('key');
-        $this->assertSame(2, $segments['deployed']['value']);
+        $this->assertSame(1, $segments['deployed']['value']);
         $this->assertSame('asset-deployed', $segments['deployed']['tone']);
-        $this->assertSame(4, $charts['status']['total']);
-        // Deployed 2 + common 1 of 4.
-        $this->assertSame(75, $charts['status']['center']['value']);
+        $this->assertSame(5, $charts['status']['total']);
+        // Deployed 1 + common 1 of 5.
+        $this->assertSame(40, $charts['status']['center']['value']);
 
-        $this->assertSame([['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], 3], [$charts['category']['rows'][0]['label'], $charts['category']['rows'][0]['value']]);
+        // As the /assets card: ready / in use (anything out of the pool) / written off, with the icon.
+        $this->assertSame('buckets', $charts['category']['type']);
+        $this->assertSame(['ready', 'used', 'writeoff'], array_column($charts['category']['series'], 'key'));
+        $laptopRow = $charts['category']['rows'][0];
+        $this->assertSame(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], $laptopRow['label']);
+        $this->assertSame('Laptop', $laptopRow['icon']);
+        $this->assertSame(['ready' => 1, 'used' => 2, 'writeoff' => 1], $laptopRow['values']);
+        $this->assertSame(4, $laptopRow['total']);
 
-        // The category filter narrows every chart, the category bars included.
+        // The category filter narrows every card, the category card included.
         $printersOnly = collect($this->actingAs($viewer)
-            ->getJson("/api/reports/r/assets.by_status_department/rows?category_id={$printers->id}")->json('charts'))->keyBy('key');
+            ->getJson("/api/reports/r/assets.overview/rows?category_id={$printers->id}")->json('charts'))->keyBy('key');
         $this->assertSame(1, $printersOnly['status']['total']);
         $this->assertCount(1, $printersOnly['category']['rows']);
     }
 
-    public function test_by_status_department_says_how_many_were_bought_and_rented(): void
+    public function test_overview_says_how_many_were_bought_and_rented(): void
     {
         $it = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
         $holder = Employee::create(['code' => 'EMP-1', 'first_name' => 'Anan', 'last_name' => 'IT', 'department_id' => $it->id]);
@@ -147,7 +199,7 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'pending_return', 'source' => 'purchased', 'owner_employee_id' => $holder->id, 'owner' => null]);
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.by_status_department/rows')->assertOk()->json();
+            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json();
 
         // Every tile breaks its number down: bought, then rented.
         $split = collect($body['summary'])->mapWithKeys(fn (array $tile) => [$tile['key'] => array_column($tile['split'], 'value', 'key')]);
@@ -174,8 +226,29 @@ class AssetActivityReportsTest extends TestCase
 
         // The source filter narrows the tiles' split as well.
         $rentedOnly = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.by_status_department/rows?source=rented')->json('summary.0.split');
+            ->getJson('/api/reports/r/assets.overview/rows?source=rented')->json('summary.0.split');
         $this->assertSame(['purchased' => 0, 'rented' => 2], array_column($rentedOnly, 'value', 'key'));
+    }
+
+    public function test_overview_export_carries_the_cards_as_sheets_before_the_list(): void
+    {
+        Excel::fake();
+        $store = Warehouse::create(['name' => 'Main store']);
+        Asset::factory()->create(['status' => 'ready', 'warehouse_id' => $store->id, 'owner_employee_id' => null, 'owner' => null]);
+        Asset::factory()->create(['status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null, 'last_reason' => 'Broken']);
+
+        $this->actingAs($this->userWith(['assets.view']))
+            ->exportReport('/api/reports/r/assets.overview/export?format=xlsx')->assertAccepted();
+
+        $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
+            $titles = array_map(fn ($sheet) => $sheet->title(), array_slice($export->sheets(), 1, 4));
+            $warehouseRows = $export->sheets()[2]->array();
+
+            return $titles === ['แยกตามแผนก', 'คลัง (พร้อมส่งมอบ)', 'ส่วนกลาง (ตามสถานที่)', 'ตัดจำหน่าย']
+                && $warehouseRows === [['Main store', 1, 1, 0]]
+                && $export->sheets()[4]->array()[0][4] === 'Broken'
+                && count($export->sheets()) === 6;
+        });
     }
 
     public function test_reports_without_charts_send_an_empty_list(): void
@@ -223,7 +296,7 @@ class AssetActivityReportsTest extends TestCase
     {
         $user = $this->userWith(['employees.view']);
 
-        foreach (['assets.by_status_department', 'assets.transfer_history'] as $key) {
+        foreach (['assets.overview', 'assets.transfer_history'] as $key) {
             $this->actingAs($user)->getJson("/api/reports/r/{$key}/rows")->assertForbidden();
         }
     }
@@ -250,7 +323,7 @@ class AssetActivityReportsTest extends TestCase
         $this->transfer('handover', '2026-09-10 09:00:00');
         $user = $this->userWith(['assets.view']);
 
-        foreach (['assets.by_status_department', 'assets.transfer_history'] as $key) {
+        foreach (['assets.overview', 'assets.transfer_history'] as $key) {
             $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
