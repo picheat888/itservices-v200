@@ -50,7 +50,7 @@ export const notification: Dict = {
     notif_ticket_sla_response_near_due: 'Nearly overdue for pickup - take it now',
     notif_ticket_sla_response_over_sla: 'Pickup overdue - no one has taken this ticket',
     notif_ticket_sla_resolve_near_due: 'Resolution deadline is closing in',
-    notif_ticket_sla_resolve_over_sla: 'Resolution overdue - SLA breached',
+    notif_ticket_sla_resolve_over_sla: 'Resolution overdue - this case is past its SLA',
     notif_ticket_forwarded: 'Case forwarded to you by {from}',
     notif_ticket_forwarded_away: 'Your case was forwarded to {to}',
     notif_ticket_new: 'New case waiting to be taken - tap to view',
