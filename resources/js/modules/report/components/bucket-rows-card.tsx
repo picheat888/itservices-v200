@@ -17,7 +17,7 @@ import { FILL } from './chart-tones';
 type Buckets = Extract<TabularChart, { type: 'buckets' }>;
 
 /** How many categories show before the rest fold into "อื่น ๆ". */
-const TOP_BUCKETS = 8;
+const TOP_BUCKETS = 5;
 
 /**
  * One row as the /assets card draws it: an icon (optional) and the name, each part's count with
