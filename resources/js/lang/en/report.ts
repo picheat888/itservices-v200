@@ -76,7 +76,7 @@ export const report: Dict = {
     rep_kpi_sla: 'Closed within SLA',
     rep_kpi_goal: 'Goal {n}%',
     rep_kpi_avg: 'Average time to fix',
-    rep_kpi_p90: '90% closed within {n} h',
+    rep_kpi_p90: '90% closed in at most {n} h',
     rep_kpi_backlog: 'Open now',
     rep_kpi_over_sla: '{n} over SLA',
     rep_kpi_backlog_open: 'Open',
