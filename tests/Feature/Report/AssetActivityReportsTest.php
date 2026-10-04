@@ -120,7 +120,7 @@ class AssetActivityReportsTest extends TestCase
 
         $segments = collect($charts['status']['segments'])->keyBy('key');
         $this->assertSame(2, $segments['deployed']['value']);
-        $this->assertSame('soft-green', $segments['deployed']['tone']);
+        $this->assertSame('asset-deployed', $segments['deployed']['tone']);
         $this->assertSame(4, $charts['status']['total']);
         // Deployed 2 + common 1 of 4.
         $this->assertSame(75, $charts['status']['center']['value']);
