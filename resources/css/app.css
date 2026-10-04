@@ -145,15 +145,15 @@
     --chart-3: hsl(38, 92%, 50%);
     --chart-4: hsl(0, 72%, 51%);
     --chart-5: hsl(262, 68%, 58%);
-    /* Soft report palette — the brand blue lighter and calmer (255°), and 30° steps around it at the
-       same lightness and chroma: sky 225° · blue 255° · indigo 285° · violet 315° · orchid 345°. */
+    /* Soft report palette — the blue is #2978e9 (chosen by the user); around it, 30° steps at one soft
+       lightness and chroma: sky 225° · indigo 285° · violet 315° · orchid 345°. */
     --chart-soft-sky: oklch(0.74 0.09 225);
-    --chart-soft-blue: oklch(0.74 0.09 255);
+    --chart-soft-blue: #2978e9;
     --chart-soft-indigo: oklch(0.74 0.09 285);
     --chart-soft-violet: oklch(0.74 0.09 315);
     --chart-soft-orchid: oklch(0.74 0.09 345);
     --chart-soft-sky-ink: oklch(0.52 0.1 225);
-    --chart-soft-blue-ink: oklch(0.52 0.12 255);
+    --chart-soft-blue-ink: #1d5fc2;
     --chart-soft-indigo-ink: oklch(0.52 0.12 285);
     --chart-soft-violet-ink: oklch(0.52 0.12 315);
     --chart-soft-orchid-ink: oklch(0.52 0.12 345);
@@ -209,12 +209,12 @@
     --chart-4: hsl(0, 72%, 55%);
     --chart-5: hsl(262, 68%, 64%);
     --chart-soft-sky: oklch(0.66 0.09 225);
-    --chart-soft-blue: oklch(0.66 0.09 255);
+    --chart-soft-blue: #2978e9;
     --chart-soft-indigo: oklch(0.66 0.09 285);
     --chart-soft-violet: oklch(0.66 0.09 315);
     --chart-soft-orchid: oklch(0.66 0.09 345);
     --chart-soft-sky-ink: oklch(0.8 0.08 225);
-    --chart-soft-blue-ink: oklch(0.8 0.08 255);
+    --chart-soft-blue-ink: #8fb8f4;
     --chart-soft-indigo-ink: oklch(0.8 0.08 285);
     --chart-soft-violet-ink: oklch(0.8 0.08 315);
     --chart-soft-orchid-ink: oklch(0.8 0.08 345);
