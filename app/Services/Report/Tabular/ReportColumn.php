@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Model;
  * page only turns it into a link when the reader may open that module (nav.ts anyOf).
  * `labelKey()` gives the page heading its own i18n key when the shared `rep_c_{key}` reads
  * wrong for this report (a ticket's "ผู้แจ้ง" against a request's "ผู้ขอ").
+ * `sheetOnly()` keeps a column to the Excel sheet — data for analysis (a ticket's full description,
+ * both of its SLA deadlines) the screen and the PDF have no room for.
  */
 final class ReportColumn
 {
@@ -40,6 +42,22 @@ final class ReportColumn
 
     /** The page heading's i18n key when not the shared `rep_c_{key}`. */
     private ?string $labelKey = null;
+
+    /** Whether only the Excel sheet carries this column (not the page, the API rows or the PDF). */
+    private bool $sheetOnly = false;
+
+    /** Carry this column in the Excel sheet only. */
+    public function sheetOnly(): self
+    {
+        $this->sheetOnly = true;
+
+        return $this;
+    }
+
+    public function isSheetOnly(): bool
+    {
+        return $this->sheetOnly;
+    }
 
     /** Head the column on the page with this i18n key instead of `rep_c_{key}`. */
     public function labelKey(string $key): self

@@ -36,6 +36,9 @@ class TicketBacklogReport extends TabularReport
 
     private const DUE_KIND_TH = ['response' => 'รอรับเคส', 'resolve' => 'รอปิดเคส'];
 
+    /** The sheet's SLA bucket, worded as the page's SLA segments. */
+    private const SLA_STATE_TH = ['over_sla' => 'เกิน SLA', 'due_soon' => 'ใกล้ครบ (ภายใน 24 ชม.)', 'on_track' => 'ยังไม่ถึง', 'no_due' => 'ไม่มีกำหนด'];
+
     /** tickets.source on screen (i18n keys) — the file reads TicketLabels::source(). */
     private const SOURCE_KEYS = ['manual' => 'rep_source_manual', 'auto_request' => 'rep_source_auto_request'];
 
@@ -104,8 +107,8 @@ class TicketBacklogReport extends TabularReport
             ReportColumn::text('ticket_no', 'เลขที่ Ticket', fn (Ticket $t) => $t->ticket_no)->linkTo('/tickets', fn (Ticket $t) => $t->id),
             ReportColumn::text('subject', 'เรื่อง', fn (Ticket $t) => $t->subject),
             ReportColumn::hoursLeft('hours_left', 'เหลือ (ชม.)', fn (Ticket $t) => self::hoursLeft($t)),
-            ReportColumn::enum('due_kind', 'เงื่อนไข SLA', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
-            ReportColumn::dateTime('due_at', 'ครบกำหนด SLA', fn (Ticket $t) => TicketMetrics::activeDue($t)),
+            ReportColumn::enum('due_kind', 'เงื่อนไข SLA (ขั้นปัจจุบัน)', fn (Ticket $t) => self::dueKind($t), self::DUE_KIND_KEYS, self::DUE_KIND_TH),
+            ReportColumn::dateTime('due_at', 'ครบกำหนด SLA (ขั้นปัจจุบัน)', fn (Ticket $t) => TicketMetrics::activeDue($t)),
             ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, self::priorityKeys(), self::priorityTh()),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
@@ -116,7 +119,42 @@ class TicketBacklogReport extends TabularReport
             ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null),
             ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::number('age_days', 'ค้างมา (วัน)', fn (Ticket $t) => $t->created_at === null ? null : round($t->created_at->diffInHours(now(), true) / 24, 1)),
+            // The Excel sheet only — for working the backlog over in a spreadsheet.
+            ReportColumn::text('description', 'รายละเอียด', fn (Ticket $t) => $t->description === null ? null : trim($t->description))->sheetOnly(),
+            ReportColumn::dateTime('response_due_at', 'วันที่ครบกำหนด SLA รับเคส', fn (Ticket $t) => $t->sla_response_due_at)->sheetOnly(),
+            ReportColumn::dateTime('resolve_due_at', 'วันที่ครบกำหนด SLA ปิดเคส', fn (Ticket $t) => $t->sla_resolve_due_at)->sheetOnly(),
+            ReportColumn::enum('sla_state', 'สถานะ SLA', fn (Ticket $t) => self::slaState($t), [], self::SLA_STATE_TH)->sheetOnly(),
         ];
+    }
+
+    /**
+     * The Excel sheet grouped for analysis: the case, who, where it stands, then its SLA — the two
+     * deadlines, the one it is now held to, the hours left and which SLA bucket that puts it in.
+     * Rows keep the page's order, most overdue first, so the buckets run in blocks down the sheet.
+     *
+     * @return list<string>
+     */
+    protected function sheetOrder(): array
+    {
+        return [
+            'ticket_no', 'subject', 'description', 'category', 'priority', 'source',
+            'requester', 'department', 'assignee',
+            'ticket_status', 'opened_at', 'age_days',
+            'response_due_at', 'resolve_due_at', 'due_kind', 'due_at', 'hours_left', 'sla_state',
+        ];
+    }
+
+    /** Which of the page's SLA segments a ticket falls in, for a column to group or filter the sheet by. */
+    private static function slaState(Ticket $ticket): string
+    {
+        $hours = self::hoursLeft($ticket);
+
+        return match (true) {
+            $hours === null => 'no_due',
+            $hours < 0 => 'over_sla',
+            $hours <= self::SOON_HOURS => 'due_soon',
+            default => 'on_track',
+        };
     }
 
     public function summary(Builder $query, array $filters): array

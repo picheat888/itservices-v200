@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Report;
 
+use App\Exports\Report\TabularReportExport;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
@@ -9,6 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
@@ -233,6 +235,49 @@ class TicketTabularReportsTest extends TestCase
         foreach (['tickets.backlog'] as $key) {
             $this->actingAs($viewer)->getJson("/api/reports/r/{$key}/rows")->assertForbidden();
         }
+    }
+
+    /** The Excel sheet carries what the page leaves out — description, both SLA deadlines, the SLA bucket — grouped for analysis. */
+    public function test_backlog_sheet_adds_analysis_columns_in_groups(): void
+    {
+        Excel::fake();
+        $this->seedTickets();
+        $user = $this->reader();
+
+        // The page and its rows never see the sheet-only columns.
+        $screen = array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns'), 'key');
+        $this->assertNotContains('description', $screen);
+        $this->assertNotContains('response_due_at', $screen);
+        $this->assertArrayNotHasKey('description', $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows')->json('data.0'));
+
+        // A column picked down to two still exports the sheet-only ones.
+        $this->actingAs($user)->exportReport('/api/reports/r/tickets.backlog/export?format=xlsx&columns[]=ticket_no&columns[]=hours_left')->assertAccepted();
+        $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', function (TabularReportExport $export) {
+            $sheet = last($export->sheets());
+            $headings = $sheet->headings();
+            $this->assertSame(['เลขที่ Ticket', 'รายละเอียด', 'วันที่ครบกำหนด SLA รับเคส', 'วันที่ครบกำหนด SLA ปิดเคส', 'เหลือ (ชม.)', 'สถานะ SLA'], $headings);
+
+            // Most overdue first: t2 (resolve due the 20th) is over SLA, t5 (response due in 24 h) due soon.
+            $rows = $export->rows->map(fn (Ticket $t) => array_combine($headings, $sheet->map($t)))->keyBy('เลขที่ Ticket');
+            $t2 = $rows[$this->set['t2']->ticket_no];
+            $t5 = $rows[$this->set['t5']->ticket_no];
+            $this->assertSame('เกิน SLA', $t2['สถานะ SLA']);
+            $this->assertSame('2026-09-20 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
+            $this->assertSame('ใกล้ครบ (ภายใน 24 ชม.)', $t5['สถานะ SLA']);
+            $this->assertSame('2026-09-26 10:00', $t5['วันที่ครบกำหนด SLA รับเคส']);
+            $this->assertSame(trim($this->set['t5']->description), $t5['รายละเอียด']);
+
+            return true;
+        });
+
+        // Every column: the case, who, where it stands, then its SLA.
+        $this->actingAs($user)->exportReport('/api/reports/r/tickets.backlog/export?format=xlsx')->assertAccepted();
+        $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', fn (TabularReportExport $export) => last($export->sheets())->headings() === [
+            'เลขที่ Ticket', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ความสำคัญ', 'ที่มา',
+            'ผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
+            'สถานะ', 'วันที่แจ้ง', 'ค้างมา (วัน)',
+            'วันที่ครบกำหนด SLA รับเคส', 'วันที่ครบกำหนด SLA ปิดเคส', 'เงื่อนไข SLA (ขั้นปัจจุบัน)', 'ครบกำหนด SLA (ขั้นปัจจุบัน)', 'เหลือ (ชม.)', 'สถานะ SLA',
+        ]);
     }
 
     public function test_pdf_exports_stream_a_pdf(): void

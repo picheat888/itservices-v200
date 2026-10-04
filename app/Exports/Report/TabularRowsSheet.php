@@ -14,7 +14,8 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 /**
  * "รายการ" sheet of any tabular report workbook: one line per row, columns straight from the
- * report's own column definitions so the sheet can never drift from the on-screen table.
+ * report's own column definitions so the sheet can never drift from the on-screen table — plus
+ * any sheet-only columns, in the report's sheet order (TabularReport::sheetColumns()).
  */
 class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
 {
@@ -36,7 +37,7 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, 
      */
     public function headings(): array
     {
-        return array_map(fn (ReportColumn $c) => $c->heading, $this->report->exportColumns());
+        return array_map(fn (ReportColumn $c) => $c->heading, $this->report->sheetColumns());
     }
 
     /**
@@ -45,6 +46,6 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, 
      */
     public function map($model): array
     {
-        return array_map(fn (ReportColumn $c) => $c->exportValue($model), $this->report->exportColumns());
+        return array_map(fn (ReportColumn $c) => $c->exportValue($model), $this->report->sheetColumns());
     }
 }
