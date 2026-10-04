@@ -40,6 +40,9 @@ interface DataTableProps<T> {
     loading?: boolean;
     /** Custom content for the empty state (defaults to a plain "No data" line). */
     emptyState?: React.ReactNode;
+    /** Extra classes for the <table> — e.g. a `min-w-[…]` so the one flexible column keeps room on a
+     *  narrow screen and the table scrolls sideways instead of squeezing that column to nothing. */
+    tableClassName?: string;
     /** Cap the table body height (e.g. "55vh") so rows scroll under a sticky header — keeps search/pagination in view inside a dialog. */
     maxBodyHeight?: string;
     /** Fill the parent's height: rows-per-page is computed from the available height,
@@ -82,6 +85,7 @@ export function DataTable<T>({
     filters,
     loading,
     emptyState,
+    tableClassName,
     maxBodyHeight,
     fillHeight,
     rowHeight,
@@ -173,7 +177,7 @@ export function DataTable<T>({
             >
                 {/* fillHeight: `h-full` makes the browser stretch the rows to fill the body exactly,
                     so the floored row count never leaves a gap under the last row. */}
-                <table className={cn('w-full text-sm', fillHeight && 'h-full', columns.some((c) => c.width) && 'table-fixed')}>
+                <table className={cn('w-full text-sm', fillHeight && 'h-full', columns.some((c) => c.width) && 'table-fixed', tableClassName)}>
                     {columns.some((c) => c.width) && (
                         <colgroup>
                             {columns.map((c) => (

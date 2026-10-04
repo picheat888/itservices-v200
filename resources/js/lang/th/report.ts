@@ -168,7 +168,6 @@ export const report: Dict = {
     rep_empty_last30: 'ดู 30 วันล่าสุด',
     rep_empty_clear: 'ล้างตัวกรอง',
     rep_rows_title: 'รายการ Ticket',
-    rep_col_no: 'เลขที่',
     rep_col_opened: 'วันที่แจ้ง',
     rep_col_subject: 'เรื่อง',
     rep_col_category: 'หมวด',
