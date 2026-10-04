@@ -226,7 +226,7 @@ export default function TicketOverviewReportPage() {
                             badge={<StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(data.sla_goal))}</StatusBadge>}
                             value={fmt(data.kpi.sla_rate)}
                             unit={data.kpi.sla_rate === null ? undefined : '%'}
-                            alert={data.kpi.sla_rate !== null && data.kpi.sla_rate < data.sla_goal}
+                            alert={data.kpi.sla_rate !== null && data.kpi.sla_rate < data.sla_goal ? 'red' : false}
                             meter={data.kpi.sla_rate === null ? undefined : { value: data.kpi.sla_rate, goal: data.sla_goal }}
                             footer={
                                 data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', String(data.previous.sla_rate))
@@ -273,7 +273,7 @@ export default function TicketOverviewReportPage() {
                                     </span>
                                 </span>
                             }
-                            alert={data.backlog.over_sla > 0}
+                            alert={data.backlog.over_sla > 0 ? 'red' : false}
                         />
                     </div>
 

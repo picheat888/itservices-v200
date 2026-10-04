@@ -83,10 +83,15 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                 <StatusBadge tone="gray">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
                             ) : undefined
                         }
-                        // A 0-valued tile has nothing to warn about — only flag it once there's
-                        // actually something overdue/expiring behind the amber/red tone, or a rate short of its goal.
+                        // A 0-valued tile has nothing to warn about — only flag it once there's actually
+                        // something behind its tone: red for a rate short of its goal or a red tile (past SLA),
+                        // amber for an amber one (due soon, nobody assigned).
                         alert={
-                            ((item.tone === 'amber' || item.tone === 'red') && (item.value ?? 0) > 0) || (goal !== null && (item.value ?? 0) < goal)
+                            (goal !== null && (item.value ?? 0) < goal) || (item.tone === 'red' && (item.value ?? 0) > 0)
+                                ? 'red'
+                                : item.tone === 'amber' && (item.value ?? 0) > 0
+                                  ? 'amber'
+                                  : false
                         }
                         meter={goal !== null ? { value: item.value ?? 0, goal } : undefined}
                         bar={
