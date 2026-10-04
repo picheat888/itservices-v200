@@ -4,6 +4,7 @@ namespace App\Models\Ticket;
 
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketSource;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Asset\Asset;
@@ -33,7 +34,7 @@ class Ticket extends Model
 
     protected $fillable = [
         'ticket_no', 'subject', 'description',
-        'category', 'priority', 'work_class', 'status',
+        'category', 'priority', 'work_class', 'status', 'source',
         'requester_id', 'assignee_id', 'callback_phone', 'related_asset_id',
         'take_note', 'resolution', 'resolved_at', 'responded_at',
         'sla_response_due_at', 'sla_resolve_due_at',
@@ -56,6 +57,7 @@ class Ticket extends Model
             'priority' => TicketPriority::class,
             'work_class' => TicketWorkClass::class,
             'status' => TicketStatus::class,
+            'source' => TicketSource::class,
             'resolved_at' => 'datetime',
             'responded_at' => 'datetime',
             'sla_response_due_at' => 'datetime',
