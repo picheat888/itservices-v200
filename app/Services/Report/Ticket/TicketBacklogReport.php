@@ -36,6 +36,9 @@ class TicketBacklogReport extends TabularReport
 
     private const DUE_KIND_TH = ['response' => 'รอรับเคส', 'resolve' => 'รอปิดเคส'];
 
+    /** Kind of work (tickets.work_class, App\Enums\Ticket\TicketWorkClass), as the ticket overview's file words it. */
+    private const WORK_CLASS_TH = ['standard' => 'งานปกติ', 'repair_internal' => 'งานซ่อม (ช่างภายในองค์กร)', 'repair_vendor' => 'งานซ่อม (ช่างภายนอก)'];
+
     /** The sheet's SLA bucket, worded as the page's SLA segments. */
     private const SLA_STATE_TH = ['over_sla' => 'เกิน SLA', 'due_soon' => 'ใกล้ครบ (ภายใน 24 ชม.)', 'on_track' => 'ยังไม่ถึง', 'no_due' => 'ไม่มีกำหนด'];
 
@@ -120,6 +123,7 @@ class TicketBacklogReport extends TabularReport
             ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::number('age_days', 'ค้างมา (วัน)', fn (Ticket $t) => $t->created_at === null ? null : round($t->created_at->diffInHours(now(), true) / 24, 1)),
             // The Excel sheet only — for working the backlog over in a spreadsheet.
+            ReportColumn::enum('work_class', 'ลักษณะงาน', fn (Ticket $t) => $t->work_class, [], self::WORK_CLASS_TH)->sheetOnly(),
             ReportColumn::text('description', 'รายละเอียด', fn (Ticket $t) => $t->description === null ? null : trim($t->description))->sheetOnly(),
             ReportColumn::dateTime('response_due_at', 'วันที่ครบกำหนด SLA รับเคส', fn (Ticket $t) => $t->sla_response_due_at)->sheetOnly(),
             ReportColumn::dateTime('resolve_due_at', 'วันที่ครบกำหนด SLA ปิดเคส', fn (Ticket $t) => $t->sla_resolve_due_at)->sheetOnly(),
@@ -137,7 +141,7 @@ class TicketBacklogReport extends TabularReport
     protected function sheetOrder(): array
     {
         return [
-            'ticket_no', 'subject', 'description', 'category', 'priority', 'source',
+            'ticket_no', 'subject', 'description', 'category', 'work_class', 'priority', 'source',
             'requester', 'department', 'assignee',
             'ticket_status', 'opened_at', 'age_days',
             'response_due_at', 'resolve_due_at', 'due_kind', 'due_at', 'hours_left', 'sla_state',

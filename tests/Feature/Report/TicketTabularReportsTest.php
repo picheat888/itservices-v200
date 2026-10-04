@@ -255,7 +255,7 @@ class TicketTabularReportsTest extends TestCase
         $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = last($export->sheets());
             $headings = $sheet->headings();
-            $this->assertSame(['เลขที่ Ticket', 'รายละเอียด', 'วันที่ครบกำหนด SLA รับเคส', 'วันที่ครบกำหนด SLA ปิดเคส', 'เหลือ (ชม.)', 'สถานะ SLA'], $headings);
+            $this->assertSame(['เลขที่ Ticket', 'รายละเอียด', 'ลักษณะงาน', 'วันที่ครบกำหนด SLA รับเคส', 'วันที่ครบกำหนด SLA ปิดเคส', 'เหลือ (ชม.)', 'สถานะ SLA'], $headings);
 
             // Most overdue first: t2 (resolve due the 20th) is over SLA, t5 (response due in 24 h) due soon.
             $rows = $export->rows->map(fn (Ticket $t) => array_combine($headings, $sheet->map($t)))->keyBy('เลขที่ Ticket');
@@ -266,6 +266,7 @@ class TicketTabularReportsTest extends TestCase
             $this->assertSame('ใกล้ครบ (ภายใน 24 ชม.)', $t5['สถานะ SLA']);
             $this->assertSame('2026-09-26 10:00', $t5['วันที่ครบกำหนด SLA รับเคส']);
             $this->assertSame(trim($this->set['t5']->description), $t5['รายละเอียด']);
+            $this->assertSame('งานปกติ', $t5['ลักษณะงาน']);
 
             return true;
         });
@@ -273,7 +274,7 @@ class TicketTabularReportsTest extends TestCase
         // Every column: the case, who, where it stands, then its SLA.
         $this->actingAs($user)->exportReport('/api/reports/r/tickets.backlog/export?format=xlsx')->assertAccepted();
         $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', fn (TabularReportExport $export) => last($export->sheets())->headings() === [
-            'เลขที่ Ticket', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ความสำคัญ', 'ที่มา',
+            'เลขที่ Ticket', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ลักษณะงาน', 'ความสำคัญ', 'ที่มา',
             'ผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
             'สถานะ', 'วันที่แจ้ง', 'ค้างมา (วัน)',
             'วันที่ครบกำหนด SLA รับเคส', 'วันที่ครบกำหนด SLA ปิดเคส', 'เงื่อนไข SLA (ในสถานะปัจจุบัน)', 'วันที่ครบกำหนด SLA (ในสถานะปัจจุบัน)', 'เหลือ (ชม.)', 'สถานะ SLA',
