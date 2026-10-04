@@ -401,6 +401,8 @@ class AssetOverviewReport extends TabularReport
             'split_title_key' => 'rep_chart_store_source',
             // Each store's ring says how much of it is rented — the part a contract ends.
             'center_key' => 'rented',
+            // How the heading counts the places beside the assets ("53 คลัง").
+            'count_key' => 'rep_chart_stores_n',
             'series' => $this->sourceSeries(),
             'rows' => $lines->map(fn (Asset $a) => [
                 'label' => $a->getAttribute('place_id') === null ? self::NO_WAREHOUSE : ['name' => $a->getAttribute('place_name'), 'name_th' => null],

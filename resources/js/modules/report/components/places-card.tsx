@@ -11,8 +11,8 @@
  *   piece and the place's total at the end ("ทั้งหมด" names that column in the heading).
  * Both sections list the same places — the first `TOP_PLACES`, then "แสดงทั้งหมด (n)" opens the
  * rest; a place not recorded comes last, faded (under a dashed rule in the opened lists). The title is
- * followed by its subtitle in a lighter weight ("ทรัพย์สินในคลัง สถานะพร้อมใช้งาน"), the count on
- * the right.
+ * followed by its subtitle in a lighter weight ("ทรัพย์สินในคลัง สถานะพร้อมใช้งาน"), the counts on
+ * the right — the assets, then the places ("746 รายการ | 53 คลัง").
  * Drawn by tabular-charts.tsx beside the compact location card.
  */
 import { useT } from '@/lang';
@@ -266,7 +266,13 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                         <span className="text-muted-foreground font-normal">{t(chart.subtitle_key)}</span>
                     </span>
                 }
-                sub={t('rep_chart_items').replace('{n}', chart.total.toLocaleString())}
+                sub={
+                    // "746 รายการ | 53 คลัง" — the places named, not the row for those with none recorded.
+                    <span className="flex items-center gap-3">
+                        {t('rep_chart_items').replace('{n}', chart.total.toLocaleString())}
+                        <span className="border-border border-l pl-3">{t(chart.count_key).replace('{n}', places.length.toLocaleString())}</span>
+                    </span>
+                }
             />
             {chart.rows.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>

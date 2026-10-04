@@ -366,6 +366,8 @@ export type TabularChart =
           series: ChartSeries[];
           /** The series whose share each place's ring writes in its hole (rented). */
           center_key: string;
+          /** The i18n key the heading counts the places with ("{n} คลัง"), after the asset count. */
+          count_key: string;
           /** `apart`: no place recorded — listed last. */
           rows: { label: ChartLabel; values: Record<string, number>; total: number; apart?: boolean }[];
       }

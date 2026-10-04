@@ -142,6 +142,7 @@ export const report: Dict = {
     rep_chart_in_store: 'Assets in store',
     rep_chart_in_store_status: 'ready to use',
     rep_chart_store_source: 'Bought / rented in each store',
+    rep_chart_stores_n: '{n} stores',
     rep_chart_by_location: 'Shared use (by location)',
     rep_chart_writeoff: 'Written off',
     rep_chart_items: '{n} items',
