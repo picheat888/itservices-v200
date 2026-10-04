@@ -15,11 +15,11 @@ export const FILL: Record<ChartTone, string> = {
     red: 'bg-red-500',
     pink: 'bg-pink-500',
     gray: 'bg-slate-400 dark:bg-slate-500',
-    'soft-sky': 'bg-chart-soft-sky',
     'soft-blue': 'bg-chart-soft-blue',
-    'soft-indigo': 'bg-chart-soft-indigo',
-    'soft-violet': 'bg-chart-soft-violet',
-    'soft-orchid': 'bg-chart-soft-orchid',
+    'pair-orange': 'bg-chart-pair-orange',
+    'pair-green': 'bg-chart-pair-green',
+    'pair-rose': 'bg-chart-pair-rose',
+    'pair-violet': 'bg-chart-pair-violet',
 };
 /** Each tone as text, for the counts printed over a stacked bar. */
 export const TEXT: Record<ChartTone, string> = {
@@ -31,11 +31,11 @@ export const TEXT: Record<ChartTone, string> = {
     red: 'text-red-600 dark:text-red-400',
     pink: 'text-pink-600 dark:text-pink-400',
     gray: 'text-slate-500 dark:text-slate-400',
-    'soft-sky': 'text-chart-soft-sky-ink',
     'soft-blue': 'text-chart-soft-blue-ink',
-    'soft-indigo': 'text-chart-soft-indigo-ink',
-    'soft-violet': 'text-chart-soft-violet-ink',
-    'soft-orchid': 'text-chart-soft-orchid-ink',
+    'pair-orange': 'text-chart-pair-orange-ink',
+    'pair-green': 'text-chart-pair-green-ink',
+    'pair-rose': 'text-chart-pair-rose-ink',
+    'pair-violet': 'text-chart-pair-violet-ink',
 };
 export const STROKE: Record<ChartTone, string> = {
     green: 'stroke-emerald-500',
@@ -46,9 +46,9 @@ export const STROKE: Record<ChartTone, string> = {
     red: 'stroke-red-500',
     pink: 'stroke-pink-500',
     gray: 'stroke-slate-400 dark:stroke-slate-500',
-    'soft-sky': 'stroke-chart-soft-sky',
     'soft-blue': 'stroke-chart-soft-blue',
-    'soft-indigo': 'stroke-chart-soft-indigo',
-    'soft-violet': 'stroke-chart-soft-violet',
-    'soft-orchid': 'stroke-chart-soft-orchid',
+    'pair-orange': 'stroke-chart-pair-orange',
+    'pair-green': 'stroke-chart-pair-green',
+    'pair-rose': 'stroke-chart-pair-rose',
+    'pair-violet': 'stroke-chart-pair-violet',
 };

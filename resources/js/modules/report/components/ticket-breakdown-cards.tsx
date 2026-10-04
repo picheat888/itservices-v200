@@ -32,16 +32,17 @@ import { categoryKey } from './ticket-labels';
 const TOP_ROWS = 10;
 
 /**
- * Category order and colours of the department card: an analogous run on the colour wheel around
- * the soft blue (software) — sky · blue · indigo · violet · orchid, 30° apart at one lightness — so
- * the bar reads as one calm ramp; "other" stays grey.
+ * Category order and colours of the department card: two complementary pairs on the colour wheel,
+ * built from the weekly card's own colours — blue (opened) ↔ orange, green (closed) ↔ rose — plus
+ * violet, at the same vividness. Opposites sit side by side in the bar, so neighbouring parts read
+ * apart; "other" stays grey.
  */
 const CATEGORY_TONES: [string, ChartTone][] = [
-    ['hardware', 'soft-sky'],
-    ['software', 'soft-blue'],
-    ['network', 'soft-indigo'],
-    ['telephone', 'soft-violet'],
-    ['cctv', 'soft-orchid'],
+    ['hardware', 'soft-blue'],
+    ['software', 'pair-orange'],
+    ['network', 'pair-green'],
+    ['telephone', 'pair-rose'],
+    ['cctv', 'pair-violet'],
     ['other', 'gray'],
 ];
 
