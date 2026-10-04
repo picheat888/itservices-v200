@@ -135,10 +135,10 @@ export const report: Dict = {
     rep_f_clear: 'ล้างทั้งหมด',
 
     // components/ticket-report-table.tsx — ticket rows
-    rep_chart_by_department: 'แยกตามแผนก',
+    rep_chart_by_department: 'ทรัพย์สินแยกตามแผนก',
     rep_chart_status: 'สถานะทรัพย์สิน',
     rep_chart_in_use: 'ใช้งาน\nรวมส่วนกลาง',
-    rep_chart_by_category: 'แยกตามหมวด',
+    rep_chart_by_category: 'แยกตามหมวดหมู่',
     rep_chart_by_warehouse: 'คลัง (พร้อมส่งมอบ)',
     rep_chart_by_location: 'ส่วนกลาง (ตามสถานที่)',
     rep_chart_writeoff: 'ตัดจำหน่าย',
@@ -309,6 +309,7 @@ export const report: Dict = {
     rep_c_asset_code: 'รหัสทรัพย์สิน',
     rep_c_tag: 'Tag',
     rep_c_category: 'หมวด',
+    rep_c_asset_category: 'หมวดหมู่',
     rep_c_brand: 'ยี่ห้อ',
     rep_c_model: 'รุ่น',
     rep_c_serial: 'Serial',
@@ -327,6 +328,7 @@ export const report: Dict = {
     rep_fl_status: 'สถานะ',
     rep_fl_source: 'ที่มา',
     rep_fl_category_id: 'หมวด',
+    rep_fl_asset_category: 'หมวดหมู่',
     rep_fl_department_id: 'แผนก',
     rep_fl_search: 'ค้นหา',
     rep_k_total: 'ทั้งหมด',

@@ -161,6 +161,10 @@ class AssetActivityReportsTest extends TestCase
         $this->assertTrue($definition['has_charts']);
         // The register's list sits under the cards.
         $this->assertTrue($definition['shows_table']);
+        // Asset categories read "หมวดหมู่" here, not the shared "หมวด" other reports use.
+        $this->assertSame('rep_fl_asset_category', collect($definition['filters'])->firstWhere('name', 'category_id')['label_key']);
+        $this->assertSame('rep_c_asset_category', collect($definition['columns'])->firstWhere('key', 'category')['label_key']);
+        $this->assertSame('rep_fl_status', collect($definition['filters'])->firstWhere('name', 'status')['label_key']);
 
         $charts = collect($this->actingAs($viewer)
             ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
@@ -244,7 +248,7 @@ class AssetActivityReportsTest extends TestCase
             $titles = array_map(fn ($sheet) => $sheet->title(), array_slice($export->sheets(), 1, 4));
             $warehouseRows = $export->sheets()[2]->array();
 
-            return $titles === ['แยกตามแผนก', 'คลัง (พร้อมส่งมอบ)', 'ส่วนกลาง (ตามสถานที่)', 'ตัดจำหน่าย']
+            return $titles === ['ทรัพย์สินแยกตามแผนก', 'คลัง (พร้อมส่งมอบ)', 'ส่วนกลาง (ตามสถานที่)', 'ตัดจำหน่าย']
                 && $warehouseRows === [['Main store', 1, 1, 0]]
                 && $export->sheets()[4]->array()[0][4] === 'Broken'
                 && count($export->sheets()) === 6;

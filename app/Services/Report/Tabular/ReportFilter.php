@@ -5,6 +5,8 @@ namespace App\Services\Report\Tabular;
 /**
  * One filter of a tabular report (Report Center → "table" reports): what the page draws,
  * how the request validates it, and its default when the reader leaves it empty.
+ * `labelKey()` gives the filter its own i18n key when the shared `rep_fl_{name}` reads wrong
+ * for this report (an asset's "หมวดหมู่" against a ticket's "หมวด").
  */
 final class ReportFilter
 {
@@ -17,6 +19,17 @@ final class ReportFilter
         public readonly array $options = [],
         public readonly string|int|null $default = null,
     ) {}
+
+    /** The label's i18n key when not the shared `rep_fl_{name}`. */
+    private ?string $labelKey = null;
+
+    /** Label the filter on the page with this i18n key instead of `rep_fl_{name}`. */
+    public function labelKey(string $key): self
+    {
+        $this->labelKey = $key;
+
+        return $this;
+    }
 
     /**
      * A dropdown. Each option labels itself with an i18n key (`label_key`) or, for master
@@ -61,7 +74,7 @@ final class ReportFilter
             'type' => $this->type,
             'options' => $this->options,
             'default' => $this->default,
-            'label_key' => "rep_fl_{$this->name}",
+            'label_key' => $this->labelKey ?? "rep_fl_{$this->name}",
         ];
     }
 }
