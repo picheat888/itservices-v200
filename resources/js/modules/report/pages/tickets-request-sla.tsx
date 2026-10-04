@@ -9,7 +9,8 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { RequestSlaCards } from '../components/request-sla-cards';
+import { useUiStore } from '@/stores/ui';
+import { oneDecimal, RequestSlaCards } from '../components/request-sla-cards';
 import { TabularReportView } from '../components/tabular-report-view';
 import { TicketStatusBadge } from '../components/ticket-badges';
 
@@ -22,8 +23,15 @@ function SlaPill({ value }: { value: unknown }) {
     return <StatusBadge tone={SLA_TONE[value]}>{t(`rep_rs_sla_${value}`)}</StatusBadge>;
 }
 
+/** Hours to fix in one decimal ("73.0"), as the per-type table and the summary tiles print them. */
+function FixHours({ value }: { value: unknown }) {
+    const lang = useUiStore((s) => s.lang);
+    return <span className="font-mono">{typeof value === 'number' ? oneDecimal(value, lang) : '—'}</span>;
+}
+
 function requestSlaCell(key: string, row: Record<string, unknown>) {
     if (key === 'ticket_status') return <TicketStatusBadge status={row.ticket_status as string | null} />;
+    if (key === 'fix_hours') return <FixHours value={row.fix_hours} />;
     if (key === 'take_sla' || key === 'close_sla') return <SlaPill value={row[key]} />;
     return undefined;
 }

@@ -25,7 +25,7 @@ export function KpiTile({
     unit?: string;
     footer?: React.ReactNode;
     alert?: boolean;
-    /** Percent value against a percent goal; green once it reaches the goal, amber below it. */
+    /** Percent value against a percent goal; green once it reaches the goal, red below it (as every SLA bar). */
     meter?: { value: number; goal: number };
     /** Stacked pieces as percents of the track, each with its fill class. */
     bar?: { key: string; percent: number; className: string; title?: string }[];
@@ -45,7 +45,7 @@ export function KpiTile({
             {meter && (
                 <div className="bg-muted relative h-1.5 overflow-hidden rounded-full" aria-hidden="true">
                     <div
-                        className={cn('h-full rounded-full', meter.value >= meter.goal ? 'bg-emerald-500' : 'bg-amber-500')}
+                        className={cn('h-full rounded-full', meter.value >= meter.goal ? 'bg-emerald-500' : 'bg-red-500')}
                         style={{ width: `${Math.min(100, Math.max(0, meter.value))}%` }}
                     />
                     <div className="bg-foreground/60 absolute inset-y-0 w-0.5" style={{ left: `${meter.goal}%` }} />

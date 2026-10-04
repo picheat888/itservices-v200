@@ -134,9 +134,10 @@ class TicketRequestSlaReportTest extends TestCase
         $t2 = $rows[$this->set['t2']->id];
         $this->assertSame(['missed', 'missed'], [$t2['take_sla'], $t2['close_sla']]);
 
-        // Never taken and past its response deadline: over SLA on both.
+        // Never taken and past its response deadline: over SLA on taking; closing has not started
+        // (the resolve clock runs from the moment a case is taken), so it is not judged there.
         $t3 = $rows[$this->set['t3']->id];
-        $this->assertSame(['over', 'over'], [$t3['take_sla'], $t3['close_sla']]);
+        $this->assertSame(['over', null], [$t3['take_sla'], $t3['close_sla']]);
         $this->assertNull($t3['taken_at']);
 
         // Canceled: taken in time, but closing is not judged and has no time to fix.
@@ -173,9 +174,11 @@ class TicketRequestSlaReportTest extends TestCase
         // (24 + 120) / 2; taken after (0.5 + 23 + 1 + 0.5) / 4 hours on average.
         $this->assertEquals(72.0, $summary['rs_fix_avg']['value']);
         $this->assertSame('hours', $summary['rs_fix_avg']['format']);
-        $this->assertEquals(6.25, $summary['rs_fix_avg']['note']['hours']);
+        $this->assertEquals(6.3, $summary['rs_fix_avg']['note']['values']['avg']);
 
+        // Past SLA right now: t3 (not taken in time), out of the 2 still open.
         $this->assertSame(1, $summary['rs_over_sla']['value']);
+        $this->assertSame(['n' => 2], $summary['rs_over_sla']['note']['values']);
     }
 
     public function test_breakdown_lists_every_type_with_its_tally_the_open_tickets_and_the_rules(): void
@@ -212,6 +215,25 @@ class TicketRequestSlaReportTest extends TestCase
         $resolve = collect($data['rules']['resolve'])->keyBy('type');
         $this->assertSame(['type' => 'computer', 'hours' => 24, 'clock' => 'business'], $resolve['computer']);
         $this->assertNull($resolve['email']['hours']);
+    }
+
+    public function test_a_taken_case_past_its_resolve_deadline_is_over_on_closing_and_counts_once(): void
+    {
+        $this->seedTickets();
+        // Taken in time, then left past its resolve deadline.
+        $late = $this->ticket('computer', '2026-09-15 10:00:00', ['status' => 'in_progress',
+            'responded_at' => '2026-09-15 10:30:00', 'sla_resolve_due_at' => '2026-09-18 10:00:00']);
+        $user = $this->reader();
+
+        $body = $this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
+        $row = collect($body['data'])->firstWhere('id', $late->id);
+        $this->assertSame(['met', 'over'], [$row['take_sla'], $row['close_sla']]);
+        $this->assertSame(2, collect($body['summary'])->firstWhere('key', 'rs_over_sla')['value']);
+
+        $open = $this->actingAs($user)->getJson('/api/reports/tickets/request-sla/breakdown?'.self::RANGE)->assertOk()->json('data.open');
+        // Most overdue first: t3 missed its taking deadline on the 20th 10:00, this one its resolve deadline on the 18th.
+        $this->assertSame([$late->id, $this->set['t3']->id], array_column($open, 'id'));
+        $this->assertSame('resolve', $open[0]['due_kind']);
     }
 
     public function test_request_type_and_assignee_filters_narrow_the_rows_but_not_the_type_table(): void
