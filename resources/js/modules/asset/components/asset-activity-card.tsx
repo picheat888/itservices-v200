@@ -16,6 +16,9 @@ type View = 'handover' | 'returned';
  *
  * The view is component state, not a URL parameter: it is a way of looking at one card, not
  * a filter someone would want to link to or come back to.
+ *
+ * The card fills the height its grid row gives it (the "By type" card beside it sets that), and
+ * the chart grows into it — never shorter than its own 172px.
  */
 export function AssetActivityCard({ data }: { data: AssetSummary['activity_12m'] }) {
     const t = useT();
@@ -24,7 +27,7 @@ export function AssetActivityCard({ data }: { data: AssetSummary['activity_12m']
     const bars = data.map((m) => ({ month: m.month, count: view === 'handover' ? m.handover : m.returned }));
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="flex h-full flex-col overflow-hidden">
             <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-3.5">
                 <div className="flex items-center gap-2">
                     <ArrowLeftRight className="text-muted-foreground h-4 w-4" />
@@ -47,7 +50,7 @@ export function AssetActivityCard({ data }: { data: AssetSummary['activity_12m']
                 </div>
             </div>
 
-            <div className="px-5 pt-5 pb-3.5">
+            <div className="flex flex-1 flex-col px-5 pt-5 pb-3.5">
                 <div className="mb-2.5 flex items-center justify-between gap-3">
                     <p className="text-muted-foreground text-xs">
                         {t(view === 'handover' ? 'asset_activity_cap_handover' : 'asset_activity_cap_returned')}
@@ -55,7 +58,11 @@ export function AssetActivityCard({ data }: { data: AssetSummary['activity_12m']
                     <CurrentMonthLegend />
                 </div>
 
-                <MonthBarChart data={bars} emptyLabel={t(view === 'handover' ? 'asset_activity_none_handover' : 'asset_activity_none_returned')} />
+                <MonthBarChart
+                    data={bars}
+                    emptyLabel={t(view === 'handover' ? 'asset_activity_none_handover' : 'asset_activity_none_returned')}
+                    className="h-auto min-h-[172px] flex-1"
+                />
             </div>
         </Card>
     );
