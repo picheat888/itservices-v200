@@ -110,30 +110,22 @@ const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v 
 export default function SettingsPage() {
     const t = useT();
     const { can } = useAuth();
-    // The active section lives in the URL (?tab=) and nowhere else, as on every page with
-    // tabs — a reload or a shared link (/settings?tab=tickets) opens the same section.
+    // The active section lives in the URL (?tab=) and nowhere else — read straight from it on
+    // every render, so a reload, a shared link (/settings?tab=tickets) and the browser's Back /
+    // Forward always show the section the URL names (no ?tab= = Company).
     const [searchParams, setSearchParams] = useSearchParams();
     const tabParam = searchParams.get('tab');
-    const [section, setSection] = useState<Section>(() => (isSection(tabParam) ? tabParam : 'company'));
-    // Follows the URL while the page stays mounted: Back / Forward, and a link into another section.
-    useEffect(() => {
-        if (isSection(tabParam) && tabParam !== section) {
-            setSection(tabParam);
-        }
-    }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
+    const section: Section = isSection(tabParam) ? tabParam : 'company';
     const { data } = useSettings();
 
+    // Each section click is its own history entry, so Back steps back through the sections pressed.
     const changeSection = (s: Section) => {
-        setSection(s);
-        // replace: a section click is not a page visit, so it does not fill the history.
-        setSearchParams(
-            (p) => {
-                const sp = new URLSearchParams(p);
-                sp.set('tab', s);
-                return sp;
-            },
-            { replace: true },
-        );
+        if (s === section) return;
+        setSearchParams((p) => {
+            const sp = new URLSearchParams(p);
+            sp.set('tab', s);
+            return sp;
+        });
     };
     const update = useUpdateCompany();
     const [form, setForm] = useState<SettingsForm>(emptyForm);
