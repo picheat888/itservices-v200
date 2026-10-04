@@ -387,9 +387,9 @@ class AssetOverviewReport extends TabularReport
 
     /**
      * Assets in one status by where they sit, as a 'places' card — ready stock by warehouse, shared
-     * use by location: how many sit in each place, one bar each in the ready colour (both cards the
-     * same green), so the fullest and emptiest read at a glance — then, under a ruled heading in the
-     * same card, each place's bought / rented share.
+     * use by location: how many sit in each place, one bar each in the colour of the status counted
+     * (ready green, shared-use gray, as Settings sets them), so the fullest and emptiest read at a
+     * glance — then, under a ruled heading in the same card, each place's bought / rented share.
      *
      * @param  array<string, mixed>  $filters
      * @param  array{name: string, name_th: string}  $none
@@ -404,7 +404,7 @@ class AssetOverviewReport extends TabularReport
             'type' => 'places',
             'key' => $key,
             ...$words,
-            'tone' => self::CHART_TONES['ready'],
+            'tone' => self::CHART_TONES[$status],
             'total' => (int) $lines->sum(fn (Asset $a) => (int) $a->getAttribute('total_count')),
             // Each place's ring says how much of it is rented — the part a contract ends.
             'center_key' => 'rented',
