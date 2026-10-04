@@ -178,9 +178,9 @@ class ContractController extends Controller
     public function store(StoreContractRequest $request): JsonResponse
     {
         $contract = $this->service->create($request->validated());
-        AuditLog::record('Created contract', "{$contract->name} ({$contract->code})");
+        AuditLog::record('Created contract', "{$contract->name} ({$contract->code})", subject: $contract);
 
-        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category'])))
+        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'creator', 'updater', 'canceller'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -188,16 +188,16 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        return (new ContractResource($contract->load(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category'])))->response();
+        return (new ContractResource($contract->load(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category', 'creator', 'updater', 'canceller'])))->response();
     }
 
     public function update(StoreContractRequest $request, Contract $contract): JsonResponse
     {
         $before = $contract->getOriginal();
         $contract = $this->service->update($contract, $request->validated());
-        AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract));
+        AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract), subject: $contract);
 
-        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category'])))
+        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'creator', 'updater', 'canceller'])))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -214,7 +214,7 @@ class ContractController extends Controller
         ]);
 
         $contract = $this->service->cancel($contract, $validated['reason']);
-        AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) - {$validated['reason']}");
+        AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) - {$validated['reason']}", subject: $contract);
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
@@ -230,7 +230,7 @@ class ContractController extends Controller
 
         $contract = $this->service->reactivate($contract);
         $this->alertService->resetForContract($contract);
-        AuditLog::record('Reactivated contract', "{$contract->name} ({$contract->code})");
+        AuditLog::record('Reactivated contract', "{$contract->name} ({$contract->code})", subject: $contract);
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
@@ -242,7 +242,7 @@ class ContractController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.expire'), 403);
 
         $contract = $this->service->expire($contract);
-        AuditLog::record('Expired contract', "{$contract->name} ({$contract->code})");
+        AuditLog::record('Expired contract', "{$contract->name} ({$contract->code})", subject: $contract);
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
@@ -258,7 +258,7 @@ class ContractController extends Controller
         abort_unless($contract->status === 'active', 422, 'Only a newly created (active) contract can be deleted.');
         abort_if($contract->assets()->exists(), 422, 'Detach the linked assets before deleting this contract.');
 
-        AuditLog::record('Deleted contract', "{$contract->name} ({$contract->code})");
+        AuditLog::recordDeleted('Deleted contract', "{$contract->name} ({$contract->code})", $contract);
 
         // Remove the attachment files; the DB rows go via cascade on delete.
         $paths = $contract->attachments()->pluck('path')->all();

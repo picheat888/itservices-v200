@@ -127,7 +127,7 @@ class WorkflowController extends Controller
             'before' => $before,
             'after' => $workflow->only(['name', 'active', 'auto_ticket']),
             'steps' => count($data['steps']),
-        ]);
+        ], subject: $workflow);
 
         return new WorkflowResource($workflow->refresh()->load(['steps.positions', 'steps.approvers']));
     }

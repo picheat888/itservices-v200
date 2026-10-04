@@ -448,7 +448,7 @@ class TicketController extends Controller
         abort_if($employee === null, 422, 'no_employee_link');
 
         $ticket = $this->service->create($request->validated(), $employee);
-        AuditLog::record('Created ticket', "{$ticket->ticket_no} - {$ticket->subject}");
+        AuditLog::record('Created ticket', "{$ticket->ticket_no} - {$ticket->subject}", subject: $ticket);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -499,7 +499,7 @@ class TicketController extends Controller
             $data['note'] ?? null,
             $data['related_asset_id'] ?? null,
         );
-        AuditLog::record('Took ticket', "{$ticket->ticket_no} → {$request->user()?->name}");
+        AuditLog::record('Took ticket', "{$ticket->ticket_no} → {$request->user()?->name}", subject: $ticket);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
@@ -531,7 +531,7 @@ class TicketController extends Controller
         );
         $this->assertCanReceive($staff, $ticket);
         $ticket = $this->service->assign($ticket, $staff, isset($data['priority']) ? TicketPriority::from($data['priority']) : null, $request->user());
-        AuditLog::record('Assigned ticket', "{$ticket->ticket_no} → {$staff->name}");
+        AuditLog::record('Assigned ticket', "{$ticket->ticket_no} → {$staff->name}", subject: $ticket);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
@@ -568,7 +568,7 @@ class TicketController extends Controller
         $this->assertCanReceive($staff, $ticket);
 
         $ticket = $this->service->forward($ticket, $staff, $user);
-        AuditLog::record('Forwarded ticket', "{$ticket->ticket_no} → {$staff->name}");
+        AuditLog::record('Forwarded ticket', "{$ticket->ticket_no} → {$staff->name}", subject: $ticket);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
@@ -629,7 +629,7 @@ class TicketController extends Controller
 
         $completed = $data['mode'] === 'complete';
         $ticket = $this->service->resolve($ticket, $completed, $data['resolution']);
-        AuditLog::record('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}");
+        AuditLog::record('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}", subject: $ticket);
 
         $requests->settleFromTicket($ticket, $request->user(), $completed, $data['resolution']);
 
@@ -684,11 +684,12 @@ class TicketController extends Controller
             AuditLog::record(
                 'Classified ticket work',
                 sprintf('%s - %s → %s', $ticket->ticket_no, $before?->value ?? 'standard', $ticket->work_class->value),
+                subject: $ticket,
             );
         } else {
             $this->service->addUpdate($ticket, $request->user(), $data['body']);
             $ticket = $ticket->fresh();
-            AuditLog::record('Updated ticket progress', "{$ticket->ticket_no} - {$ticket->subject}");
+            AuditLog::record('Updated ticket progress', "{$ticket->ticket_no} - {$ticket->subject}", subject: $ticket);
         }
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments', 'updates'])))
@@ -702,7 +703,7 @@ class TicketController extends Controller
     public function update(UpdateTicketRequest $request, Ticket $ticket): JsonResponse
     {
         $ticket = $this->service->update($ticket, $request->validated());
-        AuditLog::record('Updated ticket', "{$ticket->ticket_no} - {$ticket->subject}");
+        AuditLog::record('Updated ticket', "{$ticket->ticket_no} - {$ticket->subject}", subject: $ticket);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();

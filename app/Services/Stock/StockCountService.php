@@ -71,7 +71,7 @@ class StockCountService
                 ]);
             }
 
-            AuditLog::record('Opened stock count', "{$count->reference} ({$count->lines()->count()} items)");
+            AuditLog::record('Opened stock count', "{$count->reference} ({$count->lines()->count()} items)", subject: $count);
 
             return $count->load('lines');
         });
@@ -180,7 +180,8 @@ class StockCountService
 
         AuditLog::record(
             'Committed stock count',
-            $count->reference.($mode === StockCountAdjustMode::Manual ? ' (manual - report only)' : ' (auto - stock adjusted)')
+            $count->reference.($mode === StockCountAdjustMode::Manual ? ' (manual - report only)' : ' (auto - stock adjusted)'),
+            subject: $count,
         );
 
         return $count->fresh('lines');

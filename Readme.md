@@ -4441,3 +4441,33 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - Tests: `AssetApiTest` ใหม่ 1 — ทั้งระบบ 1590 passed
 - **รายงาน "การตัดจำหน่ายทรัพย์สิน"** (`assets.writeoffs`, `/reports/assets-writeoffs`) — ตัวกรอง: ช่วงวันที่ตัดจำหน่าย (ค่าเริ่มต้นต้นปี–วันนี้), หมวดหมู่, ที่มา, ค้นหา (รหัส/Serial/รุ่น/เหตุผล) · การ์ด: จำนวนที่ตัดจำหน่าย (แยก ซื้อ/เช่า), มูลค่าซื้อที่ตัดจำหน่าย · กราฟ: แยกตามเดือน (เก่า→ใหม่), แยกตามหมวดหมู่ (มาก→น้อย) แยก ซื้อ/เช่า · รายการ: วันที่ตัดจำหน่าย, รหัส, หมวดหมู่, ยี่ห้อ, รุ่น, Serial, ที่มา, คลัง, เหตุผล, วันที่ซื้อ, อายุใช้งาน (ปี), มูลค่า — ใหม่ก่อน · Excel: สรุป → แยกตามเดือน → แยกตามหมวดหมู่ → รายการ · ต้องมีสิทธิ์ assets.view
 - **ภาพรวมของทรัพย์สิน: การ์ดตัดจำหน่ายมีวันที่** — คอลัมน์แรก "วันที่ตัดจำหน่าย" เรียงล่าสุดก่อน, แผ่นส่งออกเพิ่มคอลัมน์วันที่ · การ์ดกราฟแนวนอน (stacks) ยืดได้แต่ไม่หดเล็กกว่าเนื้อหา — สองใบในคอลัมน์เดียวไม่ตัดแถวทิ้ง · Report tests 170 passed · ตรวจใน Chrome แล้ว
+
+### ใครเพิ่ม/แก้/ตัดจำหน่าย/ยกเลิก + audit log ผูกกับ record — 2026-10-04
+- migration `2026_10_04_224354_add_actor_columns_and_audit_subjects` (**รันบน DB จริงแล้ว**):
+  - `assets`: `created_by`, `updated_by`, `written_off_by`
+  - `contracts`: `created_by`, `updated_by`, `cancelled_by`
+  - ทั้งหมดเป็น FK → users แบบ null on delete
+  - `audit_logs`: `subject_type` / `subject_id` (+ index)
+- เติมค่าย้อนหลังจาก audit log:
+  - ทรัพย์สิน 80/1294 เครื่อง ที่เหลือมาจากการ import ซึ่งไม่มี log จึงเว้นว่าง
+  - สัญญาครบ 16/16 รวม cancelled_by ของ 2 ฉบับที่ยกเลิก
+  - log เก่า 156 รายการผูกกับทรัพย์สิน และ 22 รายการผูกกับสัญญา
+  - ไม่มี written_off_by ย้อนหลัง เพราะเดิม bulk บันทึกแค่จำนวน
+- `App\Models\Concerns\RecordsActors` (ใช้กับ Asset, Contract):
+  - ประทับผู้ใช้ที่ login อยู่ทุกครั้งที่ save ผ่าน model; ถ้าไม่มีผู้ใช้ (queue/scheduler) จะไม่แตะค่า
+  - relation `creator()` / `updater()`
+  - query update ไม่ผ่าน hook จึงประทับเอง (`AssetService::bulkSetStatus`, การผูกทรัพย์สินใน `ContractService`)
+  - ผูกสัญญาใหม่จะประทับเฉพาะเครื่องที่เพิ่งผูก
+- `Asset` ประทับ/ล้าง `written_off_by` คู่กับ `written_off_at`; `Contract` ประทับ/ล้าง `cancelled_by` เมื่อ `cancelled_at` เปลี่ยน
+- `AuditLog`:
+  - `record(..., subject: $model)`
+  - `recordDeleted()` เก็บทั้งแถวไว้ใน `details.snapshot` ไม่รวม password/token/hidden
+  - `forSubject($model)` ดึง log ของ record นั้น
+  - `subjectType()` ใช้ `Relation::getMorphAlias()` เพราะแอป enforce morph map
+- เติม subject ให้ทุกจุดที่เรียก `AuditLog::record` ใน app/ (~145 จุด); จุดที่ลบทั้งหมดใช้ `recordDeleted`
+- Bulk ทรัพย์สิน (ตัดจำหน่าย, ย้ายที่ตั้ง, โอน, เรียกคืน, รับคืน) บันทึกทีละเครื่อง ด้วยชื่อ action เดียวกับแบบเครื่องเดียว:
+  - ตัดจำหน่ายใช้ "Wrote off asset" + เหตุผลใน facts
+  - เรียกคืนระบุ forced รายเครื่อง
+- API/UI: หน้ารายละเอียดทรัพย์สินและสัญญาแสดง "… โดย <ชื่อ>" ที่วันที่ลงทะเบียน/สร้าง และอัปเดตล่าสุด, กล่อง "ตัดจำหน่ายแล้ว · โดย …", ช่อง "ยกเลิกโดย" (ส่งชื่อเฉพาะ endpoint รายตัว ไม่ส่งใน list)
+- ไม่ทำ soft delete / deleted_by — snapshot ใน audit log ใช้แทน
+- Tests: `ActorStampsTest` ใหม่ 11 tests; `AssetRelocateTest` ปรับให้ตรวจ log รายเครื่อง; ทั้งระบบ 1606 passed (ก่อนเพิ่ม test ชื่อใน API) · ตรวจใน Chrome แล้ว

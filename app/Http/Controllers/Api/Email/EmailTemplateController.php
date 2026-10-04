@@ -116,7 +116,7 @@ class EmailTemplateController extends Controller
 
         $before = $emailTemplate->getOriginal();
         $emailTemplate->update($data);
-        AuditLog::record('Updated email template', $emailTemplate->name, AuditLog::changes($before, $emailTemplate));
+        AuditLog::record('Updated email template', $emailTemplate->name, AuditLog::changes($before, $emailTemplate), subject: $emailTemplate);
 
         return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
     }
@@ -165,7 +165,7 @@ class EmailTemplateController extends Controller
             'enabled' => $standard['enabled'],
             'cadence' => $standard['cadence'],
         ]);
-        AuditLog::record('Reset email template to standard', $emailTemplate->name, AuditLog::changes($before, $emailTemplate));
+        AuditLog::record('Reset email template to standard', $emailTemplate->name, AuditLog::changes($before, $emailTemplate), subject: $emailTemplate);
 
         return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
     }

@@ -80,6 +80,10 @@ class AssetResource extends JsonResource
             'last_reason' => $this->last_reason,
             // When it was written off (null unless it is), for the write-off report.
             'written_off_at' => $this->written_off_at?->format('Y-m-d H:i'),
+            // Who added it, who changed it last, who wrote it off — names, on the single-asset endpoint only.
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
+            'written_off_by_name' => $this->whenLoaded('writtenOffBy', fn () => $this->writtenOffBy?->name),
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),
 

@@ -43,7 +43,7 @@ class RequestOptionController extends Controller
 
         $option = RequestOption::create($data);
         RequestSchemas::flushManagedCache();
-        AuditLog::record('Created request option', "{$option->request_type}.{$option->field_key} · {$option->label_en}");
+        AuditLog::record('Created request option', "{$option->request_type}.{$option->field_key} · {$option->label_en}", subject: $option);
 
         return response()->json(['data' => $option, 'message' => 'success'], 201);
     }
@@ -67,6 +67,7 @@ class RequestOptionController extends Controller
             'Updated request option',
             "{$requestOption->request_type}.{$requestOption->field_key} · {$requestOption->label_en}",
             AuditLog::changes($before, $requestOption),
+            subject: $requestOption,
         );
 
         return response()->json(['data' => $requestOption, 'message' => 'success']);
@@ -131,7 +132,7 @@ class RequestOptionController extends Controller
             return response()->json(['message' => 'in_use', 'count' => $used], 409);
         }
 
-        AuditLog::record('Deleted request option', "{$requestOption->request_type}.{$requestOption->field_key} · {$requestOption->label_en}");
+        AuditLog::recordDeleted('Deleted request option', "{$requestOption->request_type}.{$requestOption->field_key} · {$requestOption->label_en}", $requestOption);
         $requestOption->delete();
         RequestSchemas::flushManagedCache();
 

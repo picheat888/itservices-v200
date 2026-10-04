@@ -28,7 +28,7 @@ class CategoryController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $category = Category::create($data);
-        AuditLog::record('Created category', $category->name);
+        AuditLog::record('Created category', $category->name, subject: $category);
 
         return response()->json(['data' => $category, 'message' => 'success'], 201);
     }
@@ -44,7 +44,7 @@ class CategoryController extends Controller
         ]);
         $before = $category->getOriginal();
         $category->update($data);
-        AuditLog::record('Updated category', $category->name, AuditLog::changes($before, $category));
+        AuditLog::record('Updated category', $category->name, AuditLog::changes($before, $category), subject: $category);
 
         return response()->json(['data' => $category, 'message' => 'success']);
     }
@@ -56,7 +56,7 @@ class CategoryController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted category', $category->name);
+        AuditLog::recordDeleted('Deleted category', $category->name, $category);
         $category->delete();
 
         return response()->json(['message' => 'success']);

@@ -110,6 +110,7 @@ export const asset: Dict = {
     asset_owner_name: 'ชื่อ',
     asset_position: 'ตำแหน่ง',
     asset_last_update: 'อัปเดตล่าสุด',
+    asset_by: 'โดย',
     asset_contract_no: 'เลขที่สัญญา',
     asset_receive_title: 'รับเข้าคลัง',
     asset_receive_sub: 'รับทรัพย์สินคืนเข้าคลัง แล้วตั้งสถานะเป็น “พร้อมใช้งาน”',

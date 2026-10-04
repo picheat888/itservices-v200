@@ -154,7 +154,7 @@ class NotificationTemplateController extends Controller
         $bell->fill($data)->save();
         NotificationCatalogue::forgetSwitches();
 
-        AuditLog::record('Updated bell', $standard['name'], AuditLog::changes($before, $bell));
+        AuditLog::record('Updated bell', $standard['name'], AuditLog::changes($before, $bell), subject: $bell);
 
         return response()->json(['message' => 'success']);
     }

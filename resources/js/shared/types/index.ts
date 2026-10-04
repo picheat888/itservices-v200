@@ -220,6 +220,10 @@ export interface Contract {
     cancel_reason: string | null;
     created_at: string | null;
     updated_at: string | null;
+    // Who added / last changed / cancelled it — on the single-contract responses only.
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
+    cancelled_by_name?: string | null;
 }
 
 export interface ContractSummary {
@@ -290,6 +294,9 @@ export interface Asset {
     created_at: string | null;
     updated_at: string | null;
     // Present only on the single-asset endpoint (GET /assets/{id}).
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
+    written_off_by_name?: string | null;
     transfers?: AssetTransferEntry[];
     tickets?: AssetTicket[];
 }

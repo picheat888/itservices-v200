@@ -4,6 +4,7 @@ namespace App\Models\Asset;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
+use App\Models\Concerns\RecordsActors;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
 use App\Models\Settings\AssetModel;
@@ -13,17 +14,21 @@ use App\Models\Settings\Location;
 use App\Models\Settings\Vendor;
 use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
+use App\Models\User;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class Asset extends Model
 {
     /** @use HasFactory<AssetFactory> */
     use HasFactory;
+
+    use RecordsActors;
 
     /**
      * Bind to the flat AssetFactory explicitly — factory auto-discovery would look for
@@ -59,6 +64,12 @@ class Asset extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    /** Who wrote the asset off (written_off_by, stamped with written_off_at); null while it is in service. */
+    public function writtenOffBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'written_off_by');
     }
 
     /** Physical location a deployed asset sits at (Master Data). */
@@ -121,9 +132,9 @@ class Asset extends Model
 
     /**
      * Auto-generate an INK-IT-YY-NNNN Asset code on create, and stamp the write-off:
-     * written_off_at is set when the status becomes writeoff (created written off, retired, or
-     * edited to it) and cleared when it leaves it (a write-off cancelled). The bulk write-off is a
-     * query update, so AssetService::bulkSetStatus stamps it itself.
+     * written_off_at / written_off_by (who) are set when the status becomes writeoff (created written
+     * off, retired, or edited to it) and cleared when it leaves it (a write-off cancelled). The bulk
+     * write-off is a query update, so AssetService::bulkSetStatus stamps them itself.
      */
     protected static function booted(): void
     {
@@ -139,8 +150,10 @@ class Asset extends Model
             }
             if ($asset->status === AssetStatus::Writeoff) {
                 $asset->written_off_at ??= now();
+                $asset->written_off_by ??= Auth::id();
             } else {
                 $asset->written_off_at = null;
+                $asset->written_off_by = null;
             }
         });
     }

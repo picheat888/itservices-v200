@@ -30,7 +30,7 @@ class VendorController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
         ]);
         $vendor = Vendor::create($data);
-        AuditLog::record('Created vendor', $vendor->name);
+        AuditLog::record('Created vendor', $vendor->name, subject: $vendor);
 
         return response()->json(['data' => $vendor, 'message' => 'success'], 201);
     }
@@ -48,7 +48,7 @@ class VendorController extends Controller
         ]);
         $before = $vendor->getOriginal();
         $vendor->update($data);
-        AuditLog::record('Updated vendor', $vendor->name, AuditLog::changes($before, $vendor));
+        AuditLog::record('Updated vendor', $vendor->name, AuditLog::changes($before, $vendor), subject: $vendor);
 
         return response()->json(['data' => $vendor, 'message' => 'success']);
     }
@@ -60,7 +60,7 @@ class VendorController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted vendor', $vendor->name);
+        AuditLog::recordDeleted('Deleted vendor', $vendor->name, $vendor);
         $vendor->delete();
 
         return response()->json(['message' => 'success']);

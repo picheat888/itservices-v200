@@ -191,9 +191,10 @@ class AssetRelocateTest extends TestCase
         $this->assertSame($to->id, $two->fresh()->location_id);
         $this->assertDatabaseCount('asset_transfers', 2);
 
-        // "2 assets → HQ" on its own names nobody, so the codes ride along in the details.
-        $entry = AuditLog::where('action', 'Updated asset location')->latest('id')->firstOrFail();
-        $this->assertSame([$one->asset_code, $two->asset_code], $entry->details['items']);
+        // "2 assets → HQ" on its own names nobody, so each asset gets its own entry, tied to it.
+        $entries = AuditLog::where('action', 'Updated asset location')->orderBy('id')->get();
+        $this->assertSame(["{$one->asset_code} → HQ - 3rd floor", "{$two->asset_code} → HQ - 3rd floor"], $entries->pluck('target')->all());
+        $this->assertSame([$one->id, $two->id], $entries->pluck('subject_id')->all());
     }
 
     public function test_updating_a_location_needs_the_edit_permission(): void

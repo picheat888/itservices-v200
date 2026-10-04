@@ -29,7 +29,7 @@ class AssetModelController extends Controller
         ]);
         $model = AssetModel::create($data);
         $model->load('brand');
-        AuditLog::record('Created asset model', $model->name);
+        AuditLog::record('Created asset model', $model->name, subject: $model);
 
         return response()->json(['data' => $model, 'message' => 'success'], 201);
     }
@@ -45,7 +45,7 @@ class AssetModelController extends Controller
         $before = $assetModel->getOriginal();
         $assetModel->update($data);
         $assetModel->load('brand');
-        AuditLog::record('Updated asset model', $assetModel->name, AuditLog::changes($before, $assetModel));
+        AuditLog::record('Updated asset model', $assetModel->name, AuditLog::changes($before, $assetModel), subject: $assetModel);
 
         return response()->json(['data' => $assetModel, 'message' => 'success']);
     }
@@ -57,7 +57,7 @@ class AssetModelController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted asset model', $assetModel->name);
+        AuditLog::recordDeleted('Deleted asset model', $assetModel->name, $assetModel);
         $assetModel->delete();
 
         return response()->json(['message' => 'success']);

@@ -184,7 +184,7 @@ class GroupRoleController extends Controller
             return $group;
         });
 
-        AuditLog::record('Created role group', $group->name);
+        AuditLog::record('Created role group', $group->name, subject: $group);
 
         return response()->json(['data' => $this->present($group), 'message' => 'success'], 201);
     }
@@ -212,7 +212,7 @@ class GroupRoleController extends Controller
             }
         });
 
-        AuditLog::record('Updated role group', $groupRole->name, AuditLog::changes($before, $groupRole));
+        AuditLog::record('Updated role group', $groupRole->name, AuditLog::changes($before, $groupRole), subject: $groupRole);
 
         return response()->json(['data' => $this->present($groupRole->load(['employees'])), 'message' => 'success']);
     }
@@ -232,7 +232,7 @@ class GroupRoleController extends Controller
         $groupRole->delete();
         $this->fallbackOrphansToDefault($groupRole, $memberIds);
 
-        AuditLog::record('Deleted role group', $name);
+        AuditLog::recordDeleted('Deleted role group', $name, $groupRole);
 
         return response()->json(['message' => 'success']);
     }
@@ -250,7 +250,7 @@ class GroupRoleController extends Controller
         AppSetting::put('default_employee_group_id', $groupId);
 
         $group = $groupId ? GroupRole::find($groupId) : null;
-        AuditLog::record('Set default role group', $group?->name ?? '(none)');
+        AuditLog::record('Set default role group', $group?->name ?? '(none)', subject: $group);
 
         return $this->index($request);
     }

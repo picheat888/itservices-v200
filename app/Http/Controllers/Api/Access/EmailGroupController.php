@@ -26,7 +26,7 @@ class EmailGroupController extends Controller
     public function store(StoreEmailGroupRequest $request): JsonResponse
     {
         $g = EmailGroup::create($request->validated());
-        AuditLog::record('Created email group', $g->name);
+        AuditLog::record('Created email group', $g->name, subject: $g);
 
         return (new EmailGroupResource($g))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -36,7 +36,7 @@ class EmailGroupController extends Controller
     {
         $before = $emailGroup->getOriginal();
         $emailGroup->update($request->validated());
-        AuditLog::record('Updated email group', $emailGroup->name, AuditLog::changes($before, $emailGroup));
+        AuditLog::record('Updated email group', $emailGroup->name, AuditLog::changes($before, $emailGroup), subject: $emailGroup);
 
         return (new EmailGroupResource($emailGroup))->additional(['message' => 'success'])->response();
     }
@@ -47,7 +47,7 @@ class EmailGroupController extends Controller
         if ($emailGroup->memberships()->active()->exists()) {
             return response()->json(['message' => 'resource_has_members'], 422);
         }
-        AuditLog::record('Deleted email group', $emailGroup->name);
+        AuditLog::recordDeleted('Deleted email group', $emailGroup->name, $emailGroup);
         $emailGroup->delete();
 
         return response()->json(['message' => 'success']);
@@ -67,7 +67,7 @@ class EmailGroupController extends Controller
         ]);
         $svc->setOwner($emailGroup, $data['owner_employee_id']);
         $emailGroup->load('owner');
-        AuditLog::record('Changed email group owner', $emailGroup->name, ['owner' => $emailGroup->owner?->name]);
+        AuditLog::record('Changed email group owner', $emailGroup->name, ['owner' => $emailGroup->owner?->name], subject: $emailGroup);
 
         return (new EmailGroupResource($emailGroup))->additional(['message' => 'success'])->response();
     }
@@ -85,7 +85,7 @@ class EmailGroupController extends Controller
     {
         $data = $request->validated();
         $m = $svc->grant($emailGroup, (int) $data['employee_id'], $data);
-        AuditLog::record('Added member to email group', $emailGroup->name, ['employee' => $m->employee?->name]);
+        AuditLog::record('Added member to email group', $emailGroup->name, ['employee' => $m->employee?->name], subject: $emailGroup);
 
         return (new AccessMembershipResource($m->load('employee', 'grantedBy')))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -93,7 +93,7 @@ class EmailGroupController extends Controller
     /** Soft-revoke a member's access to the email group. */
     public function revokeMember(EmailGroup $emailGroup, AccessMembership $membership, AccessService $svc): JsonResponse
     {
-        AuditLog::record('Removed member from email group', $emailGroup->name, ['employee' => $membership->employee?->name]);
+        AuditLog::record('Removed member from email group', $emailGroup->name, ['employee' => $membership->employee?->name], subject: $emailGroup);
         $svc->revoke($membership);
 
         return response()->json(['message' => 'success']);

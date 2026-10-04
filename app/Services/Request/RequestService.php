@@ -389,8 +389,7 @@ class RequestService
         AuditLog::record(
             $completed ? 'Completed request via ticket' : 'Cancelled request via ticket',
             $fresh->reference,
-            ['ticket' => $ticket->ticket_no],
-        );
+            ['ticket' => $ticket->ticket_no], subject: $fresh);
 
         $fresh->refresh()->load('approvals');
         // Both go to the requester and whoever filed it for them. NOT cancelled(), which
@@ -492,7 +491,7 @@ class RequestService
         if ($employee === null) {
             // The requester's employee record vanished mid-flight; the approval
             // still completes — IT just won't get an auto-opened case.
-            AuditLog::record('Auto-ticket skipped', $request->reference, ['reason' => 'requester employee record missing']);
+            AuditLog::record('Auto-ticket skipped', $request->reference, ['reason' => 'requester employee record missing'], subject: $request);
 
             return;
         }

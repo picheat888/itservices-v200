@@ -593,7 +593,7 @@ class EmployeeController extends Controller
         unset($data['services'], $data['onboarding_note']);
 
         $employee = $this->service->create($data);
-        AuditLog::record('Created employee', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Created employee', "{$employee->name} ({$employee->code})", subject: $employee);
 
         $onboarding = null;
         if ($services !== []) {
@@ -601,7 +601,7 @@ class EmployeeController extends Controller
             AuditLog::record('Filed onboarding requests', "{$employee->name} ({$employee->code})", [
                 'created' => array_column($onboarding['created'], 'reference'),
                 'failed' => array_column($onboarding['failed'], 'service'),
-            ]);
+            ], subject: $employee);
         }
 
         return (new EmployeeResource($employee->load(['department', 'position', 'section'])))
@@ -790,7 +790,7 @@ class EmployeeController extends Controller
 
         $before = $employee->getOriginal();
         $employee = $this->service->update($employee, $this->handlePhoto($request, $request->validated(), $employee->photo_path));
-        AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})", AuditLog::changes($before, $employee));
+        AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})", AuditLog::changes($before, $employee), subject: $employee);
 
         return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->additional(['message' => 'success'])->response();
     }
@@ -826,7 +826,7 @@ class EmployeeController extends Controller
             $user->update(['username' => $data['username']]);
             // Mirror onto the employee for display/search (same as account creation).
             $employee->update(['username' => $data['username']]);
-            AuditLog::record('Changed username', "{$employee->name} ({$employee->code})");
+            AuditLog::record('Changed username', "{$employee->name} ({$employee->code})", subject: $employee);
         }
 
         $newPassword = null;
@@ -843,7 +843,7 @@ class EmployeeController extends Controller
                 'must_change_password' => $force,
             ])->save();
             $user->signOutEverywhere();
-            AuditLog::record('Reset password', "{$employee->name} ({$employee->code})");
+            AuditLog::record('Reset password', "{$employee->name} ({$employee->code})", subject: $employee);
         }
 
         return response()->json(array_filter(['message' => 'success', 'new_password' => $newPassword]));
@@ -872,7 +872,7 @@ class EmployeeController extends Controller
 
         $this->service->createUserWithCredentials($employee, $data['username'], $data['password'], $request->boolean('force_change'));
 
-        AuditLog::record('Created user account', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Created user account', "{$employee->name} ({$employee->code})", subject: $employee);
 
         return response()->json(['message' => 'success'], 201);
     }
@@ -887,7 +887,7 @@ class EmployeeController extends Controller
         ]);
 
         $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null);
-        AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})", subject: $employee);
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }
@@ -917,7 +917,7 @@ class EmployeeController extends Controller
         $this->service->delete($employee);
         // Name the login that went with them: it is the part nobody expects, and after the
         // delete there is nothing else left to read it from.
-        AuditLog::record('Deleted employee', $label, $deletedAccount ? ['facts' => ['login_account' => $deletedAccount]] : null);
+        AuditLog::recordDeleted('Deleted employee', $label, $employee, $deletedAccount ? ['facts' => ['login_account' => $deletedAccount]] : null);
 
         return response()->json(['message' => 'success']);
     }
@@ -932,7 +932,7 @@ class EmployeeController extends Controller
         abort_unless($employee->status->value === 'resigned', 422, 'Employee is not resigned.');
 
         $employee = $this->service->cancelResign($employee);
-        AuditLog::record('Cancelled resignation', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Cancelled resignation', "{$employee->name} ({$employee->code})", subject: $employee);
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }

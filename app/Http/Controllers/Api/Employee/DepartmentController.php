@@ -23,7 +23,7 @@ class DepartmentController extends Controller
     public function store(StoreDepartmentRequest $request): JsonResponse
     {
         $department = Department::create($request->validated());
-        AuditLog::record('Created department', $department->name);
+        AuditLog::record('Created department', $department->name, subject: $department);
 
         return (new DepartmentResource($department))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -32,7 +32,7 @@ class DepartmentController extends Controller
     {
         $before = $department->getOriginal();
         $department->update($request->validated());
-        AuditLog::record('Updated department', $department->name, AuditLog::changes($before, $department));
+        AuditLog::record('Updated department', $department->name, AuditLog::changes($before, $department), subject: $department);
 
         return (new DepartmentResource($department))->additional(['message' => 'success'])->response();
     }
@@ -52,7 +52,7 @@ class DepartmentController extends Controller
             ], 422);
         }
 
-        AuditLog::record('Deleted department', $department->name);
+        AuditLog::recordDeleted('Deleted department', $department->name, $department);
         $department->delete();
 
         return response()->json(['message' => 'success']);

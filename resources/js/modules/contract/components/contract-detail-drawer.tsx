@@ -213,9 +213,11 @@ export function ContractDetailDrawer({
                                 <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
                                     <div>
                                         {t('contract_created')}: {c.created_at ?? '—'}
+                                        {c.created_by_name && ` ${t('contract_by')} ${c.created_by_name}`}
                                     </div>
                                     <div>
                                         {t('contract_updated')}: {c.updated_at ?? '—'}
+                                        {c.updated_by_name && ` ${t('contract_by')} ${c.updated_by_name}`}
                                     </div>
                                 </div>
                             </div>
@@ -286,6 +288,9 @@ export function ContractDetailDrawer({
                                         <SectionLabel>{t('contract_section_closure')}</SectionLabel>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                             {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />}
+                                            {cancelled && c.cancelled_by_name && (
+                                                <KV label={t('contract_cancelled_by')} value={c.cancelled_by_name} />
+                                            )}
                                             {c.status === 'expired' && c.expired_at && (
                                                 <KV label={t('contract_expired_on')} value={c.expired_at} mono />
                                             )}

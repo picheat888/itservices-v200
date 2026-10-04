@@ -25,7 +25,7 @@ class WarrantyTypeController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $warrantyType = WarrantyType::create($data);
-        AuditLog::record('Created warranty type', $warrantyType->name);
+        AuditLog::record('Created warranty type', $warrantyType->name, subject: $warrantyType);
 
         return response()->json(['data' => $warrantyType, 'message' => 'success'], 201);
     }
@@ -39,7 +39,7 @@ class WarrantyTypeController extends Controller
         ]);
         $before = $warrantyType->getOriginal();
         $warrantyType->update($data);
-        AuditLog::record('Updated warranty type', $warrantyType->name, AuditLog::changes($before, $warrantyType));
+        AuditLog::record('Updated warranty type', $warrantyType->name, AuditLog::changes($before, $warrantyType), subject: $warrantyType);
 
         return response()->json(['data' => $warrantyType, 'message' => 'success']);
     }
@@ -51,7 +51,7 @@ class WarrantyTypeController extends Controller
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
-        AuditLog::record('Deleted warranty type', $warrantyType->name);
+        AuditLog::recordDeleted('Deleted warranty type', $warrantyType->name, $warrantyType);
         $warrantyType->delete();
 
         return response()->json(['message' => 'success']);

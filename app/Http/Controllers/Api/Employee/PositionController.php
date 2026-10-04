@@ -53,7 +53,7 @@ class PositionController extends Controller
     {
         $data = $this->guardSpecialFlag($request, $request->validated());
         $position = Position::create($data);
-        AuditLog::record('Created position', $position->title);
+        AuditLog::record('Created position', $position->title, subject: $position);
 
         return (new PositionResource($position))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -63,7 +63,7 @@ class PositionController extends Controller
         $before = $position->getOriginal();
         $data = $this->guardSpecialFlag($request, $request->validated(), $position);
         $position->update($data);
-        AuditLog::record('Updated position', $position->title, AuditLog::changes($before, $position));
+        AuditLog::record('Updated position', $position->title, AuditLog::changes($before, $position), subject: $position);
 
         return (new PositionResource($position))->additional(['message' => 'success'])->response();
     }
@@ -81,7 +81,7 @@ class PositionController extends Controller
             ], 422);
         }
 
-        AuditLog::record('Deleted position', $position->title);
+        AuditLog::recordDeleted('Deleted position', $position->title, $position);
         $position->delete();
 
         return response()->json(['message' => 'success']);
