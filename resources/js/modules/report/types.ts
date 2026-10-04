@@ -353,6 +353,21 @@ export type TabularChart =
           rows: { label: ChartLabel; icon: string | null; values: Record<string, number>; total: number }[];
       }
     | {
+          // How many sit in each place, one bar each in `tone`, then each place's share by `series`
+          // (ready stock by warehouse, bought / rented) — two sections of one card.
+          type: 'places';
+          key: string;
+          title_key: string;
+          /** Said after the title in a lighter weight ("สถานะพร้อมใช้งาน"). */
+          subtitle_key: string;
+          tone: ChartTone;
+          total: number;
+          split_title_key: string;
+          series: ChartSeries[];
+          /** `apart`: no place recorded — listed last. */
+          rows: { label: ChartLabel; values: Record<string, number>; total: number; apart?: boolean }[];
+      }
+    | {
           // A few records by name (the written-off assets), each opening on /assets.
           type: 'list';
           key: string;

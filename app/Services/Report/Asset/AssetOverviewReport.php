@@ -23,8 +23,9 @@ use Illuminate\Support\Collection;
  *   back), one row per department of the holder, people with no department in one row apart;
  * - the status donut, and the categories as on the /assets overview card (ready / in use /
  *   written off per category, with the category's icon);
- * - three cards for what no employee holds: ready stock by warehouse, shared use by location,
- *   and the written-off assets themselves (no write-off date is recorded, so none is shown).
+ * - three cards for what no employee holds: ready stock by warehouse (how many in each, then the
+ *   bought / rented share of each), shared use by location, and the written-off assets themselves
+ *   (no write-off date is recorded, so none is shown).
  *
  * Every filter narrows the whole page. The file export carries the list, then one sheet each for
  * departments, warehouses, locations and written-off assets.
@@ -289,7 +290,7 @@ class AssetOverviewReport extends TabularReport
                 'segments' => array_map(fn (array $item) => [...$item, 'value' => $totals[$item['key']]], $legend),
             ],
             $this->categoryChart($filters),
-            $this->placeChart($filters, 'warehouse', 'rep_chart_by_warehouse', 'ready', 'warehouses', 'warehouse_id', self::NO_WAREHOUSE),
+            $this->storeChart($filters),
             $this->placeChart($filters, 'location', 'rep_chart_by_location', 'common', 'locations', 'location_id', self::NO_LOCATION),
             $this->writeoffChart($filters),
         ];
@@ -379,8 +380,38 @@ class AssetOverviewReport extends TabularReport
     }
 
     /**
-     * Assets in one status by where they sit — ready stock by warehouse, shared use by location —
-     * each line split by source. A small card in the row under the department card.
+     * Ready stock by warehouse, as a 'places' card: how many sit in each warehouse — one bar each in
+     * the ready colour, so the fullest and emptiest stores read at a glance — then, under a ruled
+     * heading in the same card, each warehouse's bought / rented share.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private function storeChart(array $filters): array
+    {
+        $lines = $this->placeLines($filters, 'ready', 'warehouses', 'warehouse_id');
+
+        return [
+            'type' => 'places',
+            'key' => 'warehouse',
+            'title_key' => 'rep_chart_in_store',
+            'subtitle_key' => 'rep_chart_in_store_status',
+            'tone' => self::CHART_TONES['ready'],
+            'total' => (int) $lines->sum(fn (Asset $a) => (int) $a->getAttribute('total_count')),
+            'split_title_key' => 'rep_chart_store_source',
+            'series' => $this->sourceSeries(),
+            'rows' => $lines->map(fn (Asset $a) => [
+                'label' => $a->getAttribute('place_id') === null ? self::NO_WAREHOUSE : ['name' => $a->getAttribute('place_name'), 'name_th' => null],
+                'apart' => $a->getAttribute('place_id') === null,
+                'values' => $this->sourceValues($a),
+                'total' => (int) $a->getAttribute('total_count'),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * Assets in one status by where they sit (shared use by location), each line split by source.
+     * A small card beside the warehouse card.
      *
      * @param  array<string, mixed>  $filters
      * @param  array{name: string, name_th: string}  $none
@@ -503,7 +534,7 @@ class AssetOverviewReport extends TabularReport
                 ])->values()->all(),
             ],
             [
-                'title' => 'คลัง (พร้อมส่งมอบ)',
+                'title' => 'ทรัพย์สินในคลัง (พร้อมใช้งาน)',
                 'headings' => ['คลัง', 'ทั้งหมด', ...$sourceHeadings],
                 'rows' => $this->placeLines($filters, 'ready', 'warehouses', 'warehouse_id')
                     ->map(fn (Asset $a) => [$place($a, self::NO_WAREHOUSE), (int) $a->getAttribute('total_count'), ...$sources($a)])->values()->all(),
