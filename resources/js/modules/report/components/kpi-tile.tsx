@@ -24,14 +24,16 @@ export function KpiTile({
     value: string;
     unit?: string;
     footer?: React.ReactNode;
-    alert?: boolean;
+    /** Flags the tile with a tinted border: "red" for what has already gone wrong (below the goal,
+     *  past SLA), "amber" (or true) for what needs watching (due soon, nobody assigned). */
+    alert?: boolean | 'amber' | 'red';
     /** Percent value against a percent goal; green once it reaches the goal, red below it (as every SLA bar). */
     meter?: { value: number; goal: number };
     /** Stacked pieces as percents of the track, each with its fill class. */
     bar?: { key: string; percent: number; className: string; title?: string }[];
 }) {
     return (
-        <Card className={cn('flex min-w-0 flex-col gap-1.5 p-4', alert && 'border-amber-500/50')}>
+        <Card className={cn('flex min-w-0 flex-col gap-1.5 p-4', alert === 'red' ? 'border-red-500/50' : alert && 'border-amber-500/50')}>
             <div className="text-muted-foreground flex items-center justify-between gap-2 text-sm">
                 <span className="truncate" title={hint}>
                     {label}
