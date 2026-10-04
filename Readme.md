@@ -4372,3 +4372,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **ที่ทำ**: `app.css` เพิ่ม token `--chart-soft-{sky,blue,indigo,violet,orchid}` + `-ink` (OKLCH, สว่าง/มืด) และ `--color-chart-soft-*` · `ChartTone` เพิ่ม `soft-*` (`FILL` / `TEXT` / `STROKE` ใน `chart-tones.ts`) — สีเดิมของรายงานอื่นไม่เปลี่ยน · `weekly-ticket-chart.tsx`, `ticket-breakdown-cards.tsx` (`CATEGORY_TONES`), `pages/tickets-overview.tsx`
 - ยังไม่เปลี่ยน: การ์ดอายุงานค้าง (พื้นสีจางอยู่แล้ว), แท่งผลงานเจ้าหน้าที่ IT (ใช้สีเขียวกลางร่วมกับรายงานอื่น), แถบ KPI
 - **ตรวจ** tsc + eslint ผ่าน · Chrome สว่าง/มืด
+- **ปรับน้ำเงิน** (ตามที่ผู้ใช้กำหนด): `--chart-soft-blue` = **#2978e9** ทั้งโหมดสว่าง/มืด (ตัวเลขบนแท่ง `-ink` #1d5fc2 / #8fb8f4) — แท่งเปิดใหม่รายสัปดาห์, Ticket ตามหมวด และหมวดซอฟต์แวร์ในการ์ดแยกตามแผนก · ตรวจใน Chrome
