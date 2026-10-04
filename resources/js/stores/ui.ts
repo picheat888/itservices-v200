@@ -8,7 +8,7 @@ const DEFAULT_ASSET_STATUS_COLORS: AssetStatusColors = {
     deployed: '#0284c7',
     ready: '#059669',
     pending_acceptance: '#d97706',
-    pending_return: '#d97706',
+    pending_return: '#7c3aed',
     common: '#64748b',
     writeoff: '#dc2626',
 };
