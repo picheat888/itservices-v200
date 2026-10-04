@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 16/17 — the people a department step names, as a list.
+ * Baseline 16/18 — the people a department step names, as a list.
  *
  * A step that names one person could have been a column, but naming a deputy alongside
  * them is the common case — so a route does not stall while somebody is on leave — and

@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 7/17 — the spare-parts store.
+ * Baseline 7/18 — the spare-parts store.
  *
  * stock_movements is the ledger every other table here answers to: lots carry the
  * FIFO cost layers it created, balances the per-warehouse totals it moved, and

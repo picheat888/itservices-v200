@@ -5,12 +5,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 14/17 — progress notes on a ticket between being taken and being closed.
+ * Baseline 14/18 — progress notes on a ticket between being taken and being closed.
  *
  * The desk had two places to write: a note when taking the case and a resolution when closing
  * it. Everything in between — the part that was ordered, the answer that never came — was said
  * out loud and written nowhere, so the person who filed the case heard nothing for days and
- * whoever picked it up next had to ask.
+ * whoever picked it up next had to ask. `kind` tells a plain note from the entries the desk
+ * writes itself (default 'note'); `meta` holds what such an entry needs to show.
  */
 return new class extends Migration
 {
@@ -23,7 +24,9 @@ return new class extends Migration
             // readable after that person leaves, the way approval rows already do.
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('author_name', 160);
+            $table->string('kind', 20)->default('note');
             $table->text('body');
+            $table->json('meta')->nullable();
             $table->timestamps();
 
             // The only way this table is ever read: one ticket's updates, oldest first.

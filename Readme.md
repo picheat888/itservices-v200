@@ -4272,3 +4272,14 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 
 **Tests**: `SlaStateRenameMigrationTest` ใหม่ (up แล้ว down: alert level, subtype, source_key, template key + ค่าที่แอดมินแก้, ตัวกรองที่บันทึก, แถวที่ไม่เกี่ยวไม่ถูกแตะ) · อัปเดต TicketSla / SlaAlert / DeskInternals / รายงาน · **ทั้งชุด 1559 passed** · tsc + eslint + pint ผ่าน · ตรวจใน Chrome: หน้า Ticket (ป้าย SLA, ตัวกรองเกิน SLA), กระดิ่ง (ข้อความ SLA), หน้าตั้งค่าการแจ้งเตือน (ชื่อ + key ใหม่ + ส่งล่าสุดเดิม), Ticket ค้าง
 - **NT-35 (`notif_ticket_sla_resolve_over_sla`) ข้อความไม่มีคำว่า breach**: "เกินกำหนดปิดเคส - SLA breach แล้ว" → **"เกินกำหนดปิดเคสแล้ว - เคสนี้เกิน SLA"** · "Resolution overdue - SLA breached" → **"Resolution overdue - this case is past its SLA"** — แก้ครบ 3 ที่: `NotificationCatalogue` (ข้อความมาตรฐาน), ไฟล์ภาษา (ข้อความสำรอง) และแถวใน `notification_templates` ที่กระดิ่งอ่านจริง ผ่าน migration `2026_10_04_095621_reword_ticket_sla_resolve_over_sla_notification` (แก้เฉพาะภาษาที่ยังเป็นข้อความมาตรฐานเดิม ไม่ทับข้อความที่แอดมินแก้เอง; รันบนฐานข้อมูลจริงแล้ว) · test `test_nt35_rewords_only_the_standard_text`
+
+## รวม migration เข้าไฟล์ฐาน 0001 (2026-10-04)
+
+ระบบยังอยู่ช่วง demo/ทดสอบ — ไฟล์ migration แบบมีวันที่ 11 ไฟล์ถูกรวมเข้าไฟล์ฐาน `0001_01_01_*` (เหลือ **18 ไฟล์**, "Baseline n/18")
+- `000007_create_ticket_tables`: + `tickets.source` (ต่อจาก `status`, index) + index `tickets_created_at_idx`
+- `000013_create_ticket_updates_table`: + `kind` (default `note`) + `meta` (json)
+- `000016_create_request_attachments_table`: + `ticket_attachments.request_attachment_id` (FK → request_attachments, restrict) — อยู่ไฟล์นี้เพราะตาราง request_attachments ต้องมีก่อน
+- `000017_create_report_tables` (ใหม่): `report_pins`, `report_exports`, `report_schedules`
+- ลบ migration แก้ข้อมูลครั้งเดียว (ค่า source เดิม, ชื่อสถานะ SLA เดิม, ข้อความ NT-35, ใส่เทมเพลต `report.scheduled`) — ฐานข้อมูลใหม่ได้ค่าใหม่จากโค้ด/seeder อยู่แล้ว (`EmailTemplateSeeder`, `NotificationTemplateSeeder` เป็น firstOrCreate) · ลบ `SlaStateRenameMigrationTest` ตามไป · `ReportScheduleTest` seed `EmailTemplateSeeder` เองใน setUp (เดิมได้เทมเพลตจาก migration)
+
+**ตรวจ**: migrate ลงฐานข้อมูลทดลอง `itservices_schemacheck` แล้ว dump โครงสร้างเทียบกับฐานข้อมูลจริง (`mariadb-dump --no-data`) — **ตรงกันทุกตาราง 69 ตาราง** (ไม่นับ AUTO_INCREMENT) · db:seed บนฐานข้อมูลทดลองผ่าน (เทมเพลต report.scheduled, key การแจ้งเตือน SLA ใหม่, ข้อความ NT-35 ใหม่) แล้วลบฐานข้อมูลทดลองทิ้ง · ฐานข้อมูลจริง: ตาราง `migrations` ลบ 11 แถวไฟล์ที่ไม่มีแล้ว + ลงทะเบียน `0001_01_01_000017_create_report_tables` (batch 1) — โครงสร้าง/ข้อมูลไม่ถูกแตะ, `migrate` = Nothing to migrate · **ทั้งชุด 1558 passed**

@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 11/17 — admin-managed configuration, none of which belongs in .env.
+ * Baseline 11/18 — admin-managed configuration, none of which belongs in .env.
  *
  *  app_settings    — loose key/value for branding, company details, SLA and
  *                    asset options edited in Settings.
