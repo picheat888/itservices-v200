@@ -4315,3 +4315,10 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 
 **Tests**: `TicketRequestSlaReportTest` ใหม่ 7 ตัว (เฉพาะ auto_request + หมวดตามสิทธิ์ + ช่วงวันที่, ทัน/ไม่ทัน/เกิน SLA ต่อเคส, การ์ดสรุป + เป้า, breakdown + เกณฑ์จาก `sla_targets`, ตัวกรองประเภท/ผู้รับผิดชอบ, สิทธิ์ 403, Excel 3 แผ่น, PDF) · `ReportCatalogueTest` เพิ่มรายงานในรายการ (18) · **ทั้งชุด 1567 passed** · tsc + eslint + prettier + pint ผ่าน · ตรวจใน Chrome กับข้อมูลจริง (17 Ticket: ปิดทัน 100%, รับเคสทัน 47%, เกิน SLA 3 — ตรงกับ mockup), กดกรองประเภท, โหมดมืด, ลิงก์ไป Ticket ค้าง, การ์ดในศูนย์รายงาน
 - **ชื่อรายงาน** (เปลี่ยนหลังทำเสร็จ): "SLA ตามประเภทคำขอ" → **"สรุปผล SLA ของ Ticket จากคำขอ"** · EN "SLA summary of tickets from requests" — หัวหน้า, breadcrumb, การ์ดในศูนย์รายงาน (`rep_tickets_request_sla_title`) และหัวไฟล์ Excel/PDF (`title()`) · key / URL เดิม (`tickets.request_sla`, `/reports/tickets-request-sla`)
+
+## ตั้งค่า: ปุ่ม Back / Forward ของเบราว์เซอร์สลับหมวดตาม `#` (2026-10-04)
+
+**ปัญหา**: หน้า `/settings#assets` อ่าน `#` ครั้งเดียวตอนเปิดหน้า (`useState(sectionFromHash)`) — กด Back แล้ว `#` ใน URL เปลี่ยนแต่หน้าจอค้างหมวดเดิม
+- `settings/pages/index.tsx`: หมวดที่เปิดอ่านจาก `#` ผ่าน router (`useLocation().hash`) ทุกครั้ง ไม่เก็บซ้ำใน state · กดเมนู = `navigate({ hash })` (เพิ่มประวัติ 1 รายการ) → Back / Forward / ลิงก์ตรง `/settings#tickets` เปิดหมวดตาม URL เสมอ · รูปแบบ URL เดิม (`#company`, `#assets`, …) ไม่เปลี่ยน
+- แก้ลิงก์ "ตั้งค่า SLA" ในรายงานสรุปผล SLA ของ Ticket จากคำขอ: `/settings?tab=tickets` → `/settings#tickets` (หน้าตั้งค่าใช้ `#` ไม่ใช่ `?tab=` — ลิงก์เดิมเปิดหมวดแรก)
+- **ตรวจ**: tsc + eslint ผ่าน · Chrome: บริษัท → ทรัพย์สิน → ตั้งค่าอีเมล แล้ว Back 2 ครั้ง / Forward — เมนูที่เลือก เนื้อหา และ `#` ตรงกันทุกขั้น · เปิด `/settings#tickets` ตรงได้หมวด Ticket & SLA (ยังไม่มีชุดทดสอบฝั่งหน้าเว็บ)
