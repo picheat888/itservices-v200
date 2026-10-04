@@ -16,7 +16,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * "Ticket ค้างและเกิน SLA" (Report Center → Tickets, /reports/tickets-backlog): every ticket still
+ * "Ticket ค้าง และเกิน SLA" (Report Center → Tickets, /reports/tickets-backlog): every ticket still
  * open or in progress, most overdue first, with its age, the deadline it is running against now
  * (first response while waiting to be taken, resolution afterwards — TicketMetrics::activeDue),
  * which of the two that is, and how many hours are left on it (negative = already over SLA).
@@ -49,7 +49,7 @@ class TicketBacklogReport extends TabularReport
 
     public function title(): string
     {
-        return 'Ticket ค้างและเกิน SLA';
+        return 'Ticket ค้าง และเกิน SLA';
     }
 
     public function filters(): array
@@ -133,16 +133,16 @@ class TicketBacklogReport extends TabularReport
 
         return [
             ReportSummary::make('total', 'ทั้งหมด', $total)->withSplit([
-                ['key' => 'open', 'label_key' => 'rep_k_open', 'tone' => 'blue', 'value' => $bare()->where('status', 'open')->count()],
-                ['key' => 'in_progress', 'label_key' => 'rep_k_in_progress', 'tone' => 'amber', 'value' => $bare()->where('status', 'in_progress')->count()],
+                ['key' => 'open', 'label_key' => 'rep_k_open', 'tone' => 'soft-blue', 'value' => $bare()->where('status', 'open')->count()],
+                ['key' => 'in_progress', 'label_key' => 'rep_k_in_progress', 'tone' => 'soft-amber', 'value' => $bare()->where('status', 'in_progress')->count()],
             ]),
-            ReportSummary::make('over_sla', 'เกิน SLA', $bare()->whereRaw(self::overSlaSql())->count(), 'red')
+            ReportSummary::make('over_sla', 'เกิน SLA', $bare()->whereRaw(self::overSlaSql())->count(), 'soft-red')
                 ->withShareOf($total)
                 ->withNote($mostOverdue === null ? null : ['label_key' => 'rep_bl_note_most_overdue', 'hours' => $hoursSince($mostOverdue)]),
-            ReportSummary::make('due_soon', 'ครบกำหนดใน 24 ชม.', $bare()->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} <= {$soon}")->count(), 'amber')
+            ReportSummary::make('due_soon', 'ครบกำหนดใน 24 ชม.', $bare()->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} <= {$soon}")->count(), 'soft-amber')
                 ->withShareOf($total)
                 ->withNote($nextDue === null ? null : ['label_key' => 'rep_bl_note_next_due', 'at' => Carbon::parse($nextDue)->format('Y-m-d H:i')]),
-            ReportSummary::make('unassigned', 'ยังไม่มีผู้รับ', $bare()->whereNull('assignee_id')->count(), 'amber')
+            ReportSummary::make('unassigned', 'ยังไม่มีผู้รับ', $bare()->whereNull('assignee_id')->count(), 'soft-amber')
                 ->withShareOf($total)
                 ->withNote($oldestUnassigned === null ? null : ['label_key' => 'rep_bl_note_longest_wait', 'hours' => $hoursSince((string) $oldestUnassigned)]),
         ];

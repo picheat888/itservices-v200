@@ -93,7 +93,7 @@ function SlaCells({ met, n, goal, label }: { met: number; n: number; goal: numbe
                     aria-label={pct === null ? `${label}: —` : `${label}: ${met}/${n} (${pct}%)`}
                 >
                     {pct !== null && (
-                        <span className={cn('block h-full rounded-l-[3px]', ok ? 'bg-emerald-500' : 'bg-red-500')} style={{ width: `${pct}%` }} />
+                        <span className={cn('block h-full rounded-l-[3px]', ok ? 'bg-emerald-400' : 'bg-red-400')} style={{ width: `${pct}%` }} />
                     )}
                 </span>
             </td>
@@ -139,8 +139,8 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                 }
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone="bg-emerald-500">{t('rep_rs_at_goal').replace('{n}', String(goal))}</Swatch>
-                        <Swatch tone="bg-red-500">{t('rep_rs_below_goal')}</Swatch>
+                        <Swatch tone="bg-emerald-400">{t('rep_rs_at_goal').replace('{n}', String(goal))}</Swatch>
+                        <Swatch tone="bg-red-400">{t('rep_rs_below_goal')}</Swatch>
                     </span>
                 }
             />

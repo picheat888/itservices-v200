@@ -13,7 +13,7 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * The ticket tabular report "Ticket ค้างและเกิน SLA" (tickets.backlog) over one set of
+ * The ticket tabular report "Ticket ค้าง และเกิน SLA" (tickets.backlog) over one set of
  * tickets. (Its former siblings, by department and staff performance, are now cards on the
  * Ticket & SLA overview — see TicketOverviewReportTest.) The reader holds hardware and software
  * levels only, so the network ticket in the set must never be counted.

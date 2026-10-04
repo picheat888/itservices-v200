@@ -342,8 +342,11 @@ function DonutSection({ chart }: { chart: Donut }) {
     );
 }
 
-/** A neutral fill: the category bars are counts, not one of the status or source colours. */
-const NEUTRAL_BAR = 'bg-slate-500 dark:bg-slate-400';
+/**
+ * The category bars are counts, not one of the status or source colours — one soft blue for all of
+ * them, the same as "Ticket ตามหมวด" on the Ticket & SLA overview.
+ */
+const NEUTRAL_BAR = 'bg-chart-soft-blue';
 
 function BarsSection({ chart, className, expanded, onToggle }: { chart: Bars; className?: string; expanded: boolean; onToggle: () => void }) {
     const t = useT();

@@ -66,6 +66,9 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                 const unit = item.value === null ? undefined : item.format === 'percent' ? '%' : item.format === 'hours' ? t('rep_hours') : undefined;
                 const goal = item.format === 'percent' && item.goal != null && item.value !== null ? item.goal : null;
                 const tone = item.tone ?? 'gray';
+                // A soft tone ("soft-red") fills in its lighter shade; the badge and the warning keep
+                // the base meaning (red = gone wrong, amber = needs watching).
+                const base = tone.replace(/^soft-/, '') as 'amber' | 'red' | 'green' | 'violet' | 'blue' | 'gray';
                 const share = item.share ?? null;
                 const split = item.split ?? [];
                 const splitTotal = split.reduce((sum, part) => sum + part.value, 0);
@@ -86,7 +89,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         unit={unit}
                         badge={
                             share !== null ? (
-                                <StatusBadge tone={tone}>{`${share}%`}</StatusBadge>
+                                <StatusBadge tone={base}>{`${share}%`}</StatusBadge>
                             ) : goal !== null ? (
                                 <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
                             ) : undefined
@@ -95,9 +98,9 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         // something behind its tone: red for a rate short of its goal or a red tile (past SLA),
                         // amber for an amber one (due soon, nobody assigned).
                         alert={
-                            (goal !== null && (item.value ?? 0) < goal) || (item.tone === 'red' && (item.value ?? 0) > 0)
+                            (goal !== null && (item.value ?? 0) < goal) || (base === 'red' && (item.value ?? 0) > 0)
                                 ? 'red'
-                                : item.tone === 'amber' && (item.value ?? 0) > 0
+                                : base === 'amber' && (item.value ?? 0) > 0
                                   ? 'amber'
                                   : false
                         }

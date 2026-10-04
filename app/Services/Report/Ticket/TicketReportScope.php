@@ -12,7 +12,7 @@ use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * What the ticket tabular report ("Ticket ค้างและเกิน SLA") shares with the Ticket & SLA overview:
+ * What the ticket tabular report ("Ticket ค้าง และเกิน SLA") shares with the Ticket & SLA overview:
  *
  * - scoping: a reader only ever counts tickets in the categories their `tickets.level_*`
  *   permissions open (Permissions::ticketLevelsFor), exactly like TicketOverviewReportService;

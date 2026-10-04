@@ -4,8 +4,8 @@ namespace App\Services\Report\Tabular;
 
 /**
  * One headline number above a tabular report's table (and on the export's summary sheet).
- * `tone` is a UI hint: null | 'amber' | 'red' | 'green' | 'violet' | 'blue' (amber/red also mark
- * the tile as needing attention). `format` tells the page (and the
+ * `tone` is a UI hint: null | 'amber' | 'red' | 'green' | 'violet' | 'blue', or the same with a
+ * `soft-` prefix for the lighter shade (amber/red, soft or not, also mark the tile as needing attention). `format` tells the page (and the
  * PDF) how to render the value: 'count' (default, a plain integer), 'money' (2 decimals,
  * locale grouping — mirrors TabularCell's money column formatting), 'percent' (a whole percent,
  * "93 %") or 'hours' (one decimal, "58.8 ชม."). `goal` (percent tiles) draws the value as a meter
