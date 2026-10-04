@@ -9,6 +9,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Services\Report\TicketLabels;
 use App\Services\Report\TicketMetrics;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -35,6 +36,9 @@ class TicketBacklogReport extends TabularReport
 
     private const DUE_KIND_TH = ['response' => 'รอรับเคส', 'resolve' => 'รอปิดเคส'];
 
+    /** tickets.source on screen (i18n keys) — the file reads TicketLabels::source(). */
+    private const SOURCE_KEYS = ['manual' => 'rep_source_manual', 'auto_request' => 'rep_source_auto_request'];
+
     /** "Due soon" reaches this far ahead. */
     private const SOON_HOURS = 24;
 
@@ -55,6 +59,7 @@ class TicketBacklogReport extends TabularReport
             ReportFilter::select('category', Options::fromLabels(self::categoryKeys())),
             ReportFilter::select('priority', Options::fromLabels(self::priorityKeys())),
             ReportFilter::select('assignee', self::assigneeOptions()),
+            ReportFilter::select('source', Options::fromLabels(self::SOURCE_KEYS)),
             ReportFilter::search(),
         ];
     }
@@ -71,6 +76,8 @@ class TicketBacklogReport extends TabularReport
             ->when($filters['assignee'] ?? null, fn (Builder $q, string|int $assignee) => $assignee === 'none'
                 ? $q->whereNull('assignee_id')
                 : $q->where('assignee_id', (int) $assignee))
+            // Who opened it: a person (manual) or an approved request (auto_request) — tickets.source.
+            ->when($filters['source'] ?? null, fn (Builder $q, string $source) => $q->where('source', $source))
             ->when($filters['sla'], fn (Builder $q, string $sla) => match ($sla) {
                 'over_sla' => $q->whereRaw(self::overSlaSql()),
                 'due_soon' => $q->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} <= {$soon}"),
@@ -102,6 +109,7 @@ class TicketBacklogReport extends TabularReport
             ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, self::priorityKeys(), self::priorityTh()),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
+            ReportColumn::enum('source', 'ที่มา', fn (Ticket $t) => $t->source, self::SOURCE_KEYS, ['manual' => TicketLabels::source('manual'), 'auto_request' => TicketLabels::source('auto_request')]),
             ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, self::categoryKeys(), self::categoryTh()),
             ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null)
                 ->labelKey('rep_c_ticket_requester'),

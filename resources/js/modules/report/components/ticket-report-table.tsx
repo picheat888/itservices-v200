@@ -77,6 +77,13 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             render: (r) => <TicketStatusBadge status={r.status} />,
         },
         {
+            key: 'source',
+            header: t('rep_fl_source'),
+            width: '150px',
+            className: 'whitespace-nowrap',
+            render: (r) => (r.source ? t(`rep_source_${r.source}`) : '—'),
+        },
+        {
             key: 'assignee',
             header: t('rep_col_assignee'),
             width: '170px',

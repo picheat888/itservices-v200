@@ -47,7 +47,7 @@ class TicketOverviewReportService
      * (GenerateReportExport) rebuilds exactly what the screen asked for from the input it stored.
      *
      * @param  array<string, mixed>  $input
-     * @return array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}
+     * @return array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}
      */
     public static function resolveFilters(array $input): array
     {
@@ -58,11 +58,12 @@ class TicketOverviewReportService
             'priority' => $input['priority'] ?? null,
             'department_id' => filled($input['department_id'] ?? null) ? (int) $input['department_id'] : null,
             'assignee_id' => filled($input['assignee_id'] ?? null) ? (int) $input['assignee_id'] : null,
+            'source' => filled($input['source'] ?? null) ? (string) $input['source'] : null,
         ];
     }
 
     /**
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      * @return array<string, mixed>
      */
     public function summary(User $viewer, array $filters): array
@@ -101,7 +102,7 @@ class TicketOverviewReportService
     /**
      * Viewer scope + non-date filters. Shared by the backlog (which ignores the range).
      *
-     * @param  array{categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      */
     public function scoped(User $viewer, array $filters): Builder
     {
@@ -117,13 +118,15 @@ class TicketOverviewReportService
                 'requester',
                 fn (Builder $r) => $r->where('department_id', $id),
             ))
-            ->when($filters['assignee_id'], fn (Builder $q, int $id) => $q->where('assignee_id', $id));
+            ->when($filters['assignee_id'], fn (Builder $q, int $id) => $q->where('assignee_id', $id))
+            // Who opened it: a person (manual) or an approved request (auto_request) — tickets.source.
+            ->when($filters['source'] ?? null, fn (Builder $q, string $source) => $q->where('source', $source));
     }
 
     /**
      * The report population: scoped tickets opened inside the range.
      *
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      */
     public function inRange(User $viewer, array $filters): Builder
     {
@@ -133,7 +136,7 @@ class TicketOverviewReportService
     /**
      * The row table under the charts, newest first.
      *
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      */
     public function rows(User $viewer, array $filters, int $perPage): LengthAwarePaginator
     {
@@ -143,7 +146,7 @@ class TicketOverviewReportService
     /**
      * Every row for an export; `$limit` caps PDF exports.
      *
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      * @return Collection<int, Ticket>
      */
     public function exportRows(User $viewer, array $filters, ?int $limit = null): Collection
@@ -363,7 +366,7 @@ class TicketOverviewReportService
      * often inside SLA. Only the chosen period: what someone holds right now is not counted
      * here. Most closed first.
      *
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      * @return list<array{assignee_id: int, name: ?string, total: int, completed: int, canceled: int, avg_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
      */
     private function byAssignee(User $viewer, array $filters): array

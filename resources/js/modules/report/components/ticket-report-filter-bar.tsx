@@ -16,7 +16,7 @@ import { DateInput } from '@/shared/ui/date-input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useUiStore } from '@/stores/ui';
 import { ChevronsUpDown } from 'lucide-react';
-import { defaultTicketReportFilters } from '../hooks/use-ticket-report-filters';
+import { defaultTicketReportFilters, TICKET_SOURCES } from '../hooks/use-ticket-report-filters';
 import type { TicketOverviewSummary, TicketReportFilters } from '../types';
 import { ClearFiltersBadge, FILTER_ACTIVE, FilterField, FilterRow, useWithAllOption } from './filter-row';
 import { FILTER_SELECT_ALL as ALL } from './filter-select';
@@ -52,7 +52,8 @@ export function TicketReportFilterBar({
         (filters.categories.length > 0 ? 1 : 0) +
         (filters.priority ? 1 : 0) +
         (filters.department_id ? 1 : 0) +
-        (filters.assignee_id ? 1 : 0);
+        (filters.assignee_id ? 1 : 0) +
+        (filters.source ? 1 : 0);
 
     const withAll = useWithAllOption();
 
@@ -154,6 +155,19 @@ export function TicketReportFilterBar({
                         value={filters.assignee_id ? String(filters.assignee_id) : ALL}
                         onChange={(v) => onChange({ assignee_id: v === ALL ? null : Number(v) })}
                         options={withAll((options?.assignees ?? []).map((a) => ({ value: String(a.id), label: a.name, search: a.name })))}
+                    />
+                </div>
+            </FilterField>
+
+            {/* Who opened the ticket: a person, or an approved request (tickets.source). */}
+            <FilterField htmlFor="rep-source" label={t('rep_fl_source')}>
+                <div className="w-48">
+                    <SearchableSelect
+                        id="rep-source"
+                        active={!!filters.source}
+                        value={filters.source || ALL}
+                        onChange={(v) => onChange({ source: v === ALL ? '' : v })}
+                        options={withAll(TICKET_SOURCES.map((s) => ({ value: s, label: t(`rep_source_${s}`), search: t(`rep_source_${s}`) })))}
                     />
                 </div>
             </FilterField>

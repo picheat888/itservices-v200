@@ -91,5 +91,8 @@ export function ticketFilterChips(
         const assignee = options?.assignees.find((a) => a.id === Number(filters.assignee_id));
         chips.push({ label: t('rep_f_assignee'), value: assignee?.name ?? `#${filters.assignee_id}` });
     }
+    if (isSet(filters.source)) {
+        chips.push({ label: t('rep_fl_source'), value: t(`rep_source_${String(filters.source)}`) });
+    }
     return chips;
 }

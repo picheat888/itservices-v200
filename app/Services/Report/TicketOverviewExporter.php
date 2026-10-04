@@ -25,7 +25,7 @@ class TicketOverviewExporter
     public function __construct(private TicketOverviewReportService $reports) {}
 
     /**
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      */
     public function download(User $viewer, array $filters, string $format): Response
     {
@@ -39,7 +39,7 @@ class TicketOverviewExporter
     /**
      * Write the file under $directory on the local disk.
      *
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      * @return array{name: string, path: string, rows: int}
      */
     public function store(User $viewer, array $filters, string $format, string $directory): array
@@ -55,7 +55,7 @@ class TicketOverviewExporter
     }
 
     /**
-     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      * @return array{name: string, rows: int, export?: TicketOverviewExport, pdf?: \Barryvdh\DomPDF\PDF}
      */
     private function build(User $viewer, array $filters, string $format): array

@@ -181,6 +181,27 @@ class TicketTabularReportsTest extends TestCase
         $this->assertContains($this->set['kan']->id, array_column($options, 'value'));
     }
 
+    /** "ที่มา": the backlog narrows to tickets a person opened, or to those an approved request opened. */
+    public function test_backlog_source_filter_and_column(): void
+    {
+        $this->seedTickets();
+        $this->set['t5']->update(['source' => 'auto_request']);
+        $user = $this->reader();
+        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
+
+        $this->assertSame([$this->set['t5']->id], $ids('source=auto_request'));
+        $this->assertSame([$this->set['t2']->id], $ids('source=manual'));
+        $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?source=request')->assertUnprocessable();
+
+        $row = collect($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows')->json('data'))->firstWhere('id', $this->set['t5']->id);
+        $this->assertSame('auto_request', $row['source']);
+        $columns = collect($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->json('data.columns'))->keyBy('key');
+        $this->assertSame(['manual' => 'rep_source_manual', 'auto_request' => 'rep_source_auto_request'], $columns['source']['labels']);
+        // The board follows the same filter.
+        $this->assertSame([$this->set['t5']->id], array_column(
+            $this->actingAs($user)->getJson('/api/reports/tickets/backlog/board?source=auto_request')->assertOk()->json('data'), 'id'));
+    }
+
     /** The due board gets every live ticket the other filters keep — unpaged, SLA filter ignored. */
     public function test_backlog_board_lists_every_live_ticket_without_the_sla_filter(): void
     {

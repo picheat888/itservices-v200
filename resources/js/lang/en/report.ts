@@ -510,6 +510,9 @@ export const report: Dict = {
     rep_due_kind_resolve: 'Waiting to close',
     rep_opt_unassigned: 'Unassigned',
     rep_fl_assignee: 'Assignee',
+    // tickets.source — the "ที่มา" filter / column on the ticket reports
+    rep_source_manual: 'Opened by user',
+    rep_source_auto_request: 'From a request (auto)',
     rep_c_due_kind: 'SLA condition',
     rep_k_due_soon: 'Due within 24 h',
     rep_k_unassigned: 'Unassigned',

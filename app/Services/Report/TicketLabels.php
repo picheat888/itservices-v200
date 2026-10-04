@@ -19,6 +19,12 @@ final class TicketLabels
     ];
 
     /** @var array<string, string> */
+    /** Who opened the ticket (tickets.source, App\Enums\Ticket\TicketSource). */
+    private const SOURCE_TH = [
+        'manual' => 'ผู้ใช้เปิดเอง',
+        'auto_request' => 'จากคำขอ (อัตโนมัติ)',
+    ];
+
     private const STATUS_TH = [
         'open' => 'เปิด',
         'in_progress' => 'กำลังดำเนินการ',
@@ -44,6 +50,11 @@ final class TicketLabels
     public static function status(?string $value): ?string
     {
         return $value === null ? null : (self::STATUS_TH[$value] ?? $value);
+    }
+
+    public static function source(?string $value): ?string
+    {
+        return $value === null ? null : (self::SOURCE_TH[$value] ?? $value);
     }
 
     public static function category(?string $value): ?string

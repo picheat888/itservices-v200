@@ -31,6 +31,7 @@ function ticketParams(f: TicketReportFilters) {
         priority: f.priority || undefined,
         department_id: f.department_id ?? undefined,
         assignee_id: f.assignee_id ?? undefined,
+        source: f.source || undefined,
     };
 }
 
