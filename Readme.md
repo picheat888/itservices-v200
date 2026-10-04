@@ -4322,3 +4322,10 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `settings/pages/index.tsx`: หมวดที่เปิดอ่านจาก `#` ผ่าน router (`useLocation().hash`) ทุกครั้ง ไม่เก็บซ้ำใน state · กดเมนู = `navigate({ hash })` (เพิ่มประวัติ 1 รายการ) → Back / Forward / ลิงก์ตรง `/settings#tickets` เปิดหมวดตาม URL เสมอ · รูปแบบ URL เดิม (`#company`, `#assets`, …) ไม่เปลี่ยน
 - แก้ลิงก์ "ตั้งค่า SLA" ในรายงานสรุปผล SLA ของ Ticket จากคำขอ: `/settings?tab=tickets` → `/settings#tickets` (หน้าตั้งค่าใช้ `#` ไม่ใช่ `?tab=` — ลิงก์เดิมเปิดหมวดแรก)
 - **ตรวจ**: tsc + eslint ผ่าน · Chrome: บริษัท → ทรัพย์สิน → ตั้งค่าอีเมล แล้ว Back 2 ครั้ง / Forward — เมนูที่เลือก เนื้อหา และ `#` ตรงกันทุกขั้น · เปิด `/settings#tickets` ตรงได้หมวด Ticket & SLA (ยังไม่มีชุดทดสอบฝั่งหน้าเว็บ)
+
+## ตั้งค่า: หมวดที่เปิดอยู่ใช้ `?tab=` ตามมาตรฐาน (2026-10-04)
+
+ต่อจากหัวข้อก่อนหน้า — เปลี่ยนจาก `#` เป็นมาตรฐานแท็บเดียวกับทุกหน้า (`permission/pages/index.tsx` เป็นต้นแบบ): `/settings?tab=company|system|master-data|email|tickets|request-data|assets|security`
+- อ่านค่าด้วย type guard `isSection()` (ไม่ cast) — `?tab=` ที่ไม่มีหรือไม่มีสิทธิ์เปิด → หมวดแรกที่เห็นได้ · `useEffect` ตาม `?tab=` ขณะอยู่ในหน้า (ลิงก์จากหน้าอื่นเข้าหมวดอื่น / Back / Forward) · กดเมนูเขียน URL แบบ `replace` ไม่เพิ่มประวัติ (กด Back = กลับหน้าก่อนเข้าตั้งค่า เหมือนหน้าอื่น) · ไม่มี localStorage
+- ไม่รองรับ `#assets` แบบเดิม (ยังอยู่ช่วง demo/ทดสอบ) — ลิงก์ "ตั้งค่า SLA" ในรายงานสรุปผล SLA ของ Ticket จากคำขอกลับเป็น `/settings?tab=tickets`
+- **ตรวจ**: tsc + eslint ผ่าน · Chrome: ลิงก์จากรายงานเปิดหมวด Ticket & SLA · กดทรัพย์สิน → อีเมล URL เปลี่ยนตาม ประวัติไม่เพิ่ม · Back กลับหน้ารายงาน / Forward กลับมาหมวดเดิม · `?tab=garbage` → หมวดบริษัท

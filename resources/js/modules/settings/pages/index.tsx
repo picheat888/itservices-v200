@@ -41,7 +41,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
@@ -104,24 +104,36 @@ const emptyForm: SettingsForm = {
 
 const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'request-data', 'assets', 'security'];
 
-/** The section named by the URL hash ("#assets"); anything else opens Company. */
-function sectionFromHash(hash: string): Section {
-    const s = hash.replace('#', '') as Section;
-    return VALID_SECTIONS.includes(s) ? s : 'company';
-}
+/** A ?tab= value this page has — checked, never cast, so ?tab=garbage falls back instead of opening nothing. */
+const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v as Section);
 
 export default function SettingsPage() {
     const t = useT();
     const { can } = useAuth();
-    // The section lives in the URL hash only — read through the router, so the browser's
-    // Back / Forward (which change just the hash) switch the section too.
-    const { hash } = useLocation();
-    const navigate = useNavigate();
-    const section = sectionFromHash(hash);
+    // The active section lives in the URL (?tab=) and nowhere else, as on every page with
+    // tabs — a reload or a shared link (/settings?tab=tickets) opens the same section.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabParam = searchParams.get('tab');
+    const [section, setSection] = useState<Section>(() => (isSection(tabParam) ? tabParam : 'company'));
+    // Follows the URL while the page stays mounted: Back / Forward, and a link into another section.
+    useEffect(() => {
+        if (isSection(tabParam) && tabParam !== section) {
+            setSection(tabParam);
+        }
+    }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
     const { data } = useSettings();
 
     const changeSection = (s: Section) => {
-        if (s !== section) navigate({ hash: s });
+        setSection(s);
+        // replace: a section click is not a page visit, so it does not fill the history.
+        setSearchParams(
+            (p) => {
+                const sp = new URLSearchParams(p);
+                sp.set('tab', s);
+                return sp;
+            },
+            { replace: true },
+        );
     };
     const update = useUpdateCompany();
     const [form, setForm] = useState<SettingsForm>(emptyForm);
@@ -180,7 +192,7 @@ export default function SettingsPage() {
 
     if (nav.length === 0) return <NoAccess />;
 
-    // If the hash/section points at a tab the user can't see, fall back to the first visible one.
+    // If ?tab= points at a section the user can't see, fall back to the first visible one.
     const activeSection = nav.some((n) => n.id === section) ? section : nav[0].id;
 
     return (
