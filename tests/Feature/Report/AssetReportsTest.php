@@ -139,7 +139,7 @@ class AssetReportsTest extends TestCase
 
         $viewer = $this->userWith(['assets.view']);
         $keys = collect($this->actingAs($viewer)->getJson('/api/reports')->assertOk()->json('data'))->pluck('key')->all();
-        $this->assertSame(['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history'], $keys);
+        $this->assertSame(['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history', 'assets.writeoffs'], $keys);
     }
 
     public function test_overview_list_export_translates_status_to_thai(): void

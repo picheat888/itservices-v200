@@ -12,6 +12,7 @@ import AccessSoftwareLicensesReportPage from './pages/access-software-licenses';
 import AssetsOverviewReportPage from './pages/assets-overview';
 import AssetsTransferHistoryReportPage from './pages/assets-transfer-history';
 import AssetsWarrantyExpiringReportPage from './pages/assets-warranty-expiring';
+import AssetsWriteoffsReportPage from './pages/assets-writeoffs';
 import ContractsExpiringReportPage from './pages/contracts-expiring';
 import ContractsMonthlyCostReportPage from './pages/contracts-monthly-cost';
 import EmployeesJoinersLeaversReportPage from './pages/employees-joiners-leavers';
@@ -44,6 +45,7 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'assets-warranty-expiring', anyOf: ['assets.view'], Page: AssetsWarrantyExpiringReportPage },
     { path: 'assets-overview', anyOf: ['assets.view'], Page: AssetsOverviewReportPage },
     { path: 'assets-transfer-history', anyOf: ['assets.view'], Page: AssetsTransferHistoryReportPage },
+    { path: 'assets-writeoffs', anyOf: ['assets.view'], Page: AssetsWriteoffsReportPage },
     // Contracts
     { path: 'contracts-expiring', anyOf: ['contracts.view'], Page: ContractsExpiringReportPage },
     { path: 'contracts-monthly-cost', anyOf: ['contracts.view'], Page: ContractsMonthlyCostReportPage },

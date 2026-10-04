@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Report\Access\SoftwareLicenseReport;
 use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
+use App\Services\Report\Asset\AssetWriteoffReport;
 use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
 use App\Services\Report\Contract\ContractMonthlyCostReport;
@@ -47,6 +48,8 @@ class ReportCatalogue
     public const ASSETS_OVERVIEW = 'assets.overview';
 
     public const ASSETS_TRANSFER_HISTORY = 'assets.transfer_history';
+
+    public const ASSETS_WRITEOFFS = 'assets.writeoffs';
 
     public const CONTRACTS_EXPIRING = 'contracts.expiring';
 
@@ -150,6 +153,15 @@ class ReportCatalogue
                 'domain' => 'assets',
                 'kind' => 'tabular',
                 'class' => AssetTransferHistoryReport::class,
+                'requires' => ['assets.view'],
+                'formats' => ['xlsx', 'pdf'],
+                'range' => true,
+            ],
+            // What was written off within a range (assets.written_off_at).
+            self::ASSETS_WRITEOFFS => [
+                'domain' => 'assets',
+                'kind' => 'tabular',
+                'class' => AssetWriteoffReport::class,
                 'requires' => ['assets.view'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,

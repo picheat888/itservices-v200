@@ -136,8 +136,10 @@ function StacksCard({ chart, expanded, onToggle }: { chart: Stacks; expanded: bo
     // rest; the apart rows are left out so they cannot squash every department to a sliver.
     const max = Math.max(1, ...rows.map((r) => r.total));
 
+    // The card grows to the row beside a side card, but never shrinks below its rows — two stacked in
+    // one column (by month, by category) each keep their full height.
     return (
-        <Card className="flex flex-1 flex-col overflow-hidden">
+        <Card className="flex flex-auto shrink-0 flex-col overflow-hidden">
             <Heading
                 title={
                     <span className="flex items-center gap-3">
