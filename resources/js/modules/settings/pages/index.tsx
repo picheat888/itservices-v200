@@ -41,6 +41,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
@@ -103,20 +104,24 @@ const emptyForm: SettingsForm = {
 
 const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'request-data', 'assets', 'security'];
 
-function sectionFromHash(): Section {
-    const s = window.location.hash.replace('#', '') as Section;
+/** The section named by the URL hash ("#assets"); anything else opens Company. */
+function sectionFromHash(hash: string): Section {
+    const s = hash.replace('#', '') as Section;
     return VALID_SECTIONS.includes(s) ? s : 'company';
 }
 
 export default function SettingsPage() {
     const t = useT();
     const { can } = useAuth();
-    const [section, setSection] = useState<Section>(sectionFromHash);
+    // The section lives in the URL hash only — read through the router, so the browser's
+    // Back / Forward (which change just the hash) switch the section too.
+    const { hash } = useLocation();
+    const navigate = useNavigate();
+    const section = sectionFromHash(hash);
     const { data } = useSettings();
 
     const changeSection = (s: Section) => {
-        setSection(s);
-        window.location.hash = s;
+        if (s !== section) navigate({ hash: s });
     };
     const update = useUpdateCompany();
     const [form, setForm] = useState<SettingsForm>(emptyForm);
