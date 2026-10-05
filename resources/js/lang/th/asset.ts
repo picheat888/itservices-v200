@@ -217,9 +217,11 @@ export const asset: Dict = {
 
     // asset-writeoff-dialog.tsx — writing off with a disposal note
     asset_writeoff_title: 'ตัดจำหน่ายทรัพย์สินที่เลือก',
-    asset_writeoff_note: 'หมายเหตุการตัดจำหน่าย',
-    asset_writeoff_note_ph: 'เช่น ทิ้ง / ขายซาก / บริจาค / หมดสัญญาเช่า — ระบุรายละเอียดได้เลย',
-    asset_writeoff_note_required: 'กรุณาระบุหมายเหตุการตัดจำหน่าย',
+    asset_writeoff_reason: 'เหตุผลการตัดจำหน่าย',
+    asset_writeoff_reason_ph: 'เลือกเหตุผล',
+    asset_writeoff_reason_required: 'กรุณาเลือกเหตุผลการตัดจำหน่าย',
+    asset_writeoff_note: 'หมายเหตุ',
+    asset_writeoff_note_ph: 'รายละเอียดเพิ่มเติม เช่น ขายซากให้ร้านรับซื้อ 500 บาท',
     asset_writeoff_failed: 'ตัดจำหน่ายไม่สำเร็จ',
 
     // asset-detail-drawer.tsx — write-off note

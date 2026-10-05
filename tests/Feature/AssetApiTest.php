@@ -13,6 +13,7 @@ use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Location;
 use App\Models\Settings\Vendor;
+use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -49,6 +50,12 @@ class AssetApiTest extends TestCase
     private function vendorId(string $name = 'Acme Vendor'): int
     {
         return Vendor::create(['name' => $name])->id;
+    }
+
+    /** A reason from the standard list the migration starts with. */
+    private function writeoffReasonId(): int
+    {
+        return (int) WriteoffReason::where('name', 'หมดอายุการใช้งาน / ล้าสมัย')->value('id');
     }
 
     public function test_guests_cannot_list_assets(): void
@@ -740,7 +747,7 @@ class AssetApiTest extends TestCase
         $a = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
         $b = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$a->id, $b->id], 'op' => 'writeoff', 'reason' => 'EOL'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$a->id, $b->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'EOL'])
             ->assertOk()
             ->assertJsonPath('updated', 2);
 
@@ -755,7 +762,7 @@ class AssetApiTest extends TestCase
         $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
         $this->assertNull($asset->written_off_at);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'reason' => 'EOL'])->assertOk();
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'EOL'])->assertOk();
         $this->assertSame('2026-10-04 14:30:00', $asset->fresh()->written_off_at->toDateTimeString());
         $this->getJson("/api/assets/{$asset->id}")->assertOk()->assertJsonPath('data.written_off_at', '2026-10-04 14:30');
 
@@ -767,19 +774,30 @@ class AssetApiTest extends TestCase
         $this->assertSame('2026-10-05 09:00:00', Asset::factory()->create(['status' => 'writeoff'])->written_off_at->toDateTimeString());
     }
 
-    public function test_bulk_writeoff_requires_a_note(): void
+    /** Why is picked from Settings → Assets (for the write-off report); the note only adds the details. */
+    public function test_bulk_writeoff_requires_a_reason_from_the_list_but_not_a_note(): void
     {
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'reason' => 'EOL'])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('reason');
-        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'reason' => '   '])
+            ->assertJsonValidationErrors('writeoff_reason_id');
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'writeoff_reason_id' => 999999])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('reason');
-
+            ->assertJsonValidationErrors('writeoff_reason_id');
         $this->assertSame('ready', $asset->fresh()->status->value);
+
+        $reason = WriteoffReason::where('name', 'ขายซาก')->sole();
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'writeoff_reason_id' => $reason->id])->assertOk();
+        $this->getJson("/api/assets/{$asset->id}")->assertOk()
+            ->assertJsonPath('data.writeoff_reason_id', $reason->id)
+            ->assertJsonPath('data.writeoff_reason', 'ขายซาก')
+            ->assertJsonPath('data.last_reason', null);
+
+        // Cancelling the write-off clears the reason with it.
+        $this->postJson("/api/assets/{$asset->id}/cancel-writeoff")->assertOk();
+        $this->assertNull($asset->fresh()->writeoff_reason_id);
     }
 
     public function test_bulk_writeoff_keeps_the_note_on_the_asset(): void
@@ -787,7 +805,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'reason' => 'ขายซากให้ร้านรับซื้อ 500 บาท'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'ขายซากให้ร้านรับซื้อ 500 บาท'])
             ->assertOk();
 
         $this->getJson("/api/assets/{$asset->id}")
@@ -803,7 +821,7 @@ class AssetApiTest extends TestCase
         $held = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-5001', 'owner_employee_id' => $employee->id]);
         $free = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$held->id, $free->id], 'op' => 'writeoff', 'reason' => 'EOL'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$held->id, $free->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'EOL'])
             ->assertStatus(422);
 
         // No partial write-off — the whole batch is rejected.
@@ -817,7 +835,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $held = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-5002', 'owner_employee_id' => $employee->id]);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$held->id], 'op' => 'writeoff', 'reason' => 'EOL'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$held->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'EOL'])
             ->assertStatus(422);
 
         $this->assertSame('deployed', $held->fresh()->status->value);
@@ -830,13 +848,13 @@ class AssetApiTest extends TestCase
         $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
         // A Common (shared) asset must be recalled to Ready first — the whole batch is rejected.
-        $this->postJson('/api/assets/bulk', ['ids' => [$common->id, $ready->id], 'op' => 'writeoff', 'reason' => 'EOL'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$common->id, $ready->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'EOL'])
             ->assertStatus(422);
         $this->assertSame('common', $common->fresh()->status->value);
         $this->assertSame('ready', $ready->fresh()->status->value);
 
         // A Ready asset writes off fine.
-        $this->postJson('/api/assets/bulk', ['ids' => [$ready->id], 'op' => 'writeoff', 'reason' => 'EOL'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$ready->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'EOL'])
             ->assertOk()->assertJsonPath('updated', 1);
         $this->assertSame('writeoff', $ready->fresh()->status->value);
     }

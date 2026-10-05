@@ -27,6 +27,8 @@ export {
     useWarehouses,
     useWarrantyTypeMutations,
     useWarrantyTypes,
+    useWriteoffReasonMutations,
+    useWriteoffReasons,
 } from './hooks/use-master-data';
 export {
     useCurrency,

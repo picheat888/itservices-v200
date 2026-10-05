@@ -5,6 +5,7 @@ namespace App\Services\Report\Tabular;
 use App\Models\Employee\Department;
 use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
+use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 
 /**
@@ -47,6 +48,17 @@ final class Options
     {
         return Vendor::query()->orderBy('name')->get(['id', 'name', 'name_th'])
             ->map(fn (Vendor $v) => ['value' => $v->id, 'label' => $v->name, 'label_th' => $v->name_th])->all();
+    }
+
+    /**
+     * Write-off reasons (Settings → Assets), in the order the settings list them.
+     *
+     * @return list<array{value: int, label: string, label_th: null}>
+     */
+    public static function writeoffReasons(): array
+    {
+        return WriteoffReason::query()->orderBy('id')->get(['id', 'name'])
+            ->map(fn (WriteoffReason $r) => ['value' => $r->id, 'label' => $r->name, 'label_th' => null])->all();
     }
 
     /**

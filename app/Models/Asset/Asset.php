@@ -12,6 +12,7 @@ use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Location;
 use App\Models\Settings\Vendor;
+use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -43,7 +44,7 @@ class Asset extends Model
         'asset_code', 'tag', 'category_id', 'brand_id', 'model_id', 'serial', 'source', 'status',
         'owner', 'owner_employee_id', 'location_id', 'warehouse_id', 'value', 'vendor_id',
         'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id',
-        'owned_since', 'notes', 'last_reason', 'written_off_at',
+        'owned_since', 'notes', 'last_reason', 'writeoff_reason_id', 'written_off_at',
     ];
 
     protected function casts(): array
@@ -70,6 +71,12 @@ class Asset extends Model
     public function writtenOffBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'written_off_by');
+    }
+
+    /** Why it was written off (Settings → Assets); null while it is in service. The note stays in last_reason. */
+    public function writeoffReason(): BelongsTo
+    {
+        return $this->belongsTo(WriteoffReason::class);
     }
 
     /** Physical location a deployed asset sits at (Master Data). */
@@ -133,7 +140,8 @@ class Asset extends Model
     /**
      * Auto-generate an INK-IT-YY-NNNN Asset code on create, and stamp the write-off:
      * written_off_at / written_off_by (who) are set when the status becomes writeoff (created written
-     * off, retired, or edited to it) and cleared when it leaves it (a write-off cancelled). The bulk
+     * off, retired, or edited to it) and cleared, with the write-off reason, when it leaves it (a
+     * write-off cancelled). The bulk
      * write-off is a query update, so AssetService::bulkSetStatus stamps them itself.
      */
     protected static function booted(): void
@@ -154,6 +162,7 @@ class Asset extends Model
             } else {
                 $asset->written_off_at = null;
                 $asset->written_off_by = null;
+                $asset->writeoff_reason_id = null;
             }
         });
     }

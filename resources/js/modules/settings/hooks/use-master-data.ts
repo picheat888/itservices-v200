@@ -9,6 +9,7 @@ import {
     vendorApi,
     warehouseApi,
     warrantyTypeApi,
+    writeoffReasonApi,
     type RequestOptionOrder,
     type RequestOptionPayload,
 } from '../api/masterDataApi';
@@ -20,6 +21,7 @@ const VENDORS = ['vendors'] as const;
 const WAREHOUSES = ['warehouses'] as const;
 const UNITS = ['units'] as const;
 const WARRANTY_TYPES = ['warranty-types'] as const;
+const WRITEOFF_REASONS = ['writeoff-reasons'] as const;
 // Distinct from the request module's ['request-options'] — that key caches the
 // New Request form's whole options payload, this one the admin list.
 const REQUEST_OPTION_MASTER = ['request-option-master'] as const;
@@ -31,6 +33,7 @@ export const useVendors = () => useQuery({ queryKey: VENDORS, queryFn: vendorApi
 export const useWarehouses = () => useQuery({ queryKey: WAREHOUSES, queryFn: warehouseApi.list });
 export const useUnits = () => useQuery({ queryKey: UNITS, queryFn: unitApi.list });
 export const useWarrantyTypes = () => useQuery({ queryKey: WARRANTY_TYPES, queryFn: warrantyTypeApi.list });
+export const useWriteoffReasons = () => useQuery({ queryKey: WRITEOFF_REASONS, queryFn: writeoffReasonApi.list });
 export const useRequestOptionLists = () => useQuery({ queryKey: REQUEST_OPTION_MASTER, queryFn: requestOptionApi.list });
 
 type RequestOptionCache = { lists: RequestOptionList[]; options: RequestOption[] };
@@ -173,6 +176,20 @@ export function useUnitMutations() {
             onSuccess: inv,
         }),
         remove: useMutation({ mutationFn: (id: number) => unitApi.remove(id), onSuccess: inv }),
+    };
+}
+
+export function useWriteoffReasonMutations() {
+    const qc = useQueryClient();
+    const inv = () => qc.invalidateQueries({ queryKey: WRITEOFF_REASONS });
+    return {
+        create: useMutation({ mutationFn: (p: { name: string; description?: string }) => writeoffReasonApi.create(p), onSuccess: inv }),
+        update: useMutation({
+            mutationFn: (v: { id: number; name: string; description?: string }) =>
+                writeoffReasonApi.update(v.id, { name: v.name, description: v.description }),
+            onSuccess: inv,
+        }),
+        remove: useMutation({ mutationFn: (id: number) => writeoffReasonApi.remove(id), onSuccess: inv }),
     };
 }
 

@@ -296,6 +296,9 @@ export interface Asset {
     owned_since: string | null;
     notes: string | null;
     last_reason: string | null;
+    /** Why it was written off (Settings → Assets); last_reason is the free-text note. */
+    writeoff_reason_id?: number | null;
+    writeoff_reason?: string | null;
     created_at: string | null;
     updated_at: string | null;
     // Present only on the single-asset endpoint (GET /assets/{id}).
@@ -594,6 +597,13 @@ export interface Warehouse {
 }
 
 export interface Unit {
+    id: number;
+    name: string;
+    description?: string | null;
+}
+
+/** A write-off reason (Settings → Assets) — picked in the write-off dialog, counted by the write-off report. */
+export interface WriteoffReason {
     id: number;
     name: string;
     description?: string | null;

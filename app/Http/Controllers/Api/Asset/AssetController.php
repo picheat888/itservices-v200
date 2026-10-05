@@ -16,6 +16,7 @@ use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
 use App\Models\Settings\Location;
+use App\Models\Settings\WriteoffReason;
 use App\Models\User;
 use App\Services\Asset\AssetService;
 use App\Support\SystemTime;
@@ -351,7 +352,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator', 'updater', 'writtenOffBy']);
+        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator', 'updater', 'writtenOffBy', 'writeoffReason']);
 
         return (new AssetResource($asset))->response();
     }
@@ -553,8 +554,9 @@ class AssetController extends Controller
     }
 
     /**
-     * Bulk write-off many assets (requires assets.retire). The note is required: it is the
-     * only record of how the asset left (discarded, sold for scrap, donated, lease ended…).
+     * Bulk write-off many assets (requires assets.retire). The reason is required and comes from
+     * the list in Settings → Assets (discarded, sold for scrap, donated, lease ended…) so the
+     * write-off report can count by it; the note adds the details and is optional.
      */
     public function bulk(Request $request): JsonResponse
     {
@@ -563,13 +565,15 @@ class AssetController extends Controller
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:assets,id'],
             'op' => ['required', 'in:writeoff'],
-            'reason' => ['required', 'string', 'max:500'],
+            'writeoff_reason_id' => ['required', 'integer', 'exists:writeoff_reasons,id'],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $count = $this->service->bulkSetStatus($data['ids'], AssetStatus::Writeoff, $data['reason'] ?? null);
+        $count = $this->service->bulkSetStatus($data['ids'], AssetStatus::Writeoff, $data['reason'] ?? null, (int) $data['writeoff_reason_id']);
+        $reasonName = WriteoffReason::whereKey($data['writeoff_reason_id'])->value('name');
         // One entry per asset, so each asset's own history shows its write-off and who did it.
         foreach (Asset::whereIn('id', $data['ids'])->get() as $asset) {
-            AuditLog::record('Wrote off asset', $asset->asset_code, ['facts' => ['reason' => $data['reason']]], subject: $asset);
+            AuditLog::record('Wrote off asset', $asset->asset_code, ['facts' => array_filter(['reason' => $reasonName, 'note' => $data['reason'] ?? null])], subject: $asset);
         }
 
         return response()->json(['message' => 'success', 'updated' => $count]);

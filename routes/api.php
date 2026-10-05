@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Settings\UnitController;
 use App\Http\Controllers\Api\Settings\VendorController;
 use App\Http\Controllers\Api\Settings\WarrantyTypeController;
+use App\Http\Controllers\Api\Settings\WriteoffReasonController;
 use App\Http\Controllers\Api\Sidebar\SidebarBadgeController;
 use App\Http\Controllers\Api\Stock\StockCountController;
 use App\Http\Controllers\Api\Stock\StockItemController;
@@ -201,6 +202,10 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('units', [UnitController::class, 'index'])->name('api.units.index');
     Route::get('warranty-types', [WarrantyTypeController::class, 'index'])->name('api.warranty-types.index');
     Route::get('locations', [LocationController::class, 'index'])->name('api.locations.index');
+    // Write-off reasons — read by the write-off dialog; kept in Settings → Assets (settings.assets).
+    Route::get('writeoff-reasons', [WriteoffReasonController::class, 'index'])->name('api.writeoff-reasons.index');
+    Route::apiResource('writeoff-reasons', WriteoffReasonController::class)->except(['show', 'index'])
+        ->middleware('permission:settings.assets');
     // Request data — its own Settings section, with its own gate.
     Route::middleware('permission:settings.requestdata')->group(function () {
         Route::get('request-options', [RequestOptionController::class, 'index'])->name('api.request-options.index');
