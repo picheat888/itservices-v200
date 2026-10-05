@@ -15,17 +15,27 @@
  *   <script>, <video>. Each such tag is reported once, at its first use.
  */
 
-export type HtmlIssue =
-    /** `<tag>` on `line` is never closed. */
-    | { kind: 'unclosed'; tag: string; line: number }
-    /** `</tag>` on `line` closes nothing. */
-    | { kind: 'stray'; tag: string; line: number }
-    /** `</tag>` on `line` closes it while `inner` (opened on `innerLine`) is still open. */
-    | { kind: 'misnested'; tag: string; line: number; inner: string; innerLine: number }
-    /** `<tag>` on `line` sits directly inside a `<parent>` list instead of inside an `<li>`. */
-    | { kind: 'list_child'; tag: string; line: number; parent: string }
-    /** `<tag>`, first used on `line`, is not one mail clients reliably draw. */
-    | { kind: 'unsupported'; tag: string; line: number };
+/** Where the offending tag is: its 1-based line, and its character range in the text. */
+interface TagSpot {
+    line: number;
+    start: number;
+    end: number;
+}
+
+/** What is wrong with the tag. */
+type HtmlIssueKind =
+    /** `<tag>` is never closed. */
+    | { kind: 'unclosed'; tag: string }
+    /** `</tag>` closes nothing. */
+    | { kind: 'stray'; tag: string }
+    /** `</tag>` closes it while `inner` (opened on `innerLine`) is still open. */
+    | { kind: 'misnested'; tag: string; inner: string; innerLine: number }
+    /** `<tag>` sits directly inside a `<parent>` list instead of inside an `<li>`. */
+    | { kind: 'list_child'; tag: string; parent: string }
+    /** `<tag>`, at its first use, is not one mail clients reliably draw. */
+    | { kind: 'unsupported'; tag: string };
+
+export type HtmlIssue = TagSpot & HtmlIssueKind;
 
 /** Tags that never take a closing tag. */
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
@@ -83,7 +93,7 @@ const TAG_PATTERN = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?(\/?)>/
 
 export function findHtmlIssues(html: string): HtmlIssue[] {
     const issues: HtmlIssue[] = [];
-    const open: { tag: string; line: number }[] = [];
+    const open: (TagSpot & { tag: string })[] = [];
     const reportedUnsupported = new Set<string>();
     const lineAt = (index: number) => html.slice(0, index).split('\n').length;
 
@@ -91,35 +101,36 @@ export function findHtmlIssues(html: string): HtmlIssue[] {
         const [, slash, rawTag, selfClose] = match;
         if (!rawTag) continue; // a comment
         const tag = rawTag.toLowerCase();
-        const line = lineAt(match.index ?? 0);
+        const start = match.index ?? 0;
+        const spot: TagSpot = { line: lineAt(start), start, end: start + match[0].length };
 
         if (!slash) {
             if (!EMAIL_SAFE_TAGS.has(tag) && !reportedUnsupported.has(tag)) {
                 reportedUnsupported.add(tag);
-                issues.push({ kind: 'unsupported', tag, line });
+                issues.push({ kind: 'unsupported', tag, ...spot });
             }
             const parent = open[open.length - 1];
             if (parent && LIST_TAGS.has(parent.tag) && tag !== 'li') {
-                issues.push({ kind: 'list_child', tag, line, parent: parent.tag });
+                issues.push({ kind: 'list_child', tag, parent: parent.tag, ...spot });
             }
-            if (!VOID_TAGS.has(tag) && !selfClose) open.push({ tag, line });
+            if (!VOID_TAGS.has(tag) && !selfClose) open.push({ tag, ...spot });
             continue;
         }
 
         if (VOID_TAGS.has(tag)) continue; // a harmless </br>
         const at = open.map((o) => o.tag).lastIndexOf(tag);
         if (at === -1) {
-            issues.push({ kind: 'stray', tag, line });
+            issues.push({ kind: 'stray', tag, ...spot });
             continue;
         }
         // Everything opened after the tag being closed was left open inside it.
         for (const inner of open.splice(at + 1).reverse()) {
-            issues.push({ kind: 'misnested', tag, line, inner: inner.tag, innerLine: inner.line });
+            issues.push({ kind: 'misnested', tag, inner: inner.tag, innerLine: inner.line, ...spot });
         }
         open.pop();
     }
 
-    for (const left of open) issues.push({ kind: 'unclosed', tag: left.tag, line: left.line });
+    for (const left of open) issues.push({ kind: 'unclosed', ...left });
 
-    return issues.sort((a, b) => a.line - b.line);
+    return issues.sort((a, b) => a.start - b.start);
 }
