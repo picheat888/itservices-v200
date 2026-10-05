@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useDepartments, useEmployees } from '@/modules/employee';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
@@ -39,6 +40,8 @@ export type MemberTarget = {
     color?: string | null;
     /** Uploaded logo URL (social platforms / software) — shown round in the header. */
     logo?: string | null;
+    /** When and by whom the resource was added / last changed. */
+    stamps?: { createdAt?: string | null; createdBy?: string | null; updatedAt?: string | null; updatedBy?: string | null };
 };
 
 // Access levels offered per kind; only file shares grade access. Email-group owner
@@ -316,6 +319,7 @@ export function MembersDrawer({
                             title={tgt.name}
                             code={tgt.code ?? undefined}
                             srDescription={tgt.name}
+                            headerRight={tgt.stamps && <RecordStamps className="text-right" {...tgt.stamps} />}
                             subtitle={
                                 tgt.detail || (tgt.metaValue && kind !== 'email-groups') ? (
                                     <>

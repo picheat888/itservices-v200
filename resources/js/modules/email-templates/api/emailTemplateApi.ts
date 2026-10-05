@@ -11,6 +11,9 @@ export interface EmailTemplate {
     /** How the template is triggered: on the event, or by a scheduled sweep. */
     cadence: 'realtime' | 'daily' | 'weekly' | 'scheduled';
     last_sent_at: string | null;
+    /** Who reworded it last; null while nobody has. */
+    updated_at?: string | null;
+    updated_by_name?: string | null;
     is_standard: boolean; // has a standard definition (can be reset)
     is_modified: boolean; // differs from its standard definition
 }

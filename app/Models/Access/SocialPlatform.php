@@ -2,12 +2,15 @@
 
 namespace App\Models\Access;
 
+use App\Models\Concerns\RecordsActors;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Storage;
 
 class SocialPlatform extends Model
 {
+    use RecordsActors;
+
     protected $fillable = ['code', 'name', 'url', 'color', 'policy', 'logo_path'];
 
     /**

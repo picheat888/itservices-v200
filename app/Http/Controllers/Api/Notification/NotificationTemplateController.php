@@ -8,6 +8,7 @@ use App\Models\Notification\NotificationTemplate;
 use App\Notifications\NotificationTestNotification;
 use App\Support\EmailTemplates;
 use App\Support\NotificationCatalogue;
+use App\Support\SystemTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -48,7 +49,7 @@ class NotificationTemplateController extends Controller
     {
         $this->gate($request);
 
-        $stored = NotificationTemplate::get()->keyBy('key');
+        $stored = NotificationTemplate::with('updater')->get()->keyBy('key');
         $emailModules = collect(EmailTemplates::all())
             ->map(fn (array $template) => explode('.', $template['key'])[0])
             ->unique()
@@ -68,6 +69,9 @@ class NotificationTemplateController extends Controller
                 'message_th' => $row?->message_th ?? $bell['message_th'],
                 'enabled' => $row ? $row->enabled : $bell['enabled'],
                 'last_sent_at' => $row?->last_sent_at?->toIso8601String(),
+                // Who reworded or switched it last; null while nobody has.
+                'updated_at' => SystemTime::date($row?->updated_at),
+                'updated_by_name' => $row?->updater?->name,
                 'is_standard' => $row === null
                     || ($row->message_en === $bell['message_en'] && $row->message_th === $bell['message_th']),
                 'has_email' => in_array($this->emailPrefixFor($bell['module']), $emailModules, true),
@@ -212,14 +216,14 @@ class NotificationTemplateController extends Controller
         $standard = NotificationCatalogue::find($key);
         abort_if($standard === null, 404, 'No such bell.');
 
-        NotificationTemplate::updateOrCreate(['key' => $key], [
+        $bell = NotificationTemplate::updateOrCreate(['key' => $key], [
             'message_en' => $standard['message_en'],
             'message_th' => $standard['message_th'],
             'enabled' => $standard['enabled'],
         ]);
         NotificationCatalogue::forgetSwitches();
 
-        AuditLog::record('Reset bell to standard', $standard['name']);
+        AuditLog::record('Reset bell to standard', $standard['name'], subject: $bell);
 
         return response()->json(['message' => 'success']);
     }

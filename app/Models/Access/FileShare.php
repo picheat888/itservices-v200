@@ -2,6 +2,7 @@
 
 namespace App\Models\Access;
 
+use App\Models\Concerns\RecordsActors;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class FileShare extends Model
 {
+    use RecordsActors;
+
     protected $fillable = ['code', 'name', 'path', 'department_id', 'size', 'size_unit', 'description', 'owner_employee_id'];
 
     /** @return array<string, string> */

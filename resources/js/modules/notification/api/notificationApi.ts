@@ -137,6 +137,9 @@ export interface NotificationTemplate {
     message_th: string;
     enabled: boolean;
     last_sent_at: string | null;
+    /** Who reworded or switched it last; null while nobody has. */
+    updated_at?: string | null;
+    updated_by_name?: string | null;
     /** False once the wording has been changed from the standard. */
     is_standard: boolean;
     /**

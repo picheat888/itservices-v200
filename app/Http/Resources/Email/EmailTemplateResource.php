@@ -4,6 +4,7 @@ namespace App\Http\Resources\Email;
 
 use App\Models\Email\EmailTemplate;
 use App\Support\EmailTemplates;
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,6 +26,9 @@ class EmailTemplateResource extends JsonResource
             'enabled' => (bool) $this->enabled,
             'cadence' => $this->cadence ?? 'realtime',
             'last_sent_at' => $this->last_sent_at?->toIso8601String(),
+            // Who reworded it last (null while nobody has) — the name when the index loaded the updater.
+            'updated_at' => SystemTime::date($this->updated_at),
+            'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
             // Whether this key has a standard definition (drives the Reset action),
             // and whether the current row differs from it (drives the "modified" badge).
             'is_standard' => EmailTemplates::has($this->key),

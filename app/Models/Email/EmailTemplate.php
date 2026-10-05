@@ -2,6 +2,7 @@
 
 namespace App\Models\Email;
 
+use App\Models\Concerns\RecordsUpdater;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class EmailTemplate extends Model
 {
+    use RecordsUpdater;
+
     protected $fillable = [
         'key', 'name', 'subject', 'body_html', 'enabled', 'cadence', 'last_sent_at',
     ];

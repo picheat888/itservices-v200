@@ -809,6 +809,11 @@ export interface EmailGroup {
     owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
+    /** When and by whom it was added / last changed (names on the registry list). */
+    created_at?: string | null;
+    updated_at?: string | null;
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
 }
 
 export interface FileShare {
@@ -827,6 +832,11 @@ export interface FileShare {
     owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
+    /** When and by whom it was added / last changed (names on the registry list). */
+    created_at?: string | null;
+    updated_at?: string | null;
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
 }
 
 export interface SocialPlatform {
@@ -840,6 +850,11 @@ export interface SocialPlatform {
     logo_path?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
+    /** When and by whom it was added / last changed (names on the registry list). */
+    created_at?: string | null;
+    updated_at?: string | null;
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
 }
 
 export type SoftwareLicenseType = 'perpetual' | 'subscription' | 'free' | 'open_source';
@@ -861,6 +876,11 @@ export interface Software {
     notes?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
+    /** When and by whom it was added / last changed (names on the registry list). */
+    created_at?: string | null;
+    updated_at?: string | null;
+    created_by_name?: string | null;
+    updated_by_name?: string | null;
 }
 
 /** Lightweight member preview returned inline on the index endpoints. */

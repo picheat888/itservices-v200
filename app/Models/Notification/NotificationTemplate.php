@@ -2,6 +2,7 @@
 
 namespace App\Models\Notification;
 
+use App\Models\Concerns\RecordsUpdater;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class NotificationTemplate extends Model
 {
+    use RecordsUpdater;
+
     protected $fillable = ['key', 'message_en', 'message_th', 'enabled', 'last_sent_at'];
 
     /** @return array<string, string> */

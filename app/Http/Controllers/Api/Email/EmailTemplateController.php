@@ -49,7 +49,7 @@ class EmailTemplateController extends Controller
     {
         $this->gate($request);
 
-        $templates = EmailTemplate::orderBy('id')->get();
+        $templates = EmailTemplate::with('updater')->orderBy('id')->get();
 
         $sentTotal = EmailLog::where('status', 'sent')->count();
         $failedTotal = EmailLog::where('status', 'failed')->count();
@@ -182,6 +182,7 @@ class EmailTemplateController extends Controller
                 continue;
             }
 
+            $before = $template->getOriginal();
             $template->update([
                 'name' => $standard['name'],
                 'subject' => $standard['subject'],
@@ -189,9 +190,13 @@ class EmailTemplateController extends Controller
                 'enabled' => $standard['enabled'],
                 'cadence' => $standard['cadence'],
             ]);
+            // One entry per template it actually changed, like the single reset, so each template's own
+            // history shows it (and who did it, in updated_by).
+            if ($template->wasChanged()) {
+                AuditLog::record('Reset email template to standard', $template->name, AuditLog::changes($before, $template), subject: $template);
+            }
             $count++;
         }
-        AuditLog::record('Reset all email templates to standard', "{$count} template(s)");
 
         return response()->json(['message' => 'success', 'reset' => $count]);
     }

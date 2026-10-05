@@ -7,7 +7,8 @@ import { useUiStore } from '@/stores/ui';
  * Two small muted lines — "เพิ่มเมื่อ 4 ต.ค. 2026 โดย …" / "แก้ไขล่าสุด … โดย …" — for a record's
  * created_at/created_by and updated_at/updated_by (App\Models\Concerns\RecordsActors). A missing
  * name (rows seeded or imported before the stamps existed) just drops the "โดย" part.
- * Used by the employee and stock item detail views.
+ * Leave createdAt/createdBy out for records nobody adds by hand (the templates) — only the
+ * "แก้ไขล่าสุด" line shows then. Used by the employee, stock item, access and template views.
  */
 export function RecordStamps({
     createdAt,
@@ -33,7 +34,7 @@ export function RecordStamps({
 
     return (
         <div className={cn('text-muted-foreground text-[10.5px] leading-tight', className)}>
-            {line(t('record_added'), createdAt, createdBy)}
+            {(createdAt !== undefined || createdBy !== undefined) && line(t('record_added'), createdAt, createdBy)}
             {line(t('record_updated'), updatedAt, updatedBy)}
         </div>
     );

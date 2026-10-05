@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Access;
 
 use App\Models\Access\Software;
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -41,6 +42,11 @@ class SoftwareResource extends JsonResource
                 'purpose' => $m->purpose,
             ])->values()),
             'members_count' => $seatsUsed,
+            // When and by whom it was added / last changed (names when the index loaded creator/updater).
+            'created_at' => SystemTime::date($this->created_at),
+            'updated_at' => SystemTime::date($this->updated_at),
+            'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
         ];
     }
 }

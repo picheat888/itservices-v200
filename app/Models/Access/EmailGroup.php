@@ -2,6 +2,7 @@
 
 namespace App\Models\Access;
 
+use App\Models\Concerns\RecordsActors;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class EmailGroup extends Model
 {
+    use RecordsActors;
+
     protected $fillable = ['code', 'name', 'email', 'department_id', 'description', 'owner_employee_id'];
 
     protected static function booted(): void

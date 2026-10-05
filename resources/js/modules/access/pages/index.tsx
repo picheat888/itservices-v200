@@ -344,7 +344,17 @@ export default function AccessControlPage() {
     };
 
     // Build the drawer's header/meta payload from a registry row (fields differ per kind).
-    const buildTarget = (kind: AccessKind, row: AnyResource): MemberTarget => {
+    const buildTarget = (kind: AccessKind, row: AnyResource): MemberTarget => ({ ...buildTargetFields(kind, row), stamps: stampsOf(row) });
+
+    // When and by whom — the four catalogues carry the same four fields.
+    const stampsOf = (row: AnyResource): MemberTarget['stamps'] => ({
+        createdAt: row.created_at,
+        createdBy: row.created_by_name,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by_name,
+    });
+
+    const buildTargetFields = (kind: AccessKind, row: AnyResource): MemberTarget => {
         if (kind === 'email-groups') {
             const g = row as EmailGroup;
             return {
