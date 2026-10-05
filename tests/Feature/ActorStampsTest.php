@@ -22,6 +22,7 @@ use App\Models\Settings\Location;
 use App\Models\Settings\Unit;
 use App\Models\Settings\Vendor;
 use App\Models\Settings\WarrantyType;
+use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -113,7 +114,10 @@ class ActorStampsTest extends TestCase
 
         $retirer = $this->super();
         $this->actingAs($retirer)
-            ->postJson('/api/assets/bulk', ['ids' => [$one->id, $two->id], 'op' => 'writeoff', 'reason' => 'Sold for scrap'])
+            ->postJson('/api/assets/bulk', [
+                'ids' => [$one->id, $two->id], 'op' => 'writeoff',
+                'writeoff_reason_id' => WriteoffReason::where('name', 'ขายซาก')->value('id'), 'reason' => 'Sold for scrap',
+            ])
             ->assertOk()
             ->assertJsonPath('updated', 2);
 
@@ -124,7 +128,7 @@ class ActorStampsTest extends TestCase
 
             $entry = AuditLog::forSubject($asset)->where('action', 'Wrote off asset')->sole();
             $this->assertSame($asset->asset_code, $entry->target);
-            $this->assertSame(['reason' => 'Sold for scrap'], $entry->details['facts']);
+            $this->assertSame(['reason' => 'ขายซาก', 'note' => 'Sold for scrap'], $entry->details['facts']);
             $this->assertSame($retirer->id, $entry->user_id);
         }
     }

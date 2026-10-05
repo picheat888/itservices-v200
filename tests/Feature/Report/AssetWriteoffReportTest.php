@@ -7,6 +7,7 @@ use App\Models\Asset\Asset;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\Category;
+use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,23 +48,26 @@ class AssetWriteoffReportTest extends TestCase
 
     /**
      * Written off in August (laptop, bought 3 years before), September (two: a laptop rented, a
-     * printer bought), and July — outside the range — plus one still ready.
+     * printer bought), and July — outside the range — plus one still ready. The reasons are the
+     * standard list the migration starts with: two beyond repair, the rented one handed back.
      */
     private function seedAssets(): void
     {
         $laptops = Category::create(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป']);
         $printers = Category::create(['name' => 'Printer', 'name_th' => 'เครื่องพิมพ์']);
         $store = Warehouse::create(['name' => 'Main store']);
+        $beyondRepair = WriteoffReason::where('name', 'ชำรุด ซ่อมไม่คุ้ม')->value('id');
+        $handedBack = WriteoffReason::where('name', 'คืนผู้ให้เช่า')->value('id');
         $writeoff = fn (array $attributes) => Asset::factory()->create(array_merge([
             'status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null, 'warehouse_id' => $store->id,
         ], $attributes));
 
         $this->set = [
             'aug' => $writeoff(['category_id' => $laptops->id, 'source' => 'purchased', 'value' => 30000, 'purchase_date' => '2023-08-10',
-                'written_off_at' => '2026-08-10 09:00:00', 'last_reason' => 'Screen broken']),
-            'sep_rented' => $writeoff(['category_id' => $laptops->id, 'written_off_at' => '2026-09-05 09:00:00', 'last_reason' => 'Lease ended']),
+                'written_off_at' => '2026-08-10 09:00:00', 'last_reason' => 'Screen broken', 'writeoff_reason_id' => $beyondRepair]),
+            'sep_rented' => $writeoff(['category_id' => $laptops->id, 'written_off_at' => '2026-09-05 09:00:00', 'last_reason' => 'Lease ended', 'writeoff_reason_id' => $handedBack]),
             'sep_printer' => $writeoff(['category_id' => $printers->id, 'source' => 'purchased', 'value' => 12000, 'purchase_date' => '2024-09-05',
-                'written_off_at' => '2026-09-20 15:30:00', 'last_reason' => 'Beyond repair']),
+                'written_off_at' => '2026-09-20 15:30:00', 'last_reason' => 'Beyond repair', 'writeoff_reason_id' => $beyondRepair]),
             'july' => $writeoff(['category_id' => $printers->id, 'source' => 'purchased', 'value' => 9000, 'written_off_at' => '2026-07-01 09:00:00']),
             'ready' => Asset::factory()->create(['status' => 'ready', 'category_id' => $laptops->id]),
         ];
@@ -84,7 +88,9 @@ class AssetWriteoffReportTest extends TestCase
         );
         $printer = $body['data'][0];
         $this->assertSame('2026-09-20 15:30', $printer['written_off_at']);
-        $this->assertSame('Beyond repair', $printer['reason']);
+        // The reason from the list, and the note typed with it.
+        $this->assertSame('ชำรุด ซ่อมไม่คุ้ม', $printer['reason']);
+        $this->assertSame('Beyond repair', $printer['reason_note']);
         $this->assertSame('Main store', $printer['warehouse']);
         // Bought 2024-09-05, written off 2026-09-20: two years in service.
         $this->assertEquals(2.0, $printer['age_years']);
@@ -97,7 +103,7 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertSame('money', $summary['wo_purchase_value']['format']);
     }
 
-    public function test_it_charts_the_write_offs_by_month_and_by_category(): void
+    public function test_it_charts_the_write_offs_by_month_reason_and_category(): void
     {
         $this->seedAssets();
 
@@ -109,21 +115,29 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertSame([['name' => 'Aug 2026', 'name_th' => 'ส.ค. 2026'], ['name' => 'Sep 2026', 'name_th' => 'ก.ย. 2026']], array_column($months, 'label'));
         $this->assertSame([['purchased' => 1, 'rented' => 0], ['purchased' => 1, 'rented' => 1]], array_column($months, 'values'));
 
+        // Largest reason first; an asset with none counts as "no reason given".
+        $reasons = $charts['reason']['rows'];
+        $this->assertSame(['ชำรุด ซ่อมไม่คุ้ม', 'คืนผู้ให้เช่า'], array_column(array_column($reasons, 'label'), 'name'));
+        $this->assertSame([['purchased' => 2, 'rented' => 0], ['purchased' => 0, 'rented' => 1]], array_column($reasons, 'values'));
+
         // Largest category first.
         $categories = $charts['category']['rows'];
         $this->assertSame(['Laptop', 'Printer'], array_column(array_column($categories, 'label'), 'name'));
         $this->assertSame([2, 1], array_column($categories, 'total'));
     }
 
-    public function test_the_filters_narrow_by_category_source_and_search(): void
+    public function test_the_filters_narrow_by_reason_category_source_and_search(): void
     {
         $this->seedAssets();
         $user = $this->userWith(['assets.view']);
         $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/assets.writeoffs/rows?'.self::RANGE.'&'.$query)->assertOk()->json('data'), 'id');
 
+        $this->assertSame([$this->set['sep_rented']->id], $ids('writeoff_reason_id='.$this->set['sep_rented']->writeoff_reason_id));
         $this->assertSame([$this->set['sep_printer']->id], $ids('category_id='.$this->set['sep_printer']->category_id));
         $this->assertSame([$this->set['sep_rented']->id], $ids('source=rented'));
         $this->assertSame([$this->set['aug']->id], $ids('search=Screen'));
+        // The search reads the reason's name as well as the note.
+        $this->assertSame([$this->set['sep_rented']->id], $ids('search='.urlencode('คืนผู้')));
     }
 
     public function test_it_needs_assets_view(): void
@@ -131,7 +145,7 @@ class AssetWriteoffReportTest extends TestCase
         $this->actingAs($this->userWith(['contracts.view']))->getJson('/api/reports/r/assets.writeoffs/rows')->assertForbidden();
     }
 
-    public function test_excel_export_carries_the_month_and_category_sheets_before_the_list(): void
+    public function test_excel_export_carries_the_month_reason_and_category_sheets_before_the_list(): void
     {
         Excel::fake();
         $this->seedAssets();
@@ -144,8 +158,10 @@ class AssetWriteoffReportTest extends TestCase
 
             return $sheets[1]->title() === 'แยกตามเดือน'
                 && $sheets[1]->array() === [['ส.ค. 2026', 1, 1, 0], ['ก.ย. 2026', 2, 1, 1]]
-                && $sheets[2]->title() === 'แยกตามหมวดหมู่'
-                && $sheets[2]->array() === [['แล็ปท็อป', 2, 1, 1], ['เครื่องพิมพ์', 1, 1, 0]]
+                && $sheets[2]->title() === 'แยกตามเหตุผล'
+                && $sheets[2]->array() === [['ชำรุด ซ่อมไม่คุ้ม', 2, 2, 0], ['คืนผู้ให้เช่า', 1, 0, 1]]
+                && $sheets[3]->title() === 'แยกตามหมวดหมู่'
+                && $sheets[3]->array() === [['แล็ปท็อป', 2, 1, 1], ['เครื่องพิมพ์', 1, 1, 0]]
                 && last($sheets)->headings()[0] === 'วันที่ตัดจำหน่าย';
         });
     }

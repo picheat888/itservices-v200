@@ -4572,3 +4572,29 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
   - รัน `NotificationTemplateSeeder` บน DB จริงแล้ว: 44 → 48 แถว (ครบตามรายการตั้งต้น)
   - Tests: `ProductionSeedTest` ตรวจจำนวนแถว notification ครบ · `NotificationTemplateTest` เพิ่ม 1 test (id/code และรายการไม่มีแถวไม่แสดง) · test ที่อ่านรายการ seed ก่อน · Notification/ProductionSeed/ActorStamps 130 passed · ตรวจใน Chrome แล้ว
 - **เอาปุ่ม "ส่งทดสอบ" มุมขวาบนของหน้า Email & Notification ออก** (2026-10-05) — ส่งทดสอบยังทำได้ในหน้าต่างแก้ไขแต่ละเทมเพลต และทดสอบ SMTP ในหน้าตั้งค่า · lang key `email_test` / `email_test_sent` ยังใช้ที่อื่น ไม่ลบ · ตรวจใน Chrome แล้ว
+
+### ตั้งค่าเหตุผลการตัดจำหน่าย + รายงานแยกตามเหตุผล — 2026-10-05
+- **ตารางใหม่ `writeoff_reasons`** (migration `2026_10_05_171538_create_writeoff_reasons_table`, **รันบน DB จริงแล้ว**):
+  - เก็บ name (unique) และ description พร้อม created_by / updated_by (RecordsActors)
+  - `assets.writeoff_reason_id` ผูกด้วย FK แบบ restrictOnDelete
+  - รายการตั้งต้น 7 ข้อ: ชำรุด ซ่อมไม่คุ้ม · หมดอายุการใช้งาน / ล้าสมัย · สูญหาย / ถูกโจรกรรม · ขายซาก · บริจาค · คืนผู้ให้เช่า · อื่น ๆ
+  - ทรัพย์สิน 3 เครื่องที่ตัดจำหน่ายแล้ว (หมายเหตุ "Beyond economical repair…") ผูกกับ "ชำรุด ซ่อมไม่คุ้ม"
+- **ตั้งค่า > ทรัพย์สิน:** มีส่วน "เหตุผลการตัดจำหน่าย" (ใช้ `LookupSection`) เพิ่ม แก้ไข ลบได้
+  - `WriteoffReasonController`: อ่านได้ทุกคนที่ login, การแก้ไขต้องมีสิทธิ์ `settings.assets`
+  - ลบเหตุผลที่มีทรัพย์สินใช้อยู่ไม่ได้ (409); เปลี่ยนชื่อแล้วทรัพย์สินตามไปด้วยเพราะผูกด้วย id
+- **การตัดจำหน่าย:**
+  - `POST /assets/bulk` ต้องมี `writeoff_reason_id`; หมายเหตุ (`reason` → `last_reason`) **ไม่บังคับแล้ว**
+  - ยกเลิกการตัดจำหน่ายแล้วเหตุผลถูกล้างด้วย
+  - audit log เก็บ facts ทั้ง reason และ note
+  - หน้าต่างตัดจำหน่ายเลือกเหตุผลจากรายการ (SearchableSelect)
+  - รายละเอียดทรัพย์สินแสดงเหตุผลตัวหนา แล้วตามด้วยหมายเหตุ
+- **รายงานการตัดจำหน่าย:**
+  - ตัวกรองใหม่ "เหตุผล"
+  - คอลัมน์ "เหตุผล" (จากรายการ), "หมายเหตุ" และ "ผู้ตัดจำหน่าย"
+  - กราฟและแผ่น Excel ใหม่ "แยกตามเหตุผล" (ไม่มีเหตุผล = "ไม่ระบุเหตุผล")
+  - ค้นหาครอบคลุมชื่อเหตุผลด้วย
+- Tests:
+  - `WriteoffReasonTest` ใหม่ 4
+  - `AssetApiTest`: test "requires a note" เปลี่ยนเป็น "requires a reason from the list but not a note"
+  - `AssetWriteoffReportTest` / `ActorStampsTest` ปรับตาม
+  - ทั้งระบบ 1642 passed

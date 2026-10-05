@@ -510,8 +510,10 @@ class AssetService
      * Returns the number of assets updated.
      *
      * @param  list<int>  $ids
+     * @param  ?string  $reason  the free-text note (assets.last_reason)
+     * @param  ?int  $writeoffReasonId  the reason picked from the list (assets.writeoff_reason_id)
      */
-    public function bulkSetStatus(array $ids, AssetStatus $status, ?string $reason = null): int
+    public function bulkSetStatus(array $ids, AssetStatus $status, ?string $reason = null, ?int $writeoffReasonId = null): int
     {
         if ($status === AssetStatus::Writeoff) {
             $notReady = Asset::whereIn('id', $ids)->where('status', '!=', AssetStatus::Ready->value)->pluck('asset_code');
@@ -525,6 +527,8 @@ class AssetService
         return Asset::whereIn('id', $ids)->update([
             'status' => $status->value,
             'last_reason' => $reason,
+            // Why, from Settings → Assets; only a write-off carries one.
+            'writeoff_reason_id' => $status === AssetStatus::Writeoff ? $writeoffReasonId : null,
             // A query update skips the model's hooks, so the write-off and the editor are stamped here.
             'written_off_at' => $status === AssetStatus::Writeoff ? now() : null,
             'written_off_by' => $status === AssetStatus::Writeoff ? Auth::id() : null,

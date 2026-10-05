@@ -67,6 +67,8 @@ import {
     useWarehouses,
     useWarrantyTypeMutations,
     useWarrantyTypes,
+    useWriteoffReasonMutations,
+    useWriteoffReasons,
 } from '../hooks/use-master-data';
 import {
     useResetLogo,
@@ -1382,6 +1384,31 @@ function AssetsTab() {
                     {t('save')}
                 </SaveButton>
             </div>
+
+            <WriteoffReasonsSection />
+        </div>
+    );
+}
+
+/** Write-off reasons — the list the write-off dialog picks from, counted by the write-off report. */
+function WriteoffReasonsSection() {
+    const t = useT();
+    const { data: reasons = [] } = useWriteoffReasons();
+    const mutations = useWriteoffReasonMutations();
+    return (
+        <div className="border-border mt-8 border-t pt-6">
+            <div className="mb-4">
+                <h3 className="text-base font-semibold">{t('set_wo_reasons_title')}</h3>
+                <p className="text-muted-foreground text-sm">{t('set_wo_reasons_desc')}</p>
+            </div>
+            <LookupSection
+                rows={reasons}
+                mutations={mutations}
+                addLabel={t('set_wo_reason_add')}
+                editLabel={t('set_wo_reason_edit')}
+                nameLabel={t('set_wo_reason_name')}
+                addButtonLabel={t('set_wo_reason_add')}
+            />
         </div>
     );
 }

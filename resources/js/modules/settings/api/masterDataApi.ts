@@ -10,6 +10,7 @@ import type {
     Vendor,
     Warehouse,
     WarrantyType,
+    WriteoffReason,
 } from '@/shared/types';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
@@ -63,6 +64,14 @@ export const unitApi = {
     create: (payload: { name: string; description?: string }) => mutate<Unit>('post', '/units', payload),
     update: (id: number, payload: { name: string; description?: string }) => mutate<Unit>('put', `/units/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/units/${id}`),
+};
+
+// Write-off reasons live in Settings → Assets (writes need settings.assets); the list is open to the write-off dialog.
+export const writeoffReasonApi = {
+    list: () => http.get<ApiEnvelope<WriteoffReason[]>>('/writeoff-reasons').then((r) => r.data.data),
+    create: (payload: { name: string; description?: string }) => mutate<WriteoffReason>('post', '/writeoff-reasons', payload),
+    update: (id: number, payload: { name: string; description?: string }) => mutate<WriteoffReason>('put', `/writeoff-reasons/${id}`, payload),
+    remove: (id: number) => mutate<void>('delete', `/writeoff-reasons/${id}`),
 };
 
 export interface RequestOptionPayload {

@@ -78,6 +78,9 @@ class AssetResource extends JsonResource
             'owned_since' => $this->owned_since?->toDateString(),
             'notes' => $this->notes,
             'last_reason' => $this->last_reason,
+            // Why it was written off (Settings → Assets); last_reason above is the free-text note.
+            'writeoff_reason_id' => $this->writeoff_reason_id,
+            'writeoff_reason' => $this->whenLoaded('writeoffReason', fn () => $this->writeoffReason?->name),
             // When it was written off (null unless it is), for the write-off report.
             'written_off_at' => $this->written_off_at?->format('Y-m-d H:i'),
             // Who added it, who changed it last, who wrote it off — names, on the single-asset endpoint only.

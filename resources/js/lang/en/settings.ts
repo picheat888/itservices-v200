@@ -106,6 +106,12 @@ export const settings: Dict = {
     set_assets_masterdata_note: 'Brands, Models, Types, Suppliers and Locations used in',
     set_assets_colors_note: 'Customize the badge color of each asset status.',
     set_assets_apply_note: 'Color changes apply across the system immediately.',
+    set_wo_reasons_title: 'Write-off reasons',
+    set_wo_reasons_desc:
+        'The list to pick from when writing off an asset, and what the write-off report counts by. A reason assets were written off with cannot be deleted.',
+    set_wo_reason_add: 'Add reason',
+    set_wo_reason_edit: 'Edit reason',
+    set_wo_reason_name: 'Reason',
     set_workflow: 'Workflows',
     set_integrations: 'Integrations',
     set_security: 'Security',

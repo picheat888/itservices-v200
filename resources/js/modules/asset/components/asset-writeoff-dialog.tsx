@@ -1,42 +1,56 @@
 import { useT } from '@/lang';
+import { useWriteoffReasons } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { fieldError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { FlaskConicalOff, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
 
 /**
- * Write off the selected Ready assets, with a required note on how each one left — thrown
- * away, sold for scrap, donated, returned at the end of a lease, in the admin's own words.
- * There is deliberately no fixed list of disposal methods: the note is the record, and it
- * stays on the asset (last_reason) where the detail drawer shows it.
+ * Write off the selected Ready assets. The reason is picked from the list kept in Settings →
+ * Assets (beyond repair, sold for scrap, donated, handed back to the lessor…) so the write-off
+ * report can count by it; the note adds the details in the admin's own words and is optional.
+ * Both stay on the asset (writeoff_reason_id, last_reason), where the detail drawer shows them.
  */
 export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: number[]; open: boolean; onClose: () => void; onDone: () => void }) {
     const t = useT();
     const { bulk } = useAssetMutations();
+    const { data: reasons = [] } = useWriteoffReasons();
+    const [reasonId, setReasonId] = useState('');
     const [note, setNote] = useState('');
-    const [err, setErr] = useState<string | undefined>();
+    const [reasonErr, setReasonErr] = useState<string | undefined>();
+    const [noteErr, setNoteErr] = useState<string | undefined>();
 
-    // Reset on every open — guarded by `open` so a closing dialog keeps the text while it fades out.
+    const reasonOptions = useMemo(
+        () =>
+            reasons.map((r) => ({ value: String(r.id), label: r.name, sub: r.description ?? undefined, search: `${r.name} ${r.description ?? ''}` })),
+        [reasons],
+    );
+
+    // Reset on every open — guarded by `open` so a closing dialog keeps its content while it fades out.
     useEffect(() => {
         if (!open) return;
+        setReasonId('');
         setNote('');
-        setErr(undefined);
+        setReasonErr(undefined);
+        setNoteErr(undefined);
     }, [open]);
 
     const submit = async () => {
-        if (!note.trim()) {
-            setErr(t('asset_writeoff_note_required'));
+        if (!reasonId) {
+            setReasonErr(t('asset_writeoff_reason_required'));
             return;
         }
         try {
-            await bulk.mutateAsync({ ids, op: 'writeoff', reason: note.trim() });
+            await bulk.mutateAsync({ ids, op: 'writeoff', writeoffReasonId: Number(reasonId), reason: note.trim() || undefined });
             onDone();
         } catch (error) {
-            setErr(fieldError(error, 'reason') ?? t('asset_writeoff_failed'));
+            setReasonErr(fieldError(error, 'writeoff_reason_id'));
+            setNoteErr(fieldError(error, 'reason') ?? (fieldError(error, 'writeoff_reason_id') ? undefined : t('asset_writeoff_failed')));
         }
     };
 
@@ -49,13 +63,23 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
                 </DialogTitle>
                 <DialogDescription>{t('asset_bulk_count').replace('{count}', String(ids.length))}</DialogDescription>
 
-                <div className="mt-4">
-                    <Field label={t('asset_writeoff_note')} required error={err}>
+                <div className="mt-4 space-y-4">
+                    <Field label={t('asset_writeoff_reason')} required error={reasonErr}>
+                        <SearchableSelect
+                            value={reasonId}
+                            onChange={(v) => {
+                                setReasonId(v);
+                                setReasonErr(undefined);
+                            }}
+                            options={reasonOptions}
+                            placeholder={t('asset_writeoff_reason_ph')}
+                        />
+                    </Field>
+                    <Field label={t('asset_writeoff_note')} error={noteErr}>
                         <Textarea
                             value={note}
                             onChange={(ev) => setNote(ev.target.value)}
-                            rows={4}
-                            autoFocus
+                            rows={3}
                             maxLength={500}
                             placeholder={t('asset_writeoff_note_ph')}
                         />

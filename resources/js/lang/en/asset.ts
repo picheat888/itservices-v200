@@ -218,9 +218,11 @@ export const asset: Dict = {
 
     // asset-writeoff-dialog.tsx — writing off with a disposal note
     asset_writeoff_title: 'Write off selected assets',
-    asset_writeoff_note: 'Write-off note',
-    asset_writeoff_note_ph: 'e.g. Discarded / Sold for scrap / Donated / Lease ended — describe it in your own words',
-    asset_writeoff_note_required: 'Please add a write-off note',
+    asset_writeoff_reason: 'Write-off reason',
+    asset_writeoff_reason_ph: 'Pick a reason',
+    asset_writeoff_reason_required: 'Please pick a write-off reason',
+    asset_writeoff_note: 'Note',
+    asset_writeoff_note_ph: 'More detail, e.g. sold to a scrap dealer for 500 baht',
     asset_writeoff_failed: 'Could not write off the assets',
 
     // asset-detail-drawer.tsx — write-off note

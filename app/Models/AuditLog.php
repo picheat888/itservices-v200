@@ -62,6 +62,7 @@ class AuditLog extends Model
         'approver_employee_id' => [Employee::class, 'name'],
         'written_off_by' => [User::class, 'name'],
         'cancelled_by' => [User::class, 'name'],
+        'writeoff_reason_id' => [WriteoffReason::class, 'name'],
     ];
 
     /**

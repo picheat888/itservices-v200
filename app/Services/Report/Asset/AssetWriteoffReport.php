@@ -15,10 +15,10 @@ use Illuminate\Support\Collection;
 
 /**
  * "การตัดจำหน่ายทรัพย์สิน" (Report Center → Assets): the assets written off within a date range
- * (assets.written_off_at; this year by default), newest first — what, from where, why, and worth
- * how much. The tiles count them (bought / rented) and add up what the bought ones cost; the
- * charts break them down by month and by category, each split by source. The file carries the
- * list, then one sheet per chart.
+ * (assets.written_off_at; this year by default), newest first — what, from where, why (the reason
+ * picked from Settings → Assets, plus the note), by whom, and worth how much. The tiles count them
+ * (bought / rented) and add up what the bought ones cost; the charts break them down by month, by
+ * reason and by category, each split by source. The file carries the list, then one sheet per chart.
  */
 class AssetWriteoffReport extends TabularReport
 {
@@ -37,6 +37,9 @@ class AssetWriteoffReport extends TabularReport
 
     private const NO_CATEGORY = ['name' => 'No category', 'name_th' => 'ไม่ระบุหมวดหมู่'];
 
+    /** Written off before the reasons list existed, or registered already written off. */
+    private const NO_REASON = ['name' => 'No reason given', 'name_th' => 'ไม่ระบุเหตุผล'];
+
     public function key(): string
     {
         return 'assets.writeoffs';
@@ -52,6 +55,7 @@ class AssetWriteoffReport extends TabularReport
         return [
             ReportFilter::date('from', today()->startOfYear()->toDateString()),
             ReportFilter::date('to', today()->toDateString()),
+            ReportFilter::select('writeoff_reason_id', Options::writeoffReasons())->labelKey('rep_fl_writeoff_reason'),
             ReportFilter::select('category_id', Options::categories())->labelKey('rep_fl_asset_category'),
             ReportFilter::select('source', Options::fromLabels(self::SOURCE_KEYS)),
             ReportFilter::search(),
@@ -70,6 +74,7 @@ class AssetWriteoffReport extends TabularReport
         return Asset::query()
             ->where('assets.status', 'writeoff')
             ->whereBetween('assets.written_off_at', [$from, $to])
+            ->when($filters['writeoff_reason_id'], fn (Builder $q, $id) => $q->where('assets.writeoff_reason_id', (int) $id))
             ->when($filters['category_id'], fn (Builder $q, $id) => $q->where('assets.category_id', (int) $id))
             ->when($filters['source'], fn (Builder $q, string $source) => $q->where('assets.source', $source))
             ->when($filters['search'], fn (Builder $q, string $search) => $q->where(function (Builder $w) use ($search) {
@@ -77,6 +82,7 @@ class AssetWriteoffReport extends TabularReport
                 $w->where('assets.asset_code', 'like', $like)
                     ->orWhere('assets.serial', 'like', $like)
                     ->orWhere('assets.last_reason', 'like', $like)
+                    ->orWhereHas('writeoffReason', fn (Builder $r) => $r->where('name', 'like', $like))
                     ->orWhereHas('model', fn (Builder $m) => $m->where('name', 'like', $like));
             }));
     }
@@ -84,7 +90,7 @@ class AssetWriteoffReport extends TabularReport
     public function query(User $viewer, array $filters): Builder
     {
         return $this->filtered($filters)
-            ->with(['category:id,name,name_th', 'brand:id,name', 'model:id,name', 'warehouse:id,name', 'contract:id,value'])
+            ->with(['category:id,name,name_th', 'brand:id,name', 'model:id,name', 'warehouse:id,name', 'contract:id,value', 'writeoffReason:id,name', 'writtenOffBy:id,name'])
             ->orderByDesc('assets.written_off_at')
             ->orderBy('assets.asset_code');
     }
@@ -101,7 +107,9 @@ class AssetWriteoffReport extends TabularReport
             ReportColumn::text('serial', 'Serial', fn (Asset $a) => $a->serial),
             ReportColumn::enum('source', 'ที่มา', fn (Asset $a) => $a->source, self::SOURCE_KEYS, self::SOURCE_TH),
             ReportColumn::text('warehouse', 'คลัง', fn (Asset $a) => $a->warehouse?->name),
-            ReportColumn::text('reason', 'เหตุผล', fn (Asset $a) => $a->last_reason),
+            ReportColumn::text('reason', 'เหตุผล', fn (Asset $a) => $a->writeoffReason?->name),
+            ReportColumn::text('reason_note', 'หมายเหตุ', fn (Asset $a) => $a->last_reason),
+            ReportColumn::text('written_off_by', 'ผู้ตัดจำหน่าย', fn (Asset $a) => $a->writtenOffBy?->name),
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date),
             // How long it served: bought to written off, in years.
             ReportColumn::number('age_years', 'อายุใช้งาน (ปี)', fn (Asset $a) => $a->purchase_date === null || $a->written_off_at === null
@@ -127,9 +135,11 @@ class AssetWriteoffReport extends TabularReport
     {
         return $this->filtered($filters)
             ->leftJoin('categories', 'categories.id', '=', 'assets.category_id')
+            ->leftJoin('writeoff_reasons', 'writeoff_reasons.id', '=', 'assets.writeoff_reason_id')
             ->get([
                 'assets.id', 'assets.source', 'assets.value', 'assets.written_off_at',
                 'categories.id as category_ref', 'categories.name as category_name', 'categories.name_th as category_name_th',
+                'writeoff_reasons.id as reason_ref', 'writeoff_reasons.name as reason_name',
             ]);
     }
 
@@ -175,6 +185,14 @@ class AssetWriteoffReport extends TabularReport
             : ['name' => (string) $asset->getAttribute('category_name'), 'name_th' => $asset->getAttribute('category_name_th')];
     }
 
+    /** @return array{name: string, name_th: ?string} */
+    private static function reasonLabel(Asset $asset): array
+    {
+        return $asset->getAttribute('reason_ref') === null
+            ? self::NO_REASON
+            : ['name' => (string) $asset->getAttribute('reason_name'), 'name_th' => null];
+    }
+
     /**
      * @param  array<string, mixed>  $filters
      * @return list<array<string, mixed>>
@@ -192,6 +210,13 @@ class AssetWriteoffReport extends TabularReport
                 'views' => $views,
                 // Oldest month first, so the bars read as a timeline.
                 'rows' => self::lines($assets, fn (Asset $a) => $a->written_off_at->format('Y-m'), self::monthLabel(...), keepOrder: true),
+            ],
+            [
+                'type' => 'stacks',
+                'key' => 'reason',
+                'title_key' => 'rep_chart_wo_by_reason',
+                'views' => $views,
+                'rows' => self::lines($assets, fn (Asset $a) => (string) $a->getAttribute('reason_ref'), self::reasonLabel(...)),
             ],
             [
                 'type' => 'stacks',
@@ -219,7 +244,7 @@ class AssetWriteoffReport extends TabularReport
     }
 
     /**
-     * The two charts as sheets: by month, then by category.
+     * The charts as sheets: by month, by reason, then by category.
      *
      * @param  array<string, mixed>  $filters
      * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
@@ -237,6 +262,11 @@ class AssetWriteoffReport extends TabularReport
                 'title' => 'แยกตามเดือน',
                 'headings' => ['เดือน', 'ทั้งหมด', 'ซื้อ', 'เช่า'],
                 'rows' => $sheet(self::lines($assets, fn (Asset $a) => $a->written_off_at->format('Y-m'), self::monthLabel(...), keepOrder: true)),
+            ],
+            [
+                'title' => 'แยกตามเหตุผล',
+                'headings' => ['เหตุผล', 'ทั้งหมด', 'ซื้อ', 'เช่า'],
+                'rows' => $sheet(self::lines($assets, fn (Asset $a) => (string) $a->getAttribute('reason_ref'), self::reasonLabel(...))),
             ],
             [
                 'title' => 'แยกตามหมวดหมู่',

@@ -96,9 +96,10 @@ export const assetApi = {
         mutate<Asset>('post', `/assets/${id}/recall`, reason ? { warehouse, reason } : { warehouse }),
     // Undo a write-off — restore a retired asset to the Ready pool.
     cancelWriteoff: (id: number) => mutate<Asset>('post', `/assets/${id}/cancel-writeoff`),
-    bulk: async (ids: number[], op: 'writeoff', reason: string): Promise<{ updated: number }> => {
+    // Write off: the reason is picked from Settings → Assets, the note (reason) adds the details.
+    bulk: async (ids: number[], op: 'writeoff', writeoffReasonId: number, reason?: string): Promise<{ updated: number }> => {
         await ensureCsrf();
-        const { data } = await http.post<{ updated: number }>('/assets/bulk', { ids, op, reason });
+        const { data } = await http.post<{ updated: number }>('/assets/bulk', { ids, op, writeoff_reason_id: writeoffReasonId, reason });
         return data;
     },
     // Bulk transfer many Ready/Common assets to one owner — an employee or a shared label.
