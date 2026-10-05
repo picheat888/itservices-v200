@@ -33,6 +33,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { NotificationTemplate } from '../api/notificationApi';
 import { NOTIFICATION_GROUPS, notificationGroupLabel } from '../groups';
 import { useNotificationTemplateMutations, useNotificationTemplates } from '../hooks/use-notifications';
@@ -148,12 +149,15 @@ function NotificationEditDialog({ bell, onClose }: { bell: NotificationTemplate 
     const [th, setTh] = useState('');
     const [enabled, setEnabled] = useState(true);
 
+    // Re-seed only when a different notification opens: the row comes from the list, which
+    // refetches (window focus, a save elsewhere), and a refetch must not wipe what is typed.
     useEffect(() => {
         if (!bell) return;
         setEn(bell.message_en);
         setTh(bell.message_th);
         setEnabled(bell.enabled);
-    }, [bell]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [bell?.key]);
 
     if (!bell) return null;
 
@@ -295,11 +299,35 @@ export function NotificationSettingsPane() {
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useNotificationTemplates();
     const { update } = useNotificationTemplateMutations();
-    const [editing, setEditing] = useState<NotificationTemplate | null>(null);
     const [module, setModule] = useState('');
     const [search, setSearch] = useState('');
 
     const all = useMemo(() => data?.data ?? [], [data]);
+
+    // The editor is URL-driven (?edit=<key without notif_>, e.g. ticket_assigned), like the
+    // Email tab's ?edit=<id>: a reload or a shared link reopens it. By key, not the NT-## code —
+    // that follows catalogue order and shifts when a notification is added.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const editKey = searchParams.get('edit');
+    const editing = editKey ? (all.find((n) => suffix(n.key) === editKey) ?? null) : null;
+    const setEditing = (n: NotificationTemplate | null) =>
+        setSearchParams(
+            (sp) => {
+                const next = new URLSearchParams(sp);
+                if (n) {
+                    next.set('edit', suffix(n.key));
+                } else {
+                    next.delete('edit');
+                }
+                return next;
+            },
+            { replace: true },
+        );
+    // A link to a notification that no longer exists opens nothing; drop the dead param.
+    useEffect(() => {
+        if (data && editKey && !editing) setEditing(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data, editKey, editing]);
 
     /** Module chips carry their own count, the way the Email tab's do. */
     const modules = useMemo(() => {

@@ -566,7 +566,8 @@ export default function EmailTemplatesPage() {
     // The editor is URL-driven (?edit=<id>), like the contract dialog's ?view=: a reload or a
     // shared link reopens it on the same template, and closing drops the param.
     const [searchParams, setSearchParams] = useSearchParams();
-    const editId = toRecordId(searchParams.get('edit'));
+    // The Notification tab uses ?edit= for its own editor (by key), so only read it here on this tab.
+    const editId = tab === 'email' ? toRecordId(searchParams.get('edit')) : null;
     const editing = editId === null ? null : (templates.find((tp) => tp.id === editId) ?? null);
     const setEditing = (tp: EmailTemplate | null) =>
         setSearchParams(
@@ -581,6 +582,13 @@ export default function EmailTemplatesPage() {
             },
             { replace: true },
         );
+    // The tab shows in the URL from the first visit (the menu, the old /email-templates link),
+    // not only after a tab press. A redirect, so it replaces: Back never lands on the bare URL.
+    useEffect(() => {
+        if (searchParams.get('tab') === null) changeTab(tab, { replace: true, extra: () => undefined });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
+
     // A link to a template that no longer exists opens nothing; drop the dead param.
     useEffect(() => {
         if (data && editId !== null && !editing) setEditing(null);
