@@ -5,7 +5,7 @@ import { Field } from '@/shared/components/field';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SettingToggle } from '@/shared/components/setting-toggle';
 import { relativeTime } from '@/shared/lib/datetime';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
@@ -304,18 +304,17 @@ export function NotificationSettingsPane() {
 
     const all = useMemo(() => data?.data ?? [], [data]);
 
-    // The editor is URL-driven (?edit=<key without notif_>, e.g. ticket_assigned), like the
-    // Email tab's ?edit=<id>: a reload or a shared link reopens it. By key, not the NT-## code —
-    // that follows catalogue order and shifts when a notification is added.
+    // The editor is URL-driven (?edit=<id>), like the Email tab's: a reload or a shared link
+    // reopens it on the same notification.
     const [searchParams, setSearchParams] = useSearchParams();
-    const editKey = searchParams.get('edit');
-    const editing = editKey ? (all.find((n) => suffix(n.key) === editKey) ?? null) : null;
+    const editId = toRecordId(searchParams.get('edit'));
+    const editing = editId === null ? null : (all.find((n) => n.id === editId) ?? null);
     const setEditing = (n: NotificationTemplate | null) =>
         setSearchParams(
             (sp) => {
                 const next = new URLSearchParams(sp);
                 if (n) {
-                    next.set('edit', suffix(n.key));
+                    next.set('edit', String(n.id));
                 } else {
                     next.delete('edit');
                 }
@@ -325,9 +324,9 @@ export function NotificationSettingsPane() {
         );
     // A link to a notification that no longer exists opens nothing; drop the dead param.
     useEffect(() => {
-        if (data && editKey && !editing) setEditing(null);
+        if (data && editId !== null && !editing) setEditing(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data, editKey, editing]);
+    }, [data, editId, editing]);
 
     /** Module chips carry their own count, the way the Email tab's do. */
     const modules = useMemo(() => {
@@ -340,22 +339,6 @@ export function NotificationSettingsPane() {
         // the two screens that list these groups read the same way round.
         const order = NOTIFICATION_GROUPS.map((g) => g.id);
         return Object.entries(counts).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
-    }, [all]);
-
-    /**
-     * Display id, mirroring the email templates' ET-##.
-     *
-     * Derived from catalogue order rather than stored: these rows are keyed by a string, and a
-     * number that only exists to be read aloud ("check NT-07") does not need a column in the
-     * database to be stable — the catalogue's order is.
-     */
-    const codeOf = useMemo(() => {
-        const map: Record<string, string> = {};
-        all.forEach((n, i) => {
-            map[n.key] = `NT-${String(i + 1).padStart(2, '0')}`;
-        });
-
-        return map;
     }, [all]);
 
     const rows = useMemo(() => {
@@ -379,7 +362,7 @@ export function NotificationSettingsPane() {
             key: 'code',
             header: 'ID',
             className: 'w-[6%]',
-            render: (n) => <span className="text-muted-foreground font-mono text-xs">{codeOf[n.key]}</span>,
+            render: (n) => <span className="text-muted-foreground font-mono text-xs">{n.code}</span>,
         },
         {
             key: 'name',
