@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Support\DefaultWorkflows;
 use App\Support\EmailTemplates;
+use App\Support\NotificationCatalogue;
 use App\Support\Permissions;
 use App\Support\RequestSchemas;
 use Database\Seeders\DatabaseSeeder;
@@ -205,6 +206,8 @@ class ProductionSeedTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $this->assertDatabaseCount('email_templates', count(EmailTemplates::all()));
+        // Every bell needs its row: the settings page lists and opens them by id.
+        $this->assertDatabaseCount('notification_templates', count(NotificationCatalogue::all()));
         $this->assertDatabaseCount('workflows', count(DefaultWorkflows::all()));
         $this->assertDatabaseCount('mail_settings', 1);
 

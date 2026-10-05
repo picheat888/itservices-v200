@@ -9,6 +9,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Notifications\AssetAssignedNotification;
 use App\Support\NotificationCatalogue;
+use Database\Seeders\NotificationTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -150,6 +151,7 @@ class NotificationTemplateTest extends TestCase
         ])->assertForbidden();
 
         $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
+        $this->seed(NotificationTemplateSeeder::class); // the list shows the stored bells
         $this->getJson('/api/notification-templates')->assertOk()->assertJsonPath('stats.total', count(NotificationCatalogue::all()));
     }
 
@@ -213,9 +215,30 @@ class NotificationTemplateTest extends TestCase
         $this->assertNull(NotificationTemplate::where('key', 'notif_asset_assigned')->first()->last_sent_at);
     }
 
+    /**
+     * The settings page opens a bell by its row's id (?edit=<id>) and shows NT-## from it, so
+     * the list carries both — and only for bells that have a row, like the email templates:
+     * NotificationTemplateSeeder runs on every deploy.
+     */
+    public function test_the_list_gives_each_stored_bell_its_id_and_code(): void
+    {
+        $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
+        $this->seed(NotificationTemplateSeeder::class);
+        NotificationTemplate::where('key', 'notif_stock_low')->delete();
+
+        $rows = collect($this->getJson('/api/notification-templates')->assertOk()->json('data'))->keyBy('key');
+
+        $assigned = NotificationTemplate::where('key', 'notif_asset_assigned')->firstOrFail();
+        $this->assertSame($assigned->id, $rows['notif_asset_assigned']['id']);
+        $this->assertSame(sprintf('NT-%02d', $assigned->id), $rows['notif_asset_assigned']['code']);
+        $this->assertArrayNotHasKey('notif_stock_low', $rows->all());
+        $this->assertCount(count(NotificationCatalogue::all()) - 1, $rows);
+    }
+
     public function test_every_bell_reports_whether_mail_covers_its_event(): void
     {
         $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
+        $this->seed(NotificationTemplateSeeder::class); // the list shows the stored bells
         $rows = collect($this->getJson('/api/notification-templates')->assertOk()->json('data'))->keyBy('key');
 
         // Assets, tickets, requests and the rest all send mail as well as ringing.

@@ -55,25 +55,28 @@ class NotificationTemplateController extends Controller
             ->unique()
             ->all();
 
-        $rows = collect(NotificationCatalogue::all())->map(function (array $bell) use ($stored, $emailModules) {
+        // Only the bells that have a row, like the email templates: NotificationTemplateSeeder
+        // runs on every deploy (DatabaseSeeder), and a bell is opened by its row's id.
+        $rows = collect(NotificationCatalogue::all())->filter(fn (array $bell) => $stored->has($bell['key']))->map(function (array $bell) use ($stored, $emailModules) {
             $row = $stored->get($bell['key']);
 
             return [
+                'id' => $row->id,
+                'code' => sprintf('NT-%02d', $row->id), // display id, like the email templates' ET-##
                 'key' => $bell['key'],
                 'module' => $bell['module'],
                 // name / trigger / audience are deliberately NOT sent: they are UI text, and
                 // the SPA holds them per language (notification_name_* / _when_ / _who_).
                 // The catalogue keeps its English copy for the audit log, which is written
                 // server-side and has no reader's language to write in.
-                'message_en' => $row?->message_en ?? $bell['message_en'],
-                'message_th' => $row?->message_th ?? $bell['message_th'],
-                'enabled' => $row ? $row->enabled : $bell['enabled'],
-                'last_sent_at' => $row?->last_sent_at?->toIso8601String(),
+                'message_en' => $row->message_en,
+                'message_th' => $row->message_th,
+                'enabled' => $row->enabled,
+                'last_sent_at' => $row->last_sent_at?->toIso8601String(),
                 // Who reworded or switched it last; null while nobody has.
-                'updated_at' => SystemTime::date($row?->updated_at),
-                'updated_by_name' => $row?->updater?->name,
-                'is_standard' => $row === null
-                    || ($row->message_en === $bell['message_en'] && $row->message_th === $bell['message_th']),
+                'updated_at' => SystemTime::date($row->updated_at),
+                'updated_by_name' => $row->updater?->name,
+                'is_standard' => $row->message_en === $bell['message_en'] && $row->message_th === $bell['message_th'],
                 'has_email' => in_array($this->emailPrefixFor($bell['module']), $emailModules, true),
             ];
         })->values();

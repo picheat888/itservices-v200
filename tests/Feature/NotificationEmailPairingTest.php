@@ -88,6 +88,7 @@ class NotificationEmailPairingTest extends TestCase
     {
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
         $this->actingAs(User::factory()->create(['role' => 'super']));
+        $this->seed(NotificationTemplateSeeder::class); // the list shows the stored bells
 
         $rows = collect($this->getJson('/api/notification-templates')->assertOk()->json('data'));
         $bell = $rows->firstWhere('key', 'notif_access_offboarding');

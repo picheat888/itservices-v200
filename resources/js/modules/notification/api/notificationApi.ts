@@ -129,6 +129,8 @@ export const notificationApi = {
  * joined to the wording an administrator can change.
  */
 export interface NotificationTemplate {
+    id: number;
+    code: string; // NT-## display id, from the id like the email templates' ET-##
     key: string;
     module: string;
     // No name / trigger / audience here: those are UI text and live in the SPA's own
