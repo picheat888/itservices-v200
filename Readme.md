@@ -4557,3 +4557,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **รายการ HTML Syntax error แบบทางการ** (2026-10-05) — กดแถบแดงแล้วรายการขึ้นหัว "⚠ HTML Syntax error" + จำนวน ("3 issues") · แถว "Line 5 | Unclosed element <strong>." สองคอลัมน์ คั่นเส้นบาง · ท้ายรายการ "The preview may appear correct, but some email clients may display this email incorrectly." · หน้าต่างยืนยันตอนบันทึกใช้หัวข้อและรายการแบบเดียวกัน · ข้อความทั้งชุด (รวม "N lines" ท้ายแถบ, "Show N more") เป็นภาษาอังกฤษทุกภาษา · ลบ lang key `email_html_list_title`, `email_html_issues_text` · ตรวจใน Chrome แล้ว
 - **ท้ายรายการ HTML Syntax error:** "Browsers hide errors in the preview. Outlook or Gmail may show a broken layout." (2026-10-05) — บอกตรง ๆ ว่าทำไมพรีวิวดูปกติ และผู้รับจะเห็นอะไร
 - **รายการ HTML Syntax error กว้างขึ้น** (2026-10-05) — 28rem → `min(34rem, 90vw)` ข้อความท้ายรายการอยู่บรรทัดเดียว (วัดใน Chrome: กว้าง 544px, สูง 1 บรรทัด)
+- **เทมเพลตอีเมล: "ส่งเมื่อ / ถึง" เป็นภาษาคน แทนชื่อ Trigger** (2026-10-05)
+  - ตาราง: คอลัมน์ "ส่งเมื่อ / ถึง" เช่น "เปิด Ticket ใหม่ / ส่งถึง: ผู้แจ้ง" (ชี้เมาส์เห็นชื่อ Trigger เดิม เช่น `ticket.created`)
+  - หน้าต่างแก้ไข: ใต้ชื่อเทมเพลต "เมื่อ: ส่งต่อ Ticket · ส่งถึง: IT ที่รับงานต่อ" แทน `ticket.forwarded`
+  - ข้อความทั้ง 38 เทมเพลต (th/en) อยู่ใน `lang/*/email.ts` คีย์ `email_when_<key>` / `email_to_<key>` (จุดเป็น `_`) — ไล่ผู้รับจากโค้ดที่ส่งจริงทุกฉบับ · ตารางเวลาเขียนแบบ "ทุกเช้าวันจันทร์" ไม่ระบุนาที เพื่อไม่ให้ข้อความผิดเมื่อเปลี่ยนเวลาใน `routes/console.php`
+  - เทมเพลตที่ไม่มีข้อความ (สร้างเอง) ยังแสดงชื่อ Trigger เดิม
+  - Test: `EmailTemplateAudienceTextTest` (4) — ทุกเทมเพลตมีข้อความครบทั้ง 2 ภาษา และไม่มีข้อความค้างของเทมเพลตที่ไม่มีแล้ว · ตรวจใน Chrome แล้ว

@@ -152,6 +152,33 @@ const SAMPLE_VARS: Record<string, string> = {
 // maintains it; the menu is read by someone hunting for one name, and hunting is alphabetical.
 const VARIABLE_NAMES = Object.keys(SAMPLE_VARS).sort((a, b) => a.localeCompare(b));
 
+/**
+ * When a template goes out and to whom, in plain words, from the email_when_* / email_to_*
+ * lang keys. Null for a template they don't describe (one an administrator added), which
+ * then shows its technical key instead.
+ */
+function templateAudience(t: (key: string) => string, key: string): { when: string; to: string } | null {
+    const id = key.replace(/\./g, '_');
+    const when = t(`email_when_${id}`);
+    if (when === `email_when_${id}`) return null;
+    return { when, to: t(`email_to_${id}`) };
+}
+
+/** The editor header's "When: … · To: …" line; the technical key for a template it can't describe. */
+function TemplateAudienceLine({ templateKey }: { templateKey: string }) {
+    const t = useT();
+    const audience = templateAudience(t, templateKey);
+    if (!audience) return <span className="text-muted-foreground font-mono text-xs">{templateKey}</span>;
+
+    return (
+        <span title={templateKey} className="text-muted-foreground text-xs">
+            {t('email_when_label')} <span className="text-foreground">{audience.when}</span>
+            <span className="mx-1.5">·</span>
+            {t('email_to_label')} <span className="text-foreground">{audience.to}</span>
+        </span>
+    );
+}
+
 /** The {{variables}} in a piece of wording, without duplicates. */
 function variablesIn(text: string): string[] {
     return Array.from(new Set(Array.from(text.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
@@ -576,9 +603,21 @@ export default function EmailTemplatesPage() {
         },
         {
             key: 'key',
-            header: t('email_trigger'),
-            className: 'w-[24%]',
-            render: (tp) => <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>,
+            header: t('email_audience_col'),
+            className: 'w-[24%] max-w-0',
+            // The technical trigger key stays one hover away for whoever maintains the senders.
+            render: (tp) => {
+                const audience = templateAudience(t, tp.key);
+                if (!audience) return <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>;
+                return (
+                    <div title={tp.key} className="min-w-0">
+                        <div className="truncate text-xs">{audience.when}</div>
+                        <div className="text-muted-foreground truncate text-[11px]">
+                            {t('email_to_label')} {audience.to}
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             key: 'cadence',
@@ -1598,7 +1637,7 @@ function EditorDialog({
                             }
                             title={name || template.name}
                             srDescription={t('email_edit_preview')}
-                            subtitle={<span className="text-muted-foreground font-mono text-xs">{template.key}</span>}
+                            subtitle={<TemplateAudienceLine templateKey={template.key} />}
                             titleSuffix={
                                 dirty ? (
                                     <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-normal">
