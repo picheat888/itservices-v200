@@ -190,7 +190,7 @@ function TagText({ text }: { text: string }) {
 
 /**
  * One line under the body editor saying whether its HTML is sound: blue when it is, a red
- * "HTML syntax error" when it is not (the lines show red in the number column). Its height
+ * "HTML Syntax error" when it is not (the lines show red in the number column). Its height
  * never changes, so the editor keeps its size however many problems there are; the full
  * list opens over the editor on click.
  */
