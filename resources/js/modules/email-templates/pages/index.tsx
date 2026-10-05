@@ -166,11 +166,6 @@ function unknownVariables(tokens: string[], variables: string[] | null): string[
     return variables ? tokens.filter((tk) => !variables.includes(tk)) : [];
 }
 
-/** One HTML mistake with its line, e.g. "บรรทัด 5: Stray end tag </p>." The message stays in English. */
-function describeHtmlIssue(issue: HtmlIssue, t: (key: string) => string): string {
-    return `${t('email_html_line').replace('{line}', String(issue.line))} ${htmlIssueMessage(issue)}`;
-}
-
 /** A warning sentence with its <tags> in code type, the rest in the normal font. */
 function TagText({ text }: { text: string }) {
     return (
@@ -248,13 +243,19 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
                     onKeyDown={(e) => {
                         if (e.key === 'Escape') setOpen(false);
                     }}
-                    className="w-[min(26rem,85vw)] space-y-2 text-xs"
+                    className="w-[min(28rem,85vw)] p-0 text-xs"
                 >
-                    <p className="text-muted-foreground font-semibold">{t('email_html_list_title')}</p>
-                    <div className="max-h-60 overflow-y-auto">
+                    <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-600 dark:text-red-400" />
+                        <span className="font-semibold">{t('email_html_bad')}</span>
+                        <span className="text-muted-foreground ml-auto tabular-nums">
+                            {issues.length === 1 ? t('email_html_count_one') : t('email_html_count').replace('{count}', String(issues.length))}
+                        </span>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto px-3">
                         <HtmlIssueList issues={issues} limit={issues.length} />
                     </div>
-                    <p className="text-muted-foreground">{t('email_html_hint')}</p>
+                    <p className="text-muted-foreground border-border border-t px-3 py-2 leading-relaxed">{t('email_html_hint')}</p>
                 </PopoverContent>
             </Popover>
             {total}
@@ -270,15 +271,20 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
     const hidden = issues.length - shown.length;
 
     return (
-        <ul className="space-y-0.5">
+        <ul className="divide-border divide-y">
             {shown.map((issue, i) => (
-                <li key={i}>
-                    <TagText text={describeHtmlIssue(issue, t)} />
+                <li key={i} className="grid grid-cols-[3.75rem_minmax(0,1fr)] gap-2 py-1.5">
+                    <span className="font-mono text-[11px] text-red-600 tabular-nums dark:text-red-400">
+                        {t('email_html_line').replace('{line}', String(issue.line))}
+                    </span>
+                    <span className="text-foreground">
+                        <TagText text={htmlIssueMessage(issue)} />
+                    </span>
                 </li>
             ))}
             {hidden > 0 && (
-                <li>
-                    <button type="button" onClick={() => setShowAll(true)} className="underline underline-offset-2 hover:no-underline">
+                <li className="py-1.5">
+                    <button type="button" onClick={() => setShowAll(true)} className="text-brand underline-offset-2 hover:underline">
                         {t('email_html_more').replace('{count}', String(hidden))}
                     </button>
                 </li>
@@ -1435,7 +1441,7 @@ function EditorDialog({
                         )}
                         {htmlIssues.length > 0 && (
                             <div>
-                                <p>{t('email_html_issues_text')}</p>
+                                <p className="font-semibold">{t('email_html_bad')}</p>
                                 <HtmlIssueList issues={htmlIssues} />
                             </div>
                         )}
