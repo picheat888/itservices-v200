@@ -193,16 +193,25 @@ You can tracking progress in {{app.name}}.</p>
                 // an administrator rewords the message around them. The two lists answer
                 // different questions — what nobody has picked up, and what the team is
                 // holding — so they are separate variables rather than one merged table.
+                // The wording is the administrator's own (edited on the live system 2026-10-05):
+                // the two counts and their total ({{digest.total}}) up top, then each table.
                 'key' => 'ticket.weekly_digest',
                 'name' => 'Ticket Weekly summary (สรุป Ticket ค้างประจำสัปดาห์)',
-                'subject' => '{{digest.open_count}} case(s) waiting to be taken',
+                'subject' => 'Weekly Pending Tickets Summary – {{digest.total}} Tickets',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We have some outstanding tickets from last week.</p>
-<p><strong>Waiting({{digest.open_count}})</strong></p>
+<br>
+<p>This is the weekly summary of pending tickets currently.</p>
+<strong>Pending Tickets</strong>
+<ul>
+  <li>🕒 Waiting to be assigned: <strong>{{digest.open_count}} tickets</strong></li>
+  <li>🔄 In progress / Not completed: <strong>{{digest.working_count}} tickets</strong></li>
+  <li><strong>Total pending: {{digest.total}} tickets</strong></li>
+</ul>
+<p><strong>🕒 Waiting to be assigned: {{digest.open_count}} tickets</strong></p>
 {{digest.open_table}}
-<p><strong>Not closed ({{digest.working_count}})</strong></p>
+<p><strong>🔄 In progress / Not completed: {{digest.working_count}} tickets</strong></p>
 {{digest.working_table}}
-<p style="color:#64748b">Please resolve the tickets from last week.</p>',
+<p style="color:#64748b">Please review and take action on the pending tickets from last week.</p>',
                 'enabled' => true,
                 'cadence' => 'weekly',
             ],
