@@ -74,6 +74,8 @@ class TicketDigestService
                 'digest.open_table' => $this->openTable($open),
                 'digest.working_count' => (string) $working->count(),
                 'digest.working_table' => $this->workingTable($working),
+                // Both lists together — waiting to be taken plus still being worked on — for the subject line.
+                'digest.total' => (string) ($open->count() + $working->count()),
             ], rtrim((string) config('app.url'), '/').'/tickets?tab=all', 'Open the case list', $user->name);
 
             $sent['recipients']++;

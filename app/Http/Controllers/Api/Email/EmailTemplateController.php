@@ -477,6 +477,8 @@ first day 01-09-2026.',
             'digest.count' => 2,
             'digest.open_count' => 2,
             'digest.working_count' => 1,
+            // open_count + working_count.
+            'digest.total' => 3,
             // Every digest builds its rows in PHP, so the preview needs stand-ins. Without
             // them an administrator rewording the mail sees a literal {{digest.table}} and
             // cannot tell what they are writing around. Built through the same renderer the
