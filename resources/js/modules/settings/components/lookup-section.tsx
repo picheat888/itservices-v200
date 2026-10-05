@@ -70,10 +70,18 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
             align: 'right',
             render: (r) => (
                 <div className="flex justify-end gap-1">
-                    <button onClick={() => setEditItem(r)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
-                        <Pencil className="h-4 w-4" />
+                    {/* Icon-only, so each says what it does and to which row. */}
+                    <button
+                        type="button"
+                        onClick={() => setEditItem(r)}
+                        aria-label={`${t('edit')} ${r.name}`}
+                        className="hover:bg-accent focus-visible:ring-ring/50 flex h-8 w-8 items-center justify-center rounded-md outline-none focus-visible:ring-2"
+                    >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
                     </button>
                     <button
+                        type="button"
+                        aria-label={`${t('delete')} ${r.name}`}
                         onClick={async () => {
                             if (!(await confirm({ variant: 'danger', entity: { name: r.name, sub: r.description || undefined } }))) return;
                             try {
@@ -82,9 +90,9 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
                                 toastDeleteError(e, t);
                             }
                         }}
-                        className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                        className="text-destructive hover:bg-destructive/10 focus-visible:ring-destructive/40 flex h-8 w-8 items-center justify-center rounded-md outline-none focus-visible:ring-2"
                     >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                 </div>
             ),

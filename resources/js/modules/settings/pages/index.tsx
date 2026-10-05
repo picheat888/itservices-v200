@@ -42,6 +42,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
@@ -1295,7 +1296,16 @@ function SaveRow({ onSave, saving, saved, disabled }: { onSave: () => void; savi
 }
 
 // Swatch palette + the asset statuses shown in the color editor (mirrors the design).
-const ASSET_STATUS_PALETTE = ['#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0ea5e9', '#64748b'];
+// Each swatch carries a colour name so a screen reader says "สีเขียว", not a hex code.
+const ASSET_STATUS_PALETTE = [
+    { hex: '#0284c7', nameKey: 'set_color_blue' },
+    { hex: '#059669', nameKey: 'set_color_green' },
+    { hex: '#d97706', nameKey: 'set_color_amber' },
+    { hex: '#dc2626', nameKey: 'set_color_red' },
+    { hex: '#7c3aed', nameKey: 'set_color_violet' },
+    { hex: '#0ea5e9', nameKey: 'set_color_sky' },
+    { hex: '#64748b', nameKey: 'set_color_slate' },
+] as const;
 const ASSET_STATUS_ROWS: { key: string; labelKey: string }[] = [
     { key: 'deployed', labelKey: 'asset_deployed' },
     { key: 'ready', labelKey: 'asset_ready' },
@@ -1336,33 +1346,46 @@ function AssetsTab() {
             </div>
 
             <div className="bg-muted/50 text-muted-foreground mb-5 flex items-center gap-2 rounded-md px-3.5 py-2.5 text-xs">
-                <Boxes className="h-4 w-4 shrink-0" />
+                <Boxes className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>
-                    {t('set_assets_masterdata_note')} <span className="text-foreground font-semibold">{t('set_master_data')}</span>
+                    {t('set_assets_masterdata_note')}{' '}
+                    <Link to="/settings?tab=master-data" className="text-foreground font-semibold underline-offset-2 hover:underline">
+                        {t('set_master_data')}
+                    </Link>
                 </span>
             </div>
 
-            <p className="text-muted-foreground mb-3 text-xs">{t('set_assets_colors_note')}</p>
+            {/* Badge colours — the same section shape as Ticket & SLA: a small heading, its help, then the rows. */}
+            <h3 className="text-sm font-semibold">{t('set_assets_colors_title')}</h3>
+            <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_assets_colors_note')}</p>
             <div className="space-y-3">
                 {ASSET_STATUS_ROWS.map((r) => {
                     const cur = draft[r.key];
+                    const label = t(r.labelKey);
                     return (
                         <div key={r.key} className="border-border grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border px-3.5 py-3">
-                            <StatusBadge color={cur}>{t(r.labelKey)}</StatusBadge>
-                            <div className="flex gap-1.5">
-                                {ASSET_STATUS_PALETTE.map((c) => (
-                                    <button
-                                        key={c}
-                                        type="button"
-                                        onClick={() => setColor(r.key, c)}
-                                        aria-label={c}
-                                        className={cn(
-                                            'ring-offset-background h-7 w-7 rounded-full ring-2 ring-offset-2 transition-all',
-                                            cur?.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
-                                        )}
-                                        style={{ background: c }}
-                                    />
-                                ))}
+                            {/* The badge at its own width, as everywhere else it shows — not stretched into a bar. */}
+                            <div>
+                                <StatusBadge color={cur}>{label}</StatusBadge>
+                            </div>
+                            <div role="group" aria-label={label} className="flex gap-1.5">
+                                {ASSET_STATUS_PALETTE.map((c) => {
+                                    const selected = cur?.toLowerCase() === c.hex.toLowerCase();
+                                    return (
+                                        <button
+                                            key={c.hex}
+                                            type="button"
+                                            onClick={() => setColor(r.key, c.hex)}
+                                            aria-label={t(c.nameKey)}
+                                            aria-pressed={selected}
+                                            className={cn(
+                                                'ring-offset-background focus-visible:outline-brand h-7 w-7 rounded-full ring-2 ring-offset-2 transition-shadow focus-visible:outline-2 focus-visible:outline-offset-4',
+                                                selected ? 'ring-foreground' : 'hover:ring-border ring-transparent',
+                                            )}
+                                            style={{ background: c.hex }}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
                     );
@@ -1370,7 +1393,7 @@ function AssetsTab() {
             </div>
 
             <div className="mt-5 flex items-center gap-2 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-600 dark:text-blue-400">
-                <Info className="h-4 w-4 shrink-0" />
+                <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{t('set_assets_apply_note')}</span>
             </div>
 
@@ -1396,11 +1419,9 @@ function WriteoffReasonsSection() {
     const { data: reasons = [] } = useWriteoffReasons();
     const mutations = useWriteoffReasonMutations();
     return (
-        <div className="border-border mt-8 border-t pt-6">
-            <div className="mb-4">
-                <h3 className="text-base font-semibold">{t('set_wo_reasons_title')}</h3>
-                <p className="text-muted-foreground text-sm">{t('set_wo_reasons_desc')}</p>
-            </div>
+        <div className="border-border mt-6 border-t pt-5">
+            <h3 className="text-sm font-semibold">{t('set_wo_reasons_title')}</h3>
+            <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_wo_reasons_desc')}</p>
             <LookupSection
                 rows={reasons}
                 mutations={mutations}
