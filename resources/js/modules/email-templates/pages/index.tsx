@@ -40,7 +40,7 @@ import {
     Search,
     Send,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
 //
@@ -170,19 +170,44 @@ function describeHtmlIssue(issue: HtmlIssue, t: (key: string) => string): string
     return Object.entries(values).reduce((text, [k, v]) => text.replaceAll(`{${k}}`, String(v)), t(`email_html_${issue.kind}`));
 }
 
-/** The first few HTML mistakes, one per line, and how many more there are. */
+/** A warning sentence with its <tags> in code type, the rest in the normal font. */
+function TagText({ text }: { text: string }) {
+    return (
+        <>
+            {text.split(/(<\/?[a-zA-Z0-9]+>)/).map((part, i) =>
+                i % 2 === 1 ? (
+                    <code key={i} className="font-mono">
+                        {part}
+                    </code>
+                ) : (
+                    part
+                ),
+            )}
+        </>
+    );
+}
+
+/** The first few HTML mistakes, one per line; "and N more" shows the rest. */
 function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: number }) {
     const t = useT();
-    const more = issues.length - limit;
+    const [showAll, setShowAll] = useState(false);
+    const shown = showAll ? issues : issues.slice(0, limit);
+    const hidden = issues.length - shown.length;
 
     return (
         <ul className="space-y-0.5">
-            {issues.slice(0, limit).map((issue, i) => (
-                <li key={i} className="font-mono">
-                    {describeHtmlIssue(issue, t)}
+            {shown.map((issue, i) => (
+                <li key={i}>
+                    <TagText text={describeHtmlIssue(issue, t)} />
                 </li>
             ))}
-            {more > 0 && <li>{t('email_html_more').replace('{count}', String(more))}</li>}
+            {hidden > 0 && (
+                <li>
+                    <button type="button" onClick={() => setShowAll(true)} className="underline underline-offset-2 hover:no-underline">
+                        {t('email_html_more').replace('{count}', String(hidden))}
+                    </button>
+                </li>
+            )}
         </ul>
     );
 }
@@ -273,9 +298,63 @@ function highlightHtml(src: string): string {
     return out;
 }
 
-// Body overlay needs a trailing newline so its height tracks the textarea's.
-function highlightBody(src: string): string {
-    return highlightHtml(src) + '\n';
+/** One line coloured like the rest, with the parts `marks` cover underlined in red. */
+function highlightLine(text: string, from: number, marks: HtmlIssue[]): string {
+    const to = from + text.length;
+    const cuts = marks
+        .filter((mark) => mark.start < to && mark.end > from)
+        .map((mark) => [Math.max(mark.start, from) - from, Math.min(mark.end, to) - from] as const)
+        .sort((a, b) => a[0] - b[0]);
+    let out = '';
+    let at = 0;
+    for (const [cutStart, cutEnd] of cuts) {
+        if (cutEnd <= at) continue;
+        const begin = Math.max(cutStart, at);
+        out += highlightHtml(text.slice(at, begin));
+        // An underline, not a background or bold: anything that changes glyph width would
+        // drift the caret (laid out by the textarea, not this layer) out of alignment.
+        out += `<span class="underline decoration-red-500 decoration-wavy underline-offset-2">${highlightHtml(text.slice(begin, cutEnd))}</span>`;
+        at = cutEnd;
+    }
+    return out + highlightHtml(text.slice(at));
+}
+
+/**
+ * The body editor's colour layer, drawn one real line at a time with its number in the left
+ * column. A long line wraps onto rows with no number of their own, so the numbers are the
+ * ones the HTML warnings quote; the lines they name get a red number and their tag a red
+ * underline. Each row is its own block, so an empty line still takes a row's height.
+ */
+function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlIssue[]; layerRef: RefObject<HTMLDivElement | null> }) {
+    const markedLines = new Set(marks.map((mark) => mark.line));
+    let offset = 0;
+    const rows = value.split('\n').map((text, i) => {
+        const html = highlightLine(text, offset, marks);
+        offset += text.length + 1;
+        return { number: i + 1, html };
+    });
+
+    return (
+        <div
+            ref={layerRef}
+            aria-hidden="true"
+            className="text-foreground pointer-events-none absolute inset-0 overflow-hidden py-2 pr-3 font-mono text-xs break-words whitespace-pre-wrap [scrollbar-gutter:stable]"
+        >
+            {rows.map((row) => (
+                <div key={row.number} className="relative pl-11">
+                    <span
+                        className={cn(
+                            'absolute left-0 w-8 text-right select-none',
+                            markedLines.has(row.number) ? 'text-red-500' : 'text-muted-foreground/60',
+                        )}
+                    >
+                        {row.number}
+                    </span>
+                    <span dangerouslySetInnerHTML={{ __html: row.html || '&#8203;' }} />
+                </div>
+            ))}
+        </div>
+    );
 }
 
 // Single quick-tool button in the Body editor toolbar (icon + tooltip).
@@ -812,12 +891,9 @@ function BodyEditor({
                     Both layers are absolute now, so the box's height comes from the column
                     rather than from a row count. */}
                 <div className="relative min-h-[10rem] flex-1">
-                    <div
-                        ref={hlRef}
-                        aria-hidden="true"
-                        className="text-foreground pointer-events-none absolute inset-0 overflow-hidden px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap"
-                        dangerouslySetInnerHTML={{ __html: highlightBody(value) }}
-                    />
+                    {/* The line-number column's background, still while the lines scroll. */}
+                    <div aria-hidden="true" className="bg-muted/40 border-border pointer-events-none absolute inset-y-0 left-0 w-9 border-r" />
+                    <BodyHighlight value={value} marks={htmlIssues} layerRef={hlRef} />
                     <textarea
                         ref={ref}
                         value={value}
@@ -830,7 +906,7 @@ function BodyEditor({
                             }
                         }}
                         spellCheck={false}
-                        className="caret-foreground absolute inset-0 block h-full w-full resize-none overflow-auto bg-transparent px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none"
+                        className="caret-foreground absolute inset-0 block h-full w-full resize-none overflow-auto bg-transparent py-2 pr-3 pl-11 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none [scrollbar-gutter:stable]"
                     />
                 </div>
             </div>
@@ -841,7 +917,7 @@ function BodyEditor({
                     className="mt-2 flex shrink-0 gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
                 >
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <div className="min-w-0">
+                    <div className="max-h-28 min-w-0 overflow-y-auto">
                         <HtmlIssueList issues={htmlIssues} />
                         <p className="mt-0.5 opacity-80">{t('email_html_hint')}</p>
                     </div>
