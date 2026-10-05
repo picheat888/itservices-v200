@@ -47,7 +47,7 @@ export const email: Dict = {
     email_html_more: 'และอีก {count} จุด',
     email_html_hint: 'พรีวิวอาจดูปกติ แต่โปรแกรมอีเมลบางตัวจะแสดงเพี้ยน',
     email_html_ok: 'HTML ถูกต้อง',
-    email_html_bad: 'HTML syntax error. Please see.',
+    email_html_bad: 'HTML Syntax error',
     email_html_line_count: '{count} บรรทัด',
     email_html_list_title: 'HTML ที่ควรแก้',
     email_var_unknown_text: 'ตัวแปรเหล่านี้ไม่มีค่าในอีเมลนี้ ผู้รับจะเห็นเป็นข้อความตรง ๆ:',
