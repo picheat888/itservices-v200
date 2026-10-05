@@ -4,7 +4,7 @@ import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemp
 import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
 import { findHtmlIssues, htmlIssueMessage, type HtmlIssue } from '@/modules/email-templates/lib/html-issues';
 import { NotificationSettingsPane, NotificationSettingsStats } from '@/modules/notification';
-import { settingsApi, useSettings } from '@/modules/settings';
+import { useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
@@ -548,7 +548,6 @@ export default function EmailTemplatesPage() {
     }, []);
     const [search, setSearch] = useState(savedFilters.search ?? '');
     const [module, setModule] = useState(savedFilters.module ?? '');
-    const [pageTesting, setPageTesting] = useState(false);
 
     // The active tab lives in the URL only (?tab=), so a reload or a shared link lands on
     // the same half of the screen, and Back steps through the tabs pressed (useTabParam).
@@ -721,25 +720,6 @@ export default function EmailTemplatesPage() {
         });
     };
 
-    const sendPageTest = async () => {
-        setPageTesting(true);
-        try {
-            const res = await settingsApi.testMail();
-            useToastStore
-                .getState()
-                .push(
-                    res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'),
-                    res.sent ? 'success' : 'error',
-                    res.sent ? undefined : t('email_test_failed_title'),
-                );
-        } catch (e: unknown) {
-            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
-        } finally {
-            setPageTesting(false);
-        }
-    };
-
     return (
         <div className="space-y-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -747,8 +727,8 @@ export default function EmailTemplatesPage() {
                     <h1 className="text-2xl font-bold">{t('email_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('email_sub')}</p>
                 </div>
-                {/* Both actions belong to the email templates; the Bell tab has its own
-                    per-bell reset and nothing to send. */}
+                {/* Belongs to the email templates; the Bell tab has its own per-bell reset. A test
+                    send lives in each template's editor (and the SMTP check in Settings). */}
                 <div className={cn('flex gap-2', tab === 'notification' && 'hidden')}>
                     {anyModified && (
                         <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending} title={t('email_reset_all')}>
@@ -756,10 +736,6 @@ export default function EmailTemplatesPage() {
                             {t('email_reset_all')}
                         </Button>
                     )}
-                    <Button variant="outline" onClick={sendPageTest} disabled={pageTesting}>
-                        {pageTesting && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {t('email_test')}
-                    </Button>
                 </div>
             </div>
 
