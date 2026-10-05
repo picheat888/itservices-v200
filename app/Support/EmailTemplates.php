@@ -194,7 +194,8 @@ You can tracking progress in {{app.name}}.</p>
                 // different questions — what nobody has picked up, and what the team is
                 // holding — so they are separate variables rather than one merged table.
                 // The wording is the administrator's own (edited on the live system 2026-10-05):
-                // the two counts and their total ({{digest.total}}) up top, then each table.
+                // the two counts as a list, their total ({{digest.total}}) as a last item with no bullet
+                // (list-style:none keeps it a real <li>, which Outlook needs), then each table.
                 'key' => 'ticket.weekly_digest',
                 'name' => 'Ticket Weekly summary (สรุป Ticket ค้างประจำสัปดาห์)',
                 'subject' => 'Weekly Pending Tickets Summary – {{digest.total}} Tickets',
@@ -205,7 +206,7 @@ You can tracking progress in {{app.name}}.</p>
 <ul>
   <li>🕒 Waiting to be assigned: <strong>{{digest.open_count}} tickets</strong></li>
   <li>🔄 In progress / Not completed: <strong>{{digest.working_count}} tickets</strong></li>
-  <li><strong>Total pending: {{digest.total}} tickets</strong></li>
+  <li style="list-style:none"><strong>Total pending: {{digest.total}} tickets</strong></li>
 </ul>
 <p><strong>🕒 Waiting to be assigned: {{digest.open_count}} tickets</strong></p>
 {{digest.open_table}}
