@@ -243,7 +243,7 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
                     onKeyDown={(e) => {
                         if (e.key === 'Escape') setOpen(false);
                     }}
-                    className="w-[min(28rem,85vw)] p-0 text-xs"
+                    className="w-[min(34rem,90vw)] p-0 text-xs"
                 >
                     <div className="border-border flex items-center gap-2 border-b px-3 py-2">
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-600 dark:text-red-400" />
