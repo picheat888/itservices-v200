@@ -164,17 +164,21 @@ function templateAudience(t: (key: string) => string, key: string): { when: stri
     return { when, to: t(`email_to_${id}`) };
 }
 
-/** The editor header's "When: … · To: …" line; the technical key for a template it can't describe. */
+/** The editor header's "When: …   To: …" line; the technical key for a template it can't describe. */
 function TemplateAudienceLine({ templateKey }: { templateKey: string }) {
     const t = useT();
     const audience = templateAudience(t, templateKey);
     if (!audience) return <span className="text-muted-foreground font-mono text-xs">{templateKey}</span>;
 
     return (
-        <span title={templateKey} className="text-muted-foreground text-xs">
-            {t('email_when_label')} <span className="text-foreground">{audience.when}</span>
-            <span className="mx-1.5">·</span>
-            {t('email_to_label')} <span className="text-foreground">{audience.to}</span>
+        // Two label/value pairs set apart by space alone: the muted labels already mark where each starts.
+        <span title={templateKey} className="text-muted-foreground inline-flex flex-wrap gap-x-5 text-xs">
+            <span>
+                {t('email_when_label')} <span className="text-foreground">{audience.when}</span>
+            </span>
+            <span>
+                {t('email_to_label')} <span className="text-foreground">{audience.to}</span>
+            </span>
         </span>
     );
 }
