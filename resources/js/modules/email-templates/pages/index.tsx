@@ -104,7 +104,10 @@ const SAMPLE_VARS: Record<string, string> = {
     'employee.working': '01-09-2026',
     'digest.count': '2',
     'digest.open_count': '2',
-    'digest.working_count': '3',
+    // The same numbers as the API's preview sample (EmailTemplateController), so the subject line
+    // above the preview agrees with the body: 2 waiting + 1 in progress = 3.
+    'digest.working_count': '1',
+    'digest.total': '3',
     'digest.expiring_count': '2',
     'digest.overdue_count': '1',
     // Overridden with the real brand where it is rendered; this is the chip-list entry.
@@ -1288,15 +1291,16 @@ function EditorDialog({
                                 ) : undefined
                             }
                             headerRight={
-                                <div className="flex shrink-0 items-center gap-4">
-                                    {/* Only once a person has reworded it — the seeded date alone says nothing. */}
-                                    {template.updated_by_name && (
-                                        <RecordStamps className="text-right" updatedAt={template.updated_at} updatedBy={template.updated_by_name} />
-                                    )}
+                                // The switch on top, who last reworded it right-aligned under it.
+                                <div className="flex shrink-0 flex-col items-end gap-1">
                                     <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
                                         <span className="text-muted-foreground">{t('email_enabled')}</span>
                                         <SettingToggle on={enabled} onClick={() => setEnabled((v) => !v)} />
                                     </label>
+                                    {/* Only once a person has reworded it — the seeded date alone says nothing. */}
+                                    {template.updated_by_name && (
+                                        <RecordStamps className="text-right" updatedAt={template.updated_at} updatedBy={template.updated_by_name} />
+                                    )}
                                 </div>
                             }
                         />

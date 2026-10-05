@@ -146,7 +146,7 @@ class TicketStaffNotificationTest extends TestCase
     public function test_the_weekly_digest_lists_untaken_and_unfinished_cases(): void
     {
         Queue::fake();
-        $this->template('ticket.weekly_digest', '<p>{{digest.open_count}}|{{digest.working_count}}</p>{{digest.open_table}}{{digest.working_table}}');
+        $this->template('ticket.weekly_digest', '<p>{{digest.open_count}}|{{digest.working_count}}|{{digest.total}}</p>{{digest.open_table}}{{digest.working_table}}');
         $reader = $this->accountWith([...self::BASE, 'tickets.level_network'], 'Reader');
         $holder = $this->accountWith([...self::BASE, 'tickets.level_network'], 'Holder');
 
@@ -165,7 +165,8 @@ class TicketStaffNotificationTest extends TestCase
         $this->assertCount(2, $jobs, 'both readers of this level get their own copy');
         $mine = collect($jobs)->firstWhere('toEmail', $reader->email);
         $this->assertNotNull($mine);
-        $this->assertStringContainsString('1|1', $mine->html);
+        // One waiting, one being worked on: two in all ({{digest.total}}).
+        $this->assertStringContainsString('1|1|2', $mine->html);
         $this->assertStringContainsString('Nobody has taken this', $mine->html);
         $this->assertStringContainsString('Somebody is on this', $mine->html);
         // Team-wide, so a case in a colleague's hands has to name them.
