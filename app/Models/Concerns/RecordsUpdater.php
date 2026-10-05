@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Auth;
  * own bookkeeping (a template's last_sent_at) does not count as an edit.
  *
  * On its own it serves records that are only ever edited, never added by a person: the
- * notification and email templates. App\Models\Concerns\RecordsActors adds created_by on top.
+ * notification and email templates, and the workflows. App\Models\Concerns\RecordsActors adds
+ * created_by on top.
  */
 trait RecordsUpdater
 {

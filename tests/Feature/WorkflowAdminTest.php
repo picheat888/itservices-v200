@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Request\RequestStatus;
+use App\Models\AuditLog;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
@@ -110,6 +111,36 @@ class WorkflowAdminTest extends TestCase
             ->assertJsonPath('data.steps.2.kind', 'completion');
 
         $this->assertSame([1, 2, 3], $workflow->fresh()->steps->pluck('position')->all());
+    }
+
+    public function test_a_save_records_who_made_it_even_when_only_the_steps_changed(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+        // Seeded, so nobody has saved it yet.
+        $this->assertNull($workflow->updated_by);
+        $this->travel(5)->minutes();
+
+        // Same name and flags — only the steps differ, which leaves the workflow row itself clean.
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'name' => $workflow->name,
+            'active' => $workflow->active,
+            'auto_ticket' => $workflow->auto_ticket,
+            'steps' => [
+                [
+                    'actor_type' => 'chain', 'label' => 'Director', 'kind' => 'approval',
+                    'position_ids' => [Position::where('title', 'Director')->firstOrFail()->id],
+                ],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
+            ],
+        ])->assertOk()->assertJsonPath('data.updated_by_name', $this->admin->name);
+
+        $fresh = $workflow->fresh();
+        $this->assertSame($this->admin->id, $fresh->updated_by);
+        $this->assertTrue($fresh->updated_at->greaterThan($workflow->updated_at));
+        $this->assertSame(1, AuditLog::forSubject($workflow)->where('action', 'Updated workflow')->count());
+
+        $this->actingAs($this->admin)->getJson('/api/workflows')->assertOk()
+            ->assertJsonFragment(['request_type' => 'computer', 'updated_by_name' => $this->admin->name]);
     }
 
     public function test_a_department_step_saves_its_department_and_its_group(): void

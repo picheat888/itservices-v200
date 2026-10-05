@@ -3,6 +3,7 @@
 namespace App\Models\Workflow;
 
 use App\Enums\Request\RequestType;
+use App\Models\Concerns\RecordsUpdater;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Workflow extends Model
 {
+    use RecordsUpdater;
+
     protected $fillable = ['request_type', 'name', 'active', 'auto_ticket'];
 
     protected function casts(): array

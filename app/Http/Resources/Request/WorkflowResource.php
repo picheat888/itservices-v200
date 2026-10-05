@@ -30,6 +30,8 @@ class WorkflowResource extends JsonResource
             // when nothing on this route was decided in the window.
             'measured' => $this->measured ?? null,
             'updated_at' => $this->updated_at?->toDateTimeString(),
+            // Who saved it last (null while nobody has) — the name when the updater was loaded.
+            'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
         ];
     }
 }

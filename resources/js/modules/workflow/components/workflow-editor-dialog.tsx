@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useDepartmentMembers, useDepartments } from '@/modules/employee';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -249,6 +250,9 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                     title={wf.name}
                     subtitle={<span className="text-muted-foreground text-xs">{t(REQUEST_TYPE_META[wf.request_type].labelKey)}</span>}
                     srDescription={t('wf_sub')}
+                    headerRight={
+                        wf.updated_by_name && <RecordStamps className="text-right" updatedAt={wf.updated_at} updatedBy={wf.updated_by_name} />
+                    }
                 />
 
                 <div className="border-border/60 flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">

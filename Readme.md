@@ -4516,3 +4516,14 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
   - `ActorStampsTest` เพิ่มทะเบียนสิทธิ์ 4 แบบ (data provider), เทมเพลตอีเมล (ส่งเมลไม่นับเป็นการแก้), แจ้งเตือน
   - `EmailTemplateResetTest` เพิ่ม 1 test
   - ทั้งระบบ 1628 passed · ตรวจใน Chrome แล้ว
+
+### ใครบันทึก Workflow ล่าสุด (workflows.updated_by) — 2026-10-05
+- migration `2026_10_05_084536_add_updated_by_to_workflows_table` (**รันบน DB จริงแล้ว**):
+  - `workflows.updated_by` (FK → users แบบ null on delete) ใช้ `RecordsUpdater`
+  - ไม่มี created_by เพราะ workflow ถูก seed ไว้ประเภทคำขอละ 1 แถว สร้าง/ลบเองไม่ได้
+  - ตารางขั้นตอน (`workflow_steps` + pivot ตำแหน่ง/ผู้อนุมัติ) ไม่เพิ่ม เพราะทุกการบันทึกลบแล้วสร้างใหม่ ค่าจะซ้ำกับ workflow เสมอ
+  - เติมค่าย้อนหลังจาก log "Updated workflow" ด้วย `details.workflow_id` (DB จริงยังไม่มี log จึงว่างทั้ง 13 แถว)
+- `WorkflowController::update` เรียก `touch()` หลังบันทึก — แก้เฉพาะขั้นตอนก็นับเป็นการแก้ไข (`updated_at`/`updated_by` ขยับ)
+- API: `WorkflowResource.updated_by_name` (index และผลลัพธ์ของ update)
+- UI: หน้าต่างดูและแก้ไข Workflow แสดง "แก้ไขล่าสุด … โดย …" เมื่อเคยมีคนบันทึกแล้ว · `RecordStamps` รับวันที่แบบมีเวลาได้
+- Tests: `WorkflowAdminTest` เพิ่ม 1 test (แก้แค่ขั้นตอนก็ประทับ) · ทั้งระบบ 1629 passed

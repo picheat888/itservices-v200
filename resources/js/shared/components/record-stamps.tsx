@@ -27,7 +27,7 @@ export function RecordStamps({
     const lang = useUiStore((s) => s.lang);
     const line = (label: string, date?: string | null, by?: string | null) => (
         <div>
-            {label} {date ? formatDateShort(date, lang) : '—'}
+            {label} {date ? formatDateShort(date.slice(0, 10), lang) : '—'}
             {by && ` ${t('record_by')} ${by}`}
         </div>
     );
