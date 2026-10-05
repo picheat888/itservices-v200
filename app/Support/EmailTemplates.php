@@ -418,6 +418,8 @@ You can tracking progress in {{app.name}}.</p>
 <p style="color:#64748b">If you think an error has occurred, please contact IT.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
+                // Sent but not in the standard wording: who handed it over.
+                'variables' => ['asset.from'],
             ],
             [
                 // Goes to whoever can receive assets back into the pool, not to the holder —
@@ -436,6 +438,8 @@ You can tracking progress in {{app.name}}.</p>
 <strong style="color:#64748b">Returned by:</strong> {{asset.holder}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
+                // Sent but not in the standard wording.
+                'variables' => ['asset.type'],
             ],
             [
                 // One mail per departure, matching the single bell — a leaver holding five
@@ -804,6 +808,31 @@ This report summarizes all items that currently require attention:</p>
     public static function widthFor(?string $key): int
     {
         return (int) (self::find((string) $key)['width'] ?? self::DEFAULT_WIDTH);
+    }
+
+    /**
+     * The variables a template's mail is actually given, A-Z — what the editor offers to
+     * insert and what it accepts without a warning. Anything else stays as literal
+     * {{text}} in the sent mail, because the renderer only replaces what it is handed.
+     *
+     * Read from the standard wording itself (every variable it uses is one the sender
+     * supplies), plus the entry's 'variables' for the ones sent but left out of the
+     * wording, plus the global {{app.name}}. Null for a key with no standard.
+     *
+     * @return list<string>|null
+     */
+    public static function variablesFor(string $key): ?array
+    {
+        $template = self::find($key);
+        if ($template === null) {
+            return null;
+        }
+
+        preg_match_all('/\{\{([a-z0-9_.]+)\}\}/', $template['subject'].' '.$template['body_html'], $matches);
+        $variables = array_unique([...$matches[1], ...($template['variables'] ?? []), 'app.name']);
+        sort($variables);
+
+        return array_values($variables);
     }
 
     /**
