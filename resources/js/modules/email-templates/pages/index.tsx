@@ -15,7 +15,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -43,6 +43,7 @@ import {
     Send,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
 //
@@ -547,7 +548,6 @@ export default function EmailTemplatesPage() {
     }, []);
     const [search, setSearch] = useState(savedFilters.search ?? '');
     const [module, setModule] = useState(savedFilters.module ?? '');
-    const [editing, setEditing] = useState<EmailTemplate | null>(null);
     const [pageTesting, setPageTesting] = useState(false);
 
     // The active tab lives in the URL only (?tab=), so a reload or a shared link lands on
@@ -562,6 +562,30 @@ export default function EmailTemplatesPage() {
 
     const templates = useMemo(() => data?.data ?? [], [data]);
     const stats = data?.stats;
+
+    // The editor is URL-driven (?edit=<id>), like the contract dialog's ?view=: a reload or a
+    // shared link reopens it on the same template, and closing drops the param.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const editId = toRecordId(searchParams.get('edit'));
+    const editing = editId === null ? null : (templates.find((tp) => tp.id === editId) ?? null);
+    const setEditing = (tp: EmailTemplate | null) =>
+        setSearchParams(
+            (sp) => {
+                const next = new URLSearchParams(sp);
+                if (tp) {
+                    next.set('edit', String(tp.id));
+                } else {
+                    next.delete('edit');
+                }
+                return next;
+            },
+            { replace: true },
+        );
+    // A link to a template that no longer exists opens nothing; drop the dead param.
+    useEffect(() => {
+        if (data && editId !== null && !editing) setEditing(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data, editId, editing]);
 
     // Derive unique module prefixes from keys (e.g. "ticket" from "ticket.created")
     const modules = useMemo(() => {
