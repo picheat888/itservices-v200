@@ -21,12 +21,14 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import {
     AlertTriangle,
     Bold,
     Check,
+    ChevronUp,
     CornerDownLeft,
     Italic,
     Link2,
@@ -187,6 +189,83 @@ function TagText({ text }: { text: string }) {
     );
 }
 
+/**
+ * One line under the body editor saying whether its HTML is sound: blue when it is, red with
+ * the count and the lines when it is not. Its height never changes, so the editor keeps its
+ * size however many problems there are; the full list opens over the editor on click.
+ */
+function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: number }) {
+    const t = useT();
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const [open, setOpen] = useState(false);
+    // Inside the modal editor the list must portal into the dialog, or its clicks are dead.
+    const [container, setContainer] = useState<HTMLElement | null>(null);
+    const total = (
+        <span className="text-muted-foreground ml-auto font-mono text-[11px]">
+            {t('email_html_line_count').replace('{count}', String(lineCount))}
+        </span>
+    );
+
+    if (issues.length === 0) {
+        return (
+            <div role="status" className="border-border bg-brand/5 text-brand flex h-7 shrink-0 items-center gap-1.5 border-t px-2.5 text-xs">
+                <Check className="h-3.5 w-3.5" />
+                {t('email_html_ok')}
+                {total}
+            </div>
+        );
+    }
+
+    const lines = Array.from(new Set(issues.map((issue) => issue.line)));
+    const lineText = lines.slice(0, 5).join(', ') + (lines.length > 5 ? ', …' : '');
+
+    return (
+        <div
+            role="status"
+            className="flex h-7 shrink-0 items-center gap-1.5 border-t border-red-200 bg-red-50 px-2.5 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
+            <Popover
+                open={open}
+                onOpenChange={(next) => {
+                    if (next) setContainer((triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? null);
+                    setOpen(next);
+                }}
+            >
+                <PopoverTrigger asChild>
+                    <button
+                        ref={triggerRef}
+                        type="button"
+                        className="inline-flex min-w-0 items-center gap-1.5 rounded font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-hidden"
+                    >
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        {t('email_html_bad').replace('{count}', String(issues.length))}
+                        <span className="truncate font-normal opacity-80">{t('email_html_lines').replace('{lines}', lineText)}</span>
+                        <ChevronUp className={cn('h-3.5 w-3.5 shrink-0 transition-transform', open && 'rotate-180')} />
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent
+                    container={container}
+                    side="top"
+                    align="start"
+                    // The editor sees Esc first and marks it handled (so it stays open), which
+                    // stops Radix closing this list on Esc — close it here instead.
+                    onKeyDown={(e) => {
+                        if (e.key === 'Escape') setOpen(false);
+                    }}
+                    className="w-[min(26rem,85vw)] space-y-2 text-xs"
+                >
+                    <p className="text-muted-foreground font-semibold">{t('email_html_list_title')}</p>
+                    <div className="max-h-60 overflow-y-auto">
+                        <HtmlIssueList issues={issues} limit={issues.length} />
+                    </div>
+                    <p className="text-muted-foreground">{t('email_html_hint')}</p>
+                </PopoverContent>
+            </Popover>
+            {total}
+        </div>
+    );
+}
+
 /** The first few HTML mistakes, one per line; "and N more" shows the rest. */
 function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: number }) {
     const t = useT();
@@ -324,9 +403,12 @@ function highlightLine(text: string, from: number, marks: HtmlIssue[]): string {
  * column. A long line wraps onto rows with no number of their own, so the numbers are the
  * ones the HTML warnings quote; the lines they name get a red number and their tag a red
  * underline. Each row is its own block, so an empty line still takes a row's height.
+ *
+ * A red number shows its line's problems on hover. The textarea starts right of the number
+ * column, so the column is the one part of this layer the pointer can reach.
  */
 function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlIssue[]; layerRef: RefObject<HTMLDivElement | null> }) {
-    const markedLines = new Set(marks.map((mark) => mark.line));
+    const t = useT();
     let offset = 0;
     const rows = value.split('\n').map((text, i) => {
         const html = highlightLine(text, offset, marks);
@@ -340,19 +422,35 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
             aria-hidden="true"
             className="text-foreground pointer-events-none absolute inset-0 overflow-hidden py-2 pr-3 font-mono text-xs break-words whitespace-pre-wrap [scrollbar-gutter:stable]"
         >
-            {rows.map((row) => (
-                <div key={row.number} className="relative pl-11">
-                    <span
-                        className={cn(
-                            'absolute left-0 w-8 text-right select-none',
-                            markedLines.has(row.number) ? 'text-red-500' : 'text-muted-foreground/60',
-                        )}
-                    >
-                        {row.number}
-                    </span>
-                    <span dangerouslySetInnerHTML={{ __html: row.html || '&#8203;' }} />
-                </div>
-            ))}
+            {rows.map((row) => {
+                const lineIssues = marks.filter((mark) => mark.line === row.number);
+
+                return (
+                    <div key={row.number} className="relative pl-11">
+                        <span
+                            className={cn(
+                                'absolute left-0 w-8 text-right select-none',
+                                lineIssues.length > 0 ? 'group pointer-events-auto cursor-help text-red-500' : 'text-muted-foreground/60',
+                            )}
+                        >
+                            {row.number}
+                            {lineIssues.length > 0 && (
+                                <span
+                                    role="tooltip"
+                                    className="bg-foreground text-background invisible absolute top-0 left-full z-10 ml-2 w-max max-w-xs space-y-0.5 rounded-md px-2 py-1 text-left font-sans text-[11px] leading-snug whitespace-normal shadow-md group-hover:visible"
+                                >
+                                    {lineIssues.map((issue, i) => (
+                                        <span key={i} className="block">
+                                            <TagText text={describeHtmlIssue(issue, t)} />
+                                        </span>
+                                    ))}
+                                </span>
+                            )}
+                        </span>
+                        <span dangerouslySetInnerHTML={{ __html: row.html || '&#8203;' }} />
+                    </div>
+                );
+            })}
         </div>
     );
 }
@@ -906,23 +1004,11 @@ function BodyEditor({
                             }
                         }}
                         spellCheck={false}
-                        className="caret-foreground absolute inset-0 block h-full w-full resize-none overflow-auto bg-transparent py-2 pr-3 pl-11 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none [scrollbar-gutter:stable]"
+                        className="caret-foreground absolute inset-y-0 right-0 left-9 block h-full resize-none overflow-auto bg-transparent py-2 pr-3 pl-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none [scrollbar-gutter:stable]"
                     />
                 </div>
+                <HtmlStatusBar issues={htmlIssues} lineCount={value.split('\n').length} />
             </div>
-
-            {htmlIssues.length > 0 && (
-                <div
-                    role="status"
-                    className="mt-2 flex shrink-0 gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-                >
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <div className="max-h-28 min-w-0 overflow-y-auto">
-                        <HtmlIssueList issues={htmlIssues} />
-                        <p className="mt-0.5 opacity-80">{t('email_html_hint')}</p>
-                    </div>
-                </div>
-            )}
 
             {tokens.length > 0 && (
                 <div className="mt-3 shrink-0">
@@ -1474,6 +1560,9 @@ function EditorDialog({
             <DialogContent
                 onEscapeKeyDown={(e) => {
                     e.preventDefault();
+                    // Esc with the HTML problem list open closes only the list: this handler runs
+                    // first and marks the key handled, so the list closes itself (HtmlStatusBar).
+                    if (document.querySelector('[role="dialog"] [data-radix-popper-content-wrapper]')) return;
                     requestClose();
                 }}
                 // A click outside asks to close; focus leaving does not. Opening a confirm (save
