@@ -46,7 +46,7 @@ export const email: Dict = {
     email_html_line: 'Line {line}:',
     email_html_more: 'and {count} more',
     email_html_hint: 'The preview may look fine, but some mail clients will show it differently.',
-    email_html_ok: 'HTML looks good',
+    email_html_ok: 'No syntax errors',
     email_html_bad: 'HTML Syntax error',
     email_html_line_count: '{count} lines',
     email_html_list_title: 'HTML to fix',
