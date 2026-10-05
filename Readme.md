@@ -4571,3 +4571,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
   - API `/notification-templates` ส่ง `id` และ `code` (`NT-%02d` จาก id เหมือน ET-##) · แสดงเฉพาะรายการที่มีแถวในฐานข้อมูล เหมือน Email Template — **ต้องรัน seeder ทุกครั้งที่ขึ้นระบบ** (`DatabaseSeeder` เรียก `NotificationTemplateSeeder` อยู่แล้ว, firstOrCreate ไม่ทับข้อความที่แก้ไว้)
   - รัน `NotificationTemplateSeeder` บน DB จริงแล้ว: 44 → 48 แถว (ครบตามรายการตั้งต้น)
   - Tests: `ProductionSeedTest` ตรวจจำนวนแถว notification ครบ · `NotificationTemplateTest` เพิ่ม 1 test (id/code และรายการไม่มีแถวไม่แสดง) · test ที่อ่านรายการ seed ก่อน · Notification/ProductionSeed/ActorStamps 130 passed · ตรวจใน Chrome แล้ว
+- **เอาปุ่ม "ส่งทดสอบ" มุมขวาบนของหน้า Email & Notification ออก** (2026-10-05) — ส่งทดสอบยังทำได้ในหน้าต่างแก้ไขแต่ละเทมเพลต และทดสอบ SMTP ในหน้าตั้งค่า · lang key `email_test` / `email_test_sent` ยังใช้ที่อื่น ไม่ลบ · ตรวจใน Chrome แล้ว
