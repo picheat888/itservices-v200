@@ -22,7 +22,23 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Bold, Check, CornerDownLeft, Italic, Link2, List, Loader2, Mail, PenLine, Pilcrow, RotateCcw, Save, Search, Send } from 'lucide-react';
+import {
+    AlertTriangle,
+    Bold,
+    Check,
+    CornerDownLeft,
+    Italic,
+    Link2,
+    List,
+    Loader2,
+    Mail,
+    PenLine,
+    Pilcrow,
+    RotateCcw,
+    Save,
+    Search,
+    Send,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
@@ -132,6 +148,20 @@ const SAMPLE_VARS: Record<string, string> = {
 // Every variable an author can insert, A-Z. SAMPLE_VARS is grouped by module for whoever
 // maintains it; the menu is read by someone hunting for one name, and hunting is alphabetical.
 const VARIABLE_NAMES = Object.keys(SAMPLE_VARS).sort((a, b) => a.localeCompare(b));
+
+/** The {{variables}} in a piece of wording, without duplicates. */
+function variablesIn(text: string): string[] {
+    return Array.from(new Set(Array.from(text.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
+}
+
+/**
+ * The tokens this template's mail is not given — a typo, or one from another event. The
+ * sender only replaces what it hands over, so these would reach the reader as literal
+ * {{text}}. None when the template has no known list (a custom template).
+ */
+function unknownVariables(tokens: string[], variables: string[] | null): string[] {
+    return variables ? tokens.filter((tk) => !variables.includes(tk)) : [];
+}
 
 // Short notes for the "magic" placeholders that aren't a simple field — shown
 // beside the variable chips in the Edit drawer so a short body doesn't look broken.
@@ -586,6 +616,7 @@ export default function EmailTemplatesPage() {
                 onClose={() => setEditing(null)}
                 onSave={(payload) => (editing ? update.mutateAsync({ id: editing.id, payload }) : Promise.resolve())}
                 saving={update.isPending}
+                onToggle={(id, enabled) => update.mutateAsync({ id, payload: { enabled } })}
                 onTest={(id, draft) => test.mutateAsync({ id, draft })}
                 testing={test.isPending}
                 onReset={(id) => reset.mutateAsync(id)}
@@ -646,7 +677,18 @@ function SubjectField({ value, onChange }: { value: string; onChange: (v: string
  * variable chips. Tools insert HTML at the caret or wrap the selection. `extraText`
  * (e.g. the subject) folds its variables into the chip list too.
  */
-function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChange: (v: string) => void; extraText?: string }) {
+function BodyEditor({
+    value,
+    onChange,
+    extraText = '',
+    variables,
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    extraText?: string;
+    /** What this template's mail is given; null offers every known variable and flags none. */
+    variables: string[] | null;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const ref = useRef<HTMLTextAreaElement>(null);
@@ -688,9 +730,11 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
     // The variables this template uses, A-Z. Occurrence order put them in whatever sequence
     // the wording happened to reach them, which reshuffles the row on every edit — a list you
     // scan for one name should keep names where you last saw them.
-    const tokens = Array.from(new Set(Array.from(`${extraText} ${value}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1]))).sort((a, b) =>
-        a.localeCompare(b),
-    );
+    const tokens = variablesIn(`${extraText} ${value}`).sort((a, b) => a.localeCompare(b));
+    // Offer only what this mail is given: the other ~60 belong to other events and would
+    // go out as literal {{text}}.
+    const offered = variables ?? VARIABLE_NAMES;
+    const unknownTokens = unknownVariables(tokens, variables);
 
     return (
         // A flex column so the editor takes the height its column has to give: it used to be
@@ -734,7 +778,7 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
                         className="text-muted-foreground hover:text-foreground ml-auto h-7 cursor-pointer rounded bg-transparent px-1.5 text-xs outline-none"
                     >
                         <option value="">{`{{ }} ${t('email_insert_var')}`}</option>
-                        {VARIABLE_NAMES.map((k) => (
+                        {offered.map((k) => (
                             <option key={k} value={k}>{`{{${k}}}`}</option>
                         ))}
                     </select>
@@ -770,20 +814,34 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
                 <div className="mt-3 shrink-0">
                     <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('email_variables')}</div>
                     <div className="flex max-h-[5.5rem] flex-wrap gap-1.5 overflow-y-auto">
-                        {tokens.map((tk) => (
-                            <button
-                                key={tk}
-                                type="button"
-                                onClick={() => insertVar(tk)}
-                                title={t('email_insert_var')}
-                                className="bg-muted hover:bg-accent inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors"
-                            >
-                                {`{{${tk}}}`}
-                                {VAR_NOTE[tk] && <span className="text-muted-foreground text-[10px]">· {VAR_NOTE[tk][lang]}</span>}
-                            </button>
-                        ))}
+                        {tokens.map((tk) => {
+                            const unknown = unknownTokens.includes(tk);
+
+                            return (
+                                <button
+                                    key={tk}
+                                    type="button"
+                                    onClick={() => insertVar(tk)}
+                                    title={unknown ? t('email_var_unknown') : t('email_insert_var')}
+                                    className={cn(
+                                        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors',
+                                        unknown
+                                            ? 'bg-red-50 text-red-700 ring-1 ring-red-300 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800'
+                                            : 'bg-muted hover:bg-accent',
+                                    )}
+                                >
+                                    {unknown && <AlertTriangle className="h-3 w-3" />}
+                                    {`{{${tk}}}`}
+                                    {VAR_NOTE[tk] && <span className="text-muted-foreground text-[10px]">· {VAR_NOTE[tk][lang]}</span>}
+                                </button>
+                            );
+                        })}
                     </div>
-                    <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
+                    {unknownTokens.length > 0 ? (
+                        <p className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">{t('email_var_unknown_hint')}</p>
+                    ) : (
+                        <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
+                    )}
                 </div>
             )}
         </div>
@@ -1102,6 +1160,7 @@ function EditorDialog({
     onClose,
     onSave,
     saving,
+    onToggle,
     onTest,
     testing,
     onReset,
@@ -1111,8 +1170,10 @@ function EditorDialog({
     /** The address the system really sends from, for the preview's From line. */
     fromAddress: string;
     onClose: () => void;
-    onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => Promise<unknown>;
+    onSave: (p: { name: string; subject: string; body_html: string }) => Promise<unknown>;
     saving: boolean;
+    /** Switches the template on or off straight away, the same call as the list's switch. */
+    onToggle: (id: number, enabled: boolean) => Promise<unknown>;
     /** Resolves with whether the mail actually left — a rejected address is not a thrown error. */
     onTest: (id: number, draft: { name: string; subject: string; body_html: string }) => Promise<{ sent: boolean }>;
     testing: boolean;
@@ -1127,10 +1188,13 @@ function EditorDialog({
     const [name, setName] = useState('');
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
+    // The switch saves the moment it is flipped (like the list's), so it is not part of the
+    // unsaved draft: closing without saving must not quietly undo it.
     const [enabled, setEnabled] = useState(true);
+    const [toggling, setToggling] = useState(false);
     // Saved/sent values to diff against (the Save button is disabled until something
     // changes) plus short-lived success flags for the button check marks.
-    const [base, setBase] = useState({ name: '', subject: '', body: '', enabled: true });
+    const [base, setBase] = useState({ name: '', subject: '', body: '' });
     const [savedOk, setSavedOk] = useState(false);
     const [sentOk, setSentOk] = useState(false);
     const [resetOk, setResetOk] = useState(false);
@@ -1144,7 +1208,7 @@ function EditorDialog({
             setSubject(template.subject);
             setBody(template.body_html);
             setEnabled(template.enabled);
-            setBase({ name: template.name, subject: template.subject, body: template.body_html, enabled: template.enabled });
+            setBase({ name: template.name, subject: template.subject, body: template.body_html });
             setPreviewHtml('');
             setSavedOk(false);
             setSentOk(false);
@@ -1152,18 +1216,46 @@ function EditorDialog({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
 
-    const dirty = name !== base.name || subject !== base.subject || body !== base.body || enabled !== base.enabled;
+    const dirty = name !== base.name || subject !== base.subject || body !== base.body;
 
     // Save: persist, flash a check, and reset the dirty baseline so the button greys out again.
+    // A variable this mail is not given would go out as literal {{text}}, so ask first.
     const handleSave = async () => {
         if (!template || !dirty || saving) return;
+        const unknown = unknownVariables(variablesIn(`${subject} ${body}`), template.variables);
+        if (
+            unknown.length > 0 &&
+            !(await confirm({
+                variant: 'warn',
+                title: t('email_var_unknown_title'),
+                description: `${t('email_var_unknown_text')} ${unknown.map((tk) => `{{${tk}}}`).join(', ')}`,
+                confirmText: t('email_var_unknown_confirm'),
+            }))
+        )
+            return;
         try {
-            await onSave({ name, subject, body_html: body, enabled });
-            setBase({ name, subject, body, enabled });
+            await onSave({ name, subject, body_html: body });
+            setBase({ name, subject, body });
             setSavedOk(true);
             window.setTimeout(() => setSavedOk(false), 1600);
         } catch {
             useToastStore.getState().push(t('cred_err_generic'), 'error');
+        }
+    };
+
+    // Flip the switch and save it at once; put it back if the save fails.
+    const handleToggle = async () => {
+        if (!template || toggling) return;
+        const next = !enabled;
+        setEnabled(next);
+        setToggling(true);
+        try {
+            await onToggle(template.id, next);
+        } catch {
+            setEnabled(!next);
+            useToastStore.getState().push(t('cred_err_generic'), 'error');
+        } finally {
+            setToggling(false);
         }
     };
 
@@ -1207,7 +1299,7 @@ function EditorDialog({
                     setSubject(next.subject);
                     setBody(next.body_html);
                     setEnabled(next.enabled);
-                    setBase({ name: next.name, subject: next.subject, body: next.body_html, enabled: next.enabled });
+                    setBase({ name: next.name, subject: next.subject, body: next.body_html });
                     setPreviewHtml('');
                 }
                 setResetOk(true);
@@ -1244,7 +1336,7 @@ function EditorDialog({
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [template, dirty, saving, name, subject, body, enabled]);
+    }, [template, dirty, saving, name, subject, body]);
 
     return (
         <Dialog open={!!template} onOpenChange={(o) => !o && requestClose()}>
@@ -1253,10 +1345,14 @@ function EditorDialog({
                     e.preventDefault();
                     requestClose();
                 }}
-                onInteractOutside={(e) => {
+                // A click outside asks to close; focus leaving does not. Opening a confirm (save
+                // with unknown variables, Reset) moves focus into it, and treating that as
+                // "outside" stacked the discard prompt over the one just asked.
+                onPointerDownOutside={(e) => {
                     e.preventDefault();
                     requestClose();
                 }}
+                onFocusOutside={(e) => e.preventDefault()}
                 className="flex h-[min(900px,90vh)] w-[min(1500px,92vw)] max-w-[min(1500px,92vw)] flex-col gap-0 overflow-hidden rounded-2xl p-0"
             >
                 {template && (
@@ -1295,7 +1391,7 @@ function EditorDialog({
                                 <div className="flex shrink-0 flex-col items-end gap-1">
                                     <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
                                         <span className="text-muted-foreground">{t('email_enabled')}</span>
-                                        <SettingToggle on={enabled} onClick={() => setEnabled((v) => !v)} />
+                                        <SettingToggle on={enabled} onClick={handleToggle} label={t('email_enabled')} />
                                     </label>
                                     {/* Only once a person has reworded it — the seeded date alone says nothing. */}
                                     {template.updated_by_name && (
@@ -1324,7 +1420,7 @@ function EditorDialog({
                                     <SubjectField value={subject} onChange={setSubject} />
                                 </Field>
                                 <Field label={t('email_body')} grow>
-                                    <BodyEditor value={body} onChange={setBody} extraText={subject} />
+                                    <BodyEditor value={body} onChange={setBody} extraText={subject} variables={template.variables} />
                                 </Field>
                             </div>
                         </div>

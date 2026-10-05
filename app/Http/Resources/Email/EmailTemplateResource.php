@@ -33,6 +33,8 @@ class EmailTemplateResource extends JsonResource
             // and whether the current row differs from it (drives the "modified" badge).
             'is_standard' => EmailTemplates::has($this->key),
             'is_modified' => $this->differsFromStandard(),
+            // The variables this template's mail is given (null for a custom template).
+            'variables' => EmailTemplates::variablesFor($this->key),
         ];
     }
 

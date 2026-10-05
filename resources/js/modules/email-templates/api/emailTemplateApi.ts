@@ -16,6 +16,8 @@ export interface EmailTemplate {
     updated_by_name?: string | null;
     is_standard: boolean; // has a standard definition (can be reset)
     is_modified: boolean; // differs from its standard definition
+    /** The variables this template's mail is given, A-Z; null for a custom template (no list known). */
+    variables: string[] | null;
 }
 
 export interface EmailTemplateStats {
