@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
 import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
-import { findHtmlIssues, type HtmlIssue } from '@/modules/email-templates/lib/html-issues';
+import { findHtmlIssues, htmlIssueMessage, type HtmlIssue } from '@/modules/email-templates/lib/html-issues';
 import { NotificationSettingsPane, NotificationSettingsStats } from '@/modules/notification';
 import { settingsApi, useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
@@ -166,10 +166,9 @@ function unknownVariables(tokens: string[], variables: string[] | null): string[
     return variables ? tokens.filter((tk) => !variables.includes(tk)) : [];
 }
 
-/** One HTML mistake as a sentence, e.g. "บรรทัด 5: แท็ก <strong> ยังไม่ได้ปิด". */
+/** One HTML mistake with its line, e.g. "บรรทัด 5: Stray end tag </p>." The message stays in English. */
 function describeHtmlIssue(issue: HtmlIssue, t: (key: string) => string): string {
-    const values: Record<string, string | number> = { ...issue };
-    return Object.entries(values).reduce((text, [k, v]) => text.replaceAll(`{${k}}`, String(v)), t(`email_html_${issue.kind}`));
+    return `${t('email_html_line').replace('{line}', String(issue.line))} ${htmlIssueMessage(issue)}`;
 }
 
 /** A warning sentence with its <tags> in code type, the rest in the normal font. */
@@ -408,7 +407,6 @@ function highlightLine(text: string, from: number, marks: HtmlIssue[]): string {
  * column, so the column is the one part of this layer the pointer can reach.
  */
 function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlIssue[]; layerRef: RefObject<HTMLDivElement | null> }) {
-    const t = useT();
     let offset = 0;
     const rows = value.split('\n').map((text, i) => {
         const html = highlightLine(text, offset, marks);
@@ -441,7 +439,7 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
                                 >
                                     {lineIssues.map((issue, i) => (
                                         <span key={i} className="block">
-                                            <TagText text={describeHtmlIssue(issue, t)} />
+                                            <TagText text={htmlIssueMessage(issue)} />
                                         </span>
                                     ))}
                                 </span>

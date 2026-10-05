@@ -134,3 +134,23 @@ export function findHtmlIssues(html: string): HtmlIssue[] {
 
     return issues.sort((a, b) => a.start - b.start);
 }
+
+/**
+ * The problem in the W3C HTML validator's own wording (e.g. "Stray end tag </p>."), left
+ * untranslated so it reads the same as any HTML tool and can be searched as is. The last
+ * kind is not a validator check, so it borrows the same sentence shape.
+ */
+export function htmlIssueMessage(issue: HtmlIssue): string {
+    switch (issue.kind) {
+        case 'unclosed':
+            return `Unclosed element <${issue.tag}>.`;
+        case 'stray':
+            return `Stray end tag </${issue.tag}>.`;
+        case 'misnested':
+            return `End tag </${issue.tag}> seen, but there were open elements (<${issue.inner}> on line ${issue.innerLine}).`;
+        case 'list_child':
+            return `Element <${issue.tag}> not allowed as child of element <${issue.parent}> in this context.`;
+        case 'unsupported':
+            return `Element <${issue.tag}> is not supported by some email clients.`;
+    }
+}
