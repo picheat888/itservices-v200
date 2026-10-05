@@ -189,9 +189,10 @@ function TagText({ text }: { text: string }) {
 }
 
 /**
- * One line under the body editor saying whether its HTML is sound: blue when it is, red with
- * the count and the lines when it is not. Its height never changes, so the editor keeps its
- * size however many problems there are; the full list opens over the editor on click.
+ * One line under the body editor saying whether its HTML is sound: blue when it is, a red
+ * "HTML syntax error" when it is not (the lines show red in the number column). Its height
+ * never changes, so the editor keeps its size however many problems there are; the full
+ * list opens over the editor on click.
  */
 function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: number }) {
     const t = useT();
@@ -215,9 +216,6 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
         );
     }
 
-    const lines = Array.from(new Set(issues.map((issue) => issue.line)));
-    const lineText = lines.slice(0, 5).join(', ') + (lines.length > 5 ? ', …' : '');
-
     return (
         <div
             role="status"
@@ -237,8 +235,7 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
                         className="inline-flex min-w-0 items-center gap-1.5 rounded font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-hidden"
                     >
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        {t('email_html_bad').replace('{count}', String(issues.length))}
-                        <span className="truncate font-normal opacity-80">{t('email_html_lines').replace('{lines}', lineText)}</span>
+                        {t('email_html_bad')}
                         <ChevronUp className={cn('h-3.5 w-3.5 shrink-0 transition-transform', open && 'rotate-180')} />
                     </button>
                 </PopoverTrigger>
