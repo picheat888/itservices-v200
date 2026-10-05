@@ -44,7 +44,7 @@ export const email: Dict = {
     email_check_title: 'เนื้อหายังมีจุดที่ควรแก้',
     email_html_line: 'Line {line}',
     email_html_more: 'Show {count} more',
-    email_html_hint: 'Your browser hides these errors in the preview. Outlook or Gmail may show a broken layout.',
+    email_html_hint: 'Browsers hide errors in the preview. Outlook or Gmail may show a broken layout.',
     email_html_ok: 'No syntax errors',
     email_html_bad: 'HTML Syntax error',
     email_html_count_one: '1 issue',
