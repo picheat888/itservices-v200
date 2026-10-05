@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -49,15 +50,19 @@ export function WorkflowViewDialog({
                     title={wf.name}
                     srDescription={t('wf_sub')}
                     headerRight={
-                        <>
-                            <StatusBadge tone={wf.active ? 'green' : 'gray'}>{wf.active ? t('wf_active') : t('wf_inactive')}</StatusBadge>
-                            {wf.auto_ticket && (
-                                <StatusBadge tone="blue" dot={false}>
-                                    <Zap className="h-3 w-3" />
-                                    {t('wf_auto_ticket')}
-                                </StatusBadge>
-                            )}
-                        </>
+                        <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-2">
+                                <StatusBadge tone={wf.active ? 'green' : 'gray'}>{wf.active ? t('wf_active') : t('wf_inactive')}</StatusBadge>
+                                {wf.auto_ticket && (
+                                    <StatusBadge tone="blue" dot={false}>
+                                        <Zap className="h-3 w-3" />
+                                        {t('wf_auto_ticket')}
+                                    </StatusBadge>
+                                )}
+                            </div>
+                            {/* Only once a person has saved it — the seeded date alone says nothing. */}
+                            {wf.updated_by_name && <RecordStamps className="text-right" updatedAt={wf.updated_at} updatedBy={wf.updated_by_name} />}
+                        </div>
                     }
                 />
 

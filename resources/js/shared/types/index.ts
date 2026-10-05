@@ -1165,6 +1165,8 @@ export interface Workflow {
     steps: WorkflowStep[];
     measured: WorkflowMeasured | null;
     updated_at: string | null;
+    /** Who saved it last; null while nobody has. */
+    updated_by_name?: string | null;
 }
 
 /** One dynamic field definition of the New Request dialog (from RequestSchemas). */

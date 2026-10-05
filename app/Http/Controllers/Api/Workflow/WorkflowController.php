@@ -50,7 +50,7 @@ class WorkflowController extends Controller
         // of an internal key, which tells a reader nothing. Sorted in PHP because the list is
         // one row per request type, so there is nothing to gain from doing it in SQL.
         $order = array_flip(array_column(RequestType::cases(), 'value'));
-        $workflows = Workflow::with(['steps.positions', 'steps.approvers'])->get()
+        $workflows = Workflow::with(['steps.positions', 'steps.approvers', 'updater'])->get()
             ->sortBy(fn (Workflow $workflow) => $order[$workflow->request_type->value] ?? PHP_INT_MAX)
             ->values();
 
@@ -97,6 +97,9 @@ class WorkflowController extends Controller
 
         DB::transaction(function () use ($workflow, $data) {
             $workflow->update(collect($data)->only(['name', 'active', 'auto_ticket'])->all());
+            // A save that only changes the steps leaves the row itself clean, so update() writes nothing;
+            // touch() makes every save count — updated_at and updated_by (RecordsUpdater) move with it.
+            $workflow->touch();
 
             $workflow->steps()->delete();
             foreach (array_values($data['steps']) as $index => $step) {
@@ -129,7 +132,7 @@ class WorkflowController extends Controller
             'steps' => count($data['steps']),
         ], subject: $workflow);
 
-        return new WorkflowResource($workflow->refresh()->load(['steps.positions', 'steps.approvers']));
+        return new WorkflowResource($workflow->refresh()->load(['steps.positions', 'steps.approvers', 'updater']));
     }
 
     /**
