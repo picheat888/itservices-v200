@@ -7,6 +7,7 @@ import { settingsApi, useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { SettingToggle } from '@/shared/components/setting-toggle';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -1287,10 +1288,16 @@ function EditorDialog({
                                 ) : undefined
                             }
                             headerRight={
-                                <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
-                                    <span className="text-muted-foreground">{t('email_enabled')}</span>
-                                    <SettingToggle on={enabled} onClick={() => setEnabled((v) => !v)} />
-                                </label>
+                                <div className="flex shrink-0 items-center gap-4">
+                                    {/* Only once a person has reworded it — the seeded date alone says nothing. */}
+                                    {template.updated_by_name && (
+                                        <RecordStamps className="text-right" updatedAt={template.updated_at} updatedBy={template.updated_by_name} />
+                                    )}
+                                    <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
+                                        <span className="text-muted-foreground">{t('email_enabled')}</span>
+                                        <SettingToggle on={enabled} onClick={() => setEnabled((v) => !v)} />
+                                    </label>
+                                </div>
                             }
                         />
 

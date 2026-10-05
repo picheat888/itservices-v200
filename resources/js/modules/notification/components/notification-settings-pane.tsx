@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { SettingToggle } from '@/shared/components/setting-toggle';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
@@ -173,6 +174,10 @@ function NotificationEditDialog({ bell, onClose }: { bell: NotificationTemplate 
                     eyebrow={t(notificationGroupLabel(bell.module))}
                     title={t(`notification_name_${suffix(bell.key)}`)}
                     subtitle={t(`notification_when_${suffix(bell.key)}`)}
+                    headerRight={
+                        // Only once a person has reworded or switched it — until then there is no row of its own.
+                        bell.updated_by_name && <RecordStamps className="text-right" updatedAt={bell.updated_at} updatedBy={bell.updated_by_name} />
+                    }
                 />
 
                 <div className="mt-4 space-y-5">

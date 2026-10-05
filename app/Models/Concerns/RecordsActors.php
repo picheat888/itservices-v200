@@ -16,25 +16,22 @@ use Illuminate\Support\Facades\Auth;
  * writes that way sets updated_by itself. The full history — what changed, from what — stays in
  * audit_logs; these two columns answer "who" at a glance.
  *
- * Used by assets, contracts, employees, stock items and the master data: brands, asset models,
- * categories, vendors, warehouses, locations, units, warranty types, departments, positions, sections.
+ * updated_by and updater() come from App\Models\Concerns\RecordsUpdater.
+ *
+ * Used by assets, contracts, employees, stock items, the master data (brands, asset models,
+ * categories, vendors, warehouses, locations, units, warranty types, departments, positions,
+ * sections) and the access catalogues (email groups, file shares, social platforms, software).
  */
 trait RecordsActors
 {
+    use RecordsUpdater;
+
     public static function bootRecordsActors(): void
     {
         static::creating(function (Model $model) {
             $id = Auth::id();
             if ($id !== null) {
                 $model->created_by ??= $id;
-                $model->updated_by ??= $id;
-            }
-        });
-
-        static::updating(function (Model $model) {
-            $id = Auth::id();
-            if ($id !== null) {
-                $model->updated_by = $id;
             }
         });
     }
@@ -43,11 +40,5 @@ trait RecordsActors
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function updater(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
     }
 }

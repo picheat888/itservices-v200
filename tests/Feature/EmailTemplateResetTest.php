@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Permission\Role;
 use App\Models\User;
@@ -127,6 +128,22 @@ class EmailTemplateResetTest extends TestCase
                 'body_html' => $standard['body_html'],
             ]);
         }
+    }
+
+    public function test_reset_all_logs_and_stamps_only_the_templates_it_changed(): void
+    {
+        $this->seed(EmailTemplateSeeder::class);
+        $admin = $this->admin();
+        EmailTemplate::where('key', 'ticket.created')->update(['subject' => 'changed A']);
+
+        $this->actingAs($admin)->postJson('/api/email-templates/reset-all')->assertOk();
+
+        $changed = EmailTemplate::where('key', 'ticket.created')->sole();
+        $this->assertSame($admin->id, $changed->updated_by);
+        $this->assertSame(1, AuditLog::where('action', 'Reset email template to standard')->count());
+        $this->assertSame(1, AuditLog::forSubject($changed)->count());
+        // Untouched ones keep no editor: nothing about them changed.
+        $this->assertSame(0, EmailTemplate::whereNotNull('updated_by')->where('key', '!=', 'ticket.created')->count());
     }
 
     public function test_reset_requires_the_notifications_permission(): void

@@ -2,13 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Models\Access\EmailGroup;
+use App\Models\Access\FileShare;
+use App\Models\Access\SocialPlatform;
+use App\Models\Access\Software;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
+use App\Models\Email\EmailTemplate;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
+use App\Models\Notification\NotificationTemplate;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
@@ -20,6 +26,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Contract\ContractService;
+use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -262,6 +269,75 @@ class ActorStampsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.created_by_name', 'Store Adder')
             ->assertJsonPath('data.updated_by_name', 'Store Receiver');
+    }
+
+    /** @return array<string, array{class-string<Model>, array<string, mixed>, string}> */
+    public static function accessCatalogues(): array
+    {
+        return [
+            'email group' => [EmailGroup::class, ['name' => 'QC Team', 'email' => 'qc@example.com'], '/api/email-groups'],
+            'file share' => [FileShare::class, ['name' => 'QC Documents', 'path' => '\\fs\qc'], '/api/file-shares'],
+            'social platform' => [SocialPlatform::class, ['name' => 'LINE Official', 'url' => 'https://line.me'], '/api/social-platforms'],
+            'software' => [Software::class, ['name' => 'Office', 'license_type' => 'subscription'], '/api/software'],
+        ];
+    }
+
+    /**
+     * @param  class-string<Model>  $class
+     * @param  array<string, mixed>  $create
+     */
+    #[DataProvider('accessCatalogues')]
+    public function test_an_access_catalogue_records_who_added_it_and_lists_the_names(string $class, array $create, string $index): void
+    {
+        $adder = User::factory()->create(['role' => 'super', 'name' => 'IT Adder']);
+        $this->actingAs($adder);
+        $record = $class::create($create);
+
+        $editor = User::factory()->create(['role' => 'super', 'name' => 'IT Editor']);
+        $this->actingAs($editor);
+        $record->update(['name' => $create['name'].' 2']);
+
+        $record->refresh();
+        $this->assertSame($adder->id, $record->created_by);
+        $this->assertSame($editor->id, $record->updated_by);
+        $this->getJson($index)
+            ->assertOk()
+            ->assertJsonPath('data.0.created_by_name', 'IT Adder')
+            ->assertJsonPath('data.0.updated_by_name', 'IT Editor');
+    }
+
+    public function test_a_template_records_who_reworded_it_but_not_the_system_sending_it(): void
+    {
+        $this->seed(EmailTemplateSeeder::class);
+        $template = EmailTemplate::where('key', 'ticket.created')->sole();
+        $this->assertNull($template->updated_by);
+
+        $editor = User::factory()->create(['role' => 'super', 'name' => 'Mail Editor']);
+        $this->actingAs($editor);
+        $template->update(['subject' => 'New ticket']);
+        $this->assertSame($editor->id, $template->fresh()->updated_by);
+
+        // Sending bumps last_sent_at by a query update — bookkeeping, not an edit by whoever is signed in.
+        $other = $this->super();
+        $this->actingAs($other);
+        EmailTemplate::where('key', 'ticket.created')->update(['last_sent_at' => now()]);
+        $this->assertSame($editor->id, $template->fresh()->updated_by);
+
+        $this->getJson('/api/email-templates')->assertOk()
+            ->assertJsonFragment(['key' => 'ticket.created', 'updated_by_name' => 'Mail Editor']);
+    }
+
+    public function test_a_bell_records_who_reworded_it(): void
+    {
+        $editor = User::factory()->create(['role' => 'super', 'name' => 'Bell Editor']);
+        $this->actingAs($editor);
+        $this->putJson('/api/notification-templates/notif_asset_assigned', [
+            'message_en' => 'Asset {asset} is yours', 'message_th' => 'ทรัพย์สิน {asset} เป็นของคุณ', 'enabled' => true,
+        ])->assertOk();
+
+        $this->assertSame($editor->id, NotificationTemplate::where('key', 'notif_asset_assigned')->sole()->updated_by);
+        $this->getJson('/api/notification-templates')->assertOk()
+            ->assertJsonFragment(['key' => 'notif_asset_assigned', 'updated_by_name' => 'Bell Editor']);
     }
 
     public function test_an_audit_entry_is_tied_to_the_record_it_is_about(): void

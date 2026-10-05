@@ -4493,3 +4493,26 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
   - `ActorStampsTest` เพิ่ม master data 11 ตาราง (data provider), พนักงาน, อะไหล่ (รับเข้าแล้ว updated_by เปลี่ยน)
   - `EmployeeImportTest` เพิ่ม 1 test
   - ทั้งระบบ 1621 passed · ตรวจใน Chrome แล้ว
+
+### ใครเพิ่ม/แก้: เทมเพลตแจ้งเตือน/อีเมล และทะเบียนสิทธิ์การเข้าถึง — 2026-10-05
+- migration `2026_10_05_081959_add_actor_columns_to_templates_and_access_catalogues` (**รันบน DB จริงแล้ว**):
+  - `notification_templates`, `email_templates`: `updated_by` อย่างเดียว เพราะแถวมาจาก catalogue ของระบบ คนทำได้แค่แก้ไข
+  - `email_groups`, `file_shares`, `social_platforms`, `softwares`: `created_by` + `updated_by`
+- เติมค่าย้อนหลังจาก audit log (จับคู่ด้วยชื่อ ชื่อซ้ำจะข้าม):
+  - ทะเบียนสิทธิ์ครบทั้ง 10 แถว
+  - log เก่า 28 รายการ (สร้าง/แก้/เปลี่ยนเจ้าของ/เพิ่ม-ลบสมาชิก) ผูก subject แล้ว
+  - เทมเพลตยังไม่มีประวัติแก้ไข จึงว่าง
+- trait ใหม่ `App\Models\Concerns\RecordsUpdater`:
+  - ประทับ updated_by อย่างเดียว ใช้กับเทมเพลต
+  - `RecordsActors` ใช้ trait นี้แล้วเพิ่ม created_by
+  - การประทับ `last_sent_at` ตอนส่งเป็น query update จึงไม่นับเป็นการแก้ไข
+- รีเซ็ตเทมเพลตอีเมลทั้งหมด: บันทึก log เฉพาะเทมเพลตที่เปลี่ยนจริง ทีละรายการ (แทน log ก้อนเดียว "N template(s)")
+- รีเซ็ตแจ้งเตือน: ผูก subject แล้ว
+- API/UI:
+  - list ของทะเบียนสิทธิ์ทั้ง 4 ส่งวันที่และชื่อผู้เพิ่ม/แก้ แสดงที่หัวหน้าต่างสมาชิก
+  - list เทมเพลตอีเมลและแจ้งเตือนส่ง `updated_at` / `updated_by_name` แสดง "แก้ไขล่าสุด … โดย …" ในหน้าต่างแก้ไข เฉพาะเมื่อมีคนเคยแก้แล้ว
+  - `RecordStamps` ซ่อนบรรทัด "เพิ่มเมื่อ" ได้
+- Tests:
+  - `ActorStampsTest` เพิ่มทะเบียนสิทธิ์ 4 แบบ (data provider), เทมเพลตอีเมล (ส่งเมลไม่นับเป็นการแก้), แจ้งเตือน
+  - `EmailTemplateResetTest` เพิ่ม 1 test
+  - ทั้งระบบ 1628 passed · ตรวจใน Chrome แล้ว

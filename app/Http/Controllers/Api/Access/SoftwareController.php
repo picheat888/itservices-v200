@@ -21,7 +21,7 @@ class SoftwareController extends Controller
     public function index(): JsonResponse
     {
         return SoftwareResource::collection(
-            Software::with(['memberships' => fn ($q) => $q->active()->with('employee'), 'brand'])->orderBy('code')->get()
+            Software::with(['memberships' => fn ($q) => $q->active()->with('employee'), 'brand', 'creator', 'updater'])->orderBy('code')->get()
         )->response();
     }
 

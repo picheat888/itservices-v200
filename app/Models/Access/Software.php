@@ -3,6 +3,7 @@
 namespace App\Models\Access;
 
 use App\Enums\Access\SoftwareLicenseType;
+use App\Models\Concerns\RecordsActors;
 use App\Models\Settings\Brand;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 
 class Software extends Model
 {
+    use RecordsActors;
+
     /**
      * Eloquent's pluralizer treats "software" as uncountable (plural ===
      * singular), so the default table-name guess would be "software" instead
