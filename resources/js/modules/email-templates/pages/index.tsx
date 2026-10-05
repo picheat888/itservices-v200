@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
 import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
+import { findHtmlIssues, type HtmlIssue } from '@/modules/email-templates/lib/html-issues';
 import { NotificationSettingsPane, NotificationSettingsStats } from '@/modules/notification';
 import { settingsApi, useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
@@ -161,6 +162,29 @@ function variablesIn(text: string): string[] {
  */
 function unknownVariables(tokens: string[], variables: string[] | null): string[] {
     return variables ? tokens.filter((tk) => !variables.includes(tk)) : [];
+}
+
+/** One HTML mistake as a sentence, e.g. "บรรทัด 5: แท็ก <strong> ยังไม่ได้ปิด". */
+function describeHtmlIssue(issue: HtmlIssue, t: (key: string) => string): string {
+    const values: Record<string, string | number> = { ...issue };
+    return Object.entries(values).reduce((text, [k, v]) => text.replaceAll(`{${k}}`, String(v)), t(`email_html_${issue.kind}`));
+}
+
+/** The first few HTML mistakes, one per line, and how many more there are. */
+function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: number }) {
+    const t = useT();
+    const more = issues.length - limit;
+
+    return (
+        <ul className="space-y-0.5">
+            {issues.slice(0, limit).map((issue, i) => (
+                <li key={i} className="font-mono">
+                    {describeHtmlIssue(issue, t)}
+                </li>
+            ))}
+            {more > 0 && <li>{t('email_html_more').replace('{count}', String(more))}</li>}
+        </ul>
+    );
 }
 
 // Short notes for the "magic" placeholders that aren't a simple field — shown
@@ -735,6 +759,7 @@ function BodyEditor({
     // go out as literal {{text}}.
     const offered = variables ?? VARIABLE_NAMES;
     const unknownTokens = unknownVariables(tokens, variables);
+    const htmlIssues = findHtmlIssues(value);
 
     return (
         // A flex column so the editor takes the height its column has to give: it used to be
@@ -809,6 +834,19 @@ function BodyEditor({
                     />
                 </div>
             </div>
+
+            {htmlIssues.length > 0 && (
+                <div
+                    role="status"
+                    className="mt-2 flex shrink-0 gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                >
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <div className="min-w-0">
+                        <HtmlIssueList issues={htmlIssues} />
+                        <p className="mt-0.5 opacity-80">{t('email_html_hint')}</p>
+                    </div>
+                </div>
+            )}
 
             {tokens.length > 0 && (
                 <div className="mt-3 shrink-0">
@@ -1219,16 +1257,33 @@ function EditorDialog({
     const dirty = name !== base.name || subject !== base.subject || body !== base.body;
 
     // Save: persist, flash a check, and reset the dirty baseline so the button greys out again.
-    // A variable this mail is not given would go out as literal {{text}}, so ask first.
+    // A variable this mail is not given would go out as literal {{text}}, and broken HTML is
+    // drawn differently by each mail client — so ask first, once, listing both.
     const handleSave = async () => {
         if (!template || !dirty || saving) return;
         const unknown = unknownVariables(variablesIn(`${subject} ${body}`), template.variables);
+        const htmlIssues = findHtmlIssues(body);
         if (
-            unknown.length > 0 &&
+            (unknown.length > 0 || htmlIssues.length > 0) &&
             !(await confirm({
                 variant: 'warn',
-                title: t('email_var_unknown_title'),
-                description: `${t('email_var_unknown_text')} ${unknown.map((tk) => `{{${tk}}}`).join(', ')}`,
+                title: t('email_check_title'),
+                description: (
+                    <div className="space-y-2 text-xs">
+                        {unknown.length > 0 && (
+                            <div>
+                                <p>{t('email_var_unknown_text')}</p>
+                                <p className="font-mono">{unknown.map((tk) => `{{${tk}}}`).join(', ')}</p>
+                            </div>
+                        )}
+                        {htmlIssues.length > 0 && (
+                            <div>
+                                <p>{t('email_html_issues_text')}</p>
+                                <HtmlIssueList issues={htmlIssues} />
+                            </div>
+                        )}
+                    </div>
+                ),
                 confirmText: t('email_var_unknown_confirm'),
             }))
         )
