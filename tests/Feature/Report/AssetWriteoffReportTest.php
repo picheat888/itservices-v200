@@ -198,7 +198,10 @@ class AssetWriteoffReportTest extends TestCase
 
         // Only the bought ones' cost: 30,000 + 12,000 + 5,000 + 8,000, on average 13,750.
         $this->assertEquals(55000.0, $summary['wo_purchase_value']['value']);
-        $this->assertSame(['label_key' => 'rep_n_wo_purchase', 'values' => ['n' => 4, 'avg' => 13750]], $summary['wo_purchase_value']['note']);
+        // Money in a note keeps two decimals, like the tile and the list.
+        $this->assertSame('rep_n_wo_purchase', $summary['wo_purchase_value']['note']['label_key']);
+        $this->assertSame(['n' => 4], $summary['wo_purchase_value']['note']['values']);
+        $this->assertSame(['avg' => '13,750.00'], $summary['wo_purchase_value']['note']['texts']);
 
         // (3.0 + 2.0 + 7.7 + 1.7) / 4; the laptops served shortest (3.0 and 1.7 → 2.3).
         $this->assertSame('years', $summary['wo_avg_life']['format']);
@@ -210,7 +213,8 @@ class AssetWriteoffReportTest extends TestCase
         // The printer still under warranty and the lifetime one: 12,000 + 5,000 worth.
         $this->assertSame(2, $summary['wo_under_warranty']['value']);
         $this->assertSame('amber', $summary['wo_under_warranty']['attention']);
-        $this->assertSame(['label_key' => 'rep_n_wo_under_warranty_value', 'values' => ['value' => 17000]], $summary['wo_under_warranty']['note']);
+        $this->assertSame('rep_n_wo_under_warranty_value', $summary['wo_under_warranty']['note']['label_key']);
+        $this->assertSame(['value' => '17,000.00'], $summary['wo_under_warranty']['note']['texts']);
 
         // r3 is still out on a contract that ended 31 Aug.
         $this->assertSame(1, $summary['wo_rented_overdue']['value']);

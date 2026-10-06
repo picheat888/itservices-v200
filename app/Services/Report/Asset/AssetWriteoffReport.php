@@ -267,7 +267,9 @@ class AssetWriteoffReport extends TabularReport
             ReportSummary::make('wo_purchase_value', 'มูลค่าซื้อที่ตัดจำหน่าย', $boughtValue, null, 'money')
                 ->withNote($bought->isEmpty() ? null : [
                     'label_key' => 'rep_n_wo_purchase',
-                    'values' => ['n' => $bought->count(), 'avg' => (int) round($boughtValue / $bought->count())],
+                    'values' => ['n' => $bought->count()],
+                    // Money in a note keeps its two decimals, like the tile and the list (texts are not re-formatted).
+                    'texts' => ['avg' => number_format($boughtValue / $bought->count(), 2)],
                 ]),
             ReportSummary::make('wo_avg_life', 'อายุใช้งานเฉลี่ย (ปี)', self::averageAge($bought), null, 'years')
                 ->withNote($shortest === null ? null : [
@@ -279,7 +281,7 @@ class AssetWriteoffReport extends TabularReport
                 ->withAttention('amber')
                 ->withNote($underWarranty->isEmpty()
                     ? ['label_key' => 'rep_n_wo_under_warranty_none']
-                    : ['label_key' => 'rep_n_wo_under_warranty_value', 'values' => ['value' => (int) round((float) $underWarranty->sum('value'))]]),
+                    : ['label_key' => 'rep_n_wo_under_warranty_value', 'texts' => ['value' => number_format((float) $underWarranty->sum('value'), 2)]]),
             // Units still out on contracts that have already ended — whatever the date range.
             ReportSummary::make('wo_rented_overdue', 'เครื่องเช่าค้างคืน (เครื่อง)', (int) $overdue->sum('still_out'))
                 ->withAttention('red')

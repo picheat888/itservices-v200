@@ -63,7 +63,8 @@ const NUM = 'text-right font-mono tabular-nums';
 
 const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
 const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
-const money = (n: number, lang: Lang) => `฿${n.toLocaleString(locale(lang), { maximumFractionDigits: 0 })}`;
+// Two decimals and no ฿, like the money tile and the list's value column on the same page.
+const money = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** "2026-09" → "ก.ย." (with "26" on the first column and each January when `withYear`). */
