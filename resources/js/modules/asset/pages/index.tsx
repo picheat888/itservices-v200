@@ -44,7 +44,7 @@ import {
     Warehouse,
     X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { assetApi } from '../api/assetApi';
 import { AssetActivityCard } from '../components/asset-activity-card';
@@ -299,7 +299,11 @@ export default function AssetsPage() {
     const [recallAsset, setRecallAsset] = useState<Asset | null>(null);
 
     const { data: summary, isLoading: summaryLoading } = useAssetSummary();
-    const { data: listData, isLoading } = useAssets({
+    const {
+        data: listData,
+        isLoading,
+        isFetching,
+    } = useAssets({
         page,
         per_page: perPage,
         search,
@@ -445,6 +449,22 @@ export default function AssetsPage() {
         setSelectionStatus(on ? eligibleStatus : null);
     };
     const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
+
+    // Loading rows show while any fetch runs (a page, filter or search change keeps the previous
+    // page as placeholder data, which would otherwise sit there looking current).
+    const tableLoading = isLoading || isFetching;
+    const searchRef = useRef<HTMLInputElement>(null);
+    const filterIdBase = useId();
+    const filterIds = {
+        type: `${filterIdBase}-type`,
+        source: `${filterIdBase}-source`,
+        status: `${filterIdBase}-status`,
+        warehouse: `${filterIdBase}-warehouse`,
+    };
+    const perPageLabelId = `${filterIdBase}-per-page`;
+    const numberFormat = useMemo(() => new Intl.NumberFormat(lang === 'th' ? 'th-TH' : 'en-US'), [lang]);
+    const formatCount = (n: number) => numberFormat.format(n);
+    const selectionCountText = t('asset_selected_count').replace('{n}', formatCount(selectedIds.length));
 
     // True when any inventory list control differs from its default — drives the quick "Clear filters" pill.
     const hasActiveFilters = !!search || !!typeFilter || !!sourceFilter || !!statusFilter || !!warehouseFilter;
@@ -725,8 +745,14 @@ export default function AssetsPage() {
                     <div className="space-y-3 p-5">
                         <div className="flex flex-wrap items-center gap-2">
                             <div className="relative w-full max-w-xs">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                <Search
+                                    className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                                    aria-hidden="true"
+                                />
                                 <Input
+                                    ref={searchRef}
+                                    type="search"
+                                    aria-label={t('asset_search_label')}
                                     value={search}
                                     onChange={(e) => {
                                         setSearch(e.target.value);
@@ -740,11 +766,15 @@ export default function AssetsPage() {
                                 {() => (
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                <Filter className="h-3.5 w-3.5" />
-                                                {lang === 'th' ? 'ประเภท' : 'Type'}
-                                            </div>
+                                            <label
+                                                htmlFor={filterIds.type}
+                                                className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                            >
+                                                <Filter className="h-3.5 w-3.5" aria-hidden="true" />
+                                                {t('asset_type')}
+                                            </label>
                                             <SearchableSelect
+                                                id={filterIds.type}
                                                 active={!!typeFilter}
                                                 value={typeFilter || ALL}
                                                 onChange={(v) => {
@@ -763,11 +793,15 @@ export default function AssetsPage() {
                                             />
                                         </div>
                                         <div>
-                                            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                <Tag className="h-3.5 w-3.5" />
-                                                {lang === 'th' ? 'แหล่งที่มา' : 'Source'}
-                                            </div>
+                                            <label
+                                                htmlFor={filterIds.source}
+                                                className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                            >
+                                                <Tag className="h-3.5 w-3.5" aria-hidden="true" />
+                                                {t('asset_source_filter')}
+                                            </label>
                                             <SearchableSelect
+                                                id={filterIds.source}
                                                 active={!!sourceFilter}
                                                 value={sourceFilter || ALL}
                                                 onChange={(v) => {
@@ -792,11 +826,15 @@ export default function AssetsPage() {
                                             />
                                         </div>
                                         <div>
-                                            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                <CircleDot className="h-3.5 w-3.5" />
+                                            <label
+                                                htmlFor={filterIds.status}
+                                                className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                            >
+                                                <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
                                                 {t('asset_status')}
-                                            </div>
+                                            </label>
                                             <SearchableSelect
+                                                id={filterIds.status}
                                                 active={!!statusFilter}
                                                 value={statusFilter || ALL}
                                                 onChange={(v) => {
@@ -815,11 +853,15 @@ export default function AssetsPage() {
                                             />
                                         </div>
                                         <div>
-                                            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                <Warehouse className="h-3.5 w-3.5" />
+                                            <label
+                                                htmlFor={filterIds.warehouse}
+                                                className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                            >
+                                                <Warehouse className="h-3.5 w-3.5" aria-hidden="true" />
                                                 {t('asset_warehouse')}
-                                            </div>
+                                            </label>
                                             <SearchableSelect
+                                                id={filterIds.warehouse}
                                                 active={!!warehouseFilter}
                                                 value={warehouseFilter || ALL}
                                                 onChange={(v) => {
@@ -858,23 +900,27 @@ export default function AssetsPage() {
                                     <button
                                         key={c.key}
                                         type="button"
-                                        onClick={c.clear}
+                                        aria-label={`${t('remove_filter')}: ${c.label}`}
+                                        onClick={() => {
+                                            c.clear();
+                                            setPage(1);
+                                            searchRef.current?.focus();
+                                        }}
                                         className="bg-brand/10 text-brand hover:bg-brand/20 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
                                     >
                                         {c.label}
-                                        <X className="h-3 w-3" />
+                                        <X className="h-3 w-3" aria-hidden="true" />
                                     </button>
                                 ))}
                             </div>
                         )}
 
+                        <div role="status" aria-live="polite" className="sr-only">
+                            {selectedIds.length > 0 ? selectionCountText : ''}
+                        </div>
                         {selectedIds.length > 0 && (
-                            <div className="bg-brand/5 border-border flex items-center gap-3 rounded-lg border px-4 py-2.5">
-                                <span className="text-brand text-sm font-semibold">
-                                    {lang === 'th'
-                                        ? `${t('asset_selected')} ${selectedIds.length} ${lang === 'th' ? 'รายการ' : ''}`
-                                        : `${selectedIds.length} ${t('asset_selected')}`}
-                                </span>
+                            <div className="bg-brand/5 border-border flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-4 py-2.5">
+                                <span className="text-brand text-sm font-semibold">{selectionCountText}</span>
                                 {/* Which status group the selection is locked to — explains why other rows can't be ticked. */}
                                 {selectionStatus && (
                                     <span className="border-border bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs">
@@ -883,7 +929,11 @@ export default function AssetsPage() {
                                         <span className="text-foreground font-medium">{t(ASSET_STATUS_META[selectionStatus].key)}</span>
                                     </span>
                                 )}
-                                <button className="text-muted-foreground text-xs hover:underline" onClick={clearSelection}>
+                                <button
+                                    type="button"
+                                    className="text-muted-foreground rounded px-1 py-1 text-xs hover:underline"
+                                    onClick={clearSelection}
+                                >
                                     {t('asset_clear')}
                                 </button>
                                 <div className="flex-1" />
@@ -949,7 +999,7 @@ export default function AssetsPage() {
 
                         <div className="border-border overflow-hidden rounded-xl border">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-sm" aria-label={t('asset_inventory_table')} aria-busy={tableLoading}>
                                     <thead>
                                         <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                             <th
@@ -961,6 +1011,7 @@ export default function AssetsPage() {
                                             >
                                                 <div className="flex items-center justify-center px-2 py-1.5">
                                                     <Checkbox
+                                                        aria-label={t('asset_select_page_group')}
                                                         checked={allGroupSelected}
                                                         disabled={!eligibleStatus}
                                                         onCheckedChange={(v) => toggleAllOnPage(v === true)}
@@ -975,17 +1026,17 @@ export default function AssetsPage() {
                                             <th className="px-4 py-2.5">{t('asset_dept')}</th>
                                             <th className="px-4 py-2.5">{t('asset_warehouse')}</th>
                                             <th className="px-4 py-2.5">{t('asset_status')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_value')}</th>
+                                            <th className="px-4 py-2.5 text-right">{t('asset_value')}</th>
                                             <th className="px-4 py-2.5 text-right">{t('asset_actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {isLoading ? (
+                                        {tableLoading ? (
                                             Array.from({ length: 8 }).map((_, r) => (
-                                                <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
+                                                <tr key={`skeleton-${r}`} aria-hidden="true" className="border-border/60 border-b last:border-0">
                                                     {Array.from({ length: 10 }).map((_, c) => (
                                                         <td key={c} className="px-4 py-2.5">
-                                                            <div className="bg-muted h-4 w-3/4 max-w-[160px] animate-pulse rounded" />
+                                                            <div className="bg-muted h-4 w-3/4 max-w-[160px] rounded motion-safe:animate-pulse" />
                                                         </td>
                                                     ))}
                                                 </tr>
@@ -993,7 +1044,17 @@ export default function AssetsPage() {
                                         ) : rows.length === 0 ? (
                                             <tr>
                                                 <td colSpan={10} className="text-muted-foreground px-4 py-16 text-center text-sm">
-                                                    {t('asset_none')}
+                                                    {hasActiveFilters ? (
+                                                        <div className="flex flex-col items-center gap-3">
+                                                            {t('asset_none_filtered')}
+                                                            <Button size="sm" variant="outline" onClick={clearFilters}>
+                                                                <X className="h-4 w-4" aria-hidden="true" />
+                                                                {t('reset_filters')}
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        t('asset_none')
+                                                    )}
                                                 </td>
                                             </tr>
                                         ) : (
@@ -1004,7 +1065,7 @@ export default function AssetsPage() {
                                                     className={cn(
                                                         'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
                                                         selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
-                                                        rowLockedOut(a) && 'opacity-55',
+                                                        rowLockedOut(a) && 'bg-muted/40',
                                                     )}
                                                 >
                                                     <td
@@ -1020,10 +1081,16 @@ export default function AssetsPage() {
                                                     >
                                                         <div className="flex items-center justify-center px-2 py-1.5">
                                                             {rowLockedOut(a) ? (
-                                                                // Locked out by the active status group — a lock reads far clearer than a faint checkbox.
-                                                                <Lock className="text-muted-foreground/60 size-4" aria-hidden />
+                                                                // Locked out by the active status group — a lock reads far clearer than a faint
+                                                                // checkbox; it carries the reason for screen readers too (the title is mouse-only).
+                                                                <Lock
+                                                                    className="text-muted-foreground size-4"
+                                                                    role="img"
+                                                                    aria-label={t('asset_locked_hint')}
+                                                                />
                                                             ) : rowActionable(a) ? (
                                                                 <Checkbox
+                                                                    aria-label={`${t('asset_select_row')} ${a.asset_code}`}
                                                                     checked={selectedIds.includes(a.id)}
                                                                     disabled={!rowSelectable(a)}
                                                                     onCheckedChange={(v) => toggleRow(a, v === true)}
@@ -1035,81 +1102,114 @@ export default function AssetsPage() {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2.5">
-                                                        <div className="text-muted-foreground font-mono text-xs">{a.asset_code}</div>
+                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openAsset(a);
+                                                            }}
+                                                            aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
+                                                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded font-mono text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+                                                        >
+                                                            {a.asset_code}
+                                                        </button>
                                                         {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-[140px]" />}
                                                     </td>
                                                     <td className="px-4 py-2.5">
                                                         <span className="flex items-center gap-2">
-                                                            <AssetTypeIcon type={a.type} className="text-muted-foreground h-4 w-4" />
+                                                            <AssetTypeIcon
+                                                                type={a.type}
+                                                                className="text-muted-foreground h-4 w-4"
+                                                                aria-hidden="true"
+                                                            />
                                                             {catLabel(a.type)}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-2.5 font-medium">{a.model}</td>
-                                                    <td className="px-4 py-2.5">{a.owner_name}</td>
-                                                    <td className="px-4 py-2.5">{a.department}</td>
+                                                    <td className="max-w-[14rem] truncate px-4 py-2.5 font-medium" title={a.model ?? undefined}>
+                                                        {a.model}
+                                                    </td>
+                                                    <td className="max-w-[12rem] truncate px-4 py-2.5" title={a.owner_name ?? undefined}>
+                                                        {a.owner_name}
+                                                    </td>
+                                                    <td className="max-w-[12rem] truncate px-4 py-2.5" title={a.department ?? undefined}>
+                                                        {a.department}
+                                                    </td>
                                                     <td className="px-4 py-2.5">
                                                         {a.warehouse ? (
-                                                            <span className="inline-flex items-center gap-1.5">
-                                                                <Warehouse className="text-muted-foreground/70 h-3.5 w-3.5 shrink-0" />
-                                                                {a.warehouse}
+                                                            <span className="inline-flex max-w-[12rem] items-center gap-1.5" title={a.warehouse}>
+                                                                <Warehouse
+                                                                    className="text-muted-foreground/70 h-3.5 w-3.5 shrink-0"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                <span className="truncate">{a.warehouse}</span>
                                                             </span>
                                                         ) : (
                                                             <span className="text-muted-foreground">—</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-4 py-2.5">
+                                                    <td className="px-4 py-2.5 whitespace-nowrap">
                                                         <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                     </td>
-                                                    <td className="px-4 py-2.5 font-mono text-xs">{a.value_display}</td>
+                                                    <td className="px-4 py-2.5 text-right font-mono text-xs whitespace-nowrap tabular-nums">
+                                                        {a.value_display}
+                                                    </td>
                                                     <td className="px-4 py-2.5">
                                                         <div className="flex items-center justify-end gap-1">
                                                             {a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode && (
                                                                 <button
                                                                     className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600"
+                                                                    type="button"
                                                                     title={t('asset_accept')}
+                                                                    aria-label={t('asset_accept')}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         accept.mutate(a.id);
                                                                     }}
                                                                 >
-                                                                    <Check className="h-4 w-4" />
+                                                                    <Check className="h-4 w-4" aria-hidden="true" />
                                                                 </button>
                                                             )}
                                                             {canReceive && a.status === 'pending_return' && (
                                                                 <button
                                                                     className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600"
+                                                                    type="button"
                                                                     title={t('asset_mark_received')}
+                                                                    aria-label={t('asset_mark_received')}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setReceiveAsset(a);
                                                                     }}
                                                                 >
-                                                                    <CheckCircle2 className="h-4 w-4" />
+                                                                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                                                                 </button>
                                                             )}
                                                             {canTransfer && a.status === 'ready' && (
                                                                 <button
                                                                     className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                                                    type="button"
                                                                     title={t('transfer_asset')}
+                                                                    aria-label={t('transfer_asset')}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setTransferAsset(a);
                                                                     }}
                                                                 >
-                                                                    <Share2 className="h-4 w-4" />
+                                                                    <Share2 className="h-4 w-4" aria-hidden="true" />
                                                                 </button>
                                                             )}
                                                             {canEdit && a.status !== 'writeoff' && (
                                                                 <button
                                                                     className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                                                    type="button"
                                                                     title={t('edit_asset')}
+                                                                    aria-label={t('edit_asset')}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         openEdit(a);
                                                                     }}
                                                                 >
-                                                                    <SquarePen className="h-4 w-4" />
+                                                                    <SquarePen className="h-4 w-4" aria-hidden="true" />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -1124,7 +1224,7 @@ export default function AssetsPage() {
 
                         <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
                             <div className="flex items-center gap-2">
-                                <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                                <span id={perPageLabelId}>{t('asset_rows_per_page')}</span>
                                 <Select
                                     value={String(perPage)}
                                     onValueChange={(v) => {
@@ -1132,7 +1232,7 @@ export default function AssetsPage() {
                                         setPage(1);
                                     }}
                                 >
-                                    <SelectTrigger className="h-8 w-[72px]">
+                                    <SelectTrigger className="h-8 w-[72px]" aria-labelledby={perPageLabelId}>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1146,27 +1246,31 @@ export default function AssetsPage() {
                             </div>
 
                             <div className="flex items-center gap-3">
-                                <span>
-                                    {totalRows === 0 ? 0 : (currentPage - 1) * perPageDisplay + 1}–{Math.min(currentPage * perPageDisplay, totalRows)}{' '}
-                                    {t('asset_of')} {totalRows}
+                                <span role="status" aria-live="polite" className="tabular-nums">
+                                    {formatCount(totalRows === 0 ? 0 : (currentPage - 1) * perPageDisplay + 1)}–
+                                    {formatCount(Math.min(currentPage * perPageDisplay, totalRows))} {t('asset_of')} {formatCount(totalRows)}
                                 </span>
                                 <div className="flex items-center gap-1">
                                     <button
+                                        type="button"
+                                        aria-label={t('asset_prev_page')}
                                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                                         disabled={page <= 1}
                                         className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                                     >
-                                        <ChevronLeft className="h-4 w-4" />
+                                        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                                     </button>
-                                    <span className="text-foreground px-1 font-medium">
-                                        {currentPage} / {lastPage}
+                                    <span className="text-foreground px-1 font-medium tabular-nums">
+                                        {formatCount(currentPage)} / {formatCount(lastPage)}
                                     </span>
                                     <button
+                                        type="button"
+                                        aria-label={t('asset_next_page')}
                                         onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
                                         disabled={page >= lastPage}
                                         className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                                     >
-                                        <ChevronRight className="h-4 w-4" />
+                                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
                                     </button>
                                 </div>
                             </div>
