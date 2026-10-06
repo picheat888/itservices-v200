@@ -8,6 +8,7 @@ import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
+import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -60,7 +61,8 @@ import { AssetReturnToVendorDialog } from '../components/asset-return-to-vendor-
 import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
-import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers, usePendingReturns } from '../hooks/use-assets';
+import { PendingReturnStrip } from '../components/pending-return-strip';
+import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -301,6 +303,22 @@ export default function AssetsPage() {
     const setSourceFilter = (value: string) => setListParams({ source: value });
     const setStatusFilter = (value: AssetStatus | '') => setListParams({ status: value });
     const setWarehouseFilter = (value: string) => setListParams({ warehouse: value });
+    // The strip's button: list the assets awaiting receipt, or — if already listed — show all again.
+    // Switching tab and filter is one URL write (tab change is a history step, like any tab click).
+    const showPendingReturns = () => {
+        const listed = tab === 'inventory' && searchParams.get('status') === 'pending_return';
+        if (listed) {
+            setListParams({ status: null, page: null });
+            return;
+        }
+        setSearchParams((sp) => {
+            const next = new URLSearchParams(sp);
+            next.set('tab', 'inventory');
+            next.set('status', 'pending_return');
+            next.delete('page');
+            return next;
+        });
+    };
     const setPage = (value: number | ((current: number) => number)) => {
         const next = typeof value === 'function' ? value(page) : value;
         setListParams({ page: next > 1 ? String(next) : null });
@@ -389,7 +407,9 @@ export default function AssetsPage() {
     const transfers = transferLog?.data ?? [];
     // How far back the endpoint reaches. Only worth saying once the log is actually that long.
     const transfersCapped = !!transferLog?.meta?.limit && transfers.length >= transferLog.meta.limit;
-    const { data: pendingReturns = [] } = usePendingReturns();
+    // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, usually
+    // already loaded by the shell; undefined until known, so the strip can hold its space).
+    const pendingReturnCount = useSidebarBadge('assets');
 
     // Transfer log — the same columns the asset's own History tab uses, plus the asset itself,
     // since this list spans every asset in the system.
@@ -606,6 +626,15 @@ export default function AssetsPage() {
                 </div>
             </div>
 
+            {canReceive && (
+                <PendingReturnStrip
+                    count={pendingReturnCount}
+                    active={tab === 'inventory' && statusFilter === 'pending_return'}
+                    onToggle={showPendingReturns}
+                    t={t}
+                />
+            )}
+
             <Card className="overflow-clip">
                 <PageTabs
                     tabs={(['overview', 'inventory', 'transfers'] as Tab[])
@@ -613,10 +642,6 @@ export default function AssetsPage() {
                         .map((tb) => ({
                             id: tb,
                             label: tb === 'overview' ? t('asset_overview') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers'),
-                            // Assets sent back and waiting for IT to receive them (receivers only).
-                            ...(tb === 'inventory' && canReceive
-                                ? { count: pendingReturns.length, tone: 'warn' as const, countTitle: t('asset_pending_return_chip_hint') }
-                                : {}),
                         }))}
                     active={tab}
                     onChange={changeTab}
@@ -917,31 +942,6 @@ export default function AssetsPage() {
                                 >
                                     <X className="h-3 w-3" />
                                     {t('reset_filters')}
-                                </button>
-                            )}
-                            {/* Return queue as a filter chip. It replaces the box above the tabs, which arrived
-                                after the list and pushed it down ~320px; the toolbar row's height is fixed, so the
-                                chip appearing late moves nothing. Receive from the row's own button. */}
-                            {canReceive && pendingReturns.length > 0 && (
-                                <button
-                                    type="button"
-                                    aria-pressed={statusFilter === 'pending_return'}
-                                    title={t('asset_pending_return_chip_hint')}
-                                    onClick={() => {
-                                        setStatusFilter(statusFilter === 'pending_return' ? '' : 'pending_return');
-                                        setPage(1);
-                                    }}
-                                    className={cn(
-                                        'ml-auto inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors',
-                                        'focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-1 focus-visible:outline-none',
-                                        statusFilter === 'pending_return'
-                                            ? 'border-amber-700 bg-amber-700 text-white hover:bg-amber-800'
-                                            : 'border-amber-500/40 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20 dark:text-amber-300',
-                                    )}
-                                >
-                                    <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
-                                    {t('asset_pending_return_chip')}
-                                    <span className="font-mono tabular-nums">{pendingReturns.length}</span>
                                 </button>
                             )}
                         </div>

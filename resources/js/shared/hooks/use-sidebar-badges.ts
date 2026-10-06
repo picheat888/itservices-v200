@@ -27,14 +27,29 @@ export const SIDEBAR_BADGES_KEY = ['sidebar-badges'] as const;
  * from another session still shows up without a reload.
  */
 export function useSidebarBadges(enabled = true) {
-    const { data } = useQuery({
+    const { data } = useQuery(sidebarBadgesQuery(enabled));
+
+    return data ?? EMPTY;
+}
+
+/**
+ * One badge's count, or undefined until the first answer arrives — for a page that must know
+ * "not loaded yet" apart from "zero" (e.g. to hold space for a notice). Shares the sidebar's
+ * query, so it is usually already loaded by the time a page opens.
+ */
+export function useSidebarBadge(key: keyof SidebarBadges): number | undefined {
+    const { data } = useQuery(sidebarBadgesQuery(true));
+
+    return data?.[key];
+}
+
+function sidebarBadgesQuery(enabled: boolean) {
+    return {
         queryKey: SIDEBAR_BADGES_KEY,
         queryFn: () => http.get<{ data: SidebarBadges }>('/sidebar-badges').then((r) => r.data.data),
         enabled,
         staleTime: 10_000,
         refetchInterval: 15_000,
         refetchIntervalInBackground: true,
-    });
-
-    return data ?? EMPTY;
+    };
 }
