@@ -61,7 +61,9 @@ export function usePrefetchSidebarBadges(): boolean {
 
     useEffect(() => {
         let alive = true;
-        qc.prefetchQuery({ queryKey: SIDEBAR_BADGES_KEY, queryFn: () => fetchSidebarBadges(true), staleTime: 10_000 }).finally(() => {
+        // retry: false — a signed-out visitor's 401 will not turn into a yes by asking again
+        // (the default 3 retries hit the server three more times from the login page).
+        qc.prefetchQuery({ queryKey: SIDEBAR_BADGES_KEY, queryFn: () => fetchSidebarBadges(true), staleTime: 10_000, retry: false }).finally(() => {
             if (alive) setSettled(true);
         });
         return () => {
