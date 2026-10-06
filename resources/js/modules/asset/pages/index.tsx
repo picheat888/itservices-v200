@@ -6,7 +6,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { ToneDot } from '@/shared/components/status-badge';
+import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -1238,13 +1238,13 @@ export default function AssetsPage() {
                                                     <td className="px-4 py-2.5 text-right font-mono text-xs whitespace-nowrap tabular-nums">
                                                         {a.source === 'rented' ? (
                                                             // The contract's rent is for the whole contract — repeated on every unit it read as
-                                                            // each one's value. Name the contract instead.
-                                                            <div className="font-sans">
-                                                                <div className="text-muted-foreground text-xs">
-                                                                    {a.contract_code ? t('asset_rented_by_contract') : t('asset_rented_badge')}
-                                                                </div>
+                                                            // each one's value. A "Rented" badge with the contract code under it instead.
+                                                            <div className="flex flex-col items-end font-sans">
+                                                                <StatusBadge tone="violet" dot={false}>
+                                                                    {t('asset_rented_badge')}
+                                                                </StatusBadge>
                                                                 {a.contract_code && (
-                                                                    <div className="text-foreground font-mono text-xs">{a.contract_code}</div>
+                                                                    <div className="text-muted-foreground font-mono text-xs">{a.contract_code}</div>
                                                                 )}
                                                             </div>
                                                         ) : (

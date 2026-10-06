@@ -44,9 +44,10 @@ export function PendingReturnStrip({
             className="flex h-12 items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4"
         >
             <Undo2 className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden="true" />
+            {/* Read as one sentence: what happened, then the count in bold. */}
             <p className="min-w-0 truncate text-sm">
-                <span className="font-semibold">{t('asset_pending_return_strip').replace('{count}', String(count))}</span>
-                <span className="text-muted-foreground ml-2">{t('asset_pending_return_strip_hint')}</span>
+                {t('asset_pending_return_strip_hint')}{' '}
+                <strong className="font-bold">{t('asset_pending_return_strip').replace('{count}', String(count))}</strong>
             </p>
             <Button size="sm" variant="outline" className="ml-auto shrink-0" aria-pressed={active} onClick={onToggle}>
                 {active ? t('asset_pending_return_show_all') : t('asset_pending_return_show')}
