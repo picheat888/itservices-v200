@@ -442,7 +442,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-muted-foreground font-mono text-xs font-semibold">{session.reference}</span>
                                         <span className="text-muted-foreground text-xs font-normal">
-                                            · {session.warehouse || t('stock_count_all_wh')}
+                                            {session.warehouse || t('stock_count_all_wh')}
                                         </span>
                                     </div>
                                 </DialogTitle>

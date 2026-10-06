@@ -8,7 +8,7 @@ import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Clock, Eye, ListChecks, Pencil, Search, Workflow as WorkflowIcon, Zap, type LucideIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { WorkflowEditorDialog } from '../components/workflow-editor-dialog';
 import { WorkflowStrip } from '../components/workflow-strip';
@@ -111,9 +111,16 @@ export default function WorkflowsPage() {
                     // States the window and the sample, so a figure that moves week to
                     // week is not read as a target somebody set.
                     sub={
-                        measuredRequests
-                            ? `${t('wf_kpi_decision_window').replace('{days}', String(measureDays))} · ${measuredRequests} ${t('wf_kpi_decision_requests')}`
-                            : t('wf_kpi_decision_none').replace('{days}', String(measureDays))
+                        measuredRequests ? (
+                            <>
+                                <span>{t('wf_kpi_decision_window').replace('{days}', String(measureDays))}</span>
+                                <span className="ml-3">
+                                    {measuredRequests} {t('wf_kpi_decision_requests')}
+                                </span>
+                            </>
+                        ) : (
+                            t('wf_kpi_decision_none').replace('{days}', String(measureDays))
+                        )
                     }
                 />
                 <Stat icon={Zap} label={t('wf_kpi_auto')} value={`${autoCount}/${workflows.length}`} sub={t('wf_kpi_auto_sub')} />
@@ -176,7 +183,7 @@ export default function WorkflowsPage() {
                                             {/* What this route took in practice, or nothing at all rather than a zero. */}
                                             {wf.measured && (
                                                 <span className="font-mono">
-                                                    · {t('wf_row_decision')} {wf.measured.avg_days}
+                                                    {t('wf_row_decision')} {wf.measured.avg_days}
                                                     {t('wf_days_suffix')}
                                                 </span>
                                             )}
@@ -209,7 +216,7 @@ export default function WorkflowsPage() {
     );
 }
 
-function Stat({ icon: Icon, label, value, sub }: { icon: LucideIcon; label: string; value: string; sub: string }) {
+function Stat({ icon: Icon, label, value, sub }: { icon: LucideIcon; label: string; value: string; sub: ReactNode }) {
     return (
         <Card className="p-5">
             <div className="flex items-start justify-between gap-3">

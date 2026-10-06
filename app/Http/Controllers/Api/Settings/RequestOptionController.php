@@ -43,7 +43,7 @@ class RequestOptionController extends Controller
 
         $option = RequestOption::create($data);
         RequestSchemas::flushManagedCache();
-        AuditLog::record('Created request option', "{$option->request_type}.{$option->field_key} · {$option->label_en}", subject: $option);
+        AuditLog::record('Created request option', "{$option->request_type}.{$option->field_key}: {$option->label_en}", subject: $option);
 
         return response()->json(['data' => $option, 'message' => 'success'], 201);
     }
@@ -65,7 +65,7 @@ class RequestOptionController extends Controller
         RequestSchemas::flushManagedCache();
         AuditLog::record(
             'Updated request option',
-            "{$requestOption->request_type}.{$requestOption->field_key} · {$requestOption->label_en}",
+            "{$requestOption->request_type}.{$requestOption->field_key}: {$requestOption->label_en}",
             AuditLog::changes($before, $requestOption),
             subject: $requestOption,
         );
@@ -113,7 +113,7 @@ class RequestOptionController extends Controller
         RequestSchemas::flushManagedCache();
         AuditLog::record(
             'Reordered request options',
-            "{$data['request_type']}.{$data['field_key']} · ".$options->pluck('label_en')->implode(' → '),
+            "{$data['request_type']}.{$data['field_key']}: ".$options->pluck('label_en')->implode(' → '),
         );
 
         return response()->json(['data' => $options, 'message' => 'success']);
@@ -132,7 +132,7 @@ class RequestOptionController extends Controller
             return response()->json(['message' => 'in_use', 'count' => $used], 409);
         }
 
-        AuditLog::recordDeleted('Deleted request option', "{$requestOption->request_type}.{$requestOption->field_key} · {$requestOption->label_en}", $requestOption);
+        AuditLog::recordDeleted('Deleted request option', "{$requestOption->request_type}.{$requestOption->field_key}: {$requestOption->label_en}", $requestOption);
         $requestOption->delete();
         RequestSchemas::flushManagedCache();
 

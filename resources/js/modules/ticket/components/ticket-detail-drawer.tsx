@@ -620,7 +620,7 @@ export function TicketDetailDrawer({
                                                                     </button>
                                                                     <div className="text-muted-foreground truncate font-mono text-[11px]">
                                                                         {formatFileSize(a.size)}
-                                                                        {a.created_at ? ` · ${fmtWhen(a.created_at)}` : ''}
+                                                                        {a.created_at && <span className="ml-3">{fmtWhen(a.created_at)}</span>}
                                                                     </div>
                                                                     {/* Filed with the request, not uploaded here — and not removable. */}
                                                                     {a.from_request && (

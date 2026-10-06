@@ -68,8 +68,13 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                         {deptName}
                         {view?.tag && <span className="text-muted-foreground font-mono text-xs font-normal">{view.tag}</span>}
                     </DialogTitle>
-                    <DialogDescription>
-                        {sections.length} {t('sub_sections')} · {members.length} {t('dept_members')}
+                    <DialogDescription className="flex flex-wrap gap-x-3">
+                        <span>
+                            {sections.length} {t('sub_sections')}
+                        </span>
+                        <span>
+                            {members.length} {t('dept_members')}
+                        </span>
                     </DialogDescription>
                 </DialogHeader>
 

@@ -106,7 +106,7 @@ export const common: Dict = {
     all_contracts: 'สัญญาทั้งหมด',
     all_contracts_hint: 'สัญญาทั้งหมดในองค์กร',
     new_contract: 'เพิ่มสัญญา',
-    attachment_hint: 'PDF ไม่เกิน 25MB · สูงสุด 5 ไฟล์',
+    attachment_hint: 'PDF ไม่เกิน 25MB สูงสุด 5 ไฟล์',
     attachment_pick: 'คลิกเพื่อเลือกไฟล์ PDF',
     attachment_none: 'ยังไม่มีไฟล์แนบ',
     attachment_new: 'ใหม่',

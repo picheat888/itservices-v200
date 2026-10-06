@@ -105,7 +105,9 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                 {/* 2 — which slice of it, and how many rows */}
                 <div className="text-foreground/75 mt-0.5 truncate text-xs">
                     {reportScope(item.filters, item.columns_count, t, lang)}
-                    {item.rows_count != null && ` · ${t('rep_my_exports_rows').replace('{n}', item.rows_count.toLocaleString())}`}
+                    {item.rows_count != null && (
+                        <span className="ml-3">{t('rep_my_exports_rows').replace('{n}', item.rows_count.toLocaleString())}</span>
+                    )}
                 </div>
                 {/* 3 — when it was made and how long ago; or where it stands while it is not ready */}
                 {item.status === 'failed' ? (

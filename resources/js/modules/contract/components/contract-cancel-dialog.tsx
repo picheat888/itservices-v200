@@ -46,8 +46,9 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                         {t('contract_cancel_confirm_title')}
                     </DialogTitle>
                     {contract && (
-                        <DialogDescription>
-                            {contract.name} · {contract.code}
+                        <DialogDescription className="flex flex-wrap gap-x-3">
+                            <span>{contract.name}</span>
+                            <span className="font-mono">{contract.code}</span>
                         </DialogDescription>
                     )}
                 </DialogHeader>

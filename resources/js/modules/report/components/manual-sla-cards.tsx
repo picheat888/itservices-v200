@@ -269,7 +269,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                                     ) : (
                                         <span className="font-mono text-xs font-bold">{o.ticket_no}</span>
                                     )}
-                                    {o.category && <span className="text-muted-foreground"> · {t(`ticket_cat_${o.category}`)}</span>}
+                                    {o.category && <span className="text-muted-foreground ml-2">{t(`ticket_cat_${o.category}`)}</span>}
                                 </span>
                                 <span className="row-span-2">
                                     {o.over_hours !== null && (
@@ -280,7 +280,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                                     {t('rep_rs_open_due')
                                         .replace('{kind}', t(`rep_due_kind_${o.due_kind}`))
                                         .replace('{at}', shortMoment(o.due_at, lang))}
-                                    {o.assignee ? ` · ${o.assignee}` : ''}
+                                    {o.assignee && <span className="ml-3">{o.assignee}</span>}
                                 </span>
                             </div>
                         );

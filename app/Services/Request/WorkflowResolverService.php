@@ -247,7 +247,7 @@ class WorkflowResolverService
             $rows->prepend([
                 'actor_type' => StepActorType::Chain->value,
                 'kind' => WorkflowStepKind::Approval->value,
-                'label' => implode(' · ', $skippedChainLabels),
+                'label' => implode(', ', $skippedChainLabels),
                 'approver_employee_id' => null,
                 'approver_name' => null,
                 'status' => ApprovalStatus::Skipped->value,
@@ -432,11 +432,11 @@ class WorkflowResolverService
                     && $last['approver_employee_id'] === $row['approver_employee_id']
                     && $last['kind'] === $row['kind']) {
                     // The joined label is the explanation: it lists every step this one
-                    // decision covers ("Supervisor / Head · Manager · Vice President").
+                    // decision covers ("Supervisor / Head, Manager, Vice President").
                     // Restating that in prose only added an English sentence to a row
                     // that already said it, so `note` stays free for skip reasons and
                     // for whatever the approver actually writes.
-                    $merged[$lastIndex]['label'] = $last['label'].' · '.$row['label'];
+                    $merged[$lastIndex]['label'] = $last['label'].', '.$row['label'];
 
                     continue;
                 }

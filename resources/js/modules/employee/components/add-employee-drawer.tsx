@@ -362,7 +362,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                 // otherwise be repeated once per line.
                 const reasons = [...new Set(onboarding.failed.map((f) => f.message))]
                     .map((message) => (BLOCK_REASON_LABEL[message] ? t(BLOCK_REASON_LABEL[message]) : message))
-                    .join(' · ');
+                    .join(', ');
                 // Somebody has to file these by hand, so it waits to be dismissed.
                 pushToast(`${services} - ${reasons}`, 'error', t('emp_onboarding_failed'));
             } else if (onboarding?.created.length) {

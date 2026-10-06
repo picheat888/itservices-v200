@@ -1,6 +1,6 @@
 /**
- * One short line saying which slice of a report a file or a schedule holds — "ก.ย. 2026 ·
- * กรอง 2 อย่าง · 5 คอลัมน์" — built from the filters it was made with. Used by the Report
+ * One short line saying which slice of a report a file or a schedule holds — "ก.ย. 2026,
+ * กรอง 2 อย่าง, 5 คอลัมน์" — built from the filters it was made with. Used by the Report
  * Center rail (my-exports.tsx) so two files of the same report can be told apart — plus
  * `periodRange`, the dates of the hub's period switch for its report links. Dates are
  * written short, as the design does ("ส.ค. 2026"): a whole calendar month by its name, any
@@ -50,7 +50,7 @@ export function reportScope(filters: Record<string, unknown>, columnsCount: numb
     if (narrowed > 0) parts.push(t('rep_scope_filters').replace('{n}', String(narrowed)));
     if (columnsCount) parts.push(t('rep_scope_columns').replace('{n}', String(columnsCount)));
 
-    return parts.length > 0 ? parts.join(' · ') : t('rep_scope_all');
+    return parts.length > 0 ? parts.join(', ') : t('rep_scope_all');
 }
 
 /** Days each preset period looks back over, today included — ReportSnapshotService::PRESET_DAYS. */

@@ -17,6 +17,8 @@ interface TrailItem {
     glyph: React.ReactNode;
     title: string;
     meta: string;
+    /** When the step was decided — its own span after the meta, spaced rather than joined. */
+    metaTime?: string | null;
     note?: string | null;
     /** Step is open but its approver cannot sign in yet — said in the reader's language. */
     awaitingAccount?: boolean;
@@ -29,21 +31,21 @@ interface TrailItem {
  * → every (frozen) approval step with its decision + remark → the Admin/IT
  * completion hop, or the rejection notice back to the requester.
  */
-/** "QC Dept. · Asst. Manager / Manager" — who is holding a step that names no one person. */
+/** "QC Dept.: Asst. Manager / Manager" — who is holding a step that names no one person. */
 function departmentTitle(row: RequestApproval): string {
     const positions = (row.approver_positions ?? []).join(' / ');
-    return positions ? `${row.approver_department} · ${positions}` : String(row.approver_department);
+    return positions ? `${row.approver_department}: ${positions}` : String(row.approver_department);
 }
 
 /**
  * Who is holding a step that names several people: all of them, until one signs.
  *
- * Joined with "·" like the department line above rather than listed, because the trail
+ * Joined with commas on one line rather than listed, because the trail
  * gives each step one line and the names are alternates — whichever of them acts, the step
  * is done, so the line is one answer and not a checklist.
  */
 function candidatesTitle(row: RequestApproval): string {
-    return (row.approver_candidates ?? []).join(' · ');
+    return (row.approver_candidates ?? []).join(', ');
 }
 
 export function RequestTrail({ request }: { request: ServiceRequest }) {
@@ -66,9 +68,9 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
     const stepMeta = (row: RequestApproval): string => {
         switch (row.status) {
             case 'approved':
-                return `${t('req_trail_approved')}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
+                return t('req_trail_approved');
             case 'rejected':
-                return `${t('req_trail_rejected')}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
+                return t('req_trail_rejected');
             case 'current':
                 return t('req_trail_waiting');
             case 'skipped':
@@ -94,14 +96,14 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             // this is the one where the work actually happened.
             const done = row.acted_by_name ? t('req_trail_completed_by').replace('{name}', row.acted_by_name) : t('req_trail_completed_done');
 
-            return `${done}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
+            return done;
         }
         // Closed without delivery. Every approver said yes, so this is a cancellation —
         // and it names who called it off, the same way the completed line does.
         if (row.status === 'rejected') {
             const stopped = row.acted_by_name ? t('req_trail_cancelled_by').replace('{name}', row.acted_by_name) : t('req_trail_not_delivered');
 
-            return `${stopped}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
+            return stopped;
         }
 
         const ticket = request.ticket;
@@ -152,6 +154,8 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             // status line stays quiet instead of printing "skipped" twice. Rows from before
             // reasons were stored still get the plain word.
             meta: isCompletion ? completionMeta(row) : row.status === 'skipped' && row.skip_reason ? '' : stepMeta(row),
+            // Decided or closed steps say when; open, queued and skipped steps have no time.
+            metaTime: row.status === 'approved' || row.status === 'rejected' ? row.acted_at : null,
             note: row.note,
             awaitingAccount: row.awaiting_account,
             skipReason: row.skip_reason,
@@ -214,7 +218,12 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                         >
                             {item.title}
                         </div>
-                        {item.meta && <div className="text-muted-foreground mt-0.5 text-xs leading-snug">{item.meta}</div>}
+                        {(item.meta || item.metaTime) && (
+                            <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs leading-snug">
+                                {item.meta && <span>{item.meta}</span>}
+                                {item.metaTime && <span>{item.metaTime}</span>}
+                            </div>
+                        )}
                         {item.skipReason && (
                             <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
                                 <SkipForward className="h-3.5 w-3.5 shrink-0" />

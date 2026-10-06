@@ -10,7 +10,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>@yield('code') · {{ config('app.name', 'IT Services V2.0') }}</title>
+    <title>@yield('code') - {{ config('app.name', 'IT Services V2.0') }}</title>
 
     <link rel="icon" href="/logo.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,6 +131,8 @@
             transition: opacity 0.15s ease;
         }
         .home-link:hover { opacity: 0.7; }
+        /* The Thai label sits after the English one, spaced apart. */
+        .home-link .th { margin-left: 0.6em; }
 
         .ref {
             margin-top: 28px;
@@ -152,7 +154,7 @@
             <span class="th">@yield('message_th')</span>
         </p>
 
-        <a href="/" class="home-link">Back to home · กลับหน้าหลัก</a>
+        <a href="/" class="home-link">Back to home <span class="th" lang="th">กลับหน้าหลัก</span></a>
 
         @hasSection('ref')
             <p class="ref">@yield('ref')</p>

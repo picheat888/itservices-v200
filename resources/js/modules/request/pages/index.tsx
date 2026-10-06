@@ -45,7 +45,7 @@ import { useRequests } from '../hooks/use-requests';
 function activityLine(request: ServiceRequest, t: (key: string) => string): string {
     const what = t(`req_activity_${request.activity.kind}`);
 
-    return request.activity.by ? `${what} · ${request.activity.by}` : what;
+    return request.activity.by ? t('req_activity_by').replace('{what}', what).replace('{name}', request.activity.by) : what;
 }
 
 /**
@@ -391,16 +391,14 @@ export default function RequestsPage() {
                                                         typed fields at all (a General Request). */}
                                                     <div className="truncate text-sm font-medium">
                                                         {r.fields_display[0]
-                                                            ? `${t(REQUEST_TYPE_META[r.type].labelKey)} · ${headlineValue(r, lang)}`
+                                                            ? `${t(REQUEST_TYPE_META[r.type].labelKey)}: ${headlineValue(r, lang)}`
                                                             : requestTitle(r, t)}
                                                     </div>
                                                     {/* Who it is for. The reason has moved out of the row: it is a sentence, it
                                                         was truncated mid-thought, and it belongs where the decision is made. */}
                                                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                                                        <span className="truncate">
-                                                            {r.requester.name}
-                                                            {r.requester.department ? ` · ${r.requester.department}` : ''}
-                                                        </span>
+                                                        <span className="truncate">{r.requester.name}</span>
+                                                        {r.requester.department && <span className="truncate">{r.requester.department}</span>}
                                                         {isOnBehalfRequest(r) && (
                                                             <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="shrink-0">
                                                                 {t(REQUEST_ONBOARDING_BADGE.labelKey)}
@@ -501,8 +499,9 @@ export default function RequestsPage() {
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
                                                     <div className="truncate text-sm font-medium">{requestTitle(r, t)}</div>
-                                                    <div className="text-muted-foreground truncate text-xs">
-                                                        {activityLine(r, t)} · {ageLabel(r.activity.at ?? r.created_at)}
+                                                    <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
+                                                        <span className="truncate">{activityLine(r, t)}</span>
+                                                        <span className="shrink-0">{ageLabel(r.activity.at ?? r.created_at)}</span>
                                                     </div>
                                                 </div>
                                                 {/* The badge already says where this stands, so the progress ticks
@@ -662,7 +661,7 @@ function DashCard({
             <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
                 <Icon className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm font-semibold">{title}</span>
-                {count != null && <span className="text-muted-foreground font-mono text-xs">· {count}</span>}
+                {count != null && <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 font-mono text-[11px]">{count}</span>}
                 {action}
             </div>
             {children}

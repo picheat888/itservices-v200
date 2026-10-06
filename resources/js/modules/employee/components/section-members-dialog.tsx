@@ -61,9 +61,11 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                         {sectionName}
                         {view?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{view.code}</span>}
                     </DialogTitle>
-                    <DialogDescription>
-                        {view?.department ? `${view.department} · ` : ''}
-                        {members.length} {t('section_members')}
+                    <DialogDescription className="flex flex-wrap gap-x-3">
+                        {view?.department && <span>{view.department}</span>}
+                        <span>
+                            {members.length} {t('section_members')}
+                        </span>
                     </DialogDescription>
                 </DialogHeader>
 

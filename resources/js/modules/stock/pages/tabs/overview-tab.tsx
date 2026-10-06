@@ -119,12 +119,14 @@ export function OverviewTab({
                                                 <span className={cn('w-1 shrink-0 rounded-full', out ? 'bg-destructive sc-led' : 'bg-amber-500')} />
                                                 <div className="min-w-0 flex-1 py-0.5">
                                                     <div className="truncate text-sm font-medium">{it.name}</div>
-                                                    <div className="text-muted-foreground font-mono text-[11px]">
-                                                        {it.sku} ·{' '}
-                                                        {(it.balances ?? [])
-                                                            .filter((b) => b.qty > 0)
-                                                            .map((b) => b.warehouse)
-                                                            .join(', ') || '—'}
+                                                    <div className="text-muted-foreground flex flex-wrap gap-x-3 font-mono text-[11px]">
+                                                        <span>{it.sku}</span>
+                                                        <span>
+                                                            {(it.balances ?? [])
+                                                                .filter((b) => b.qty > 0)
+                                                                .map((b) => b.warehouse)
+                                                                .join(', ') || '—'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div className="shrink-0 text-right">
@@ -177,8 +179,9 @@ export function OverviewTab({
                                                     </span>
                                                     <div className="min-w-0 flex-1">
                                                         <div className="truncate text-sm font-medium">{m.item_name}</div>
-                                                        <div className="text-muted-foreground font-mono text-[11px]">
-                                                            {m.sku} · {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
+                                                        <div className="text-muted-foreground flex flex-wrap gap-x-3 font-mono text-[11px]">
+                                                            <span>{m.sku}</span>
+                                                            <span>{t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}</span>
                                                         </div>
                                                     </div>
                                                     <div className="shrink-0 text-right">

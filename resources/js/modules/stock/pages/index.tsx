@@ -356,7 +356,7 @@ export default function StockPage() {
             render: (i) => (
                 <div>
                     <div className="text-sm font-medium">{i.name}</div>
-                    <div className="text-muted-foreground text-xs">{[i.brand, i.model].filter(Boolean).join(' · ') || '—'}</div>
+                    <div className="text-muted-foreground text-xs">{[i.brand, i.model].filter(Boolean).join(' ') || '—'}</div>
                 </div>
             ),
         },

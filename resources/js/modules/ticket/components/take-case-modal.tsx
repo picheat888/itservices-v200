@@ -57,14 +57,16 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     const assetOptions = useMemo(() => {
         const own = (ownAssets ?? []).map((a) => ({
             value: String(a.id),
-            label: `${a.asset_code} · ${a.model ?? '—'}`,
+            label: a.asset_code,
+            hint: a.model ?? '—',
             search: `${a.asset_code} ${a.model ?? ''}`,
         }));
         const ownIds = new Set(own.map((o) => o.value));
         const rest = (assetData?.data ?? [])
             .map((a) => ({
                 value: String(a.id),
-                label: `${a.asset_code} · ${a.model}`,
+                label: a.asset_code,
+                hint: a.model ?? undefined,
                 search: `${a.asset_code} ${a.model}`,
             }))
             .filter((o) => !ownIds.has(o.value));
@@ -159,13 +161,14 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                                                         type="button"
                                                         onClick={() => setAssetId(selected ? '' : String(a.id))}
                                                         className={cn(
-                                                            'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                                                            'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
                                                             selected
                                                                 ? 'border-brand bg-brand/10 text-brand'
                                                                 : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
                                                         )}
                                                     >
-                                                        {a.asset_code} · {a.model ?? '—'}
+                                                        <span className="font-mono">{a.asset_code}</span>
+                                                        <span>{a.model ?? '—'}</span>
                                                     </button>
                                                 );
                                             })}

@@ -832,8 +832,8 @@ function OverviewTab({
                                     key={c.id}
                                     title={
                                         c.days <= 0
-                                            ? `${c.code} · ${c.name} - ${c.end} (${t('contract_timeline_expired_ago').replace('{n}', String(-c.days))})`
-                                            : `${c.code} · ${c.name} - ${c.end} (${t('contract_days_many').replace('{n}', String(c.days))})`
+                                            ? `${c.code}\n${c.name}\n${c.end} (${t('contract_timeline_expired_ago').replace('{n}', String(-c.days))})`
+                                            : `${c.code}\n${c.name}\n${c.end} (${t('contract_days_many').replace('{n}', String(c.days))})`
                                     }
                                     onClick={() => onSelect(c.id)}
                                     className={cn(

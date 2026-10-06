@@ -280,7 +280,7 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
                                     ) : (
                                         <span className="font-mono text-xs font-bold">{o.ticket_no}</span>
                                     )}
-                                    {o.request_type && <span className="text-muted-foreground"> · {t(`req_${o.request_type}`)}</span>}
+                                    {o.request_type && <span className="text-muted-foreground ml-2">{t(`req_${o.request_type}`)}</span>}
                                 </span>
                                 <span className="row-span-2">
                                     {o.over_hours !== null && (

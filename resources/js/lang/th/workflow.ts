@@ -89,6 +89,6 @@ export const workflow: Dict = {
     wf_skipped: 'ข้ามขั้นนี้',
     wf_covers: 'อนุมัติแทน',
     wf_owner_preview: 'ระบุตัวจริงเมื่อเลือก Resource ตอนยื่นคำขอ',
-    wf_queue_preview: 'คิวทีม IT · เปิด Ticket อัตโนมัติ',
+    wf_queue_preview: 'เข้าคิวทีม IT และเปิด Ticket อัตโนมัติ',
     wf_save_error_steps: 'ตรวจสอบรายการขั้นตอน',
 };

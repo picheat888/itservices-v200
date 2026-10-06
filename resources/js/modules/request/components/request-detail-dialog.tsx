@@ -215,7 +215,7 @@ function RequestDetailBody({
             <FocusDialogHeader
                 icon={meta.icon}
                 accent={meta.color}
-                eyebrow={`${t('req_detail_eyebrow')} · ${t(REQUEST_TYPE_META[request.type].labelKey)}`}
+                eyebrow={`${t('req_detail_eyebrow')}: ${t(REQUEST_TYPE_META[request.type].labelKey)}`}
                 title={shownTitle}
                 code={request.reference}
                 srDescription={shownTitle}
@@ -231,10 +231,17 @@ function RequestDetailBody({
                     <UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" />
                     <div className="min-w-0 text-sm">
                         <div className="font-semibold text-violet-700 dark:text-violet-300">{t('req_onboarding_title')}</div>
-                        <div className="text-muted-foreground text-xs">
-                            {request.submitted_by?.name
-                                ? `${t('req_submitted_by')} ${request.submitted_by.name} · ${request.created_at}`
-                                : t('req_onboarding_desc')}
+                        <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
+                            {request.submitted_by?.name ? (
+                                <>
+                                    <span>
+                                        {t('req_submitted_by')} {request.submitted_by.name}
+                                    </span>
+                                    <span>{request.created_at}</span>
+                                </>
+                            ) : (
+                                t('req_onboarding_desc')
+                            )}
                         </div>
                     </div>
                 </div>
