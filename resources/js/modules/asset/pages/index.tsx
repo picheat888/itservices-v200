@@ -6,7 +6,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { ToneDot } from '@/shared/components/status-badge';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
@@ -34,7 +34,6 @@ import {
     Lock,
     MapPin,
     MoreHorizontal,
-    PackageCheck,
     Plus,
     RefreshCcw,
     Search,
@@ -607,60 +606,6 @@ export default function AssetsPage() {
                 </div>
             </div>
 
-            {/* Admin warning — assets a holder has sent back, awaiting IT receipt into a warehouse. */}
-            {canReceive && pendingReturns.length > 0 && (
-                <div className="bg-card overflow-hidden rounded-xl border border-amber-500/30 shadow-xs">
-                    {/* Banner: a bare amber icon anchors the return queue; "Receiving: N Unit" on the right. */}
-                    <div className="flex items-center gap-3 border-b border-amber-500/25 bg-amber-500/10 px-4 py-3.5">
-                        <Undo2 className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                        <div className="text-sm font-extrabold tracking-tight">{t('asset_pending_return_title')}</div>
-                        <span className="ml-auto shrink-0 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">
-                            {t('asset_receiving_count').replace('{count}', String(pendingReturns.length))}
-                        </span>
-                    </div>
-
-                    {pendingReturns.map((a, i) => (
-                        <div
-                            key={a.id}
-                            className={cn(
-                                'flex items-center gap-3 px-4 py-3 transition-colors hover:bg-amber-500/[0.06]',
-                                i > 0 && 'border-border border-t',
-                            )}
-                        >
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                <AssetTypeIcon type={a.type} className="h-4 w-4" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <span className="truncate text-sm font-semibold">{a.model}</span>
-                                    {a.tag && <AssetTagBadge tag={a.tag} className="shrink-0" />}
-                                </div>
-                                <div className="text-muted-foreground truncate font-mono text-xs">
-                                    {a.asset_code}
-                                    {a.owner_name ? ` · ${lang === 'th' ? 'จาก' : 'from'} ${a.owner_name}` : ''}
-                                </div>
-                            </div>
-                            {/* Receive action: a solid amber icon button (opens the receive-to-warehouse
-                                modal). Icon mirrors the header's Undo2 → received. */}
-                            <button
-                                type="button"
-                                onClick={() => setReceiveAsset(a)}
-                                title={t('asset_mark_received')}
-                                aria-label={t('asset_mark_received')}
-                                className={cn(
-                                    'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm',
-                                    'transition-all duration-150 hover:bg-amber-600 hover:shadow-md',
-                                    'focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-1 focus-visible:outline-none',
-                                    'active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100',
-                                )}
-                            >
-                                <PackageCheck className="h-[18px] w-[18px]" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
             <Card className="overflow-clip">
                 <PageTabs
                     tabs={(['overview', 'inventory', 'transfers'] as Tab[])
@@ -668,6 +613,10 @@ export default function AssetsPage() {
                         .map((tb) => ({
                             id: tb,
                             label: tb === 'overview' ? t('asset_overview') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers'),
+                            // Assets sent back and waiting for IT to receive them (receivers only).
+                            ...(tb === 'inventory' && canReceive
+                                ? { count: pendingReturns.length, tone: 'warn' as const, countTitle: t('asset_pending_return_chip_hint') }
+                                : {}),
                         }))}
                     active={tab}
                     onChange={changeTab}
@@ -970,6 +919,31 @@ export default function AssetsPage() {
                                     {t('reset_filters')}
                                 </button>
                             )}
+                            {/* Return queue as a filter chip. It replaces the box above the tabs, which arrived
+                                after the list and pushed it down ~320px; the toolbar row's height is fixed, so the
+                                chip appearing late moves nothing. Receive from the row's own button. */}
+                            {canReceive && pendingReturns.length > 0 && (
+                                <button
+                                    type="button"
+                                    aria-pressed={statusFilter === 'pending_return'}
+                                    title={t('asset_pending_return_chip_hint')}
+                                    onClick={() => {
+                                        setStatusFilter(statusFilter === 'pending_return' ? '' : 'pending_return');
+                                        setPage(1);
+                                    }}
+                                    className={cn(
+                                        'ml-auto inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors',
+                                        'focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-1 focus-visible:outline-none',
+                                        statusFilter === 'pending_return'
+                                            ? 'border-amber-700 bg-amber-700 text-white hover:bg-amber-800'
+                                            : 'border-amber-500/40 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20 dark:text-amber-300',
+                                    )}
+                                >
+                                    <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                    {t('asset_pending_return_chip')}
+                                    <span className="font-mono tabular-nums">{pendingReturns.length}</span>
+                                </button>
+                            )}
                         </div>
 
                         {activeChips.length > 0 && (
@@ -1265,11 +1239,14 @@ export default function AssetsPage() {
                                                         {a.source === 'rented' ? (
                                                             // The contract's rent is for the whole contract — repeated on every unit it read as
                                                             // each one's value. Name the contract instead.
-                                                            <StatusBadge tone="violet" dot={false} className="font-sans">
-                                                                {a.contract_code
-                                                                    ? `${t('asset_rented_badge')} · ${a.contract_code}`
-                                                                    : t('asset_rented_badge')}
-                                                            </StatusBadge>
+                                                            <div className="font-sans">
+                                                                <div className="text-muted-foreground text-xs">
+                                                                    {a.contract_code ? t('asset_rented_by_contract') : t('asset_rented_badge')}
+                                                                </div>
+                                                                {a.contract_code && (
+                                                                    <div className="text-foreground font-mono text-xs">{a.contract_code}</div>
+                                                                )}
+                                                            </div>
                                                         ) : (
                                                             a.value_display
                                                         )}

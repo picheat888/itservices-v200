@@ -20,15 +20,14 @@ export const ASSET_STATUS_META: Record<AssetStatus, { tone: Tone; key: string }>
 /** Coloured badge for an asset's lifecycle status (color is system-wide, set in Settings -> Assets). */
 /**
  * An asset's status as a badge. `returned` marks a write-off that was a return to the lessor
- * (returned_to_vendor_at): same colour, with the way it left spelled out next to it.
+ * (returned_to_vendor_at): same colour, labelled "Returned to the lessor" instead of "Written off".
  */
 export function AssetStatusBadge({ status, t, returned = false }: { status: AssetStatus; t: (k: string) => string; returned?: boolean }) {
     const meta = ASSET_STATUS_META[status] ?? { tone: 'gray' as Tone, key: status };
     const color = useUiStore((s) => s.assetStatusColors[status]);
     return (
         <StatusBadge tone={meta.tone} color={color}>
-            {t(meta.key)}
-            {returned && status === 'writeoff' && ` · ${t('asset_returned_to_vendor_short')}`}
+            {returned && status === 'writeoff' ? t('asset_returned_to_vendor_label') : t(meta.key)}
         </StatusBadge>
     );
 }

@@ -250,18 +250,14 @@ export function AssetDetailDrawer({
                                 {/* A rented asset that went back to its lessor: when, by whom, and the note. */}
                                 {a.status === 'writeoff' && a.returned_to_vendor_at && (
                                     <div className="border-border bg-muted/40 rounded-lg border px-4 py-3">
-                                        <div className="text-xs font-semibold">
-                                            {t('asset_returned_to_vendor_label')}
-                                            <span className="text-muted-foreground font-normal">
-                                                {' · '}
-                                                {formatDateTime(a.returned_to_vendor_at)}
-                                                {a.returned_to_vendor_by_name && (
-                                                    <>
-                                                        {' · '}
-                                                        {t('asset_by')} {a.returned_to_vendor_by_name}
-                                                    </>
-                                                )}
-                                            </span>
+                                        <div className="text-xs font-semibold">{t('asset_returned_to_vendor_label')}</div>
+                                        <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs">
+                                            <span>{formatDateTime(a.returned_to_vendor_at)}</span>
+                                            {a.returned_to_vendor_by_name && (
+                                                <span>
+                                                    {t('asset_by')} {a.returned_to_vendor_by_name}
+                                                </span>
+                                            )}
                                         </div>
                                         {a.last_reason && (
                                             <div className="text-muted-foreground mt-0.5 text-sm whitespace-pre-wrap">{a.last_reason}</div>
@@ -271,15 +267,12 @@ export function AssetDetailDrawer({
                                 {/* How a written-off asset left — the reason picked at write-off (Settings → Assets) and the note typed with it. */}
                                 {a.status === 'writeoff' && !a.returned_to_vendor_at && (a.writeoff_reason || a.last_reason) && (
                                     <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
-                                        <div className="text-destructive text-xs font-semibold">
-                                            {t('asset_writeoff_note_label')}
-                                            {a.written_off_by_name && (
-                                                <span className="text-muted-foreground font-normal">
-                                                    {' · '}
-                                                    {t('asset_by')} {a.written_off_by_name}
-                                                </span>
-                                            )}
-                                        </div>
+                                        <div className="text-destructive text-xs font-semibold">{t('asset_writeoff_note_label')}</div>
+                                        {a.written_off_by_name && (
+                                            <div className="text-muted-foreground mt-0.5 text-xs">
+                                                {t('asset_by')} {a.written_off_by_name}
+                                            </div>
+                                        )}
                                         {a.writeoff_reason && <div className="mt-1 text-sm font-semibold">{a.writeoff_reason}</div>}
                                         {a.last_reason && (
                                             <div className="text-muted-foreground mt-0.5 text-sm whitespace-pre-wrap">{a.last_reason}</div>
