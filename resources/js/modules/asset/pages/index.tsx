@@ -194,6 +194,9 @@ function AssetOverviewSkeleton() {
     );
 }
 
+/** Rows-per-page choices for the inventory table; the first is the default (left out of the URL). */
+const PER_PAGE_OPTIONS = [20, 50, 100];
+
 export default function AssetsPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -227,13 +230,52 @@ export default function AssetsPage() {
         }
     }, [tab, canViewOverview]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const [search, setSearch] = useState('');
-    const [typeFilter, setTypeFilter] = useState<AssetType | ''>('');
-    const [sourceFilter, setSourceFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('');
-    const [warehouseFilter, setWarehouseFilter] = useState('');
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
+    // The inventory list's search, filters and page live in the URL (?q, type, source, status,
+    // warehouse, page, per), so a reload or a shared link shows the same list. Defaults are left
+    // out of the URL, and every change replaces the entry (typing a search must not fill Back
+    // with one step per letter). Several setters called in one handler — a filter plus "back to
+    // page 1" — are merged into one URL write: separate writes would each start from the same
+    // old URL and the last would undo the others.
+    const pendingListParams = useRef<Record<string, string | null> | null>(null);
+    const setListParams = (patch: Record<string, string | null>) => {
+        const first = pendingListParams.current === null;
+        pendingListParams.current = { ...(pendingListParams.current ?? {}), ...patch };
+        if (!first) return;
+        queueMicrotask(() => {
+            const merged = pendingListParams.current ?? {};
+            pendingListParams.current = null;
+            setSearchParams(
+                (sp) => {
+                    const next = new URLSearchParams(sp);
+                    for (const [key, value] of Object.entries(merged)) {
+                        if (value === null || value === '') next.delete(key);
+                        else next.set(key, value);
+                    }
+                    return next;
+                },
+                { replace: true },
+            );
+        });
+    };
+    const search = searchParams.get('q') ?? '';
+    const typeFilter = (searchParams.get('type') ?? '') as AssetType | '';
+    const sourceFilter = searchParams.get('source') ?? '';
+    const statusParam = searchParams.get('status');
+    const statusFilter: AssetStatus | '' = statusParam && statusParam in ASSET_STATUS_META ? (statusParam as AssetStatus) : '';
+    const warehouseFilter = searchParams.get('warehouse') ?? '';
+    const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1);
+    const perPageParam = Number(searchParams.get('per'));
+    const perPage = PER_PAGE_OPTIONS.includes(perPageParam) ? perPageParam : PER_PAGE_OPTIONS[0];
+    const setSearch = (value: string) => setListParams({ q: value });
+    const setTypeFilter = (value: AssetType | '') => setListParams({ type: value });
+    const setSourceFilter = (value: string) => setListParams({ source: value });
+    const setStatusFilter = (value: AssetStatus | '') => setListParams({ status: value });
+    const setWarehouseFilter = (value: string) => setListParams({ warehouse: value });
+    const setPage = (value: number | ((current: number) => number)) => {
+        const next = typeof value === 'function' ? value(page) : value;
+        setListParams({ page: next > 1 ? String(next) : null });
+    };
+    const setPerPage = (value: number) => setListParams({ per: value === PER_PAGE_OPTIONS[0] ? null : String(value) });
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     // Multi-select is locked to one status group; `selectionStatus` is that group.
     const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
@@ -1236,7 +1278,7 @@ export default function AssetsPage() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {[20, 50, 100].map((n) => (
+                                        {PER_PAGE_OPTIONS.map((n) => (
                                             <SelectItem key={n} value={String(n)}>
                                                 {n}
                                             </SelectItem>
