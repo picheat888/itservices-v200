@@ -8,6 +8,7 @@ export const common: Dict = {
     toast_region: 'Notifications',
     filters: 'Filters',
     reset_filters: 'Clear filters',
+    remove_filter: 'Remove filter',
     filter_clear_all: 'Clear all',
     filter_active_sr: 'active filters',
     filter_found: 'Found',
