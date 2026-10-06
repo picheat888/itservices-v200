@@ -544,7 +544,9 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
                               ? t('wf_any_of_preview')
                               : row.approver_position || row.label}
                 </div>
-                {!skipped && !queue && row.approver_name && row.label.includes(', ') && (
+                {/* Merged steps say so with covered_steps — not by a comma in the label, which a
+                    single step's own name may contain. */}
+                {!skipped && !queue && row.approver_name && (row.covered_steps ?? 1) > 1 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                         <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
                             {t('wf_covers')}: {row.label}

@@ -41,6 +41,8 @@ export interface ResolvedPreviewRow {
     note: string | null;
     /** Why a skipped row was skipped — a code the editor writes out through `req_skip_*`. */
     skip_reason: ApprovalSkipReason | null;
+    /** Set when consecutive steps fell to the same person and were merged: how many it stands for. */
+    covered_steps?: number;
 }
 
 export interface WorkflowPreviewResponse {

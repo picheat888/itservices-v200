@@ -437,6 +437,10 @@ class WorkflowResolverService
                     // that already said it, so `note` stays free for skip reasons and
                     // for whatever the approver actually writes.
                     $merged[$lastIndex]['label'] = $last['label'].', '.$row['label'];
+                    // How many steps this decision stands for, so the editor can say "covers …"
+                    // without guessing from the label (a single step's own name may hold a comma).
+                    // Not a request_approvals column: create() drops it when the row is stored.
+                    $merged[$lastIndex]['covered_steps'] = ($last['covered_steps'] ?? 1) + 1;
 
                     continue;
                 }
