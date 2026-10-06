@@ -123,9 +123,13 @@ export function AssetReceiveModal({
                             <Warehouse className="text-brand h-4 w-4 shrink-0" />
                             <div className="min-w-0">
                                 <div className="truncate text-sm font-semibold">{shownAsset.model}</div>
-                                <div className="text-muted-foreground font-mono text-[11px]">
-                                    {shownAsset.asset_code}
-                                    {shownAsset.warehouse ? ` · ${lang === 'th' ? 'เดิมอยู่' : 'from'}: ${shownAsset.warehouse}` : ''}
+                                <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
+                                    <span className="font-mono">{shownAsset.asset_code}</span>
+                                    {shownAsset.warehouse && (
+                                        <span>
+                                            {lang === 'th' ? 'เดิมอยู่' : 'from'}: {shownAsset.warehouse}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

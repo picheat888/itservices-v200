@@ -52,7 +52,9 @@ export function AssetTransferDialog({
                 const name = lang === 'th' ? (e.name_th ?? e.name) : e.name;
                 return {
                     value: String(e.id),
-                    label: `${name} · ${e.code}${e.department ? ` · ${e.department}` : ''}`,
+                    label: name,
+                    hint: e.department ?? undefined,
+                    sub: e.code,
                     // Search both languages so a Thai query matches an English-stored name and vice versa.
                     search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.department ?? ''}`,
                 };
