@@ -213,7 +213,17 @@ class StockItemController extends Controller
             'updater',
         ]);
 
-        return (new StockItemResource($stockItem))->response();
+        return (new StockItemResource($this->withReserved($stockItem)))->response();
+    }
+
+    /**
+     * Load the reserved quantity (approved-but-unfulfilled requests) the way index() does with
+     * withSum. Without it a single item's response said 0 reserved, so the item dialog never
+     * showed its "reserved / free" line.
+     */
+    private function withReserved(StockItem $stockItem): StockItem
+    {
+        return $stockItem->loadSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty');
     }
 
     /** Full audit history for one SKU: movement timeline + lots + per-serial event timelines. */
@@ -342,7 +352,7 @@ class StockItemController extends Controller
         $stockItem->update($request->validated());
         AuditLog::record('Updated stock item', "{$stockItem->sku} - {$stockItem->name}", AuditLog::changes($before, $stockItem), subject: $stockItem);
 
-        return (new StockItemResource($stockItem))->response();
+        return (new StockItemResource($this->withReserved($stockItem)))->response();
     }
 
     /** Delete a stock item (requires stock.delete). Only an empty SKU — zero

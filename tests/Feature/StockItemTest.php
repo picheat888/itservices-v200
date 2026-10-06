@@ -246,6 +246,29 @@ class StockItemTest extends TestCase
             ->assertJsonPath('data.0.reserved', 3);
     }
 
+    public function test_show_reports_reserved_like_the_index(): void
+    {
+        $item = $this->makeItem(['current_stock' => 10]);
+        StockRequest::create(['stock_item_id' => $item->id, 'requester_name' => 'A', 'qty' => 2, 'reason' => 'x', 'status' => 'approved']);
+        StockRequest::create(['stock_item_id' => $item->id, 'requester_name' => 'B', 'qty' => 4, 'reason' => 'y', 'status' => 'pending']);
+
+        // The item dialog reads this to show "reserved 2, free 8"; it used to come back 0.
+        $this->actingAs($this->superUser())
+            ->getJson("/api/stock-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('data.reserved', 2);
+    }
+
+    public function test_show_reports_zero_reserved_without_approved_requests(): void
+    {
+        $item = $this->makeItem();
+
+        $this->actingAs($this->superUser())
+            ->getJson("/api/stock-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('data.reserved', 0);
+    }
+
     public function test_create_requires_category_brand_model_warranty(): void
     {
         $this->actingAs($this->superUser())
