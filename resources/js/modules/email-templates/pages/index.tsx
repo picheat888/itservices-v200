@@ -760,7 +760,7 @@ export default function EmailTemplatesPage() {
 
             {/* Tabs are the card's top edge, the way every other tabbed page in the app sets
                 them: a row of labels floating on the page background belongs to nothing. */}
-            <Card className="overflow-hidden">
+            <Card className="overflow-clip">
                 <div className="border-border flex items-center gap-1 border-b px-2">
                     {TAB_IDS.map((id) => (
                         <button

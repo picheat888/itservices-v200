@@ -7,7 +7,9 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -524,6 +526,11 @@ export default function AssetsPage() {
     // Loading rows show while any fetch runs (a page, filter or search change keeps the previous
     // page as placeholder data, which would otherwise sit there looking current).
     const tableLoading = isLoading || isFetching;
+    // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
+    // header stick while the table fits its width.
+    const tableBoxRef = useRef<HTMLDivElement>(null);
+    const heldTableHeight = useHeldHeight(tableBoxRef, tableLoading);
+    const tableFitsWidth = useTableFitsWidth(tableBoxRef);
     const searchRef = useRef<HTMLInputElement>(null);
     const filterIdBase = useId();
     const filterIds = {
@@ -654,7 +661,7 @@ export default function AssetsPage() {
                 </div>
             )}
 
-            <Card className="overflow-hidden">
+            <Card className="overflow-clip">
                 <PageTabs
                     tabs={(['overview', 'inventory', 'transfers'] as Tab[])
                         .filter((tb) => tb !== 'overview' || canViewOverview)
@@ -1068,10 +1075,19 @@ export default function AssetsPage() {
                             </div>
                         )}
 
-                        <div className="border-border overflow-hidden rounded-xl border">
-                            <div className="overflow-x-auto">
+                        {/* overflow-clip, not -hidden: clips the same rounded edge without being a scroll box, which would stop the header sticking. */}
+                        <div className="border-border overflow-clip rounded-xl border">
+                            <div
+                                ref={tableBoxRef}
+                                className={cn(!tableFitsWidth && 'overflow-x-auto')}
+                                style={heldTableHeight ? { minHeight: heldTableHeight } : undefined}
+                            >
                                 <table className="w-full text-sm" aria-label={t('asset_inventory_table')} aria-busy={tableLoading}>
-                                    <thead>
+                                    <thead
+                                        className={cn(
+                                            tableFitsWidth && 'bg-card sticky top-[var(--sticky-top,0px)] z-10 shadow-[0_1px_0_var(--color-border)]',
+                                        )}
+                                    >
                                         <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                             <th
                                                 className={cn('w-10 px-2 py-2.5', eligibleStatus ? 'cursor-pointer' : 'cursor-not-allowed')}
@@ -1103,11 +1119,17 @@ export default function AssetsPage() {
                                     </thead>
                                     <tbody>
                                         {tableLoading ? (
-                                            Array.from({ length: 8 }).map((_, r) => (
+                                            // As many rows as the page on screen, each as tall as a real two-line row,
+                                            // so the table keeps its height while the next page loads — a shorter
+                                            // table pulled the scroll position up and the page jumped.
+                                            Array.from({ length: rows.length || 8 }).map((_, r) => (
                                                 <tr key={`skeleton-${r}`} aria-hidden="true" className="border-border/60 border-b last:border-0">
                                                     {Array.from({ length: 10 }).map((_, c) => (
                                                         <td key={c} className="px-4 py-2.5">
-                                                            <div className="bg-muted h-4 w-3/4 max-w-[160px] rounded motion-safe:animate-pulse" />
+                                                            <div className="flex h-9 flex-col justify-center gap-1.5">
+                                                                <div className="bg-muted h-3 w-1/2 max-w-[90px] rounded motion-safe:animate-pulse" />
+                                                                <div className="bg-muted h-4 w-3/4 max-w-[160px] rounded motion-safe:animate-pulse" />
+                                                            </div>
                                                         </td>
                                                     ))}
                                                 </tr>

@@ -4,7 +4,9 @@ import { useDepartments, useEmployees, usePositions, useSections } from '@/modul
 import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
+import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
@@ -33,7 +35,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { AccessPermissionTree } from '../components/access-permission-tree';
 import { AssetPermissionTree } from '../components/asset-permission-tree';
@@ -101,7 +103,7 @@ export default function PermissionsPage() {
                 <p className="text-muted-foreground text-sm">{t('perm_sub')}</p>
             </div>
 
-            <Card className="overflow-hidden p-0">
+            <Card className="overflow-clip p-0">
                 <div className="border-border flex gap-1 border-b px-3 pt-1">
                     {tabs.map((tb) => (
                         <button
@@ -1011,6 +1013,11 @@ function AuditTab() {
     const filters: AuditFilters = { q, category, user };
 
     const { data, isLoading } = useAuditLogs(page, pageSize, filters);
+    // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
+    // header stick while the table fits its width.
+    const tableBoxRef = useRef<HTMLDivElement>(null);
+    const heldTableHeight = useHeldHeight(tableBoxRef, isLoading);
+    const tableFitsWidth = useTableFitsWidth(tableBoxRef);
 
     // Reference data to turn raw foreign-key ids in diffs into entity names.
     const { data: positions = [] } = usePositions();
@@ -1092,9 +1099,13 @@ function AuditTab() {
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div
+                ref={tableBoxRef}
+                className={cn(!tableFitsWidth && 'overflow-x-auto')}
+                style={heldTableHeight ? { minHeight: heldTableHeight } : undefined}
+            >
                 <table className="w-full text-sm">
-                    <thead>
+                    <thead className={cn(tableFitsWidth && 'bg-card sticky top-[var(--sticky-top,0px)] z-10 shadow-[0_1px_0_var(--color-border)]')}>
                         <tr className="border-border border-b">
                             {['Event', t('audit_user'), t('audit_target'), t('audit_time'), ''].map((h, i) => (
                                 <th

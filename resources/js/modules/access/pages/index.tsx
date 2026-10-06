@@ -536,7 +536,7 @@ export default function AccessControlPage() {
             </div>
 
             {/* Tab card */}
-            <Card className="overflow-hidden p-0">
+            <Card className="overflow-clip p-0">
                 <PageTabs tabs={tabs} active={tab} onChange={setTab} />
 
                 <div className="p-4">

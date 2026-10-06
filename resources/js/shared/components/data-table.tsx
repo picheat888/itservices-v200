@@ -1,4 +1,6 @@
 import { useT } from '@/lang';
+import { useHeldHeight } from '@/shared/hooks/use-held-height';
+import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -135,6 +137,15 @@ export function DataTable<T>({
     // Server: rows are already the page. Client: slice (unless pagination is hidden).
     const pageRows = server ? rows : hidePagination ? filtered : filtered.slice(start, start + pageSize);
 
+    // Steady pager: while a page loads, hold the table at the height it had, so the pager under
+    // it stays under the reader's cursor and "next" can be clicked again and again. (Skeleton rows
+    // alone are shorter than real two-line rows; the table shrank and the pager jumped up.)
+    const heldHeight = useHeldHeight(bodyRef, !!loading && !fillHeight);
+
+    // Sticky header while the table fits its width (see useTableFitsWidth for why not when wider).
+    const fitsWidth = useTableFitsWidth(bodyRef);
+    const stickyHeader = !fillHeight && (maxBodyHeight !== undefined || fitsWidth);
+
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
 
     return (
@@ -171,9 +182,14 @@ export function DataTable<T>({
                     // Scroll sideways rather than clip. A table wider than its card used to lose
                     // the overhang with no way to reach it — eleven pixels of the last column on a
                     // wide screen, a whole column on a laptop, and nothing on screen to say so.
-                    fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-auto' : 'overflow-x-auto',
+                    // A table that fits is clipped instead (same rounded edge, but not a scroll box),
+                    // so its header can stick to the top of the page.
+                    fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-auto' : fitsWidth ? 'overflow-clip' : 'overflow-x-auto',
                 )}
-                style={maxBodyHeight && !fillHeight ? { maxHeight: maxBodyHeight } : undefined}
+                style={{
+                    ...(maxBodyHeight && !fillHeight ? { maxHeight: maxBodyHeight } : {}),
+                    ...(heldHeight ? { minHeight: heldHeight } : {}),
+                }}
             >
                 {/* fillHeight: `h-full` makes the browser stretch the rows to fill the body exactly,
                     so the floored row count never leaves a gap under the last row. */}
@@ -185,7 +201,13 @@ export function DataTable<T>({
                             ))}
                         </colgroup>
                     )}
-                    <thead className={cn(maxBodyHeight && 'bg-card sticky top-0 z-10')}>
+                    <thead
+                        className={cn(
+                            stickyHeader && 'bg-card sticky z-10 shadow-[0_1px_0_var(--color-border)]',
+                            // Its own scroll box (maxBodyHeight) has no padding to offset; on the page, stick flush with the top.
+                            stickyHeader && (maxBodyHeight ? 'top-0' : 'top-[var(--sticky-top,0px)]'),
+                        )}
+                    >
                         <tr className="border-border bg-muted/40 border-b">
                             {columns.map((c) => (
                                 <th
@@ -204,7 +226,8 @@ export function DataTable<T>({
                     </thead>
                     <tbody>
                         {loading &&
-                            Array.from({ length: 6 }).map((_, r) => (
+                            // As many skeleton rows as the page on screen (6 on a first load).
+                            Array.from({ length: pageRows.length || 6 }).map((_, r) => (
                                 <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
                                     {columns.map((c) => (
                                         <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align))}>
