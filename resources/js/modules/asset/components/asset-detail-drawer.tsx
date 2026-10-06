@@ -9,7 +9,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
-import { Check, Eye, MapPin, RotateCcw, Share2, SquarePen, Tag, Trash2 } from 'lucide-react';
+import { Check, Eye, FlaskConicalOff, MapPin, RotateCcw, Share2, SquarePen, Tag, Trash2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAsset, useAssetMutations } from '../hooks/use-assets';
 import { AssetHistoryTab } from './asset-history-tab';
@@ -52,12 +52,15 @@ export function AssetDetailDrawer({
     onReceive,
     onRecall,
     onEdit,
+    onWriteoff,
+    onReturnToVendor,
     canUpdateLocation = false,
     canTransfer,
     canReceive,
     canForceRecall = false,
     canCancelWriteoff = false,
     canDelete = false,
+    canRetire = false,
 }: {
     asset: Asset | null;
     onClose: () => void;
@@ -65,6 +68,10 @@ export function AssetDetailDrawer({
     onReceive: (a: Asset) => void;
     onRecall?: (a: Asset) => void;
     onEdit?: (a: Asset) => void;
+    /** Write the asset off — the page closes this dialog and opens the write-off dialog for it. */
+    onWriteoff?: (a: Asset) => void;
+    /** Return a rented asset to its lessor — the page opens the return dialog for it. */
+    onReturnToVendor?: (a: Asset) => void;
     /** Offer "Update location" in the footer — true only for viewers who hold assets.edit. */
     canUpdateLocation?: boolean;
     canTransfer: boolean;
@@ -72,6 +79,8 @@ export function AssetDetailDrawer({
     canForceRecall?: boolean;
     canCancelWriteoff?: boolean;
     canDelete?: boolean;
+    /** assets.retire — write off, or return a rented asset to its lessor (Ready assets only). */
+    canRetire?: boolean;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -388,6 +397,7 @@ export function AssetDetailDrawer({
                         isRecipient ||
                         canForceRecall ||
                         (canCancelWriteoff && a.status === 'writeoff') ||
+                        (canRetire && a.status === 'ready' && (onWriteoff || onReturnToVendor)) ||
                         (canDelete && a.status === 'ready' && !a.contract_id)) && (
                         <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
                             {isRecipient && (
@@ -447,6 +457,24 @@ export function AssetDetailDrawer({
                                 <Button variant="outline" onClick={() => askCancelWriteoff(a)} disabled={cancelWriteoff.isPending}>
                                     <RotateCcw className="h-4 w-4" />
                                     {t(a.returned_to_vendor_at ? 'asset_cancel_return_vendor' : 'asset_cancel_writeoff')}
+                                </Button>
+                            )}
+                            {/* Its way out of the register, once back in the pool (Ready) — the same rule as the bulk
+                                bar. A rented asset goes back to its lessor; it can still be written off (lost, broken). */}
+                            {canRetire && a.status === 'ready' && a.source === 'rented' && onReturnToVendor && (
+                                <Button variant="outline" onClick={() => onReturnToVendor(a)}>
+                                    <Undo2 className="h-4 w-4" />
+                                    {t('asset_return_vendor')}
+                                </Button>
+                            )}
+                            {canRetire && a.status === 'ready' && onWriteoff && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => onWriteoff(a)}
+                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                    <FlaskConicalOff className="h-4 w-4" />
+                                    {t('asset_writeoff')}
                                 </Button>
                             )}
                             {/* Permanent delete — only for an in-pool (Ready) asset with no contract link.
