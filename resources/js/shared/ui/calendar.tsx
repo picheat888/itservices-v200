@@ -46,7 +46,11 @@ function GridCell({
             className={cn(
                 'grid h-10 place-items-center rounded-md text-sm capitalize transition-colors',
                 'hover:bg-accent disabled:pointer-events-none disabled:opacity-30',
-                active ? 'bg-brand hover:bg-brand font-medium text-white' : current ? 'border-brand/60 border font-medium' : 'text-foreground',
+                active
+                    ? 'bg-brand hover:bg-brand text-brand-foreground font-medium'
+                    : current
+                      ? 'border-brand/60 border font-medium'
+                      : 'text-foreground',
             )}
         >
             {label}

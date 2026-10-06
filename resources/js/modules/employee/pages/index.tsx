@@ -748,7 +748,10 @@ function DirectoryTab({
                                 </DropdownMenuItem>
                             )}
                             {canCancelResign && e.status === 'resigned' && (
-                                <DropdownMenuItem onClick={() => onCancelResign(e)} className="text-emerald-600 focus:text-emerald-600">
+                                <DropdownMenuItem
+                                    onClick={() => onCancelResign(e)}
+                                    className="text-emerald-600 focus:text-emerald-600 dark:text-emerald-400"
+                                >
                                     <UserCheck className="h-4 w-4" />
                                     {t('cancel_resign')}
                                 </DropdownMenuItem>

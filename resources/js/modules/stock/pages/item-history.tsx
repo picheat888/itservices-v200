@@ -13,9 +13,24 @@ type Movement = StockItemHistory['movements'][number];
 
 const VIEW_META: Record<View, { titleKey: string; icon: typeof ArrowDownToLine; tone: string; bg: string }> = {
     issue: { titleKey: 'stock_hist_issue', icon: ArrowUpFromLine, tone: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950/40' },
-    receive: { titleKey: 'stock_hist_receive', icon: ArrowDownToLine, tone: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-950/40' },
-    adjust: { titleKey: 'stock_hist_adjust', icon: SlidersHorizontal, tone: 'text-amber-700', bg: 'bg-amber-100 dark:bg-amber-950/40' },
-    transfer: { titleKey: 'stock_hist_transfer', icon: ArrowLeftRight, tone: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-950/40' },
+    receive: {
+        titleKey: 'stock_hist_receive',
+        icon: ArrowDownToLine,
+        tone: 'text-emerald-600 dark:text-emerald-400',
+        bg: 'bg-emerald-100 dark:bg-emerald-950/40',
+    },
+    adjust: {
+        titleKey: 'stock_hist_adjust',
+        icon: SlidersHorizontal,
+        tone: 'text-amber-600 dark:text-amber-400',
+        bg: 'bg-amber-100 dark:bg-amber-950/40',
+    },
+    transfer: {
+        titleKey: 'stock_hist_transfer',
+        icon: ArrowLeftRight,
+        tone: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-blue-100 dark:bg-blue-950/40',
+    },
 };
 
 /** Which movement types + serial-event name belong to each view. */

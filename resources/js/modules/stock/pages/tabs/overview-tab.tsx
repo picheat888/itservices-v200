@@ -96,7 +96,7 @@ export function OverviewTab({
                         <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
                             <div className="border-border flex items-center justify-between border-b px-5 py-3">
                                 <div className="flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                    <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                                     <span className="text-sm font-semibold">{t('stock_action_queue')}</span>
                                 </div>
                                 {reorderItems.length > 0 && (
@@ -107,7 +107,7 @@ export function OverviewTab({
                             </div>
                             {reorderItems.length === 0 ? (
                                 <div className="text-muted-foreground flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-12 text-center text-sm">
-                                    <Check className="h-6 w-6 text-emerald-500" />
+                                    <Check className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
                                     {t('stock_all_stocked')}
                                 </div>
                             ) : (
@@ -133,7 +133,7 @@ export function OverviewTab({
                                                     <div className="text-muted-foreground font-mono text-[11px]">
                                                         {it.current_stock}/{it.min_stock}
                                                     </div>
-                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 font-mono text-xs font-bold text-emerald-600">
+                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                                         +{Math.max(0, it.max_stock - it.current_stock)}
                                                     </span>
                                                 </div>
@@ -188,7 +188,7 @@ export function OverviewTab({
                                                         <div
                                                             className={cn(
                                                                 'font-mono text-sm font-bold',
-                                                                inbound ? 'text-emerald-600' : 'text-destructive',
+                                                                inbound ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive',
                                                             )}
                                                         >
                                                             {inbound ? '+' : '−'}

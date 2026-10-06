@@ -110,7 +110,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
             <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl flex-col">
                 <DialogHeader>
                     <div className="flex items-start gap-4">
-                        <AlertTriangle className="mt-0.5 h-11 w-11 shrink-0 stroke-[1.75] text-amber-500" />
+                        <AlertTriangle className="mt-0.5 h-11 w-11 shrink-0 stroke-[1.75] text-amber-500 dark:text-amber-400" />
                         <div className="min-w-0">
                             <DialogTitle className="text-2xl leading-tight tracking-tight">{t('resign_title')}</DialogTitle>
                             <DialogDescription className="mt-1.5 text-[15px]">{t('resign_desc')}</DialogDescription>

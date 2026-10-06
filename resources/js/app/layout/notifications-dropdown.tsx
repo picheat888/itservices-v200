@@ -168,7 +168,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                                 }}
                                 className={cn(
                                     'flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                                    active ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent',
+                                    active ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent',
                                 )}
                             >
                                 {t(tb.label)}
@@ -176,7 +176,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                                     <span
                                         className={cn(
                                             'rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold',
-                                            active ? 'bg-white/20 text-white' : 'bg-brand/10 text-brand',
+                                            active ? 'text-brand-foreground bg-white/20' : 'bg-brand/10 text-brand',
                                         )}
                                     >
                                         {count}

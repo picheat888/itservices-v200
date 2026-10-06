@@ -83,7 +83,7 @@ function ColumnTable() {
                             <td className="px-3 py-1.5 font-mono text-[11px] font-medium whitespace-nowrap">{row.column}</td>
                             <td className="px-1 py-1.5 whitespace-nowrap">
                                 {row.required === 'yes' && <span className="text-destructive font-bold">*</span>}
-                                {row.required === 'org' && <span className="text-amber-700 dark:text-amber-400">*</span>}
+                                {row.required === 'org' && <span className="text-amber-600 dark:text-amber-400">*</span>}
                             </td>
                             <td className="text-muted-foreground px-3 py-1.5 leading-relaxed">{t(row.noteKey)}</td>
                         </tr>
@@ -95,7 +95,7 @@ function ColumnTable() {
                     <span className="text-destructive font-bold">*</span> {t('import_required_always')}
                 </span>
                 <span>
-                    <span className="font-bold text-amber-700 dark:text-amber-400">*</span> {t('import_required_org')}
+                    <span className="font-bold text-amber-600 dark:text-amber-400">*</span> {t('import_required_org')}
                 </span>
             </p>
         </div>
@@ -216,7 +216,7 @@ function ValidValues() {
                                 </span>
                             </span>
                             {copied === row.key ? (
-                                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                             ) : (
                                 <Copy className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100" />
                             )}

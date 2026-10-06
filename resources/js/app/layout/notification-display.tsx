@@ -68,12 +68,12 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         if ((n.data.days_remaining ?? 0) <= 0) {
             return { Icon: CalendarClock, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         }
-        return { Icon: CalendarClock, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: CalendarClock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     if (n.data.type === 'ticket_sla') {
         // Over SLA = red, near due = amber — mirrors the SLA badge tones on the list.
         if (n.data.subtype?.endsWith('over_sla')) return { Icon: Gauge, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
-        return { Icon: Gauge, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: Gauge, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     if (n.data.type === 'ticket_forwarded' || n.data.type === 'ticket_forwarded_away') {
         return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
@@ -92,19 +92,19 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         if (n.data.event === 'forwarded') return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
         // A progress note is news about the work, not about who holds it — amber, the tone
         // the rest of the app uses for "still running".
-        if (n.data.event === 'updated') return { Icon: MessageSquare, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.event === 'updated') return { Icon: MessageSquare, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         return { Icon: UserCheck, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
     }
     if (n.data.type === 'stock_alert') {
         if (n.data.subtype === 'out') return { Icon: PackageMinus, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         if (n.data.subtype === 'over') return { Icon: PackagePlus, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
-        return { Icon: Boxes, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: Boxes, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     if (n.data.type === 'stock_request') {
         if (n.data.subtype === 'rejected') return { Icon: Inbox, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         if (n.data.subtype === 'approved' || n.data.subtype === 'fulfilled')
             return { Icon: Inbox, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
-        return { Icon: Inbox, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     if (n.data.type === 'stock_count') {
         return { Icon: ClipboardList, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
@@ -112,20 +112,20 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     if (n.data.type === 'request') {
         // Service requests: action needed = amber, progress = blue, terminal good = green, bad = red.
         // A request stuck for want of an account is an account job, not an approval one.
-        if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled')
             return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         if (n.data.subtype === 'approved_final' || n.data.subtype === 'completed')
             return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
-        if (n.data.subtype === 'waiting') return { Icon: Inbox, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype === 'waiting') return { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         // A step nobody has touched for days — the clock, not the inbox tray.
-        if (n.data.subtype === 'stalled') return { Icon: Clock, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype === 'stalled') return { Icon: Clock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         // The queue bell is amber only while somebody there still has to press Complete. Once
         // a case carries the delivery it is news, not a task — the case has its own bell.
         if (n.data.subtype === 'ready_to_complete') {
             return n.data.ticket_no
                 ? { Icon: PackageCheck, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' }
-                : { Icon: Inbox, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+                : { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         }
         return { Icon: Inbox, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
     }
@@ -142,18 +142,18 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         return { Icon: MailX, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
     }
     if (n.data.type === 'password_expiring') {
-        return { Icon: KeyRound, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     if (n.data.type === 'asset_assigned') {
         return { Icon: PackageCheck, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
     }
     if (n.data.type === 'asset_return_requested') {
-        return { Icon: Undo2, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: Undo2, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     // A leaver's whole kit in one bell — a job to do, so amber like the return request it
     // replaces, but PackageMinus for "these are leaving your floor" rather than one send-back.
     if (n.data.type === 'asset_offboarding') {
-        return { Icon: PackageMinus, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: PackageMinus, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     // A recall is news, never a task: the reader has nothing to press either way, so it
     // wears slate rather than joining the amber "you owe someone something" bells.

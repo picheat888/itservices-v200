@@ -77,7 +77,7 @@ const LANES: { key: string; label: string; test: (h: number | null) => boolean; 
         label: 'rep_bl_lane_soon',
         test: (h) => h !== null && h >= 0 && h <= 24,
         tone: 'border-amber-400',
-        count: 'text-amber-700 dark:text-amber-400',
+        count: 'text-amber-600 dark:text-amber-400',
     },
     { key: 'later', label: 'rep_bl_lane_later', test: (h) => h !== null && h > 24 && h <= 72, tone: 'border-border', count: '' },
     { key: 'far', label: 'rep_bl_lane_far', test: (h) => h === null || h > 72, tone: 'border-border', count: '' },
@@ -164,7 +164,7 @@ function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
                 <span
                     className={cn(
                         'block truncate text-xs',
-                        ticket.assignee ? 'text-muted-foreground' : 'font-semibold text-amber-700 dark:text-amber-400',
+                        ticket.assignee ? 'text-muted-foreground' : 'font-semibold text-amber-600 dark:text-amber-400',
                     )}
                 >
                     {ticket.assignee ?? t('rep_opt_unassigned')}
@@ -362,7 +362,7 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
                 selected={selected}
                 onSelect={() => patch({ assignee: selected ? null : apart ? 'none' : Number(id) })}
             >
-                <span className={cn('min-w-0 truncate', apart && 'font-semibold text-amber-700 dark:text-amber-400')}>{label}</span>
+                <span className={cn('min-w-0 truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>{label}</span>
                 {/* Each part's count over it, as "ค้างตามหมวด"; the length against whoever holds the most. */}
                 <StackBar values={{ over_sla: r.over_sla, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
                 <span className="text-right font-mono font-semibold">{r.n}</span>

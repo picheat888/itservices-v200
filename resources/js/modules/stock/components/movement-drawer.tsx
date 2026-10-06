@@ -346,17 +346,17 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
             <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
                 <DialogContent className="max-w-lg">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-emerald-600">
+                        <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                             <Check className="h-5 w-5" />
                             {t('stock_received_ok')}
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="flex flex-col items-center gap-1 py-2 text-center">
-                            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                                 <ArrowDownToLine className="h-6 w-6" />
                             </span>
-                            <div className="mt-1 font-mono text-3xl font-bold text-emerald-600">+{done.qty}</div>
+                            <div className="mt-1 font-mono text-3xl font-bold text-emerald-600 dark:text-emerald-400">+{done.qty}</div>
                             <div className="text-sm font-medium">{done.item.name}</div>
                             <div className="text-muted-foreground text-xs">
                                 {t('stock_new_onhand')} <b className="font-mono">{done.prevStock + done.qty}</b>
@@ -512,8 +512,8 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                             sourceBalance === 0
                                                 ? 'text-destructive'
                                                 : sourceBalance <= (selected.min_stock ?? 0)
-                                                  ? 'text-amber-700'
-                                                  : 'text-emerald-600',
+                                                  ? 'text-amber-600 dark:text-amber-400'
+                                                  : 'text-emerald-600 dark:text-emerald-400',
                                         )}
                                     >
                                         {sourceBalance}
@@ -897,7 +897,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                                     )}
                                                 />
                                                 <span className="w-20 shrink-0 text-xs">
-                                                    {st === 'ok' && <Check className="h-4 w-4 text-emerald-600" />}
+                                                    {st === 'ok' && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
                                                     {st === 'dup-system' && <span className="text-destructive">{t('stock_serial_in_stock')}</span>}
                                                     {st === 'dup-batch' && <span className="text-destructive">{t('stock_serial_dup')}</span>}
                                                     {st === 'empty' && <span className="text-muted-foreground">{t('stock_serial_empty')}</span>}
@@ -954,7 +954,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                         </span>
                                     )}
                                     {serialValid && (
-                                        <span className="flex items-center gap-1 text-emerald-600">
+                                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                                             <Check className="h-3 w-3" />
                                             {t('stock_serials_ready')}
                                         </span>

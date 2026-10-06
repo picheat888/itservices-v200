@@ -351,7 +351,7 @@ const VAR_NOTE: Record<string, { en: string; th: string }> = {
 // — the -600 shades alone were the one place that did not, and went muddy on a dark row.
 const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: string }> = {
     realtime: { badge: 'bg-blue-500/12 text-blue-600 dark:text-blue-400', labelKey: 'email_cadence_realtime' },
-    daily: { badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-400', labelKey: 'email_cadence_daily' },
+    daily: { badge: 'bg-amber-500/12 text-amber-600 dark:text-amber-400', labelKey: 'email_cadence_daily' },
     weekly: { badge: 'bg-violet-500/12 text-violet-600 dark:text-violet-400', labelKey: 'email_cadence_weekly' },
     // Whenever the person who set the schedule chose (Report Center → scheduled reports).
     scheduled: { badge: 'bg-teal-500/12 text-teal-600 dark:text-teal-400', labelKey: 'email_cadence_scheduled' },
@@ -463,7 +463,9 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
                         <span
                             className={cn(
                                 'absolute left-0 w-8 text-right select-none',
-                                lineIssues.length > 0 ? 'group pointer-events-auto cursor-help text-red-500' : 'text-muted-foreground/60',
+                                lineIssues.length > 0
+                                    ? 'group pointer-events-auto cursor-help text-red-500 dark:text-red-400'
+                                    : 'text-muted-foreground/60',
                             )}
                         >
                             {row.number}
@@ -629,7 +631,7 @@ export default function EmailTemplatesPage() {
                 <span className="flex items-center gap-2">
                     <span className="truncate font-medium">{tp.name}</span>
                     {tp.is_modified && (
-                        <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                        <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                             {t('email_modified')}
                         </span>
                     )}
@@ -802,7 +804,7 @@ export default function EmailTemplatesPage() {
                                 onClick={() => setModule('')}
                                 className={cn(
                                     'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                                    module === '' ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                                    module === '' ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:bg-accent',
                                 )}
                             >
                                 {lang === 'th' ? 'ทั้งหมด' : 'All'}
@@ -822,7 +824,7 @@ export default function EmailTemplatesPage() {
                                     onClick={() => setModule(mod)}
                                     className={cn(
                                         'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
-                                        module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                                        module === mod ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:bg-accent',
                                     )}
                                 >
                                     {mod}
@@ -1308,7 +1310,7 @@ function DeliveryLogPane() {
                         onClick={() => setStatus(value)}
                         className={cn(
                             'rounded-full px-3 py-1 text-xs font-medium transition',
-                            status === value ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:text-foreground',
+                            status === value ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
                         )}
                     >
                         {value === '' ? t('all') : t(LOG_STATUS_META[value].labelKey)}

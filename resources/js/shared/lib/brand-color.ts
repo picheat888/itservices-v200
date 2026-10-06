@@ -1,6 +1,6 @@
 // Shared brand-color helpers so the live theme (use-apply-theme) and the
 // Display color picker (Settings) resolve the accent identically.
-import { blend, contrastRatio, DARK_GROUND, LIGHT_GROUND } from '@/shared/lib/contrast';
+import { blend, contrastRatio, DARK_GROUND } from '@/shared/lib/contrast';
 
 /** Parses #rrggbb into [r,g,b], or null when malformed. */
 export function parseHex(hex: string): [number, number, number] | null {
@@ -28,42 +28,33 @@ export function lighten([r, g, b]: [number, number, number], amt: number): strin
 }
 
 /**
- * Contrast the brand colour must reach as TEXT on the card (`text-brand` links, active filter
- * buttons, chips). 5.6 rather than WCAG's 4.5 leaves room for the brand tints it often sits on
- * (`bg-brand/5` to `/15`, e.g. the sidebar counts), which pull the ground towards the brand.
+ * Contrast the brand colour must reach as TEXT on the dark card. 5.6 rather than WCAG's 4.5
+ * leaves room for the brand tints it often sits on (`bg-brand/5` to `/15`, the sidebar counts).
  */
-const BRAND_TEXT_CONTRAST = 5.6;
+const DARK_BRAND_TEXT_CONTRAST = 5.6;
 
 /**
- * The brand color actually shown for a given accent + mode. One variable serves both as a
- * surface (buttons, with `brandForeground` on top) and as text, so it is tuned for text: mixed
- * toward black (light mode) or white (dark mode) in 5% steps, only as far as it takes to read
- * at BRAND_TEXT_CONTRAST on the card. The default blue is unchanged in light mode; in dark mode
- * it lightens (an accent set in Settings used to override the dark theme's lighter blue, so
- * active filters read at about 2.9:1). A near-black accent becomes a legible grey in dark mode.
+ * The brand color actually shown for a given accent + mode. Light mode shows the accent as
+ * chosen. In dark mode one variable serves as a surface and as text, so it is tuned for text:
+ * mixed toward white in 5% steps until it reads at DARK_BRAND_TEXT_CONTRAST on the dark card
+ * (the accent used to override the dark theme's lighter blue, leaving brand text at ~2.9:1).
+ * A near-black accent ends up a legible grey the same way.
  */
 export function resolveBrand(accent: string, dark: boolean): string {
     const rgb = parseHex(accent);
-    if (!rgb) return accent;
-    const ground = dark ? DARK_GROUND : LIGHT_GROUND;
-    const toward: [number, number, number] = dark ? [255, 255, 255] : [0, 0, 0];
+    if (!rgb || !dark) return accent;
     for (let step = 0; step <= 20; step++) {
-        const shade = blend(toward, rgb, step * 0.05);
-        if (contrastRatio(shade, ground) >= BRAND_TEXT_CONTRAST) return toHex(shade);
+        const shade = blend([255, 255, 255], rgb, step * 0.05);
+        if (contrastRatio(shade, DARK_GROUND) >= DARK_BRAND_TEXT_CONTRAST) return toHex(shade);
     }
-    return toHex(toward);
+    return '#ffffff';
 }
 
 /** Legible text colour on a brand-coloured surface: white or near-black, whichever reads better. */
 export function brandForeground(hex: string): string {
     const rgb = parseHex(hex);
     if (!rgb) return '#ffffff';
-    const onWhite = contrastRatio(rgb, [255, 255, 255]);
-    const onInk = contrastRatio(rgb, parseHex(INK)!);
-    return onWhite >= onInk ? '#ffffff' : INK;
+    return contrastRatio(rgb, [255, 255, 255]) >= contrastRatio(rgb, [15, 23, 42]) ? '#ffffff' : '#0f172a';
 }
-
-/** Near-black used for text on light brand surfaces. */
-const INK = '#0f172a';
 
 const toHex = (rgb: [number, number, number]) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');

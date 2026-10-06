@@ -290,7 +290,7 @@ function MasterDataTab() {
                         onClick={() => setTab(tb.id)}
                         className={cn(
                             'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                            tab === tb.id ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent/50',
+                            tab === tb.id ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent/50',
                         )}
                     >
                         {tb.label}

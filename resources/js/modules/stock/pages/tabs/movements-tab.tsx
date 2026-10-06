@@ -176,7 +176,7 @@ export function MovementsTab() {
                                             <div
                                                 className={cn(
                                                     'shrink-0 font-mono text-2xl font-bold',
-                                                    inbound ? 'text-emerald-600' : 'text-destructive',
+                                                    inbound ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive',
                                                 )}
                                             >
                                                 {inbound ? '+' : '−'}
@@ -235,7 +235,7 @@ export function MovementsTab() {
                                                         <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
                                                             {t('stock_mv_total')}
                                                         </div>
-                                                        <div className="mt-0.5 font-mono font-bold text-emerald-600">
+                                                        <div className="mt-0.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
                                                             {format(viewMove.qty * viewMove.unit_cost)}
                                                         </div>
                                                     </div>

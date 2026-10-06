@@ -755,7 +755,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                     missing default group actually stops the work — repeating it here
                                     only asked HR to read something they cannot act on. */}
                                 <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 p-3">
-                                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                                     <div className="text-muted-foreground text-sm">
                                         <span className="text-foreground font-bold">{t('emp_account_pending_title')}</span> :{' '}
                                         {t('emp_account_pending_desc')}
@@ -770,7 +770,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 
                                     {!servicesBlocked && offNames && (
                                         <div className="mb-3 flex items-start gap-2.5 rounded-lg bg-amber-500/10 p-3 text-sm">
-                                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                                             <div className="text-muted-foreground">
                                                 <span className="text-foreground font-semibold">{offNames}</span> : {offReasonText}
                                             </div>
@@ -807,7 +807,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                                         <span
                                                             className={cn(
                                                                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
-                                                                on ? 'bg-brand text-white' : 'bg-muted text-muted-foreground',
+                                                                on ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground',
                                                             )}
                                                         >
                                                             <Icon className="h-4 w-4" />
@@ -816,7 +816,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                                         <span
                                                             className={cn(
                                                                 'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                                                                on ? 'border-brand bg-brand text-white' : 'border-input',
+                                                                on ? 'border-brand bg-brand text-brand-foreground' : 'border-input',
                                                             )}
                                                         >
                                                             {on && <Check className="h-3 w-3" />}

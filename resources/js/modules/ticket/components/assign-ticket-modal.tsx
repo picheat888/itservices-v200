@@ -103,7 +103,9 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                                         onClick={() => setPriority(p)}
                                         className={cn(
                                             'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                                            priority === p ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:text-foreground',
+                                            priority === p
+                                                ? 'bg-brand text-brand-foreground'
+                                                : 'bg-muted text-muted-foreground hover:text-foreground',
                                         )}
                                     >
                                         {t(TICKET_PRIORITY_META[p].key)}

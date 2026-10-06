@@ -1271,7 +1271,7 @@ export default function AssetsPage() {
                                                         <div className="flex items-center justify-end gap-1">
                                                             {a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode && (
                                                                 <button
-                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600"
+                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600 dark:text-emerald-400"
                                                                     type="button"
                                                                     title={t('asset_accept')}
                                                                     aria-label={t('asset_accept')}
@@ -1285,7 +1285,7 @@ export default function AssetsPage() {
                                                             )}
                                                             {canReceive && a.status === 'pending_return' && (
                                                                 <button
-                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600"
+                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600 dark:text-emerald-400"
                                                                     type="button"
                                                                     title={t('asset_mark_received')}
                                                                     aria-label={t('asset_mark_received')}

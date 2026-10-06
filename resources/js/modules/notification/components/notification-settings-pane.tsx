@@ -100,7 +100,7 @@ function StatCard({ label, value, icon: Icon, tone }: { label: string; value: nu
                 <span
                     className={cn(
                         'flex h-9 w-9 items-center justify-center rounded-lg',
-                        tone === 'amber' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-brand/10 text-brand',
+                        tone === 'amber' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-brand/10 text-brand',
                     )}
                 >
                     <Icon className="h-[18px] w-[18px]" />
@@ -373,14 +373,14 @@ export function NotificationSettingsPane() {
                     <div className="flex items-center gap-2">
                         <span className="truncate font-medium">{t(`notification_name_${suffix(n.key)}`)}</span>
                         {!n.is_standard && (
-                            <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                            <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                                 {t('notification_modified')}
                             </span>
                         )}
                         {/* The event this is the only announcement of — switching it off silences it. */}
                         {!n.has_email && (
                             <span title={t('notification_only_channel_title')}>
-                                <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                                <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-500 dark:text-amber-400" />
                             </span>
                         )}
                     </div>
@@ -485,7 +485,7 @@ export function NotificationSettingsPane() {
                     onClick={() => setModule('')}
                     className={cn(
                         'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                        module === '' ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                        module === '' ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:bg-accent',
                     )}
                 >
                     {lang === 'th' ? 'ทั้งหมด' : 'All'}
@@ -500,7 +500,7 @@ export function NotificationSettingsPane() {
                         onClick={() => setModule(mod)}
                         className={cn(
                             'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
-                            module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                            module === mod ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:bg-accent',
                         )}
                     >
                         {t(notificationGroupLabel(mod))}
