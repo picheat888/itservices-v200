@@ -6,7 +6,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { ToneDot } from '@/shared/components/status-badge';
+import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
@@ -191,6 +191,35 @@ function AssetOverviewSkeleton() {
                 </div>
             </Card>
         </div>
+    );
+}
+
+/**
+ * Where an asset is, for the inventory's "Warehouse / Place" column: the warehouse while it sits
+ * in the pool (Ready, or waiting to be received back), otherwise where it was put to use (the
+ * location), falling back to the warehouse. The icon tells the two apart; the words say it to a
+ * screen reader too.
+ */
+function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) {
+    const inPool = asset.status === 'ready' || asset.status === 'pending_return';
+    const place = inPool
+        ? { kind: 'warehouse' as const, name: asset.warehouse }
+        : asset.location
+          ? { kind: 'location' as const, name: asset.location }
+          : { kind: 'warehouse' as const, name: asset.warehouse };
+    if (!place.name) return <span className="text-muted-foreground">—</span>;
+    const Icon = place.kind === 'warehouse' ? Warehouse : MapPin;
+    const kindLabel = t(place.kind === 'warehouse' ? 'asset_place_warehouse' : 'asset_place_location');
+
+    // `relative` anchors the sr-only label to this cell. Without it the label's position:absolute
+    // resolves against the document (nothing up to the app's scrolling <main> is positioned), so
+    // labels in lower rows stretched the page and added a second, outer scrollbar.
+    return (
+        <span className="relative inline-flex max-w-[12rem] items-center gap-1.5" title={`${kindLabel}: ${place.name}`}>
+            <Icon className="text-muted-foreground/70 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="sr-only">{kindLabel}: </span>
+            <span className="truncate">{place.name}</span>
+        </span>
     );
 }
 
@@ -1061,12 +1090,12 @@ export default function AssetsPage() {
                                                     />
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-2.5">{t('asset_tag')}</th>
+                                            <th className="px-4 py-2.5">{t('asset_col_code_tag')}</th>
+                                            <th className="px-4 py-2.5">{t('asset_col_brand_model')}</th>
                                             <th className="px-4 py-2.5">{t('asset_type')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_model')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_owner')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_dept')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_warehouse')}</th>
+                                            <th className="px-4 py-2.5">{t('asset_col_serial')}</th>
+                                            <th className="px-4 py-2.5">{t('asset_col_holder_dept')}</th>
+                                            <th className="px-4 py-2.5">{t('asset_col_place')}</th>
                                             <th className="px-4 py-2.5">{t('asset_status')}</th>
                                             <th className="px-4 py-2.5 text-right">{t('asset_value')}</th>
                                             <th className="px-4 py-2.5 text-right">{t('asset_actions')}</th>
@@ -1158,8 +1187,19 @@ export default function AssetsPage() {
                                                         </button>
                                                         {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-[140px]" />}
                                                     </td>
+                                                    {/* Brand over model: "Latitude 5440" alone does not say Dell. */}
+                                                    <td className="max-w-[14rem] px-4 py-2.5">
+                                                        {a.brand && (
+                                                            <div className="text-muted-foreground truncate text-xs" title={a.brand}>
+                                                                {a.brand}
+                                                            </div>
+                                                        )}
+                                                        <div className="truncate font-medium" title={a.model ?? undefined}>
+                                                            {a.model ?? '—'}
+                                                        </div>
+                                                    </td>
                                                     <td className="px-4 py-2.5">
-                                                        <span className="flex items-center gap-2">
+                                                        <span className="flex items-center gap-2 whitespace-nowrap">
                                                             <AssetTypeIcon
                                                                 type={a.type}
                                                                 className="text-muted-foreground h-4 w-4"
@@ -1168,33 +1208,49 @@ export default function AssetsPage() {
                                                             {catLabel(a.type)}
                                                         </span>
                                                     </td>
-                                                    <td className="max-w-[14rem] truncate px-4 py-2.5 font-medium" title={a.model ?? undefined}>
-                                                        {a.model}
+                                                    {/* What IT reads off the sticker; the search already matches it. */}
+                                                    <td
+                                                        className="max-w-[10rem] truncate px-4 py-2.5 font-mono text-xs"
+                                                        title={a.serial ?? undefined}
+                                                    >
+                                                        {a.serial || <span className="text-muted-foreground">—</span>}
                                                     </td>
-                                                    <td className="max-w-[12rem] truncate px-4 py-2.5" title={a.owner_name ?? undefined}>
-                                                        {a.owner_name}
-                                                    </td>
-                                                    <td className="max-w-[12rem] truncate px-4 py-2.5" title={a.department ?? undefined}>
-                                                        {a.department}
-                                                    </td>
-                                                    <td className="px-4 py-2.5">
-                                                        {a.warehouse ? (
-                                                            <span className="inline-flex max-w-[12rem] items-center gap-1.5" title={a.warehouse}>
-                                                                <Warehouse
-                                                                    className="text-muted-foreground/70 h-3.5 w-3.5 shrink-0"
-                                                                    aria-hidden="true"
-                                                                />
-                                                                <span className="truncate">{a.warehouse}</span>
-                                                            </span>
+                                                    {/* Holder with their department under it (the department alone was a column
+                                                        empty for every pool and shared asset). */}
+                                                    <td className="max-w-[12rem] px-4 py-2.5">
+                                                        {a.owner_name ? (
+                                                            <>
+                                                                <div className="truncate" title={a.owner_name}>
+                                                                    {a.owner_name}
+                                                                </div>
+                                                                {a.department && (
+                                                                    <div className="text-muted-foreground truncate text-xs" title={a.department}>
+                                                                        {a.department}
+                                                                    </div>
+                                                                )}
+                                                            </>
                                                         ) : (
                                                             <span className="text-muted-foreground">—</span>
                                                         )}
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        <AssetPlace asset={a} t={t} />
                                                     </td>
                                                     <td className="px-4 py-2.5 whitespace-nowrap">
                                                         <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                     </td>
                                                     <td className="px-4 py-2.5 text-right font-mono text-xs whitespace-nowrap tabular-nums">
-                                                        {a.value_display}
+                                                        {a.source === 'rented' ? (
+                                                            // The contract's rent is for the whole contract — repeated on every unit it read as
+                                                            // each one's value. Name the contract instead.
+                                                            <StatusBadge tone="violet" dot={false} className="font-sans">
+                                                                {a.contract_code
+                                                                    ? `${t('asset_rented_badge')} · ${a.contract_code}`
+                                                                    : t('asset_rented_badge')}
+                                                            </StatusBadge>
+                                                        ) : (
+                                                            a.value_display
+                                                        )}
                                                     </td>
                                                     <td className="px-4 py-2.5">
                                                         <div className="flex items-center justify-end gap-1">
