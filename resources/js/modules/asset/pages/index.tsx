@@ -242,6 +242,10 @@ export default function AssetsPage() {
     const [selectedSource, setSelectedSource] = useState<Record<number, Asset['source']>>({});
     const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor'>(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
+    // One asset leaving from its detail dialog — the same dialogs the bulk bar opens, for one id.
+    // Closing only clears open: the id stays so the dialog keeps its content while it fades out.
+    const [exitAsset, setExitAsset] = useState<{ id: number; kind: 'writeoff' | 'returnToVendor'; open: boolean } | null>(null);
+    const closeExit = () => setExitAsset((e) => (e ? { ...e, open: false } : e));
 
     const { data: warehouses = [] } = useWarehouses();
     const { data: categories = [] } = useCategories();
@@ -1213,6 +1217,15 @@ export default function AssetsPage() {
                     setRecallAsset(a);
                 }}
                 onEdit={canEdit ? openEdit : undefined}
+                onWriteoff={(a) => {
+                    closeAsset();
+                    setExitAsset({ id: a.id, kind: 'writeoff', open: true });
+                }}
+                onReturnToVendor={(a) => {
+                    closeAsset();
+                    setExitAsset({ id: a.id, kind: 'returnToVendor', open: true });
+                }}
+                canRetire={canRetire}
                 canUpdateLocation={canEdit}
                 canTransfer={canTransfer}
                 canReceive={canReceive}
@@ -1254,6 +1267,18 @@ export default function AssetsPage() {
                     setBulkDialog(null);
                     clearSelection();
                 }}
+            />
+            <AssetReturnToVendorDialog
+                ids={exitAsset ? [exitAsset.id] : []}
+                open={!!exitAsset?.open && exitAsset.kind === 'returnToVendor'}
+                onClose={closeExit}
+                onDone={closeExit}
+            />
+            <AssetWriteoffDialog
+                ids={exitAsset ? [exitAsset.id] : []}
+                open={!!exitAsset?.open && exitAsset.kind === 'writeoff'}
+                onClose={closeExit}
+                onDone={closeExit}
             />
             <AssetReturnToVendorDialog
                 ids={selectedIds}
