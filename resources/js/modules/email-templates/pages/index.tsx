@@ -351,7 +351,7 @@ const VAR_NOTE: Record<string, { en: string; th: string }> = {
 // — the -600 shades alone were the one place that did not, and went muddy on a dark row.
 const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: string }> = {
     realtime: { badge: 'bg-blue-500/12 text-blue-600 dark:text-blue-400', labelKey: 'email_cadence_realtime' },
-    daily: { badge: 'bg-amber-500/12 text-amber-600 dark:text-amber-400', labelKey: 'email_cadence_daily' },
+    daily: { badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-400', labelKey: 'email_cadence_daily' },
     weekly: { badge: 'bg-violet-500/12 text-violet-600 dark:text-violet-400', labelKey: 'email_cadence_weekly' },
     // Whenever the person who set the schedule chose (Report Center → scheduled reports).
     scheduled: { badge: 'bg-teal-500/12 text-teal-600 dark:text-teal-400', labelKey: 'email_cadence_scheduled' },
@@ -629,7 +629,7 @@ export default function EmailTemplatesPage() {
                 <span className="flex items-center gap-2">
                     <span className="truncate font-medium">{tp.name}</span>
                     {tp.is_modified && (
-                        <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
+                        <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
                             {t('email_modified')}
                         </span>
                     )}

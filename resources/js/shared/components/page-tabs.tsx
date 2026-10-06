@@ -17,7 +17,7 @@ export interface PageTab<T extends string> {
 
 const TONES: Record<NonNullable<PageTab<string>['tone']>, string> = {
     alert: 'bg-red-100 font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400',
-    warn: 'bg-amber-500/15 font-semibold text-amber-600 dark:text-amber-400',
+    warn: 'bg-amber-500/15 font-semibold text-amber-700 dark:text-amber-400',
     muted: 'bg-accent text-muted-foreground',
 };
 

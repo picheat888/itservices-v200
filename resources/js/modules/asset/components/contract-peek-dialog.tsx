@@ -116,7 +116,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                     days <= 0
                         ? 'border-destructive/30 bg-destructive/10 text-destructive'
                         : c.in_reminder
-                          ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
                           : 'border-brand/30 bg-brand/10 text-brand',
                 )}
             >

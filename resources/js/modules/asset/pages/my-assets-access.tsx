@@ -96,7 +96,7 @@ function SummaryStat({
     const toneCls = {
         blue: 'bg-brand/10 text-brand',
         emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-        amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
         violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
     }[tone];
     return (

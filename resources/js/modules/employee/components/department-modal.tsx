@@ -80,7 +80,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                             maxLength={50}
                         />
                         {tagInvalid ? (
-                            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
                                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                                 {t('dept_code_en_only')}
                             </p>

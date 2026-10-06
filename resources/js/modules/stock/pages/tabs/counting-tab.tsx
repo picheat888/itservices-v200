@@ -466,7 +466,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     <div
                                         className={cn(
                                             'mt-0.5 font-mono text-sm font-semibold',
-                                            countSummary.discrepancies > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
+                                            countSummary.discrepancies > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
                                         )}
                                     >
                                         {countSummary.discrepancies}
@@ -748,7 +748,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                             <div className="font-mono text-xs font-medium">{it.sku}</div>
                                             <div className="text-muted-foreground truncate text-xs">{it.name}</div>
                                         </div>
-                                        <span className={cn('shrink-0 text-[11px] font-semibold', ok ? 'text-emerald-600' : 'text-amber-600')}>
+                                        <span className={cn('shrink-0 text-[11px] font-semibold', ok ? 'text-emerald-600' : 'text-amber-700')}>
                                             {t('stock_count_serial_tick_n').replace('{n}', String(it.need))} ({ticked.length}/{it.need})
                                         </span>
                                     </div>

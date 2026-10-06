@@ -176,7 +176,7 @@ function NowRow({
 }) {
     const toneClass = {
         red: 'text-destructive',
-        amber: 'text-amber-600 dark:text-amber-400',
+        amber: 'text-amber-700 dark:text-amber-400',
         green: 'text-emerald-600 dark:text-emerald-400',
         ink: 'text-muted-foreground',
     }[tone];
@@ -200,7 +200,7 @@ function NowRow({
                 <span
                     className={cn(
                         'rounded-full px-2 py-px font-mono text-xs font-bold',
-                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
                     )}
                 >
                     {typeof value === 'number' ? value.toLocaleString('en-US') : value}

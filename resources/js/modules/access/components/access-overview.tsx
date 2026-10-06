@@ -67,7 +67,7 @@ function StatusRow({
     onClick?: () => void;
 }) {
     const toneClass = {
-        amber: 'text-amber-600 dark:text-amber-400',
+        amber: 'text-amber-700 dark:text-amber-400',
         red: 'text-destructive',
         green: 'text-emerald-600 dark:text-emerald-400',
         ink: 'text-muted-foreground',
@@ -92,7 +92,7 @@ function StatusRow({
                 <span
                     className={cn(
                         'rounded-full px-2 py-px font-mono text-xs font-bold',
-                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
                     )}
                 >
                     {value}
@@ -144,7 +144,7 @@ function IssueSection({
     t: (k: string) => string;
 }) {
     if (items.length === 0) return null;
-    const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-600 dark:text-amber-400';
+    const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-700 dark:text-amber-400';
     const toneRail = tone === 'red' ? 'border-l-destructive' : 'border-l-amber-500';
     return (
         // Severity is carried by the rail and the header icon together — one treatment, read

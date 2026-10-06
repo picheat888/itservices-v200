@@ -202,7 +202,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                                 item.tone === 'current' && 'border-brand bg-brand/10 text-brand ring-brand/15 ring-[3px]',
                                 item.tone === 'rejected' && 'border-destructive bg-destructive text-white',
                                 item.tone === 'cancelled' && 'border-border bg-muted text-muted-foreground',
-                                item.tone === 'skipped' && 'border-amber-500/60 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                                item.tone === 'skipped' && 'border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400',
                                 item.tone === 'queued' && 'border-border bg-background text-muted-foreground',
                             )}
                         >

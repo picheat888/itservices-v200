@@ -54,7 +54,7 @@ export interface ConfirmOptions {
 const VARIANT: Record<ConfirmVariant, { icon: LucideIcon; tint: string; fg: string; btn: 'destructive' | 'default' }> = {
     danger: { icon: Trash2, tint: 'bg-destructive/10', fg: 'text-destructive', btn: 'destructive' },
     edit: { icon: PencilLine, tint: 'bg-primary/10', fg: 'text-primary', btn: 'default' },
-    warn: { icon: AlertTriangle, tint: 'bg-amber-500/10', fg: 'text-amber-600 dark:text-amber-400', btn: 'default' },
+    warn: { icon: AlertTriangle, tint: 'bg-amber-500/10', fg: 'text-amber-700 dark:text-amber-400', btn: 'default' },
 };
 
 type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;

@@ -100,7 +100,7 @@ function StatCard({ label, value, icon: Icon, tone }: { label: string; value: nu
                 <span
                     className={cn(
                         'flex h-9 w-9 items-center justify-center rounded-lg',
-                        tone === 'amber' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-brand/10 text-brand',
+                        tone === 'amber' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-brand/10 text-brand',
                     )}
                 >
                     <Icon className="h-[18px] w-[18px]" />
@@ -373,7 +373,7 @@ export function NotificationSettingsPane() {
                     <div className="flex items-center gap-2">
                         <span className="truncate font-medium">{t(`notification_name_${suffix(n.key)}`)}</span>
                         {!n.is_standard && (
-                            <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
+                            <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
                                 {t('notification_modified')}
                             </span>
                         )}
