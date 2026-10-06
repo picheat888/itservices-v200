@@ -46,7 +46,15 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
         {
             key: 'status',
             header: t('contract_label_status'),
-            render: (a) => (a.status ? <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge> : '—'),
+            // A return to the lessor is a write-off of its own kind; it says so.
+            render: (a) =>
+                a.returned_to_vendor ? (
+                    <StatusBadge tone="gray">{t('contract_asset_returned_to_vendor')}</StatusBadge>
+                ) : a.status ? (
+                    <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge>
+                ) : (
+                    '—'
+                ),
         },
     ];
 

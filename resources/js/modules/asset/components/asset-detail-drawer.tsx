@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { refusalReason } from '@/shared/lib/api-errors';
+import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -108,14 +109,16 @@ export function AssetDetailDrawer({
     const { user } = useAuth();
     const { accept, cancelWriteoff, remove } = useAssetMutations();
 
-    // Undo a write-off (wrong-retire fix) — restores the asset to the Ready pool.
+    // Undo a write-off (wrong-retire fix) — restores the asset to the Ready pool. A return to the
+    // lessor is undone the same way, under its own name.
     const askCancelWriteoff = async (target: Asset) => {
+        const returned = !!target.returned_to_vendor_at;
         await confirm({
             variant: 'edit',
-            title: t('asset_cancel_writeoff'),
+            title: t(returned ? 'asset_cancel_return_vendor' : 'asset_cancel_writeoff'),
             entity: { name: target.model, sub: target.asset_code },
-            description: t('asset_cancel_writeoff_confirm'),
-            confirmText: t('asset_cancel_writeoff'),
+            description: t(returned ? 'asset_cancel_return_vendor_confirm' : 'asset_cancel_writeoff_confirm'),
+            confirmText: t(returned ? 'asset_cancel_return_vendor' : 'asset_cancel_writeoff'),
             action: async () => {
                 await cancelWriteoff.mutateAsync(target.id);
                 onClose();
@@ -213,7 +216,7 @@ export function AssetDetailDrawer({
                             </DialogTitle>
                         </div>
                         <div className="ml-auto flex shrink-0 flex-col items-end gap-1 pr-8">
-                            <AssetStatusBadge status={a.status} t={t} />
+                            <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                             <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
                                 <div>
                                     {t('asset_registered')}: {a.registered_date ?? '—'}
@@ -235,8 +238,29 @@ export function AssetDetailDrawer({
                     <div className={cn('min-h-0 flex-1', tab === 'overview' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6')}>
                         {tab === 'overview' && (
                             <div className="space-y-5">
+                                {/* A rented asset that went back to its lessor: when, by whom, and the note. */}
+                                {a.status === 'writeoff' && a.returned_to_vendor_at && (
+                                    <div className="border-border bg-muted/40 rounded-lg border px-4 py-3">
+                                        <div className="text-xs font-semibold">
+                                            {t('asset_returned_to_vendor_label')}
+                                            <span className="text-muted-foreground font-normal">
+                                                {' · '}
+                                                {formatDateTime(a.returned_to_vendor_at)}
+                                                {a.returned_to_vendor_by_name && (
+                                                    <>
+                                                        {' · '}
+                                                        {t('asset_by')} {a.returned_to_vendor_by_name}
+                                                    </>
+                                                )}
+                                            </span>
+                                        </div>
+                                        {a.last_reason && (
+                                            <div className="text-muted-foreground mt-0.5 text-sm whitespace-pre-wrap">{a.last_reason}</div>
+                                        )}
+                                    </div>
+                                )}
                                 {/* How a written-off asset left — the reason picked at write-off (Settings → Assets) and the note typed with it. */}
-                                {a.status === 'writeoff' && (a.writeoff_reason || a.last_reason) && (
+                                {a.status === 'writeoff' && !a.returned_to_vendor_at && (a.writeoff_reason || a.last_reason) && (
                                     <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
                                         <div className="text-destructive text-xs font-semibold">
                                             {t('asset_writeoff_note_label')}
@@ -422,7 +446,7 @@ export function AssetDetailDrawer({
                             {canCancelWriteoff && a.status === 'writeoff' && (
                                 <Button variant="outline" onClick={() => askCancelWriteoff(a)} disabled={cancelWriteoff.isPending}>
                                     <RotateCcw className="h-4 w-4" />
-                                    {t('asset_cancel_writeoff')}
+                                    {t(a.returned_to_vendor_at ? 'asset_cancel_return_vendor' : 'asset_cancel_writeoff')}
                                 </Button>
                             )}
                             {/* Permanent delete — only for an in-pool (Ready) asset with no contract link.

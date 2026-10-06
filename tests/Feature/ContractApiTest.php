@@ -230,7 +230,8 @@ class ContractApiTest extends TestCase
     public function test_switching_a_hardware_contract_to_another_type_detaches_its_assets(): void
     {
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create();
+        // In service: one already written off would keep the contract hardware (AssetReturnToVendorTest).
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null]);
 
         $base = [
             'code' => 'CT-HW-1', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'details' => 'T',

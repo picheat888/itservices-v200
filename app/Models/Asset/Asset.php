@@ -45,6 +45,7 @@ class Asset extends Model
         'owner', 'owner_employee_id', 'location_id', 'warehouse_id', 'value', 'vendor_id',
         'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id',
         'owned_since', 'notes', 'last_reason', 'writeoff_reason_id', 'written_off_at',
+        'returned_to_vendor_at',
     ];
 
     protected function casts(): array
@@ -58,6 +59,7 @@ class Asset extends Model
             'warranty_lifetime' => 'boolean',
             'owned_since' => 'date',
             'written_off_at' => 'datetime',
+            'returned_to_vendor_at' => 'datetime',
         ];
     }
 
@@ -71,6 +73,21 @@ class Asset extends Model
     public function writtenOffBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'written_off_by');
+    }
+
+    /**
+     * Who handed a rented asset back to its lessor (returned_to_vendor_by, stamped with
+     * returned_to_vendor_at by AssetService::returnToVendor); null for any other asset.
+     */
+    public function returnedToVendorBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'returned_to_vendor_by');
+    }
+
+    /** True when the asset left the register by going back to its lessor, not by an ordinary write-off. */
+    public function returnedToVendor(): bool
+    {
+        return $this->returned_to_vendor_at !== null;
     }
 
     /** Why it was written off (Settings → Assets); null while it is in service. The note stays in last_reason. */
@@ -141,8 +158,9 @@ class Asset extends Model
      * Auto-generate an INK-IT-YY-NNNN Asset code on create, and stamp the write-off:
      * written_off_at / written_off_by (who) are set when the status becomes writeoff (created written
      * off, retired, or edited to it) and cleared, with the write-off reason, when it leaves it (a
-     * write-off cancelled). The bulk
-     * write-off is a query update, so AssetService::bulkSetStatus stamps them itself.
+     * write-off cancelled). A return to the lessor (returned_to_vendor_at / _by) is a kind of
+     * write-off and is cleared with it. The bulk write-off and the return are query updates, so
+     * AssetService::bulkSetStatus / returnToVendor stamp them themselves.
      */
     protected static function booted(): void
     {
@@ -163,6 +181,8 @@ class Asset extends Model
                 $asset->written_off_at = null;
                 $asset->written_off_by = null;
                 $asset->writeoff_reason_id = null;
+                $asset->returned_to_vendor_at = null;
+                $asset->returned_to_vendor_by = null;
             }
         });
     }

@@ -130,6 +130,9 @@ export const contract: Dict = {
     contract_link_assets_loading: 'กำลังโหลด…',
     contract_link_assets_none: 'ไม่มี asset ให้เลือก',
     contract_link_assets_selected: 'เลือกแล้ว {n} รายการ',
+    contract_link_asset_locked: 'ตัดจำหน่ายหรือคืนผู้ให้เช่าแล้ว ผูกกับสัญญานี้ถาวร',
+    contract_type_locked: 'สัญญานี้มีทรัพย์สินที่คืนผู้ให้เช่าหรือตัดจำหน่ายแล้ว จึงต้องเป็นประเภทฮาร์ดแวร์',
+    contract_asset_returned_to_vendor: 'คืนผู้ให้เช่าแล้ว',
 
     // contract-form-drawer.tsx — review card
     contract_review_code: 'Contract No',

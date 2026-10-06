@@ -170,6 +170,10 @@ export function useAssetMutations() {
                 assetApi.bulk(v.ids, v.op, v.writeoffReasonId, v.reason),
             onSuccess: invalidate,
         }),
+        returnToVendor: useMutation({
+            mutationFn: (v: { ids: number[]; reason?: string }) => assetApi.returnToVendor(v.ids, v.reason),
+            onSuccess: invalidate,
+        }),
         bulkTransfer: useMutation({
             mutationFn: (v: {
                 ids: number[];

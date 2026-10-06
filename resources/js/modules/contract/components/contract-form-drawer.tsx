@@ -14,7 +14,7 @@ import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Package, Paperclip, Search, Wifi, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Paperclip, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
 
@@ -391,6 +391,8 @@ export function ContractFormDrawer({
     };
 
     const saving = create.isPending || update.isPending || uploadAttachments.isPending || deleteAttachment.isPending;
+    // Mirrors ContractService::assertKeepsRetiredAssets — the server refuses the switch too.
+    const typeLocked = editing?.type === 'hardware' && (editing.linked_assets ?? []).some((a) => a.status === 'writeoff');
 
     // Step labels (lang keys) for the horizontal stepper.
     const steps = [
@@ -472,6 +474,14 @@ export function ContractFormDrawer({
                                 </p>
                                 <h2 className="text-xl font-extrabold tracking-tight">{t('contract_type')}</h2>
                                 <p className="text-muted-foreground mt-1 mb-6 text-sm">{t('contract_step_type_sub')}</p>
+                                {/* A hardware contract holding assets that already came back (returned or written
+                                    off) stays hardware: they cannot be unlinked, which another type would need. */}
+                                {typeLocked && (
+                                    <p className="text-muted-foreground -mt-3 mb-4 flex items-center gap-1.5 text-xs">
+                                        <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                        {t('contract_type_locked')}
+                                    </p>
+                                )}
                                 <div className="grid grid-cols-5 gap-3">
                                     {TYPE_META.map((tp) => {
                                         const Icon = tp.icon;
@@ -480,12 +490,16 @@ export function ContractFormDrawer({
                                             <ChoiceCard
                                                 key={tp.value}
                                                 selected={sel}
+                                                disabled={typeLocked && tp.value !== 'hardware'}
                                                 onClick={() => {
                                                     upd('type', tp.value);
                                                     // Only hardware contracts can hold assets — drop any selection on other types.
                                                     if (tp.value !== 'hardware') setForm((f) => ({ ...f, asset_ids: [] }));
                                                 }}
-                                                className={cn('flex flex-col items-center gap-2.5 rounded-xl p-5 text-center', sel && 'text-brand')}
+                                                className={cn(
+                                                    'flex flex-col items-center gap-2.5 rounded-xl p-5 text-center disabled:cursor-not-allowed disabled:opacity-50',
+                                                    sel && 'text-brand',
+                                                )}
                                             >
                                                 <Icon className="h-6 w-6" />
                                                 <span className="text-[13px] leading-tight font-semibold">
@@ -769,12 +783,17 @@ export function ContractFormDrawer({
                                                 ) : (
                                                     filteredAssets.map((a) => {
                                                         const checked = form.asset_ids.includes(a.id);
+                                                        // A written-off asset already on this contract stays on it (the server
+                                                        // refuses to unlink it): it is the contract's record of what came back.
+                                                        const locked = checked && a.status === 'writeoff';
                                                         return (
                                                             <button
                                                                 key={a.id}
                                                                 type="button"
                                                                 onClick={() => toggleAsset(a.id)}
-                                                                className="border-border/60 hover:bg-accent/40 flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-0"
+                                                                disabled={locked}
+                                                                title={locked ? t('contract_link_asset_locked') : undefined}
+                                                                className="border-border/60 hover:bg-accent/40 flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
                                                             >
                                                                 <span
                                                                     className={cn(
@@ -786,7 +805,8 @@ export function ContractFormDrawer({
                                                                 </span>
                                                                 <span className="font-mono text-xs">{a.asset_code}</span>
                                                                 <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
-                                                                <span className="text-muted-foreground shrink-0 text-[11px]">
+                                                                <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
+                                                                    {locked && <Lock className="h-3 w-3" aria-hidden="true" />}
                                                                     {a.status.replace(/_/g, ' ')}
                                                                 </span>
                                                             </button>

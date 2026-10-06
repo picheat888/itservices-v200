@@ -67,6 +67,8 @@ class ContractResource extends JsonResource
                 'type' => $a->type,
                 'serial' => $a->serial,
                 'status' => $a->status?->value,
+                // Went back to the lessor (a kind of write-off) rather than written off for a reason.
+                'returned_to_vendor' => $a->returned_to_vendor_at !== null,
                 'owner' => $a->owner,
             ])->all(), []),
             'cancelled_at' => SystemTime::date($this->cancelled_at),

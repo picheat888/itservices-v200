@@ -87,6 +87,9 @@ class AssetResource extends JsonResource
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
             'written_off_by_name' => $this->whenLoaded('writtenOffBy', fn () => $this->writtenOffBy?->name),
+            // Set when a rented asset went back to its lessor (a kind of write-off); null otherwise.
+            'returned_to_vendor_at' => $this->returned_to_vendor_at?->format('Y-m-d H:i'),
+            'returned_to_vendor_by_name' => $this->whenLoaded('returnedToVendorBy', fn () => $this->returnedToVendorBy?->name),
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),
 

@@ -24,7 +24,8 @@ return new class extends Migration
         ['name' => 'สูญหาย / ถูกโจรกรรม', 'description' => null],
         ['name' => 'ขายซาก', 'description' => null],
         ['name' => 'บริจาค', 'description' => null],
-        ['name' => 'คืนผู้ให้เช่า', 'description' => 'สิ้นสุดหรือยกเลิกสัญญาเช่า'],
+        // No "คืนผู้ให้เช่า": a rented asset goes back through its own action (returned_to_vendor_at),
+        // see 2026_10_06_090155_add_returned_to_vendor_to_assets_table.
         ['name' => 'อื่น ๆ', 'description' => 'ระบุรายละเอียดในหมายเหตุ'],
     ];
 

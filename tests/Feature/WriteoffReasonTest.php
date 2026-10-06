@@ -36,9 +36,10 @@ class WriteoffReasonTest extends TestCase
         $this->actingAs($this->userWith([]))
             ->getJson('/api/writeoff-reasons')
             ->assertOk()
-            ->assertJsonCount(7, 'data')
+            // Six: "คืนผู้ให้เช่า" left the list for the Return to lessor action (2026_10_06_090155).
+            ->assertJsonCount(6, 'data')
             ->assertJsonPath('data.0.name', 'ชำรุด ซ่อมไม่คุ้ม')
-            ->assertJsonPath('data.6.name', 'อื่น ๆ');
+            ->assertJsonPath('data.5.name', 'อื่น ๆ');
     }
 
     public function test_changing_the_list_needs_settings_assets(): void

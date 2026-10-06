@@ -57,7 +57,8 @@ class AssetWriteoffReportTest extends TestCase
         $printers = Category::create(['name' => 'Printer', 'name_th' => 'เครื่องพิมพ์']);
         $store = Warehouse::create(['name' => 'Main store']);
         $beyondRepair = WriteoffReason::where('name', 'ชำรุด ซ่อมไม่คุ้ม')->value('id');
-        $handedBack = WriteoffReason::where('name', 'คืนผู้ให้เช่า')->value('id');
+        // A lost rented laptop: returning one to the lessor is its own action now, with no reason.
+        $lost = WriteoffReason::where('name', 'สูญหาย / ถูกโจรกรรม')->value('id');
         $writeoff = fn (array $attributes) => Asset::factory()->create(array_merge([
             'status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null, 'warehouse_id' => $store->id,
         ], $attributes));
@@ -65,7 +66,7 @@ class AssetWriteoffReportTest extends TestCase
         $this->set = [
             'aug' => $writeoff(['category_id' => $laptops->id, 'source' => 'purchased', 'value' => 30000, 'purchase_date' => '2023-08-10',
                 'written_off_at' => '2026-08-10 09:00:00', 'last_reason' => 'Screen broken', 'writeoff_reason_id' => $beyondRepair]),
-            'sep_rented' => $writeoff(['category_id' => $laptops->id, 'written_off_at' => '2026-09-05 09:00:00', 'last_reason' => 'Lease ended', 'writeoff_reason_id' => $handedBack]),
+            'sep_rented' => $writeoff(['category_id' => $laptops->id, 'written_off_at' => '2026-09-05 09:00:00', 'last_reason' => 'Lease ended', 'writeoff_reason_id' => $lost]),
             'sep_printer' => $writeoff(['category_id' => $printers->id, 'source' => 'purchased', 'value' => 12000, 'purchase_date' => '2024-09-05',
                 'written_off_at' => '2026-09-20 15:30:00', 'last_reason' => 'Beyond repair', 'writeoff_reason_id' => $beyondRepair]),
             'july' => $writeoff(['category_id' => $printers->id, 'source' => 'purchased', 'value' => 9000, 'written_off_at' => '2026-07-01 09:00:00']),
@@ -117,7 +118,7 @@ class AssetWriteoffReportTest extends TestCase
 
         // Largest reason first; an asset with none counts as "no reason given".
         $reasons = $charts['reason']['rows'];
-        $this->assertSame(['ชำรุด ซ่อมไม่คุ้ม', 'คืนผู้ให้เช่า'], array_column(array_column($reasons, 'label'), 'name'));
+        $this->assertSame(['ชำรุด ซ่อมไม่คุ้ม', 'สูญหาย / ถูกโจรกรรม'], array_column(array_column($reasons, 'label'), 'name'));
         $this->assertSame([['purchased' => 2, 'rented' => 0], ['purchased' => 0, 'rented' => 1]], array_column($reasons, 'values'));
 
         // Largest category first.
@@ -137,7 +138,7 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertSame([$this->set['sep_rented']->id], $ids('source=rented'));
         $this->assertSame([$this->set['aug']->id], $ids('search=Screen'));
         // The search reads the reason's name as well as the note.
-        $this->assertSame([$this->set['sep_rented']->id], $ids('search='.urlencode('คืนผู้')));
+        $this->assertSame([$this->set['sep_rented']->id], $ids('search='.urlencode('สูญหาย')));
     }
 
     public function test_it_needs_assets_view(): void
@@ -159,7 +160,7 @@ class AssetWriteoffReportTest extends TestCase
             return $sheets[1]->title() === 'แยกตามเดือน'
                 && $sheets[1]->array() === [['ส.ค. 2026', 1, 1, 0], ['ก.ย. 2026', 2, 1, 1]]
                 && $sheets[2]->title() === 'แยกตามเหตุผล'
-                && $sheets[2]->array() === [['ชำรุด ซ่อมไม่คุ้ม', 2, 2, 0], ['คืนผู้ให้เช่า', 1, 0, 1]]
+                && $sheets[2]->array() === [['ชำรุด ซ่อมไม่คุ้ม', 2, 2, 0], ['สูญหาย / ถูกโจรกรรม', 1, 0, 1]]
                 && $sheets[3]->title() === 'แยกตามหมวดหมู่'
                 && $sheets[3]->array() === [['แล็ปท็อป', 2, 1, 1], ['เครื่องพิมพ์', 1, 1, 0]]
                 && last($sheets)->headings()[0] === 'วันที่ตัดจำหน่าย';
