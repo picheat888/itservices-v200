@@ -7,6 +7,17 @@ import axios from 'axios';
 // Same-origin SPA: Laravel serves the app and the API, so cookies flow
 // automatically. withCredentials + withXSRFToken let Sanctum's cookie-based
 // SPA auth work (XSRF-TOKEN cookie -> X-XSRF-TOKEN header).
+declare module 'axios' {
+    interface AxiosRequestConfig {
+        /**
+         * A 401 on this request is an answer, not a lost session: leave it to the caller
+         * instead of sending the reader to the login page. For calls made before we know
+         * whether anyone is signed in (the start-up prefetch in ProtectedRoute).
+         */
+        quietUnauthenticated?: boolean;
+    }
+}
+
 export const http = axios.create({
     baseURL: '/api',
     withCredentials: true,
@@ -46,7 +57,12 @@ http.interceptors.response.use(
         // revoked elsewhere. Without this the page just fails silently until the user
         // happens to reload. `/me` is exempt: it answers 401 whenever nobody is signed in,
         // and the route guard already sends those visitors to the login page.
-        if (status === 401 && !error.config?.url?.endsWith('/me') && !window.location.pathname.startsWith('/login')) {
+        if (
+            status === 401 &&
+            !error.config?.url?.endsWith('/me') &&
+            !error.config?.quietUnauthenticated &&
+            !window.location.pathname.startsWith('/login')
+        ) {
             window.location.href = '/login?reason=signed_out';
             return Promise.reject(error);
         }

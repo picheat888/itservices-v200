@@ -407,8 +407,8 @@ export default function AssetsPage() {
     const transfers = transferLog?.data ?? [];
     // How far back the endpoint reaches. Only worth saying once the log is actually that long.
     const transfersCapped = !!transferLog?.meta?.limit && transfers.length >= transferLog.meta.limit;
-    // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, usually
-    // already loaded by the shell; undefined until known, so the strip can hold its space).
+    // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, loaded
+    // by ProtectedRoute before any page draws).
     const pendingReturnCount = useSidebarBadge('assets');
 
     // Transfer log — the same columns the asset's own History tab uses, plus the asset itself,
