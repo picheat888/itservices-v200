@@ -80,8 +80,9 @@ abstract class TabularReport
     }
 
     /**
-     * The columns the Excel sheet carries: the PDF's, plus every sheet-only column (the page's
-     * column picker never hides those), in sheetOrder() when the report sets one.
+     * The columns the Excel sheet carries: the PDF's, plus every sheet-only and hidden-by-default
+     * column (the page's column picker never takes those out of the file), in sheetOrder() when
+     * the report sets one.
      *
      * @return list<ReportColumn>
      */
@@ -90,7 +91,7 @@ abstract class TabularReport
         $picked = array_map(fn (ReportColumn $c) => $c->key, $this->exportColumns());
         $columns = array_values(array_filter(
             $this->columns(),
-            fn (ReportColumn $c) => $c->isSheetOnly() || in_array($c->key, $picked, true),
+            fn (ReportColumn $c) => $c->isSheetOnly() || $c->isHiddenByDefault() || in_array($c->key, $picked, true),
         ));
 
         $order = array_flip($this->sheetOrder());
