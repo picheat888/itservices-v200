@@ -22,7 +22,7 @@ function ListLine({ row }: { row: List['rows'][number] }) {
     const label = useChartLabel();
     const canOpen = useCanOpen();
     const href = `/assets?view=${row.id}`;
-    const what = [row.label ? label(row.label) : null, row.model].filter(Boolean).join(' · ');
+    const kind = row.label ? label(row.label) : null;
 
     return (
         <div className="grid gap-x-4 gap-y-0.5 px-5 py-2.5 text-sm lg:grid-cols-[9rem_10rem_minmax(0,1fr)_10rem_minmax(0,1.4fr)] lg:items-baseline">
@@ -34,7 +34,17 @@ function ListLine({ row }: { row: List['rows'][number] }) {
             ) : (
                 <span className="font-mono font-medium">{row.code}</span>
             )}
-            <span className="truncate">{what || '—'}</span>
+            {/* Category, then the model spaced after it. */}
+            <span className="truncate">
+                {kind || row.model ? (
+                    <>
+                        {kind}
+                        {row.model && <span className={kind ? 'text-muted-foreground ml-2' : undefined}>{row.model}</span>}
+                    </>
+                ) : (
+                    '—'
+                )}
+            </span>
             <span className="text-muted-foreground truncate">{row.place ?? '—'}</span>
             <span className="text-muted-foreground truncate" title={row.reason ?? undefined}>
                 {row.reason ?? '—'}

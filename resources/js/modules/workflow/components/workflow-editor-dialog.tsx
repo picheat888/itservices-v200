@@ -185,7 +185,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                 value: String(e.id),
                 label: e.name,
                 sub: e.code,
-                hint: [e.position, e.department].filter(Boolean).join(' · ') || undefined,
+                hint: [e.position, e.department].filter(Boolean).join(', ') || undefined,
                 search: `${e.name} ${e.code} ${e.position ?? ''} ${e.department ?? ''}`,
             })),
         [employees],
@@ -282,7 +282,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                             <SectionLabel className="mb-0">
                                 {t('wf_steps')}{' '}
                                 <span className="text-muted-foreground font-mono text-xs">
-                                    · {t('wf_steps_count').replace('{n}', String(approvalCount))}
+                                    ({t('wf_steps_count').replace('{n}', String(approvalCount))})
                                 </span>
                             </SectionLabel>
                             <Button variant="outline" size="sm" onClick={addStep}>
@@ -524,7 +524,7 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
             </span>
             <div className="min-w-0">
                 <div className="text-sm font-semibold">
-                    {queue ? t('wf_actor_it') : (row.approver_name ?? (candidates.length > 0 ? candidates.join(' · ') : row.label))}
+                    {queue ? t('wf_actor_it') : (row.approver_name ?? (candidates.length > 0 ? candidates.join(', ') : row.label))}
                 </div>
                 <div className="text-muted-foreground text-xs">
                     {skipped
@@ -544,7 +544,7 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
                               ? t('wf_any_of_preview')
                               : row.approver_position || row.label}
                 </div>
-                {!skipped && !queue && row.approver_name && row.label.includes(' · ') && (
+                {!skipped && !queue && row.approver_name && row.label.includes(', ') && (
                     <div className="mt-1 flex flex-wrap gap-1">
                         <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
                             {t('wf_covers')}: {row.label}
@@ -735,7 +735,7 @@ function withDerivedLabel(step: EditableStep, positions: { id: number; title: st
             : step.actor_type === 'owner'
               ? 'Resource Owner'
               : step.actor_type === 'department'
-                ? [department, titles.join(' / ')].filter(Boolean).join(' · ')
+                ? [department, titles.join(' / ')].filter(Boolean).join(': ')
                 : titles.join(' / ');
 
     return { ...step, label };

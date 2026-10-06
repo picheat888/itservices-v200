@@ -702,7 +702,7 @@ export default function TicketsPage() {
                                                     <RefreshCcw className="h-3.5 w-3.5" />
                                                     {(summary?.backlog_in_progress ?? 0).toLocaleString('en-US')} {t('ticket_kpi_working')}
                                                 </span>
-                                                <span className="text-muted-foreground/80">· {t('ticket_kpi_now')}</span>
+                                                <span className="text-muted-foreground/80">({t('ticket_kpi_now')})</span>
                                             </span>
                                         }
                                     />

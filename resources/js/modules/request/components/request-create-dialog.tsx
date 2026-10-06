@@ -240,7 +240,7 @@ export function RequestCreateDialog({
                 <FocusDialogHeader
                     icon={HeaderIcon}
                     accent={type ? REQUEST_TYPE_META[type].color : undefined}
-                    eyebrow={type ? `${t('req_new_eyebrow')} · ${t(REQUEST_TYPE_META[type].labelKey)}` : t('req_new_eyebrow')}
+                    eyebrow={type ? `${t('req_new_eyebrow')}: ${t(REQUEST_TYPE_META[type].labelKey)}` : t('req_new_eyebrow')}
                     title={t('req_new_title')}
                     srDescription={t('requests_sub')}
                 />

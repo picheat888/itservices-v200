@@ -86,6 +86,6 @@ export const workflow: Dict = {
     wf_skipped: 'skipped',
     wf_covers: 'Covers',
     wf_owner_preview: 'Resolved from the picked resource at submit',
-    wf_queue_preview: 'IT completion queue · auto-opened ticket',
+    wf_queue_preview: 'Goes to the IT queue, which opens a ticket automatically',
     wf_save_error_steps: 'Check the step list',
 };

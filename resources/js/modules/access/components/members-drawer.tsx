@@ -387,7 +387,7 @@ export function MembersDrawer({
                         {/* Members — DataTable sized to content; body scrolls past maxBodyHeight */}
                         <div className="border-border border-t px-6 py-4">
                             <SectionLabel>
-                                {t('access_members')} · {members.length}
+                                {t('access_members')} ({members.length})
                             </SectionLabel>
                             <div>
                                 <DataTable

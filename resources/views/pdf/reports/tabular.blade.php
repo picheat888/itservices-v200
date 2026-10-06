@@ -11,6 +11,8 @@
         body { margin: 0; color: #000; font-size: 11px; }
         h1 { font-size: 15px; margin: 0; }
         .muted { color: #555; }
+        /* Header facts sit side by side, spaced apart (no dot between them). */
+        .muted .part + .part { margin-left: 14px; }
         .head { border-bottom: 1.5px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; }
         .kpi td { border: 0.5px solid #999; padding: 6px; text-align: center; }
@@ -24,7 +26,7 @@
 <body>
 <div class="head">
     <h1>{{ $report->title() }}</h1>
-    <div class="muted">{{ $company }} · พิมพ์โดย {{ $printedBy }} เมื่อ {{ $printedAt }}</div>
+    <div class="muted"><span class="part">{{ $company }}</span><span class="part">พิมพ์โดย {{ $printedBy }} เมื่อ {{ $printedAt }}</span></div>
 </div>
 
 <table class="kpi"><tr>

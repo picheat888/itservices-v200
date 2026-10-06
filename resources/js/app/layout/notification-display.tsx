@@ -284,7 +284,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
 
         // Say it is a new hire's request up front — an approver acting from the bell
         // never sees the violet marking on the list.
-        const prefix = n.data.origin === 'onboarding' ? `${t('req_origin_onboarding')} · ` : '';
+        const prefix = n.data.origin === 'onboarding' ? `${t('req_origin_onboarding')}: ` : '';
 
         return (
             prefix +

@@ -151,7 +151,7 @@ export function EmployeeViewDrawer({
     // as un-deletable rather than briefly offering a button that would be refused.
     const blockers = emp.delete_blockers;
     const deletable = !!blockers && blockers.length === 0;
-    const deleteBlockedReason = deletable ? undefined : blockers?.map((b) => t(`emp_del_block_${b}`)).join(' · ');
+    const deleteBlockedReason = deletable ? undefined : blockers?.map((b) => t(`emp_del_block_${b}`)).join('\n');
     const tenure = tenureOf(emp.joined_at);
     // The person this employee reports to (their manager), resolved from the org list.
     const managerNode = emp.manager_id ? nodeById.get(emp.manager_id) : null;
@@ -357,11 +357,11 @@ export function EmployeeViewDrawer({
                         <TriangleAlert className="h-[15px] w-[15px] shrink-0" />
                         <span>{t('emp_v_resigned_note')}</span>
                         {emp.last_day && (
-                            <span className="font-mono">
-                                · {t('emp_v_last_day')} {emp.last_day}
+                            <span className="ml-2 font-mono">
+                                {t('emp_v_last_day')} {emp.last_day}
                             </span>
                         )}
-                        {emp.resign_reason && <span>· {emp.resign_reason}</span>}
+                        {emp.resign_reason && <span className="ml-2">{emp.resign_reason}</span>}
                     </div>
                 )}
 
@@ -587,13 +587,12 @@ export function EmployeeViewDrawer({
                                                                 </div>
                                                             ) : grp.key === 'social' ? (
                                                                 // Single line: platform name is the label; the URL reads as technical, so it's
-                                                                // set in mono (like the paths/emails elsewhere) and split off with a middot.
+                                                                // set in mono (like the paths/emails elsewhere) and set apart by a gap.
                                                                 <div className="min-w-0 flex-1 truncate text-[13px] leading-tight">
                                                                     <span className="font-semibold">{r.resource_name}</span>
                                                                     {r.resource_detail && (
-                                                                        <span className="text-muted-foreground font-mono text-[11px]">
-                                                                            {' '}
-                                                                            · {r.resource_detail}
+                                                                        <span className="text-muted-foreground ml-2 font-mono text-[11px]">
+                                                                            {r.resource_detail}
                                                                         </span>
                                                                     )}
                                                                 </div>
@@ -728,9 +727,11 @@ function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; la
                         </div>
                         <div className="min-w-0">
                             <div className="truncate text-xs font-medium">{a.model ?? a.asset_code}</div>
+                            {/* Type, then the status with its colour dot in front of it. */}
                             <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase">
-                                <span className={cn('h-1.5 w-1.5 rounded-full', meta?.dot ?? 'bg-muted-foreground')} />
-                                {type} · {meta ? t(meta.key) : a.status}
+                                <span>{type}</span>
+                                <span className={cn('ml-1.5 h-1.5 w-1.5 rounded-full', meta?.dot ?? 'bg-muted-foreground')} />
+                                <span>{meta ? t(meta.key) : a.status}</span>
                             </div>
                         </div>
                     </div>

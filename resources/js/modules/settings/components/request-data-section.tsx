@@ -359,8 +359,9 @@ function OptionModal({
             <DialogContent className="max-w-[440px]">
                 <DialogTitle className="text-[15px] font-bold">{option ? t('rd_edit') : t('rd_add')}</DialogTitle>
                 {list && (
-                    <p className="text-muted-foreground -mt-2 text-xs">
-                        {t(REQUEST_TYPE_META[list.request_type].labelKey)} · {lang === 'th' ? list.label_th : list.label_en}
+                    <p className="text-muted-foreground -mt-2 flex flex-wrap gap-x-3 text-xs">
+                        <span>{t(REQUEST_TYPE_META[list.request_type].labelKey)}</span>
+                        <span>{lang === 'th' ? list.label_th : list.label_en}</span>
                     </p>
                 )}
 

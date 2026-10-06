@@ -1084,7 +1084,7 @@ function BodyEditor({
                                 >
                                     {unknown && <AlertTriangle className="h-3 w-3" />}
                                     {`{{${tk}}}`}
-                                    {VAR_NOTE[tk] && <span className="text-muted-foreground text-[10px]">· {VAR_NOTE[tk][lang]}</span>}
+                                    {VAR_NOTE[tk] && <span className="text-muted-foreground ml-1 text-[10px]">{VAR_NOTE[tk][lang]}</span>}
                                 </button>
                             );
                         })}
@@ -1166,12 +1166,13 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
                     title={log.subject}
                     srDescription={t('email_log_sub')}
                     subtitle={
-                        <span className="text-muted-foreground text-xs">
-                            {formatDateTime(log.created_at)}
-                            {' · '}
-                            {log.recipient_name
-                                ? `${log.recipient_name} (${log.to_email ?? t('email_log_no_address')})`
-                                : (log.to_email ?? t('email_log_no_address'))}
+                        <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
+                            <span>{formatDateTime(log.created_at)}</span>
+                            <span>
+                                {log.recipient_name
+                                    ? `${log.recipient_name} (${log.to_email ?? t('email_log_no_address')})`
+                                    : (log.to_email ?? t('email_log_no_address'))}
+                            </span>
                         </span>
                     }
                     headerRight={<StatusBadge tone={meta.tone}>{t(meta.labelKey)}</StatusBadge>}

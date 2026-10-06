@@ -341,10 +341,10 @@ function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHel
                             </div>
                             <div className="mt-0.5 flex items-center gap-2">
                                 <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1.5 text-xs">
-                                    <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', meta?.dot ?? 'bg-muted-foreground')} />
-                                    <span className="truncate">
-                                        {type} · {meta ? t(meta.key) : a.status}
-                                    </span>
+                                    {/* Type, then the status with its colour dot in front of it. */}
+                                    <span className="shrink-0">{type}</span>
+                                    <span className={cn('ml-1.5 h-1.5 w-1.5 shrink-0 rounded-full', meta?.dot ?? 'bg-muted-foreground')} />
+                                    <span className="truncate">{meta ? t(meta.key) : a.status}</span>
                                 </span>
                                 {a.tag && (
                                     <span className="bg-brand/10 text-brand inline-flex max-w-36 shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">

@@ -219,7 +219,7 @@ export function StockItemDetailModal({
                                     </span>
                                 </DialogTitle>
                                 <DialogDescription className="sr-only">
-                                    {item.sku} · {[item.brand, item.model].filter(Boolean).join(' ')}
+                                    {[item.sku, [item.brand, item.model].filter(Boolean).join(' ')].filter(Boolean).join(': ')}
                                 </DialogDescription>
                             </div>
                             <div className="ml-auto flex shrink-0 flex-col items-end gap-1 pr-8">
@@ -248,10 +248,13 @@ export function StockItemDetailModal({
                                             value={item.current_stock.toLocaleString()}
                                             sub={
                                                 item.reserved != null && item.reserved > 0 ? (
-                                                    <span>
-                                                        {lang === 'th'
-                                                            ? `สำรอง ${item.reserved} · ว่าง ${item.current_stock - item.reserved}`
-                                                            : `${item.reserved} reserved · ${item.current_stock - item.reserved} free`}
+                                                    <span className="flex flex-wrap gap-x-3">
+                                                        <span>{lang === 'th' ? `สำรอง ${item.reserved}` : `${item.reserved} reserved`}</span>
+                                                        <span>
+                                                            {lang === 'th'
+                                                                ? `ว่าง ${item.current_stock - item.reserved}`
+                                                                : `${item.current_stock - item.reserved} free`}
+                                                        </span>
                                                     </span>
                                                 ) : (
                                                     <span className="lowercase">{item.unit}</span>

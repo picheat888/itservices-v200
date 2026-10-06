@@ -224,7 +224,7 @@ class RequestResolutionTest extends TestCase
         $this->assertCount(2, $rows);
         $merged = $rows->first();
         $this->assertSame($sup->id, $merged['approver_employee_id']);
-        $this->assertSame('Supervisor · Resource Owner', $merged['label']);
+        $this->assertSame('Supervisor, Resource Owner', $merged['label']);
         // The joined label already lists both, so nothing is written into note.
         $this->assertNull($merged['note']);
         $this->assertSame([1, 2], $rows->pluck('position')->all());

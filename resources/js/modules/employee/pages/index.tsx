@@ -358,7 +358,7 @@ export default function EmployeesPage() {
                 description: t('dept_del_blocked_desc'),
                 entity: {
                     name: lang === 'th' ? (d.name_th ?? d.name) : d.name,
-                    sub: `${members} ${t('dept_members')} · ${sections} ${t('sub_sections')}`,
+                    sub: `${members} ${t('dept_members')}, ${sections} ${t('sub_sections')}`,
                 },
                 confirmText: t('got_it'),
             });
@@ -1024,8 +1024,11 @@ function OverviewTab({
                                     <UserAvatar name={e.name} photoUrl={e.photo_url} />
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
-                                        <div className="text-muted-foreground truncate text-xs">
-                                            {e.position} · {lang === 'th' ? (e.department_th ?? e.department) : e.department}
+                                        <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
+                                            <span className="min-w-0 truncate">{e.position}</span>
+                                            <span className="min-w-0 truncate">
+                                                {lang === 'th' ? (e.department_th ?? e.department) : e.department}
+                                            </span>
                                         </div>
                                     </div>
                                     <span className="text-muted-foreground font-mono text-xs">{e.last_day}</span>
@@ -1075,8 +1078,9 @@ function OverviewTab({
                                 <UserAvatar name={e.name} />
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
-                                    <div className="text-muted-foreground truncate text-xs">
-                                        {e.position} · {lang === 'th' ? (e.department_th ?? e.department) : e.department}
+                                    <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
+                                        <span className="min-w-0 truncate">{e.position}</span>
+                                        <span className="min-w-0 truncate">{lang === 'th' ? (e.department_th ?? e.department) : e.department}</span>
                                     </div>
                                 </div>
                                 <span className="text-muted-foreground font-mono text-xs">{e.joined_at}</span>

@@ -62,8 +62,13 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
         if (ok) useToastStore.getState().push(t('rep_schedules_deleted'), 'error', undefined, 'trash', { duration: 4000 });
     };
 
-    // "ทุกวันจันทร์ · 07:00" — the day it goes out and the hour.
-    const when = `${t(`rep_schedule_freq_${item.frequency}_when`)} · ${hourLabel(item.send_hour)}`;
+    // "ทุกวันจันทร์  07:00" — the day it goes out and the hour, spaced apart.
+    const when = (
+        <>
+            {t(`rep_schedule_freq_${item.frequency}_when`)}
+            <span className="ml-2">{hourLabel(item.send_hour)}</span>
+        </>
+    );
     const recipients =
         item.recipients.length === 1
             ? item.recipients[0]

@@ -52,7 +52,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                         )}
                     >
                         {d.name}
-                        {d.name_th && <span className="text-muted-foreground ml-1 font-normal">· {d.name_th}</span>}
+                        {d.name_th && <span className="text-muted-foreground ml-2 font-normal">{d.name_th}</span>}
                     </div>
                     <div className="text-muted-foreground truncate text-[12px] leading-[17px]" title={d.title ?? undefined}>
                         {d.title ?? '—'}

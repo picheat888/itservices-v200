@@ -177,9 +177,11 @@ function TicketsOverviewCard({ it }: { it: DashboardIt }) {
                     <Ticket className="text-muted-foreground h-4 w-4" />
                     <span className="font-semibold">{t('dash_tickets_overview')}</span>
                 </div>
-                <span className="text-muted-foreground text-xs">
-                    {t('dash_last_days').replace('{n}', String(it.window_days))} · <b className="text-foreground font-mono font-semibold">{total}</b>{' '}
-                    {t('dash_cases')}
+                <span className="text-muted-foreground flex items-baseline gap-x-3 text-xs">
+                    <span>{t('dash_last_days').replace('{n}', String(it.window_days))}</span>
+                    <span>
+                        <b className="text-foreground font-mono font-semibold">{total}</b> {t('dash_cases')}
+                    </span>
                 </span>
             </div>
             <div className="p-5">
@@ -346,7 +348,7 @@ function VolumeChart({ it }: { it: DashboardIt }) {
                         {days.map((d) => (
                             <div
                                 key={d.date}
-                                title={`${label(d.date)} · ${t('dash_volume_opened')} ${d.opened} · ${t('dash_volume_backlog')} ${d.backlog}`}
+                                title={`${label(d.date)}\n${t('dash_volume_opened')} ${d.opened}\n${t('dash_volume_backlog')} ${d.backlog}`}
                                 className="group flex h-full flex-1 items-end"
                             >
                                 <div
@@ -447,10 +449,9 @@ function WorkloadCard({ it }: { it: DashboardIt }) {
                                 <span className="text-muted-foreground shrink-0 text-xs">
                                     <b className="text-foreground font-mono">{row.open}</b> {t('dash_carrying')}
                                     {row.closed > 0 && (
-                                        <>
-                                            {' · '}
+                                        <span className="ml-3">
                                             <span className="font-mono">{row.closed}</span> {t('dash_closed')}
-                                        </>
+                                        </span>
                                     )}
                                 </span>
                             </div>
@@ -494,9 +495,11 @@ function RequestsOverviewCard({ requests }: { requests: DashboardRequests }) {
                     <Inbox className="text-muted-foreground h-4 w-4" />
                     <span className="font-semibold">{t('dash_requests_overview')}</span>
                 </div>
-                <span className="text-muted-foreground text-xs">
-                    {t('dash_last_days').replace('{n}', String(requests.window_days))} ·{' '}
-                    <b className="text-foreground font-mono font-semibold">{total}</b> {t('dash_requests')}
+                <span className="text-muted-foreground flex items-baseline gap-x-3 text-xs">
+                    <span>{t('dash_last_days').replace('{n}', String(requests.window_days))}</span>
+                    <span>
+                        <b className="text-foreground font-mono font-semibold">{total}</b> {t('dash_requests')}
+                    </span>
                 </span>
             </div>
             <div className="p-5">
@@ -551,7 +554,7 @@ function WaitingRequestsCard({ requests }: { requests: DashboardRequests }) {
     const t = useT();
     return (
         <ListCard
-            title={`${t('dash_waiting_title').replace('{n}', String(requests.waiting_after_days))}${requests.waiting_count > 0 ? ` · ${requests.waiting_count}` : ''}`}
+            title={`${t('dash_waiting_title').replace('{n}', String(requests.waiting_after_days))}${requests.waiting_count > 0 ? ` (${requests.waiting_count})` : ''}`}
             icon={Inbox}
             to="/requests?tab=all"
             empty={t('dash_empty_waiting')}
@@ -565,9 +568,8 @@ function WaitingRequestsCard({ requests }: { requests: DashboardRequests }) {
                             <>
                                 <span className="font-mono">{row.reference}</span>
                                 {row.waiting_on && (
-                                    <span>
-                                        {' '}
-                                        · {t('dash_waiting_on')} {row.waiting_on}
+                                    <span className="ml-3">
+                                        {t('dash_waiting_on')} {row.waiting_on}
                                     </span>
                                 )}
                             </>
@@ -611,7 +613,14 @@ function HrSection({ hr }: { hr: DashboardHr }) {
                         <Row
                             key={hire.id}
                             lead={hire.name}
-                            sub={[hire.position, hire.department].filter(Boolean).join(' · ') || undefined}
+                            sub={
+                                hire.position || hire.department ? (
+                                    <>
+                                        {hire.position && <span>{hire.position}</span>}
+                                        {hire.department && <span className={hire.position ? 'ml-3' : undefined}>{hire.department}</span>}
+                                    </>
+                                ) : undefined
+                            }
                             trailing={<span className="text-muted-foreground font-mono text-xs">{hire.joined_at ?? '—'}</span>}
                         />
                     ))}
@@ -653,7 +662,7 @@ function ActivityCard({ rows }: { rows: ActivityRow[] }) {
                     lead={
                         <>
                             {row.action}
-                            {row.target && <span className="text-muted-foreground font-normal"> · {row.target}</span>}
+                            {row.target && <span className="text-muted-foreground ml-2 font-normal">{row.target}</span>}
                         </>
                     }
                     sub={row.actor ?? undefined}
@@ -706,7 +715,7 @@ export default function DashboardPage() {
                                     {toAccept.map((asset) => (
                                         <li key={asset.id} className="text-sm">
                                             <span className="font-mono">{asset.asset_code}</span>
-                                            {asset.model && <span className="text-muted-foreground"> · {asset.model}</span>}
+                                            {asset.model && <span className="text-muted-foreground ml-2">{asset.model}</span>}
                                         </li>
                                     ))}
                                 </ul>
@@ -750,7 +759,7 @@ export default function DashboardPage() {
                             sub={
                                 <>
                                     <span className="font-mono">{tk.ticket_no}</span>
-                                    {tk.assignee_name && <span> · {tk.assignee_name}</span>}
+                                    {tk.assignee_name && <span className="ml-3">{tk.assignee_name}</span>}
                                 </>
                             }
                             status={tk.status}
@@ -786,7 +795,7 @@ export default function DashboardPage() {
                             sub={
                                 <>
                                     <span className="font-mono">{asset.asset_code}</span>
-                                    {asset.category && <span> · {asset.category}</span>}
+                                    {asset.category && <span className="ml-3">{asset.category}</span>}
                                 </>
                             }
                             status={asset.status}

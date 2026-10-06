@@ -60,8 +60,9 @@ export default function ItemHistoryPage() {
             <div className="mb-4 hidden print:block">
                 <div className="flex items-end justify-between gap-4">
                     <div className="min-w-0">
-                        <div className="text-base font-semibold">
-                            {view ? t(VIEW_META[view].titleKey as Parameters<typeof t>[0]) : t('stock_hist_overview')} · {data.item.name}
+                        <div className="flex flex-wrap items-baseline gap-x-3 text-base font-semibold">
+                            <span>{view ? t(VIEW_META[view].titleKey as Parameters<typeof t>[0]) : t('stock_hist_overview')}</span>
+                            <span className="text-muted-foreground font-normal">{data.item.name}</span>
                         </div>
                         <div className="mt-0.5 font-mono text-sm">SKU : {data.item.sku}</div>
                     </div>
@@ -104,8 +105,9 @@ export default function ItemHistoryPage() {
             {view ? <CategoryView view={view} movements={moves(view)} serialsOf={serialsOf} /> : <Hub data={data} onOpen={(v) => setParams({ v })} />}
 
             {/* Print-only footer */}
-            <div className="mt-6 hidden border-t border-black/30 pt-2 text-center text-xs print:block">
-                {data.item.sku} · {data.item.name}
+            <div className="mt-6 hidden justify-center gap-x-3 border-t border-black/30 pt-2 text-xs print:flex">
+                <span>{data.item.sku}</span>
+                <span>{data.item.name}</span>
             </div>
         </div>
     );
@@ -287,7 +289,7 @@ export default function ItemHistoryPage() {
                         <Icon className={cn('h-4 w-4', meta.tone)} />
                     </span>
                     <h2 className="text-base font-semibold">{t(meta.titleKey as Parameters<typeof t>[0])}</h2>
-                    <span className="text-muted-foreground text-sm">· {movements.length}</span>
+                    <span className="text-muted-foreground text-sm">({movements.length})</span>
                 </div>
                 <Table headers={headers} rows={rows} />
             </>

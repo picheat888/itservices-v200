@@ -79,7 +79,7 @@ export function RequestsTab({
     };
 
     // One-line summary of the request, shown inside the confirm dialogs.
-    const reqSummary = (r: (typeof requests)[number]) => `${r.sku ?? ''} - ${r.item_name ?? ''}  ·  ×${r.qty}  ·  ${r.requester_name}`;
+    const reqSummary = (r: (typeof requests)[number]) => `${r.sku ?? ''} - ${r.item_name ?? ''} ×${r.qty}, ${r.requester_name}`;
 
     const confirmApprove = async (r: (typeof requests)[number]) => {
         await confirm({
@@ -229,8 +229,11 @@ export function RequestsTab({
                         <div className="space-y-4">
                             <div className="border-border rounded-lg border p-3">
                                 <div className="text-sm font-semibold">{fulfillReq.item_name}</div>
-                                <div className="text-muted-foreground font-mono text-xs">
-                                    {fulfillReq.sku} · {t('stock_requester')}: {fulfillReq.requester_name}
+                                <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
+                                    <span className="font-mono">{fulfillReq.sku}</span>
+                                    <span>
+                                        {t('stock_requester')}: {fulfillReq.requester_name}
+                                    </span>
                                 </div>
                             </div>
 

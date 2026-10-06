@@ -711,8 +711,8 @@ export function ContractFormDrawer({
                                             <span className="text-foreground font-mono font-semibold">
                                                 {symbol}
                                                 {totalValueEstimate.toLocaleString()}
-                                            </span>{' '}
-                                            · {t('contract_estimate_use')}
+                                            </span>
+                                            <span className="ml-3 underline-offset-2 hover:underline">{t('contract_estimate_use')}</span>
                                         </button>
                                     )}
                                 </Field>
@@ -852,7 +852,7 @@ export function ContractFormDrawer({
                                     />
                                     <ReviewRow
                                         k={t('contract_value_per_cycle')}
-                                        v={`${symbol}${form.value ? Number(form.value).toLocaleString() : '0'} · ${t(`contract_billing_${form.billing_cycle}`)}`}
+                                        v={`${symbol}${form.value ? Number(form.value).toLocaleString() : '0'} (${t(`contract_billing_${form.billing_cycle}`)})`}
                                         mono
                                     />
                                     {form.total_value && (
@@ -860,7 +860,7 @@ export function ContractFormDrawer({
                                     )}
                                     <ReviewRow
                                         k={t('contract_notify')}
-                                        v={selectedNotify.length ? t('contract_days_many').replace('{n}', selectedNotify.join(' · ')) : '—'}
+                                        v={selectedNotify.length ? t('contract_days_many').replace('{n}', selectedNotify.join(', ')) : '—'}
                                     />
                                     {isHardware && (
                                         <ReviewRow

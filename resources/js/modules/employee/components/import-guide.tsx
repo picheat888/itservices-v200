@@ -90,10 +90,13 @@ function ColumnTable() {
                     ))}
                 </tbody>
             </table>
-            <p className="text-muted-foreground border-border/70 border-t px-3 py-2 text-[11px] leading-relaxed">
-                <span className="text-destructive font-bold">*</span> {t('import_required_always')}
-                {' · '}
-                <span className="font-bold text-amber-600 dark:text-amber-400">*</span> {t('import_required_org')}
+            <p className="text-muted-foreground border-border/70 flex flex-wrap gap-x-4 border-t px-3 py-2 text-[11px] leading-relaxed">
+                <span>
+                    <span className="text-destructive font-bold">*</span> {t('import_required_always')}
+                </span>
+                <span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">*</span> {t('import_required_org')}
+                </span>
             </p>
         </div>
     );
@@ -209,7 +212,7 @@ function ValidValues() {
                                 <span className="block truncate text-xs font-medium">{row.value}</span>
                                 <span className="text-muted-foreground block truncate text-[11px]">
                                     {row.where && <span className="mr-1.5">↳ {row.where}</span>}
-                                    {row.aliases.length > 0 && <span className="font-mono">{row.aliases.join(' · ')}</span>}
+                                    {row.aliases.length > 0 && <span className="font-mono">{row.aliases.join(', ')}</span>}
                                 </span>
                             </span>
                             {copied === row.key ? (

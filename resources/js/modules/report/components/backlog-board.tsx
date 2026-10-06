@@ -175,15 +175,11 @@ function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
     const className = 'border-border bg-card flex gap-2 rounded-lg border px-2.5 py-2 text-left';
 
     return canOpen(href) ? (
-        <Link
-            to={href}
-            title={`${ticket.subject} · ${priority}`}
-            className={cn(className, 'hover:border-brand/50 hover:bg-accent transition-colors')}
-        >
+        <Link to={href} title={`${ticket.subject}\n${priority}`} className={cn(className, 'hover:border-brand/50 hover:bg-accent transition-colors')}>
             {body}
         </Link>
     ) : (
-        <div title={`${ticket.subject} · ${priority}`} className={className}>
+        <div title={`${ticket.subject}\n${priority}`} className={className}>
             {body}
         </div>
     );
