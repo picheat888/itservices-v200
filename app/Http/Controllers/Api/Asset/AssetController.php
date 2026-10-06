@@ -352,7 +352,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator', 'updater', 'writtenOffBy', 'writeoffReason']);
+        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator', 'updater', 'writtenOffBy', 'writeoffReason', 'returnedToVendorBy']);
 
         return (new AssetResource($asset))->response();
     }
@@ -398,8 +398,9 @@ class AssetController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('assets.cancel_writeoff'), 403);
         abort_unless($asset->status === AssetStatus::Writeoff, 422, 'This asset is not written off.');
 
+        $wasReturned = $asset->returnedToVendor();
         $asset = $this->service->cancelWriteoff($asset);
-        AuditLog::record('Cancelled asset write-off', $asset->asset_code, subject: $asset);
+        AuditLog::record($wasReturned ? 'Cancelled asset return to lessor' : 'Cancelled asset write-off', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
@@ -574,6 +575,35 @@ class AssetController extends Controller
         // One entry per asset, so each asset's own history shows its write-off and who did it.
         foreach (Asset::whereIn('id', $data['ids'])->get() as $asset) {
             AuditLog::record('Wrote off asset', $asset->asset_code, ['facts' => array_filter(['reason' => $reasonName, 'note' => $data['reason'] ?? null])], subject: $asset);
+        }
+
+        return response()->json(['message' => 'success', 'updated' => $count]);
+    }
+
+    /**
+     * Return rented assets to their lessor (requires assets.retire, the write-off permission — it
+     * is the rented asset's way out of the register). No reason from the Settings list: the
+     * return is its own fact (returned_to_vendor_at), which the write-off report counts on.
+     * Undone like a write-off, through cancel-writeoff (assets.cancel_writeoff).
+     */
+    public function bulkReturnToVendor(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:assets,id'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $count = $this->service->returnToVendor($data['ids'], $data['reason'] ?? null);
+        // One entry per asset, so each asset's own history shows the return and who made it.
+        foreach (Asset::with('contract:id,code')->whereIn('id', $data['ids'])->get() as $asset) {
+            AuditLog::record(
+                'Returned asset to lessor',
+                $asset->asset_code,
+                ['facts' => array_filter(['contract' => $asset->contract?->code, 'note' => $data['reason'] ?? null])],
+                subject: $asset,
+            );
         }
 
         return response()->json(['message' => 'success', 'updated' => $count]);

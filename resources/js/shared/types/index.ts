@@ -177,6 +177,8 @@ export interface ContractLinkedAsset {
     type: string | null;
     serial: string | null;
     status: string | null;
+    /** Went back to the lessor rather than written off for a reason. */
+    returned_to_vendor?: boolean;
     owner: string | null;
 }
 
@@ -305,6 +307,9 @@ export interface Asset {
     created_by_name?: string | null;
     updated_by_name?: string | null;
     written_off_by_name?: string | null;
+    /** Set when a rented asset went back to its lessor (a kind of write-off); null otherwise. */
+    returned_to_vendor_at?: string | null;
+    returned_to_vendor_by_name?: string | null;
     transfers?: AssetTransferEntry[];
     tickets?: AssetTicket[];
 }

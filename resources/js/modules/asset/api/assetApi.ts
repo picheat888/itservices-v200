@@ -102,6 +102,12 @@ export const assetApi = {
         const { data } = await http.post<{ updated: number }>('/assets/bulk', { ids, op, writeoff_reason_id: writeoffReasonId, reason });
         return data;
     },
+    // Return rented Ready assets to their lessor — a write-off of its own kind, no reason from the list.
+    returnToVendor: async (ids: number[], reason?: string): Promise<{ updated: number }> => {
+        await ensureCsrf();
+        const { data } = await http.post<{ updated: number }>('/assets/bulk-return-to-vendor', { ids, reason });
+        return data;
+    },
     // Bulk transfer many Ready/Common assets to one owner — an employee or a shared label.
     bulkTransfer: (payload: {
         ids: number[];

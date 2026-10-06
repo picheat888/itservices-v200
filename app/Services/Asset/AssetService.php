@@ -495,12 +495,71 @@ class AssetService
         return $asset->fresh();
     }
 
-    /** Undo a write-off — restore a retired asset back to the Ready pool. */
+    /**
+     * Undo a write-off (or a return to the lessor) — restore a retired asset back to the Ready pool.
+     * Refused once its contract is closed (cancelled or expired): the contract could only close
+     * because this asset had left, and bringing it back would leave an asset in service on a
+     * contract that has ended. Reopen the contract first.
+     */
     public function cancelWriteoff(Asset $asset): Asset
     {
+        $contract = $asset->contract;
+        abort_if(
+            $contract !== null && ($contract->cancelled_at !== null || $contract->expired_at !== null),
+            422,
+            "Contract {$contract?->code} is closed - reopen it before bringing {$asset->asset_code} back.",
+        );
+
         $asset->update(['status' => AssetStatus::Ready]);
 
         return $asset->fresh();
+    }
+
+    /**
+     * Hand rented assets back to their lessor. They leave the register as a write-off (status
+     * writeoff, written_off_at/by), so everything that treats a written-off asset as gone still
+     * does, and the return itself is stamped in returned_to_vendor_at/by. That fact, not a reason
+     * picked from the editable list in Settings, is what tells a return from a loss or a breakage.
+     *
+     * Only rented assets, and only once back in the pool (Ready) — the same rule as a write-off:
+     * anything still out must be recalled or returned first. No reason is asked for; the note
+     * (assets.last_reason) is optional. The contract link stays, so the contract keeps counting it.
+     *
+     * @param  list<int>  $ids
+     * @param  ?string  $note  the free-text note (assets.last_reason)
+     * @return int the number of assets returned
+     */
+    public function returnToVendor(array $ids, ?string $note = null): int
+    {
+        $assets = Asset::whereIn('id', $ids)->get(['id', 'asset_code', 'source', 'status']);
+
+        $notRented = $assets->filter(fn (Asset $asset) => $asset->source !== AssetSource::Rented)->pluck('asset_code');
+        abort_if(
+            $notRented->isNotEmpty(),
+            422,
+            'Only rented assets can be returned to the lessor - write these off instead: '.$notRented->implode(', ').'.'
+        );
+
+        $notReady = $assets->filter(fn (Asset $asset) => $asset->status !== AssetStatus::Ready)->pluck('asset_code');
+        abort_if(
+            $notReady->isNotEmpty(),
+            422,
+            'Only Ready assets can be returned to the lessor - recall or return these first: '.$notReady->implode(', ').'.'
+        );
+
+        // A query update skips the model's hooks, so the write-off and the return are stamped here.
+        $now = now();
+
+        return Asset::whereIn('id', $ids)->update([
+            'status' => AssetStatus::Writeoff->value,
+            'last_reason' => $note,
+            'writeoff_reason_id' => null,
+            'written_off_at' => $now,
+            'written_off_by' => Auth::id(),
+            'returned_to_vendor_at' => $now,
+            'returned_to_vendor_by' => Auth::id(),
+            'updated_by' => Auth::id(),
+        ]);
     }
 
     /**

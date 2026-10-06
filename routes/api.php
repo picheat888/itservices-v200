@@ -263,6 +263,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('assets/bulk-location', [AssetController::class, 'bulkLocation'])->name('api.assets.bulk-location');
     Route::post('assets/bulk-recall', [AssetController::class, 'bulkRecall'])->name('api.assets.bulk-recall');
     Route::post('assets/bulk-receive', [AssetController::class, 'bulkReceive'])->name('api.assets.bulk-receive');
+    Route::post('assets/bulk-return-to-vendor', [AssetController::class, 'bulkReturnToVendor'])->name('api.assets.bulk-return-to-vendor');
     Route::post('assets/{asset}/transfer', [AssetController::class, 'transfer'])->name('api.assets.transfer');
     Route::post('assets/{asset}/accept', [AssetController::class, 'accept'])->name('api.assets.accept');
     Route::post('assets/{asset}/request-return', [AssetController::class, 'requestReturn'])->name('api.assets.request-return');

@@ -55,6 +55,7 @@ import { Party } from '../components/asset-history-tab';
 import { AssetLocationDialog } from '../components/asset-location-dialog';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
+import { AssetReturnToVendorDialog } from '../components/asset-return-to-vendor-dialog';
 import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
@@ -236,7 +237,10 @@ export default function AssetsPage() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     // Multi-select is locked to one status group; `selectionStatus` is that group.
     const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
-    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff'>(null);
+    // Where each ticked asset came from, kept as rows are ticked (the selection spans pages, so
+    // the rows themselves may no longer be loaded): Return to lessor is offered only for rented ones.
+    const [selectedSource, setSelectedSource] = useState<Record<number, Asset['source']>>({});
+    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor'>(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
 
     const { data: warehouses = [] } = useWarehouses();
@@ -415,6 +419,7 @@ export default function AssetsPage() {
 
     const toggleRow = (a: Asset, on: boolean) => {
         setSelectedIds((prev) => (on ? [...new Set([...prev, a.id])] : prev.filter((x) => x !== a.id)));
+        if (on) setSelectedSource((prev) => ({ ...prev, [a.id]: a.source }));
         if (on) setSelectionStatus((s) => s ?? a.status);
     };
 
@@ -432,8 +437,10 @@ export default function AssetsPage() {
         if (!eligibleStatus) return;
         const groupIds = groupRows.map((a) => a.id);
         setSelectedIds((prev) => (on ? [...new Set([...prev, ...groupIds])] : prev.filter((id) => !groupIds.includes(id))));
+        if (on) setSelectedSource((prev) => ({ ...prev, ...Object.fromEntries(groupRows.map((a) => [a.id, a.source])) }));
         setSelectionStatus(on ? eligibleStatus : null);
     };
+    const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
 
     // True when any inventory list control differs from its default — drives the quick "Clear filters" pill.
     const hasActiveFilters = !!search || !!typeFilter || !!sourceFilter || !!statusFilter || !!warehouseFilter;
@@ -698,7 +705,7 @@ export default function AssetsPage() {
                                                 <td className="px-3 py-2 font-medium">{a.model}</td>
                                                 <td className="px-3 py-2">{a.owner_name}</td>
                                                 <td className="px-3 py-2">
-                                                    <AssetStatusBadge status={a.status} t={t} />
+                                                    <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                 </td>
                                                 <td className="px-3 py-2 text-right font-mono font-semibold">{a.value_display}</td>
                                             </tr>
@@ -919,6 +926,14 @@ export default function AssetsPage() {
                                 )}
                                 {/* Write-off only once back in the pool (Ready) — anything still out must be
                                     recalled / returned to Ready first. */}
+                                {/* A rented asset goes back to its lessor through its own action (same permission as
+                                    a write-off), so the return is recorded as such — not as a reason anyone could rename. */}
+                                {canRetire && selectionStatus === 'ready' && allSelectedRented && (
+                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('returnToVendor')}>
+                                        <Undo2 className="h-4 w-4" />
+                                        {t('asset_return_vendor')}
+                                    </Button>
+                                )}
                                 {canRetire && selectionStatus === 'ready' && (
                                     <Button size="sm" variant="destructive" onClick={() => setBulkDialog('writeoff')}>
                                         <FlaskConicalOff className="h-4 w-4" />
@@ -1040,7 +1055,7 @@ export default function AssetsPage() {
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-2.5">
-                                                        <AssetStatusBadge status={a.status} t={t} />
+                                                        <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                     </td>
                                                     <td className="px-4 py-2.5 font-mono text-xs">{a.value_display}</td>
                                                     <td className="px-4 py-2.5">
@@ -1234,6 +1249,15 @@ export default function AssetsPage() {
             <AssetLocationDialog
                 ids={selectedIds}
                 open={bulkDialog === 'location'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
+            <AssetReturnToVendorDialog
+                ids={selectedIds}
+                open={bulkDialog === 'returnToVendor'}
                 onClose={() => setBulkDialog(null)}
                 onDone={() => {
                     setBulkDialog(null);

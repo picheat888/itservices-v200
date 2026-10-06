@@ -33,11 +33,37 @@ class ContractService
      */
     public function update(Contract $contract, array $data): Contract
     {
+        $this->assertKeepsRetiredAssets($contract, $data);
         $assetIds = $this->pullAssetIds($data);
         $contract->update($this->withoutBlankCode($data));
         $this->syncAssets($contract, $this->assetIdsForType($contract, $assetIds));
 
         return $contract->fresh();
+    }
+
+    /**
+     * A hardware contract that holds assets already returned to the lessor or written off stays a
+     * hardware contract: switching the type would have to unlink every asset, and those are kept
+     * on the contract for good (syncAssets) as its record of what came back.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws ValidationException
+     */
+    private function assertKeepsRetiredAssets(Contract $contract, array $data): void
+    {
+        $nextType = $data['type'] ?? null;
+        $nextType = $nextType instanceof ContractType ? $nextType : ContractType::tryFrom((string) $nextType);
+        if ($contract->type !== ContractType::Hardware || $nextType === null || $nextType === ContractType::Hardware) {
+            return;
+        }
+
+        $retired = $contract->assets()->where('status', AssetStatus::Writeoff->value)->count();
+        if ($retired > 0) {
+            throw ValidationException::withMessages([
+                'type' => "This contract holds {$retired} asset(s) already returned or written off, so it stays a hardware contract.",
+            ]);
+        }
     }
 
     /**
@@ -79,6 +105,10 @@ class ContractService
      * currently free or already this contract's, so links are never stolen from
      * another contract. Passing null leaves all existing links untouched.
      *
+     * A written-off asset (returned to the lessor or written off) is never detached: it is the
+     * contract's record of what came back, and the write-off report counts it against the
+     * contract. Leaving it out of the selection keeps it linked.
+     *
      * @param  list<int>|null  $assetIds
      */
     private function syncAssets(Contract $contract, ?array $assetIds): void
@@ -91,6 +121,7 @@ class ContractService
         // detaches all when the selection is empty).
         Asset::where('contract_id', $contract->id)
             ->whereNotIn('id', $assetIds ?: [0])
+            ->where('status', '!=', AssetStatus::Writeoff->value)
             ->update(['contract_id' => null, 'updated_by' => Auth::id()]);
 
         // Attach the selected, link-free assets (already-ours ones are left alone, so editing a

@@ -131,6 +131,9 @@ export const contract: Dict = {
     contract_link_assets_loading: 'Loading…',
     contract_link_assets_none: 'No assets available',
     contract_link_assets_selected: '{n} selected',
+    contract_link_asset_locked: 'Written off or returned to the lessor: stays linked to this contract',
+    contract_type_locked: 'This contract holds assets already returned or written off, so it stays hardware.',
+    contract_asset_returned_to_vendor: 'Returned to lessor',
 
     // contract-form-drawer.tsx — review card
     contract_review_code: 'Contract No',
