@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Permission\AuditLogController;
 use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
+use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
@@ -107,6 +108,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     // "สรุปผล SLA ของ Ticket จากคำขอ" — the per-type table, still-open list and SLA rules above its rows.
     Route::get('reports/tickets/request-sla/breakdown', TicketRequestSlaBreakdownController::class)->defaults('key', 'tickets.request_sla')->name('api.reports.tickets.request-sla.breakdown');
     Route::get('reports/tickets/manual-sla/breakdown', TicketManualSlaBreakdownController::class)->defaults('key', 'tickets.manual_sla')->name('api.reports.tickets.manual-sla.breakdown');
+    // "การตัดจำหน่ายทรัพย์สิน" — every month, the reasons, the categories and rented assets by contract above its rows.
+    Route::get('reports/assets/writeoffs/breakdown', AssetWriteoffBreakdownController::class)->defaults('key', 'assets.writeoffs')->name('api.reports.assets.writeoffs.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');

@@ -46,6 +46,26 @@ final class ReportColumn
     /** Whether only the Excel sheet carries this column (not the page, the API rows or the PDF). */
     private bool $sheetOnly = false;
 
+    /** Whether the page's column picker starts with this column hidden (the reader can show it). */
+    private bool $hiddenByDefault = false;
+
+    /**
+     * Start this column hidden on the page — detail most readers skip (a serial, the warehouse)
+     * or a value another cell already draws. The API rows still carry it, the picker can show it,
+     * and the Excel sheet always has it (TabularReport::sheetColumns).
+     */
+    public function hiddenByDefault(): self
+    {
+        $this->hiddenByDefault = true;
+
+        return $this;
+    }
+
+    public function isHiddenByDefault(): bool
+    {
+        return $this->hiddenByDefault;
+    }
+
     /** Carry this column in the Excel sheet only. */
     public function sheetOnly(): self
     {
@@ -173,13 +193,16 @@ final class ReportColumn
     }
 
     /**
-     * @return array{key: string, type: string, label_key: string, labels?: array<string, string>, link?: string}
+     * @return array{key: string, type: string, label_key: string, labels?: array<string, string>, link?: string, hidden?: true}
      */
     public function toArray(): array
     {
         $column = ['key' => $this->key, 'type' => $this->type, 'label_key' => $this->labelKey ?? "rep_c_{$this->key}"];
         if ($this->linkPath !== null) {
             $column['link'] = $this->linkPath;
+        }
+        if ($this->hiddenByDefault) {
+            $column['hidden'] = true;
         }
         if ($this->type === 'enum') {
             $column['labels'] = $this->labelKeys;

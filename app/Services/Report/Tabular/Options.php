@@ -2,6 +2,7 @@
 
 namespace App\Services\Report\Tabular;
 
+use App\Models\Contract\Contract;
 use App\Models\Employee\Department;
 use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
@@ -59,6 +60,18 @@ final class Options
     {
         return WriteoffReason::query()->orderBy('id')->get(['id', 'name'])
             ->map(fn (WriteoffReason $r) => ['value' => $r->id, 'label' => $r->name, 'label_th' => null])->all();
+    }
+
+    /**
+     * Contracts that have assets attached (any status), by code — the contracts an asset report can
+     * be narrowed to. The contract's name rides along as `hint` for the picker's second line.
+     *
+     * @return list<array{value: int, label: string, label_th: null, hint: ?string}>
+     */
+    public static function assetContracts(): array
+    {
+        return Contract::query()->whereHas('assets')->orderBy('code')->get(['id', 'code', 'name'])
+            ->map(fn (Contract $c) => ['value' => $c->id, 'label' => (string) $c->code, 'label_th' => null, 'hint' => $c->name])->all();
     }
 
     /**
