@@ -291,7 +291,7 @@ export default function RequestsPage() {
             </div>
 
             {/* Tab card */}
-            <Card className="overflow-hidden p-0">
+            <Card className="overflow-clip p-0">
                 {/* Two tabs, not three. "Awaiting my approval" was the same table with
                     `scope=approvals` on the query — a filter wearing a tab's clothes, which
                     also split one set of filters into two modes of itself. It is a chip

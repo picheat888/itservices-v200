@@ -6,7 +6,9 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -154,6 +156,11 @@ export default function ContractsPage() {
     const { data: selected, isError: selectedMissing } = useContract(selectedId);
 
     const rows = listData?.data ?? [];
+    // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
+    // header stick while the table fits its width.
+    const tableBoxRef = useRef<HTMLDivElement>(null);
+    const heldTableHeight = useHeldHeight(tableBoxRef, isLoading || isFetching);
+    const tableFitsWidth = useTableFitsWidth(tableBoxRef);
     const meta = listData?.meta;
 
     // Pagination footer values with fallbacks so the footer (incl. "Rows per page") can render
@@ -314,7 +321,7 @@ export default function ContractsPage() {
                 </div>
             )}
 
-            <Card className="overflow-hidden">
+            <Card className="overflow-clip">
                 <PageTabs<Tab>
                     tabs={[
                         { id: 'overview', label: t('sub_overview') },
@@ -475,10 +482,19 @@ export default function ContractsPage() {
                             )}
                         </div>
 
-                        <div className="border-border overflow-hidden rounded-xl border">
-                            <div className="overflow-x-auto">
+                        {/* overflow-clip, not -hidden: clips the same rounded edge without being a scroll box, which would stop the header sticking. */}
+                        <div className="border-border overflow-clip rounded-xl border">
+                            <div
+                                ref={tableBoxRef}
+                                className={cn(!tableFitsWidth && 'overflow-x-auto')}
+                                style={heldTableHeight ? { minHeight: heldTableHeight } : undefined}
+                            >
                                 <table className="w-full text-sm">
-                                    <thead>
+                                    <thead
+                                        className={cn(
+                                            tableFitsWidth && 'bg-card sticky top-[var(--sticky-top,0px)] z-10 shadow-[0_1px_0_var(--color-border)]',
+                                        )}
+                                    >
                                         <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                             <th className="px-4 py-2.5">{t('contract_code')}</th>
                                             <th className="px-4 py-2.5">{t('contract_details')}</th>
@@ -494,7 +510,7 @@ export default function ContractsPage() {
                                     <tbody>
                                         {/* Shimmering skeleton rows during initial load and refetch (filter/sort/page) — matches the Stock table. */}
                                         {isLoading || isFetching ? (
-                                            Array.from({ length: 8 }).map((_, r) => (
+                                            Array.from({ length: rows.length || 8 }).map((_, r) => (
                                                 <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
                                                     {Array.from({ length: 9 }).map((_, c) => (
                                                         <td key={c} className="px-4 py-2.5">

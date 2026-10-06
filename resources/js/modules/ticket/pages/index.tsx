@@ -632,7 +632,7 @@ export default function TicketsPage() {
                 </div>
             </div>
 
-            <Card className="overflow-hidden">
+            <Card className="overflow-clip">
                 {/* Counts are outstanding work, so all three use the red pill. */}
                 <PageTabs
                     tabs={visibleTabs.map((tb) => ({

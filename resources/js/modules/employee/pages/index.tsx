@@ -459,7 +459,7 @@ export default function EmployeesPage() {
                 )}
             </div>
 
-            <Card className="overflow-hidden">
+            <Card className="overflow-clip">
                 <PageTabs tabs={tabs} active={tab} onChange={changeTab} />
 
                 <div className="p-5">

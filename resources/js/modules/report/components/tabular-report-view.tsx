@@ -125,7 +125,7 @@ function TabularReportRows({
             {/* The rows in a headed card with the table inset, as the Ticket & SLA page's
                 "รายการ Ticket" — the same heading tint and padding (no "ข้อมูล ณ" line, as there). */}
             {showsTable && (
-                <Card className="overflow-hidden">
+                <Card className="overflow-clip">
                     <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
                         <span className="text-sm font-semibold">
                             {t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic')}

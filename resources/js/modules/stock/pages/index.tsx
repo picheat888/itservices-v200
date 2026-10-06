@@ -493,7 +493,7 @@ export default function StockPage() {
                 />
             )}
 
-            <Card className="overflow-hidden">
+            <Card className="overflow-clip">
                 {/* Outstanding work and stock alerts: red pills. */}
                 <PageTabs tabs={tabs.map((tb) => ({ ...tb, tone: 'alert' as const }))} active={tab} onChange={changeTab} />
 

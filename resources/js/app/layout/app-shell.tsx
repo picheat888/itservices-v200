@@ -47,8 +47,11 @@ export function AppShell() {
                 </div>
 
                 {/* scrollbar-gutter keeps the bar's width reserved whether or not a page needs
-                    one, so moving between a long list and a short one does not shift the layout. */}
-                <main className="bg-content flex-1 overflow-y-auto p-6 [scrollbar-gutter:stable]">
+                    one, so moving between a long list and a short one does not shift the layout.
+                    --sticky-top: a sticky element stops at the inside of this padding (24px down),
+                    leaving a strip where rows show above a sticky table header; tables use
+                    top-[var(--sticky-top)] to stick flush with the top edge instead. */}
+                <main className="bg-content flex-1 overflow-y-auto p-6 [--sticky-top:-1.5rem] [scrollbar-gutter:stable]">
                     <Outlet />
                 </main>
             </div>
