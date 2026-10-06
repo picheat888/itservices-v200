@@ -9,6 +9,7 @@ export const common: Dict = {
     filters: 'ตัวกรอง',
     reset_filters: 'ล้างตัวกรอง',
     filter_clear_all: 'ล้างทั้งหมด',
+    filter_active_sr: 'ตัวกรองที่ใช้อยู่',
     filter_found: 'พบ',
     filter_items: 'รายการ',
     filter_item: 'รายการ',

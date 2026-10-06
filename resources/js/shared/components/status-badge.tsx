@@ -1,4 +1,9 @@
+import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { cn } from '@/shared/lib/utils';
+import type { CSSProperties } from 'react';
+
+/** The tint a custom-colour badge sits on: the colour at 0x22 (≈13%) alpha. */
+const TINT = '22';
 
 type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'gray';
 
@@ -43,13 +48,22 @@ export function StatusBadge({
     className?: string;
     children: React.ReactNode;
 }) {
-    // A custom hex (e.g. from Settings -> Assets) overrides the named tone:
-    // tinted background + solid text/dot, matching the design's badge style.
+    // A custom hex (e.g. from Settings -> Assets) overrides the named tone: tinted background,
+    // the colour itself for the dot, and the text darkened (light) or lightened (dark) only as far
+    // as needed for 4.5:1 on that tint — a picked colour is often too pale as small text (WCAG 1.4.3).
     if (color) {
+        const ink = {
+            backgroundColor: `${color}${TINT}`,
+            '--ink': readableInk(color, LIGHT_GROUND, 0x22 / 255),
+            '--ink-dark': readableInk(color, DARK_GROUND, 0x22 / 255),
+        } as CSSProperties;
         return (
             <span
-                className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap', className)}
-                style={{ backgroundColor: `${color}22`, color }}
+                className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-[var(--ink)] dark:text-[var(--ink-dark)]',
+                    className,
+                )}
+                style={ink}
             >
                 {dot && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />}
                 {children}
