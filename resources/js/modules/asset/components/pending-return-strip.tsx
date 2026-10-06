@@ -1,18 +1,15 @@
 import { Button } from '@/shared/ui/button';
 import { Undo2 } from 'lucide-react';
-import { useEffect } from 'react';
 
 /**
  * One-line notice above the asset tabs: N assets their holders sent back, waiting for IT to
  * receive them into a warehouse, with a button that lists them (or shows everything again).
  * Receiving itself is done from each row's own button in the inventory table.
  *
- * Holding its space (it sits above the tabs, so arriving late would push the whole page down):
- * - `count` comes from the sidebar badge query, which the app shell has usually loaded already,
- *   so on a normal visit it is known on the first render and nothing moves;
- * - until it is known (a hard reload), a skeleton strip of the same height holds the space, but
- *   only if the last count this browser saw was above zero — a desk that usually has none does
- *   not get an empty bar that flashes and collapses.
+ * It sits above the tabs, so arriving late would push the whole page down. It doesn't:
+ * `count` comes from the sidebar badge query, which ProtectedRoute loads alongside the
+ * signed-in check and waits for (usePrefetchSidebarBadges) — the page draws with it known.
+ * Undefined only if that load failed; then the strip is simply left out.
  *
  * Used by: asset page (pages/index.tsx).
  */
@@ -22,21 +19,14 @@ export function PendingReturnStrip({
     onToggle,
     t,
 }: {
-    /** Assets awaiting receipt; undefined while not known yet. */
+    /** Assets awaiting receipt; undefined if the count could not be loaded. */
     count: number | undefined;
     /** The inventory list is currently filtered to these assets. */
     active: boolean;
     onToggle: () => void;
     t: (key: string) => string;
 }) {
-    useEffect(() => {
-        if (count !== undefined) rememberCount(count);
-    }, [count]);
-
-    if (count === undefined) {
-        return lastSeenCount() > 0 ? <PendingReturnStripSkeleton /> : null;
-    }
-    if (count === 0) return null;
+    if (!count) return null;
 
     return (
         <section
@@ -54,34 +44,4 @@ export function PendingReturnStrip({
             </Button>
         </section>
     );
-}
-
-/** Same box and height as the strip, while the count is still loading. */
-function PendingReturnStripSkeleton() {
-    return (
-        <div aria-hidden="true" className="border-border bg-muted/40 flex h-12 items-center gap-3 rounded-xl border px-4">
-            <div className="bg-muted h-4 w-4 rounded motion-safe:animate-pulse" />
-            <div className="bg-muted h-4 w-56 max-w-[50%] rounded motion-safe:animate-pulse" />
-            <div className="bg-muted ml-auto h-8 w-24 rounded-md motion-safe:animate-pulse" />
-        </div>
-    );
-}
-
-/** Per-browser memory of the last count, so a reload knows whether to hold space. */
-const STORAGE_KEY = 'asset-pending-return-last-count';
-
-function lastSeenCount(): number {
-    try {
-        return Number(localStorage.getItem(STORAGE_KEY)) || 0;
-    } catch {
-        return 0;
-    }
-}
-
-function rememberCount(count: number): void {
-    try {
-        localStorage.setItem(STORAGE_KEY, String(count));
-    } catch {
-        // Storage blocked (private mode, policy): the strip just won't hold space on a reload.
-    }
 }

@@ -1,5 +1,6 @@
 import { http } from '@/shared/lib/http';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 
 /** "Needs attention" counts per sidebar nav item id — 0 for anything the user may not see. */
 export interface SidebarBadges {
@@ -33,9 +34,9 @@ export function useSidebarBadges(enabled = true) {
 }
 
 /**
- * One badge's count, or undefined until the first answer arrives — for a page that must know
- * "not loaded yet" apart from "zero" (e.g. to hold space for a notice). Shares the sidebar's
- * query, so it is usually already loaded by the time a page opens.
+ * One badge's count, or undefined if the counts have not loaded (or failed to) — for a page
+ * that must tell "unknown" apart from "zero". Shares the sidebar's query, which
+ * usePrefetchSidebarBadges loads before any page draws.
  */
 export function useSidebarBadge(key: keyof SidebarBadges): number | undefined {
     const { data } = useQuery(sidebarBadgesQuery(true));
@@ -43,10 +44,42 @@ export function useSidebarBadge(key: keyof SidebarBadges): number | undefined {
     return data?.[key];
 }
 
+/**
+ * Starts the badge counts loading at app start-up, alongside the signed-in check, and says
+ * when that load has settled. ProtectedRoute holds its spinner until it has, so a page draws
+ * with its counts already known (the assets page's return strip sits above its tabs — drawn
+ * without the count, it would push the page down when the count arrived).
+ *
+ * Fired before we know anyone is signed in, so a 401 here is quiet (no jump to the login
+ * page); the route guard handles signed-out visitors. The 15-second poll stays loud, so a
+ * session lost later is still caught. A failed load still counts as settled — the page
+ * shows without the counts rather than waiting forever.
+ */
+export function usePrefetchSidebarBadges(): boolean {
+    const qc = useQueryClient();
+    const [settled, setSettled] = useState(() => qc.getQueryState(SIDEBAR_BADGES_KEY)?.status === 'success');
+
+    useEffect(() => {
+        let alive = true;
+        qc.prefetchQuery({ queryKey: SIDEBAR_BADGES_KEY, queryFn: () => fetchSidebarBadges(true), staleTime: 10_000 }).finally(() => {
+            if (alive) setSettled(true);
+        });
+        return () => {
+            alive = false;
+        };
+    }, [qc]);
+
+    return settled;
+}
+
+function fetchSidebarBadges(quietUnauthenticated = false): Promise<SidebarBadges> {
+    return http.get<{ data: SidebarBadges }>('/sidebar-badges', { quietUnauthenticated }).then((r) => r.data.data);
+}
+
 function sidebarBadgesQuery(enabled: boolean) {
     return {
         queryKey: SIDEBAR_BADGES_KEY,
-        queryFn: () => http.get<{ data: SidebarBadges }>('/sidebar-badges').then((r) => r.data.data),
+        queryFn: () => fetchSidebarBadges(),
         enabled,
         staleTime: 10_000,
         refetchInterval: 15_000,
