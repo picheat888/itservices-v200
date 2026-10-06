@@ -225,6 +225,9 @@ class RequestResolutionTest extends TestCase
         $merged = $rows->first();
         $this->assertSame($sup->id, $merged['approver_employee_id']);
         $this->assertSame('Supervisor, Resource Owner', $merged['label']);
+        // The editor's "covers" chip reads this count, not the comma in the label.
+        $this->assertSame(2, $merged['covered_steps']);
+        $this->assertArrayNotHasKey('covered_steps', $rows->last());
         // The joined label already lists both, so nothing is written into note.
         $this->assertNull($merged['note']);
         $this->assertSame([1, 2], $rows->pluck('position')->all());
