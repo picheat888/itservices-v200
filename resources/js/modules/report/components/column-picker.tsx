@@ -1,5 +1,7 @@
 /**
- * Column picker of a tabular report: a "Columns" button (with how many are hidden) opening
+ * Column picker of a tabular report: a "Columns" button (with how many columns the reader has
+ * changed from the report's default — a report that hides some columns by default does not
+ * start at "9") opening
  * the shared FilterPopover panel of checkboxes, one per column. What stays ticked is what
  * the table shows and what the Excel/PDF export carries. State lives in useHiddenColumns.
  * Sits at the right of the rows card heading, so the trigger is the small size and the
@@ -15,18 +17,29 @@ export function ColumnPicker({
     definition,
     hidden,
     onToggle,
-    onShowAll,
+    onReset,
 }: {
     definition: TabularDefinition;
     hidden: string[];
     onToggle: (key: string) => void;
-    onShowAll: () => void;
+    /** Back to the report's default columns (the panel's "clear" button). */
+    onReset: () => void;
 }) {
     const t = useT();
     const lastVisible = hidden.length + 1 >= definition.columns.length;
+    // Columns shown or hidden differently from the report's default.
+    const changed = definition.columns.filter((c) => hidden.includes(c.key) !== !!c.hidden).length;
 
     return (
-        <FilterPopover count={hidden.length} onClear={onShowAll} label={t('rep_columns')} icon={Columns3} size="sm" align="end">
+        <FilterPopover
+            count={changed}
+            countLabel={t('rep_columns_changed_sr')}
+            onClear={onReset}
+            label={t('rep_columns')}
+            icon={Columns3}
+            size="sm"
+            align="end"
+        >
             {() => (
                 <div className="space-y-1">
                     <p className="text-muted-foreground pb-1 text-xs">{t('rep_columns_hint')}</p>

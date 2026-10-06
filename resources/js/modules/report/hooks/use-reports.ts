@@ -117,6 +117,15 @@ export const useRequestSlaBreakdown = (filters: TabularFilters) => {
  * "สรุปผล SLA ของ Ticket ที่ผู้ใช้เปิดเอง" — keyed without the picked dimension's own filter, which the
  * grouped table only highlights (the server sets it aside too).
  */
+/** "การตัดจำหน่ายทรัพย์สิน" — the cards above the list, under the page's own filters. */
+export const useAssetWriteoffBreakdown = (filters: TabularFilters) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', 'assets.writeoffs', 'breakdown', filters],
+        queryFn: () => reportApi.assetWriteoffBreakdown(filters),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+
 export const useManualSlaBreakdown = (filters: TabularFilters) => {
     const by = (filters.by as string | null | undefined) ?? 'category';
     const rest = Object.fromEntries(Object.entries(filters).filter(([name]) => name !== by));

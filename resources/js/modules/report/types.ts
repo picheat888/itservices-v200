@@ -204,6 +204,8 @@ export interface FilterOption {
     label?: string;
     label_th?: string | null;
     label_key?: string;
+    /** A second line under the option in the picker (a contract's name under its code). */
+    hint?: string | null;
 }
 
 export interface TabularFilterDef {
@@ -224,6 +226,8 @@ export interface TabularColumnDef {
     label_key: string;
     /** enum columns only: raw value → i18n key. */
     labels?: Record<string, string>;
+    /** Starts hidden in the column picker (ReportColumn::hiddenByDefault) until the reader shows it. */
+    hidden?: boolean;
 }
 
 export interface TabularDefinition {
@@ -264,14 +268,21 @@ export interface SummaryItem {
         | 'asset-pending-return'
         | 'asset-writeoff'
         | null;
-    /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping) | 'percent' (whole %) | 'hours' (one decimal). */
-    format: 'count' | 'money' | 'percent' | 'hours';
+    /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping) | 'percent' (whole %) | 'hours' / 'years' (one decimal). */
+    format: 'count' | 'money' | 'percent' | 'hours' | 'years';
     /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
     split?: { key: string; label_key: string; tone: ChartTone; value: number }[];
     /** The value as a percent of the report's whole — a badge and a meter in the tile's tone. */
     share?: number | null;
     /** One line for the tile's foot when it has no split: a key with {n} (hours, shown as days / hours) and/or {at} ("Y-m-d H:i"), plus plain numbers by name (`values` — {met}, {n}). */
-    note?: { label_key: string; hours?: number | null; at?: string | null; values?: Record<string, number> } | null;
+    note?: {
+        label_key: string;
+        hours?: number | null;
+        at?: string | null;
+        values?: Record<string, number>;
+        /** Words by name — plain, or a master-data name the page shows in the reader's language. */
+        texts?: Record<string, string | { name: string; name_th: string | null }>;
+    } | null;
     /** Percent tiles: the goal the value is measured against — a meter with the goal marked. */
     goal?: number | null;
     /** Frames the tile apart from its colour once the value is above zero: amber = needs watching, red = gone wrong. */
@@ -473,6 +484,42 @@ export interface ManualSlaBreakdown {
         repair_rules: number;
         hours: { days: number[]; start: string; end: string; break_start: string | null; break_end: string | null };
     };
+}
+
+/** What the "การตัดจำหน่ายทรัพย์สิน" page draws above its rows (AssetWriteoffReport::breakdown). */
+export interface AssetWriteoffBreakdown {
+    /** Every month of the range, oldest first, empty months included. */
+    months: { month: string; total: number; bought: number; returned: number; rented_other: number }[];
+    /** Most first; key "returned" = handed back to the lessor, "none" = no reason picked. */
+    reasons: { key: string; reason_id: number | null; name: string | null; total: number; bought: number; rented: number }[];
+    /** Most first; a null id/name = no category. */
+    categories: {
+        category_id: number | null;
+        name: string | null;
+        name_th: string | null;
+        total: number;
+        bought: number;
+        rented: number;
+        bought_value: number;
+        avg_age_years: number | null;
+        age_bands: { under_3: number; from_3_to_5: number; over_5: number };
+        under_warranty: number;
+    }[];
+    /** Every contract with assets, all-time (only the contract filter narrows it), most urgent first. */
+    contracts: {
+        id: number;
+        code: string;
+        name: string | null;
+        vendor: string | null;
+        end_date: string | null;
+        units: number;
+        returned: number;
+        written_off_other: number;
+        still_out: number;
+        days_left: number | null;
+        returned_early: number;
+        flag: 'overdue' | 'ending_soon' | 'running' | 'all_returned';
+    }[];
 }
 
 export interface TabularRows {

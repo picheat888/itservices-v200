@@ -188,7 +188,7 @@ function TabularReportBody({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTabularFilters(definition);
-    const { hidden, visibleColumns, toggle, showAll } = useHiddenColumns(definition);
+    const { hidden, visibleColumns, toggle, reset: resetColumns } = useHiddenColumns(definition);
     // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
     const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
     const exportOpen = dialog === 'export';
@@ -252,7 +252,7 @@ function TabularReportBody({
                 onTotalChange={setRowsTotal}
                 onPatch={patch}
                 extras={extras}
-                columnPicker={<ColumnPicker definition={pickable} hidden={hidden} onToggle={toggle} onShowAll={showAll} />}
+                columnPicker={<ColumnPicker definition={pickable} hidden={hidden} onToggle={toggle} onReset={resetColumns} />}
                 emptyState={<TabularEmptyState definition={definition} filters={filters} onPatch={patch} />}
             />
             <ExportReportDialog

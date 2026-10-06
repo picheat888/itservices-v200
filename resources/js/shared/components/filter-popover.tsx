@@ -37,6 +37,7 @@ export function FilterPopover({
     width = PANEL_WIDTH,
     onClear,
     resultCount,
+    countLabel,
     label,
     icon: Icon = SlidersHorizontal,
     size = 'default',
@@ -57,6 +58,8 @@ export function FilterPopover({
     onClear?: () => void;
     /** Live match count for the footer ("Found N items") — omit to hide the footer. */
     resultCount?: number;
+    /** What the trigger's count means, read after the number by screen readers; defaults to "active filters". */
+    countLabel?: string;
     children: (close: () => void) => ReactNode;
 }) {
     const t = useT();
@@ -177,7 +180,7 @@ export function FilterPopover({
                 {count > 0 && (
                     <span className="bg-brand text-brand-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
                         {count}
-                        <span className="sr-only"> {t('filter_active_sr')}</span>
+                        <span className="sr-only"> {countLabel ?? t('filter_active_sr')}</span>
                     </span>
                 )}
             </button>
