@@ -142,7 +142,7 @@ export function RequestDataSection() {
                             onClick={() => setListKey(key)}
                             className={cn(
                                 'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                                on ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent/50',
+                                on ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent/50',
                             )}
                         >
                             {/* The service name alone — each service has one managed list,

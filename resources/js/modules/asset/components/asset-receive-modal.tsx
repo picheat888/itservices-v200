@@ -105,7 +105,7 @@ export function AssetReceiveModal({
                     <div
                         className={
                             isRecall
-                                ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 text-amber-700 dark:text-amber-400'
+                                ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 text-amber-600 dark:text-amber-400'
                                 : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-600 dark:text-emerald-400'
                         }
                     >

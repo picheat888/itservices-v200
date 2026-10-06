@@ -272,7 +272,7 @@ export default function TicketOverviewReportPage() {
                                     <span className="inline-flex items-center gap-1.5">
                                         <i className="inline-block h-2 w-2 rounded-full bg-amber-400" />
                                         {t('rep_kpi_backlog_in_progress')}
-                                        <b className="font-mono text-amber-700 dark:text-amber-400">{data.backlog.in_progress}</b>
+                                        <b className="font-mono text-amber-600 dark:text-amber-400">{data.backlog.in_progress}</b>
                                     </span>
                                 </span>
                             }

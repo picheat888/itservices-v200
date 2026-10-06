@@ -533,7 +533,7 @@ export default function RequestsPage() {
                                         onClick={() => setTab(id)}
                                         className={cn(
                                             'flex h-full items-center rounded px-2.5 text-xs font-medium transition-colors',
-                                            tab === id ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground',
+                                            tab === id ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground',
                                         )}
                                     >
                                         {label}

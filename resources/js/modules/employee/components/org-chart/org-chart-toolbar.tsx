@@ -155,7 +155,7 @@ export function OrgChartToolbar({
                             onClick={() => onDirChange(d)}
                             className={cn(
                                 'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
-                                dir === d ? 'bg-brand text-white shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                                dir === d ? 'bg-brand text-brand-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                             )}
                         >
                             {d === 'TB' ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}

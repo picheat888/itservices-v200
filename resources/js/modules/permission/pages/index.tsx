@@ -857,7 +857,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
                     {(details.added ?? []).length > 0 && (
                         <div className="min-w-0">
-                            <div className="mb-1 text-[11px] font-semibold tracking-wide text-emerald-600 uppercase">
+                            <div className="mb-1 text-[11px] font-semibold tracking-wide text-emerald-600 uppercase dark:text-emerald-400">
                                 {translate(lang, 'perm_ui_log_added')}
                             </div>
                             <div className="flex flex-wrap gap-1">
@@ -878,7 +878,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                     )}
                     {(details.removed ?? []).length > 0 && (
                         <div className="min-w-0">
-                            <div className="mb-1 text-[11px] font-semibold tracking-wide text-rose-500 uppercase">
+                            <div className="mb-1 text-[11px] font-semibold tracking-wide text-rose-500 uppercase dark:text-rose-400">
                                 {translate(lang, 'perm_ui_log_removed')}
                             </div>
                             <div className="flex flex-wrap gap-1">
@@ -927,9 +927,9 @@ const PAGE_SIZES = [20, 50, 100] as const;
 
 /** Tinted icon-chip classes for the audit feed, keyed by action tone. */
 const AUDIT_TONE: Record<string, string> = {
-    emerald: 'bg-emerald-500/12 text-emerald-600',
-    blue: 'bg-blue-500/12 text-blue-600',
-    rose: 'bg-rose-500/12 text-rose-600',
+    emerald: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400',
+    blue: 'bg-blue-500/12 text-blue-600 dark:text-blue-400',
+    rose: 'bg-rose-500/12 text-rose-600 dark:text-rose-400',
     slate: 'bg-muted text-muted-foreground',
 };
 

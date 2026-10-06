@@ -221,7 +221,7 @@ export function RequestsTab({
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <ArrowUpFromLine className="h-5 w-5 text-violet-600" />
+                            <ArrowUpFromLine className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                             {t('stock_fulfill')}
                         </DialogTitle>
                     </DialogHeader>
@@ -244,7 +244,12 @@ export function RequestsTab({
                                         <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                             {t('stock_issue_from')}
                                         </span>
-                                        <span className={cn('font-mono text-xs', fulfillReady ? 'text-emerald-600' : 'text-muted-foreground')}>
+                                        <span
+                                            className={cn(
+                                                'font-mono text-xs',
+                                                fulfillReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                                            )}
+                                        >
                                             {allocTotal}/{fulfillReq.qty}
                                         </span>
                                     </div>
@@ -296,7 +301,12 @@ export function RequestsTab({
                                             >
                                                 {t('stock_pick_fifo')} ({fulfillReq.qty})
                                             </button>
-                                            <span className={cn('font-mono text-xs', fulfillReady ? 'text-emerald-600' : 'text-muted-foreground')}>
+                                            <span
+                                                className={cn(
+                                                    'font-mono text-xs',
+                                                    fulfillReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                                                )}
+                                            >
                                                 {issueSerialIds.length}/{fulfillReq.qty}
                                             </span>
                                         </div>
@@ -341,7 +351,7 @@ export function RequestsTab({
                                                         <span
                                                             className={cn(
                                                                 'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                                                                checked ? 'bg-brand border-brand text-white' : 'border-input',
+                                                                checked ? 'bg-brand border-brand text-brand-foreground' : 'border-input',
                                                             )}
                                                         >
                                                             {checked && <Check className="h-3 w-3" />}

@@ -798,7 +798,7 @@ export function ContractFormDrawer({
                                                                 <span
                                                                     className={cn(
                                                                         'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                                                                        checked ? 'border-brand bg-brand text-white' : 'border-input',
+                                                                        checked ? 'border-brand bg-brand text-brand-foreground' : 'border-input',
                                                                     )}
                                                                 >
                                                                     {checked && <Check className="h-3 w-3" />}

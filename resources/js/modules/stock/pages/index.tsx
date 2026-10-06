@@ -108,10 +108,10 @@ function StockBar({ item }: { item: StockItem }) {
             </div>
             {/* Min / Max labels sit under the fixed gridlines → aligned across all rows. */}
             <div className="relative mt-1 h-3 font-mono text-[10px]">
-                <span className="absolute -translate-x-1/2 whitespace-nowrap text-amber-700" style={{ left: `${BAR_MIN_X}%` }}>
+                <span className="absolute -translate-x-1/2 whitespace-nowrap text-amber-600 dark:text-amber-400" style={{ left: `${BAR_MIN_X}%` }}>
                     {min}
                 </span>
-                <span className="absolute -translate-x-1/2 whitespace-nowrap text-blue-600" style={{ left: `${BAR_MAX_X}%` }}>
+                <span className="absolute -translate-x-1/2 whitespace-nowrap text-blue-600 dark:text-blue-400" style={{ left: `${BAR_MAX_X}%` }}>
                     {max}
                 </span>
             </div>
@@ -152,7 +152,7 @@ function AlertCard({
                     <span
                         className={cn(
                             'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-                            hasCritical ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-700',
+                            hasCritical ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                         )}
                     >
                         <AlertTriangle className="cf-blink h-5 w-5" />
@@ -167,12 +167,12 @@ function AlertCard({
                                     </span>
                                 ),
                                 summary.low_count > 0 && (
-                                    <span key="low" className="font-medium text-amber-700">
+                                    <span key="low" className="font-medium text-amber-600 dark:text-amber-400">
                                         {summary.low_count} {t('stock_alert_low')}
                                     </span>
                                 ),
                                 summary.over_count > 0 && (
-                                    <span key="over" className="font-medium text-blue-600">
+                                    <span key="over" className="font-medium text-blue-600 dark:text-blue-400">
                                         {summary.over_count} {t('stock_alert_over')}
                                     </span>
                                 ),

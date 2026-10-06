@@ -28,7 +28,7 @@ const PERIOD_TILES = new Set(['sla_rate']);
 const UP_IS_GOOD: Record<string, boolean> = { tickets_open: false, sla_rate: true };
 
 /** Trend line colour per tile — the chart palette's red for the backlog, green for SLA. */
-const TREND_TONE: Record<string, string> = { tickets_open: 'text-red-500', sla_rate: 'text-emerald-500' };
+const TREND_TONE: Record<string, string> = { tickets_open: 'text-red-500 dark:text-red-400', sla_rate: 'text-emerald-500 dark:text-emerald-400' };
 
 const GOOD = 'text-emerald-600 dark:text-emerald-400';
 const BAD = 'text-red-600 dark:text-red-400';

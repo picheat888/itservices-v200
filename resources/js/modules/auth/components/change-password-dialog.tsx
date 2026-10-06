@@ -70,7 +70,7 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
                 <div className="p-6">
                     <div className="mb-4 flex justify-center">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
-                            <ShieldAlert className="h-6 w-6 text-amber-500" />
+                            <ShieldAlert className="h-6 w-6 text-amber-500 dark:text-amber-400" />
                         </div>
                     </div>
 

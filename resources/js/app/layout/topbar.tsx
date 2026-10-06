@@ -103,9 +103,8 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                 title={t('notif_title')}
             >
                 <Bell className="h-[18px] w-[18px]" />
-                {/* A fixed red-600 (white text 4.8:1): the dark theme's lighter --destructive read at 4.4:1. */}
                 {unreadCount > 0 && (
-                    <span className="absolute top-px right-px flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white">
+                    <span className="bg-destructive text-destructive-foreground absolute top-px right-px flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}

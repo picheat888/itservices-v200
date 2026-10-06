@@ -176,7 +176,7 @@ function NowRow({
 }) {
     const toneClass = {
         red: 'text-destructive',
-        amber: 'text-amber-700 dark:text-amber-400',
+        amber: 'text-amber-600 dark:text-amber-400',
         green: 'text-emerald-600 dark:text-emerald-400',
         ink: 'text-muted-foreground',
     }[tone];
@@ -200,7 +200,7 @@ function NowRow({
                 <span
                     className={cn(
                         'rounded-full px-2 py-px font-mono text-xs font-bold',
-                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
                     )}
                 >
                     {typeof value === 'number' ? value.toLocaleString('en-US') : value}
@@ -243,7 +243,7 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
                     onClick={() => onChange(d)}
                     className={cn(
                         'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
-                        value === d ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground',
+                        value === d ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground',
                     )}
                 >
                     {d} {t('ticket_days')}
@@ -254,7 +254,7 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
                     type="button"
                     className={cn(
                         'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
-                        custom ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground',
+                        custom ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground',
                     )}
                 >
                     {custom ? formatRangeShort(value.from, value.to, lang) : t('ticket_range_custom')}
