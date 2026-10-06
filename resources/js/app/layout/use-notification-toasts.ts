@@ -1,6 +1,7 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from '@/modules/report';
+import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,7 +12,7 @@ import { iconMeta, notificationMessage, notificationTarget, notificationTitle } 
 /** Asset query keys refreshed the instant an asset notification arrives, so the
  *  My Assets list (and the admin lists) update in step with the toast rather than
  *  lagging behind on their own separate poll cycle. */
-const ASSET_QUERY_KEYS = [['assets-mine'], ['assets-list'], ['assets-pending-return'], ['assets-summary']] as const;
+const ASSET_QUERY_KEYS = [['assets-mine'], ['assets-list'], SIDEBAR_BADGES_KEY, ['assets-summary']] as const;
 
 /**
  * Notification toasts live as long as the old dedicated toaster gave them: long

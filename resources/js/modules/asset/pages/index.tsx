@@ -756,11 +756,13 @@ export default function AssetsPage() {
 
                         <Card className="overflow-hidden">
                             <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
-                                <TrendingUp className="text-muted-foreground h-4 w-4" />
-                                <span className="text-sm font-semibold">{t('asset_top_value')}</span>
+                                <TrendingUp className="text-muted-foreground h-4 w-4" aria-hidden="true" />
+                                <span id="asset-top-value-title" className="text-sm font-semibold">
+                                    {t('asset_top_value')}
+                                </span>
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-sm" aria-labelledby="asset-top-value-title">
                                     <thead>
                                         <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                             <th className="px-3 py-2">{t('asset_tag')}</th>
@@ -777,7 +779,21 @@ export default function AssetsPage() {
                                                 className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
                                                 onClick={() => openAsset(a)}
                                             >
-                                                <td className="text-muted-foreground px-3 py-2 font-mono text-xs">{a.asset_code}</td>
+                                                {/* The row click is mouse-only; the code is the keyboard / screen-reader way in
+                                                    (same as the inventory table). */}
+                                                <td className="px-3 py-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openAsset(a);
+                                                        }}
+                                                        aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
+                                                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded font-mono text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+                                                    >
+                                                        {a.asset_code}
+                                                    </button>
+                                                </td>
                                                 <td className="px-3 py-2 font-medium">{a.model}</td>
                                                 <td className="px-3 py-2">{a.owner_name}</td>
                                                 <td className="px-3 py-2">

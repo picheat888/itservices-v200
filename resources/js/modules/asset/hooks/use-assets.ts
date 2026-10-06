@@ -77,17 +77,6 @@ export const useMyAssets = (enabled = true) =>
 // The My Assets badge (assets awaiting my acceptance) now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
-/** Assets awaiting IT receipt back into the pool — drives the admin "to receive" card. */
-export const usePendingReturns = () =>
-    useQuery({
-        queryKey: ['assets-pending-return'],
-        queryFn: () => assetApi.list({ page: 1, per_page: 100, search: '', status: 'pending_return' }),
-        select: (r) => r.data,
-        staleTime: 10_000,
-        refetchInterval: 15_000,
-        refetchIntervalInBackground: true,
-    });
-
 // The Assets badge (awaiting IT receipt) now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
@@ -108,7 +97,6 @@ export function useAssetMutations() {
             qc.invalidateQueries({ queryKey: ASSETS }),
             qc.invalidateQueries({ queryKey: ['assets-list'] }),
             qc.invalidateQueries({ queryKey: ['assets-mine'] }),
-            qc.invalidateQueries({ queryKey: ['assets-pending-return'] }),
             qc.invalidateQueries({ queryKey: ['asset-transfers'] }),
             qc.invalidateQueries({ queryKey: SUMMARY }),
             qc.invalidateQueries({ queryKey: ['stock-items'] }),
