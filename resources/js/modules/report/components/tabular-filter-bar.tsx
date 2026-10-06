@@ -137,7 +137,8 @@ export function TabularFilterBar({
                                                 return {
                                                     value: String(o.value),
                                                     label: text,
-                                                    search: `${text} ${o.label ?? ''} ${o.label_th ?? ''}`,
+                                                    hint: o.hint ?? undefined,
+                                                    search: `${text} ${o.label ?? ''} ${o.label_th ?? ''} ${o.hint ?? ''}`,
                                                 };
                                             }),
                                         )}

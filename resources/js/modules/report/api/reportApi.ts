@@ -5,6 +5,7 @@
  */
 import { http } from '@/shared/lib/http';
 import type {
+    AssetWriteoffBreakdown,
     BacklogBoardTicket,
     ExportFormat,
     ManualSlaBreakdown,
@@ -87,6 +88,12 @@ export const reportApi = {
     /** "สรุปผล SLA ของ Ticket ที่ผู้ใช้เปิดเอง": the grouped table, the still-open list, lateness and the SLA rules. */
     manualSlaBreakdown: (filters: TabularFilters) =>
         http.get<{ data: ManualSlaBreakdown }>('/reports/tickets/manual-sla/breakdown', { params: tabularParams(filters) }).then((r) => r.data.data),
+
+    /** "การตัดจำหน่ายทรัพย์สิน": every month, the reasons, the categories and the rented assets by contract. */
+    assetWriteoffBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: AssetWriteoffBreakdown }>('/reports/assets/writeoffs/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 

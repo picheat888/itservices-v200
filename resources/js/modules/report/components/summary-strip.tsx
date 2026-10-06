@@ -7,8 +7,9 @@
  * tiles share the row between them on wide screens, so a short strip leaves no empty slot; five fit one row on extra-wide screens.
  * A tile with a `note` carries that line at its foot (after the split's dots when it has both) — a duration in days
  * (hours under a day, as the time-left pills) and/or a short date and time, and any plain numbers
- * it names. A 'percent' tile with a `goal` draws the Ticket & SLA meter (goal marked, amber below
- * it) and flags itself while short of the goal; 'hours' reads "58.8 ชม.".
+ * it names, and any words (`texts`: plain, or a master-data name in the reader's language). A
+ * 'percent' tile with a `goal` draws the Ticket & SLA meter (goal marked, amber below it) and flags
+ * itself while short of the goal; 'hours' reads "58.8 ชม.", 'years' "3.9 ปี".
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -41,8 +42,12 @@ function shortMoment(value: string, lang: string): string {
 }
 
 function noteText(t: (key: string) => string, lang: string, note: NonNullable<SummaryItem['note']>): string {
-    // Named numbers first, so a {n} among them is not read as the duration below.
-    let text = Object.entries(note.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), t(note.label_key));
+    // Words, then named numbers, so a {n} among them is not read as the duration below.
+    let text = Object.entries(note.texts ?? {}).reduce(
+        (s, [name, value]) => s.replaceAll(`{${name}}`, typeof value === 'string' ? value : (lang === 'th' && value.name_th) || value.name),
+        t(note.label_key),
+    );
+    text = Object.entries(note.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), text);
     if (note.hours !== undefined) text = text.replace('{n}', note.hours === null ? '—' : duration(t, note.hours));
     return text.replace('{at}', note.at ? shortMoment(note.at, lang) : '—');
 }
@@ -61,10 +66,19 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         ? '—'
                         : item.format === 'money'
                           ? item.value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          : item.format === 'hours'
+                          : item.format === 'hours' || item.format === 'years'
                             ? item.value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
                             : item.value.toLocaleString(locale);
-                const unit = item.value === null ? undefined : item.format === 'percent' ? '%' : item.format === 'hours' ? t('rep_hours') : undefined;
+                const unit =
+                    item.value === null
+                        ? undefined
+                        : item.format === 'percent'
+                          ? '%'
+                          : item.format === 'hours'
+                            ? t('rep_hours')
+                            : item.format === 'years'
+                              ? t('rep_years')
+                              : undefined;
                 const goal = item.format === 'percent' && item.goal != null && item.value !== null ? item.goal : null;
                 const tone = item.tone ?? 'gray';
                 // A soft tone ("soft-red") fills in its lighter shade; the badge and the warning keep
