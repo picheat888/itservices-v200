@@ -1,11 +1,15 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 // Default width of the floating panel (Tailwind w-72 = 18rem = 288px).
 const PANEL_WIDTH = 288;
+
+/** What Tab can land on inside the panel. */
+const FOCUSABLE =
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * FilterPopover — a "Filters" trigger button with an active-count badge that
@@ -19,6 +23,14 @@ const PANEL_WIDTH = 288;
  * (e.g. the report column picker); they default to "Filters" + the sliders icon.
  * `size="sm"` shrinks the trigger to sit in a card heading; `align="end"` opens the panel
  * right-aligned under it, for a trigger at the right edge of its row.
+ *
+ * Keyboard and screen readers (WCAG 2.1.1, 2.4.3, 4.1.2, 4.1.3): the trigger says whether the
+ * panel is open (aria-expanded) and names it; the panel is a labelled group — not role="dialog",
+ * which would make every SearchableSelect inside portal into the small panel and measure its
+ * room against it (see searchable-select.tsx), cramping or flipping their lists. Opening
+ * moves focus into it — it is portalled to the end of <body>, so Tab from the trigger would
+ * otherwise skip it. Escape, Done, or tabbing past either end closes it and hands focus back to
+ * the trigger. The "Found N" count is a polite live region.
  */
 export function FilterPopover({
     count,
@@ -52,6 +64,43 @@ export function FilterPopover({
     const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
+    const panelId = useId();
+    const titleId = useId();
+
+    /** Close; by default hand focus back to the trigger (not after an outside click — that moves it itself). */
+    const close = (returnFocus = true) => {
+        setOpen(false);
+        if (returnFocus) triggerRef.current?.focus();
+    };
+
+    // Move focus into the panel once it is rendered (effects run after the portal is in the DOM):
+    // the first control, else the panel itself.
+    useEffect(() => {
+        if (!open) return;
+        const panel = panelRef.current;
+        const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
+        (first ?? panel)?.focus();
+    }, [open]);
+
+    // Escape closes; Tab past the last control (or Shift+Tab before the first) leaves the panel
+    // back to the trigger, so the reader's place on the page is kept.
+    const onPanelKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Escape') {
+            e.stopPropagation();
+            close();
+            return;
+        }
+        if (e.key !== 'Tab') return;
+        const focusable = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const leavingForward = !e.shiftKey && (document.activeElement === last || focusable.length === 0);
+        const leavingBack = e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current);
+        if (leavingForward || leavingBack) {
+            e.preventDefault();
+            close();
+        }
+    };
 
     // Position the panel just under the trigger; clamp so it never spills past the right edge.
     const place = () => {
@@ -114,17 +163,21 @@ export function FilterPopover({
                 ref={triggerRef}
                 type="button"
                 onClick={toggle}
+                aria-haspopup="true"
+                aria-expanded={open}
+                aria-controls={open ? panelId : undefined}
                 className={cn(
                     'flex items-center rounded-md border font-medium transition-colors',
                     size === 'sm' ? 'bg-background h-8 gap-1.5 px-2.5 text-xs' : 'h-10 gap-2 px-3 text-sm',
                     count > 0 ? 'border-brand/50 bg-brand/5 text-brand' : 'border-input hover:bg-accent',
                 )}
             >
-                <Icon className={size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                <Icon className={size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'} aria-hidden="true" />
                 {label ?? t('filters')}
                 {count > 0 && (
                     <span className="bg-brand text-brand-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
                         {count}
+                        <span className="sr-only"> {t('filter_active_sr')}</span>
                     </span>
                 )}
             </button>
@@ -132,6 +185,11 @@ export function FilterPopover({
                 createPortal(
                     <div
                         ref={panelRef}
+                        id={panelId}
+                        role="group"
+                        aria-labelledby={titleId}
+                        tabIndex={-1}
+                        onKeyDown={onPanelKeyDown}
                         style={{ position: 'fixed', top: pos.top, left: pos.left, width, zIndex: 9999 }}
                         className="border-border bg-popover rounded-lg border shadow-md motion-safe:animate-[filter-pop_0.28s_cubic-bezier(0.16,1,0.3,1)]"
                     >
@@ -139,8 +197,10 @@ export function FilterPopover({
                         <style>{`@keyframes filter-pop{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}`}</style>
 
                         <div className="border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5">
-                            <Icon className="text-muted-foreground h-3.5 w-3.5" />
-                            <span className="text-sm font-semibold">{label ?? t('filters')}</span>
+                            <Icon className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
+                            <span id={titleId} className="text-sm font-semibold">
+                                {label ?? t('filters')}
+                            </span>
                             {count > 0 && (
                                 <span className="bg-brand/10 text-brand flex h-5 min-w-5 items-center justify-center rounded-full px-1 font-mono text-[11px] font-bold">
                                     {count}
@@ -159,17 +219,17 @@ export function FilterPopover({
                             )}
                         </div>
 
-                        <div className="p-3.5">{children(() => setOpen(false))}</div>
+                        <div className="p-3.5">{children(() => close())}</div>
 
                         {resultCount !== undefined && (
                             <div className="border-border/60 flex items-center gap-2 border-t px-3.5 py-2.5">
-                                <span className="text-muted-foreground text-xs">
+                                <span role="status" aria-live="polite" className="text-muted-foreground text-xs">
                                     {t('filter_found')} <span className="text-foreground font-mono text-[13px] font-bold">{resultCount}</span>{' '}
                                     {t('filter_items')}
                                 </span>
                                 <button
                                     type="button"
-                                    onClick={() => setOpen(false)}
+                                    onClick={() => close()}
                                     className="bg-brand text-brand-foreground hover:bg-brand/90 ml-auto rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors"
                                 >
                                     {t('done')}

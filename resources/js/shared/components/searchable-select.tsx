@@ -215,6 +215,8 @@ export function SearchableSelect({
                 id={id}
                 type="button"
                 onClick={toggle}
+                aria-haspopup="listbox"
+                aria-expanded={open}
                 className={cn(
                     'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
                     active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
