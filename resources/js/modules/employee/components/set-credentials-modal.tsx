@@ -199,7 +199,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                             saves fine; the API has the final word either way. */}
                         {noDefaultRole && (
                             <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
                                 <div className="text-muted-foreground text-xs">{t('cred_err_no_role')}</div>
                             </div>
                         )}

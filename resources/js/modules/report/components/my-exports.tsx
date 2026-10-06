@@ -133,7 +133,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                         {formatDateTime(madeAt)}
                     </div>
                 )}
-                {slow && <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
+                {slow && <div className="mt-1 text-xs text-amber-700 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
             </div>
 
             {/* Right column: the actions on top (icons only — the name and the tooltip say what

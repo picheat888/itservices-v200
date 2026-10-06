@@ -515,7 +515,7 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
             <span
                 className={cn(
                     'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                    skipped && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                    skipped && 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
                     queue && 'bg-brand/10 text-brand',
                     !skipped && !queue && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                 )}

@@ -512,7 +512,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                             sourceBalance === 0
                                                 ? 'text-destructive'
                                                 : sourceBalance <= (selected.min_stock ?? 0)
-                                                  ? 'text-amber-600'
+                                                  ? 'text-amber-700'
                                                   : 'text-emerald-600',
                                         )}
                                     >

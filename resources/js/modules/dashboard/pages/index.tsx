@@ -575,7 +575,7 @@ function WaitingRequestsCard({ requests }: { requests: DashboardRequests }) {
                             </>
                         }
                         trailing={
-                            <span className="shrink-0 font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                            <span className="shrink-0 font-mono text-xs font-semibold text-amber-700 dark:text-amber-400">
                                 {t('dash_days').replace('{n}', String(row.days))}
                             </span>
                         }

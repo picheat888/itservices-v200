@@ -86,7 +86,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                         title={t(item.label)}
                                         className={({ isActive }) =>
                                             cn(
-                                                'text-sidebar-foreground hover:bg-sidebar-accent relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                                                'group text-sidebar-foreground hover:bg-sidebar-accent relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                                                 iconsOnly && 'justify-center px-0',
                                                 isActive && 'bg-brand/15 text-brand hover:bg-brand/15 font-semibold',
                                             )
@@ -99,7 +99,10 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                                 // Collapsed rail: just a dot so it doesn't crowd the icon.
                                                 <span className="bg-brand absolute top-1.5 right-1.5 h-2 w-2 rounded-full" />
                                             ) : (
-                                                <span className="bg-brand/15 text-brand ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                                                // On the active row (already brand-tinted; NavLink marks it
+                                                // aria-current="page") the tint-on-tint pill read at about 3.7:1,
+                                                // so there it is solid brand with the brand foreground.
+                                                <span className="bg-brand/15 text-brand group-aria-[current=page]:bg-brand group-aria-[current=page]:text-brand-foreground ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold">
                                                     {badge}
                                                 </span>
                                             ))}
@@ -113,7 +116,8 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
 
             {!iconsOnly && settings?.company_name && (
                 <div className="px-4 pt-1 pb-2 text-center">
-                    <p className="text-muted-foreground/60 truncate text-[10px]">
+                    {/* Full muted colour, not /60: at 10px the faded line read at about 2.4:1. */}
+                    <p className="text-muted-foreground truncate text-[10px]">
                         &copy; {new Date().getFullYear()} {settings.company_name}
                     </p>
                 </div>

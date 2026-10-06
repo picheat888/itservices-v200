@@ -1,5 +1,6 @@
 // Shared brand-color helpers so the live theme (use-apply-theme) and the
 // Display color picker (Settings) resolve the accent identically.
+import { blend, contrastRatio, DARK_GROUND, LIGHT_GROUND } from '@/shared/lib/contrast';
 
 /** Parses #rrggbb into [r,g,b], or null when malformed. */
 export function parseHex(hex: string): [number, number, number] | null {
@@ -27,20 +28,42 @@ export function lighten([r, g, b]: [number, number, number], amt: number): strin
 }
 
 /**
- * The brand color actually shown for a given accent + mode. A near-black accent
- * collides with the dark canvas, so in dark mode it is lightened to a legible
- * grey. Other accents are returned unchanged.
+ * Contrast the brand colour must reach as TEXT on the card (`text-brand` links, active filter
+ * buttons, chips). 5.6 rather than WCAG's 4.5 leaves room for the brand tints it often sits on
+ * (`bg-brand/5` to `/15`, e.g. the sidebar counts), which pull the ground towards the brand.
+ */
+const BRAND_TEXT_CONTRAST = 5.6;
+
+/**
+ * The brand color actually shown for a given accent + mode. One variable serves both as a
+ * surface (buttons, with `brandForeground` on top) and as text, so it is tuned for text: mixed
+ * toward black (light mode) or white (dark mode) in 5% steps, only as far as it takes to read
+ * at BRAND_TEXT_CONTRAST on the card. The default blue is unchanged in light mode; in dark mode
+ * it lightens (an accent set in Settings used to override the dark theme's lighter blue, so
+ * active filters read at about 2.9:1). A near-black accent becomes a legible grey in dark mode.
  */
 export function resolveBrand(accent: string, dark: boolean): string {
     const rgb = parseHex(accent);
     if (!rgb) return accent;
-    if (dark && relLuminance(rgb) < 0.05) return lighten(rgb, 0.82);
-    return accent;
+    const ground = dark ? DARK_GROUND : LIGHT_GROUND;
+    const toward: [number, number, number] = dark ? [255, 255, 255] : [0, 0, 0];
+    for (let step = 0; step <= 20; step++) {
+        const shade = blend(toward, rgb, step * 0.05);
+        if (contrastRatio(shade, ground) >= BRAND_TEXT_CONTRAST) return toHex(shade);
+    }
+    return toHex(toward);
 }
 
-/** Legible text color to place on top of a brand-colored surface. */
+/** Legible text colour on a brand-coloured surface: white or near-black, whichever reads better. */
 export function brandForeground(hex: string): string {
     const rgb = parseHex(hex);
     if (!rgb) return '#ffffff';
-    return relLuminance(rgb) > 0.6 ? '#0f172a' : '#ffffff';
+    const onWhite = contrastRatio(rgb, [255, 255, 255]);
+    const onInk = contrastRatio(rgb, parseHex(INK)!);
+    return onWhite >= onInk ? '#ffffff' : INK;
 }
+
+/** Near-black used for text on light brand surfaces. */
+const INK = '#0f172a';
+
+const toHex = (rgb: [number, number, number]) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');

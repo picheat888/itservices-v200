@@ -125,8 +125,10 @@
     --asset-status-writeoff: #dc2626;
     --asset-soft: 72%;
 
-    /* Blue brand accent (overridable from Settings → Branding via JS) */
-    --brand: #2563eb;
+    /* Blue brand accent (overridable from Settings → Branding via JS). These are what
+       resolveBrand / brandForeground (shared/lib/brand-color.ts) make of the default #2563eb,
+       so the first paint matches the theme hook: dark enough to read as text at 5.6:1. */
+    --brand: #235edf;
     --brand-foreground: #ffffff;
 
     /* Org chart canvas — connector + dotted background */
@@ -150,7 +152,9 @@
     --secondary: hsl(210, 20%, 96%);
     --secondary-foreground: hsl(222, 25%, 20%);
     --muted: hsl(210, 20%, 96%);
-    --muted-foreground: hsl(215, 16%, 47%);
+    /* 44% (was 47%): reads at ≥4.5:1 on every ground it sits on — white, the page, bg-muted,
+       bg-accent and the brand tints of card headings (47% fell to 4.1–4.45 on those). */
+    --muted-foreground: hsl(215, 16%, 44%);
     --accent: hsl(210, 24%, 95%);
     --accent-foreground: hsl(222, 25%, 20%);
     --destructive: hsl(0, 72%, 51%);
@@ -198,8 +202,9 @@
     /* Dark UI → native scrollbars & form controls switch to their dark rendering. */
     color-scheme: dark;
 
-    --brand: #3b82f6;
-    --brand-foreground: #ffffff;
+    /* Lighter for text on the dark card (5.6:1); a light surface, so near-black text on it. */
+    --brand: #6692f1;
+    --brand-foreground: #0f172a;
 
     --oc-edge: #33425f;
     --oc-dot: #2b3a55;

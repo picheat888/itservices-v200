@@ -310,7 +310,7 @@ export function EmployeeViewDrawer({
                                     {t('emp_v_has_account')}
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                                     <TriangleAlert className="h-3 w-3" />
                                     {t('emp_v_no_account')}
                                 </span>
@@ -368,7 +368,7 @@ export function EmployeeViewDrawer({
                 {/* ── NO-ACCOUNT STRIP ── shown only while the employee still has no username/password */}
                 {showCredentials && (
                     <div className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-7 py-2.5 dark:border-amber-800 dark:bg-amber-950/20">
-                        <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <ShieldCheck className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
                         <div className="min-w-0 flex-1">
                             <span className="text-[12px] font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-400">
                                 {t('cred_no_account')}
@@ -491,7 +491,7 @@ export function EmployeeViewDrawer({
                                         </span>
                                     )}
                                     {tb.soon && (
-                                        <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-bold tracking-wide text-amber-600 uppercase dark:text-amber-400">
+                                        <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-bold tracking-wide text-amber-700 uppercase dark:text-amber-400">
                                             {t('emp_v_soon')}
                                         </span>
                                     )}
