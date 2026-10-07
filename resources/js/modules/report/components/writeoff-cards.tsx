@@ -1,25 +1,4 @@
-/**
- * The "การตัดจำหน่ายทรัพย์สิน" page's own cards (pages/assets-writeoffs.tsx), from the design mockup,
- * between the summary tiles and the list:
- *
- * - "ตัดจำหน่ายรายเดือน": a stacked column per month of the range (bought / rented handed back to the
- *   lessor / rented written off another way), the total over each column, empty months kept;
- * - "เหตุผลที่ตัดจำหน่าย": one bar per reason split bought / rented, the counts written out;
- * - "ตามหมวดหมู่": counts, bought value, average service life and the age bands, still-under-warranty;
- * - "เครื่องเช่าตามสัญญา": every rental contract with assets (all-time), how many came back, how
- *   many left another way, how many are still out, and what to do next.
- *
- * Looks like the asset overview report (/reports/assets-overview): its soft chart tones (bought
- * soft-orange, rented soft-pink), its StackBar (each count in its segment's colour above a rounded
- * bar), its column chart (rounded tops on a baseline, the value on top, no gridlines) and dot
- * legends at the card heading's right.
- *
- * Accessibility: every coloured mark has its number beside it (1.4.1), the month chart is an image
- * with a summary plus a screen-reader table (1.1.1), tables have captions and scoped headers
- * (1.3.1), card titles are h2 under the page's h1, links show a focus ring, and nothing animates
- * for a reader who asked for less motion. All of it reads useAssetWriteoffBreakdown
- * (AssetWriteoffReport::breakdown).
- */
+// Write-off report cards: by month, by reason, by category and rentals by contract (data: useAssetWriteoffBreakdown).
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -96,11 +75,7 @@ function monthLabel(month: string, lang: Lang, withYear: boolean, long = false):
     return withYear ? `${name} ${String(y).slice(2)}` : name;
 }
 
-/**
- * A card's tinted heading with its title as an h2 (under the page's h1), an optional `note`
- * beside it, and on the right a legend or a count. The note sits outside the h2 so a screen
- * reader's heading list reads just the title, not the explanation run into it.
- */
+/** Card heading: h2 title, optional note, legend on the right. */
 function CardTitle({ id, title, note, sub }: { id?: string; title: React.ReactNode; note?: React.ReactNode; sub?: React.ReactNode }) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3')}>
@@ -171,10 +146,10 @@ function MonthCard({ months }: { months: Month[] }) {
             {total === 0 ? (
                 <Empty>{t('rep_wo_empty')}</Empty>
             ) : (
-                <div className="px-5 pt-4 pb-3">
-                    <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`}>
+                <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
+                    <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex flex-1 flex-col">
                         {/* As the overview's "in the warehouse" columns: a baseline, rounded tops, the value on top. */}
-                        <div aria-hidden className="border-border flex h-40 items-end gap-1 border-b sm:gap-2">
+                        <div aria-hidden className="border-border flex min-h-40 flex-1 items-end gap-1 border-b sm:gap-2">
                             {months.map((m) => (
                                 <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
                                     {m.total > 0 && <span className="font-mono text-xs font-semibold tabular-nums">{m.total}</span>}
@@ -263,8 +238,8 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
                 <>
                     <ul className="space-y-3 px-5 py-4">
                         {shown.map((r) => (
-                            <li key={r.key} className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_auto] items-end gap-3 text-sm">
-                                <span className={cn('truncate', r.key === 'none' && 'text-muted-foreground')} title={name(r)}>
+                            <li key={r.key} className="grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto] items-end gap-3 text-sm">
+                                <span className={cn('line-clamp-2 leading-snug', r.key === 'none' && 'text-muted-foreground')} title={name(r)}>
                                     {name(r)}
                                 </span>
                                 <StackBar values={{ bought: r.bought, rented: r.rented }} series={SOURCES} scale={max} />
