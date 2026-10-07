@@ -1,9 +1,11 @@
 // "การตัดจำหน่ายทรัพย์สิน" report page (/reports/assets-writeoffs): shared tabular body + WriteoffCards + its own list cells.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { TabularReportView } from '../components/tabular-report-view';
 import { WriteoffCards } from '../components/writeoff-cards';
+import { YearsTip } from '../components/years-tip';
 import { useCanOpen } from '../hooks/use-can-open';
 
 type Row = Record<string, unknown> & { _links?: Record<string, string> };
@@ -102,12 +104,24 @@ function ReasonCell({ row }: { row: Row }) {
     );
 }
 
+function AgeCell({ years }: { years: number }) {
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <span className="font-mono tabular-nums">
+            <YearsTip years={years}>
+                {years.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+            </YearsTip>
+        </span>
+    );
+}
+
 function writeoffCell(key: string, row: Row) {
     if (key === 'asset_code') return <AssetCell row={row} />;
     if (key === 'source') return <SourceCell row={row} />;
     if (key === 'reason') return <ReasonCell row={row} />;
     if (key === 'warranty') return <WarrantyCell row={row} />;
     if (key === 'value' && row.source === 'rented') return <None />;
+    if (key === 'age_years' && typeof row.age_years === 'number') return <AgeCell years={row.age_years} />;
     return undefined;
 }
 

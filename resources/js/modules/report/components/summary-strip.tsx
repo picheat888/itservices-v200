@@ -18,6 +18,7 @@ import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
+import { YearsTip } from './years-tip';
 
 /** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
 const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 5: 'lg:grid-cols-3 xl:grid-cols-5' };
@@ -104,7 +105,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                     <KpiTile
                         key={item.key}
                         label={t(item.label_key)}
-                        value={value}
+                        value={item.format === 'years' && item.value !== null ? <YearsTip years={item.value}>{value}</YearsTip> : value}
                         unit={unit}
                         badge={
                             share !== null ? (

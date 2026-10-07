@@ -21,7 +21,7 @@ export function KpiTile({
     /** Shown on hover over the label — what a plain-worded figure really measures. */
     hint?: string;
     badge?: React.ReactNode;
-    value: string;
+    value: React.ReactNode;
     unit?: string;
     footer?: React.ReactNode;
     /** Flags the tile with a tinted border: "red" for what has already gone wrong (below the goal,
