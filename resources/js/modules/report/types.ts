@@ -532,6 +532,47 @@ export interface AssetWriteoffBreakdown {
     }[];
 }
 
+/** What the "ประวัติโอนย้ายและรับคืน" page draws above its rows (AssetTransferHistoryReport::breakdown). */
+export interface AssetTransferBreakdown {
+    /** Every month of the range, oldest first, empty months included. */
+    months: { month: string; handover: number; return: number; recall: number; relocate: number }[];
+    /** What became of the hand-overs in the range (TransferTrail::acceptance). */
+    acceptance: {
+        to_people: number;
+        to_shared: number;
+        same_day: number;
+        next_day: number;
+        later: number;
+        /** Of the later ones: sent on a Friday, accepted the Monday after. */
+        later_weekend: number;
+        waiting: number;
+        recalled: number;
+        never_accepted: number;
+        median_hours: number | null;
+        within_2_days: number;
+    };
+    /** Warehouses on the trail, most hand-overs out first. */
+    warehouses: { name: string; out: number; back: number }[];
+    /** Hand-overs to employees by the receiver's department, most first; null = no department. */
+    departments: { department_id: number | null; name: string | null; name_th: string | null; count: number }[];
+    /** Hand-overs by the asset's category, most first; null = no category. */
+    categories: { name: string | null; name_th: string | null; count: number }[];
+    /** Assets waiting right now (not by the date range): pending acceptance first, longest wait first. */
+    waiting: {
+        id: number;
+        code: string;
+        model: string | null;
+        category: ChartLabel | null;
+        status: 'pending_acceptance' | 'pending_return';
+        holder: { code: string; name: string; department: ChartLabel | null } | null;
+        owner_label: string | null;
+        /** "Y-m-d H:i" */
+        since: string;
+        cause: 'handover' | 'request' | 'resign' | null;
+        days: number;
+    }[];
+}
+
 export interface TabularRows {
     data: Array<Record<string, unknown> & { id: number }>;
     meta: PagedRows<unknown>['meta'];

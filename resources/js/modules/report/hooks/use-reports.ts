@@ -126,6 +126,15 @@ export const useAssetWriteoffBreakdown = (filters: TabularFilters) =>
         retry: noRetryOn4xx,
     });
 
+/** "ประวัติโอนย้ายและรับคืน" — the cards above the list, under the page's own filters. */
+export const useAssetTransferBreakdown = (filters: TabularFilters) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', 'assets.transfer_history', 'breakdown', filters],
+        queryFn: () => reportApi.assetTransferBreakdown(filters),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+
 export const useManualSlaBreakdown = (filters: TabularFilters) => {
     const by = (filters.by as string | null | undefined) ?? 'category';
     const rest = Object.fromEntries(Object.entries(filters).filter(([name]) => name !== by));

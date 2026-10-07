@@ -5,6 +5,7 @@
  */
 import { http } from '@/shared/lib/http';
 import type {
+    AssetTransferBreakdown,
     AssetWriteoffBreakdown,
     BacklogBoardTicket,
     ExportFormat,
@@ -93,6 +94,12 @@ export const reportApi = {
     assetWriteoffBreakdown: (filters: TabularFilters) =>
         http
             .get<{ data: AssetWriteoffBreakdown }>('/reports/assets/writeoffs/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "ประวัติโอนย้ายและรับคืน": every month, acceptance, warehouses, departments, categories and the assets waiting now. */
+    assetTransferBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: AssetTransferBreakdown }>('/reports/assets/transfer-history/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),

@@ -11,8 +11,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWriteoffBreakdown } from '../hooks/use-reports';
 import type { AssetWriteoffBreakdown, ChartSeries, TabularFilters } from '../types';
-import { CARD_HEADING_TINT } from './card-heading';
-import { fold, FoldToggle, StackBar } from './chart-parts';
+import { CardTitle, CardEmpty as Empty, fold, FoldToggle, monthLabel, StackBar, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
@@ -77,41 +76,6 @@ const currentMonth = () => {
 };
 const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-/** "2026-09" → "ก.ย." (with "26" on the first column and each January when `withYear`). */
-function monthLabel(month: string, lang: Lang, withYear: boolean, long = false): string {
-    const [y, m] = month.split('-').map(Number);
-    const name = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { month: long ? 'long' : 'short' }).format(
-        new Date(y, m - 1, 1),
-    );
-    if (long) return `${name} ${y}`;
-    return withYear ? `${name} ${String(y).slice(2)}` : name;
-}
-
-/** Card heading: h2 title, optional note, legend on the right. */
-function CardTitle({ id, title, note, sub }: { id?: string; title: React.ReactNode; note?: React.ReactNode; sub?: React.ReactNode }) {
-    return (
-        <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3')}>
-            <div className="flex flex-wrap items-baseline gap-x-2">
-                <h2 id={id} className="text-sm font-semibold">
-                    {title}
-                </h2>
-                {note && <p className="text-muted-foreground text-xs">{note}</p>}
-            </div>
-            {sub && <div className="text-muted-foreground text-xs">{sub}</div>}
-        </div>
-    );
-}
-
-/** A legend entry as on the overview's cards: a dot in the mark's colour, then what it means. */
-function Swatch({ fill, children }: { fill: string; children: React.ReactNode }) {
-    return (
-        <span className="inline-flex items-center gap-1.5">
-            <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', fill)} />
-            {children}
-        </span>
-    );
-}
-
 /** A heading-right legend for a set of series, optionally with each one's count. */
 function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<string, number> }) {
     const t = useT();
@@ -126,10 +90,6 @@ function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<str
             ))}
         </span>
     );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-    return <div className="text-muted-foreground px-5 py-10 text-center text-sm">{children}</div>;
 }
 
 /* ─────────────────────────── month chart ─────────────────────────── */
