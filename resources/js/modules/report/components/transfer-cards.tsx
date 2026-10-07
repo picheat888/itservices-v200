@@ -5,13 +5,25 @@ import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { ArrowRight } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetTransferBreakdown } from '../hooks/use-reports';
 import type { AssetTransferBreakdown, ChartLabel, ChartTone, TabularFilters } from '../types';
-import { CardEmpty, CardTitle, fold, FoldToggle, monthLabel } from './chart-parts';
+import {
+    CardEmpty,
+    CardTitle,
+    currentMonth,
+    fold,
+    FoldToggle,
+    monthDensity,
+    monthLabel,
+    monthLabelPlace,
+    SCROLL_AFTER_MONTHS,
+    SCROLL_MONTH_PX,
+} from './chart-parts';
 import { FILL } from './chart-tones';
+import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { niceMax } from './weekly-ticket-chart';
@@ -106,7 +118,6 @@ function axisTop(value: number): number {
 function MonthFlowCard({ months }: { months: Month[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const titleId = useId();
     const back = (m: Month) => m.return + m.recall;
     const up = axisTop(Math.max(0, ...months.map((m) => m.handover)));
     // The lower half never shrinks below a quarter of the upper, so a single return still reads.
@@ -116,11 +127,40 @@ function MonthFlowCard({ months }: { months: Month[] }) {
     const peak = months.reduce<Month | null>((best, m) => (m.handover > (best?.handover ?? 0) ? m : best), null);
     const upAt = (v: number) => ({ bottom: `${(v / up) * 100}%` });
     const downAt = (v: number) => ({ top: `${(v / down) * 100}%` });
+    const thisMonth = currentMonth();
+    const hasCurrent = months.some((m) => m.month === thisMonth);
+    const partialNote = t('rep_wo_month_partial_tip').replace(
+        '{date}',
+        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+            new Date(),
+        ),
+    );
+    const density = monthDensity(months);
+    const scroll = months.length > SCROLL_AFTER_MONTHS;
+    const scroller = useRef<HTMLDivElement>(null);
+    const [scrollbar, setScrollbar] = useState(0);
+    useLayoutEffect(() => {
+        const element = scroller.current;
+        if (!element) return;
+        element.scrollLeft = element.scrollWidth;
+        const observer = new ResizeObserver(() => setScrollbar(element.offsetHeight - element.clientHeight));
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [months]);
+    const monthText = (m: Month) =>
+        [
+            monthLabel(m.month, lang, false, true),
+            ...(['handover', 'return', 'recall', 'relocate'] as const)
+                .filter((k) => m[k] > 0)
+                .map((k) => `${t(`asset_hist_kind_${k}`)} ${count(m[k], lang)}`),
+            m.month === thisMonth ? partialNote : null,
+        ]
+            .filter(Boolean)
+            .join(', ');
 
     return (
         <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
-                id={titleId}
                 title={t('rep_th_month_title')}
                 note={
                     peak
@@ -129,13 +169,34 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                               .replace('{n}', count(peak.handover, lang))
                         : undefined
                 }
-                sub={<FlowLegend months={months} />}
+                sub={
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <FlowLegend months={months} />
+                        {hasCurrent && (
+                            <span className="inline-flex items-center gap-1.5">
+                                {density.thin ? (
+                                    <i aria-hidden className="bg-brand inline-block h-2 w-2 rounded-full" />
+                                ) : (
+                                    <i aria-hidden className="border-brand inline-block h-2.5 w-2.5 rounded-[3px] border border-dashed" />
+                                )}
+                                {t('rep_wo_month_partial')}
+                            </span>
+                        )}
+                    </span>
+                }
             />
             {out + inn === 0 ? (
                 <CardEmpty>{t('rep_th_empty')}</CardEmpty>
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
-                    <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex min-h-56 flex-1 gap-2">
+                    <p className="sr-only">
+                        {t('rep_th_month_aria')
+                            .replace('{from}', monthLabel(months[0].month, lang, false, true))
+                            .replace('{to}', monthLabel(months[months.length - 1].month, lang, false, true))
+                            .replace('{out}', count(out, lang))
+                            .replace('{in}', count(inn, lang))}
+                    </p>
+                    <div className="flex min-h-56 flex-1 gap-2">
                         <div aria-hidden className="flex w-11 shrink-0 flex-col">
                             <div className="relative mt-[18px]" style={{ flex: up }}>
                                 {[up / 2, up].map((v) => (
@@ -170,111 +231,164 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                     </span>
                                 ))}
                             </div>
-                            <div className="h-9 shrink-0" />
+                            <div className="shrink-0" style={{ height: `calc(2.25rem + ${scrollbar}px)` }} />
                         </div>
-                        <div className="flex min-w-0 flex-1 flex-col">
-                            <div className="relative mt-[18px]" style={{ flex: up }}>
-                                <div aria-hidden>
-                                    {[up / 2, up].map((v) => (
-                                        <div key={v} className="border-border absolute inset-x-0 border-t" style={upAt(v)} />
-                                    ))}
-                                    {[up / 4, (up * 3) / 4].map((v) => (
-                                        <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={upAt(v)} />
-                                    ))}
-                                </div>
-                                <div aria-hidden className="absolute inset-0 flex items-end gap-1 sm:gap-2.5">
-                                    {months.map((m) => (
-                                        <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                                            <div className="relative w-full max-w-8" style={{ height: `${(m.handover / up) * 100}%` }}>
-                                                {m.handover > 0 && (
-                                                    <span className="absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums">
-                                                        {count(m.handover, lang)}
-                                                    </span>
-                                                )}
-                                                <span
-                                                    title={`${t('asset_hist_kind_handover')}: ${count(m.handover, lang)}`}
-                                                    className={cn('block h-full rounded-t-md', FILL[KIND_STYLE.handover.tone])}
-                                                />
-                                            </div>
+                        <div ref={scroller} className={cn('flex min-w-0 flex-1 flex-col', scroll && 'overflow-x-auto overflow-y-hidden')}>
+                            <div className="flex min-w-full flex-1 flex-col" style={scroll ? { width: months.length * SCROLL_MONTH_PX } : undefined}>
+                                <div className="relative flex flex-1 flex-col">
+                                    <div className="relative mt-[18px]" style={{ flex: up }}>
+                                        <div aria-hidden>
+                                            {[up / 2, up].map((v) => (
+                                                <div key={v} className="border-border absolute inset-x-0 border-t" style={upAt(v)} />
+                                            ))}
+                                            {[up / 4, (up * 3) / 4].map((v) => (
+                                                <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={upAt(v)} />
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div aria-hidden className="border-muted-foreground/60 border-t-2" />
-                            <div className="relative mb-[18px]" style={{ flex: down }}>
-                                <div aria-hidden>
-                                    <div className="border-border absolute inset-x-0 border-t border-dashed" style={downAt(down / 2)} />
-                                    <div className="border-border absolute inset-x-0 border-t" style={downAt(down)} />
-                                </div>
-                                <div aria-hidden className="absolute inset-0 flex items-start gap-1 sm:gap-2.5">
-                                    {months.map((m) => (
-                                        <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
-                                            <div className="relative w-full max-w-8" style={{ height: `${(back(m) / down) * 100}%` }}>
-                                                <div className="flex h-full flex-col overflow-hidden rounded-b-md">
-                                                    {(['return', 'recall'] as const).map((k) =>
-                                                        m[k] > 0 ? (
+                                        <div aria-hidden className={cn('absolute inset-0 flex items-end', density.gap)}>
+                                            {months.map((m) => (
+                                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                                                    <div
+                                                        className={cn('relative w-full', density.bar)}
+                                                        style={{ height: `${(m.handover / up) * 100}%` }}
+                                                    >
+                                                        {m.month === thisMonth &&
+                                                            (density.thin ? (
+                                                                <span className="bg-brand absolute -top-2.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full" />
+                                                            ) : (
+                                                                m.handover > 0 && (
+                                                                    <span className="border-brand pointer-events-none absolute -inset-x-[3px] -top-[3px] bottom-0 rounded-t-md border-2 border-b-0 border-dashed" />
+                                                                )
+                                                            ))}
+                                                        {density.top && m.handover > 0 && (
                                                             <span
-                                                                key={k}
-                                                                title={`${t(`asset_hist_kind_${k}`)}: ${count(m[k], lang)}`}
-                                                                className={cn('block w-full basis-0', FILL[KIND_STYLE[k].tone])}
-                                                                style={{ flexGrow: m[k] }}
-                                                            />
-                                                        ) : null,
-                                                    )}
+                                                                className={cn(
+                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    m.month === thisMonth && 'text-brand',
+                                                                )}
+                                                            >
+                                                                {count(m.handover, lang)}
+                                                            </span>
+                                                        )}
+                                                        <span
+                                                            className={cn(
+                                                                'block h-full',
+                                                                !density.thin && 'rounded-t-md',
+                                                                FILL[KIND_STYLE.handover.tone],
+                                                            )}
+                                                        />
+                                                    </div>
                                                 </div>
-                                                {back(m) > 0 && (
-                                                    <span className="absolute right-0 -bottom-[18px] left-0 text-center font-mono text-[11px] font-semibold tabular-nums">
-                                                        {count(back(m), lang)}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div aria-hidden className="border-muted-foreground/60 border-t-2" />
+                                    <div className="relative mb-[18px]" style={{ flex: down }}>
+                                        <div aria-hidden>
+                                            <div className="border-border absolute inset-x-0 border-t border-dashed" style={downAt(down / 2)} />
+                                            <div className="border-border absolute inset-x-0 border-t" style={downAt(down)} />
+                                        </div>
+                                        <div aria-hidden className={cn('absolute inset-0 flex items-start', density.gap)}>
+                                            {months.map((m) => (
+                                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
+                                                    <div
+                                                        className={cn('relative w-full', density.bar)}
+                                                        style={{ height: `${(back(m) / down) * 100}%` }}
+                                                    >
+                                                        {m.month === thisMonth && !density.thin && back(m) > 0 && (
+                                                            <span className="border-brand pointer-events-none absolute -inset-x-[3px] top-0 -bottom-[3px] rounded-b-md border-2 border-t-0 border-dashed" />
+                                                        )}
+                                                        <div className={cn('flex h-full flex-col overflow-hidden', !density.thin && 'rounded-b-md')}>
+                                                            {(['return', 'recall'] as const).map((k) =>
+                                                                m[k] > 0 ? (
+                                                                    <span
+                                                                        key={k}
+                                                                        className={cn('block min-h-px w-full basis-0', FILL[KIND_STYLE[k].tone])}
+                                                                        style={{ flexGrow: m[k] }}
+                                                                    />
+                                                                ) : null,
+                                                            )}
+                                                        </div>
+                                                        {density.top && back(m) > 0 && (
+                                                            <span
+                                                                className={cn(
+                                                                    'absolute -bottom-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    m.month === thisMonth && 'text-brand',
+                                                                )}
+                                                            >
+                                                                {count(back(m), lang)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className={cn('absolute inset-0 flex', density.gap)}>
+                                        {months.map((m) => (
+                                            <InfoPopover
+                                                key={m.month}
+                                                label={monthText(m)}
+                                                side="right"
+                                                className="h-full min-w-0 flex-1 cursor-pointer"
+                                                content={<FlowDetail month={m} partialNote={m.month === thisMonth ? partialNote : null} />}
+                                            >
+                                                <span className="sr-only">{monthLabel(m.month, lang, false, true)}</span>
+                                            </InfoPopover>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div aria-hidden className={cn('flex h-9 shrink-0 pt-1.5', density.gap)}>
+                                    {months.map((m, i) => (
+                                        <div key={m.month} className="relative min-w-0 flex-1">
+                                            {density.label(i, m.month) && (
+                                                <div
+                                                    className={cn(
+                                                        'absolute top-0 text-[10.5px] whitespace-nowrap',
+                                                        monthLabelPlace(density, i, months.length),
+                                                    )}
+                                                >
+                                                    <b
+                                                        className={cn(
+                                                            'block font-semibold',
+                                                            m.month === thisMonth ? 'text-brand' : 'text-foreground',
+                                                        )}
+                                                    >
+                                                        {monthLabel(m.month, lang, false)}
+                                                    </b>
+                                                    <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            <div aria-hidden className="flex h-9 shrink-0 gap-1 pt-1.5 sm:gap-2.5">
-                                {months.map((m) => (
-                                    <div key={m.month} className="min-w-0 flex-1 text-center text-[10.5px] whitespace-nowrap">
-                                        <b className="text-foreground block font-semibold">{monthLabel(m.month, lang, false)}</b>
-                                        <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
-                        <p id={`${titleId}-summary`} className="sr-only">
-                            {t('rep_th_month_aria')
-                                .replace('{from}', monthLabel(months[0].month, lang, false, true))
-                                .replace('{to}', monthLabel(months[months.length - 1].month, lang, false, true))
-                                .replace('{out}', count(out, lang))
-                                .replace('{in}', count(inn, lang))}
-                        </p>
                     </div>
-                    <table className="sr-only">
-                        <caption>{t('rep_th_month_title')}</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col">{t('rep_wo_month_col')}</th>
-                                {(['handover', 'return', 'recall'] as const).map((k) => (
-                                    <th key={k} scope="col">
-                                        {t(`asset_hist_kind_${k}`)}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {months.map((m) => (
-                                <tr key={m.month}>
-                                    <th scope="row">{monthLabel(m.month, lang, false, true)}</th>
-                                    <td>{count(m.handover, lang)}</td>
-                                    <td>{count(m.return, lang)}</td>
-                                    <td>{count(m.recall, lang)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
                 </div>
             )}
         </Card>
+    );
+}
+
+/** A month's popover: each kind's count with its mark, and "counted to …" for this month. */
+function FlowDetail({ month, partialNote }: { month: Month; partialNote: string | null }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <div className="space-y-1">
+            <div className="font-semibold">{monthLabel(month.month, lang, false, true)}</div>
+            {(['handover', 'return', 'recall', 'relocate'] as const).map((k) => (
+                <div key={k} className="flex items-center justify-between gap-4">
+                    <span className="inline-flex items-center gap-1.5">
+                        <KindMark kind={k} />
+                        {t(`asset_hist_kind_${k}`)}
+                    </span>
+                    <b className={cn('font-mono tabular-nums', month[k] === 0 && 'text-muted-foreground font-normal')}>{count(month[k], lang)}</b>
+                </div>
+            ))}
+            {partialNote && <div className="text-muted-foreground border-border border-t pt-1">{partialNote}</div>}
+        </div>
     );
 }
 
