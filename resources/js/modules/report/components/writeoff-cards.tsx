@@ -60,6 +60,9 @@ const SHORT_LIFE_YEARS = 3;
 /** Reasons listed before the rest fold under "แสดงทั้งหมด". */
 const REASONS_SHOWN = 10;
 
+/** A month bar's piece gets its own count once it is at least this share of the tallest bar. */
+const SEGMENT_LABEL_SHARE = 0.12;
+
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
 const NUM = 'text-right font-mono tabular-nums';
@@ -205,9 +208,14 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                     <span
                                                         key={s.key}
                                                         title={`${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
-                                                        className={cn('block w-full', FILL[s.tone])}
+                                                        className={cn(
+                                                            'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-slate-900/80',
+                                                            FILL[s.tone],
+                                                        )}
                                                         style={{ flexGrow: m[s.key] }}
-                                                    />
+                                                    >
+                                                        {m.total > m[s.key] && m[s.key] / top >= SEGMENT_LABEL_SHARE ? count(m[s.key], lang) : null}
+                                                    </span>
                                                 ) : null,
                                             )}
                                         </div>
