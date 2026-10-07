@@ -1,6 +1,6 @@
-// A decimal number of years ("4.3") that shows "4 ปี 4 เดือน" on hover, and says it to screen readers.
+// A decimal number of years ("4.3") that shows "4 ปี 4 เดือน" on hover, tap or keyboard, and says it to screen readers.
 import { useT } from '@/lang';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
+import { InfoPopover } from './info-popover';
 
 export function useYearsInWords() {
     const t = useT();
@@ -20,16 +20,8 @@ export function useYearsInWords() {
 export function YearsTip({ years, children }: { years: number; children: React.ReactNode }) {
     const words = useYearsInWords()(years);
     return (
-        <TooltipProvider delayDuration={150}>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <span className="cursor-help">
-                        <span aria-hidden>{children}</span>
-                        <span className="sr-only">{words}</span>
-                    </span>
-                </TooltipTrigger>
-                <TooltipContent className="font-sans text-xs font-normal whitespace-nowrap">{words}</TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+        <InfoPopover label={words} content={words} contentClassName="whitespace-nowrap">
+            {children}
+        </InfoPopover>
     );
 }

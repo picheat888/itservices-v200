@@ -71,6 +71,8 @@ export function useChartLabel() {
 /** Stacked bar with each count over its piece; `scale` is what a full-width bar stands for. */
 export function StackBar({ values, series, scale }: { values: Record<string, number>; series: ChartSeries[]; scale: number }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const number = (value: number) => value.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
     const width = (value: number) => `${Math.min(100, (value / Math.max(1, scale)) * 100)}%`;
 
     return (
@@ -83,12 +85,12 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
                         <span
                             key={s.key}
                             className={cn(
-                                'flex shrink-0 justify-center overflow-visible font-mono text-xs leading-none font-semibold whitespace-nowrap',
+                                'flex shrink-0 justify-center overflow-visible font-mono text-xs leading-none font-semibold whitespace-nowrap tabular-nums',
                                 TEXT[s.tone],
                             )}
                             style={{ width: width(value) }}
                         >
-                            {value}
+                            {number(value)}
                         </span>
                     );
                 })}
@@ -100,7 +102,7 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
                     return (
                         <span
                             key={s.key}
-                            title={`${t(s.label_key)}: ${value}`}
+                            title={`${t(s.label_key)}: ${number(value)}`}
                             className={cn('block h-full min-w-[3px]', FILL[s.tone])}
                             style={{ width: width(value) }}
                         />
@@ -110,19 +112,27 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
             <span className="sr-only">
                 {series
                     .filter((s) => (values[s.key] ?? 0) > 0)
-                    .map((s) => `${t(s.label_key)} ${values[s.key]}`)
+                    .map((s) => `${t(s.label_key)} ${number(values[s.key])}`)
                     .join(', ')}
             </span>
         </div>
     );
 }
 
+/** A code that opens its record: the report lists' brand link, with a visible keyboard focus ring. */
+export const CODE_LINK =
+    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
+
+const monthFormats = new Map<string, Intl.DateTimeFormat>();
+
 /** "2026-09" → "ก.ย." (with "26" on the first column and each January when `withYear`). */
 export function monthLabel(month: string, lang: 'th' | 'en', withYear: boolean, long = false): string {
     const [y, m] = month.split('-').map(Number);
-    const name = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { month: long ? 'long' : 'short' }).format(
-        new Date(y, m - 1, 1),
-    );
+    const key = `${lang}-${long}`;
+    if (!monthFormats.has(key)) {
+        monthFormats.set(key, new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { month: long ? 'long' : 'short' }));
+    }
+    const name = (monthFormats.get(key) as Intl.DateTimeFormat).format(new Date(y, m - 1, 1));
     if (long) return `${name} ${y}`;
     return withYear ? `${name} ${String(y).slice(2)}` : name;
 }
