@@ -566,6 +566,7 @@ export const report: Dict = {
     rep_wo_ct_col_returned: 'Returned',
     rep_wo_ct_col_other: 'Written off otherwise',
     rep_wo_ct_col_out: 'Still out',
+    rep_wo_ct_out_overdue: 'Overdue past contract end',
     rep_wo_ct_col_progress: 'Return progress',
     rep_wo_ct_col_todo: 'What to do',
     rep_wo_ct_progress: '{x} of {y} returned',

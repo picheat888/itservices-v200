@@ -565,6 +565,7 @@ export const report: Dict = {
     rep_wo_ct_col_returned: 'คืนแล้ว',
     rep_wo_ct_col_other: 'ตัดด้วยเหตุผลอื่น',
     rep_wo_ct_col_out: 'ยังไม่คืน',
+    rep_wo_ct_out_overdue: 'ค้างคืนหลังหมดสัญญา',
     rep_wo_ct_col_progress: 'ความคืบหน้าการคืน',
     rep_wo_ct_col_todo: 'สิ่งที่ต้องทำ',
     rep_wo_ct_progress: 'คืนแล้ว {x} จาก {y}',

@@ -60,6 +60,18 @@ const BANDS: (ChartSeries & { key: 'under_3' | 'from_3_to_5' | 'over_5' })[] = [
     { key: 'over_5', label_key: 'rep_wo_band_over_5', tone: 'soft-green' },
 ];
 
+/**
+ * A rental contract's units, all accounted for: returned (pink, as in the monthly chart), written off
+ * another way (violet, likewise) and still out. Still out wears the overview's "in use" status colour,
+ * or soft red once the contract has ended — the bar no longer leaves them as the empty grey track,
+ * where they sank out of sight.
+ */
+const contractSeries = (overdue: boolean): ChartSeries[] => [
+    { key: 'returned', label_key: 'rep_wo_ct_col_returned', tone: 'soft-pink' },
+    { key: 'written_off_other', label_key: 'rep_wo_ct_col_other', tone: 'soft-violet' },
+    { key: 'still_out', label_key: overdue ? 'rep_wo_ct_out_overdue' : 'rep_wo_ct_col_out', tone: overdue ? 'soft-red' : 'asset-deployed' },
+];
+
 /** A code that opens its record: the report lists' brand link, with a visible keyboard focus ring. */
 const CODE_LINK =
     'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-bold hover:underline focus-visible:ring-2 focus-visible:outline-none';
@@ -437,7 +449,11 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Swatch fill={FILL['soft-pink']}>{t('rep_wo_ct_col_returned')}</Swatch>
-                        <Swatch fill="bg-muted">{t('rep_wo_ct_col_out')}</Swatch>
+                        <Swatch fill={FILL['soft-violet']}>{t('rep_wo_ct_col_other')}</Swatch>
+                        <Swatch fill={FILL['asset-deployed']}>{t('rep_wo_ct_col_out')}</Swatch>
+                        {contracts.some((c) => c.flag === 'overdue' && c.still_out > 0) && (
+                            <Swatch fill={FILL['soft-red']}>{t('rep_wo_ct_out_overdue')}</Swatch>
+                        )}
                     </span>
                 }
             />
@@ -482,7 +498,6 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                             {contracts.map((c) => {
                                 const href = `/contracts?view=${c.id}`;
                                 const todo = contractTodo(t, c);
-                                const percent = c.units === 0 ? 0 : (c.returned / c.units) * 100;
                                 return (
                                     <tr key={c.id} className="border-border/60 border-b last:border-b-0">
                                         <th scope="row" className={cn(TD, 'text-left font-normal')}>
@@ -509,8 +524,9 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                             className={cn(
                                                 TD,
                                                 NUM,
+                                                // Violet, like its segment in the bar beside it.
                                                 c.written_off_other > 0
-                                                    ? 'font-semibold text-amber-800 dark:text-amber-300'
+                                                    ? 'font-semibold text-violet-700 dark:text-violet-300'
                                                     : 'text-muted-foreground',
                                             )}
                                         >
@@ -526,17 +542,19 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                             {count(c.still_out, lang)}
                                         </td>
                                         <td className={TD}>
+                                            {/* Every unit has a colour, each count above its segment (the overview's StackBar);
+                                                the sr-only line says the same for screen readers. */}
                                             <div className="min-w-[8rem]">
-                                                <div aria-hidden className="bg-muted flex h-2.5 overflow-hidden rounded-full">
-                                                    {c.returned > 0 && (
-                                                        <span className={cn('block h-full', FILL['soft-pink'])} style={{ width: `${percent}%` }} />
-                                                    )}
-                                                </div>
-                                                <div className="text-muted-foreground mt-1 text-[11px] tabular-nums">
+                                                <StackBar
+                                                    values={{ returned: c.returned, written_off_other: c.written_off_other, still_out: c.still_out }}
+                                                    series={contractSeries(c.flag === 'overdue')}
+                                                    scale={c.units}
+                                                />
+                                                <span className="sr-only">
                                                     {t('rep_wo_ct_progress')
                                                         .replace('{x}', count(c.returned, lang))
                                                         .replace('{y}', count(c.units, lang))}
-                                                </div>
+                                                </span>
                                             </div>
                                         </td>
                                         <td className={cn(TD, 'min-w-[14rem] text-[13px]')}>
