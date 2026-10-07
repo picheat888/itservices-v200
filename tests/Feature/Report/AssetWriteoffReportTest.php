@@ -209,6 +209,7 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertEquals(3.6, $summary['wo_avg_life']['value']);
         $this->assertSame('rep_n_wo_shortest_life', $summary['wo_avg_life']['note']['label_key']);
         $this->assertEquals(2.3, $summary['wo_avg_life']['note']['values']['years']);
+        $this->assertSame(2, $summary['wo_avg_life']['note']['values']['n']);
         $this->assertSame(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], $summary['wo_avg_life']['note']['texts']['category']);
 
         // The printer still under warranty and the lifetime one: 12,000 + 5,000 worth.

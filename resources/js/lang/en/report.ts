@@ -509,7 +509,7 @@ export const report: Dict = {
     rep_k_wo_under_warranty: 'Written off under warranty',
     rep_k_wo_rented_overdue: 'Rented units overdue',
     rep_n_wo_purchase: '{n} bought units, ฿{avg} each on average',
-    rep_n_wo_shortest_life: 'Shortest: {category} {years} yrs',
+    rep_n_wo_shortest_life: 'Shortest-lived category: {category}, {years} yrs on average ({n} units)',
     rep_n_wo_under_warranty_value: '฿{value} worth, still under warranty when written off',
     rep_n_wo_under_warranty_none: 'None written off under warranty',
     rep_n_wo_rented_overdue: 'Contracts ended: {codes}',

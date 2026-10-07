@@ -254,7 +254,7 @@ class AssetWriteoffReport extends TabularReport
         // The category that served shortest, among the bought assets with a purchase date.
         $shortest = $bought->filter(fn (Asset $a) => self::ageYears($a) !== null)
             ->groupBy(fn (Asset $a) => (string) $a->getAttribute('category_ref'))
-            ->map(fn (Collection $group) => ['label' => self::categoryLabel($group->first()), 'years' => self::averageAge($group)])
+            ->map(fn (Collection $group) => ['label' => self::categoryLabel($group->first()), 'years' => self::averageAge($group), 'count' => $group->count()])
             ->sortBy('years')
             ->first();
 
@@ -274,7 +274,7 @@ class AssetWriteoffReport extends TabularReport
             ReportSummary::make('wo_avg_life', 'อายุใช้งานเฉลี่ย (ปี)', self::averageAge($bought), null, 'years')
                 ->withNote($shortest === null ? null : [
                     'label_key' => 'rep_n_wo_shortest_life',
-                    'values' => ['years' => $shortest['years']],
+                    'values' => ['years' => $shortest['years'], 'n' => $shortest['count']],
                     'texts' => ['category' => $shortest['label']],
                 ]),
             ReportSummary::make('wo_under_warranty', 'ตัดทั้งที่ยังมีประกัน (เครื่อง)', $underWarranty->count())
