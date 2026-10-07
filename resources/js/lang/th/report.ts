@@ -508,7 +508,7 @@ export const report: Dict = {
     rep_k_wo_under_warranty: 'ตัดทั้งที่ยังมีประกัน',
     rep_k_wo_rented_overdue: 'เครื่องเช่าค้างคืน',
     rep_n_wo_purchase: 'เครื่องซื้อ {n} เครื่อง เฉลี่ยเครื่องละ ฿{avg}',
-    rep_n_wo_shortest_life: 'สั้นสุด: {category} {years} ปี',
+    rep_n_wo_shortest_life: 'หมวดที่ใช้งานสั้นสุด: {category} เฉลี่ย {years} ปี ({n} เครื่อง)',
     rep_n_wo_under_warranty_value: 'มูลค่า ฿{value} ยังอยู่ในประกันตอนตัด',
     rep_n_wo_under_warranty_none: 'ไม่มีเครื่องที่ตัดทั้งที่ยังมีประกัน',
     rep_n_wo_rented_overdue: 'สัญญาหมดแล้ว: {codes}',
