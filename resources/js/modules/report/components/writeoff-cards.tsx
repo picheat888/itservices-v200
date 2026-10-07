@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle } from 'lucide-react';
 import { useId, useState } from 'react';
@@ -15,6 +16,7 @@ import { fold, FoldToggle, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
+import { YearsTip } from './years-tip';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -298,6 +300,28 @@ function AgeBands({ category }: { category: Category }) {
     );
 }
 
+function ShortLifeWarning() {
+    const t = useT();
+    return (
+        <TooltipProvider delayDuration={150}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <button
+                        type="button"
+                        aria-label={t('rep_wo_short_life')}
+                        className="focus-visible:ring-ring inline-flex cursor-help rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                        <AlertTriangle aria-hidden className="h-3.5 w-3.5" />
+                    </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-left font-sans text-xs font-normal whitespace-normal">
+                    {t('rep_wo_short_life_tip')}
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+}
+
 function CategoryCard({ categories, totals }: { categories: Category[]; totals: AssetWriteoffBreakdown['category_totals'] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -360,9 +384,8 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
                                             ) : (
                                                 // Under three years gets an icon and words, not only red.
                                                 <span className={cn('inline-flex items-center gap-1', short && 'text-red-700 dark:text-red-400')}>
-                                                    {short && <AlertTriangle aria-hidden className="h-3.5 w-3.5" />}
-                                                    {years(c.avg_age_years, lang)}
-                                                    {short && <span className="sr-only">{t('rep_wo_short_life')}</span>}
+                                                    {short && <ShortLifeWarning />}
+                                                    <YearsTip years={c.avg_age_years}>{years(c.avg_age_years, lang)}</YearsTip>
                                                 </span>
                                             )}
                                         </td>
@@ -390,7 +413,13 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
                                     <td className={cn(TD, NUM)}>{count(totals.bought, lang)}</td>
                                     <td className={cn(TD, NUM)}>{count(totals.rented, lang)}</td>
                                     <td className={cn(TD, NUM)}>{totals.bought === 0 ? '—' : money(totals.bought_value, lang)}</td>
-                                    <td className={cn(TD, NUM)}>{totals.avg_age_years === null ? '—' : years(totals.avg_age_years, lang)}</td>
+                                    <td className={cn(TD, NUM)}>
+                                        {totals.avg_age_years === null ? (
+                                            '—'
+                                        ) : (
+                                            <YearsTip years={totals.avg_age_years}>{years(totals.avg_age_years, lang)}</YearsTip>
+                                        )}
+                                    </td>
                                     <td className={TD}>
                                         <AgeBands category={{ ...totals, category_id: null, name: null, name_th: null }} />
                                     </td>
