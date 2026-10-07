@@ -103,6 +103,8 @@ export const common: Dict = {
     branding_apply_note: 'Changes apply instantly across the entire portal.',
     export: 'Export',
     current_month: 'Current',
+    page_prev: 'Previous page',
+    page_next: 'Next page',
     all_contracts: 'All contracts',
     all_contracts_hint: 'All contracts in the organization.',
     new_contract: 'New contract',

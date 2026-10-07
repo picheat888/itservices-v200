@@ -261,7 +261,7 @@ class AssetWriteoffReport extends TabularReport
         return [
             ReportSummary::make('wo_total', 'ตัดจำหน่าย (เครื่อง)', $assets->count())->withSplit([
                 ['key' => 'purchased', 'label_key' => 'rep_src_purchased', 'tone' => 'soft-orange', 'value' => $bought->count()],
-                ['key' => 'rented', 'label_key' => 'rep_src_rented', 'tone' => 'soft-pink', 'value' => self::rented($assets)->count()],
+                ['key' => 'rented', 'label_key' => 'rep_src_rented', 'tone' => 'soft-violet', 'value' => self::rented($assets)->count()],
             ]),
             // What the bought ones cost — a rented asset is the lessor's, not a write-off of ours.
             ReportSummary::make('wo_purchase_value', 'มูลค่าซื้อที่ตัดจำหน่าย', $boughtValue, null, 'money')

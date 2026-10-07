@@ -46,7 +46,7 @@ class AssetOverviewReport extends TabularReport
         // Orange, not blue or violet: blue is ใช้งานอยู่ and violet is รอรับคืน in the Settings colours,
         // and both sit in the same tiles as these footers.
         'purchased' => ['label_key' => 'rep_src_purchased', 'tone' => 'soft-orange'],
-        'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'soft-pink'],
+        'rented' => ['label_key' => 'rep_src_rented', 'tone' => 'soft-violet'],
     ];
 
     /**
