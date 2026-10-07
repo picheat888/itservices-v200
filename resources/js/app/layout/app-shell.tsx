@@ -14,23 +14,20 @@ import { useNotificationToasts } from './use-notification-toasts';
 export function AppShell() {
     useDocumentTitle();
     useUserPreferences();
-    // Turns newly-arrived notifications into toasts. Lives here (inside the router)
-    // because tapping one navigates; the toasts themselves render in the app-wide
-    // Toaster mounted at the root.
+    // Inside the router: tapping a toast navigates.
     useNotificationToasts();
     const density = useUiStore((s) => s.density);
     const passwordDialogOpen = useUiStore((s) => s.passwordDialogOpen);
     const setPasswordDialog = useUiStore((s) => s.setPasswordDialog);
     const { user } = useAuth();
 
-    // Shared with SecurityTab via the same query key — updates immediately when admin saves.
+    // Same query key as SecurityTab.
     const { data: security } = useQuery({
         queryKey: ['security-settings'],
         queryFn: settingsApi.getSecurity,
         staleTime: 5 * 60_000,
     });
-    // A remembered sign-in lasts as long as its remember cookie, so the idle timer stands
-    // down for it — the server exempts it the same way (CheckSessionTimeout).
+    // Remembered sign-ins skip the idle timer, as the server does.
     const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
     const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(idleMinutes);
     const [notifOpen, setNotifOpen] = useState(false);
@@ -46,12 +43,7 @@ export function AppShell() {
                     {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} />}
                 </div>
 
-                {/* scrollbar-gutter keeps the bar's width reserved whether or not a page needs
-                    one, so moving between a long list and a short one does not shift the layout.
-                    --sticky-top: a sticky element stops at the inside of this padding (24px down),
-                    leaving a strip where rows show above a sticky table header; tables use
-                    top-[var(--sticky-top)] to stick flush with the top edge instead. */}
-                <main className="bg-content flex-1 overflow-y-auto p-6 [--sticky-top:-1.5rem] [scrollbar-gutter:stable]">
+                <main className="bg-content relative flex-1 overflow-y-auto p-6 [--sticky-top:-1.5rem] [scrollbar-gutter:stable]">
                     <Outlet />
                 </main>
             </div>
@@ -59,10 +51,7 @@ export function AppShell() {
             <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
 
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
-            {/* The first two block the app until a new password is set, and explain different
-                reasons: an admin set this one, versus the policy aged it out. The third is the
-                same form asked for on purpose — from the profile drawer, or from the expiry
-                warning in the tray — so it is dismissable and comes last. */}
+            {/* Forced password changes first; the voluntary one is dismissable */}
             {user?.must_change_password ? (
                 <SetPasswordDialog />
             ) : user?.password_expired ? (
