@@ -192,7 +192,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                                 key={s.key}
                                                                 title={`${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
                                                                 className={cn(
-                                                                    'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-slate-900/80',
+                                                                    'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white',
                                                                     FILL[s.tone],
                                                                 )}
                                                                 style={{ flexGrow: m[s.key] }}
