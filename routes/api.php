@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Permission\AuditLogController;
 use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
+use App\Http\Controllers\Api\Report\AssetTransferBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
@@ -110,6 +111,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/tickets/manual-sla/breakdown', TicketManualSlaBreakdownController::class)->defaults('key', 'tickets.manual_sla')->name('api.reports.tickets.manual-sla.breakdown');
     // "การตัดจำหน่ายทรัพย์สิน" — every month, the reasons, the categories and rented assets by contract above its rows.
     Route::get('reports/assets/writeoffs/breakdown', AssetWriteoffBreakdownController::class)->defaults('key', 'assets.writeoffs')->name('api.reports.assets.writeoffs.breakdown');
+    // "ประวัติโอนย้ายและรับคืน" — months, acceptance, warehouses, departments, categories and assets waiting now above its rows.
+    Route::get('reports/assets/transfer-history/breakdown', AssetTransferBreakdownController::class)->defaults('key', 'assets.transfer_history')->name('api.reports.assets.transfer-history.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
