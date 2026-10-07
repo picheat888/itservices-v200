@@ -22,10 +22,10 @@ type Month = AssetWriteoffBreakdown['months'][number];
 type Category = AssetWriteoffBreakdown['categories'][number];
 type Contract = AssetWriteoffBreakdown['contracts'][number];
 
-/** The three ways an asset leaves: bought orange, rented violet (as on /assets), rented written off another way amber. */
+/** The three ways an asset leaves: bought orange, rented handed back green, rented written off another way amber. */
 const SERIES: (ChartSeries & { key: 'bought' | 'returned' | 'rented_other' })[] = [
     { key: 'bought', label_key: 'rep_wo_series_bought', tone: 'soft-orange' },
-    { key: 'returned', label_key: 'rep_wo_series_returned', tone: 'soft-violet' },
+    { key: 'returned', label_key: 'rep_wo_series_returned', tone: 'soft-green' },
     { key: 'rented_other', label_key: 'rep_wo_series_rented_other', tone: 'soft-amber' },
 ];
 
@@ -43,7 +43,7 @@ const BANDS: (ChartSeries & { key: 'under_3' | 'from_3_to_5' | 'over_5' })[] = [
 ];
 
 const contractSeries = (overdue: boolean): ChartSeries[] => [
-    { key: 'returned', label_key: 'rep_wo_ct_col_returned', tone: 'soft-violet' },
+    { key: 'returned', label_key: 'rep_wo_ct_col_returned', tone: 'soft-green' },
     { key: 'written_off_other', label_key: 'rep_wo_ct_col_other', tone: 'soft-amber' },
     { key: 'still_out', label_key: overdue ? 'rep_wo_ct_out_overdue' : 'rep_wo_ct_col_out', tone: overdue ? 'soft-red' : 'asset-deployed' },
 ];
@@ -445,7 +445,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                 note={t('rep_wo_ct_sub')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch fill={FILL['soft-violet']}>{t('rep_wo_ct_col_returned')}</Swatch>
+                        <Swatch fill={FILL['soft-green']}>{t('rep_wo_ct_col_returned')}</Swatch>
                         <Swatch fill={FILL['soft-amber']}>{t('rep_wo_ct_col_other')}</Swatch>
                         <Swatch fill={FILL['asset-deployed']}>{t('rep_wo_ct_col_out')}</Swatch>
                         {contracts.some((c) => c.flag === 'overdue' && c.still_out > 0) && (
