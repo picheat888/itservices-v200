@@ -22,17 +22,17 @@ type Month = AssetWriteoffBreakdown['months'][number];
 type Category = AssetWriteoffBreakdown['categories'][number];
 type Contract = AssetWriteoffBreakdown['contracts'][number];
 
-/** The three ways an asset leaves, in the overview's soft tones (bought orange, rented pink). */
+/** The three ways an asset leaves: bought orange, rented violet (as on /assets), rented written off another way amber. */
 const SERIES: (ChartSeries & { key: 'bought' | 'returned' | 'rented_other' })[] = [
     { key: 'bought', label_key: 'rep_wo_series_bought', tone: 'soft-orange' },
-    { key: 'returned', label_key: 'rep_wo_series_returned', tone: 'soft-pink' },
-    { key: 'rented_other', label_key: 'rep_wo_series_rented_other', tone: 'soft-violet' },
+    { key: 'returned', label_key: 'rep_wo_series_returned', tone: 'soft-violet' },
+    { key: 'rented_other', label_key: 'rep_wo_series_rented_other', tone: 'soft-amber' },
 ];
 
 /** A reason's split: bought / rented (returned or not), the tiles' two source tones. */
 const SOURCES: ChartSeries[] = [
     { key: 'bought', label_key: 'rep_src_purchased', tone: 'soft-orange' },
-    { key: 'rented', label_key: 'rep_src_rented', tone: 'soft-pink' },
+    { key: 'rented', label_key: 'rep_src_rented', tone: 'soft-violet' },
 ];
 
 /** Age at write-off, youngest first: red under 3 years, blue (well apart from bought's orange) 3–5, green over 5. */
@@ -43,8 +43,8 @@ const BANDS: (ChartSeries & { key: 'under_3' | 'from_3_to_5' | 'over_5' })[] = [
 ];
 
 const contractSeries = (overdue: boolean): ChartSeries[] => [
-    { key: 'returned', label_key: 'rep_wo_ct_col_returned', tone: 'soft-pink' },
-    { key: 'written_off_other', label_key: 'rep_wo_ct_col_other', tone: 'soft-violet' },
+    { key: 'returned', label_key: 'rep_wo_ct_col_returned', tone: 'soft-violet' },
+    { key: 'written_off_other', label_key: 'rep_wo_ct_col_other', tone: 'soft-amber' },
     { key: 'still_out', label_key: overdue ? 'rep_wo_ct_out_overdue' : 'rep_wo_ct_col_out', tone: overdue ? 'soft-red' : 'asset-deployed' },
 ];
 
@@ -445,8 +445,8 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                 note={t('rep_wo_ct_sub')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch fill={FILL['soft-pink']}>{t('rep_wo_ct_col_returned')}</Swatch>
-                        <Swatch fill={FILL['soft-violet']}>{t('rep_wo_ct_col_other')}</Swatch>
+                        <Swatch fill={FILL['soft-violet']}>{t('rep_wo_ct_col_returned')}</Swatch>
+                        <Swatch fill={FILL['soft-amber']}>{t('rep_wo_ct_col_other')}</Swatch>
                         <Swatch fill={FILL['asset-deployed']}>{t('rep_wo_ct_col_out')}</Swatch>
                         {contracts.some((c) => c.flag === 'overdue' && c.still_out > 0) && (
                             <Swatch fill={FILL['soft-red']}>{t('rep_wo_ct_out_overdue')}</Swatch>
@@ -528,7 +528,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                                 TD,
                                                 NUM,
                                                 c.written_off_other > 0
-                                                    ? 'font-semibold text-violet-700 dark:text-violet-300'
+                                                    ? 'font-semibold text-amber-700 dark:text-amber-300'
                                                     : 'text-muted-foreground',
                                             )}
                                         >

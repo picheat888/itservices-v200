@@ -42,6 +42,8 @@ interface DataTableProps<T> {
     loading?: boolean;
     /** Custom content for the empty state (defaults to a plain "No data" line). */
     emptyState?: React.ReactNode;
+    /** Screen-reader name of the table (a visually hidden <caption>). */
+    caption?: string;
     /** Extra classes for the <table> — e.g. a `min-w-[…]` so the one flexible column keeps room on a
      *  narrow screen and the table scrolls sideways instead of squeezing that column to nothing. */
     tableClassName?: string;
@@ -87,6 +89,7 @@ export function DataTable<T>({
     filters,
     loading,
     emptyState,
+    caption,
     tableClassName,
     maxBodyHeight,
     fillHeight,
@@ -194,6 +197,7 @@ export function DataTable<T>({
                 {/* fillHeight: `h-full` makes the browser stretch the rows to fill the body exactly,
                     so the floored row count never leaves a gap under the last row. */}
                 <table className={cn('w-full text-sm', fillHeight && 'h-full', columns.some((c) => c.width) && 'table-fixed', tableClassName)}>
+                    {caption && <caption className="sr-only">{caption}</caption>}
                     {columns.some((c) => c.width) && (
                         <colgroup>
                             {columns.map((c) => (
@@ -331,9 +335,10 @@ export function DataTable<T>({
                             <button
                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                 disabled={safePage <= 1}
-                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                aria-label={t('page_prev')}
+                                className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                             >
-                                <ChevronLeft className="h-4 w-4" />
+                                <ChevronLeft aria-hidden className="h-4 w-4" />
                             </button>
                             <span className="text-foreground px-1 font-medium">
                                 {safePage} / {pageCount}
@@ -341,9 +346,10 @@ export function DataTable<T>({
                             <button
                                 onClick={() => setPage(Math.min(pageCount, safePage + 1))}
                                 disabled={safePage >= pageCount}
-                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                aria-label={t('page_next')}
+                                className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                             >
-                                <ChevronRight className="h-4 w-4" />
+                                <ChevronRight aria-hidden className="h-4 w-4" />
                             </button>
                         </div>
                     </div>

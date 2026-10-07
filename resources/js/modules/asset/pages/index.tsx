@@ -882,7 +882,7 @@ export default function AssetsPage() {
                                                         value: 'purchased',
                                                         label: t('asset_purchase'),
                                                         search: t('asset_purchase'),
-                                                        icon: <ToneDot tone="blue" />,
+                                                        icon: <ToneDot tone="orange" />,
                                                     },
                                                     {
                                                         value: 'rented',
@@ -1369,7 +1369,7 @@ export default function AssetsPage() {
                                         aria-label={t('asset_prev_page')}
                                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                                         disabled={page <= 1}
-                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                        className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                                     >
                                         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                                     </button>
@@ -1381,7 +1381,7 @@ export default function AssetsPage() {
                                         aria-label={t('asset_next_page')}
                                         onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
                                         disabled={page >= lastPage}
-                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                        className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                                     >
                                         <ChevronRight className="h-4 w-4" aria-hidden="true" />
                                     </button>

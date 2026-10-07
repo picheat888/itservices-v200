@@ -103,6 +103,8 @@ export const common: Dict = {
     branding_apply_note: 'การเปลี่ยนแปลงจะใช้ทันทีทั่วทั้งระบบ',
     export: 'ส่งออก',
     current_month: 'ปัจจุบัน',
+    page_prev: 'หน้าก่อนหน้า',
+    page_next: 'หน้าถัดไป',
     all_contracts: 'สัญญาทั้งหมด',
     all_contracts_hint: 'สัญญาทั้งหมดในองค์กร',
     new_contract: 'เพิ่มสัญญา',

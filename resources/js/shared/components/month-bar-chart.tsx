@@ -33,7 +33,7 @@ export function MonthBarChart({ data, emptyLabel, className }: { data: MonthBar[
     const label = (ym: string) => {
         const [y, m] = ym.split('-').map(Number);
         const mon = (lang === 'th' ? TH_MON : EN_MON)[(m || 1) - 1];
-        const yy = (lang === 'th' ? y + 543 : y) % 100;
+        const yy = String(y).slice(2);
         return { mon, yy };
     };
 

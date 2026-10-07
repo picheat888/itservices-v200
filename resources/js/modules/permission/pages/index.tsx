@@ -1241,9 +1241,10 @@ function AuditTab() {
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                             disabled={page <= 1}
-                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                            aria-label={t('page_prev')}
+                            className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                         >
-                            <ChevronLeft className="h-4 w-4" />
+                            <ChevronLeft aria-hidden className="h-4 w-4" />
                         </button>
                         <span className="text-foreground px-1 font-medium">
                             {page} / {totalPages}
@@ -1251,9 +1252,10 @@ function AuditTab() {
                         <button
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                             disabled={page >= totalPages}
-                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                            aria-label={t('page_next')}
+                            className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                         >
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight aria-hidden className="h-4 w-4" />
                         </button>
                     </div>
                 </div>

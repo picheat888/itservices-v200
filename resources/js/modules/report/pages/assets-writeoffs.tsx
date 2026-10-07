@@ -55,7 +55,7 @@ function SourceCell({ row }: { row: Row }) {
     const href = row._links?.contract;
     return (
         <div className="flex flex-col items-start">
-            <StatusBadge tone="pink" dot={false}>
+            <StatusBadge tone="violet" dot={false}>
                 {t('rep_src_rented')}
             </StatusBadge>
             {code &&

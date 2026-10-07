@@ -99,6 +99,7 @@ function TabularReportRows({
         );
     const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, filters, page, perPage, true);
     const canOpen = useCanOpen();
+    const rowsTitle = t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic');
 
     useEffect(() => {
         if (data) onTotalChange(data.meta.total);
@@ -133,9 +134,7 @@ function TabularReportRows({
             {showsTable && (
                 <Card className="overflow-clip">
                     <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
-                        <span className="text-sm font-semibold">
-                            {t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic')}
-                        </span>
+                        <h2 className="text-sm font-semibold">{rowsTitle}</h2>
                         <div className="flex items-center gap-3">
                             {data && (
                                 <span className="text-muted-foreground text-xs tabular-nums">
@@ -153,6 +152,7 @@ function TabularReportRows({
                             rowKey={(r) => r.id}
                             rowClassName={extras.rowClassName}
                             emptyState={emptyState}
+                            caption={rowsTitle}
                             loading={isLoading || isFetching}
                             server={{
                                 page,
