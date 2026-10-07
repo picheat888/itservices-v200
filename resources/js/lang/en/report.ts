@@ -534,7 +534,7 @@ export const report: Dict = {
     rep_wo_series_rented_other: 'Rented, written off otherwise',
     rep_wo_month_title: 'Write-offs by month',
     rep_wo_month_peak: 'Peak {month} ({n})',
-    rep_wo_month_aria: 'Bar chart of write-offs by month, {from} to {to}, {n} in total, peak {peak}',
+    rep_wo_month_aria: 'Bar chart of write-offs by month, {from} to {to}, {n} in total, {peak}',
     rep_wo_month_col: 'Month',
     rep_wo_month_col_total: 'Total',
     rep_wo_reason_title: 'Reasons for write-off',
