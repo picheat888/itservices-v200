@@ -131,11 +131,21 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 /* ─────────────────────────── month chart ─────────────────────────── */
 
-function MonthCard({ months }: { months: Month[] }) {
+function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const titleId = useId();
     const thisMonth = currentMonth();
+    const today = new Date();
+    const toDate = to ? new Date(`${to}T00:00:00`) : today;
+    const countedTo = toDate < today ? toDate : today;
+    const partialNote = t('rep_wo_month_partial_tip').replace(
+        '{date}',
+        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+            countedTo,
+        ),
+    );
+    const hasPartial = months.some((m) => m.month === thisMonth);
     const total = months.reduce((sum, m) => sum + m.total, 0);
     const peak = months.reduce<Month | null>((best, m) => (m.total > (best?.total ?? 0) ? m : best), null);
     const top = Math.max(1, peak?.total ?? 0);
@@ -155,7 +165,12 @@ function MonthCard({ months }: { months: Month[] }) {
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Legend series={SERIES} counts={counts} />
-                        {months.some((m) => m.month === thisMonth) && <Swatch fill="bg-brand">{t('rep_wo_month_partial')}</Swatch>}
+                        {hasPartial && (
+                            <span className="inline-flex items-center gap-1.5" title={partialNote}>
+                                <i aria-hidden className="outline-brand inline-block h-2.5 w-2.5 rounded-[3px] outline-1 outline-dashed" />
+                                {t('rep_wo_month_partial')}
+                            </span>
+                        )}
                     </span>
                 }
             />
@@ -167,7 +182,13 @@ function MonthCard({ months }: { months: Month[] }) {
                         <div aria-hidden className="border-border flex min-h-44 flex-1 items-end gap-1 border-b pt-[22px] sm:gap-2.5">
                             {months.map((m) => (
                                 <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                                    <div className="relative w-full max-w-8" style={{ height: `${(m.total / top) * 100}%` }}>
+                                    <div
+                                        className={cn(
+                                            'relative w-full max-w-8',
+                                            m.month === thisMonth && 'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
+                                        )}
+                                        style={{ height: `${(m.total / top) * 100}%` }}
+                                    >
                                         {m.total > 0 && (
                                             <span
                                                 className={cn(
@@ -183,8 +204,8 @@ function MonthCard({ months }: { months: Month[] }) {
                                                 m[s.key] > 0 ? (
                                                     <span
                                                         key={s.key}
-                                                        title={`${t(s.label_key)}: ${count(m[s.key], lang)}`}
-                                                        className={cn('block w-full', FILL[s.tone], m.month === thisMonth && 'opacity-55')}
+                                                        title={`${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
+                                                        className={cn('block w-full', FILL[s.tone])}
                                                         style={{ flexGrow: m[s.key] }}
                                                     />
                                                 ) : null,
@@ -210,6 +231,7 @@ function MonthCard({ months }: { months: Month[] }) {
                                 .replace('{to}', monthLabel(months[months.length - 1].month, lang, false, true))
                                 .replace('{n}', count(total, lang))
                                 .replace('{peak}', peakText)}
+                            {hasPartial && ` ${t('rep_wo_month_partial')} ${partialNote}`}
                         </p>
                     </div>
                     {/* Every month's numbers for a screen reader (the chart itself is one image). */}
@@ -638,7 +660,7 @@ export function WriteoffCards({ filters }: { filters: TabularFilters }) {
         <div className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                <MonthCard months={data.months} />
+                <MonthCard months={data.months} to={typeof filters.to === 'string' ? filters.to : null} />
                 <ReasonsCard reasons={data.reasons} />
             </div>
             <CategoryCard categories={data.categories} totals={data.category_totals} />
