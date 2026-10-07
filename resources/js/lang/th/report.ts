@@ -837,7 +837,7 @@ export const report: Dict = {
     rep_th_dept_shared: 'ใช้ร่วม (ไม่ผูกกับพนักงาน)',
     rep_th_no_department: 'ไม่ระบุแผนก',
     rep_th_cat_title: 'ส่งมอบตามหมวดหมู่',
-    rep_th_cat_sub: '{n} หมวดหมู่ รวม {m} ครั้ง',
+    rep_th_cat_sub: '{n} หมวดหมู่ | รวม {m} ครั้ง',
     rep_th_no_category: 'ไม่ระบุหมวดหมู่',
     rep_th_trips: '{n} ครั้ง',
     rep_th_trips_aria: 'ดูการเคลื่อนไหวทั้ง {n} ครั้งของ {code}',
