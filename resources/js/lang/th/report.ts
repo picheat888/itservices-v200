@@ -805,7 +805,7 @@ export const report: Dict = {
     rep_th_month_peak: 'ส่งมอบมากสุด {month} ({n} ครั้ง)',
     rep_th_month_aria: 'กราฟแท่งเข้า–ออกคลังรายเดือน {from} ถึง {to} ส่งมอบออก {out} ครั้ง กลับเข้าคลัง {in} ครั้ง',
     rep_th_wait_title: 'ค้างอยู่ตอนนี้',
-    rep_th_wait_sub: 'ตามสถานะทรัพย์สิน ไม่ขึ้นกับช่วงวันที่',
+    rep_th_wait_sub: 'สถานะทรัพย์สิน (ตอนนี้)',
     rep_th_wait_empty: 'ไม่มีเครื่องที่ค้างรอกดรับหรือรอรับคืน',
     rep_th_wait_accept: 'รอพนักงานกดรับ',
     rep_th_wait_return: 'รอ IT รับคืน',

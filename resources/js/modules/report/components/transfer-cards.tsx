@@ -444,7 +444,7 @@ function WaitingCard({ waiting }: { waiting: Waiting[] }) {
 
     return (
         <Card className="flex flex-col overflow-hidden xl:col-span-2">
-            <CardTitle title={t('rep_th_wait_title')} note={t('rep_th_wait_sub')} />
+            <CardTitle title={t('rep_th_wait_title')} sub={t('rep_th_wait_sub')} />
             {waiting.length === 0 ? (
                 <CardEmpty>{t('rep_th_wait_empty')}</CardEmpty>
             ) : (
