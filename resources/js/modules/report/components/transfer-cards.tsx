@@ -706,9 +706,14 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                                         {w.name}
                                     </th>
                                     <td className={cn(TD, NUM, w.back === 0 && 'text-muted-foreground')}>{count(w.back, lang)}</td>
-                                    <td className={cn(TD, 'w-1/2')}>
+                                    <td className={cn(TD, 'relative w-1/2')}>
+                                        <div aria-hidden className="absolute inset-y-0 right-3 left-3">
+                                            <span className="border-border absolute inset-y-0 left-1/2 border-l" />
+                                            <span className="border-border/70 absolute inset-y-0 left-1/4 border-l border-dashed" />
+                                            <span className="border-border/70 absolute inset-y-0 left-3/4 border-l border-dashed" />
+                                        </div>
                                         {/* Back in grows left from the middle, out grows right. */}
-                                        <div aria-hidden className="grid min-w-[9rem] grid-cols-2 gap-0.5">
+                                        <div aria-hidden className="relative grid min-w-[9rem] grid-cols-2 gap-0.5">
                                             <span className="flex justify-end">
                                                 <span
                                                     className={cn('block h-2.5 rounded-l-full', FILL[KIND_STYLE.return.tone])}
