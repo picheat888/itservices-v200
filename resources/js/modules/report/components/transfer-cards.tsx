@@ -209,17 +209,19 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                 <div aria-hidden className="absolute inset-0 flex items-start gap-1 sm:gap-2.5">
                                     {months.map((m) => (
                                         <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
-                                            <div className="relative flex w-full max-w-8 flex-col" style={{ height: `${(back(m) / down) * 100}%` }}>
-                                                {(['return', 'recall'] as const).map((k) =>
-                                                    m[k] > 0 ? (
-                                                        <span
-                                                            key={k}
-                                                            title={`${t(`asset_hist_kind_${k}`)}: ${count(m[k], lang)}`}
-                                                            className={cn('block w-full basis-0 last:rounded-b-md', FILL[KIND_STYLE[k].tone])}
-                                                            style={{ flexGrow: m[k] }}
-                                                        />
-                                                    ) : null,
-                                                )}
+                                            <div className="relative w-full max-w-8" style={{ height: `${(back(m) / down) * 100}%` }}>
+                                                <div className="flex h-full flex-col overflow-hidden rounded-b-md">
+                                                    {(['return', 'recall'] as const).map((k) =>
+                                                        m[k] > 0 ? (
+                                                            <span
+                                                                key={k}
+                                                                title={`${t(`asset_hist_kind_${k}`)}: ${count(m[k], lang)}`}
+                                                                className={cn('block w-full basis-0', FILL[KIND_STYLE[k].tone])}
+                                                                style={{ flexGrow: m[k] }}
+                                                            />
+                                                        ) : null,
+                                                    )}
+                                                </div>
                                                 {back(m) > 0 && (
                                                     <span className="absolute right-0 -bottom-[18px] left-0 text-center font-mono text-[11px] font-semibold tabular-nums">
                                                         {count(back(m), lang)}
