@@ -1,10 +1,4 @@
-/**
- * Small pieces every report card shares: the card heading, a master-data name in the reader's
- * language, folding a long list ("อื่น ๆ (n)" with "แสดงทั้งหมด (n)" under it), and the stacked
- * bar with each piece's count over it.
- * Used by tabular-charts.tsx, its cards (bucket-rows-card, places-card, asset-list-card)
- * and the Ticket pages' cards (backlog-board, ticket-breakdown-cards).
- */
+// Shared report card pieces: list folding, card heading, title with count, master-data label, stacked bar.
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -13,11 +7,7 @@ import type { ChartLabel, ChartSeries } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { FILL, TEXT } from './chart-tones';
 
-/**
- * The rows a list shows: all of them, or — past `top` and while not `open` — the first `top`
- * with the rest handed back to be summed into one "อื่น ๆ" row. By default one extra row is shown
- * rather than folded, since "อื่น ๆ (1)" would only hide a name; `spare: 0` folds at exactly `top`.
- */
+/** First `top` rows plus the rest to fold into "อื่น ๆ"; one spare row is shown instead of folding a single name. */
 export function fold<T>(rows: T[], top: number, open: boolean, spare = 1) {
     const folds = rows.length > top + spare;
     const folded = folds && !open;
@@ -35,9 +25,9 @@ export function FoldToggle({ open, total, onToggle }: { open: boolean; total: nu
             type="button"
             onClick={onToggle}
             aria-expanded={open}
-            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground mt-auto flex w-full items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors"
+            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring mt-auto flex w-full items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
-            <Icon className="h-3.5 w-3.5" />
+            <Icon aria-hidden className="h-3.5 w-3.5" />
             {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', String(total))}
         </button>
     );
@@ -78,19 +68,14 @@ export function useChartLabel() {
     return (label: ChartLabel | null) => (label && ((lang === 'th' && label.name_th) || label.name)) || t('rep_no_data');
 }
 
-/**
- * A stacked bar with each piece's count printed over it, `scale` being what a full-width bar
- * stands for — the largest row, or the row's own total for a bar that always fills the width.
- * Used by the department cards (tabular-charts, ticket-breakdown-cards), the IT staff card, the
- * backlog board and the category card (bucket-rows-card).
- */
+/** Stacked bar with each count over its piece; `scale` is what a full-width bar stands for. */
 export function StackBar({ values, series, scale }: { values: Record<string, number>; series: ChartSeries[]; scale: number }) {
     const t = useT();
     const width = (value: number) => `${Math.min(100, (value / Math.max(1, scale)) * 100)}%`;
 
     return (
         <div className="min-w-0">
-            <div className="flex h-4 items-end">
+            <div aria-hidden className="flex h-4 items-end">
                 {series.map((s) => {
                     const value = values[s.key] ?? 0;
                     if (value === 0) return null;
@@ -108,7 +93,7 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
                     );
                 })}
             </div>
-            <div className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
+            <div aria-hidden className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
                 {series.map((s) => {
                     const value = values[s.key] ?? 0;
                     if (value === 0) return null;
@@ -122,6 +107,12 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
                     );
                 })}
             </div>
+            <span className="sr-only">
+                {series
+                    .filter((s) => (values[s.key] ?? 0) > 0)
+                    .map((s) => `${t(s.label_key)} ${values[s.key]}`)
+                    .join(', ')}
+            </span>
         </div>
     );
 }

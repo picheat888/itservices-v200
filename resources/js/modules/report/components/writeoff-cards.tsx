@@ -1,5 +1,6 @@
 // Write-off report cards: by month, by reason, by category and rentals by contract (data: useAssetWriteoffBreakdown).
 import { useT } from '@/lang';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -12,6 +13,8 @@ import type { AssetWriteoffBreakdown, ChartSeries, TabularFilters } from '../typ
 import { CARD_HEADING_TINT } from './card-heading';
 import { fold, FoldToggle, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
+import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
+import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -47,7 +50,7 @@ const contractSeries = (overdue: boolean): ChartSeries[] => [
 
 /** A code that opens its record: the report lists' brand link, with a visible keyboard focus ring. */
 const CODE_LINK =
-    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-bold hover:underline focus-visible:ring-2 focus-visible:outline-none';
+    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
 /** A category that served under this many years on average is flagged. */
 const SHORT_LIFE_YEARS = 3;
@@ -55,7 +58,7 @@ const SHORT_LIFE_YEARS = 3;
 /** Reasons listed before the rest fold under "แสดงทั้งหมด". */
 const REASONS_SHOWN = 10;
 
-const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold whitespace-nowrap';
+const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
 const NUM = 'text-right font-mono tabular-nums';
 
@@ -63,6 +66,10 @@ const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
 const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
 // Two decimals and no ฿, like the money tile and the list's value column on the same page.
 const money = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const currentMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
 const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** "2026-09" → "ก.ย." (with "26" on the first column and each January when `withYear`). */
@@ -103,12 +110,13 @@ function Swatch({ fill, children }: { fill: string; children: React.ReactNode })
 /** A heading-right legend for a set of series, optionally with each one's count. */
 function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<string, number> }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     return (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {series.map((s) => (
                 <Swatch key={s.key} fill={FILL[s.tone]}>
                     {t(s.label_key)}
-                    {counts && <b className="text-foreground font-mono font-semibold tabular-nums">{counts[s.key] ?? 0}</b>}
+                    {counts && <b className="text-foreground font-mono font-semibold tabular-nums">{count(counts[s.key] ?? 0, lang)}</b>}
                 </Swatch>
             ))}
         </span>
@@ -125,6 +133,7 @@ function MonthCard({ months }: { months: Month[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const titleId = useId();
+    const thisMonth = currentMonth();
     const total = months.reduce((sum, m) => sum + m.total, 0);
     const peak = months.reduce<Month | null>((best, m) => (m.total > (best?.total ?? 0) ? m : best), null);
     const top = Math.max(1, peak?.total ?? 0);
@@ -141,37 +150,56 @@ function MonthCard({ months }: { months: Month[] }) {
                 id={titleId}
                 title={t('rep_wo_month_title')}
                 note={peak ? peakText : undefined}
-                sub={<Legend series={SERIES} counts={counts} />}
+                sub={
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <Legend series={SERIES} counts={counts} />
+                        {months.some((m) => m.month === thisMonth) && <Swatch fill="bg-brand">{t('rep_wo_month_partial')}</Swatch>}
+                    </span>
+                }
             />
             {total === 0 ? (
                 <Empty>{t('rep_wo_empty')}</Empty>
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex flex-1 flex-col">
-                        {/* As the overview's "in the warehouse" columns: a baseline, rounded tops, the value on top. */}
-                        <div aria-hidden className="border-border flex min-h-40 flex-1 items-end gap-1 border-b sm:gap-2">
+                        <div aria-hidden className="border-border flex min-h-44 flex-1 items-end gap-1 border-b pt-[22px] sm:gap-2.5">
                             {months.map((m) => (
-                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
-                                    {m.total > 0 && <span className="font-mono text-xs font-semibold tabular-nums">{m.total}</span>}
-                                    {/* Bought at the foot, rented on top. */}
-                                    <div
-                                        className="flex w-full max-w-14 flex-col-reverse overflow-hidden rounded-t-md"
-                                        style={{ height: `${(m.total / top) * 100}%` }}
-                                    >
-                                        {SERIES.map((s) =>
-                                            m[s.key] > 0 ? (
-                                                <span key={s.key} className={cn('block w-full', FILL[s.tone])} style={{ flexGrow: m[s.key] }} />
-                                            ) : null,
+                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                                    <div className="relative w-full max-w-8" style={{ height: `${(m.total / top) * 100}%` }}>
+                                        {m.total > 0 && (
+                                            <span
+                                                className={cn(
+                                                    'absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums',
+                                                    m.month === thisMonth && 'text-brand',
+                                                )}
+                                            >
+                                                {count(m.total, lang)}
+                                            </span>
                                         )}
+                                        <div className="flex h-full flex-col-reverse gap-px overflow-hidden rounded-t-md">
+                                            {SERIES.map((s) =>
+                                                m[s.key] > 0 ? (
+                                                    <span
+                                                        key={s.key}
+                                                        title={`${t(s.label_key)}: ${count(m[s.key], lang)}`}
+                                                        className={cn('block w-full', FILL[s.tone], m.month === thisMonth && 'opacity-55')}
+                                                        style={{ flexGrow: m[s.key] }}
+                                                    />
+                                                ) : null,
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <div aria-hidden className="mt-2 flex gap-1 sm:gap-2">
-                            {months.map((m, i) => (
-                                <span key={m.month} className="text-muted-foreground min-w-0 flex-1 truncate text-center text-xs">
-                                    {monthLabel(m.month, lang, i === 0 || m.month.endsWith('-01'))}
-                                </span>
+                        <div aria-hidden className="mt-1.5 flex gap-1 sm:gap-2.5">
+                            {months.map((m) => (
+                                <div key={m.month} className="min-w-0 flex-1 text-center font-mono text-[10.5px] whitespace-nowrap">
+                                    <b className={cn('block font-semibold', m.month === thisMonth ? 'text-brand' : 'text-foreground')}>
+                                        {monthLabel(m.month, lang, false)}
+                                    </b>
+                                    <span className="text-muted-foreground">{m.month.slice(2, 4)}</span>
+                                </div>
                             ))}
                         </div>
                         <p id={`${titleId}-summary`} className="sr-only">
@@ -201,9 +229,9 @@ function MonthCard({ months }: { months: Month[] }) {
                                 <tr key={m.month}>
                                     <th scope="row">{monthLabel(m.month, lang, false, true)}</th>
                                     {SERIES.map((s) => (
-                                        <td key={s.key}>{m[s.key]}</td>
+                                        <td key={s.key}>{count(m[s.key], lang)}</td>
                                     ))}
-                                    <td>{m.total}</td>
+                                    <td>{count(m.total, lang)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -243,7 +271,7 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
                                     {name(r)}
                                 </span>
                                 <StackBar values={{ bought: r.bought, rented: r.rented }} series={SOURCES} scale={max} />
-                                <b className="w-8 text-right font-mono font-semibold tabular-nums">{count(r.total, lang)}</b>
+                                <b className="min-w-8 text-right font-mono font-semibold tabular-nums">{count(r.total, lang)}</b>
                             </li>
                         ))}
                     </ul>
@@ -343,9 +371,9 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
                                         </td>
                                         <td className={cn(TD, 'text-right')}>
                                             {c.under_warranty > 0 ? (
-                                                <span className="inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 font-mono text-xs font-semibold text-amber-800 tabular-nums dark:text-amber-300">
+                                                <StatusBadge tone="amber" dot={false} className="font-mono tabular-nums">
                                                     {count(c.under_warranty, lang)}
-                                                </span>
+                                                </StatusBadge>
                                             ) : (
                                                 <span className="text-muted-foreground font-mono tabular-nums">0</span>
                                             )}
@@ -475,7 +503,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                                     {c.code}
                                                 </Link>
                                             ) : (
-                                                <span className="font-mono text-xs font-bold">{c.code}</span>
+                                                <span className="font-mono text-xs font-semibold">{c.code}</span>
                                             )}
                                             {c.name && (
                                                 <div className="text-muted-foreground max-w-[16rem] truncate text-xs" title={c.name}>
@@ -483,8 +511,14 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                                 </div>
                                             )}
                                         </th>
-                                        <td className={cn(TD, 'max-w-[12rem] truncate')} title={c.vendor ?? undefined}>
-                                            {c.vendor ?? <span className="text-muted-foreground">—</span>}
+                                        <td className={TD}>
+                                            {c.vendor ? (
+                                                <div className="max-w-[12rem] truncate" title={c.vendor}>
+                                                    {c.vendor}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground">—</span>
+                                            )}
                                         </td>
                                         <td className={cn(TD, 'font-mono text-xs whitespace-nowrap tabular-nums')}>{c.end_date ?? '—'}</td>
                                         <td className={cn(TD, NUM)}>{count(c.units, lang)}</td>
@@ -516,11 +550,6 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                                     series={contractSeries(c.flag === 'overdue')}
                                                     scale={c.units}
                                                 />
-                                                <span className="sr-only">
-                                                    {t('rep_wo_ct_progress')
-                                                        .replace('{x}', count(c.returned, lang))
-                                                        .replace('{y}', count(c.units, lang))}
-                                                </span>
                                             </div>
                                         </td>
                                         <td className={cn(TD, 'min-w-[14rem] text-[13px]')}>
@@ -544,25 +573,36 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
 
 /* ─────────────────────────── the page's cards ─────────────────────────── */
 
-/** Pulsing blocks in the cards' shapes while the breakdown loads (still for reduced motion). */
 function CardsSkeleton() {
-    const block = 'bg-muted rounded-xl motion-safe:animate-pulse';
     return (
         <div className="space-y-4" aria-hidden>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                <div className={cn(block, 'h-72')} />
-                <div className={cn(block, 'h-72')} />
+                <Card className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <ChartSkeleton />
+                </Card>
+                <Card className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <BarRowsSkeleton rows={6} />
+                </Card>
             </div>
-            <div className={cn(block, 'h-56')} />
-            <div className={cn(block, 'h-40')} />
+            <Card className="overflow-hidden">
+                <CardHeadingSkeleton />
+                <TableRowsSkeleton rows={5} />
+            </Card>
+            <Card className="overflow-hidden">
+                <CardHeadingSkeleton />
+                <TableRowsSkeleton rows={3} />
+            </Card>
         </div>
     );
 }
 
-/** The cards between the summary tiles and the list. */
 export function WriteoffCards({ filters }: { filters: TabularFilters }) {
-    const { data, isLoading } = useAssetWriteoffBreakdown(filters);
+    const t = useT();
+    const { data, isLoading, isError, error } = useAssetWriteoffBreakdown(filters);
 
+    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (

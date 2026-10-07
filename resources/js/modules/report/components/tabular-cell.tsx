@@ -37,7 +37,7 @@ export function HoursLeftBadge({ value }: { value: number }) {
     return <StatusBadge tone={tone}>{t(value < 0 ? 'rep_left_over' : 'rep_left_in').replace('{n}', amount)}</StatusBadge>;
 }
 
-const ZERO = 'text-muted-foreground/60';
+const ZERO = 'text-muted-foreground/60 dark:text-muted-foreground';
 
 export function TabularCell({ column, value, href }: { column: TabularColumnDef; value: unknown; href?: string }) {
     const content = <CellValue column={column} value={value} />;

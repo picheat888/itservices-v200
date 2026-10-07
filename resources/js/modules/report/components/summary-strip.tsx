@@ -22,6 +22,8 @@ import { KpiTile } from './kpi-tile';
 /** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
 const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 5: 'lg:grid-cols-3 xl:grid-cols-5' };
 
+export const summaryColumns = (tiles: number) => WIDE_COLUMNS[tiles] ?? 'lg:grid-cols-4';
+
 /** "38 วัน" / "5 ชม." — the same rule as HoursLeftBadge. */
 function duration(t: (key: string) => string, hours: number): string {
     const abs = Math.abs(hours);
@@ -58,7 +60,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const assetStatusColors = useUiStore((s) => s.assetStatusColors);
 
     return (
-        <div className={cn('grid grid-cols-2 gap-3', WIDE_COLUMNS[items.length] ?? 'lg:grid-cols-4')}>
+        <div className={cn('grid grid-cols-2 gap-3', summaryColumns(items.length))}>
             {items.map((item) => {
                 const locale = lang === 'th' ? 'th-TH' : 'en-US';
                 const value =
