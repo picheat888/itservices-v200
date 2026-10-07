@@ -94,12 +94,13 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                 const splitTotal = split.reduce((sum, part) => sum + part.value, 0);
                 // An hours tile splits into hours ("8.2" + "ชม."); every other split is a count. The unit
                 // stays out of the monospace number, where Thai would render spaced out.
-                const partNumber = (value: number) =>
-                    item.format === 'hours'
+                const partNumber = (value: number, counts = false) =>
+                    item.format === 'hours' && !counts
                         ? value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
                         : value.toLocaleString(locale);
-                const partUnit = item.format === 'hours' ? t('rep_hours') : null;
-                const partText = (value: number) => (partUnit ? `${partNumber(value)} ${partUnit}` : partNumber(value));
+                const partUnit = (counts = false) => (item.format === 'hours' && !counts ? t('rep_hours') : null);
+                const partText = (value: number, counts = false) =>
+                    partUnit(counts) ? `${partNumber(value, counts)} ${partUnit(counts)}` : partNumber(value, counts);
 
                 return (
                     <KpiTile
@@ -139,7 +140,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                           key: part.key,
                                           percent: (part.value / splitTotal) * 100,
                                           className: FILL[part.tone],
-                                          title: `${t(part.label_key)}: ${partText(part.value)}`,
+                                          title: `${t(part.label_key)}: ${partText(part.value, part.counts)}`,
                                       }))
                                     : undefined
                         }
@@ -150,8 +151,8 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                         <span key={part.key} className="inline-flex items-center gap-1">
                                             <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL[part.tone])} />
                                             {t(part.label_key)}
-                                            <b className="text-foreground font-mono font-semibold">{partNumber(part.value)}</b>
-                                            {partUnit}
+                                            <b className="text-foreground font-mono font-semibold">{partNumber(part.value, part.counts)}</b>
+                                            {partUnit(part.counts)}
                                         </span>
                                     ))}
                                     {/* What the split is over ("จาก 7 เคสที่เสร็จสิ้น"), when the report says. */}

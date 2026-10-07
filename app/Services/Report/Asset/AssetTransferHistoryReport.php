@@ -222,6 +222,42 @@ class AssetTransferHistoryReport extends TabularReport
         return ['rows' => $rows, 'trail' => $this->trailOf($rows)];
     }
 
+    /**
+     * Who held each relocated asset when it moved — an employee, shared use or nobody (in store) —
+     * read from its last hand-over, return or recall before the move.
+     *
+     * @param  Collection<int, AssetTransfer>  $relocations
+     * @return list<array{key: string, label_key: string, tone: string, value: int}>
+     */
+    private static function relocationHolders(Collection $relocations): array
+    {
+        $counts = ['employee' => 0, 'shared' => 0, 'store' => 0];
+        if ($relocations->isNotEmpty()) {
+            $before = AssetTransfer::query()
+                ->whereIn('asset_id', $relocations->pluck('asset_id')->unique())
+                ->where('kind', '!=', AssetTransferKind::Relocate->value)
+                ->orderBy('created_at')->orderBy('id')
+                ->get(['asset_id', 'kind', 'to_owner', 'created_at'])
+                ->groupBy('asset_id');
+            $people = Employee::query()->whereIn('code', $before->flatten()->pluck('to_owner')->filter()->unique())->pluck('code')->flip();
+            foreach ($relocations as $move) {
+                $last = $before->get($move->asset_id, collect())->filter(fn (AssetTransfer $t) => $t->created_at->lt($move->created_at))->last();
+                $holder = match (true) {
+                    $last === null, $last->kind !== AssetTransferKind::Handover => 'store',
+                    $people->has($last->to_owner) => 'employee',
+                    default => 'shared',
+                };
+                $counts[$holder]++;
+            }
+        }
+
+        return [
+            ['key' => 'employee', 'label_key' => 'rep_th_split_held', 'tone' => 'asset-deployed', 'value' => $counts['employee']],
+            ['key' => 'shared', 'label_key' => 'rep_th_split_shared', 'tone' => 'asset-common', 'value' => $counts['shared']],
+            ['key' => 'store', 'label_key' => 'rep_th_split_in_store', 'tone' => 'asset-ready', 'value' => $counts['store']],
+        ];
+    }
+
     /** @param Collection<int, AssetTransfer> $rows */
     private static function ofKind(Collection $rows, AssetTransferKind $kind): Collection
     {
@@ -256,16 +292,18 @@ class AssetTransferHistoryReport extends TabularReport
                     ['key' => 'pending_return', 'label_key' => 'rep_th_split_wait_return', 'tone' => 'asset-pending-return', 'value' => $waiting->where('status', 'pending_return')->count()],
                 ]),
             ReportSummary::make('th_accept_median', 'เวลากดรับมอบ (มัธยฐาน)', $acceptance['median_hours'], null, 'hours')
+                ->withSplit([
+                    ['key' => 'same_day', 'label_key' => 'rep_th_acc_same_day', 'tone' => 'soft-green', 'value' => $acceptance['same_day'], 'counts' => true],
+                    ['key' => 'next_day', 'label_key' => 'rep_th_acc_next_day', 'tone' => 'soft-blue', 'value' => $acceptance['next_day'], 'counts' => true],
+                    ['key' => 'later', 'label_key' => 'rep_th_acc_later', 'tone' => 'soft-amber', 'value' => $acceptance['later'], 'counts' => true],
+                ])
                 ->withNote($accepted === 0 ? null : [
                     'label_key' => 'rep_n_th_within_2_days',
                     'values' => ['met' => $acceptance['within_2_days'], 'n' => $accepted, 'pct' => (int) round($acceptance['within_2_days'] / $accepted * 100)],
                 ]),
             // A desk or room move: the holder stays the same, so it is neither out nor back in.
             ReportSummary::make('th_relocations', 'ย้ายที่ตั้ง (ครั้ง)', $relocations->count())
-                ->withNote($relocations->isEmpty() ? null : [
-                    'label_key' => 'rep_n_th_relocations',
-                    'values' => ['n' => $relocations->pluck('asset_id')->unique()->count()],
-                ]),
+                ->withSplit(self::relocationHolders($relocations)),
         ];
     }
 
