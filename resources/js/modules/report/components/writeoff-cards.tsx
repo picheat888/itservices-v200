@@ -15,6 +15,7 @@ import { CardTitle, CardEmpty as Empty, fold, FoldToggle, monthLabel, StackBar, 
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
+import { niceMax } from './weekly-ticket-chart';
 import { YearsTip } from './years-tip';
 
 type T = (key: string) => string;
@@ -111,7 +112,10 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
     const hasPartial = months.some((m) => m.month === thisMonth);
     const total = months.reduce((sum, m) => sum + m.total, 0);
     const peak = months.reduce<Month | null>((best, m) => (m.total > (best?.total ?? 0) ? m : best), null);
-    const top = Math.max(1, peak?.total ?? 0);
+    const top = niceMax(peak?.total ?? 0);
+    const ticks = [0, top / 2, top];
+    const minorTicks = [top / 4, (top * 3) / 4];
+    const at = (v: number) => ({ bottom: `${(v / top) * 100}%` });
     const counts = Object.fromEntries(SERIES.map((s) => [s.key, months.reduce((sum, m) => sum + m[s.key], 0)]));
     const peakText = peak
         ? t('rep_wo_month_peak')
@@ -142,48 +146,71 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex flex-1 flex-col">
-                        <div aria-hidden className="border-border flex min-h-44 flex-1 items-end gap-1 border-b pt-[22px] sm:gap-2.5">
-                            {months.map((m) => (
-                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                                    <div
-                                        className={cn(
-                                            'relative w-full max-w-8',
-                                            m.month === thisMonth && 'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
-                                        )}
-                                        style={{ height: `${(m.total / top) * 100}%` }}
+                        <div aria-hidden className="flex min-h-44 flex-1 gap-2 pt-[22px]">
+                            <div className="relative w-6 shrink-0">
+                                {ticks.map((v) => (
+                                    <span
+                                        key={v}
+                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        style={at(v)}
                                     >
-                                        {m.total > 0 && (
-                                            <span
+                                        {count(v, lang)}
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="border-border relative flex-1 border-b">
+                                {ticks.slice(1).map((v) => (
+                                    <div key={v} className="border-border absolute inset-x-0 border-t" style={at(v)} />
+                                ))}
+                                {minorTicks.map((v) => (
+                                    <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={at(v)} />
+                                ))}
+                                <div className="absolute inset-0 flex items-end gap-1 sm:gap-2.5">
+                                    {months.map((m) => (
+                                        <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                                            <div
                                                 className={cn(
-                                                    'absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums',
-                                                    m.month === thisMonth && 'text-brand',
+                                                    'relative w-full max-w-8',
+                                                    m.month === thisMonth && 'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
                                                 )}
+                                                style={{ height: `${(m.total / top) * 100}%` }}
                                             >
-                                                {count(m.total, lang)}
-                                            </span>
-                                        )}
-                                        <div className="flex h-full flex-col-reverse gap-px overflow-hidden rounded-t-md">
-                                            {SERIES.map((s) =>
-                                                m[s.key] > 0 ? (
+                                                {m.total > 0 && (
                                                     <span
-                                                        key={s.key}
-                                                        title={`${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
                                                         className={cn(
-                                                            'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-slate-900/80',
-                                                            FILL[s.tone],
+                                                            'absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums',
+                                                            m.month === thisMonth && 'text-brand',
                                                         )}
-                                                        style={{ flexGrow: m[s.key] }}
                                                     >
-                                                        {m.total > m[s.key] && m[s.key] / top >= SEGMENT_LABEL_SHARE ? count(m[s.key], lang) : null}
+                                                        {count(m.total, lang)}
                                                     </span>
-                                                ) : null,
-                                            )}
+                                                )}
+                                                <div className="flex h-full flex-col-reverse gap-px overflow-hidden rounded-t-md">
+                                                    {SERIES.map((s) =>
+                                                        m[s.key] > 0 ? (
+                                                            <span
+                                                                key={s.key}
+                                                                title={`${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
+                                                                className={cn(
+                                                                    'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-slate-900/80',
+                                                                    FILL[s.tone],
+                                                                )}
+                                                                style={{ flexGrow: m[s.key] }}
+                                                            >
+                                                                {m.total > m[s.key] && m[s.key] / top >= SEGMENT_LABEL_SHARE
+                                                                    ? count(m[s.key], lang)
+                                                                    : null}
+                                                            </span>
+                                                        ) : null,
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                        <div aria-hidden className="mt-1.5 flex gap-1 sm:gap-2.5">
+                        <div aria-hidden className="mt-1.5 flex gap-1 pl-8 sm:gap-2.5">
                             {months.map((m) => (
                                 <div key={m.month} className="min-w-0 flex-1 text-center font-mono text-[10.5px] whitespace-nowrap">
                                     <b className={cn('block font-semibold', m.month === thisMonth ? 'text-brand' : 'text-foreground')}>

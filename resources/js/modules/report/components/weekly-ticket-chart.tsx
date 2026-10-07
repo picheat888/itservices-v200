@@ -24,7 +24,7 @@ const PAD = { l: 34, r: 40, t: 14, b: 28 };
  * Rounds to a multiple of 2*step (not just step) so the middle tick, `max / 2`, always lands
  * on a whole step too — ticket counts are integers, so a tick like 62.5 would be wrong.
  */
-function niceMax(value: number): number {
+export function niceMax(value: number): number {
     const step = value <= 10 ? 2 : value <= 50 ? 10 : value <= 200 ? 25 : 100;
     const unit = step * 2;
     return Math.max(unit, Math.ceil(value / unit) * unit);
