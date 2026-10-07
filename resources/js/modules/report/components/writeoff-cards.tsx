@@ -20,7 +20,7 @@ import { YearsTip } from './years-tip';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
-type Month = AssetWriteoffBreakdown['months'][number];
+type Bucket = AssetWriteoffBreakdown['buckets'][number];
 type Category = AssetWriteoffBreakdown['categories'][number];
 type Contract = AssetWriteoffBreakdown['contracts'][number];
 
@@ -60,7 +60,7 @@ const SHORT_LIFE_YEARS = 3;
 /** Reasons listed before the rest fold under "แสดงทั้งหมด". */
 const REASONS_SHOWN = 10;
 
-/** A month bar's piece gets its own count once it is at least this share of the tallest bar. */
+/** A bar's piece gets its own count once it is at least this share of the tallest bar. */
 const SEGMENT_LABEL_SHARE = 0.12;
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
@@ -71,10 +71,6 @@ const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
 const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
 // Two decimals and no ฿, like the money tile and the list's value column on the same page.
 const money = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentMonth = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
 const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** A heading-right legend for a set of series, optionally with each one's count. */
@@ -93,47 +89,78 @@ function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<str
     );
 }
 
-/* ─────────────────────────── month chart ─────────────────────────── */
+/* ─────────────────────────── chart by week / month / quarter / year ─────────────────────────── */
 
-function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
+type Period = AssetWriteoffBreakdown['period'];
+
+/** Past this many bars, only every n-th bar keeps its label so they never run together. */
+const MAX_BAR_LABELS = 16;
+
+const dateFormat = (lang: Lang, withYear: boolean) =>
+    new Intl.DateTimeFormat(
+        lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB',
+        withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' },
+    );
+
+/** Two short lines under a bar: "10 ก.ค." / "26", "ก.ค." / "26", "Q3" / "26", "2026". */
+function bucketShort(b: Bucket, period: Period, lang: Lang): [string, string | null] {
+    const start = new Date(`${b.start}T00:00:00`);
+    const yy = b.start.slice(2, 4);
+    if (period === 'week') return [dateFormat(lang, false).format(new Date(`${b.from}T00:00:00`)), yy];
+    if (period === 'month') return [monthLabel(b.start.slice(0, 7), lang, false), yy];
+    if (period === 'quarter') return [`Q${Math.floor(start.getMonth() / 3) + 1}`, yy];
+    return [b.start.slice(0, 4), null];
+}
+
+/** A bar's full name: "10 ก.ค. – 16 ก.ค. 2026", "กรกฎาคม 2026", "Q3 2026", "2026". */
+function bucketLong(b: Bucket, period: Period, lang: Lang, t: T): string {
+    if (period === 'week') {
+        return `${dateFormat(lang, false).format(new Date(`${b.from}T00:00:00`))} – ${dateFormat(lang, true).format(new Date(`${b.to}T00:00:00`))}`;
+    }
+    if (period === 'month') return monthLabel(b.start.slice(0, 7), lang, false, true);
+    if (period === 'quarter') {
+        return t('rep_wo_quarter_long')
+            .replace('{q}', String(Math.floor((Number(b.start.slice(5, 7)) - 1) / 3) + 1))
+            .replace('{y}', b.start.slice(0, 4));
+    }
+    return b.start.slice(0, 4);
+}
+
+function PeriodCard({ period, buckets }: { period: Period; buckets: Bucket[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const titleId = useId();
-    const thisMonth = currentMonth();
-    const today = new Date();
-    const toDate = to ? new Date(`${to}T00:00:00`) : today;
-    const countedTo = toDate < today ? toDate : today;
-    const partialNote = t('rep_wo_month_partial_tip').replace(
-        '{date}',
-        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-            countedTo,
-        ),
-    );
-    const hasPartial = months.some((m) => m.month === thisMonth);
-    const total = months.reduce((sum, m) => sum + m.total, 0);
-    const peak = months.reduce<Month | null>((best, m) => (m.total > (best?.total ?? 0) ? m : best), null);
+    const total = buckets.reduce((sum, b) => sum + b.total, 0);
+    const peak = buckets.reduce<Bucket | null>((best, b) => (b.total > (best?.total ?? 0) ? b : best), null);
     const top = niceMax(peak?.total ?? 0);
     const ticks = [0, top / 2, top];
     const minorTicks = [top / 4, (top * 3) / 4];
     const at = (v: number) => ({ bottom: `${(v / top) * 100}%` });
-    const counts = Object.fromEntries(SERIES.map((s) => [s.key, months.reduce((sum, m) => sum + m[s.key], 0)]));
+    const counts = Object.fromEntries(SERIES.map((s) => [s.key, buckets.reduce((sum, b) => sum + b[s.key], 0)]));
+    const labelEvery = Math.ceil(buckets.length / MAX_BAR_LABELS);
+    const wide = buckets.length <= 6;
+    const partialNote = (b: Bucket) =>
+        t('rep_wo_month_partial_tip')
+            .replace('{from}', dateFormat(lang, false).format(new Date(`${b.from}T00:00:00`)))
+            .replace('{to}', dateFormat(lang, true).format(new Date(`${b.to}T00:00:00`)));
+    const title = t(`rep_wo_title_${period}`);
     const peakText = peak
         ? t('rep_wo_month_peak')
-              .replace('{month}', monthLabel(peak.month, lang, false, true))
+              .replace('{month}', bucketLong(peak, period, lang, t))
               .replace('{n}', count(peak.total, lang))
         : '';
 
     return (
-        <Card className="flex flex-col overflow-hidden">
+        <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
                 id={titleId}
-                title={t('rep_wo_month_title')}
+                title={title}
                 note={peak ? peakText : undefined}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Legend series={SERIES} counts={counts} />
-                        {hasPartial && (
-                            <span className="inline-flex items-center gap-1.5" title={partialNote}>
+                        {buckets.some((b) => b.partial) && (
+                            <span className="inline-flex items-center gap-1.5">
                                 <i aria-hidden className="outline-brand inline-block h-2.5 w-2.5 rounded-[3px] outline-1 outline-dashed" />
                                 {t('rep_wo_month_partial')}
                             </span>
@@ -166,39 +193,42 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                     <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={at(v)} />
                                 ))}
                                 <div className="absolute inset-0 flex items-end gap-1 sm:gap-2.5">
-                                    {months.map((m) => (
-                                        <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                                    {buckets.map((b) => (
+                                        <div key={b.start} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
                                             <div
                                                 className={cn(
-                                                    'relative w-full max-w-8',
-                                                    m.month === thisMonth && 'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
+                                                    'relative w-full',
+                                                    wide ? 'max-w-16' : 'max-w-8',
+                                                    b.partial &&
+                                                        b.total > 0 &&
+                                                        'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
                                                 )}
-                                                style={{ height: `${(m.total / top) * 100}%` }}
+                                                style={{ height: `${(b.total / top) * 100}%` }}
                                             >
-                                                {m.total > 0 && (
+                                                {b.total > 0 && (
                                                     <span
                                                         className={cn(
                                                             'absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums',
-                                                            m.month === thisMonth && 'text-brand',
+                                                            b.partial && 'text-brand',
                                                         )}
                                                     >
-                                                        {count(m.total, lang)}
+                                                        {count(b.total, lang)}
                                                     </span>
                                                 )}
                                                 <div className="flex h-full flex-col-reverse gap-px overflow-hidden rounded-t-md">
                                                     {SERIES.map((s) =>
-                                                        m[s.key] > 0 ? (
+                                                        b[s.key] > 0 ? (
                                                             <span
                                                                 key={s.key}
-                                                                title={`${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
+                                                                title={`${bucketLong(b, period, lang, t)}\n${t(s.label_key)}: ${count(b[s.key], lang)}${b.partial ? `\n${partialNote(b)}` : ''}`}
                                                                 className={cn(
                                                                     'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white',
                                                                     FILL[s.tone],
                                                                 )}
-                                                                style={{ flexGrow: m[s.key] }}
+                                                                style={{ flexGrow: b[s.key] }}
                                                             >
-                                                                {m.total > m[s.key] && m[s.key] / top >= SEGMENT_LABEL_SHARE
-                                                                    ? count(m[s.key], lang)
+                                                                {b.total > b[s.key] && b[s.key] / top >= SEGMENT_LABEL_SHARE
+                                                                    ? count(b[s.key], lang)
                                                                     : null}
                                                             </span>
                                                         ) : null,
@@ -211,30 +241,34 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                             </div>
                         </div>
                         <div aria-hidden className="mt-1.5 flex gap-1 pl-8 sm:gap-2.5">
-                            {months.map((m) => (
-                                <div key={m.month} className="min-w-0 flex-1 text-center font-mono text-[10.5px] whitespace-nowrap">
-                                    <b className={cn('block font-semibold', m.month === thisMonth ? 'text-brand' : 'text-foreground')}>
-                                        {monthLabel(m.month, lang, false)}
-                                    </b>
-                                    <span className="text-muted-foreground">{m.month.slice(2, 4)}</span>
-                                </div>
-                            ))}
+                            {buckets.map((b, i) => {
+                                const [main, sub] = bucketShort(b, period, lang);
+                                const shown = i % labelEvery === 0;
+                                return (
+                                    <div key={b.start} className="min-w-0 flex-1 text-center font-mono text-[10.5px] whitespace-nowrap">
+                                        {shown && (
+                                            <>
+                                                <b className={cn('block font-semibold', b.partial ? 'text-brand' : 'text-foreground')}>{main}</b>
+                                                {sub && <span className="text-muted-foreground">{sub}</span>}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                         <p id={`${titleId}-summary`} className="sr-only">
                             {t('rep_wo_month_aria')
-                                .replace('{from}', monthLabel(months[0].month, lang, false, true))
-                                .replace('{to}', monthLabel(months[months.length - 1].month, lang, false, true))
+                                .replace('{from}', bucketLong(buckets[0], period, lang, t))
+                                .replace('{to}', bucketLong(buckets[buckets.length - 1], period, lang, t))
                                 .replace('{n}', count(total, lang))
                                 .replace('{peak}', peakText)}
-                            {hasPartial && ` ${t('rep_wo_month_partial')} ${partialNote}`}
                         </p>
                     </div>
-                    {/* Every month's numbers for a screen reader (the chart itself is one image). */}
                     <table className="sr-only">
-                        <caption>{t('rep_wo_month_title')}</caption>
+                        <caption>{title}</caption>
                         <thead>
                             <tr>
-                                <th scope="col">{t('rep_wo_month_col')}</th>
+                                <th scope="col">{t(`rep_wo_col_${period}`)}</th>
                                 {SERIES.map((s) => (
                                     <th key={s.key} scope="col">
                                         {t(s.label_key)}
@@ -244,13 +278,16 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {months.map((m) => (
-                                <tr key={m.month}>
-                                    <th scope="row">{monthLabel(m.month, lang, false, true)}</th>
+                            {buckets.map((b) => (
+                                <tr key={b.start}>
+                                    <th scope="row">
+                                        {bucketLong(b, period, lang, t)}
+                                        {b.partial && ` (${partialNote(b)})`}
+                                    </th>
                                     {SERIES.map((s) => (
-                                        <td key={s.key}>{count(m[s.key], lang)}</td>
+                                        <td key={s.key}>{count(b[s.key], lang)}</td>
                                     ))}
-                                    <td>{count(m.total, lang)}</td>
+                                    <td>{count(b.total, lang)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -273,7 +310,7 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
         r.key === 'returned' ? t('rep_wo_outcome_returned') : r.key === 'none' ? t('rep_wo_reason_none') : (r.name ?? t('rep_wo_reason_none'));
 
     return (
-        <Card className="flex flex-col overflow-hidden">
+        <Card className="flex flex-col overflow-hidden xl:col-span-2">
             <CardTitle
                 title={t('rep_wo_reason_title')}
                 note={reasons.length > 0 ? t('rep_wo_reason_count').replace('{n}', String(reasons.length)) : undefined}
@@ -622,12 +659,12 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
 function CardsSkeleton() {
     return (
         <div className="space-y-4" aria-hidden>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                <Card className="overflow-hidden">
+            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
+                <Card className="overflow-hidden lg:col-span-2 xl:col-span-3">
                     <CardHeadingSkeleton />
                     <ChartSkeleton />
                 </Card>
-                <Card className="overflow-hidden">
+                <Card className="overflow-hidden xl:col-span-2">
                     <CardHeadingSkeleton />
                     <BarRowsSkeleton rows={6} />
                 </Card>
@@ -654,8 +691,8 @@ export function WriteoffCards({ filters }: { filters: TabularFilters }) {
     return (
         <div className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                <MonthCard months={data.months} to={typeof filters.to === 'string' ? filters.to : null} />
+            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
+                <PeriodCard period={data.period} buckets={data.buckets} />
                 <ReasonsCard reasons={data.reasons} />
             </div>
             <CategoryCard categories={data.categories} totals={data.category_totals} />

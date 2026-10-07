@@ -488,8 +488,10 @@ export interface ManualSlaBreakdown {
 
 /** What the "การตัดจำหน่ายทรัพย์สิน" page draws above its rows (AssetWriteoffReport::breakdown). */
 export interface AssetWriteoffBreakdown {
-    /** Every month of the range, oldest first, empty months included. */
-    months: { month: string; total: number; bought: number; returned: number; rented_other: number }[];
+    /** Bar size the backend picked for the range: about 4-24 bars. */
+    period: 'week' | 'month' | 'quarter' | 'year';
+    /** Every bar of the range, oldest first; from/to = the days it counts, partial when cut short. */
+    buckets: { start: string; from: string; to: string; partial: boolean; total: number; bought: number; returned: number; rented_other: number }[];
     /** Most first; key "returned" = handed back to the lessor, "none" = no reason picked. */
     reasons: { key: string; reason_id: number | null; name: string | null; total: number; bought: number; rented: number }[];
     /** Most first; a null id/name = no category. */
