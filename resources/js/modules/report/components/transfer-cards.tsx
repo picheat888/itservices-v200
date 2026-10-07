@@ -603,12 +603,12 @@ function WaitingCard({ waiting }: { waiting: Waiting[] }) {
 
 /* ─────────────────────────── acceptance ─────────────────────────── */
 
-const ACCEPT_TILES: { key: 'same_day' | 'next_day' | 'later' | 'waiting' | 'closed'; label_key: string; edge: string }[] = [
-    { key: 'same_day', label_key: 'rep_th_acc_same_day', edge: 'border-t-emerald-500' },
-    { key: 'next_day', label_key: 'rep_th_acc_next_day', edge: 'border-t-blue-500' },
-    { key: 'later', label_key: 'rep_th_acc_later', edge: 'border-t-amber-500' },
-    { key: 'waiting', label_key: 'rep_th_acc_waiting', edge: 'border-t-red-500' },
-    { key: 'closed', label_key: 'rep_th_acc_closed', edge: 'border-t-slate-400' },
+const ACCEPT_TILES: { key: 'same_day' | 'next_day' | 'later' | 'waiting' | 'closed'; label_key: string; edge: string; fill: string }[] = [
+    { key: 'same_day', label_key: 'rep_th_acc_same_day', edge: 'border-t-emerald-500', fill: 'bg-emerald-500' },
+    { key: 'next_day', label_key: 'rep_th_acc_next_day', edge: 'border-t-blue-500', fill: 'bg-blue-500' },
+    { key: 'later', label_key: 'rep_th_acc_later', edge: 'border-t-amber-500', fill: 'bg-amber-500' },
+    { key: 'waiting', label_key: 'rep_th_acc_waiting', edge: 'border-t-red-500', fill: 'bg-red-500' },
+    { key: 'closed', label_key: 'rep_th_acc_closed', edge: 'border-t-slate-400', fill: 'bg-slate-400' },
 ];
 
 function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown['acceptance'] }) {
@@ -622,10 +622,13 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
         values.closed > 0 ? n('rep_th_acc_closed_note', { r: a.recalled, n: a.never_accepted }) : null,
         a.to_shared > 0 ? n('rep_th_acc_shared_note', { n: a.to_shared }) : null,
     ].filter((s): s is string => s !== null);
+    const accepted = a.same_day + a.next_day + a.later;
+    const total = Object.values(values).reduce((sum, v) => sum + v, 0);
+    const pct = (v: number, of: number) => (of === 0 ? 0 : Math.round((v / of) * 100));
 
     return (
         <Card className="flex flex-col overflow-hidden">
-            <CardTitle title={t('rep_th_acc_title')} note={n('rep_th_acc_sub', { n: a.to_people })} />
+            <CardTitle title={t('rep_th_acc_title')} sub={n('rep_th_acc_sub', { n: a.to_people })} />
             {a.to_people === 0 ? (
                 <CardEmpty>{t('rep_th_acc_empty')}</CardEmpty>
             ) : (
@@ -640,6 +643,37 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                             </li>
                         ))}
                     </ul>
+                    <div className="flex flex-1 flex-col justify-center gap-2 px-5 py-3">
+                        {accepted > 0 && (
+                            <div className="flex flex-wrap items-baseline gap-x-2">
+                                <b className="font-mono text-2xl font-bold tabular-nums">{pct(a.within_2_days, accepted)}%</b>
+                                <span className="text-sm font-medium">{t('rep_th_acc_within2')}</span>
+                                <span className="text-muted-foreground text-xs">
+                                    {n('rep_th_acc_within2_of', { met: a.within_2_days, n: accepted })}
+                                </span>
+                            </div>
+                        )}
+                        <div aria-hidden className="bg-muted flex h-3 gap-px overflow-hidden rounded-full">
+                            {ACCEPT_TILES.map((tile) =>
+                                values[tile.key] > 0 ? (
+                                    <span
+                                        key={tile.key}
+                                        title={`${t(tile.label_key)} ${count(values[tile.key], lang)} (${pct(values[tile.key], total)}%)`}
+                                        className={cn('block h-full', tile.fill)}
+                                        style={{ width: `${(values[tile.key] / Math.max(1, total)) * 100}%` }}
+                                    />
+                                ) : null,
+                            )}
+                        </div>
+                        <div aria-hidden className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums">
+                            {ACCEPT_TILES.filter((tile) => values[tile.key] > 0).map((tile) => (
+                                <span key={tile.key} className="inline-flex items-center gap-1">
+                                    <i className={cn('inline-block h-2 w-2 rounded-full', tile.fill)} />
+                                    {pct(values[tile.key], total)}%
+                                </span>
+                            ))}
+                        </div>
+                    </div>
                     {notes.length > 0 && (
                         <ul className="text-muted-foreground space-y-1 px-5 pb-4 text-xs">
                             {notes.map((note) => (
