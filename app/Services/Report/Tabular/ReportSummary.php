@@ -47,7 +47,7 @@ final class ReportSummary
     /**
      * The same tile with a breakdown for its footer.
      *
-     * @param  list<array{key: string, label_key: string, tone: string, value: int|float}>  $split
+     * @param  list<array{key: string, label_key: string, tone: string, value: int|float, counts?: bool}>  $split
      */
     public function withSplit(array $split): self
     {

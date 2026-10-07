@@ -223,7 +223,9 @@ class AssetTransferHistoryReportTest extends TestCase
         $this->assertEquals(25, $summary['th_accept_median']['value']);
         $this->assertSame(['met' => 2, 'n' => 3, 'pct' => 67], $summary['th_accept_median']['note']['values']);
         $this->assertSame(1, $summary['th_relocations']['value']);
-        $this->assertSame(['n' => 1], $summary['th_relocations']['note']['values']);
+        // A6 was handed to shared use before it moved.
+        $this->assertSame(['employee' => 0, 'shared' => 1, 'store' => 0], array_column($summary['th_relocations']['split'], 'value', 'key'));
+        $this->assertSame([1, 1, 1], array_column($summary['th_accept_median']['split'], 'value'));
     }
 
     public function test_the_breakdown_lists_every_month_of_the_range_by_kind(): void
