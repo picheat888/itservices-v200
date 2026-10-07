@@ -167,8 +167,8 @@ class ContractApiTest extends TestCase
     public function test_links_and_unlinks_assets_via_asset_ids(): void
     {
         $this->actingAs($this->super());
-        $a1 = Asset::factory()->create();
-        $a2 = Asset::factory()->create();
+        $a1 = Asset::factory()->create(['status' => 'ready']);
+        $a2 = Asset::factory()->create(['status' => 'ready']);
 
         $base = [
             'code' => 'CT-LINK-1', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'details' => 'T', 'type' => 'hardware',
