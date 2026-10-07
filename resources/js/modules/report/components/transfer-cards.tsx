@@ -4,6 +4,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
+import { ArrowRight } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -13,6 +14,7 @@ import { CardEmpty, CardTitle, fold, FoldToggle, monthLabel } from './chart-part
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
+import { niceMax } from './weekly-ticket-chart';
 
 type Lang = 'th' | 'en';
 type Month = AssetTransferBreakdown['months'][number];
@@ -95,86 +97,144 @@ function FlowLegend({ months }: { months: Month[] }) {
     );
 }
 
+/** A tidy axis top at or above the value whose half is a whole number: 11 → 12, 3 → 4, 41 → 50. */
+function axisTop(value: number): number {
+    const steps = [4, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 60, 80, 100];
+    return steps.find((s) => s >= value) ?? niceMax(value);
+}
+
 function MonthFlowCard({ months }: { months: Month[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const titleId = useId();
     const back = (m: Month) => m.return + m.recall;
-    const up = Math.max(1, ...months.map((m) => m.handover));
+    const up = axisTop(Math.max(0, ...months.map((m) => m.handover)));
     // The lower half never shrinks below a quarter of the upper, so a single return still reads.
-    const down = Math.max(1, Math.ceil(up / 4), ...months.map(back));
+    const down = axisTop(Math.max(Math.ceil(up / 4), ...months.map(back)));
     const out = months.reduce((s, m) => s + m.handover, 0);
     const inn = months.reduce((s, m) => s + back(m), 0);
-    const moved = months.reduce((s, m) => s + m.relocate, 0);
     const peak = months.reduce<Month | null>((best, m) => (m.handover > (best?.handover ?? 0) ? m : best), null);
-    const notes = [
-        peak
-            ? t('rep_th_month_peak')
-                  .replace('{month}', monthLabel(peak.month, lang, false, true))
-                  .replace('{n}', count(peak.handover, lang))
-            : null,
-        moved > 0 ? t('rep_th_month_moved').replace('{n}', count(moved, lang)) : null,
-    ].filter(Boolean);
+    const upAt = (v: number) => ({ bottom: `${(v / up) * 100}%` });
+    const downAt = (v: number) => ({ top: `${(v / down) * 100}%` });
 
     return (
-        <Card className="flex flex-col overflow-hidden">
-            <CardTitle id={titleId} title={t('rep_th_month_title')} note={t('rep_th_month_note')} sub={<FlowLegend months={months} />} />
+        <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
+            <CardTitle
+                id={titleId}
+                title={t('rep_th_month_title')}
+                note={
+                    peak
+                        ? t('rep_th_month_peak')
+                              .replace('{month}', monthLabel(peak.month, lang, false, true))
+                              .replace('{n}', count(peak.handover, lang))
+                        : undefined
+                }
+                sub={<FlowLegend months={months} />}
+            />
             {out + inn === 0 ? (
                 <CardEmpty>{t('rep_th_empty')}</CardEmpty>
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
-                    <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex min-h-56 flex-1 flex-col">
-                        <div aria-hidden className="flex items-end gap-1 pt-[18px] sm:gap-2.5" style={{ flex: up }}>
-                            {months.map((m) => (
-                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                                    <div className="relative w-full max-w-8" style={{ height: `${(m.handover / up) * 100}%` }}>
-                                        {m.handover > 0 && (
-                                            <span className="absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums">
-                                                {count(m.handover, lang)}
-                                            </span>
-                                        )}
-                                        <span
-                                            title={`${t('asset_hist_kind_handover')}: ${count(m.handover, lang)}`}
-                                            className={cn('block h-full rounded-t-md', FILL[KIND_STYLE.handover.tone])}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div aria-hidden className="border-muted-foreground/60 border-t-2" />
-                        <div aria-hidden className="flex items-start gap-1 pb-[18px] sm:gap-2.5" style={{ flex: down }}>
-                            {months.map((m) => (
-                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
-                                    <div
-                                        className="relative flex w-full max-w-8 flex-col overflow-visible"
-                                        style={{ height: `${(back(m) / down) * 100}%` }}
+                    <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex min-h-56 flex-1 gap-2">
+                        <div aria-hidden className="flex w-11 shrink-0 flex-col">
+                            <div className="relative mt-[18px]" style={{ flex: up }}>
+                                {[up / 2, up].map((v) => (
+                                    <span
+                                        key={v}
+                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        style={upAt(v)}
                                     >
-                                        {(['return', 'recall'] as const).map((k) =>
-                                            m[k] > 0 ? (
-                                                <span
-                                                    key={k}
-                                                    title={`${t(`asset_hist_kind_${k}`)}: ${count(m[k], lang)}`}
-                                                    className={cn('block w-full last:rounded-b-md', FILL[KIND_STYLE[k].tone])}
-                                                    style={{ flexGrow: m[k] }}
-                                                />
-                                            ) : null,
-                                        )}
-                                        {back(m) > 0 && (
-                                            <span className="absolute right-0 -bottom-[18px] left-0 text-center font-mono text-[11px] font-semibold tabular-nums">
-                                                {count(back(m), lang)}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                        {count(v, lang)}
+                                    </span>
+                                ))}
+                                <span className="text-muted-foreground absolute right-0 bottom-1 inline-flex items-center gap-1 text-[10.5px] leading-none whitespace-nowrap">
+                                    <KindMark kind="handover" />
+                                    {t('rep_th_axis_out')}
+                                </span>
+                            </div>
+                            <div className="relative mb-[18px]" style={{ flex: down }}>
+                                <span className="text-muted-foreground absolute top-1.5 right-0 inline-flex items-center gap-1 text-[10.5px] leading-none whitespace-nowrap">
+                                    <KindMark kind="return" />
+                                    {t('rep_th_axis_in')}
+                                </span>
+                                {[down / 2, down].map((v) => (
+                                    <span
+                                        key={v}
+                                        className="text-muted-foreground absolute right-0 -translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        style={downAt(v)}
+                                    >
+                                        {count(v, lang)}
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="h-9 shrink-0" />
                         </div>
-                        <div aria-hidden className="mt-1.5 flex gap-1 sm:gap-2.5">
-                            {months.map((m) => (
-                                <div key={m.month} className="min-w-0 flex-1 text-center font-mono text-[10.5px] whitespace-nowrap">
-                                    <b className="text-foreground block font-semibold">{monthLabel(m.month, lang, false)}</b>
-                                    <span className="text-muted-foreground">{m.month.slice(2, 4)}</span>
+                        <div className="flex min-w-0 flex-1 flex-col">
+                            <div className="relative mt-[18px]" style={{ flex: up }}>
+                                <div aria-hidden>
+                                    {[up / 2, up].map((v) => (
+                                        <div key={v} className="border-border absolute inset-x-0 border-t" style={upAt(v)} />
+                                    ))}
+                                    {[up / 4, (up * 3) / 4].map((v) => (
+                                        <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={upAt(v)} />
+                                    ))}
                                 </div>
-                            ))}
+                                <div aria-hidden className="absolute inset-0 flex items-end gap-1 sm:gap-2.5">
+                                    {months.map((m) => (
+                                        <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                                            <div className="relative w-full max-w-8" style={{ height: `${(m.handover / up) * 100}%` }}>
+                                                {m.handover > 0 && (
+                                                    <span className="absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums">
+                                                        {count(m.handover, lang)}
+                                                    </span>
+                                                )}
+                                                <span
+                                                    title={`${t('asset_hist_kind_handover')}: ${count(m.handover, lang)}`}
+                                                    className={cn('block h-full rounded-t-md', FILL[KIND_STYLE.handover.tone])}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div aria-hidden className="border-muted-foreground/60 border-t-2" />
+                            <div className="relative mb-[18px]" style={{ flex: down }}>
+                                <div aria-hidden>
+                                    <div className="border-border absolute inset-x-0 border-t border-dashed" style={downAt(down / 2)} />
+                                    <div className="border-border absolute inset-x-0 border-t" style={downAt(down)} />
+                                </div>
+                                <div aria-hidden className="absolute inset-0 flex items-start gap-1 sm:gap-2.5">
+                                    {months.map((m) => (
+                                        <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
+                                            <div className="relative flex w-full max-w-8 flex-col" style={{ height: `${(back(m) / down) * 100}%` }}>
+                                                {(['return', 'recall'] as const).map((k) =>
+                                                    m[k] > 0 ? (
+                                                        <span
+                                                            key={k}
+                                                            title={`${t(`asset_hist_kind_${k}`)}: ${count(m[k], lang)}`}
+                                                            className={cn('block w-full basis-0 last:rounded-b-md', FILL[KIND_STYLE[k].tone])}
+                                                            style={{ flexGrow: m[k] }}
+                                                        />
+                                                    ) : null,
+                                                )}
+                                                {back(m) > 0 && (
+                                                    <span className="absolute right-0 -bottom-[18px] left-0 text-center font-mono text-[11px] font-semibold tabular-nums">
+                                                        {count(back(m), lang)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div aria-hidden className="flex h-9 shrink-0 gap-1 pt-1.5 sm:gap-2.5">
+                                {months.map((m) => (
+                                    <div key={m.month} className="min-w-0 flex-1 text-center text-[10.5px] whitespace-nowrap">
+                                        <b className="text-foreground block font-semibold">{monthLabel(m.month, lang, false)}</b>
+                                        <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                         <p id={`${titleId}-summary`} className="sr-only">
                             {t('rep_th_month_aria')
@@ -184,20 +244,12 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                 .replace('{in}', count(inn, lang))}
                         </p>
                     </div>
-                    {notes.length > 0 && (
-                        <ul className="text-muted-foreground mt-3 space-y-0.5 text-xs">
-                            {notes.map((note) => (
-                                <li key={note}>{note}</li>
-                            ))}
-                        </ul>
-                    )}
-                    {/* Every month's numbers for a screen reader (the chart itself is one image). */}
                     <table className="sr-only">
                         <caption>{t('rep_th_month_title')}</caption>
                         <thead>
                             <tr>
                                 <th scope="col">{t('rep_wo_month_col')}</th>
-                                {(['handover', 'return', 'recall', 'relocate'] as const).map((k) => (
+                                {(['handover', 'return', 'recall'] as const).map((k) => (
                                     <th key={k} scope="col">
                                         {t(`asset_hist_kind_${k}`)}
                                     </th>
@@ -211,12 +263,108 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                     <td>{count(m.handover, lang)}</td>
                                     <td>{count(m.return, lang)}</td>
                                     <td>{count(m.recall, lang)}</td>
-                                    <td>{count(m.relocate, lang)}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
+            )}
+        </Card>
+    );
+}
+
+/* ─────────────────────────── location updates ─────────────────────────── */
+
+function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['relocations'] }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const canOpen = useCanOpen();
+    const [open, setOpen] = useState(false);
+    const { folds, shown } = fold(relocations, ROWS_SHOWN, open);
+
+    return (
+        <Card className="flex flex-col overflow-hidden">
+            <CardTitle
+                title={t('rep_th_reloc_title')}
+                note={t('rep_th_reloc_sub')}
+                sub={relocations.length > 0 ? t('rep_th_reloc_count').replace('{n}', count(relocations.length, lang)) : undefined}
+            />
+            {relocations.length === 0 ? (
+                <CardEmpty>{t('rep_th_reloc_empty')}</CardEmpty>
+            ) : (
+                <>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <caption className="sr-only">{t('rep_th_reloc_title')}</caption>
+                            <thead>
+                                <tr className="bg-muted/40 border-border border-b">
+                                    <th scope="col" className={cn(TH, 'text-left')}>
+                                        {t('rep_th_reloc_col_at')}
+                                    </th>
+                                    <th scope="col" className={cn(TH, 'text-left')}>
+                                        {t('rep_th_reloc_col_asset')}
+                                    </th>
+                                    <th scope="col" className={cn(TH, 'text-left')}>
+                                        {t('rep_th_reloc_col_move')}
+                                    </th>
+                                    <th scope="col" className={cn(TH, 'text-left')}>
+                                        {t('rep_th_reloc_col_reason')}
+                                    </th>
+                                    <th scope="col" className={cn(TH, 'text-left')}>
+                                        {t('rep_th_reloc_col_by')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {shown.map((r) => {
+                                    const href = `/assets?view=${r.asset_id}`;
+                                    return (
+                                        <tr key={r.id} className="border-border/60 border-b last:border-b-0">
+                                            <td className={cn(TD, 'whitespace-nowrap')}>{shortDate(r.at, lang)}</td>
+                                            <th scope="row" className={cn(TD, 'text-left font-normal')}>
+                                                {canOpen(href) ? (
+                                                    <Link to={href} className={CODE_LINK} translate="no">
+                                                        {r.code}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="font-mono text-xs font-semibold" translate="no">
+                                                        {r.code}
+                                                    </span>
+                                                )}
+                                                <div className="text-muted-foreground max-w-[16rem] truncate text-xs" title={r.model}>
+                                                    {r.model}
+                                                </div>
+                                            </th>
+                                            <td className={TD}>
+                                                <span className="inline-flex flex-wrap items-center gap-1.5">
+                                                    <span className="text-muted-foreground">{r.from ?? '—'}</span>
+                                                    <ArrowRight
+                                                        aria-label={t('rep_th_reloc_to')}
+                                                        className="text-muted-foreground h-3.5 w-3.5 shrink-0"
+                                                    />
+                                                    <span className="font-medium">{r.to}</span>
+                                                </span>
+                                            </td>
+                                            <td className={TD}>
+                                                {r.reason ? (
+                                                    <div className="max-w-[18rem] truncate" title={r.reason}>
+                                                        {r.reason}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">—</span>
+                                                )}
+                                            </td>
+                                            <td className={cn(TD, 'whitespace-nowrap')}>
+                                                {r.by ?? <span className="text-muted-foreground">—</span>}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    {folds && <FoldToggle open={open} total={relocations.length} onToggle={() => setOpen((v) => !v)} />}
+                </>
             )}
         </Card>
     );
@@ -295,7 +443,7 @@ function WaitingCard({ waiting }: { waiting: Waiting[] }) {
     const back = waiting.filter((w) => w.status === 'pending_return');
 
     return (
-        <Card className="flex flex-col overflow-hidden">
+        <Card className="flex flex-col overflow-hidden xl:col-span-2">
             <CardTitle title={t('rep_th_wait_title')} note={t('rep_th_wait_sub')} />
             {waiting.length === 0 ? (
                 <CardEmpty>{t('rep_th_wait_empty')}</CardEmpty>
@@ -536,12 +684,12 @@ function CategoryCard({ categories }: { categories: AssetTransferBreakdown['cate
 function CardsSkeleton() {
     return (
         <div className="space-y-4" aria-hidden>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                <Card className="overflow-hidden">
+            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
+                <Card className="overflow-hidden lg:col-span-2 xl:col-span-3">
                     <CardHeadingSkeleton />
                     <ChartSkeleton />
                 </Card>
-                <Card className="overflow-hidden">
+                <Card className="overflow-hidden xl:col-span-2">
                     <CardHeadingSkeleton />
                     <BarRowsSkeleton rows={6} />
                 </Card>
@@ -570,7 +718,7 @@ export function TransferCards({ filters }: { filters: TabularFilters }) {
     return (
         <div className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <MonthFlowCard months={data.months} />
                 <WaitingCard waiting={data.waiting} />
             </div>
@@ -582,6 +730,7 @@ export function TransferCards({ filters }: { filters: TabularFilters }) {
                 <DepartmentCard departments={data.departments} shared={data.acceptance.to_shared} />
                 <CategoryCard categories={data.categories} />
             </div>
+            <RelocationCard relocations={data.relocations} />
         </div>
     );
 }
