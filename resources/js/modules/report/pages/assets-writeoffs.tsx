@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
+import { CODE_LINK } from '../components/chart-parts';
 import { TabularReportView } from '../components/tabular-report-view';
 import { WriteoffCards } from '../components/writeoff-cards';
 import { YearsTip } from '../components/years-tip';
@@ -11,9 +12,6 @@ import { useCanOpen } from '../hooks/use-can-open';
 type Row = Record<string, unknown> & { _links?: Record<string, string> };
 
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
-
-const CODE_LINK =
-    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
 function None() {
     return <span className="text-muted-foreground">—</span>;

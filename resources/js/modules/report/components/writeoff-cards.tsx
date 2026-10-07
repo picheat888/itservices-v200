@@ -3,16 +3,16 @@ import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle } from 'lucide-react';
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWriteoffBreakdown } from '../hooks/use-reports';
 import type { AssetWriteoffBreakdown, ChartSeries, TabularFilters } from '../types';
-import { CardTitle, CardEmpty as Empty, fold, FoldToggle, monthLabel, StackBar, Swatch } from './chart-parts';
+import { CardTitle, CODE_LINK, CardEmpty as Empty, fold, FoldToggle, monthLabel, StackBar, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
+import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { niceMax } from './weekly-ticket-chart';
@@ -50,10 +50,6 @@ const contractSeries = (overdue: boolean): ChartSeries[] => [
     { key: 'still_out', label_key: overdue ? 'rep_wo_ct_out_overdue' : 'rep_wo_ct_col_out', tone: overdue ? 'soft-red' : 'asset-deployed' },
 ];
 
-/** A code that opens its record: the report lists' brand link, with a visible keyboard focus ring. */
-const CODE_LINK =
-    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
-
 /** A category that served under this many years on average is flagged. */
 const SHORT_LIFE_YEARS = 3;
 
@@ -63,18 +59,21 @@ const REASONS_SHOWN = 10;
 /** A month bar's piece gets its own count once it is at least this share of the tallest bar. */
 const SEGMENT_LABEL_SHARE = 0.12;
 
-/** Past this many months the chart stops shrinking its bars and scrolls sideways instead. */
+/** Past this many months the chart may scroll sideways: it keeps at least SCROLL_MONTH_PX per month. */
 const SCROLL_AFTER_MONTHS = 60;
 
-/** Width per month when the chart scrolls: a 6px bar and a 2px gap. */
+/** Narrowest width per month once the chart may scroll: a 6px bar and a 2px gap. */
 const SCROLL_MONTH_PX = 8;
 
 /** How the month chart draws itself for this many months (1-6, 7-12, 13-24, more). */
-function monthDensity(n: number) {
-    if (n <= 6) return { bar: 'max-w-16', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, label: () => true };
-    if (n <= 12) return { bar: 'max-w-8', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, label: () => true };
-    if (n <= 24) return { bar: 'max-w-5', gap: 'gap-1', top: true, pieces: false, label: (i: number) => i % 2 === 0 };
-    return { bar: '', gap: 'gap-0.5', top: false, pieces: false, label: (_: number, month: string) => month.endsWith('-01') };
+function monthDensity(months: Month[]) {
+    const n = months.length;
+    const fromLast = (i: number) => (n - 1 - i) % 2 === 0;
+    const janOrFirst = (i: number, month: string) => month.endsWith('-01') || (i === 0 && !months.slice(1, 4).some((m) => m.month.endsWith('-01')));
+    if (n <= 6) return { bar: 'max-w-16', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, thin: false, label: () => true };
+    if (n <= 12) return { bar: 'max-w-8', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, thin: false, label: () => true };
+    if (n <= 24) return { bar: 'max-w-5', gap: 'gap-1', top: true, pieces: false, thin: false, label: fromLast };
+    return { bar: '', gap: 'gap-0.5', top: false, pieces: false, thin: true, label: janOrFirst };
 }
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
@@ -89,6 +88,10 @@ const currentMonth = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
+const endDate = (iso: string, lang: Lang) =>
+    new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+        new Date(`${iso}T00:00:00`),
+    );
 const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** A heading-right legend for a set of series, optionally with each one's count. */
@@ -112,7 +115,6 @@ function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<str
 function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const titleId = useId();
     const thisMonth = currentMonth();
     const today = new Date();
     const toDate = to ? new Date(`${to}T00:00:00`) : today;
@@ -136,25 +138,43 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
               .replace('{month}', monthLabel(peak.month, lang, false, true))
               .replace('{n}', count(peak.total, lang))
         : '';
-    const density = monthDensity(months.length);
+    const density = monthDensity(months);
     const scroll = months.length > SCROLL_AFTER_MONTHS;
     const scroller = useRef<HTMLDivElement>(null);
+    const [scrollbar, setScrollbar] = useState(0);
     useLayoutEffect(() => {
-        if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth;
-    }, [months.length]);
+        const element = scroller.current;
+        if (!element) return;
+        element.scrollLeft = element.scrollWidth;
+        const observer = new ResizeObserver(() => setScrollbar(element.offsetHeight - element.clientHeight));
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [months]);
+    const monthText = (m: Month) =>
+        [
+            monthLabel(m.month, lang, false, true),
+            ...SERIES.filter((s) => m[s.key] > 0).map((s) => `${t(s.label_key)} ${count(m[s.key], lang)}`),
+            `${t('rep_wo_month_col_total')} ${count(m.total, lang)}`,
+            m.month === thisMonth ? partialNote : null,
+        ]
+            .filter(Boolean)
+            .join(', ');
 
     return (
         <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
-                id={titleId}
                 title={t('rep_wo_month_title')}
                 note={peak ? peakText : undefined}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Legend series={SERIES} counts={counts} />
                         {hasPartial && (
-                            <span className="inline-flex items-center gap-1.5" title={partialNote}>
-                                <i aria-hidden className="outline-brand inline-block h-2.5 w-2.5 rounded-[3px] outline-1 outline-dashed" />
+                            <span className="inline-flex items-center gap-1.5">
+                                {density.thin ? (
+                                    <i aria-hidden className="bg-brand inline-block h-2 w-2 rounded-full" />
+                                ) : (
+                                    <i aria-hidden className="border-brand inline-block h-2.5 w-2.5 rounded-[3px] border border-dashed" />
+                                )}
                                 {t('rep_wo_month_partial')}
                             </span>
                         )}
@@ -165,140 +185,153 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                 <Empty>{t('rep_wo_empty')}</Empty>
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
-                    <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex flex-1 flex-col">
-                        <div aria-hidden className="flex min-h-56 flex-1 gap-2">
-                            <div className="w-6 shrink-0 pt-[22px] pb-9">
-                                <div className="relative h-full">
-                                    {ticks.map((v) => (
-                                        <span
-                                            key={v}
-                                            className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
-                                            style={at(v)}
-                                        >
-                                            {count(v, lang)}
-                                        </span>
-                                    ))}
-                                </div>
+                    <p className="sr-only">
+                        {t('rep_wo_month_aria')
+                            .replace('{from}', monthLabel(months[0].month, lang, false, true))
+                            .replace('{to}', monthLabel(months[months.length - 1].month, lang, false, true))
+                            .replace('{n}', count(total, lang))
+                            .replace('{peak}', peakText)}
+                        {hasPartial && ` ${t('rep_wo_month_partial')} ${partialNote}`}
+                    </p>
+                    <div className="flex min-h-56 flex-1 gap-2">
+                        <div aria-hidden className="w-6 shrink-0 pt-[22px]" style={{ paddingBottom: `calc(2.25rem + ${scrollbar}px)` }}>
+                            <div className="relative h-full">
+                                {ticks.map((v) => (
+                                    <span
+                                        key={v}
+                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        style={at(v)}
+                                    >
+                                        {count(v, lang)}
+                                    </span>
+                                ))}
                             </div>
-                            <div ref={scroller} className={cn('flex min-w-0 flex-1 flex-col', scroll && 'overflow-x-auto overflow-y-hidden')}>
-                                <div
-                                    className="flex min-w-full flex-1 flex-col"
-                                    style={scroll ? { width: months.length * SCROLL_MONTH_PX } : undefined}
-                                >
-                                    <div className="border-border relative mt-[22px] flex-1 border-b">
+                        </div>
+                        <div ref={scroller} className={cn('flex min-w-0 flex-1 flex-col', scroll && 'overflow-x-auto overflow-y-hidden')}>
+                            <div className="flex min-w-full flex-1 flex-col" style={scroll ? { width: months.length * SCROLL_MONTH_PX } : undefined}>
+                                <div className="border-border relative mt-[22px] flex-1 border-b">
+                                    <div aria-hidden>
                                         {ticks.slice(1).map((v) => (
                                             <div key={v} className="border-border absolute inset-x-0 border-t" style={at(v)} />
                                         ))}
                                         {minorTicks.map((v) => (
                                             <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={at(v)} />
                                         ))}
-                                        <div className={cn('absolute inset-0 flex items-end', density.gap)}>
-                                            {months.map((m) => (
-                                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                                                    <div
-                                                        className={cn(
-                                                            'relative w-full',
-                                                            density.bar,
-                                                            m.month === thisMonth &&
-                                                                m.total > 0 &&
-                                                                'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
-                                                        )}
-                                                        style={{ height: `${(m.total / top) * 100}%` }}
-                                                    >
-                                                        {density.top && m.total > 0 && (
-                                                            <span
-                                                                className={cn(
-                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
-                                                                    m.month === thisMonth && 'text-brand',
-                                                                )}
-                                                            >
-                                                                {count(m.total, lang)}
-                                                            </span>
-                                                        )}
-                                                        <div className="flex h-full flex-col-reverse gap-px overflow-hidden rounded-t-md">
-                                                            {SERIES.map((s) =>
-                                                                m[s.key] > 0 ? (
-                                                                    <span
-                                                                        key={s.key}
-                                                                        title={`${monthLabel(m.month, lang, false, true)}\n${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
-                                                                        className={cn(
-                                                                            'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white',
-                                                                            FILL[s.tone],
-                                                                        )}
-                                                                        style={{ flexGrow: m[s.key] }}
-                                                                    >
-                                                                        {density.pieces && m.total > m[s.key] && m[s.key] / top >= SEGMENT_LABEL_SHARE
-                                                                            ? count(m[s.key], lang)
-                                                                            : null}
-                                                                    </span>
-                                                                ) : null,
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
                                     </div>
-                                    <div className={cn('flex h-9 shrink-0 pt-1.5', density.gap)}>
-                                        {months.map((m, i) => (
-                                            <div key={m.month} className="relative min-w-0 flex-1">
-                                                {density.label(i, m.month) && (
-                                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 text-center font-mono text-[10.5px] whitespace-nowrap">
-                                                        <b
+                                    <div className={cn('absolute inset-0 flex items-end', density.gap)}>
+                                        {months.map((m) => (
+                                            <InfoPopover
+                                                key={m.month}
+                                                label={monthText(m)}
+                                                className="flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-end"
+                                                content={<MonthDetail month={m} partialNote={m.month === thisMonth ? partialNote : null} />}
+                                            >
+                                                <span
+                                                    aria-hidden
+                                                    className={cn('relative block w-full', density.bar)}
+                                                    style={{ height: `${(m.total / top) * 100}%` }}
+                                                >
+                                                    {m.month === thisMonth &&
+                                                        m.total > 0 &&
+                                                        (density.thin ? (
+                                                            <span className="bg-brand absolute -top-2.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full" />
+                                                        ) : (
+                                                            <span className="border-brand pointer-events-none absolute -inset-x-[3px] -top-[3px] bottom-0 rounded-t-md border-2 border-b-0 border-dashed" />
+                                                        ))}
+                                                    {density.top && m.total > 0 && (
+                                                        <span
                                                             className={cn(
-                                                                'block font-semibold',
-                                                                m.month === thisMonth ? 'text-brand' : 'text-foreground',
+                                                                'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                m.month === thisMonth && 'text-brand',
                                                             )}
                                                         >
-                                                            {monthLabel(m.month, lang, false)}
-                                                        </b>
-                                                        <span className="text-muted-foreground">{m.month.slice(2, 4)}</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                                            {count(m.total, lang)}
+                                                        </span>
+                                                    )}
+                                                    <span
+                                                        className={cn(
+                                                            'flex h-full flex-col-reverse gap-px overflow-hidden',
+                                                            !density.thin && 'rounded-t-md',
+                                                        )}
+                                                    >
+                                                        {SERIES.map((s) =>
+                                                            m[s.key] > 0 ? (
+                                                                <span
+                                                                    key={s.key}
+                                                                    className={cn(
+                                                                        'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white tabular-nums',
+                                                                        FILL[s.tone],
+                                                                    )}
+                                                                    style={{ flexGrow: m[s.key] }}
+                                                                >
+                                                                    {density.pieces && m.total > m[s.key] && m[s.key] / top >= SEGMENT_LABEL_SHARE
+                                                                        ? count(m[s.key], lang)
+                                                                        : null}
+                                                                </span>
+                                                            ) : null,
+                                                        )}
+                                                    </span>
+                                                </span>
+                                            </InfoPopover>
                                         ))}
                                     </div>
                                 </div>
+                                <div aria-hidden className={cn('flex h-9 shrink-0 pt-1.5', density.gap)}>
+                                    {months.map((m, i) => (
+                                        <div key={m.month} className="relative min-w-0 flex-1">
+                                            {density.label(i, m.month) && (
+                                                <div
+                                                    className={cn(
+                                                        'absolute top-0 font-mono text-[10.5px] whitespace-nowrap',
+                                                        density.thin && i === 0
+                                                            ? 'left-0 text-left'
+                                                            : density.thin && i === months.length - 1
+                                                              ? 'right-0 text-right'
+                                                              : 'left-1/2 -translate-x-1/2 text-center',
+                                                    )}
+                                                >
+                                                    <b
+                                                        className={cn(
+                                                            'block font-semibold',
+                                                            m.month === thisMonth ? 'text-brand' : 'text-foreground',
+                                                        )}
+                                                    >
+                                                        {monthLabel(m.month, lang, false)}
+                                                    </b>
+                                                    <span className="text-muted-foreground">{m.month.slice(2, 4)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                        <p id={`${titleId}-summary`} className="sr-only">
-                            {t('rep_wo_month_aria')
-                                .replace('{from}', monthLabel(months[0].month, lang, false, true))
-                                .replace('{to}', monthLabel(months[months.length - 1].month, lang, false, true))
-                                .replace('{n}', count(total, lang))
-                                .replace('{peak}', peakText)}
-                            {hasPartial && ` ${t('rep_wo_month_partial')} ${partialNote}`}
-                        </p>
                     </div>
-                    {/* Every month's numbers for a screen reader (the chart itself is one image). */}
-                    <table className="sr-only">
-                        <caption>{t('rep_wo_month_title')}</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col">{t('rep_wo_month_col')}</th>
-                                {SERIES.map((s) => (
-                                    <th key={s.key} scope="col">
-                                        {t(s.label_key)}
-                                    </th>
-                                ))}
-                                <th scope="col">{t('rep_wo_month_col_total')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {months.map((m) => (
-                                <tr key={m.month}>
-                                    <th scope="row">{monthLabel(m.month, lang, false, true)}</th>
-                                    {SERIES.map((s) => (
-                                        <td key={s.key}>{count(m[s.key], lang)}</td>
-                                    ))}
-                                    <td>{count(m.total, lang)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
                 </div>
             )}
         </Card>
+    );
+}
+
+/** A month's popover: its name, each colour's count, the total, and "counted to …" for this month. */
+function MonthDetail({ month, partialNote }: { month: Month; partialNote: string | null }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <div className="space-y-1">
+            <div className="font-semibold">{monthLabel(month.month, lang, false, true)}</div>
+            {SERIES.filter((s) => month[s.key] > 0).map((s) => (
+                <div key={s.key} className="flex items-center justify-between gap-4">
+                    <Swatch fill={FILL[s.tone]}>{t(s.label_key)}</Swatch>
+                    <b className="font-mono tabular-nums">{count(month[s.key], lang)}</b>
+                </div>
+            ))}
+            <div className="border-border flex items-center justify-between gap-4 border-t pt-1">
+                <span>{t('rep_wo_month_col_total')}</span>
+                <b className="font-mono tabular-nums">{count(month.total, lang)}</b>
+            </div>
+            {partialNote && <div className="text-muted-foreground">{partialNote}</div>}
+        </div>
     );
 }
 
@@ -317,7 +350,7 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
         <Card className="flex flex-col overflow-hidden xl:col-span-2">
             <CardTitle
                 title={t('rep_wo_reason_title')}
-                note={reasons.length > 0 ? t('rep_wo_reason_count').replace('{n}', String(reasons.length)) : undefined}
+                note={reasons.length > 0 ? t('rep_wo_reason_count').replace('{n}', count(reasons.length, lang)) : undefined}
                 sub={<Legend series={SOURCES} />}
             />
             {reasons.length === 0 ? (
@@ -361,22 +394,13 @@ function AgeBands({ category }: { category: Category }) {
 function ShortLifeWarning() {
     const t = useT();
     return (
-        <TooltipProvider delayDuration={150}>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <button
-                        type="button"
-                        aria-label={t('rep_wo_short_life')}
-                        className="focus-visible:ring-ring inline-flex cursor-help rounded-sm focus-visible:ring-2 focus-visible:outline-none"
-                    >
-                        <AlertTriangle aria-hidden className="h-3.5 w-3.5" />
-                    </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs text-left font-sans text-xs font-normal whitespace-normal">
-                    {t('rep_wo_short_life_tip')}
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+        <InfoPopover
+            label={t('rep_wo_short_life')}
+            content={t('rep_wo_short_life_tip')}
+            className="-my-1 inline-flex h-6 w-6 items-center justify-center"
+        >
+            <AlertTriangle aria-hidden className="h-3.5 w-3.5" />
+        </InfoPopover>
     );
 }
 
@@ -495,21 +519,33 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
 /* ─────────────────────────── contracts ─────────────────────────── */
 
 /** What the contract needs next, worded from its flag; the extra lines stand on their own. */
-function contractTodo(t: T, c: Contract): { main: string; tone: 'bad' | 'warn' | 'ok' | 'muted'; extra: string[] } {
+function contractTodo(t: T, lang: Lang, c: Contract): { main: string; tone: 'bad' | 'warn' | 'ok' | 'muted'; extra: string[] } {
     const d = c.days_left === null ? null : Math.abs(c.days_left);
     const extra: string[] = [];
-    if (c.flag === 'running' && c.returned_early > 0) extra.push(t('rep_wo_ct_early').replace('{n}', String(c.returned_early)));
-    if (c.written_off_other > 0) extra.push(t('rep_wo_ct_other').replace('{n}', String(c.written_off_other)));
+    if (c.flag === 'running' && c.returned_early > 0) extra.push(t('rep_wo_ct_early').replace('{n}', count(c.returned_early, lang)));
+    if (c.written_off_other > 0) extra.push(t('rep_wo_ct_other').replace('{n}', count(c.written_off_other, lang)));
 
     switch (c.flag) {
         case 'overdue':
-            return { main: t('rep_wo_ct_overdue').replace('{d}', String(d)).replace('{n}', String(c.still_out)), tone: 'bad', extra };
+            return {
+                main: t('rep_wo_ct_overdue')
+                    .replace('{d}', count(d ?? 0, lang))
+                    .replace('{n}', count(c.still_out, lang)),
+                tone: 'bad',
+                extra,
+            };
         case 'ending_soon':
-            return { main: t('rep_wo_ct_ending_soon').replace('{d}', String(d)).replace('{n}', String(c.still_out)), tone: 'warn', extra };
+            return {
+                main: t('rep_wo_ct_ending_soon')
+                    .replace('{d}', count(d ?? 0, lang))
+                    .replace('{n}', count(c.still_out, lang)),
+                tone: 'warn',
+                extra,
+            };
         case 'all_returned':
             return { main: t('rep_wo_ct_all_returned'), tone: 'ok', extra };
         default:
-            return { main: d === null ? t('rep_wo_ct_no_end') : t('rep_wo_ct_running').replace('{d}', String(d)), tone: 'muted', extra };
+            return { main: d === null ? t('rep_wo_ct_no_end') : t('rep_wo_ct_running').replace('{d}', count(d, lang)), tone: 'muted', extra };
     }
 }
 
@@ -581,7 +617,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                         <tbody>
                             {contracts.map((c) => {
                                 const href = `/contracts?view=${c.id}`;
-                                const todo = contractTodo(t, c);
+                                const todo = contractTodo(t, lang, c);
                                 return (
                                     <tr key={c.id} className="border-border/60 border-b last:border-b-0">
                                         <th scope="row" className={cn(TD, 'text-left font-normal')}>
@@ -607,7 +643,9 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                                 <span className="text-muted-foreground">—</span>
                                             )}
                                         </td>
-                                        <td className={cn(TD, 'font-mono text-xs whitespace-nowrap tabular-nums')}>{c.end_date ?? '—'}</td>
+                                        <td className={cn(TD, 'whitespace-nowrap')}>
+                                            {c.end_date ? endDate(c.end_date, lang) : <span className="text-muted-foreground">—</span>}
+                                        </td>
                                         <td className={cn(TD, NUM)}>{count(c.units, lang)}</td>
                                         <td className={cn(TD, NUM, c.returned === 0 && 'text-muted-foreground')}>{count(c.returned, lang)}</td>
                                         <td

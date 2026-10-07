@@ -148,7 +148,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                 <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
                                     {split.map((part) => (
                                         <span key={part.key} className="inline-flex items-center gap-1">
-                                            <i className={cn('inline-block h-2 w-2 rounded-full', FILL[part.tone])} />
+                                            <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL[part.tone])} />
                                             {t(part.label_key)}
                                             <b className="text-foreground font-mono font-semibold">{partNumber(part.value)}</b>
                                             {partUnit}
