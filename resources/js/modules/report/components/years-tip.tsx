@@ -23,7 +23,7 @@ export function YearsTip({ years, children }: { years: number; children: React.R
         <TooltipProvider delayDuration={150}>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <span className="decoration-muted-foreground/60 cursor-help underline decoration-dotted underline-offset-4">
+                    <span className="cursor-help">
                         <span aria-hidden>{children}</span>
                         <span className="sr-only">{words}</span>
                     </span>
