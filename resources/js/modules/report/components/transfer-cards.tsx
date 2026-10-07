@@ -798,7 +798,7 @@ function DepartmentCard({ departments, shared }: { departments: AssetTransferBre
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_th_dept_title')}
-                note={t('rep_th_dept_sub').replace('{n}', count(departments.length, lang)).replace('{m}', count(total, lang))}
+                sub={t('rep_th_dept_sub').replace('{n}', count(departments.length, lang)).replace('{m}', count(total, lang))}
             />
             {rows.length === 0 && shared === 0 ? (
                 <CardEmpty>{t('rep_th_empty')}</CardEmpty>

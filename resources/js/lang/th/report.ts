@@ -833,7 +833,7 @@ export const report: Dict = {
     rep_th_wh_col_out: 'ส่งมอบออก',
     rep_th_wh_col_bar: 'สัดส่วนเข้า–ออก',
     rep_th_dept_title: 'ส่งมอบให้แผนกไหน',
-    rep_th_dept_sub: '{n} แผนก รวม {m} ครั้ง',
+    rep_th_dept_sub: '{n} แผนก | รวม {m} ครั้ง',
     rep_th_dept_shared: 'ใช้ร่วม (ไม่ผูกกับพนักงาน)',
     rep_th_no_department: 'ไม่ระบุแผนก',
     rep_th_cat_title: 'ส่งมอบตามหมวดหมู่',
