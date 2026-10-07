@@ -492,7 +492,7 @@ export const report: Dict = {
     rep_assets_overview_title: 'ภาพรวมของทรัพย์สิน',
     rep_assets_overview_desc: 'ทุกเครื่อง แยกตามแผนก คลัง ส่วนกลาง และตัดจำหน่าย พร้อมรายการ',
     rep_assets_transfer_history_title: 'ประวัติโอนย้าย และรับคืน',
-    rep_assets_transfer_history_desc: 'ส่งมอบ รับคืน เรียกคืน และย้ายที่ตั้งตามช่วงเวลา พนักงานกดรับเร็วแค่ไหน และเครื่องที่ค้างรอกดรับหรือรอคืน',
+    rep_assets_transfer_history_desc: 'การเคลื่อนไหวของทรัพย์สิน ความเร็วในการกดรับ และเครื่องที่ยังค้างอยู่',
     rep_assets_writeoffs_title: 'การตัดจำหน่ายทรัพย์สิน',
     rep_assets_writeoffs_desc: 'ทรัพย์สินที่ออกจากทะเบียนในช่วงวันที่เลือก ใช้ไปนานแค่ไหน ออกเพราะอะไร และเครื่องเช่าที่ถึงเวลาต้องคืน',
     rep_c_written_off_at: 'วันที่ตัดจำหน่าย',

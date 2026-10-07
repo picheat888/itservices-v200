@@ -493,8 +493,7 @@ export const report: Dict = {
     rep_assets_overview_title: 'Asset overview',
     rep_assets_overview_desc: 'Every asset by department, warehouse, shared location and write-off, with the full list',
     rep_assets_transfer_history_title: 'Transfer and return history',
-    rep_assets_transfer_history_desc:
-        'Handovers, returns, recalls and relocations over a period, how fast employees accept, and what waits to be accepted or returned',
+    rep_assets_transfer_history_desc: 'Asset moves, how fast staff accept, and what is still waiting',
     rep_assets_writeoffs_title: 'Asset write-offs',
     rep_assets_writeoffs_desc: 'Write-offs by service life and reason, plus rentals due back',
     rep_c_written_off_at: 'Written off',
