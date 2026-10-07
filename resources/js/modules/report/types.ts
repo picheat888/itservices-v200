@@ -571,6 +571,19 @@ export interface AssetTransferBreakdown {
         cause: 'handover' | 'request' | 'resign' | null;
         days: number;
     }[];
+    /** Location updates in the range, newest first (the holder stays the same). */
+    relocations: {
+        id: number;
+        asset_id: number;
+        /** "Y-m-d H:i" */
+        at: string;
+        code: string;
+        model: string;
+        from: string | null;
+        to: string;
+        reason: string | null;
+        by: string | null;
+    }[];
 }
 
 export interface TabularRows {

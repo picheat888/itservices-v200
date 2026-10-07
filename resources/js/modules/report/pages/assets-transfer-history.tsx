@@ -180,7 +180,7 @@ export default function AssetsTransferHistoryReportPage() {
         <TabularReportView
             reportKey="assets.transfer_history"
             extras={{
-                tiles: 4,
+                tiles: 5,
                 innerColumns: INNER,
                 beforeTable: ({ filters }) => <TransferCards filters={filters} />,
                 rowsTitle: 'rep_th_rows_title',

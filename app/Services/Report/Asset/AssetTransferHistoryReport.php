@@ -236,6 +236,7 @@ class AssetTransferHistoryReport extends TabularReport
         $returns = self::ofKind($rows, AssetTransferKind::Return)->count();
         $recalls = self::ofKind($rows, AssetTransferKind::Recall)->count();
         $waiting = collect(TransferTrail::waiting($filters));
+        $relocations = self::ofKind($rows, AssetTransferKind::Relocate);
         $accepted = $acceptance['same_day'] + $acceptance['next_day'] + $acceptance['later'];
 
         return [
@@ -259,6 +260,12 @@ class AssetTransferHistoryReport extends TabularReport
                     'label_key' => 'rep_n_th_within_2_days',
                     'values' => ['met' => $acceptance['within_2_days'], 'n' => $accepted, 'pct' => (int) round($acceptance['within_2_days'] / $accepted * 100)],
                 ]),
+            // A desk or room move: the holder stays the same, so it is neither out nor back in.
+            ReportSummary::make('th_relocations', 'ย้ายที่ตั้ง (ครั้ง)', $relocations->count())
+                ->withNote($relocations->isEmpty() ? null : [
+                    'label_key' => 'rep_n_th_relocations',
+                    'values' => ['n' => $relocations->pluck('asset_id')->unique()->count()],
+                ]),
         ];
     }
 
@@ -280,7 +287,34 @@ class AssetTransferHistoryReport extends TabularReport
             'departments' => self::departments($handovers, $trail),
             'categories' => self::categories($handovers, $trail),
             'waiting' => TransferTrail::waiting($filters),
+            'relocations' => $this->relocations($filters),
         ];
+    }
+
+    /**
+     * Every location update in the range, newest first: the asset, where from and to, why and by whom.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{id: int, asset_id: int, at: string, code: string, model: string, from: ?string, to: string, reason: ?string, by: ?string}>
+     */
+    private function relocations(array $filters): array
+    {
+        return $this->filtered($filters)
+            ->where('kind', AssetTransferKind::Relocate->value)
+            ->orderByDesc('created_at')->orderByDesc('id')
+            ->get(['id', 'asset_id', 'asset_tag', 'asset_model', 'from_owner', 'to_owner', 'reason', 'performed_by', 'created_at'])
+            ->map(fn (AssetTransfer $t) => [
+                'id' => $t->id,
+                'asset_id' => $t->asset_id,
+                'at' => $t->created_at->format('Y-m-d H:i'),
+                'code' => $t->asset_tag,
+                'model' => $t->asset_model,
+                'from' => $t->from_owner,
+                'to' => $t->to_owner,
+                'reason' => $t->reason,
+                'by' => $t->performed_by,
+            ])
+            ->all();
     }
 
     /**
@@ -432,6 +466,11 @@ class AssetTransferHistoryReport extends TabularReport
                     },
                     $w['days'],
                 ], $b['waiting']),
+            ],
+            [
+                'title' => 'อัปเดตสถานที่',
+                'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'รุ่น', 'จาก', 'ไป', 'เหตุผล', 'ผู้ทำรายการ'],
+                'rows' => array_map(fn (array $r) => [$r['at'], $r['code'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by']], $b['relocations']),
             ],
         ];
     }

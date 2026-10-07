@@ -142,6 +142,18 @@ class AssetTransferHistoryReportTest extends TestCase
     }
 
     /** @return array<string, mixed> */
+    public function test_the_breakdown_lists_location_updates_newest_first(): void
+    {
+        $relocations = $this->breakdown()['relocations'];
+
+        $this->assertCount(1, $relocations);
+        $this->assertSame(
+            ['at' => '2026-07-15 09:00', 'from' => 'Floor 1', 'to' => 'Floor 2', 'by' => 'IT Team'],
+            collect($relocations[0])->only(['at', 'from', 'to', 'by'])->all(),
+        );
+        $this->assertSame([], $this->breakdown(self::RANGE.'&kind=handover')['relocations']);
+    }
+
     private function breakdown(string $query = self::RANGE): array
     {
         return $this->actingAs($this->viewer())
@@ -210,6 +222,8 @@ class AssetTransferHistoryReportTest extends TestCase
         $this->assertSame('red', $summary['th_waiting_now']['attention']);
         $this->assertEquals(25, $summary['th_accept_median']['value']);
         $this->assertSame(['met' => 2, 'n' => 3, 'pct' => 67], $summary['th_accept_median']['note']['values']);
+        $this->assertSame(1, $summary['th_relocations']['value']);
+        $this->assertSame(['n' => 1], $summary['th_relocations']['note']['values']);
     }
 
     public function test_the_breakdown_lists_every_month_of_the_range_by_kind(): void
@@ -296,8 +310,10 @@ class AssetTransferHistoryReportTest extends TestCase
             $sheets = $export->sheets();
             $titles = array_map(fn ($sheet) => $sheet->title(), $sheets);
             $waiting = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'ค้างอยู่ตอนนี้');
+            $moves = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'อัปเดตสถานที่');
 
-            return count($sheets) === 8
+            return count($sheets) === 9
+                && $moves->array() === [['2026-07-15 09:00', 'A6', 'Latitude 5440', 'Floor 1', 'Floor 2', null, 'IT Team']]
                 && in_array('การกดรับมอบ', $titles, true)
                 && $waiting->array()[0][0] === 'A2'
                 && $waiting->array()[2][6] === 'ลาออก';
