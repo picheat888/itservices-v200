@@ -240,53 +240,18 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertSame(['label_key' => 'rep_n_wo_rented_overdue_none'], $summary['wo_rented_overdue']['note']);
     }
 
-    public function test_the_breakdown_lists_every_month_of_a_half_year_range_including_empty_ones(): void
+    public function test_the_breakdown_lists_every_month_of_the_range_including_empty_ones(): void
     {
         $this->seedAssets();
 
-        $breakdown = $this->breakdown('from=2026-04-15&to=2026-09-30');
+        $months = $this->breakdown('from=2026-06-15&to=2026-09-30')['months'];
 
-        // April is cut by the range, September by today (25 Sep): both partial.
-        $this->assertSame('month', $breakdown['period']);
         $this->assertSame([
-            ['start' => '2026-04-01', 'from' => '2026-04-15', 'to' => '2026-04-30', 'partial' => true, 'total' => 0, 'bought' => 0, 'returned' => 0, 'rented_other' => 0],
-            ['start' => '2026-05-01', 'from' => '2026-05-01', 'to' => '2026-05-31', 'partial' => false, 'total' => 0, 'bought' => 0, 'returned' => 0, 'rented_other' => 0],
-            ['start' => '2026-06-01', 'from' => '2026-06-01', 'to' => '2026-06-30', 'partial' => false, 'total' => 0, 'bought' => 0, 'returned' => 0, 'rented_other' => 0],
-            ['start' => '2026-07-01', 'from' => '2026-07-01', 'to' => '2026-07-31', 'partial' => false, 'total' => 1, 'bought' => 1, 'returned' => 0, 'rented_other' => 0],
-            ['start' => '2026-08-01', 'from' => '2026-08-01', 'to' => '2026-08-31', 'partial' => false, 'total' => 2, 'bought' => 1, 'returned' => 1, 'rented_other' => 0],
-            ['start' => '2026-09-01', 'from' => '2026-09-01', 'to' => '2026-09-25', 'partial' => true, 'total' => 5, 'bought' => 3, 'returned' => 1, 'rented_other' => 1],
-        ], $breakdown['buckets']);
-    }
-
-    public function test_a_short_range_is_drawn_by_week(): void
-    {
-        $this->seedAssets();
-
-        $breakdown = $this->breakdown(self::RANGE);
-        $buckets = collect($breakdown['buckets'])->keyBy('start');
-
-        // 1 Aug - 30 Sep: Monday weeks from 27 Jul to 28 Sep, the first cut to 1-2 Aug.
-        $this->assertSame('week', $breakdown['period']);
-        $this->assertCount(10, $buckets);
-        $this->assertSame(['from' => '2026-08-01', 'to' => '2026-08-02', 'partial' => true], collect($buckets['2026-07-27'])->only(['from', 'to', 'partial'])->all());
-        $this->assertSame(1, $buckets['2026-08-10']['total']);
-        $this->assertSame(['total' => 3, 'bought' => 2, 'returned' => 0, 'rented_other' => 1], collect($buckets['2026-08-31'])->only(['total', 'bought', 'returned', 'rented_other'])->all());
-        $this->assertSame(7, $buckets->sum('total'));
-    }
-
-    public function test_long_ranges_are_drawn_by_quarter_then_by_year(): void
-    {
-        $this->seedAssets();
-
-        $quarters = $this->breakdown('from=2024-01-01&to=2026-09-30');
-        $this->assertSame('quarter', $quarters['period']);
-        $this->assertCount(11, $quarters['buckets']);
-        $this->assertSame(['start' => '2026-07-01', 'partial' => true, 'total' => 8], collect(last($quarters['buckets']))->only(['start', 'partial', 'total'])->all());
-
-        $years = $this->breakdown('from=2018-01-01&to=2026-09-30');
-        $this->assertSame('year', $years['period']);
-        $this->assertCount(9, $years['buckets']);
-        $this->assertSame(8, last($years['buckets'])['total']);
+            ['month' => '2026-06', 'total' => 0, 'bought' => 0, 'returned' => 0, 'rented_other' => 0],
+            ['month' => '2026-07', 'total' => 1, 'bought' => 1, 'returned' => 0, 'rented_other' => 0],
+            ['month' => '2026-08', 'total' => 2, 'bought' => 1, 'returned' => 1, 'rented_other' => 0],
+            ['month' => '2026-09', 'total' => 5, 'bought' => 3, 'returned' => 1, 'rented_other' => 1],
+        ], $months);
     }
 
     public function test_the_breakdown_groups_reasons_with_returns_and_none_apart(): void
@@ -413,10 +378,8 @@ class AssetWriteoffReportTest extends TestCase
             $sheets = $export->sheets();
             $rows = last($sheets);
 
-            return $sheets[1]->title() === 'แยกตามสัปดาห์'
-                && count($sheets[1]->array()) === 10
-                && $sheets[1]->array()[0] === ['1 ส.ค. - 2 ส.ค. 2026', 0, 0, 0, 0]
-                && in_array(['10 ส.ค. - 16 ส.ค. 2026', 1, 1, 0, 0], $sheets[1]->array(), true)
+            return $sheets[1]->title() === 'แยกตามเดือน'
+                && $sheets[1]->array() === [['ส.ค. 2026', 2, 1, 1, 0], ['ก.ย. 2026', 5, 3, 1, 1]]
                 && $sheets[2]->title() === 'แยกตามเหตุผล'
                 && in_array(['คืนผู้ให้เช่า', 2, 0, 2], $sheets[2]->array(), true)
                 && in_array(['ไม่ระบุเหตุผล', 1, 1, 0], $sheets[2]->array(), true)
