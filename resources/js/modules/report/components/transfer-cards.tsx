@@ -706,24 +706,21 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                                         {w.name}
                                     </th>
                                     <td className={cn(TD, NUM, w.back === 0 && 'text-muted-foreground')}>{count(w.back, lang)}</td>
-                                    <td className={cn(TD, 'relative w-1/2')}>
-                                        <div aria-hidden className="absolute inset-y-0 right-3 left-3">
-                                            <span className="border-border absolute inset-y-0 left-1/2 border-l" />
-                                            <span className="border-border/70 absolute inset-y-0 left-1/4 border-l border-dashed" />
-                                            <span className="border-border/70 absolute inset-y-0 left-3/4 border-l border-dashed" />
-                                        </div>
-                                        {/* Back in grows left from the middle, out grows right. */}
-                                        <div aria-hidden className="relative grid min-w-[9rem] grid-cols-2 gap-0.5">
-                                            <span className="flex justify-end">
+                                    <td className={cn(TD, 'w-1/2')}>
+                                        {/* Back in grows left from the middle, out grows right; each track is the scale's max. */}
+                                        <div aria-hidden className="grid min-w-[9rem] grid-cols-2 gap-0.5">
+                                            <span className="bg-muted flex h-2.5 justify-end overflow-hidden rounded-l-full">
                                                 <span
-                                                    className={cn('block h-2.5 rounded-l-full', FILL[KIND_STYLE.return.tone])}
+                                                    className={cn('block h-full rounded-l-full', FILL[KIND_STYLE.return.tone])}
                                                     style={{ width: `${(w.back / max) * 100}%` }}
                                                 />
                                             </span>
-                                            <span
-                                                className={cn('block h-2.5 rounded-r-full', FILL[KIND_STYLE.handover.tone])}
-                                                style={{ width: `${(w.out / max) * 100}%` }}
-                                            />
+                                            <span className="bg-muted flex h-2.5 overflow-hidden rounded-r-full">
+                                                <span
+                                                    className={cn('block h-full rounded-r-full', FILL[KIND_STYLE.handover.tone])}
+                                                    style={{ width: `${(w.out / max) * 100}%` }}
+                                                />
+                                            </span>
                                         </div>
                                     </td>
                                     <td className={cn(TD, NUM, 'font-semibold', w.out === 0 && 'text-muted-foreground font-normal')}>
