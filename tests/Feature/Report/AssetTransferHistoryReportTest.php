@@ -221,7 +221,7 @@ class AssetTransferHistoryReportTest extends TestCase
         // A4 has waited 17 days.
         $this->assertSame('red', $summary['th_waiting_now']['attention']);
         $this->assertEquals(25, $summary['th_accept_median']['value']);
-        $this->assertSame(['met' => 2, 'n' => 3, 'pct' => 67], $summary['th_accept_median']['note']['values']);
+        $this->assertNull($summary['th_accept_median']['note']);
         $this->assertSame(1, $summary['th_relocations']['value']);
         // A6 was handed to shared use before it moved.
         $this->assertSame(['employee' => 0, 'shared' => 1, 'store' => 0], array_column($summary['th_relocations']['split'], 'value', 'key'));

@@ -781,7 +781,6 @@ export const report: Dict = {
     rep_th_split_in_store: 'In store',
     rep_th_split_wait_accept: 'To accept',
     rep_th_split_wait_return: 'To receive back',
-    rep_n_th_within_2_days: 'Accepted within 2 days: {met} of {n} ({pct}%)',
     rep_c_asset_moves: 'Moves of this asset',
     rep_c_th_outcome: 'What happened',
     rep_c_outcome_hours: 'What happened (h)',
