@@ -63,9 +63,9 @@ export function MonthBarChart({ data, emptyLabel, className }: { data: MonthBar[
                                 {d.count}
                             </span>
                         </div>
-                        <div className="text-center font-mono text-[10.5px] whitespace-nowrap">
+                        <div className="text-center text-[10.5px] whitespace-nowrap">
                             <b className={cn('block font-semibold', now ? 'text-brand' : 'text-foreground')}>{mon}</b>
-                            <span className="text-muted-foreground">{yy}</span>
+                            <span className="text-muted-foreground tabular-nums">{yy}</span>
                         </div>
                     </div>
                 );
