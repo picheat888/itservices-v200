@@ -60,7 +60,6 @@ const BANDS: (ChartSeries & { key: 'under_3' | 'from_3_to_5' | 'over_5' })[] = [
     { key: 'over_5', label_key: 'rep_wo_band_over_5', tone: 'soft-green' },
 ];
 
-/** Contract bar series: returned, written off otherwise, still out (red once the contract has ended). */
 const contractSeries = (overdue: boolean): ChartSeries[] => [
     { key: 'returned', label_key: 'rep_wo_ct_col_returned', tone: 'soft-pink' },
     { key: 'written_off_other', label_key: 'rep_wo_ct_col_other', tone: 'soft-violet' },
