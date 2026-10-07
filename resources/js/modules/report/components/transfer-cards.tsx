@@ -147,15 +147,18 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                         {count(v, lang)}
                                     </span>
                                 ))}
-                                <span className="text-muted-foreground absolute right-0 bottom-1 inline-flex items-center gap-1 text-[10.5px] leading-none whitespace-nowrap">
-                                    <KindMark kind="handover" />
-                                    {t('rep_th_axis_out')}
-                                </span>
                             </div>
+                            <div className="h-0.5 shrink-0" />
                             <div className="relative mb-[18px]" style={{ flex: down }}>
-                                <span className="text-muted-foreground absolute top-1.5 right-0 inline-flex items-center gap-1 text-[10.5px] leading-none whitespace-nowrap">
-                                    <KindMark kind="return" />
-                                    {t('rep_th_axis_in')}
+                                <span className="text-muted-foreground absolute top-0 left-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-start gap-2 text-[10.5px] leading-none whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1">
+                                        <KindMark kind="handover" />
+                                        {t('rep_th_axis_out')}
+                                    </span>
+                                    <span className="inline-flex items-center gap-1">
+                                        <KindMark kind="return" />
+                                        {t('rep_th_axis_in')}
+                                    </span>
                                 </span>
                                 {[down / 2, down].map((v) => (
                                     <span
