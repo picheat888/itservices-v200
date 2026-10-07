@@ -4,7 +4,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -53,7 +53,7 @@ const LONG_WAIT_DAYS = 7;
 const ROWS_SHOWN = 10;
 
 /** Waiting assets listed per group before the rest fold. */
-const WAITING_SHOWN = 6;
+const WAITING_SHOWN = 5;
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
@@ -529,11 +529,15 @@ function WaitingRow({ w }: { w: Waiting }) {
     );
 }
 
-function WaitingGroup({ title, rows, first }: { title: string; rows: Waiting[]; first?: boolean }) {
+function WaitingGroup({ title, rows, status, first }: { title: string; rows: Waiting[]; status: Waiting['status']; first?: boolean }) {
+    const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const canOpen = useCanOpen();
     const [open, setOpen] = useState(false);
     const { folds, shown } = fold(rows, WAITING_SHOWN, open);
     if (rows.length === 0) return null;
+    const listHref = `/assets?tab=inventory&status=${status}`;
+    const Icon = open ? ChevronUp : ChevronDown;
 
     return (
         <section>
@@ -546,12 +550,33 @@ function WaitingGroup({ title, rows, first }: { title: string; rows: Waiting[]; 
                 {title}
                 <b className="text-foreground font-mono tabular-nums">{count(rows.length, lang)}</b>
             </h3>
-            <ul>
+            <ul className={cn(open && 'max-h-80 overflow-y-auto overscroll-contain')}>
                 {shown.map((w) => (
                     <WaitingRow key={w.id} w={w} />
                 ))}
             </ul>
-            {folds && <FoldToggle open={open} total={rows.length} onToggle={() => setOpen((v) => !v)} />}
+            {folds && (
+                <div className="border-border/60 flex items-center justify-between gap-3 border-t px-5 py-2 text-xs font-medium">
+                    <button
+                        type="button"
+                        onClick={() => setOpen((v) => !v)}
+                        aria-expanded={open}
+                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                        <Icon aria-hidden className="h-3.5 w-3.5" />
+                        {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', count(rows.length, lang))}
+                    </button>
+                    {canOpen(listHref) && (
+                        <Link
+                            to={listHref}
+                            className="text-brand focus-visible:ring-brand inline-flex items-center gap-1 rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                        >
+                            {t('rep_th_wait_open_assets')}
+                            <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
+                        </Link>
+                    )}
+                </div>
+            )}
         </section>
     );
 }
@@ -568,8 +593,8 @@ function WaitingCard({ waiting }: { waiting: Waiting[] }) {
                 <CardEmpty>{t('rep_th_wait_empty')}</CardEmpty>
             ) : (
                 <>
-                    <WaitingGroup title={t('rep_th_wait_accept')} rows={accept} first />
-                    <WaitingGroup title={t('rep_th_wait_return')} rows={back} first={accept.length === 0} />
+                    <WaitingGroup title={t('rep_th_wait_accept')} rows={accept} status="pending_acceptance" first />
+                    <WaitingGroup title={t('rep_th_wait_return')} rows={back} status="pending_return" first={accept.length === 0} />
                 </>
             )}
         </Card>
