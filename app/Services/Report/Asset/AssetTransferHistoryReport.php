@@ -273,7 +273,6 @@ class AssetTransferHistoryReport extends TabularReport
         $recalls = self::ofKind($rows, AssetTransferKind::Recall)->count();
         $waiting = collect(TransferTrail::waiting($filters));
         $relocations = self::ofKind($rows, AssetTransferKind::Relocate);
-        $accepted = $acceptance['same_day'] + $acceptance['next_day'] + $acceptance['later'];
 
         return [
             ReportSummary::make('th_handovers', 'ส่งมอบออก (ครั้ง)', $handovers->count())->withSplit([
@@ -296,10 +295,6 @@ class AssetTransferHistoryReport extends TabularReport
                     ['key' => 'same_day', 'label_key' => 'rep_th_acc_same_day', 'tone' => 'soft-green', 'value' => $acceptance['same_day'], 'counts' => true],
                     ['key' => 'next_day', 'label_key' => 'rep_th_acc_next_day', 'tone' => 'soft-blue', 'value' => $acceptance['next_day'], 'counts' => true],
                     ['key' => 'later', 'label_key' => 'rep_th_acc_later', 'tone' => 'soft-amber', 'value' => $acceptance['later'], 'counts' => true],
-                ])
-                ->withNote($accepted === 0 ? null : [
-                    'label_key' => 'rep_n_th_within_2_days',
-                    'values' => ['met' => $acceptance['within_2_days'], 'n' => $accepted, 'pct' => (int) round($acceptance['within_2_days'] / $accepted * 100)],
                 ]),
             // A desk or room move: the holder stays the same, so it is neither out nor back in.
             ReportSummary::make('th_relocations', 'ย้ายที่ตั้ง (ครั้ง)', $relocations->count())

@@ -776,7 +776,6 @@ export const report: Dict = {
     rep_th_split_in_store: 'อยู่ในคลัง',
     rep_th_split_wait_accept: 'รอกดรับ',
     rep_th_split_wait_return: 'รอรับคืน',
-    rep_n_th_within_2_days: 'กดรับภายใน 2 วัน {met} จาก {n} ครั้ง ({pct}%)',
     rep_c_asset_moves: 'จำนวนครั้งที่เคลื่อนไหว',
     rep_c_th_outcome: 'ผลหลังส่ง',
     rep_c_outcome_hours: 'ผลหลังส่ง (ชม.)',
