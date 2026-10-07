@@ -10,7 +10,21 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWriteoffBreakdown } from '../hooks/use-reports';
 import type { AssetWriteoffBreakdown, ChartSeries, TabularFilters } from '../types';
-import { CardTitle, CODE_LINK, CardEmpty as Empty, fold, FoldToggle, monthLabel, StackBar, Swatch } from './chart-parts';
+import {
+    CardTitle,
+    CODE_LINK,
+    currentMonth,
+    CardEmpty as Empty,
+    fold,
+    FoldToggle,
+    monthDensity,
+    monthLabel,
+    monthLabelPlace,
+    SCROLL_AFTER_MONTHS,
+    SCROLL_MONTH_PX,
+    StackBar,
+    Swatch,
+} from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -59,23 +73,6 @@ const REASONS_SHOWN = 10;
 /** A month bar's piece gets its own count once it is at least this share of the tallest bar. */
 const SEGMENT_LABEL_SHARE = 0.12;
 
-/** Past this many months the chart may scroll sideways: it keeps at least SCROLL_MONTH_PX per month. */
-const SCROLL_AFTER_MONTHS = 60;
-
-/** Narrowest width per month once the chart may scroll: a 6px bar and a 2px gap. */
-const SCROLL_MONTH_PX = 8;
-
-/** How the month chart draws itself for this many months (1-6, 7-12, 13-24, more). */
-function monthDensity(months: Month[]) {
-    const n = months.length;
-    const fromLast = (i: number) => (n - 1 - i) % 2 === 0;
-    const janOrFirst = (i: number, month: string) => month.endsWith('-01') || (i === 0 && !months.slice(1, 4).some((m) => m.month.endsWith('-01')));
-    if (n <= 6) return { bar: 'max-w-16', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, thin: false, label: () => true };
-    if (n <= 12) return { bar: 'max-w-8', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, thin: false, label: () => true };
-    if (n <= 24) return { bar: 'max-w-5', gap: 'gap-1', top: true, pieces: false, thin: false, label: fromLast };
-    return { bar: '', gap: 'gap-0.5', top: false, pieces: false, thin: true, label: janOrFirst };
-}
-
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
 const NUM = 'text-right font-mono tabular-nums';
@@ -84,10 +81,6 @@ const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
 const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
 // Two decimals and no ฿, like the money tile and the list's value column on the same page.
 const money = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currentMonth = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
 const endDate = (iso: string, lang: Lang) =>
     new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
         new Date(`${iso}T00:00:00`),
@@ -223,6 +216,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                             <InfoPopover
                                                 key={m.month}
                                                 label={monthText(m)}
+                                                side="right"
                                                 className="flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-end"
                                                 content={<MonthDetail month={m} partialNote={m.month === thisMonth ? partialNote : null} />}
                                             >
@@ -283,11 +277,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                 <div
                                                     className={cn(
                                                         'absolute top-0 text-[10.5px] whitespace-nowrap',
-                                                        density.thin && i === 0
-                                                            ? 'left-0 text-left'
-                                                            : density.thin && i === months.length - 1
-                                                              ? 'right-0 text-right'
-                                                              : 'left-1/2 -translate-x-1/2 text-center',
+                                                        monthLabelPlace(density, i, months.length),
                                                     )}
                                                 >
                                                     <b

@@ -9,6 +9,7 @@ export function InfoPopover({
     children,
     className,
     contentClassName,
+    side = 'top',
 }: {
     /** What a screen reader hears for the trigger. */
     label: string;
@@ -16,6 +17,8 @@ export function InfoPopover({
     children: React.ReactNode;
     className?: string;
     contentClassName?: string;
+    /** Where the note opens: above by default; beside a tall trigger such as a whole chart column. */
+    side?: 'top' | 'right';
 }) {
     const [open, setOpen] = useState(false);
     const closing = useRef<number | null>(null);
@@ -47,9 +50,10 @@ export function InfoPopover({
                 {children}
             </PopoverTrigger>
             <PopoverContent
-                side="top"
+                side={side}
                 align="center"
                 onOpenAutoFocus={(event) => event.preventDefault()}
+                onCloseAutoFocus={(event) => event.preventDefault()}
                 onPointerEnter={hover(true)}
                 onPointerLeave={hover(false)}
                 className={cn('w-auto max-w-xs px-3 py-2 text-left font-sans text-xs font-normal whitespace-normal', contentClassName)}

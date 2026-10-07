@@ -119,6 +119,38 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
     );
 }
 
+/** Past this many months the chart may scroll sideways: it keeps at least SCROLL_MONTH_PX per month. */
+export const SCROLL_AFTER_MONTHS = 60;
+
+/** Narrowest width per month once the chart may scroll: a 6px bar and a 2px gap. */
+export const SCROLL_MONTH_PX = 8;
+
+/** How the month chart draws itself for this many months (1-6, 7-12, 13-24, more). */
+export function monthDensity(months: { month: string }[]) {
+    const n = months.length;
+    const fromLast = (i: number) => (n - 1 - i) % 2 === 0;
+    const janOrFirst = (i: number, month: string) => month.endsWith('-01') || (i === 0 && !months.slice(1, 4).some((m) => m.month.endsWith('-01')));
+    if (n <= 6) return { bar: 'max-w-16', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, thin: false, label: () => true };
+    if (n <= 12) return { bar: 'max-w-8', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, thin: false, label: () => true };
+    if (n <= 24) return { bar: 'max-w-5', gap: 'gap-1', top: true, pieces: false, thin: false, label: fromLast };
+    return { bar: '', gap: 'gap-0.5', top: false, pieces: false, thin: true, label: janOrFirst };
+}
+
+export type MonthDensity = ReturnType<typeof monthDensity>;
+
+/** A month label's place under its bar: centred, or kept inside the chart at either end of a thin run. */
+export function monthLabelPlace(density: MonthDensity, i: number, n: number): string {
+    if (density.thin && i === 0) return 'left-0 text-left';
+    if (density.thin && i === n - 1) return 'right-0 text-right';
+    return 'left-1/2 -translate-x-1/2 text-center';
+}
+
+/** This month as "YYYY-MM", the bar a chart marks as still running. */
+export const currentMonth = (): string => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+
 /** A code that opens its record: the report lists' brand link, with a visible keyboard focus ring. */
 export const CODE_LINK =
     'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
