@@ -533,7 +533,7 @@ export const report: Dict = {
     rep_wo_series_rented_other: 'เช่าที่ตัดด้วยเหตุผลอื่น',
     rep_wo_month_title: 'ตัดจำหน่ายรายเดือน',
     rep_wo_month_peak: 'มากสุด {month} ({n} เครื่อง)',
-    rep_wo_month_aria: 'กราฟแท่งตัดจำหน่ายรายเดือน {from} ถึง {to} รวม {n} เครื่อง มากสุด {peak}',
+    rep_wo_month_aria: 'กราฟแท่งตัดจำหน่ายรายเดือน {from} ถึง {to} รวม {n} เครื่อง {peak}',
     rep_wo_month_col: 'เดือน',
     rep_wo_month_col_total: 'รวม',
     rep_wo_reason_title: 'เหตุผลที่ตัดจำหน่าย',
