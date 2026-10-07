@@ -156,7 +156,8 @@ class AssetWriteoffReportTest extends TestCase
 
         $row = collect($body['data'])->keyBy('id');
         $printer = $row[$this->set['sep_printer']->id];
-        $this->assertSame('2026-09-20 15:30', $printer['written_off_at']);
+        // Date only: the time of a write-off carries no meaning on the list.
+        $this->assertSame('2026-09-20', $printer['written_off_at']);
         $this->assertSame('ชำรุด ซ่อมไม่คุ้ม', $printer['reason']);
         $this->assertSame('Beyond repair', $printer['reason_note']);
         $this->assertSame('written_off', $printer['outcome']);
@@ -290,6 +291,15 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertEquals(4.9, $printer['avg_age_years']);
         $this->assertSame(['under_3' => 1, 'from_3_to_5' => 0, 'over_5' => 1], $printer['age_bands']);
         $this->assertSame(2, $printer['under_warranty']);
+
+        // The totals row is over every asset, so its average is the tile's (3.6), not an average of averages.
+        $totals = $this->breakdown()['category_totals'];
+        $this->assertSame($laptop['total'] + $printer['total'], $totals['total']);
+        $this->assertEquals(55000.0, $totals['bought_value']);
+        $this->assertEquals(3.6, $totals['avg_age_years']);
+        $this->assertSame(['under_3' => 2, 'from_3_to_5' => 1, 'over_5' => 1], $totals['age_bands']);
+        $this->assertSame(2, $totals['under_warranty']);
+        $this->assertNull($this->breakdown('from=2020-01-01&to=2020-01-31')['category_totals']);
     }
 
     public function test_the_breakdown_flags_every_contract_all_time_most_urgent_first(): void
@@ -377,7 +387,7 @@ class AssetWriteoffReportTest extends TestCase
                 && $sheets[4]->title() === 'เครื่องเช่าตามสัญญา'
                 && $sheets[4]->array()[0] === ['CT-2026-901', 'Lease CT-2026-901', 'Lease Vendor', '2026-08-31', 3, 1, 1, 1, -25, 1, 'หมดสัญญาแล้ว ต้องตามคืน']
                 && in_array('สัญญา', $rows->headings(), true)
-                && in_array('ประกัน ณ วันที่ตัด', $rows->headings(), true)
+                && in_array('ประกันตอนตัดจำหน่าย', $rows->headings(), true)
                 && in_array('Serial', $rows->headings(), true);
         });
     }

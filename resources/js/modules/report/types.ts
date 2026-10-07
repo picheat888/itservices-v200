@@ -505,6 +505,16 @@ export interface AssetWriteoffBreakdown {
         age_bands: { under_3: number; from_3_to_5: number; over_5: number };
         under_warranty: number;
     }[];
+    /** The category table's totals row, over every asset (null when there are none). */
+    category_totals: {
+        total: number;
+        bought: number;
+        rented: number;
+        bought_value: number;
+        avg_age_years: number | null;
+        age_bands: { under_3: number; from_3_to_5: number; over_5: number };
+        under_warranty: number;
+    } | null;
     /** Every contract with assets, all-time (only the contract filter narrows it), most urgent first. */
     contracts: {
         id: number;
