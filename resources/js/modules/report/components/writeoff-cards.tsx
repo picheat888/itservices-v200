@@ -24,11 +24,11 @@ type Month = AssetWriteoffBreakdown['months'][number];
 type Category = AssetWriteoffBreakdown['categories'][number];
 type Contract = AssetWriteoffBreakdown['contracts'][number];
 
-/** The three ways an asset leaves: bought orange, rented handed back green, rented written off another way amber. */
+/** The three ways an asset leaves: bought orange, rented handed back green, rented written off another way pink. */
 const SERIES: (ChartSeries & { key: 'bought' | 'returned' | 'rented_other' })[] = [
     { key: 'bought', label_key: 'rep_wo_series_bought', tone: 'soft-orange' },
     { key: 'returned', label_key: 'rep_wo_series_returned', tone: 'soft-green' },
-    { key: 'rented_other', label_key: 'rep_wo_series_rented_other', tone: 'soft-amber' },
+    { key: 'rented_other', label_key: 'rep_wo_series_rented_other', tone: 'soft-pink' },
 ];
 
 /** A reason's split: bought / rented (returned or not), the tiles' two source tones. */
@@ -46,7 +46,7 @@ const BANDS: (ChartSeries & { key: 'under_3' | 'from_3_to_5' | 'over_5' })[] = [
 
 const contractSeries = (overdue: boolean): ChartSeries[] => [
     { key: 'returned', label_key: 'rep_wo_ct_col_returned', tone: 'soft-green' },
-    { key: 'written_off_other', label_key: 'rep_wo_ct_col_other', tone: 'soft-amber' },
+    { key: 'written_off_other', label_key: 'rep_wo_ct_col_other', tone: 'soft-pink' },
     { key: 'still_out', label_key: overdue ? 'rep_wo_ct_out_overdue' : 'rep_wo_ct_col_out', tone: overdue ? 'soft-red' : 'asset-deployed' },
 ];
 
@@ -259,7 +259,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                                 <span
                                                                     key={s.key}
                                                                     className={cn(
-                                                                        'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white tabular-nums',
+                                                                        'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
                                                                         FILL[s.tone],
                                                                     )}
                                                                     style={{ flexGrow: m[s.key] }}
@@ -282,7 +282,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                             {density.label(i, m.month) && (
                                                 <div
                                                     className={cn(
-                                                        'absolute top-0 font-mono text-[10.5px] whitespace-nowrap',
+                                                        'absolute top-0 text-[10.5px] whitespace-nowrap',
                                                         density.thin && i === 0
                                                             ? 'left-0 text-left'
                                                             : density.thin && i === months.length - 1
@@ -298,7 +298,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                     >
                                                         {monthLabel(m.month, lang, false)}
                                                     </b>
-                                                    <span className="text-muted-foreground">{m.month.slice(2, 4)}</span>
+                                                    <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -569,7 +569,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Swatch fill={FILL['soft-green']}>{t('rep_wo_ct_col_returned')}</Swatch>
-                        <Swatch fill={FILL['soft-amber']}>{t('rep_wo_ct_col_other')}</Swatch>
+                        <Swatch fill={FILL['soft-pink']}>{t('rep_wo_ct_col_other')}</Swatch>
                         <Swatch fill={FILL['asset-deployed']}>{t('rep_wo_ct_col_out')}</Swatch>
                         {contracts.some((c) => c.flag === 'overdue' && c.still_out > 0) && (
                             <Swatch fill={FILL['soft-red']}>{t('rep_wo_ct_out_overdue')}</Swatch>
@@ -652,9 +652,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                             className={cn(
                                                 TD,
                                                 NUM,
-                                                c.written_off_other > 0
-                                                    ? 'font-semibold text-amber-700 dark:text-amber-300'
-                                                    : 'text-muted-foreground',
+                                                c.written_off_other > 0 ? 'font-semibold text-pink-700 dark:text-pink-300' : 'text-muted-foreground',
                                             )}
                                         >
                                             {count(c.written_off_other, lang)}
