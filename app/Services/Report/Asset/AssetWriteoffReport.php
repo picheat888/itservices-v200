@@ -119,7 +119,7 @@ class AssetWriteoffReport extends TabularReport
     public function columns(): array
     {
         return [
-            ReportColumn::dateTime('written_off_at', 'วันที่ตัดจำหน่าย', fn (Asset $a) => $a->written_off_at),
+            ReportColumn::date('written_off_at', 'วันที่ตัดจำหน่าย', fn (Asset $a) => $a->written_off_at),
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
             // Drawn under the code on the page ("Dell Latitude 5440"), so hidden as columns of their own.
             ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->hiddenByDefault(),
@@ -129,7 +129,7 @@ class AssetWriteoffReport extends TabularReport
             ReportColumn::enum('source', 'ที่มา', fn (Asset $a) => $a->source, self::SOURCE_KEYS, self::SOURCE_TH),
             ReportColumn::text('contract', 'สัญญา', fn (Asset $a) => $a->contract?->code)->linkTo('/contracts', fn (Asset $a) => $a->contract_id),
             // The page reads this into the reason cell: a return to the lessor carries no reason of its own.
-            ReportColumn::enum('outcome', 'การตัดออก', fn (Asset $a) => self::outcome($a), self::OUTCOME_KEYS, self::OUTCOME_TH)->hiddenByDefault(),
+            ReportColumn::enum('outcome', 'ประเภทการออก', fn (Asset $a) => self::outcome($a), self::OUTCOME_KEYS, self::OUTCOME_TH)->hiddenByDefault(),
             ReportColumn::text('reason', 'เหตุผล', fn (Asset $a) => $a->writeoffReason?->name),
             ReportColumn::text('reason_note', 'หมายเหตุ', fn (Asset $a) => $a->last_reason)->hiddenByDefault(),
             ReportColumn::text('written_off_by', 'ผู้ตัดจำหน่าย', fn (Asset $a) => $a->writtenOffBy?->name)->hiddenByDefault(),
@@ -138,7 +138,7 @@ class AssetWriteoffReport extends TabularReport
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date)->hiddenByDefault(),
             // How long it served: bought to written off, in years (bought assets only).
             ReportColumn::number('age_years', 'อายุใช้งาน (ปี)', fn (Asset $a) => self::ageYears($a) === null ? null : round(self::ageYears($a), 1)),
-            ReportColumn::enum('warranty', 'ประกัน ณ วันที่ตัด', fn (Asset $a) => self::warrantyState($a), self::WARRANTY_KEYS, self::WARRANTY_TH),
+            ReportColumn::enum('warranty', 'ประกันตอนตัดจำหน่าย', fn (Asset $a) => self::warrantyState($a), self::WARRANTY_KEYS, self::WARRANTY_TH),
             // The page writes "เหลือ N เดือน" from this; null unless the warranty still ran.
             ReportColumn::number('warranty_months', 'ประกันเหลือ (เดือน)', fn (Asset $a) => self::warrantyMonthsLeft($a))->hiddenByDefault(),
             // A rented asset has no value of its own; the page marks it "Rented" (the contract's
@@ -306,6 +306,8 @@ class AssetWriteoffReport extends TabularReport
             'months' => $this->months($assets, $filters),
             'reasons' => self::reasons($assets),
             'categories' => self::categories($assets),
+            // The category table's totals row, computed over every asset (an exact average, not one of averages).
+            'category_totals' => $assets->isEmpty() ? null : self::categoryFigures($assets),
             'contracts' => $this->contracts($filters),
         ];
     }
@@ -380,30 +382,45 @@ class AssetWriteoffReport extends TabularReport
         return $assets
             ->groupBy(fn (Asset $a) => (string) $a->getAttribute('category_ref'))
             ->map(function (Collection $group) {
-                $bought = self::bought($group);
-                $ages = $bought->map(self::ageYears(...))->filter(fn (?float $age) => $age !== null);
                 $first = $group->first();
 
                 return [
                     'category_id' => $first->getAttribute('category_ref') === null ? null : (int) $first->getAttribute('category_ref'),
                     'name' => $first->getAttribute('category_ref') === null ? null : (string) $first->getAttribute('category_name'),
                     'name_th' => $first->getAttribute('category_ref') === null ? null : $first->getAttribute('category_name_th'),
-                    'total' => $group->count(),
-                    'bought' => $bought->count(),
-                    'rented' => self::rented($group)->count(),
-                    'bought_value' => (float) $bought->sum('value'),
-                    'avg_age_years' => self::averageAge($bought),
-                    'age_bands' => [
-                        'under_3' => $ages->filter(fn (float $age) => $age < 3)->count(),
-                        'from_3_to_5' => $ages->filter(fn (float $age) => $age >= 3 && $age <= 5)->count(),
-                        'over_5' => $ages->filter(fn (float $age) => $age > 5)->count(),
-                    ],
-                    'under_warranty' => $bought->filter(self::underWarranty(...))->count(),
+                    ...self::categoryFigures($group),
                 ];
             })
             ->sortBy([['total', 'desc'], ['name', 'asc']])
             ->values()
             ->all();
+    }
+
+    /**
+     * A category line's figures for any set of assets (one category, or all of them for the
+     * totals row): the split, what the bought ones cost, how long they served, still under warranty.
+     *
+     * @param  Collection<int, Asset>  $assets
+     * @return array{total: int, bought: int, rented: int, bought_value: float, avg_age_years: ?float, age_bands: array{under_3: int, from_3_to_5: int, over_5: int}, under_warranty: int}
+     */
+    private static function categoryFigures(Collection $assets): array
+    {
+        $bought = self::bought($assets);
+        $ages = $bought->map(self::ageYears(...))->filter(fn (?float $age) => $age !== null);
+
+        return [
+            'total' => $assets->count(),
+            'bought' => $bought->count(),
+            'rented' => self::rented($assets)->count(),
+            'bought_value' => (float) $bought->sum('value'),
+            'avg_age_years' => self::averageAge($bought),
+            'age_bands' => [
+                'under_3' => $ages->filter(fn (float $age) => $age < 3)->count(),
+                'from_3_to_5' => $ages->filter(fn (float $age) => $age >= 3 && $age <= 5)->count(),
+                'over_5' => $ages->filter(fn (float $age) => $age > 5)->count(),
+            ],
+            'under_warranty' => $bought->filter(self::underWarranty(...))->count(),
+        ];
     }
 
     /**
@@ -487,7 +504,7 @@ class AssetWriteoffReport extends TabularReport
         return [
             [
                 'title' => 'แยกตามเดือน',
-                'headings' => ['เดือน', 'ทั้งหมด', 'ซื้อ', 'เช่า คืนผู้ให้เช่า', 'เช่า ตัดด้วยเหตุผลอื่น'],
+                'headings' => ['เดือน', 'ทั้งหมด', 'ซื้อ', 'เช่าที่คืนผู้ให้เช่า', 'เช่าที่ตัดด้วยเหตุผลอื่น'],
                 'rows' => array_map(
                     fn (array $m) => [self::monthTh($m['month']), $m['total'], $m['bought'], $m['returned'], $m['rented_other']],
                     $breakdown['months'],

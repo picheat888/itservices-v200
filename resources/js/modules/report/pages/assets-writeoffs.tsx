@@ -11,6 +11,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { cn } from '@/shared/lib/utils';
 import { Link } from 'react-router-dom';
 import { TabularReportView } from '../components/tabular-report-view';
 import { WriteoffCards } from '../components/writeoff-cards';
@@ -21,6 +22,10 @@ type Row = Record<string, unknown> & { _links?: Record<string, string> };
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 
 /** The asset code (a link to the asset) with "brand model" under it. */
+/** A code that opens its record: the report lists' brand link (as the ticket codes on the SLA reports), with a keyboard focus ring. */
+const CODE_LINK =
+    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
+
 function AssetCell({ row }: { row: Row }) {
     const canOpen = useCanOpen();
     const href = row._links?.asset_code;
@@ -29,7 +34,7 @@ function AssetCell({ row }: { row: Row }) {
     return (
         <div className="min-w-0">
             {href && canOpen(href) ? (
-                <Link to={href} className="font-mono text-xs font-semibold hover:underline">
+                <Link to={href} className={CODE_LINK}>
                     {code}
                 </Link>
             ) : (
@@ -64,7 +69,7 @@ function SourceCell({ row }: { row: Row }) {
             </StatusBadge>
             {code &&
                 (href && canOpen(href) ? (
-                    <Link to={href} className="text-muted-foreground mt-0.5 font-mono text-xs hover:underline">
+                    <Link to={href} className={cn(CODE_LINK, 'mt-0.5 font-medium')}>
                         {code}
                     </Link>
                 ) : (
