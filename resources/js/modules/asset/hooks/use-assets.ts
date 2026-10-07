@@ -96,9 +96,6 @@ export function useAssetMutations() {
         Promise.all([
             qc.invalidateQueries({ queryKey: ASSETS }),
             qc.invalidateQueries({ queryKey: ['assets-list'] }),
-            // The single-record caches: the detail dialog's record (['asset', 'view', id]), its
-            // history/tickets (['asset', id]) and its contract peek. Without these an edit saved
-            // from the open dialog left it showing the old values until a reload.
             qc.invalidateQueries({ queryKey: ['asset'] }),
             qc.invalidateQueries({ queryKey: ['asset-contract'] }),
             qc.invalidateQueries({ queryKey: ['assets-mine'] }),
