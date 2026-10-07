@@ -688,13 +688,13 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_th_wh_col_name')}
                                 </th>
-                                <th scope="col" className={cn(TH, 'w-px text-right')}>
+                                <th scope="col" className={cn(TH, 'text-right')}>
                                     {t('rep_th_wh_col_back')}
                                 </th>
                                 <th scope="col" className={cn(TH, 'text-center')}>
                                     <span className="sr-only">{t('rep_th_wh_col_bar')}</span>
                                 </th>
-                                <th scope="col" className={cn(TH, 'w-px text-right')}>
+                                <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_th_wh_col_out')}
                                 </th>
                             </tr>
@@ -702,15 +702,11 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                         <tbody>
                             {warehouses.map((w) => (
                                 <tr key={w.name} className="border-border/60 border-b last:border-b-0">
-                                    <th
-                                        scope="row"
-                                        className={cn(TD, 'w-px max-w-[12rem] truncate text-left font-normal whitespace-nowrap')}
-                                        title={w.name}
-                                    >
+                                    <th scope="row" className={cn(TD, 'max-w-[12rem] truncate text-left font-normal')} title={w.name}>
                                         {w.name}
                                     </th>
                                     <td className={cn(TD, NUM, w.back === 0 && 'text-muted-foreground')}>{count(w.back, lang)}</td>
-                                    <td className={cn(TD, 'w-full')}>
+                                    <td className={cn(TD, 'w-1/2')}>
                                         {/* Back in grows left from the middle, out grows right; each track is the scale's max. */}
                                         <div aria-hidden className="grid min-w-[9rem] grid-cols-2 gap-0.5">
                                             <span className="bg-muted flex h-2.5 justify-end overflow-hidden rounded-l-full">
@@ -727,7 +723,13 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                                             </span>
                                         </div>
                                     </td>
-                                    <td className={cn(TD, NUM, 'font-semibold', w.out === 0 && 'text-muted-foreground font-normal')}>
+                                    <td
+                                        className={cn(
+                                            TD,
+                                            'text-left font-mono font-semibold tabular-nums',
+                                            w.out === 0 && 'text-muted-foreground font-normal',
+                                        )}
+                                    >
                                         {count(w.out, lang)}
                                     </td>
                                 </tr>
