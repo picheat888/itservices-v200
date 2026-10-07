@@ -76,12 +76,12 @@
     --color-asset-common: color-mix(in oklch, var(--asset-status-common) var(--asset-soft), white);
     --color-asset-pending-return: color-mix(in oklch, var(--asset-status-pending-return) var(--asset-soft), white);
     --color-asset-writeoff: color-mix(in oklch, var(--asset-status-writeoff) var(--asset-soft), white);
-    --color-asset-deployed-ink: var(--asset-status-deployed);
-    --color-asset-ready-ink: var(--asset-status-ready);
-    --color-asset-pending-acceptance-ink: var(--asset-status-pending-acceptance);
-    --color-asset-common-ink: var(--asset-status-common);
-    --color-asset-pending-return-ink: var(--asset-status-pending-return);
-    --color-asset-writeoff-ink: var(--asset-status-writeoff);
+    --color-asset-deployed-ink: color-mix(in oklch, var(--asset-status-deployed) var(--asset-ink), white);
+    --color-asset-ready-ink: color-mix(in oklch, var(--asset-status-ready) var(--asset-ink), white);
+    --color-asset-pending-acceptance-ink: color-mix(in oklch, var(--asset-status-pending-acceptance) var(--asset-ink), white);
+    --color-asset-common-ink: color-mix(in oklch, var(--asset-status-common) var(--asset-ink), white);
+    --color-asset-pending-return-ink: color-mix(in oklch, var(--asset-status-pending-return) var(--asset-ink), white);
+    --color-asset-writeoff-ink: color-mix(in oklch, var(--asset-status-writeoff) var(--asset-ink), white);
 
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
@@ -124,6 +124,7 @@
     --asset-status-pending-return: #7c3aed;
     --asset-status-writeoff: #dc2626;
     --asset-soft: 72%;
+    --asset-ink: 100%;
 
     /* Blue brand accent (overridable from Settings → Branding via JS) */
     --brand: #2563eb;
@@ -195,6 +196,7 @@
 
 .dark {
     --asset-soft: 82%;
+    --asset-ink: 80%;
     /* Dark UI → native scrollbars & form controls switch to their dark rendering. */
     color-scheme: dark;
 

@@ -20,7 +20,7 @@
  * they change one — same rules as use-ticket-report-filters.ts. Report Center links add the hub's
  * period as ?from=&to= (report-catalogue.tsx reportRoute).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { TabularDefinition, TabularFilters } from '../types';
 
@@ -120,11 +120,14 @@ export function useTabularFilters(definition: TabularDefinition) {
     const [linked] = useState(() => fromUrl(definition, params));
     const [filters, setFilters] = useState<TabularFilters>(() => linked ?? load(definition));
     const names = definition.filters.map((f) => f.name);
+    const synced = useRef(filters);
 
     // Mirror the filters into the URL so it can be shared or bookmarked as it stands. Only this
     // report's own names are touched — the charts' ?view= and any stray ?from= of a report that
     // has no such filter are left to themselves / cleared.
     useEffect(() => {
+        const filtersChanged = synced.current !== filters;
+        synced.current = filters;
         const wanted = toUrl(definition, filters);
         const owned = [...new Set([...names, 'from', 'to'])];
         const current = Object.fromEntries(owned.filter((n) => params.has(n)).map((n) => [n, params.get(n) as string]));
@@ -139,6 +142,7 @@ export function useTabularFilters(definition: TabularDefinition) {
             (next) => {
                 owned.forEach((n) => next.delete(n));
                 Object.entries(wanted).forEach(([n, v]) => next.set(n, v));
+                if (filtersChanged) next.delete('page');
                 return next;
             },
             { replace: true },

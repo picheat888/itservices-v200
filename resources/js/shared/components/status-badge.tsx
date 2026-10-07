@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 /** The tint a custom-colour badge sits on: the colour at 0x22 (≈13%) alpha. */
 const TINT = '22';
 
-type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'gray';
+type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'orange' | 'pink' | 'gray';
 
 const tones: Record<Tone, string> = {
     blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -13,6 +13,8 @@ const tones: Record<Tone, string> = {
     amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
     red: 'bg-destructive/10 text-destructive',
     violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+    orange: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
+    pink: 'bg-pink-500/10 text-pink-700 dark:text-pink-300',
     gray: 'bg-muted text-muted-foreground',
 };
 
@@ -24,6 +26,8 @@ export const toneDots: Record<Tone, string> = {
     amber: 'bg-amber-500',
     red: 'bg-destructive',
     violet: 'bg-violet-500',
+    orange: 'bg-orange-500',
+    pink: 'bg-pink-500',
     gray: 'bg-muted-foreground',
 };
 

@@ -1,11 +1,4 @@
-/**
- * The body of every tabular report page (pages/<slug>.tsx, e.g. pages/assets-overview.tsx):
- * fetches the report's own definition (filters/columns/formats) from the backend, then its rows
- * (with summary + pagination), and renders them through the shared filter bar, summary strip,
- * cell formatter and export / schedule dialogs. The columns and filters stay defined once, in the
- * report's backend TabularReport class, so the screen, Excel, PDF and scheduled mail never differ;
- * a page that needs more than this can wrap or replace it.
- */
+// Body of every tabular report page: definition, filter bar, summary tiles, paged rows, export and schedule dialogs.
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
@@ -17,6 +10,7 @@ import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
 import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows } from '../hooks/use-reports';
@@ -29,15 +23,16 @@ import { ReportHeader } from './report-header';
 import { CardHeadingSkeleton, DataTableSkeleton, FilterBarSkeleton, KpiRowSkeleton } from './report-skeletons';
 import { tabularFilterChips } from './schedule-filter-summary';
 import { ScheduleReportDialog, scheduleCoverage } from './schedule-report-dialog';
-import { SummaryStrip } from './summary-strip';
+import { SummaryStrip, summaryColumns } from './summary-strip';
 import { TabularCell } from './tabular-cell';
 import { ChartsSkeleton, TabularCharts } from './tabular-charts';
 import { TabularEmptyState } from './tabular-empty-state';
 import { TabularFilterBar } from './tabular-filter-bar';
 
 const REPORT_DIALOGS = ['export', 'schedule'] as const;
+const PAGE_SIZES = [20, 50, 100];
 
-function errorMessageFor(t: (key: string) => string, error: unknown): string {
+export function errorMessageFor(t: (key: string) => string, error: unknown): string {
     const status = isAxiosError(error) ? error.response?.status : undefined;
     if (status === 403) return t('rep_err_no_access');
     if (status === 404) return t('rep_err_not_found');
@@ -45,7 +40,7 @@ function errorMessageFor(t: (key: string) => string, error: unknown): string {
     return t('rep_err_load_failed');
 }
 
-function ErrorCard({ message }: { message: string }) {
+export function ErrorCard({ message }: { message: string }) {
     return (
         <Card className="flex flex-col items-center gap-2 border-dashed p-10 text-center">
             <AlertCircle className="text-muted-foreground h-8 w-8" />
@@ -54,9 +49,7 @@ function ErrorCard({ message }: { message: string }) {
     );
 }
 
-/** Rows + summary for the current filters — owns its own page/perPage so the parent can
- *  reset both to page 1 simply by remounting this (`key={JSON.stringify(filters)}`).
- *  Reports the current row total up to the parent, for the export dialog's scope note. */
+/** Rows + summary for the current filters; page and page size live in the URL (?page, ?per). */
 function TabularReportRows({
     reportKey,
     visibleColumns,
@@ -87,8 +80,23 @@ function TabularReportRows({
     onPatch: (next: TabularFilters) => void;
 }) {
     const t = useT();
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
+    const [params, setParams] = useSearchParams();
+    const page = Math.max(1, Math.floor(Number(params.get('page'))) || 1);
+    const perParam = Number(params.get('per'));
+    const perPage = PAGE_SIZES.includes(perParam) ? perParam : PAGE_SIZES[0];
+    const setPaging = (next: { page: number; per?: number }) =>
+        setParams(
+            (p) => {
+                if (next.page > 1) p.set('page', String(next.page));
+                else p.delete('page');
+                if (next.per !== undefined) {
+                    if (next.per !== PAGE_SIZES[0]) p.set('per', String(next.per));
+                    else p.delete('per');
+                }
+                return p;
+            },
+            { replace: true },
+        );
     const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, filters, page, perPage, true);
     const canOpen = useCanOpen();
 
@@ -100,15 +108,12 @@ function TabularReportRows({
         return <ErrorCard message={errorMessageFor(t, error)} />;
     }
 
-    // Codes, dates, numbers and names stay on one line (the table scrolls sideways instead);
-    // free text is cut at a readable width and keeps its full value in a tooltip.
     const columns: Column<Record<string, unknown> & { id: number; _links?: Record<string, string> }>[] = visibleColumns.map((column) => ({
         key: column.key,
         header: t(column.label_key),
         align: column.type === 'number' || column.type === 'money' || column.type === 'hours_left' ? 'right' : undefined,
         className: column.type === 'text' || column.type === 'localized' ? 'max-w-[22rem] truncate whitespace-nowrap' : 'whitespace-nowrap',
         render: (row) => {
-            // A page may draw a column its own way (the backlog's priority / status pills).
             const own = extras.renderCell?.(column.key, row);
             if (own !== undefined) return own;
             const href = row._links?.[column.key];
@@ -118,19 +123,19 @@ function TabularReportRows({
 
     return (
         <div className="space-y-4">
-            {/* Tiles pulse until the first rows arrive, so the table does not jump down when they do. */}
-            {data ? <SummaryStrip items={data.summary} /> : <KpiRowSkeleton count={4} className="lg:grid-cols-4" />}
+            {data ? (
+                <SummaryStrip items={data.summary} />
+            ) : (
+                <KpiRowSkeleton count={extras.tiles ?? 4} className={summaryColumns(extras.tiles ?? 4)} />
+            )}
             {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
             {extras.beforeTable?.({ filters, patch: onPatch })}
-            {/* The rows in a headed card with the table inset, as the Ticket & SLA page's
-                "รายการ Ticket" — the same heading tint and padding (no "ข้อมูล ณ" line, as there). */}
             {showsTable && (
                 <Card className="overflow-clip">
                     <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
                         <span className="text-sm font-semibold">
                             {t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic')}
                         </span>
-                        {/* Row count, then the column picker past a thin divider — both are about this table. */}
                         <div className="flex items-center gap-3">
                             {data && (
                                 <span className="text-muted-foreground text-xs tabular-nums">
@@ -153,11 +158,8 @@ function TabularReportRows({
                                 page,
                                 pageSize: perPage,
                                 total: data?.meta.total ?? 0,
-                                onPageChange: setPage,
-                                onPageSizeChange: (s) => {
-                                    setPerPage(s);
-                                    setPage(1);
-                                },
+                                onPageChange: (next) => setPaging({ page: next, per: perPage }),
+                                onPageSizeChange: (size) => setPaging({ page: 1, per: size }),
                             }}
                         />
                     </div>
@@ -243,7 +245,6 @@ function TabularReportBody({
                 leading={extras.filterLead?.({ filters, patch })}
             />
             <TabularReportRows
-                key={JSON.stringify(filters)}
                 reportKey={reportKey}
                 visibleColumns={drawnColumns}
                 filters={filters}
@@ -295,6 +296,8 @@ function TabularReportBody({
  * the summary and the table, and a class per table row.
  */
 export interface TabularReportExtras {
+    /** How many summary tiles the report shows, so the loading row has the same shape. */
+    tiles?: number;
     hiddenFilters?: string[];
     /** Columns the page draws inside another column's cell (a ticket number under its subject) — kept in
      *  each row and in the files, left out of the table's own columns and the column picker. */
@@ -328,7 +331,7 @@ export function TabularReportView({ reportKey: key, extras = {} }: { reportKey: 
                     <ReportHeader title={t(`rep_${stem}_title`)} description={t(`rep_${stem}_desc`)} />
                     {/* Filters, summary tiles and table in their own shapes. */}
                     <FilterBarSkeleton fields={4} />
-                    <KpiRowSkeleton count={4} className="lg:grid-cols-4" />
+                    <KpiRowSkeleton count={extras.tiles ?? 4} className={summaryColumns(extras.tiles ?? 4)} />
                     <Card className="overflow-hidden">
                         <CardHeadingSkeleton />
                         <div className="p-5">
