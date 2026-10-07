@@ -68,6 +68,22 @@ class AssetWriteoffReport extends TabularReport
 
     private const NO_CATEGORY = ['name' => 'No category', 'name_th' => 'ไม่ระบุหมวดหมู่'];
 
+    /** Bar size by range length, so the chart has about 4-24 bars: weeks up to this many days. */
+    private const WEEKS_UP_TO_DAYS = 120;
+
+    /** Months up to this many months, then quarters up to QUARTERS_UP_TO_MONTHS, then years. */
+    private const MONTHS_UP_TO = 24;
+
+    private const QUARTERS_UP_TO_MONTHS = 72;
+
+    /** The file's sheet title and first heading per bar size. */
+    private const PERIOD_TH = [
+        'week' => ['แยกตามสัปดาห์', 'สัปดาห์'],
+        'month' => ['แยกตามเดือน', 'เดือน'],
+        'quarter' => ['แยกตามไตรมาส', 'ไตรมาส'],
+        'year' => ['แยกตามปี', 'ปี'],
+    ];
+
     public function key(): string
     {
         return 'assets.writeoffs';
@@ -296,14 +312,18 @@ class AssetWriteoffReport extends TabularReport
      * writes the words.
      *
      * @param  array<string, mixed>  $filters
-     * @return array{months: list<array<string, mixed>>, reasons: list<array<string, mixed>>, categories: list<array<string, mixed>>, contracts: list<array<string, mixed>>}
+     * @return array{period: string, buckets: list<array<string, mixed>>, reasons: list<array<string, mixed>>, categories: list<array<string, mixed>>, contracts: list<array<string, mixed>>}
      */
     public function breakdown(User $viewer, array $filters): array
     {
         $assets = $this->written($filters);
 
+        [$from, $to] = $this->dayRange($filters);
+        $period = self::periodFor($from, $to);
+
         return [
-            'months' => $this->months($assets, $filters),
+            'period' => $period,
+            'buckets' => self::buckets($assets, $from, $to, $period),
             'reasons' => self::reasons($assets),
             'categories' => self::categories($assets),
             // The category table's totals row, computed over every asset (an exact average, not one of averages).
@@ -312,26 +332,65 @@ class AssetWriteoffReport extends TabularReport
         ];
     }
 
+    /** Week, month, quarter or year: whichever keeps the chart at about 4-24 bars for this range. */
+    private static function periodFor(Carbon $from, Carbon $to): string
+    {
+        if ($from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay()) + 1 <= self::WEEKS_UP_TO_DAYS) {
+            return 'week';
+        }
+        $months = ($to->year - $from->year) * 12 + $to->month - $from->month + 1;
+
+        return match (true) {
+            $months <= self::MONTHS_UP_TO => 'month',
+            $months <= self::QUARTERS_UP_TO_MONTHS => 'quarter',
+            default => 'year',
+        };
+    }
+
+    private static function periodStart(Carbon $at, string $period): Carbon
+    {
+        return match ($period) {
+            'week' => $at->copy()->startOfWeek(Carbon::MONDAY),
+            'month' => $at->copy()->startOfMonth(),
+            'quarter' => $at->copy()->startOfQuarter(),
+            default => $at->copy()->startOfYear(),
+        };
+    }
+
+    private static function periodAfter(Carbon $start, string $period): Carbon
+    {
+        return match ($period) {
+            'week' => $start->copy()->addWeek(),
+            'month' => $start->copy()->addMonthNoOverflow(),
+            'quarter' => $start->copy()->addQuarterNoOverflow(),
+            default => $start->copy()->addYear(),
+        };
+    }
+
     /**
-     * Every month of the range, oldest first, empty ones included: bought written off, rented
-     * handed back, rented written off another way.
+     * Every bar of the range, oldest first, empty ones included: bought written off, rented handed
+     * back, rented written off another way. `from`/`to` are the days a bar really counts, cut by the
+     * range and by today; `partial` when that is less than the whole week/month/quarter/year.
      *
      * @param  Collection<int, Asset>  $assets
-     * @param  array<string, mixed>  $filters
-     * @return list<array{month: string, total: int, bought: int, returned: int, rented_other: int}>
+     * @return list<array{start: string, from: string, to: string, partial: bool, total: int, bought: int, returned: int, rented_other: int}>
      */
-    private function months(Collection $assets, array $filters): array
+    private static function buckets(Collection $assets, Carbon $from, Carbon $to, string $period): array
     {
-        [$from, $to] = $this->dayRange($filters);
-        $byMonth = $assets->groupBy(fn (Asset $a) => $a->written_off_at->format('Y-m'));
-
-        $months = [];
-        for ($month = $from->copy()->startOfMonth(); $month->lte($to); $month->addMonth()) {
-            $group = $byMonth->get($month->format('Y-m'), collect());
+        $countedTo = $to->copy()->min(now()->endOfDay());
+        $buckets = [];
+        for ($start = self::periodStart($from, $period); $start->lte($to); $start = self::periodAfter($start, $period)) {
+            $end = self::periodAfter($start, $period)->subSecond();
+            $group = $assets->filter(fn (Asset $a) => $a->written_off_at->between($start, $end));
             $rented = self::rented($group);
             $returned = $rented->filter(fn (Asset $a) => self::outcome($a) === 'returned')->count();
-            $months[] = [
-                'month' => $month->format('Y-m'),
+            $first = $start->copy()->max($from);
+            $last = $end->copy()->min($countedTo)->max($first);
+            $buckets[] = [
+                'start' => $start->toDateString(),
+                'from' => $first->toDateString(),
+                'to' => $last->toDateString(),
+                'partial' => $first->gt($start) || $last->lt($end->copy()->startOfDay()),
                 'total' => $group->count(),
                 'bought' => self::bought($group)->count(),
                 'returned' => $returned,
@@ -339,7 +398,7 @@ class AssetWriteoffReport extends TabularReport
             ];
         }
 
-        return $months;
+        return $buckets;
     }
 
     /**
@@ -483,12 +542,18 @@ class AssetWriteoffReport extends TabularReport
             ->all();
     }
 
-    /** "2026-09" as "ก.ย. 2026" for the file. */
-    private static function monthTh(string $month): string
+    /** A bar's name in the file: "4 ส.ค. - 10 ส.ค. 2026", "ก.ย. 2026", "ไตรมาส 3/2026", "2026". */
+    private static function bucketTh(array $bucket, string $period): string
     {
-        $at = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $start = Carbon::parse($bucket['start']);
+        $day = fn (Carbon $at) => $at->day.' '.self::MONTHS_TH[$at->month - 1];
 
-        return self::MONTHS_TH[$at->month - 1].' '.$at->year;
+        return match ($period) {
+            'week' => $day(Carbon::parse($bucket['from'])).' - '.$day(Carbon::parse($bucket['to'])).' '.Carbon::parse($bucket['to'])->year,
+            'month' => self::MONTHS_TH[$start->month - 1].' '.$start->year,
+            'quarter' => 'ไตรมาส '.$start->quarter.'/'.$start->year,
+            default => (string) $start->year,
+        };
     }
 
     /**
@@ -503,11 +568,11 @@ class AssetWriteoffReport extends TabularReport
 
         return [
             [
-                'title' => 'แยกตามเดือน',
-                'headings' => ['เดือน', 'ทั้งหมด', 'ซื้อ', 'เช่าที่คืนผู้ให้เช่า', 'เช่าที่ตัดด้วยเหตุผลอื่น'],
+                'title' => self::PERIOD_TH[$breakdown['period']][0],
+                'headings' => [self::PERIOD_TH[$breakdown['period']][1], 'ทั้งหมด', 'ซื้อ', 'เช่าที่คืนผู้ให้เช่า', 'เช่าที่ตัดด้วยเหตุผลอื่น'],
                 'rows' => array_map(
-                    fn (array $m) => [self::monthTh($m['month']), $m['total'], $m['bought'], $m['returned'], $m['rented_other']],
-                    $breakdown['months'],
+                    fn (array $b) => [self::bucketTh($b, $breakdown['period']), $b['total'], $b['bought'], $b['returned'], $b['rented_other']],
+                    $breakdown['buckets'],
                 ),
             ],
             [
