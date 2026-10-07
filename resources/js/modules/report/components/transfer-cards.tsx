@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetTransferBreakdown } from '../hooks/use-reports';
 import type { AssetTransferBreakdown, ChartLabel, ChartTone, TabularFilters } from '../types';
-import { CardEmpty, CardTitle, fold, FoldToggle, monthLabel, Swatch } from './chart-parts';
+import { CardEmpty, CardTitle, fold, FoldToggle, monthLabel } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
@@ -332,7 +332,7 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
     ].filter((s): s is string => s !== null);
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_th_acc_title')} note={n('rep_th_acc_sub', { n: a.to_people })} />
             {a.to_people === 0 ? (
                 <CardEmpty>{t('rep_th_acc_empty')}</CardEmpty>
@@ -374,8 +374,14 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                 title={t('rep_th_wh_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch fill={FILL[KIND_STYLE.return.tone]}>{t('rep_th_wh_col_back')}</Swatch>
-                        <Swatch fill={FILL[KIND_STYLE.handover.tone]}>{t('rep_th_wh_col_out')}</Swatch>
+                        <span className="inline-flex items-center gap-1.5">
+                            <KindMark kind="return" />
+                            {t('rep_th_wh_col_back')}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <KindMark kind="handover" />
+                            {t('rep_th_wh_col_out')}
+                        </span>
                     </span>
                 }
             />
@@ -568,11 +574,11 @@ export function TransferCards({ filters }: { filters: TabularFilters }) {
                 <MonthFlowCard months={data.months} />
                 <WaitingCard waiting={data.waiting} />
             </div>
-            <div className="grid items-start gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
                 <AcceptanceCard acceptance={data.acceptance} />
                 <WarehouseCard warehouses={data.warehouses} />
             </div>
-            <div className="grid items-start gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
                 <DepartmentCard departments={data.departments} shared={data.acceptance.to_shared} />
                 <CategoryCard categories={data.categories} />
             </div>
