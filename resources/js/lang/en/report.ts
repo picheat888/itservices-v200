@@ -809,7 +809,7 @@ export const report: Dict = {
     rep_th_month_peak: 'Most handed out: {month} ({n})',
     rep_th_month_aria: 'Bar chart of assets In-Out by month, {from} to {to}: {out} handed out, {in} back in store',
     rep_th_wait_title: 'Waiting now',
-    rep_th_wait_sub: 'By asset status, whatever the date range',
+    rep_th_wait_sub: 'Asset status (now)',
     rep_th_wait_empty: 'Nothing waiting to be accepted or received back',
     rep_th_wait_accept: 'Waiting for the employee to accept',
     rep_th_wait_return: 'Waiting for IT to receive back',
