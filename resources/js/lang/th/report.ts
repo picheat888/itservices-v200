@@ -809,6 +809,7 @@ export const report: Dict = {
     rep_th_wait_empty: 'ไม่มีเครื่องที่ค้างรอกดรับหรือรอรับคืน',
     rep_th_wait_accept: 'รอพนักงานกดรับ',
     rep_th_wait_return: 'รอ IT รับคืน',
+    rep_th_wait_open_assets: 'เปิดในหน้าทรัพย์สิน',
     rep_th_wait_long: 'รอเกิน 7 วัน',
     rep_th_cause_handover: 'ส่งมอบ {date}',
     rep_th_cause_request: 'แจ้งขอคืน {date}',

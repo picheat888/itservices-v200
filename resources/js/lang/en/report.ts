@@ -813,6 +813,7 @@ export const report: Dict = {
     rep_th_wait_empty: 'Nothing waiting to be accepted or received back',
     rep_th_wait_accept: 'Waiting for the employee to accept',
     rep_th_wait_return: 'Waiting for IT to receive back',
+    rep_th_wait_open_assets: 'Open in Assets',
     rep_th_wait_long: 'Waiting over 7 days',
     rep_th_cause_handover: 'Handed over {date}',
     rep_th_cause_request: 'Return asked {date}',
