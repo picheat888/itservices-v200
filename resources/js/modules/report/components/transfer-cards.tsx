@@ -824,7 +824,7 @@ function CategoryCard({ categories }: { categories: AssetTransferBreakdown['cate
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_th_cat_title')}
-                note={t('rep_th_cat_sub').replace('{n}', count(categories.length, lang)).replace('{m}', count(total, lang))}
+                sub={t('rep_th_cat_sub').replace('{n}', count(categories.length, lang)).replace('{m}', count(total, lang))}
             />
             {rows.length === 0 ? <CardEmpty>{t('rep_th_empty')}</CardEmpty> : <BarList rows={rows} />}
         </Card>

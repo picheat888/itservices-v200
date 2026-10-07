@@ -841,7 +841,7 @@ export const report: Dict = {
     rep_th_dept_shared: 'Shared (no employee)',
     rep_th_no_department: 'No department',
     rep_th_cat_title: 'Handed out by category',
-    rep_th_cat_sub: '{m} handovers in {n} categories',
+    rep_th_cat_sub: '{n} categories | {m} handovers',
     rep_th_no_category: 'No category',
     rep_th_trips: '{n} moves',
     rep_th_trips_aria: 'Show all {n} moves of {code}',
