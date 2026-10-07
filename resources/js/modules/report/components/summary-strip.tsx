@@ -158,7 +158,9 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                     {item.note && <span>{noteText(t, lang, item.note)}</span>}
                                 </span>
                             ) : item.note ? (
-                                <span className="truncate">{noteText(t, lang, item.note)}</span>
+                                <span className="line-clamp-2" title={noteText(t, lang, item.note)}>
+                                    {noteText(t, lang, item.note)}
+                                </span>
                             ) : undefined
                         }
                     />
