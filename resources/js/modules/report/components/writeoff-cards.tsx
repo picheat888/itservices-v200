@@ -6,7 +6,7 @@ import { Card } from '@/shared/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWriteoffBreakdown } from '../hooks/use-reports';
@@ -20,7 +20,7 @@ import { YearsTip } from './years-tip';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
-type Bucket = AssetWriteoffBreakdown['buckets'][number];
+type Month = AssetWriteoffBreakdown['months'][number];
 type Category = AssetWriteoffBreakdown['categories'][number];
 type Contract = AssetWriteoffBreakdown['contracts'][number];
 
@@ -60,8 +60,22 @@ const SHORT_LIFE_YEARS = 3;
 /** Reasons listed before the rest fold under "แสดงทั้งหมด". */
 const REASONS_SHOWN = 10;
 
-/** A bar's piece gets its own count once it is at least this share of the tallest bar. */
+/** A month bar's piece gets its own count once it is at least this share of the tallest bar. */
 const SEGMENT_LABEL_SHARE = 0.12;
+
+/** Past this many months the chart stops shrinking its bars and scrolls sideways instead. */
+const SCROLL_AFTER_MONTHS = 60;
+
+/** Width per month when the chart scrolls: a 6px bar and a 2px gap. */
+const SCROLL_MONTH_PX = 8;
+
+/** How the month chart draws itself for this many months (1-6, 7-12, 13-24, more). */
+function monthDensity(n: number) {
+    if (n <= 6) return { bar: 'max-w-16', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, label: () => true };
+    if (n <= 12) return { bar: 'max-w-8', gap: 'gap-1 sm:gap-2.5', top: true, pieces: true, label: () => true };
+    if (n <= 24) return { bar: 'max-w-5', gap: 'gap-1', top: true, pieces: false, label: (i: number) => i % 2 === 0 };
+    return { bar: '', gap: 'gap-0.5', top: false, pieces: false, label: (_: number, month: string) => month.endsWith('-01') };
+}
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
@@ -71,6 +85,10 @@ const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
 const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
 // Two decimals and no ฿, like the money tile and the list's value column on the same page.
 const money = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const currentMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
 const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** A heading-right legend for a set of series, optionally with each one's count. */
@@ -89,78 +107,53 @@ function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<str
     );
 }
 
-/* ─────────────────────────── chart by week / month / quarter / year ─────────────────────────── */
+/* ─────────────────────────── month chart ─────────────────────────── */
 
-type Period = AssetWriteoffBreakdown['period'];
-
-/** Past this many bars, only every n-th bar keeps its label so they never run together. */
-const MAX_BAR_LABELS = 16;
-
-const dateFormat = (lang: Lang, withYear: boolean) =>
-    new Intl.DateTimeFormat(
-        lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB',
-        withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' },
-    );
-
-/** Two short lines under a bar: "10 ก.ค." / "26", "ก.ค." / "26", "Q3" / "26", "2026". */
-function bucketShort(b: Bucket, period: Period, lang: Lang): [string, string | null] {
-    const start = new Date(`${b.start}T00:00:00`);
-    const yy = b.start.slice(2, 4);
-    if (period === 'week') return [dateFormat(lang, false).format(new Date(`${b.from}T00:00:00`)), yy];
-    if (period === 'month') return [monthLabel(b.start.slice(0, 7), lang, false), yy];
-    if (period === 'quarter') return [`Q${Math.floor(start.getMonth() / 3) + 1}`, yy];
-    return [b.start.slice(0, 4), null];
-}
-
-/** A bar's full name: "10 ก.ค. – 16 ก.ค. 2026", "กรกฎาคม 2026", "Q3 2026", "2026". */
-function bucketLong(b: Bucket, period: Period, lang: Lang, t: T): string {
-    if (period === 'week') {
-        return `${dateFormat(lang, false).format(new Date(`${b.from}T00:00:00`))} – ${dateFormat(lang, true).format(new Date(`${b.to}T00:00:00`))}`;
-    }
-    if (period === 'month') return monthLabel(b.start.slice(0, 7), lang, false, true);
-    if (period === 'quarter') {
-        return t('rep_wo_quarter_long')
-            .replace('{q}', String(Math.floor((Number(b.start.slice(5, 7)) - 1) / 3) + 1))
-            .replace('{y}', b.start.slice(0, 4));
-    }
-    return b.start.slice(0, 4);
-}
-
-function PeriodCard({ period, buckets }: { period: Period; buckets: Bucket[] }) {
+function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const titleId = useId();
-    const total = buckets.reduce((sum, b) => sum + b.total, 0);
-    const peak = buckets.reduce<Bucket | null>((best, b) => (b.total > (best?.total ?? 0) ? b : best), null);
+    const thisMonth = currentMonth();
+    const today = new Date();
+    const toDate = to ? new Date(`${to}T00:00:00`) : today;
+    const countedTo = toDate < today ? toDate : today;
+    const partialNote = t('rep_wo_month_partial_tip').replace(
+        '{date}',
+        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+            countedTo,
+        ),
+    );
+    const hasPartial = months.some((m) => m.month === thisMonth);
+    const total = months.reduce((sum, m) => sum + m.total, 0);
+    const peak = months.reduce<Month | null>((best, m) => (m.total > (best?.total ?? 0) ? m : best), null);
     const top = niceMax(peak?.total ?? 0);
     const ticks = [0, top / 2, top];
     const minorTicks = [top / 4, (top * 3) / 4];
     const at = (v: number) => ({ bottom: `${(v / top) * 100}%` });
-    const counts = Object.fromEntries(SERIES.map((s) => [s.key, buckets.reduce((sum, b) => sum + b[s.key], 0)]));
-    const labelEvery = Math.ceil(buckets.length / MAX_BAR_LABELS);
-    const wide = buckets.length <= 6;
-    const partialNote = (b: Bucket) =>
-        t('rep_wo_month_partial_tip')
-            .replace('{from}', dateFormat(lang, false).format(new Date(`${b.from}T00:00:00`)))
-            .replace('{to}', dateFormat(lang, true).format(new Date(`${b.to}T00:00:00`)));
-    const title = t(`rep_wo_title_${period}`);
+    const counts = Object.fromEntries(SERIES.map((s) => [s.key, months.reduce((sum, m) => sum + m[s.key], 0)]));
     const peakText = peak
         ? t('rep_wo_month_peak')
-              .replace('{month}', bucketLong(peak, period, lang, t))
+              .replace('{month}', monthLabel(peak.month, lang, false, true))
               .replace('{n}', count(peak.total, lang))
         : '';
+    const density = monthDensity(months.length);
+    const scroll = months.length > SCROLL_AFTER_MONTHS;
+    const scroller = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => {
+        if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth;
+    }, [months.length]);
 
     return (
         <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
                 id={titleId}
-                title={title}
+                title={t('rep_wo_month_title')}
                 note={peak ? peakText : undefined}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Legend series={SERIES} counts={counts} />
-                        {buckets.some((b) => b.partial) && (
-                            <span className="inline-flex items-center gap-1.5">
+                        {hasPartial && (
+                            <span className="inline-flex items-center gap-1.5" title={partialNote}>
                                 <i aria-hidden className="outline-brand inline-block h-2.5 w-2.5 rounded-[3px] outline-1 outline-dashed" />
                                 {t('rep_wo_month_partial')}
                             </span>
@@ -173,102 +166,116 @@ function PeriodCard({ period, buckets }: { period: Period; buckets: Bucket[] }) 
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <div role="img" aria-labelledby={titleId} aria-describedby={`${titleId}-summary`} className="flex flex-1 flex-col">
-                        <div aria-hidden className="flex min-h-44 flex-1 gap-2 pt-[22px]">
-                            <div className="relative w-6 shrink-0">
-                                {ticks.map((v) => (
-                                    <span
-                                        key={v}
-                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
-                                        style={at(v)}
-                                    >
-                                        {count(v, lang)}
-                                    </span>
-                                ))}
-                            </div>
-                            <div className="border-border relative flex-1 border-b">
-                                {ticks.slice(1).map((v) => (
-                                    <div key={v} className="border-border absolute inset-x-0 border-t" style={at(v)} />
-                                ))}
-                                {minorTicks.map((v) => (
-                                    <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={at(v)} />
-                                ))}
-                                <div className="absolute inset-0 flex items-end gap-1 sm:gap-2.5">
-                                    {buckets.map((b) => (
-                                        <div key={b.start} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                                            <div
-                                                className={cn(
-                                                    'relative w-full',
-                                                    wide ? 'max-w-16' : 'max-w-8',
-                                                    b.partial &&
-                                                        b.total > 0 &&
-                                                        'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
-                                                )}
-                                                style={{ height: `${(b.total / top) * 100}%` }}
-                                            >
-                                                {b.total > 0 && (
-                                                    <span
-                                                        className={cn(
-                                                            'absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold tabular-nums',
-                                                            b.partial && 'text-brand',
-                                                        )}
-                                                    >
-                                                        {count(b.total, lang)}
-                                                    </span>
-                                                )}
-                                                <div className="flex h-full flex-col-reverse gap-px overflow-hidden rounded-t-md">
-                                                    {SERIES.map((s) =>
-                                                        b[s.key] > 0 ? (
-                                                            <span
-                                                                key={s.key}
-                                                                title={`${bucketLong(b, period, lang, t)}\n${t(s.label_key)}: ${count(b[s.key], lang)}${b.partial ? `\n${partialNote(b)}` : ''}`}
-                                                                className={cn(
-                                                                    'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white',
-                                                                    FILL[s.tone],
-                                                                )}
-                                                                style={{ flexGrow: b[s.key] }}
-                                                            >
-                                                                {b.total > b[s.key] && b[s.key] / top >= SEGMENT_LABEL_SHARE
-                                                                    ? count(b[s.key], lang)
-                                                                    : null}
-                                                            </span>
-                                                        ) : null,
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                        <div aria-hidden className="flex min-h-56 flex-1 gap-2">
+                            <div className="w-6 shrink-0 pt-[22px] pb-9">
+                                <div className="relative h-full">
+                                    {ticks.map((v) => (
+                                        <span
+                                            key={v}
+                                            className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                            style={at(v)}
+                                        >
+                                            {count(v, lang)}
+                                        </span>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-                        <div aria-hidden className="mt-1.5 flex gap-1 pl-8 sm:gap-2.5">
-                            {buckets.map((b, i) => {
-                                const [main, sub] = bucketShort(b, period, lang);
-                                const shown = i % labelEvery === 0;
-                                return (
-                                    <div key={b.start} className="min-w-0 flex-1 text-center font-mono text-[10.5px] whitespace-nowrap">
-                                        {shown && (
-                                            <>
-                                                <b className={cn('block font-semibold', b.partial ? 'text-brand' : 'text-foreground')}>{main}</b>
-                                                {sub && <span className="text-muted-foreground">{sub}</span>}
-                                            </>
-                                        )}
+                            <div ref={scroller} className={cn('flex min-w-0 flex-1 flex-col', scroll && 'overflow-x-auto overflow-y-hidden')}>
+                                <div
+                                    className="flex min-w-full flex-1 flex-col"
+                                    style={scroll ? { width: months.length * SCROLL_MONTH_PX } : undefined}
+                                >
+                                    <div className="border-border relative mt-[22px] flex-1 border-b">
+                                        {ticks.slice(1).map((v) => (
+                                            <div key={v} className="border-border absolute inset-x-0 border-t" style={at(v)} />
+                                        ))}
+                                        {minorTicks.map((v) => (
+                                            <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={at(v)} />
+                                        ))}
+                                        <div className={cn('absolute inset-0 flex items-end', density.gap)}>
+                                            {months.map((m) => (
+                                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                                                    <div
+                                                        className={cn(
+                                                            'relative w-full',
+                                                            density.bar,
+                                                            m.month === thisMonth &&
+                                                                m.total > 0 &&
+                                                                'outline-brand rounded-t-md outline-2 outline-offset-2 outline-dashed',
+                                                        )}
+                                                        style={{ height: `${(m.total / top) * 100}%` }}
+                                                    >
+                                                        {density.top && m.total > 0 && (
+                                                            <span
+                                                                className={cn(
+                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    m.month === thisMonth && 'text-brand',
+                                                                )}
+                                                            >
+                                                                {count(m.total, lang)}
+                                                            </span>
+                                                        )}
+                                                        <div className="flex h-full flex-col-reverse gap-px overflow-hidden rounded-t-md">
+                                                            {SERIES.map((s) =>
+                                                                m[s.key] > 0 ? (
+                                                                    <span
+                                                                        key={s.key}
+                                                                        title={`${monthLabel(m.month, lang, false, true)}\n${t(s.label_key)}: ${count(m[s.key], lang)}${m.month === thisMonth ? `\n${partialNote}` : ''}`}
+                                                                        className={cn(
+                                                                            'flex w-full items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white',
+                                                                            FILL[s.tone],
+                                                                        )}
+                                                                        style={{ flexGrow: m[s.key] }}
+                                                                    >
+                                                                        {density.pieces && m.total > m[s.key] && m[s.key] / top >= SEGMENT_LABEL_SHARE
+                                                                            ? count(m[s.key], lang)
+                                                                            : null}
+                                                                    </span>
+                                                                ) : null,
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                );
-                            })}
+                                    <div className={cn('flex h-9 shrink-0 pt-1.5', density.gap)}>
+                                        {months.map((m, i) => (
+                                            <div key={m.month} className="relative min-w-0 flex-1">
+                                                {density.label(i, m.month) && (
+                                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 text-center font-mono text-[10.5px] whitespace-nowrap">
+                                                        <b
+                                                            className={cn(
+                                                                'block font-semibold',
+                                                                m.month === thisMonth ? 'text-brand' : 'text-foreground',
+                                                            )}
+                                                        >
+                                                            {monthLabel(m.month, lang, false)}
+                                                        </b>
+                                                        <span className="text-muted-foreground">{m.month.slice(2, 4)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <p id={`${titleId}-summary`} className="sr-only">
                             {t('rep_wo_month_aria')
-                                .replace('{from}', bucketLong(buckets[0], period, lang, t))
-                                .replace('{to}', bucketLong(buckets[buckets.length - 1], period, lang, t))
+                                .replace('{from}', monthLabel(months[0].month, lang, false, true))
+                                .replace('{to}', monthLabel(months[months.length - 1].month, lang, false, true))
                                 .replace('{n}', count(total, lang))
                                 .replace('{peak}', peakText)}
+                            {hasPartial && ` ${t('rep_wo_month_partial')} ${partialNote}`}
                         </p>
                     </div>
+                    {/* Every month's numbers for a screen reader (the chart itself is one image). */}
                     <table className="sr-only">
-                        <caption>{title}</caption>
+                        <caption>{t('rep_wo_month_title')}</caption>
                         <thead>
                             <tr>
-                                <th scope="col">{t(`rep_wo_col_${period}`)}</th>
+                                <th scope="col">{t('rep_wo_month_col')}</th>
                                 {SERIES.map((s) => (
                                     <th key={s.key} scope="col">
                                         {t(s.label_key)}
@@ -278,16 +285,13 @@ function PeriodCard({ period, buckets }: { period: Period; buckets: Bucket[] }) 
                             </tr>
                         </thead>
                         <tbody>
-                            {buckets.map((b) => (
-                                <tr key={b.start}>
-                                    <th scope="row">
-                                        {bucketLong(b, period, lang, t)}
-                                        {b.partial && ` (${partialNote(b)})`}
-                                    </th>
+                            {months.map((m) => (
+                                <tr key={m.month}>
+                                    <th scope="row">{monthLabel(m.month, lang, false, true)}</th>
                                     {SERIES.map((s) => (
-                                        <td key={s.key}>{count(b[s.key], lang)}</td>
+                                        <td key={s.key}>{count(m[s.key], lang)}</td>
                                     ))}
-                                    <td>{count(b.total, lang)}</td>
+                                    <td>{count(m.total, lang)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -692,7 +696,7 @@ export function WriteoffCards({ filters }: { filters: TabularFilters }) {
         <div className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <PeriodCard period={data.period} buckets={data.buckets} />
+                <MonthCard months={data.months} to={typeof filters.to === 'string' ? filters.to : null} />
                 <ReasonsCard reasons={data.reasons} />
             </div>
             <CategoryCard categories={data.categories} totals={data.category_totals} />
