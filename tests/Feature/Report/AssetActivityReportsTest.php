@@ -288,23 +288,22 @@ class AssetActivityReportsTest extends TestCase
         $this->transfer('handover', '2026-08-30 09:00:00');
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.transfer_history/rows')->assertOk()->json();
+            ->getJson('/api/reports/r/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30')->assertOk()->json();
 
         $this->assertSame(3, $body['meta']['total']);
         $rows = collect($body['data'])->keyBy('id');
         $this->assertSame('Somchai Deploy (EMP-9)', $rows[$handover->id]['to_label']);
         $this->assertSame('Main store', $rows[$handover->id]['from_label']);
         $this->assertSame('return', $rows[$return->id]['transfer_kind']);
-        $this->assertSame('2026-09-20', $rows[$return->id]['moved_at']);
+        $this->assertSame('2026-09-20 09:00', $rows[$return->id]['moved_at']);
         $this->assertSame($return->id, $body['data'][1]['id']);
 
         $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(1, $summary['handovers']['value']);
-        $this->assertSame(1, $summary['returns']['value']);
-        $this->assertSame(1, $summary['relocations']['value']);
+        $this->assertSame(1, $summary['th_handovers']['value']);
+        $this->assertSame(1, $summary['th_back_in']['value']);
 
         $onlyReturns = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.transfer_history/rows?kind=return')->assertOk()->json('data');
+            ->getJson('/api/reports/r/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30&kind=return')->assertOk()->json('data');
         $this->assertSame([$return->id], array_column($onlyReturns, 'id'));
     }
 
@@ -327,7 +326,8 @@ class AssetActivityReportsTest extends TestCase
             ->exportReport('/api/reports/r/assets.transfer_history/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_assets-transfer_history_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $row = $export->sheets()[1]->map($export->rows->first());
+            $sheets = $export->sheets();
+            $row = end($sheets)->map($export->rows->first());
 
             return in_array('ส่งมอบ', $row, true) && in_array('Somchai Deploy (EMP-9)', $row, true);
         });
