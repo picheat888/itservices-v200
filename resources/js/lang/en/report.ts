@@ -556,7 +556,7 @@ export const report: Dict = {
     rep_wo_band_3_5: '3–5 yrs',
     rep_wo_band_over_5: 'Over 5 yrs',
     rep_wo_short_life: 'Shorter than 3 years',
-    rep_wo_short_life_tip: 'Assets in this category were written off after less than 3 years on average, sooner than expected. Check whether the model or the way they are used wears them out early.',
+    rep_wo_short_life_tip: 'Assets in this category were written off after less than 3 years of use on average.',
     rep_age_ym: '{y} yr {m} mo',
     rep_age_y: '{y} yr',
     rep_age_m: '{m} mo',
