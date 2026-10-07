@@ -1,4 +1,4 @@
-// Shared report card pieces: list folding, card heading, title with count, master-data label, stacked bar.
+// Shared report card pieces: list folding, card headings, title with count, master-data label, stacked bar, month label, swatch.
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -115,4 +115,44 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
             </span>
         </div>
     );
+}
+
+/** "2026-09" → "ก.ย." (with "26" on the first column and each January when `withYear`). */
+export function monthLabel(month: string, lang: 'th' | 'en', withYear: boolean, long = false): string {
+    const [y, m] = month.split('-').map(Number);
+    const name = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { month: long ? 'long' : 'short' }).format(
+        new Date(y, m - 1, 1),
+    );
+    if (long) return `${name} ${y}`;
+    return withYear ? `${name} ${String(y).slice(2)}` : name;
+}
+
+/** Card heading: h2 title, optional note, legend on the right. */
+export function CardTitle({ id, title, note, sub }: { id?: string; title: React.ReactNode; note?: React.ReactNode; sub?: React.ReactNode }) {
+    return (
+        <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3')}>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+                <h2 id={id} className="text-sm font-semibold">
+                    {title}
+                </h2>
+                {note && <p className="text-muted-foreground text-xs">{note}</p>}
+            </div>
+            {sub && <div className="text-muted-foreground text-xs">{sub}</div>}
+        </div>
+    );
+}
+
+/** A legend entry as on the overview's cards: a dot in the mark's colour, then what it means. */
+export function Swatch({ fill, children }: { fill: string; children: React.ReactNode }) {
+    return (
+        <span className="inline-flex items-center gap-1.5">
+            <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', fill)} />
+            {children}
+        </span>
+    );
+}
+
+/** A card body with nothing to draw. */
+export function CardEmpty({ children }: { children: React.ReactNode }) {
+    return <div className="text-muted-foreground px-5 py-10 text-center text-sm">{children}</div>;
 }

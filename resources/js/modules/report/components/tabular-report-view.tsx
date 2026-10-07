@@ -115,7 +115,7 @@ function TabularReportRows({
         align: column.type === 'number' || column.type === 'money' || column.type === 'hours_left' ? 'right' : undefined,
         className: column.type === 'text' || column.type === 'localized' ? 'max-w-[22rem] truncate whitespace-nowrap' : 'whitespace-nowrap',
         render: (row) => {
-            const own = extras.renderCell?.(column.key, row);
+            const own = extras.renderCell?.(column.key, row, { filters, patch: onPatch });
             if (own !== undefined) return own;
             const href = row._links?.[column.key];
             return <TabularCell column={column} value={row[column.key]} href={href && canOpen(href) ? href : undefined} />;
@@ -309,7 +309,11 @@ export interface TabularReportExtras {
      *  or a function of the filters, so the heading names what the table holds now. */
     rowsTitle?: string | ((filters: TabularFilters) => string);
     /** Draw one column's cell the page's own way; undefined = the shared TabularCell. */
-    renderCell?: (key: string, row: Record<string, unknown>) => React.ReactNode | undefined;
+    renderCell?: (
+        key: string,
+        row: Record<string, unknown>,
+        ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void },
+    ) => React.ReactNode | undefined;
 }
 
 export function TabularReportView({ reportKey: key, extras = {} }: { reportKey: string; extras?: TabularReportExtras }) {
