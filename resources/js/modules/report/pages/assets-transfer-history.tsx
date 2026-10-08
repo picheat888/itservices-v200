@@ -16,6 +16,7 @@ const KINDS: TransferKind[] = ['handover', 'return', 'recall', 'relocate'];
 
 /** Columns drawn inside the asset, from / to and outcome cells — kept in the rows and files. */
 const INNER = [
+    'brand',
     'model',
     'category',
     'asset_moves',
@@ -44,7 +45,8 @@ function AssetCell({ row, patch }: { row: Row; patch: Patch }) {
     const href = row._links?.asset_code;
     const code = String(row.asset_code ?? '');
     const category = isLabel(row.category) ? (lang === 'th' && row.category.name_th) || row.category.name : null;
-    const what = [str(row.model), category].filter((s): s is string => Boolean(s));
+    const model = [str(row.brand), str(row.model)].filter(Boolean).join(' ');
+    const what = [model, category].filter((s): s is string => Boolean(s));
     const moves = num(row.asset_moves) ?? 0;
 
     return (
