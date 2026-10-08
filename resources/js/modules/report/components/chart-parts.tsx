@@ -145,6 +145,13 @@ export function monthLabelPlace(density: MonthDensity, i: number, n: number): st
     return 'left-1/2 -translate-x-1/2 text-center';
 }
 
+/** A bar's top edge (lifted over the count above it) for a note to open from. */
+export function barTop(bar: HTMLElement | undefined, lift: number): DOMRect | null {
+    if (!bar) return null;
+    const box = bar.getBoundingClientRect();
+    return new DOMRect(box.left, box.top - lift, box.width, 0);
+}
+
 /** This month as "YYYY-MM", the bar a chart marks as still running. */
 export const currentMonth = (): string => {
     const now = new Date();
