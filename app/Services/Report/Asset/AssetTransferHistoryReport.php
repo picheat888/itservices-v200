@@ -36,7 +36,7 @@ class AssetTransferHistoryReport extends TabularReport
         'location' => 'rep_th_party_location', 'shared' => 'rep_th_party_shared',
     ];
 
-    private const PARTY_TH = ['employee' => 'พนักงาน', 'warehouse' => 'คลัง', 'location' => 'สถานที่', 'shared' => 'ใช้ร่วม'];
+    private const PARTY_TH = ['employee' => 'พนักงาน', 'warehouse' => 'คลัง', 'location' => 'สถานที่', 'shared' => 'ส่วนกลาง'];
 
     private const OUTCOME_KEYS = [
         'accepted' => 'rep_th_outcome_accepted', 'waiting' => 'rep_th_outcome_waiting',
@@ -46,7 +46,7 @@ class AssetTransferHistoryReport extends TabularReport
 
     private const OUTCOME_TH = [
         'accepted' => 'กดรับแล้ว', 'waiting' => 'รอกดรับ', 'recalled' => 'เรียกคืนก่อนกดรับ',
-        'never_accepted' => 'ไม่ได้กดรับ', 'not_needed' => 'ใช้ร่วม ไม่ต้องกดรับ', 'returned' => 'รับคืนหลังแจ้งคืน',
+        'never_accepted' => 'ไม่ได้กดรับ', 'not_needed' => 'ส่วนกลาง ไม่ต้องกดรับ', 'returned' => 'รับคืนหลังแจ้งคืน',
     ];
 
     /** A wait longer than this many days turns the "waiting now" tile red. */
@@ -466,8 +466,8 @@ class AssetTransferHistoryReport extends TabularReport
                 'headings' => ['รายการ', 'จำนวน'],
                 'rows' => [
                     ['ส่งมอบให้พนักงาน', $a['to_people']], ['กดรับวันเดียวกัน', $a['same_day']], ['กดรับวันถัดไป', $a['next_day']],
-                    ['กดรับหลัง 2 วันขึ้นไป', $a['later']], ['ยังรอกดรับ', $a['waiting']], ['เรียกคืนก่อนกดรับ', $a['recalled']],
-                    ['ไม่ได้กดรับ', $a['never_accepted']], ['ส่งมอบให้ใช้ร่วม (ไม่ต้องกดรับ)', $a['to_shared']],
+                    ['กดรับหลัง 2 วันขึ้นไป', $a['later']], ['รอกดรับ', $a['waiting']], ['เรียกคืนก่อนกดรับ', $a['recalled']],
+                    ['ไม่ได้กดรับ', $a['never_accepted']], ['ส่งมอบเป็นส่วนกลาง (ไม่ต้องกดรับ)', $a['to_shared']],
                     ['เวลากดรับมอบ มัธยฐาน (ชม.)', $a['median_hours']],
                 ],
             ],
@@ -495,14 +495,14 @@ class AssetTransferHistoryReport extends TabularReport
                     isset($w['holder']['department']) ? $name($w['holder']['department']['name'], $w['holder']['department']['name_th'], '') : null,
                     $w['since'],
                     match ($w['cause']) {
-                        'handover' => 'ส่งมอบ', 'request' => 'แจ้งขอคืน', 'resign' => 'ลาออก', default => null,
+                        'handover' => 'ส่งมอบ', 'request' => 'แจ้งคืน', 'resign' => 'ลาออก', default => null,
                     },
                     $w['days'],
                 ], $b['waiting']),
             ],
             [
                 'title' => 'อัปเดตสถานที่',
-                'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'รุ่น', 'จาก', 'ไป', 'เหตุผล', 'ผู้ทำรายการ'],
+                'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ'],
                 'rows' => array_map(fn (array $r) => [$r['at'], $r['code'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by']], $b['relocations']),
             ],
         ];
