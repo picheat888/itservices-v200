@@ -658,18 +658,14 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                                     <span
                                         key={tile.key}
                                         title={`${t(tile.label_key)} ${count(values[tile.key], lang)} (${share}%)`}
-                                        className={cn('@container flex h-full items-center justify-center', tile.fill)}
-                                        style={{ width: `${(values[tile.key] / Math.max(1, total)) * 100}%` }}
+                                        // Grows by its share but never narrower than its label
+                                        className={cn(
+                                            'flex h-full min-w-[1.375rem] basis-0 items-center justify-center font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
+                                            tile.fill,
+                                        )}
+                                        style={{ flexGrow: values[tile.key] }}
                                     >
-                                        {/* Shown only when the segment is wide enough for its label */}
-                                        <span
-                                            className={cn(
-                                                'hidden font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                                                share < 10 ? '@min-[0.875rem]:inline' : '@min-[1.375rem]:inline',
-                                            )}
-                                        >
-                                            {share}%
-                                        </span>
+                                        {share}%
                                     </span>
                                 ) : null;
                             })}
