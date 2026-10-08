@@ -822,7 +822,7 @@ export const report: Dict = {
     rep_th_acc_title: 'How fast employees accept',
     rep_th_acc_sub: '{n} handovers to employees',
     rep_th_acc_within2: 'accepted within 2 days',
-    rep_th_acc_within2_of: '{met} of {n} accepted',
+    rep_th_acc_within2_of: 'of all {n} handovers',
     rep_th_acc_empty: 'No handovers to employees in this period',
     rep_th_acc_same_day: 'Same day',
     rep_th_acc_next_day: 'Next day',

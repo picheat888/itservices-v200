@@ -616,7 +616,6 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
     const lang = useUiStore((s) => s.lang);
     const values = { same_day: a.same_day, next_day: a.next_day, later: a.later, waiting: a.waiting, closed: a.recalled + a.never_accepted };
     const n = (key: string, v: Record<string, number>) => Object.entries(v).reduce((s, [k, x]) => s.replaceAll(`{${k}}`, count(x, lang)), t(key));
-    const accepted = a.same_day + a.next_day + a.later;
     const total = Object.values(values).reduce((sum, v) => sum + v, 0);
     const pct = (v: number, of: number) => (of === 0 ? 0 : Math.round((v / of) * 100));
 
@@ -629,7 +628,13 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                 <>
                     <ul className="grid grid-cols-2 gap-2 px-5 pt-4 pb-3 sm:grid-cols-3 md:grid-cols-5">
                         {ACCEPT_TILES.map((tile) => (
-                            <li key={tile.key} className={cn('bg-muted/60 flex flex-col gap-0.5 rounded-lg border-t-[3px] px-3 py-2.5', tile.edge)}>
+                            <li
+                                key={tile.key}
+                                className={cn(
+                                    'bg-muted/60 flex flex-col items-center gap-0.5 rounded-lg border-t-[3px] px-3 py-2.5 text-center',
+                                    tile.edge,
+                                )}
+                            >
                                 <b className={cn('font-mono text-xl font-bold tabular-nums', values[tile.key] === 0 && 'text-muted-foreground')}>
                                     {count(values[tile.key], lang)}
                                 </b>
@@ -638,34 +643,33 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                         ))}
                     </ul>
                     <div className="flex flex-1 flex-col justify-center gap-2 px-5 pt-3 pb-4">
-                        {accepted > 0 && (
-                            <div className="flex flex-wrap items-baseline gap-x-2">
-                                <b className="font-mono text-2xl font-bold tabular-nums">{pct(a.within_2_days, accepted)}%</b>
-                                <span className="text-sm font-medium">{t('rep_th_acc_within2')}</span>
-                                <span className="text-muted-foreground text-xs">
-                                    {n('rep_th_acc_within2_of', { met: a.within_2_days, n: accepted })}
-                                </span>
-                            </div>
-                        )}
-                        <div aria-hidden className="bg-muted flex h-3 gap-px overflow-hidden rounded-full">
-                            {ACCEPT_TILES.map((tile) =>
-                                values[tile.key] > 0 ? (
+                        <div className="flex flex-wrap items-baseline gap-x-2">
+                            <b className="font-mono text-2xl font-bold tabular-nums">{pct(a.within_2_days, a.to_people)}%</b>
+                            <span className="text-sm font-medium">{t('rep_th_acc_within2')}</span>
+                            <span className="text-muted-foreground text-xs">{n('rep_th_acc_within2_of', { n: a.to_people })}</span>
+                        </div>
+                        <div aria-hidden className="bg-muted flex h-5 gap-px overflow-hidden rounded-full">
+                            {ACCEPT_TILES.map((tile) => {
+                                const share = pct(values[tile.key], total);
+                                return values[tile.key] > 0 ? (
                                     <span
                                         key={tile.key}
-                                        title={`${t(tile.label_key)} ${count(values[tile.key], lang)} (${pct(values[tile.key], total)}%)`}
-                                        className={cn('block h-full', tile.fill)}
+                                        title={`${t(tile.label_key)} ${count(values[tile.key], lang)} (${share}%)`}
+                                        className={cn('@container flex h-full items-center justify-center', tile.fill)}
                                         style={{ width: `${(values[tile.key] / Math.max(1, total)) * 100}%` }}
-                                    />
-                                ) : null,
-                            )}
-                        </div>
-                        <div aria-hidden className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums">
-                            {ACCEPT_TILES.filter((tile) => values[tile.key] > 0).map((tile) => (
-                                <span key={tile.key} className="inline-flex items-center gap-1">
-                                    <i className={cn('inline-block h-2 w-2 rounded-full', tile.fill)} />
-                                    {pct(values[tile.key], total)}%
-                                </span>
-                            ))}
+                                    >
+                                        {/* Shown only when the segment is wide enough for its label */}
+                                        <span
+                                            className={cn(
+                                                'hidden font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
+                                                share < 10 ? '@min-[0.875rem]:inline' : '@min-[1.375rem]:inline',
+                                            )}
+                                        >
+                                            {share}%
+                                        </span>
+                                    </span>
+                                ) : null;
+                            })}
                         </div>
                     </div>
                 </>

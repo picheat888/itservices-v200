@@ -818,7 +818,7 @@ export const report: Dict = {
     rep_th_acc_title: 'พนักงานกดรับมอบเร็วแค่ไหน',
     rep_th_acc_sub: 'ส่งมอบให้พนักงาน {n} ครั้ง',
     rep_th_acc_within2: 'กดรับภายใน 2 วัน',
-    rep_th_acc_within2_of: '{met} จาก {n} ครั้งที่กดรับแล้ว',
+    rep_th_acc_within2_of: 'จากทั้งหมด {n} ครั้ง',
     rep_th_acc_empty: 'ไม่มีการส่งมอบให้พนักงานในช่วงนี้',
     rep_th_acc_same_day: 'วันเดียวกัน',
     rep_th_acc_next_day: 'วันถัดไป',
