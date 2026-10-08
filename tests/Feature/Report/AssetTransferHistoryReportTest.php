@@ -313,9 +313,13 @@ class AssetTransferHistoryReportTest extends TestCase
             $titles = array_map(fn ($sheet) => $sheet->title(), $sheets);
             $waiting = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'ค้างอยู่ตอนนี้');
             $moves = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'อัปเดตสถานที่');
+            $acceptance = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'การกดรับมอบ');
 
             return count($sheets) === 9
                 && $moves->array() === [['2026-07-15 09:00', 'A6', 'Latitude 5440', 'Floor 1', 'Floor 2', null, 'IT Team']]
+                && $moves->headings() === ['วันที่', 'รหัสทรัพย์สิน', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ']
+                && in_array(['ส่งมอบเป็นส่วนกลาง (ไม่ต้องกดรับ)', 1], $acceptance->array(), true)
+                && in_array(['รอกดรับ', 1], $acceptance->array(), true)
                 && in_array('การกดรับมอบ', $titles, true)
                 && $waiting->array()[0][0] === 'A2'
                 && $waiting->array()[2][6] === 'ลาออก';
