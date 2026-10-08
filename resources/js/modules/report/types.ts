@@ -562,6 +562,7 @@ export interface AssetTransferBreakdown {
     waiting: {
         id: number;
         code: string;
+        brand: string | null;
         model: string | null;
         category: ChartLabel | null;
         status: 'pending_acceptance' | 'pending_return';
@@ -579,6 +580,7 @@ export interface AssetTransferBreakdown {
         /** "Y-m-d H:i" */
         at: string;
         code: string;
+        brand: string | null;
         model: string;
         from: string | null;
         to: string;

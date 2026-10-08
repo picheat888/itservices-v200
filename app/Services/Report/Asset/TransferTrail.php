@@ -49,6 +49,24 @@ class TransferTrail
             ->all();
     }
 
+    /**
+     * Each asset's brand name, from its record (the trail only keeps the model).
+     *
+     * @param  Collection<int, int>  $assetIds
+     * @return array<int, string>
+     */
+    public static function brands(Collection $assetIds): array
+    {
+        if ($assetIds->isEmpty()) {
+            return [];
+        }
+
+        return Asset::query()->whereIn('assets.id', $assetIds)
+            ->join('brands', 'brands.id', '=', 'assets.brand_id')
+            ->pluck('brands.name', 'assets.id')
+            ->all();
+    }
+
     /** @return list<string> */
     public static function warehouseNames(): array
     {
@@ -195,8 +213,8 @@ class TransferTrail
             ->whereIn('status', [AssetStatus::PendingAcceptance->value, AssetStatus::PendingReturn->value])
             ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->where('category_id', (int) $id))
             ->when($filters['department_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('ownerEmployee', fn (Builder $e) => $e->where('department_id', (int) $id)))
-            ->with(['model:id,name', 'category:id,name,name_th', 'ownerEmployee:id,code,first_name,last_name,department_id', 'ownerEmployee.department:id,name,name_th'])
-            ->get(['id', 'asset_code', 'status', 'model_id', 'category_id', 'owner_employee_id', 'owner', 'updated_at']);
+            ->with(['brand:id,name', 'model:id,name', 'category:id,name,name_th', 'ownerEmployee:id,code,first_name,last_name,department_id', 'ownerEmployee.department:id,name,name_th'])
+            ->get(['id', 'asset_code', 'status', 'brand_id', 'model_id', 'category_id', 'owner_employee_id', 'owner', 'updated_at']);
         if ($assets->isEmpty()) {
             return [];
         }
@@ -222,6 +240,7 @@ class TransferTrail
                 return [
                     'id' => $asset->id,
                     'code' => $asset->asset_code,
+                    'brand' => $asset->brand?->name,
                     'model' => $asset->model?->name,
                     'category' => $asset->category ? ['name' => $asset->category->name, 'name_th' => $asset->category->name_th] : null,
                     'status' => $asset->status->value,

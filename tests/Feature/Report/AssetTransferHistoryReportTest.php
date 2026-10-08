@@ -10,6 +10,7 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -152,6 +153,20 @@ class AssetTransferHistoryReportTest extends TestCase
             collect($relocations[0])->only(['at', 'from', 'to', 'by'])->all(),
         );
         $this->assertSame([], $this->breakdown(self::RANGE.'&kind=handover')['relocations']);
+    }
+
+    public function test_the_brand_comes_from_the_asset_record_in_the_rows_waiting_and_location_updates(): void
+    {
+        $zebra = Brand::create(['name' => 'Zebra']);
+        $this->assets['A2']->update(['brand_id' => $zebra->id]);
+        $this->assets['A6']->update(['brand_id' => $zebra->id]);
+
+        $this->assertSame('Zebra', $this->rowsById()[$this->rows['a6_move']->id]['brand']);
+        $this->assertSame('Zebra', $this->breakdown()['relocations'][0]['brand']);
+        $this->assertSame('Zebra', $this->breakdown()['waiting'][0]['brand']);
+
+        $named = collect(['a2', 'a6', 'a6_move'])->map(fn (string $n) => $this->rows[$n]->id)->sort()->values()->all();
+        $this->assertSame($named, collect(array_keys($this->rowsById(self::RANGE.'&search=Zebra')))->sort()->values()->all());
     }
 
     private function breakdown(string $query = self::RANGE): array
@@ -308,7 +323,8 @@ class AssetTransferHistoryReportTest extends TestCase
         $this->actingAs($this->viewer())
             ->exportReport('/api/reports/r/assets.transfer_history/export?format=xlsx&'.self::RANGE)->assertAccepted();
 
-        $this->assertExportStored('Report_assets-transfer_history_2026-10-07.xlsx', function (TabularReportExport $export) {
+        $brand = $this->assets['A6']->brand->name;
+        $this->assertExportStored('Report_assets-transfer_history_2026-10-07.xlsx', function (TabularReportExport $export) use ($brand) {
             $sheets = $export->sheets();
             $titles = array_map(fn ($sheet) => $sheet->title(), $sheets);
             $waiting = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'ค้างอยู่ตอนนี้');
@@ -316,13 +332,14 @@ class AssetTransferHistoryReportTest extends TestCase
             $acceptance = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'การกดรับมอบ');
 
             return count($sheets) === 9
-                && $moves->array() === [['2026-07-15 09:00', 'A6', 'Latitude 5440', 'Floor 1', 'Floor 2', null, 'IT Team']]
-                && $moves->headings() === ['วันที่', 'รหัสทรัพย์สิน', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ']
+                && $moves->array() === [['2026-07-15 09:00', 'A6', $brand, 'Latitude 5440', 'Floor 1', 'Floor 2', null, 'IT Team']]
+                && $moves->headings() === ['วันที่', 'รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ']
+                && $waiting->headings()[1] === 'ยี่ห้อ'
                 && in_array(['ส่งมอบเป็นส่วนกลาง (ไม่ต้องกดรับ)', 1], $acceptance->array(), true)
                 && in_array(['รอกดรับ', 1], $acceptance->array(), true)
                 && in_array('การกดรับมอบ', $titles, true)
                 && $waiting->array()[0][0] === 'A2'
-                && $waiting->array()[2][6] === 'ลาออก';
+                && $waiting->array()[2][7] === 'ลาออก';
         });
     }
 }

@@ -394,6 +394,9 @@ function FlowDetail({ month, partialNote }: { month: Month; partialNote: string 
 
 /* ─────────────────────────── location updates ─────────────────────────── */
 
+/** Brand and model on one line, e.g. "Dell Latitude 5440". */
+const brandModel = (a: { brand: string | null; model: string | null }) => [a.brand, a.model].filter(Boolean).join(' ');
+
 function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['relocations'] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -450,8 +453,8 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
                                                         {r.code}
                                                     </span>
                                                 )}
-                                                <div className="text-muted-foreground max-w-[16rem] truncate text-xs" title={r.model}>
-                                                    {r.model}
+                                                <div className="text-muted-foreground max-w-[16rem] truncate text-xs" title={brandModel(r)}>
+                                                    {brandModel(r)}
                                                 </div>
                                             </th>
                                             <td className={TD}>
@@ -510,7 +513,7 @@ function WaitingRow({ w }: { w: Waiting }) {
                 ) : (
                     <span className="font-mono text-xs font-semibold">{w.code}</span>
                 )}
-                {w.model && <span className="text-muted-foreground ml-2 text-xs">{w.model}</span>}
+                {(w.brand || w.model) && <span className="text-muted-foreground ml-2 text-xs">{brandModel(w)}</span>}
             </span>
             <span className="row-span-2" title={late ? t('rep_th_wait_long') : undefined}>
                 <StatusBadge tone={late ? 'red' : 'gray'} className="font-mono tabular-nums">

@@ -102,6 +102,7 @@ class AssetTransferHistoryReport extends TabularReport
                     ->where(fn (Builder $e) => $e->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like));
                 $q->where(fn (Builder $w) => $w->where('asset_tag', 'like', $like)
                     ->orWhere('asset_model', 'like', $like)
+                    ->orWhereIn('asset_id', Asset::query()->select('id')->whereHas('brand', fn (Builder $b) => $b->where('name', 'like', $like)))
                     ->orWhere('from_owner', 'like', $like)
                     ->orWhere('to_owner', 'like', $like)
                     ->orWhereIn('from_owner', $codes)
@@ -120,6 +121,8 @@ class AssetTransferHistoryReport extends TabularReport
             ReportColumn::dateTime('moved_at', 'วันที่', fn (AssetTransfer $t) => $t->created_at),
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (AssetTransfer $t) => $t->asset_tag)->linkTo('/assets', fn (AssetTransfer $t) => $t->asset_id),
             // Drawn under the code on the page, so hidden as columns of their own.
+            ReportColumn::text('brand', 'ยี่ห้อ', fn (AssetTransfer $t) => $this->trail($t, 'brands')[$t->asset_id] ?? null)
+                ->labelKey('rep_c_brand')->hiddenByDefault(),
             ReportColumn::text('model', 'รุ่น', fn (AssetTransfer $t) => $t->asset_model)->hiddenByDefault(),
             ReportColumn::localized('category', 'หมวดหมู่', fn (AssetTransfer $t) => $this->trail($t, 'categories')[$t->asset_id] ?? null)
                 ->labelKey('rep_c_asset_category')->hiddenByDefault(),
@@ -177,13 +180,14 @@ class AssetTransferHistoryReport extends TabularReport
     {
         $people = TransferTrail::people($rows);
         $assetIds = $rows->pluck('asset_id')->unique()->values();
+        $assets = Asset::query()->whereIn('id', $assetIds)->with('category:id,name,name_th')->get(['id', 'category_id']);
 
         return [
             'people' => $people,
             'warehouses' => TransferTrail::warehouseNames(),
             'outcomes' => TransferTrail::outcomes($rows, $people),
-            'categories' => Asset::query()->whereIn('id', $assetIds)->with('category:id,name,name_th')->get(['id', 'category_id'])
-                ->mapWithKeys(fn (Asset $a) => [$a->id => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null])->all(),
+            'categories' => $assets->mapWithKeys(fn (Asset $a) => [$a->id => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null])->all(),
+            'brands' => TransferTrail::brands($assetIds),
             'moves' => AssetTransfer::query()->whereIn('asset_id', $assetIds)->selectRaw('asset_id, COUNT(*) as n')->groupBy('asset_id')
                 ->pluck('n', 'asset_id')->map(fn ($n) => (int) $n)->all(),
         ];
@@ -328,19 +332,23 @@ class AssetTransferHistoryReport extends TabularReport
      * Every location update in the range, newest first: the asset, where from and to, why and by whom.
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{id: int, asset_id: int, at: string, code: string, model: string, from: ?string, to: string, reason: ?string, by: ?string}>
+     * @return list<array{id: int, asset_id: int, at: string, code: string, brand: ?string, model: string, from: ?string, to: string, reason: ?string, by: ?string}>
      */
     private function relocations(array $filters): array
     {
-        return $this->filtered($filters)
+        $moves = $this->filtered($filters)
             ->where('kind', AssetTransferKind::Relocate->value)
             ->orderByDesc('created_at')->orderByDesc('id')
-            ->get(['id', 'asset_id', 'asset_tag', 'asset_model', 'from_owner', 'to_owner', 'reason', 'performed_by', 'created_at'])
+            ->get(['id', 'asset_id', 'asset_tag', 'asset_model', 'from_owner', 'to_owner', 'reason', 'performed_by', 'created_at']);
+        $brands = TransferTrail::brands($moves->pluck('asset_id')->unique());
+
+        return $moves
             ->map(fn (AssetTransfer $t) => [
                 'id' => $t->id,
                 'asset_id' => $t->asset_id,
                 'at' => $t->created_at->format('Y-m-d H:i'),
                 'code' => $t->asset_tag,
+                'brand' => $brands[$t->asset_id] ?? null,
                 'model' => $t->asset_model,
                 'from' => $t->from_owner,
                 'to' => $t->to_owner,
@@ -488,9 +496,9 @@ class AssetTransferHistoryReport extends TabularReport
             ],
             [
                 'title' => 'ค้างอยู่ตอนนี้',
-                'headings' => ['รหัสทรัพย์สิน', 'รุ่น', 'สถานะ', 'ผู้ถือ', 'แผนก', 'เริ่มรอ', 'สาเหตุ', 'รอมาแล้ว (วัน)'],
+                'headings' => ['รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'สถานะ', 'ผู้ถือ', 'แผนก', 'เริ่มรอ', 'สาเหตุ', 'รอมาแล้ว (วัน)'],
                 'rows' => array_map(fn (array $w) => [
-                    $w['code'], $w['model'], $w['status'] === 'pending_acceptance' ? 'รอกดรับ' : 'รอรับคืน',
+                    $w['code'], $w['brand'], $w['model'], $w['status'] === 'pending_acceptance' ? 'รอกดรับ' : 'รอรับคืน',
                     $w['holder'] ? "{$w['holder']['name']} ({$w['holder']['code']})" : $w['owner_label'],
                     isset($w['holder']['department']) ? $name($w['holder']['department']['name'], $w['holder']['department']['name_th'], '') : null,
                     $w['since'],
@@ -502,8 +510,8 @@ class AssetTransferHistoryReport extends TabularReport
             ],
             [
                 'title' => 'อัปเดตสถานที่',
-                'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ'],
-                'rows' => array_map(fn (array $r) => [$r['at'], $r['code'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by']], $b['relocations']),
+                'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ'],
+                'rows' => array_map(fn (array $r) => [$r['at'], $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by']], $b['relocations']),
             ],
         ];
     }
