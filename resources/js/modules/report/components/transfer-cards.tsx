@@ -53,7 +53,7 @@ const LONG_WAIT_DAYS = 7;
 const ROWS_SHOWN = 10;
 
 /** Waiting assets listed per group before the rest fold. */
-const WAITING_SHOWN = 5;
+const WAITING_SHOWN = 3;
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
@@ -402,7 +402,7 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
     const { folds, shown } = fold(relocations, ROWS_SHOWN, open);
 
     return (
-        <Card className="flex flex-col overflow-hidden">
+        <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
                 title={t('rep_th_reloc_title')}
                 note={t('rep_th_reloc_sub')}
@@ -587,7 +587,7 @@ function WaitingCard({ waiting }: { waiting: Waiting[] }) {
     const back = waiting.filter((w) => w.status === 'pending_return');
 
     return (
-        <Card className="flex flex-col overflow-hidden xl:col-span-2">
+        <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_th_wait_title')} sub={t('rep_th_wait_sub')} />
             {waiting.length === 0 ? (
                 <CardEmpty>{t('rep_th_wait_empty')}</CardEmpty>
@@ -616,12 +616,6 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
     const lang = useUiStore((s) => s.lang);
     const values = { same_day: a.same_day, next_day: a.next_day, later: a.later, waiting: a.waiting, closed: a.recalled + a.never_accepted };
     const n = (key: string, v: Record<string, number>) => Object.entries(v).reduce((s, [k, x]) => s.replaceAll(`{${k}}`, count(x, lang)), t(key));
-    const notes = [
-        a.later > 0 && a.later_weekend === a.later ? n('rep_th_acc_weekend_all', { n: a.later }) : null,
-        a.later_weekend > 0 && a.later_weekend < a.later ? n('rep_th_acc_weekend_some', { w: a.later_weekend, n: a.later }) : null,
-        values.closed > 0 ? n('rep_th_acc_closed_note', { r: a.recalled, n: a.never_accepted }) : null,
-        a.to_shared > 0 ? n('rep_th_acc_shared_note', { n: a.to_shared }) : null,
-    ].filter((s): s is string => s !== null);
     const accepted = a.same_day + a.next_day + a.later;
     const total = Object.values(values).reduce((sum, v) => sum + v, 0);
     const pct = (v: number, of: number) => (of === 0 ? 0 : Math.round((v / of) * 100));
@@ -643,7 +637,7 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                             </li>
                         ))}
                     </ul>
-                    <div className="flex flex-1 flex-col justify-center gap-2 px-5 py-3">
+                    <div className="flex flex-1 flex-col justify-center gap-2 px-5 pt-3 pb-4">
                         {accepted > 0 && (
                             <div className="flex flex-wrap items-baseline gap-x-2">
                                 <b className="font-mono text-2xl font-bold tabular-nums">{pct(a.within_2_days, accepted)}%</b>
@@ -674,13 +668,6 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                             ))}
                         </div>
                     </div>
-                    {notes.length > 0 && (
-                        <ul className="text-muted-foreground space-y-1 px-5 pb-4 text-xs">
-                            {notes.map((note) => (
-                                <li key={note}>{note}</li>
-                            ))}
-                        </ul>
-                    )}
                 </>
             )}
         </Card>
@@ -695,7 +682,7 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
     const max = Math.max(1, ...warehouses.map((w) => Math.max(w.out, w.back)));
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden xl:col-span-2">
             <CardTitle
                 title={t('rep_th_wh_title')}
                 sub={
@@ -875,17 +862,23 @@ function CardsSkeleton() {
                     <CardHeadingSkeleton />
                     <ChartSkeleton />
                 </Card>
+                <div className="flex flex-col gap-3 xl:col-span-2">
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <BarRowsSkeleton rows={3} />
+                    </Card>
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <TableRowsSkeleton rows={4} />
+                    </Card>
+                </div>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <Card className="overflow-hidden xl:col-span-2">
                     <CardHeadingSkeleton />
                     <BarRowsSkeleton rows={6} />
                 </Card>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-                <Card className="overflow-hidden">
-                    <CardHeadingSkeleton />
-                    <BarRowsSkeleton rows={3} />
-                </Card>
-                <Card className="overflow-hidden">
+                <Card className="overflow-hidden lg:col-span-2 xl:col-span-3">
                     <CardHeadingSkeleton />
                     <TableRowsSkeleton rows={4} />
                 </Card>
@@ -906,17 +899,19 @@ export function TransferCards({ filters }: { filters: TabularFilters }) {
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <MonthFlowCard months={data.months} />
-                <WaitingCard waiting={data.waiting} />
+                <div className="flex flex-col gap-3 xl:col-span-2">
+                    <AcceptanceCard acceptance={data.acceptance} />
+                    <WaitingCard waiting={data.waiting} />
+                </div>
             </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-                <AcceptanceCard acceptance={data.acceptance} />
+            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <WarehouseCard warehouses={data.warehouses} />
+                <RelocationCard relocations={data.relocations} />
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
                 <DepartmentCard departments={data.departments} shared={data.acceptance.to_shared} />
                 <CategoryCard categories={data.categories} />
             </div>
-            <RelocationCard relocations={data.relocations} />
         </div>
     );
 }
