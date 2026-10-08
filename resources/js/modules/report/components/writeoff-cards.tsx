@@ -11,6 +11,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWriteoffBreakdown } from '../hooks/use-reports';
 import type { AssetWriteoffBreakdown, ChartSeries, TabularFilters } from '../types';
 import {
+    barTop,
     CardTitle,
     CODE_LINK,
     currentMonth,
@@ -134,6 +135,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
     const density = monthDensity(months);
     const scroll = months.length > SCROLL_AFTER_MONTHS;
     const scroller = useRef<HTMLDivElement>(null);
+    const bars = useRef(new Map<string, HTMLElement>());
     const [scrollbar, setScrollbar] = useState(0);
     useLayoutEffect(() => {
         const element = scroller.current;
@@ -216,11 +218,15 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                             <InfoPopover
                                                 key={m.month}
                                                 label={monthText(m)}
-                                                side="right"
+                                                anchor={() => barTop(bars.current.get(m.month), density.top && m.total > 0 ? 18 : 0)}
                                                 className="flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-end"
                                                 content={<MonthDetail month={m} partialNote={m.month === thisMonth ? partialNote : null} />}
                                             >
                                                 <span
+                                                    ref={(el) => {
+                                                        if (el) bars.current.set(m.month, el);
+                                                        else bars.current.delete(m.month);
+                                                    }}
                                                     aria-hidden
                                                     className={cn('relative block w-full', density.bar)}
                                                     style={{ height: `${(m.total / top) * 100}%` }}

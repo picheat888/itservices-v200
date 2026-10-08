@@ -11,6 +11,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetTransferBreakdown } from '../hooks/use-reports';
 import type { AssetTransferBreakdown, ChartLabel, ChartTone, TabularFilters } from '../types';
 import {
+    barTop,
     CardEmpty,
     CardTitle,
     currentMonth,
@@ -138,6 +139,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
     const density = monthDensity(months);
     const scroll = months.length > SCROLL_AFTER_MONTHS;
     const scroller = useRef<HTMLDivElement>(null);
+    const bars = useRef(new Map<string, HTMLElement>());
     const [scrollbar, setScrollbar] = useState(0);
     useLayoutEffect(() => {
         const element = scroller.current;
@@ -249,6 +251,10 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                             {months.map((m) => (
                                                 <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
                                                     <div
+                                                        ref={(el) => {
+                                                            if (el) bars.current.set(m.month, el);
+                                                            else bars.current.delete(m.month);
+                                                        }}
                                                         className={cn('relative w-full', density.bar)}
                                                         style={{ height: `${(m.handover / up) * 100}%` }}
                                                     >
@@ -329,7 +335,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                             <InfoPopover
                                                 key={m.month}
                                                 label={monthText(m)}
-                                                side="right"
+                                                anchor={() => barTop(bars.current.get(m.month), density.top && m.handover > 0 ? 18 : 0)}
                                                 className="h-full min-w-0 flex-1 cursor-pointer"
                                                 content={<FlowDetail month={m} partialNote={m.month === thisMonth ? partialNote : null} />}
                                             >
@@ -699,22 +705,25 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                             <span className="text-sm font-medium">{t('rep_th_acc_within2')}</span>
                             <span className="text-muted-foreground text-xs">{n('rep_th_acc_within2_of', { n: a.to_people })}</span>
                         </div>
-                        <div aria-hidden className="bg-muted flex h-5 gap-px overflow-hidden rounded-full">
+                        <div className="bg-muted flex h-5 gap-px overflow-hidden rounded-full">
                             {ACCEPT_TILES.map((tile) => {
                                 const share = pct(values[tile.key], total);
+                                const words = `${t(tile.label_key)} ${t('rep_th_trips').replace('{n}', count(values[tile.key], lang))} (${share}%)`;
                                 return values[tile.key] > 0 ? (
-                                    <span
+                                    <InfoPopover
                                         key={tile.key}
-                                        title={`${t(tile.label_key)} ${count(values[tile.key], lang)} (${share}%)`}
+                                        label={words}
+                                        content={words}
+                                        contentClassName="whitespace-nowrap"
                                         // Grows by its share but never narrower than its label
                                         className={cn(
-                                            'flex h-full min-w-[1.375rem] basis-0 items-center justify-center font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
+                                            'flex h-full min-w-[1.375rem] basis-0 cursor-pointer items-center justify-center rounded-none font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)] focus-visible:ring-inset',
                                             tile.fill,
                                         )}
                                         style={{ flexGrow: values[tile.key] }}
                                     >
-                                        {share}%
-                                    </span>
+                                        <span aria-hidden>{share}%</span>
+                                    </InfoPopover>
                                 ) : null;
                             })}
                         </div>
