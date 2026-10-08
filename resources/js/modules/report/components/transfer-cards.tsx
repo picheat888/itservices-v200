@@ -606,12 +606,54 @@ function WaitingCard({ waiting }: { waiting: Waiting[] }) {
 
 /* ─────────────────────────── acceptance ─────────────────────────── */
 
-const ACCEPT_TILES: { key: 'same_day' | 'next_day' | 'later' | 'waiting' | 'closed'; label_key: string; edge: string; fill: string }[] = [
-    { key: 'same_day', label_key: 'rep_th_acc_same_day', edge: 'border-t-emerald-500', fill: 'bg-emerald-500' },
-    { key: 'next_day', label_key: 'rep_th_acc_next_day', edge: 'border-t-blue-500', fill: 'bg-blue-500' },
-    { key: 'later', label_key: 'rep_th_acc_later', edge: 'border-t-amber-500', fill: 'bg-amber-500' },
-    { key: 'waiting', label_key: 'rep_th_acc_waiting', edge: 'border-t-red-500', fill: 'bg-red-500' },
-    { key: 'closed', label_key: 'rep_th_acc_closed', edge: 'border-t-slate-400', fill: 'bg-slate-400' },
+const ACCEPT_TILES: {
+    key: 'same_day' | 'next_day' | 'later' | 'waiting' | 'closed';
+    label_key: string;
+    edge: string;
+    fill: string;
+    tint: string;
+    ink: string;
+}[] = [
+    {
+        key: 'same_day',
+        label_key: 'rep_th_acc_same_day',
+        edge: 'border-t-emerald-500',
+        fill: 'bg-emerald-500',
+        tint: 'bg-emerald-500/10',
+        ink: 'text-emerald-700 dark:text-emerald-300',
+    },
+    {
+        key: 'next_day',
+        label_key: 'rep_th_acc_next_day',
+        edge: 'border-t-blue-500',
+        fill: 'bg-blue-500',
+        tint: 'bg-blue-500/10',
+        ink: 'text-blue-700 dark:text-blue-300',
+    },
+    {
+        key: 'later',
+        label_key: 'rep_th_acc_later',
+        edge: 'border-t-amber-500',
+        fill: 'bg-amber-500',
+        tint: 'bg-amber-500/10',
+        ink: 'text-amber-700 dark:text-amber-300',
+    },
+    {
+        key: 'waiting',
+        label_key: 'rep_th_acc_waiting',
+        edge: 'border-t-red-500',
+        fill: 'bg-red-500',
+        tint: 'bg-red-500/10',
+        ink: 'text-red-700 dark:text-red-300',
+    },
+    {
+        key: 'closed',
+        label_key: 'rep_th_acc_closed',
+        edge: 'border-t-slate-400',
+        fill: 'bg-slate-400',
+        tint: 'bg-slate-500/10',
+        ink: 'text-slate-700 dark:text-slate-300',
+    },
 ];
 
 function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown['acceptance'] }) {
@@ -634,11 +676,17 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                             <li
                                 key={tile.key}
                                 className={cn(
-                                    'bg-muted/60 flex flex-col items-center gap-0.5 rounded-lg border-t-[3px] px-3 py-2.5 text-center',
+                                    'flex flex-col items-center gap-0.5 rounded-lg border-t-[3px] px-3 py-2.5 text-center',
                                     tile.edge,
+                                    tile.tint,
                                 )}
                             >
-                                <b className={cn('font-mono text-xl font-bold tabular-nums', values[tile.key] === 0 && 'text-muted-foreground')}>
+                                <b
+                                    className={cn(
+                                        'font-mono text-xl font-bold tabular-nums',
+                                        values[tile.key] === 0 ? 'text-muted-foreground' : tile.ink,
+                                    )}
+                                >
                                     {count(values[tile.key], lang)}
                                 </b>
                                 <span className="text-muted-foreground text-xs">{t(tile.label_key)}</span>
