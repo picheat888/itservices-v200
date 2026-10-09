@@ -1076,7 +1076,7 @@ export const report: Dict = {
     rep_ar_no_department: 'No department',
     rep_ar_head_title: 'Members of {name}',
     rep_ar_strip_cross: '{n} from other departments',
-    rep_ar_head_gone: '{n} have left: revoke before sending to the owner',
+    rep_ar_head_gone: '{n} have left: fix this before sending to the owner for review',
     rep_ar_sheet_open: 'Member review sheet',
     rep_ar_sheet_title: 'Member review sheet',
     rep_ar_sheet_asof: 'IT Service Desk, as of {date}',
