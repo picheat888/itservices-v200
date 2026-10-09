@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { AccessBadge, useMyAccess } from '@/modules/access';
 import { useAuth } from '@/modules/auth';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, EmployeeAccessRow } from '@/shared/types';
@@ -24,7 +25,6 @@ import {
     Tag,
     Undo2,
 } from 'lucide-react';
-import { useState } from 'react';
 import { AssetTypeIcon } from '../components/asset-meta';
 import { AssetTagBadge } from '../components/asset-tag-badge';
 import { ACCEPT_KEY, useAssetMutations, useMyAssets } from '../hooks/use-assets';
@@ -188,10 +188,12 @@ export default function MyAssetsAccessPage() {
     ];
     const accessCount = holdings.length - heldAssets.length;
 
-    // Only kinds the reader actually holds get a chip: an empty filter is a dead end that
-    // teaches nothing, and four of them make the row look like a menu of things to buy.
-    const [kind, setKind] = useState<Kind | 'all'>('all');
+    // Only kinds the reader holds get a chip; ?kind= outside them reads as all
+    const list = useListParams();
     const kinds = KIND_ORDER.filter((k) => holdings.some((h) => h.kind === k));
+    const kindParam = list.get('kind');
+    const kind: Kind | 'all' = kinds.find((k) => k === kindParam) ?? 'all';
+    const setKind = (next: Kind | 'all') => list.setFilter('kind', next === 'all' ? '' : next);
 
     /**
      * Grouped, not one flat run.

@@ -1,12 +1,14 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCurrency } from '@/modules/settings';
+import { PAGE_SIZES } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
+import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -44,6 +46,14 @@ const TAB_IDS = ['overview', 'all'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isContractTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+
+const CONTRACT_TYPES: ContractType[] = ['software', 'hardware', 'service', 'connectivity', 'other'];
+type StatusFilter = '' | 'expiring' | 'expired';
+const STATUS_FILTERS: StatusFilter[] = ['expiring', 'expired'];
+const DEFAULT_SORT = 'end_asc';
+const SORT_VALUES = ['end_asc', 'end_desc', 'created_desc', 'created_asc', 'value_desc', 'value_asc'];
+// List keys of the All tab; cleared when the tab changes (rows-per-page stays).
+const LIST_KEYS = ['search', 'type', 'status', 'sort', 'page'];
 
 function StatCard({
     label,
@@ -102,16 +112,25 @@ export default function ContractsPage() {
 
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isContractTab, 'overview');
-    const [search, setSearch] = useState('');
+    // All-tab search, filters, sort and page live in the URL (?search, type, status, sort, page, per).
+    const list = useListParams();
+    const { page, perPage } = list;
+    const search = list.get('search');
     const ALL_TYPES = '__all__';
-    const [typeFilter, setTypeFilter] = useState<ContractType | ''>('');
-    // Status filter on the "All" tab. '' = every contract; 'expiring' / 'expired' reuse the
-    // backend tab filters. Set by the dashboard banners' "Review" buttons.
+    const typeParam = list.get('type');
+    const typeFilter: ContractType | '' = CONTRACT_TYPES.includes(typeParam as ContractType) ? (typeParam as ContractType) : '';
+    // Status filter: '' = every contract; 'expiring' / 'expired' reuse the backend tab filters.
     const ALL_STATUS = '__all__';
-    const [statusFilter, setStatusFilter] = useState<'' | 'expiring' | 'expired'>('');
-    const [sort, setSort] = useState('end_asc');
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
+    const statusParam = list.get('status');
+    const statusFilter: StatusFilter = STATUS_FILTERS.includes(statusParam as StatusFilter) ? (statusParam as StatusFilter) : '';
+    const sortParam = list.get('sort');
+    const sort = SORT_VALUES.includes(sortParam) ? sortParam : DEFAULT_SORT;
+    const setSearch = (value: string) => list.setFilter('search', value);
+    const setTypeFilter = (value: ContractType | '') => list.setFilter('type', value);
+    const setStatusFilter = (value: StatusFilter) => list.setFilter('status', value);
+    const setSort = (value: string) => list.setFilter('sort', value === DEFAULT_SORT ? '' : value);
+    const setPage = (next: number) => list.setParams({ page: next > 1 ? String(next) : null });
+    const setPerPage = (value: number) => list.setParams({ per: value === PAGE_SIZES[0] ? null : String(value), page: null });
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Contract | null>(null);
     // Newly created contract — pinned at the top with a "New" badge for 8 seconds.
@@ -170,9 +189,26 @@ export default function ContractsPage() {
     const perPageDisplay = meta?.per_page ?? perPage;
     const currentPage = meta?.current_page ?? page;
     const lastPage = meta?.last_page ?? 1;
+    usePageInRange(list, meta?.last_page);
 
-    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = (next: Tab) => setTab(next);
+    // Switch tab and mirror it in the URL (?tab=); the All tab's list keys are cleared in the same write.
+    const changeTab = (next: Tab) => {
+        if (next === tab) return;
+        setTab(next, { extra: (p) => LIST_KEYS.forEach((key) => p.delete(key)) });
+    };
+    // Open the All tab with a status filter on page 1, as one URL write.
+    const showAllWithStatus = (status: StatusFilter) =>
+        setTab('all', {
+            replace: tab === 'all',
+            extra: (p) => {
+                if (status) {
+                    p.set('status', status);
+                } else {
+                    p.delete('status');
+                }
+                p.delete('page');
+            },
+        });
 
     // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;
@@ -207,9 +243,7 @@ export default function ContractsPage() {
     /** Called by ContractFormDrawer after a new contract is saved. */
     const handleCreated = (contract: Contract) => {
         // Switch to the "all" tab (with no status filter) and go to page 1 so the user can see the list.
-        changeTab('all');
-        setStatusFilter('');
-        setPage(1);
+        showAllWithStatus('');
         // Pin the new row at the top for 8 seconds.
         if (newlyCreatedTimer.current) clearTimeout(newlyCreatedTimer.current);
         setNewlyCreated(contract);
@@ -221,19 +255,12 @@ export default function ContractsPage() {
     const hasBanners = !!summary?.expiring || !!summary?.overdue;
 
     // Set filters (type/status/sort ≠ default) — drives the FilterPopover count badge.
-    const DEFAULT_SORT = 'end_asc';
     const activeFilterCount = (typeFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
     // True when any list control differs from its default — drives the quick "Clear filters" pill.
     const hasActiveFilters = !!search || activeFilterCount > 0;
 
     /** Reset search, type/status filters and sort back to their defaults. */
-    const clearFilters = () => {
-        setSearch('');
-        setTypeFilter('');
-        setStatusFilter('');
-        setSort(DEFAULT_SORT);
-        setPage(1);
-    };
+    const clearFilters = () => list.setParams({ search: null, type: null, status: null, sort: null, page: null });
 
     return (
         <div className="space-y-6">
@@ -271,11 +298,7 @@ export default function ContractsPage() {
                                     <p className="mt-3 text-sm md:mt-0 md:ml-6">
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                changeTab('all');
-                                                setStatusFilter('expiring');
-                                                setPage(1);
-                                            }}
+                                            onClick={() => showAllWithStatus('expiring')}
                                             className="font-medium whitespace-nowrap text-amber-800 hover:text-amber-600 dark:text-amber-300 dark:hover:text-amber-200"
                                         >
                                             {t('contract_label_review')}
@@ -303,11 +326,7 @@ export default function ContractsPage() {
                                     <p className="mt-3 text-sm md:mt-0 md:ml-6">
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                changeTab('all');
-                                                setStatusFilter('expired');
-                                                setPage(1);
-                                            }}
+                                            onClick={() => showAllWithStatus('expired')}
                                             className="font-medium whitespace-nowrap text-red-800 hover:text-red-600 dark:text-red-300 dark:hover:text-red-200"
                                         >
                                             {t('contract_label_review')}
@@ -328,12 +347,7 @@ export default function ContractsPage() {
                         { id: 'all', label: t('all_contracts') },
                     ]}
                     active={tab}
-                    onChange={(id) => {
-                        changeTab(id);
-                        setPage(1);
-                        setTypeFilter('');
-                        setStatusFilter('');
-                    }}
+                    onChange={changeTab}
                 />
 
                 {tab === 'overview' ? (
@@ -345,10 +359,7 @@ export default function ContractsPage() {
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setPage(1);
-                                    }}
+                                    onChange={(e) => setSearch(e.target.value)}
                                     placeholder={`${t('contract_vendor')} / ${t('contract_details')}`}
                                     className="pl-9"
                                 />
@@ -373,10 +384,7 @@ export default function ContractsPage() {
                                                 <SearchableSelect
                                                     active={!!typeFilter}
                                                     value={typeFilter || ALL_TYPES}
-                                                    onChange={(v) => {
-                                                        setTypeFilter(v === ALL_TYPES ? '' : (v as ContractType));
-                                                        setPage(1);
-                                                    }}
+                                                    onChange={(v) => setTypeFilter(v === ALL_TYPES ? '' : (v as ContractType))}
                                                     options={[
                                                         {
                                                             value: ALL_TYPES,
@@ -425,10 +433,7 @@ export default function ContractsPage() {
                                                 <SearchableSelect
                                                     active={!!statusFilter}
                                                     value={statusFilter || ALL_STATUS}
-                                                    onChange={(v) => {
-                                                        setStatusFilter(v === ALL_STATUS ? '' : (v as 'expiring' | 'expired'));
-                                                        setPage(1);
-                                                    }}
+                                                    onChange={(v) => setStatusFilter(v === ALL_STATUS ? '' : (v as StatusFilter))}
                                                     options={[
                                                         {
                                                             value: ALL_STATUS,
@@ -459,10 +464,7 @@ export default function ContractsPage() {
                                                 <SearchableSelect
                                                     active={sort !== DEFAULT_SORT}
                                                     value={sort}
-                                                    onChange={(v) => {
-                                                        setSort(v);
-                                                        setPage(1);
-                                                    }}
+                                                    onChange={setSort}
                                                     options={sortOptions.map((o) => ({ ...o, search: o.label }))}
                                                 />
                                             </div>
@@ -546,18 +548,12 @@ export default function ContractsPage() {
                         <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
                             <div className="flex items-center gap-2">
                                 <span>{t('contract_rows_per_page')}</span>
-                                <Select
-                                    value={String(perPage)}
-                                    onValueChange={(v) => {
-                                        setPerPage(Number(v));
-                                        setPage(1);
-                                    }}
-                                >
+                                <Select value={String(perPage)} onValueChange={(v) => setPerPage(Number(v))}>
                                     <SelectTrigger className="h-8 w-[72px]">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {[20, 50, 100].map((n) => (
+                                        {PAGE_SIZES.map((n) => (
                                             <SelectItem key={n} value={String(n)}>
                                                 {n}
                                             </SelectItem>
@@ -573,7 +569,7 @@ export default function ContractsPage() {
                                 </span>
                                 <div className="flex items-center gap-1">
                                     <button
-                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                        onClick={() => setPage(Math.max(1, page - 1))}
                                         disabled={page <= 1}
                                         aria-label={t('page_prev')}
                                         className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
@@ -584,7 +580,7 @@ export default function ContractsPage() {
                                         {currentPage} / {lastPage}
                                     </span>
                                     <button
-                                        onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                                        onClick={() => setPage(Math.min(lastPage, page + 1))}
                                         disabled={page >= lastPage}
                                         aria-label={t('page_next')}
                                         className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"

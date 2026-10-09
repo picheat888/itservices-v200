@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -13,7 +14,10 @@ import { useSectionMutations, useSections } from '../hooks/use-sections';
 import { SectionMembersDialog } from './section-members-dialog';
 import { SectionModal } from './section-modal';
 
-type SortKey = 'dept' | 'name' | 'members' | 'code';
+const SORT_KEYS = ['dept', 'name', 'members', 'code'] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+const DEFAULT_SORT: SortKey = 'dept';
+const isSortKey = (v: string): v is SortKey => (SORT_KEYS as readonly string[]).includes(v);
 
 export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) {
     const t = useT();
@@ -24,8 +28,14 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const mut = useSectionMutations();
     const [editSection, setEditSection] = useState<Section | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
-    const [deptFilter, setDeptFilter] = useState(''); // '' = all departments
-    const [sort, setSort] = useState<SortKey>('dept');
+    // Search, department, order, page and rows-per-page live in the URL (?search, dept, sort, page, per).
+    const list = useListParams();
+    const deptParam = list.get('dept');
+    const deptFilter = departments.length === 0 || departments.some((d) => String(d.id) === deptParam) ? deptParam : '';
+    const sortParam = list.get('sort');
+    const sort: SortKey = isSortKey(sortParam) ? sortParam : DEFAULT_SORT;
+    const setDeptFilter = (value: string) => list.setFilter('dept', value);
+    const setSort = (value: SortKey) => list.setFilter('sort', value === DEFAULT_SORT ? '' : value);
     const [membersOf, setMembersOf] = useState<Section | null>(null);
 
     const sectionLabel = (s: Section) => (lang === 'th' ? (s.name_th ?? s.name) : s.name);
@@ -138,6 +148,8 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                     rowKey={(s) => s.id}
                     onRowClick={(s) => setMembersOf(s)}
                     searchable={(s) => `${s.code} ${s.name} ${s.name_th ?? ''} ${s.department ?? ''}`}
+                    search={list.table.search}
+                    paging={list.table.paging}
                     filters={
                         <>
                             {/* Filter by department */}

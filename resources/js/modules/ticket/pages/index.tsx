@@ -6,10 +6,11 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime as fmtDateTime, formatRangeShort } from '@/shared/lib/datetime';
 import { cn, toRecordId } from '@/shared/lib/utils';
-import type { Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
+import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { DateRangeInput } from '@/shared/ui/date-range-input';
@@ -84,6 +85,26 @@ const SORT_LABEL: Record<(typeof SORT_OPTIONS)[number], string> = {
 };
 
 const isTicketTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+
+// URL keys of the list tabs, cleared on a tab switch (?per stays).
+const LIST_KEYS = ['search', 'status', 'category', 'priority', 'sla', 'sort', 'page'];
+const TICKET_STATUSES = Object.keys(TICKET_STATUS_META) as TicketStatus[];
+const TICKET_PRIORITIES = Object.keys(TICKET_PRIORITY_META) as TicketPriority[];
+const DEFAULT_RANGE = 30;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A URL value when it is one of `allowed`, else '' (all). */
+const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T | '' =>
+    (allowed as readonly string[]).includes(value) ? (value as T) : '';
+
+/** The dashboard window from ?range (7 / 90, or custom with ?from & ?to); anything else is 30 days. */
+function readRange(range: string, from: string, to: string): SummaryRange {
+    if (range === 'custom') {
+        return ISO_DATE.test(from) && ISO_DATE.test(to) && from <= to ? { from, to } : DEFAULT_RANGE;
+    }
+    const days = Number(range);
+    return days === 7 || days === 90 ? days : DEFAULT_RANGE;
+}
 
 /**
  * A ↑/↓ change pill spelled out in words ("เพิ่มขึ้น 33%" / "ลดลง 33%"), colored by
@@ -356,16 +377,27 @@ export default function TicketsPage() {
     // ticket tabs at all still lands somewhere harmless).
     const isVisibleTab = (v: string | null): v is Tab => isTicketTab(v) && visibleTabs.includes(v);
     const [tab, setTab] = useTabParam(isVisibleTab, visibleTabs[0] ?? 'my');
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('');
-    const [catFilter, setCatFilter] = useState<TicketCategory | ''>('');
-    const [priFilter, setPriFilter] = useState<TicketPriority | ''>('');
+
+    // List search, filters, sort and page live in the URL (?search, status, category, priority, sla, sort, page, per).
+    const list = useListParams();
+    const { page, perPage } = list;
+    const search = list.get('search');
+    const statusFilter = pickAllowed(list.get('status'), TICKET_STATUSES);
+    const catFilter = pickAllowed(list.get('category'), TICKET_CATEGORIES);
+    const priFilter = pickAllowed(list.get('priority'), TICKET_PRIORITIES);
     // '' = all · 'over_sla' = only tickets whose current SLA deadline has passed.
-    const [slaFilter, setSlaFilter] = useState<'' | 'over_sla'>('');
-    const [sort, setSort] = useState(DEFAULT_SORT);
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
-    const [range, setRange] = useState<SummaryRange>(30); // dashboard window: 7 / 30 / 90 days or a custom from–to pair
+    const slaFilter = pickAllowed(list.get('sla'), ['over_sla'] as const);
+    // No sorting by a column this reader is not shown.
+    const sortOptions = SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due'));
+    const sort = pickAllowed(list.get('sort'), sortOptions) || DEFAULT_SORT;
+    // Dashboard window (?range=7|90|custom with ?from&to); 30 days stays out of the URL.
+    const range = readRange(list.get('range'), list.get('from'), list.get('to'));
+    const setRange = (next: SummaryRange) =>
+        list.setParams(
+            typeof next === 'object'
+                ? { range: 'custom', from: next.from, to: next.to }
+                : { range: next === DEFAULT_RANGE ? null : String(next), from: null, to: null },
+        );
 
     const [takeTicket, setTakeTicket] = useState<Ticket | null>(null);
     const [forwardTicket, setForwardTicket] = useState<Ticket | null>(null);
@@ -443,12 +475,16 @@ export default function TicketsPage() {
         shownTicket.requester_id === user?.employee_id &&
         !shownTicket.from_request;
 
-    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = (next: Tab) => setTab(next);
-    // Each tab starts on page 1 — also when Back / Forward switches it.
-    useEffect(() => {
-        setPage(1);
-    }, [tab]);
+    // Switch tab (?tab=): the new tab starts unfiltered on page 1, plus any `filters` given, in one write.
+    const changeTab = (next: Tab, filters: Record<string, string> = {}) => {
+        if (next === tab && Object.keys(filters).length === 0) return;
+        setTab(next, {
+            extra: (params) => {
+                for (const key of LIST_KEYS) params.delete(key);
+                for (const [key, value] of Object.entries(filters)) params.set(key, value);
+            },
+        });
+    };
 
     const { data: summary, isLoading: summaryLoading } = useTicketSummary(canOverview, range);
     // Not just `has_repair_rules`: a case can be classified repair before an administrator
@@ -508,14 +544,7 @@ export default function TicketsPage() {
     // reset clears every list filter back to "all".
     const activeFilterCount =
         (statusFilter ? 1 : 0) + (catFilter ? 1 : 0) + (priFilter ? 1 : 0) + (slaFilter ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
-    const resetFilters = () => {
-        setStatusFilter('');
-        setCatFilter('');
-        setPriFilter('');
-        setSlaFilter('');
-        setSort(DEFAULT_SORT);
-        setPage(1);
-    };
+    const resetFilters = () => list.setParams({ status: null, category: null, priority: null, sla: null, sort: null, page: null });
 
     // Columns for the shared DataTable (All / Assigned-to-me tabs):
     // Request at · Ticket no. · Subject · Request by · Category · Priority · Status · Responsible by
@@ -649,7 +678,7 @@ export default function TicketsPage() {
                         tone: 'alert' as const,
                     }))}
                     active={tab}
-                    onChange={changeTab}
+                    onChange={(next) => changeTab(next)}
                 />
 
                 {tab === 'overview' && canOverview && (
@@ -818,11 +847,7 @@ export default function TicketsPage() {
                                                     title={t('ticket_dash_over_sla')}
                                                     sub={t('ticket_dash_over_sla_sub')}
                                                     value={summary?.over_sla_now ?? 0}
-                                                    onClick={() => {
-                                                        resetFilters();
-                                                        setSlaFilter('over_sla');
-                                                        changeTab('all');
-                                                    }}
+                                                    onClick={() => changeTab('all', { sla: 'over_sla' })}
                                                 />
                                             ) : (
                                                 <NowRow
@@ -840,11 +865,7 @@ export default function TicketsPage() {
                                                     title={t('ticket_dash_waiting_row')}
                                                     sub={t('ticket_dash_waiting_sub')}
                                                     value={summary?.backlog_open ?? 0}
-                                                    onClick={() => {
-                                                        resetFilters();
-                                                        setStatusFilter('open');
-                                                        changeTab('all');
-                                                    }}
+                                                    onClick={() => changeTab('all', { status: 'open' })}
                                                 />
                                             ) : (
                                                 <NowRow
@@ -861,11 +882,7 @@ export default function TicketsPage() {
                                                 title={t('ticket_dash_working_row')}
                                                 sub={t('ticket_dash_working_sub')}
                                                 value={summary?.backlog_in_progress ?? 0}
-                                                onClick={() => {
-                                                    resetFilters();
-                                                    setStatusFilter('in_progress');
-                                                    changeTab('all');
-                                                }}
+                                                onClick={() => changeTab('all', { status: 'in_progress' })}
                                             />
                                         </div>
                                     </Card>
@@ -877,10 +894,7 @@ export default function TicketsPage() {
                                         <span className="text-sm font-semibold">{t('ticket_latest')}</span>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                resetFilters();
-                                                changeTab('all');
-                                            }}
+                                            onClick={() => changeTab('all')}
                                             className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
                                         >
                                             {t('ticket_view_all')}
@@ -901,10 +915,7 @@ export default function TicketsPage() {
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setPage(1);
-                                    }}
+                                    onChange={(e) => list.setFilter('search', e.target.value)}
                                     placeholder={t('ticket_search')}
                                     className="pl-9"
                                 />
@@ -920,10 +931,7 @@ export default function TicketsPage() {
                                             <SearchableSelect
                                                 active={statusFilter !== ''}
                                                 value={statusFilter || ALL}
-                                                onChange={(v) => {
-                                                    setStatusFilter(v === ALL ? '' : (v as TicketStatus));
-                                                    setPage(1);
-                                                }}
+                                                onChange={(v) => list.setFilter('status', v === ALL ? '' : v)}
                                                 options={[
                                                     { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
                                                     ...(Object.keys(TICKET_STATUS_META) as TicketStatus[]).map((s) => ({
@@ -943,10 +951,7 @@ export default function TicketsPage() {
                                             <SearchableSelect
                                                 active={catFilter !== ''}
                                                 value={catFilter || ALL}
-                                                onChange={(v) => {
-                                                    setCatFilter(v === ALL ? '' : (v as TicketCategory));
-                                                    setPage(1);
-                                                }}
+                                                onChange={(v) => list.setFilter('category', v === ALL ? '' : v)}
                                                 options={[
                                                     { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
                                                     ...TICKET_CATEGORIES.map((c) => ({
@@ -967,10 +972,7 @@ export default function TicketsPage() {
                                                 <SearchableSelect
                                                     active={priFilter !== ''}
                                                     value={priFilter || ALL}
-                                                    onChange={(v) => {
-                                                        setPriFilter(v === ALL ? '' : (v as TicketPriority));
-                                                        setPage(1);
-                                                    }}
+                                                    onChange={(v) => list.setFilter('priority', v === ALL ? '' : v)}
                                                     options={[
                                                         {
                                                             value: ALL,
@@ -997,10 +999,7 @@ export default function TicketsPage() {
                                                 <SearchableSelect
                                                     active={slaFilter !== ''}
                                                     value={slaFilter || ALL}
-                                                    onChange={(v) => {
-                                                        setSlaFilter(v === ALL ? '' : 'over_sla');
-                                                        setPage(1);
-                                                    }}
+                                                    onChange={(v) => list.setFilter('sla', v === ALL ? '' : 'over_sla')}
                                                     options={[
                                                         {
                                                             value: ALL,
@@ -1026,18 +1025,12 @@ export default function TicketsPage() {
                                             <SearchableSelect
                                                 active={sort !== DEFAULT_SORT}
                                                 value={sort}
-                                                onChange={(v) => {
-                                                    setSort(v);
-                                                    setPage(1);
-                                                }}
-                                                // No sorting by a column this reader is not shown.
-                                                options={SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due')).map(
-                                                    (s) => ({
-                                                        value: s,
-                                                        label: t(SORT_LABEL[s]),
-                                                        search: t(SORT_LABEL[s]),
-                                                    }),
-                                                )}
+                                                onChange={(v) => list.setFilter('sort', v === DEFAULT_SORT ? '' : v)}
+                                                options={sortOptions.map((s) => ({
+                                                    value: s,
+                                                    label: t(SORT_LABEL[s]),
+                                                    search: t(SORT_LABEL[s]),
+                                                }))}
                                             />
                                         </div>
                                     </div>
@@ -1062,16 +1055,7 @@ export default function TicketsPage() {
                             onRowClick={openDetail}
                             loading={isLoading || isFetching}
                             emptyState={<span>{t('ticket_none')}</span>}
-                            server={{
-                                page,
-                                pageSize: perPage,
-                                total: meta?.total ?? 0,
-                                onPageChange: setPage,
-                                onPageSizeChange: (s) => {
-                                    setPerPage(s);
-                                    setPage(1);
-                                },
-                            }}
+                            server={{ ...list.table.paging, total: meta?.total ?? 0 }}
                         />
                     </div>
                 )}

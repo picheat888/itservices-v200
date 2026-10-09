@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -8,7 +9,7 @@ import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Clock, Eye, ListChecks, Pencil, Search, Workflow as WorkflowIcon, Zap, type LucideIcon } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { WorkflowEditorDialog } from '../components/workflow-editor-dialog';
 import { WorkflowStrip } from '../components/workflow-strip';
@@ -27,7 +28,10 @@ export default function WorkflowsPage() {
     const workflows = useMemo(() => data?.data ?? [], [data]);
     const measureDays = data?.meta.measure_days ?? 30;
 
-    const [search, setSearch] = useState('');
+    // Card search lives in the URL (?search).
+    const list = useListParams();
+    const search = list.get('search');
+    const setSearch = (value: string) => list.setFilter('search', value);
 
     // Both dialogs are URL-driven (?view=<id> / ?edit=<id>), so a reload or a shared link
     // reopens exactly what was open. `open()` writes one param and drops the other, which is

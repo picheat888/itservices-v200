@@ -5,6 +5,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import {
     isOnBehalfRequest,
@@ -19,14 +20,14 @@ import {
     requestTitle,
 } from '@/shared/lib/request-meta';
 import { cn, toRecordId } from '@/shared/lib/utils';
-import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
+import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Check, CheckCircle2, ChevronRight, Clock, Eye, History, Inbox, Plus, Search, X, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DecisionDialog, type DecisionAction } from '../components/decision-dialog';
 import { RequestCreateDialog } from '../components/request-create-dialog';
@@ -65,6 +66,12 @@ const ALL = '__all__';
 const TABS = ['overview', 'all', 'approvals'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
+/** URL keys of the list, cleared when the overview is entered or left (?per stays). */
+const LIST_KEYS = ['search', 'status', 'type', 'page'];
+
+/** A URL value when it is one of `allowed`, else '' (all). */
+const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T | '' =>
+    (allowed as readonly string[]).includes(value) ? (value as T) : '';
 
 /**
  * Requests page — the whole service-request lifecycle in three tabs:
@@ -90,20 +97,43 @@ export default function RequestsPage() {
     // Either list scope means the list tab is the one on screen.
     const isListTab = tab !== 'overview';
 
-    // List controls (all/approvals tabs).
-    const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
+    // List search, filters and page live in the URL (?search, status, type, page, per).
+    const list = useListParams();
+    const { page, perPage } = list;
+    const search = list.get('search');
+    // Typed as the unions (plus '' for "all") so the status/type registries can be indexed directly.
+    const status = pickAllowed(list.get('status'), REQUEST_STATUSES);
+    const type = pickAllowed(list.get('type'), REQUEST_TYPES);
+
+    // The box types instantly; the trimmed text reaches ?search 300ms later. `written` tells our own writes from Back / tab clears.
+    const [searchInput, setSearchInput] = useState(search);
+    const written = useRef(search);
     useEffect(() => {
-        const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+        if (search === written.current) return;
+        written.current = search;
+        setSearchInput(search);
+    }, [search]);
+    useEffect(() => {
+        const next = searchInput.trim();
+        if (next === search) return;
+        const timer = setTimeout(() => {
+            written.current = next;
+            list.setFilter('search', next);
+        }, 300);
         return () => clearTimeout(timer);
-    }, [searchInput]);
-    // Typed as the unions (plus '' for "all") so the status/type registries can be
-    // indexed directly — a raw string would only be checkable at runtime.
-    const [status, setStatus] = useState<ServiceRequestStatus | ''>('');
-    const [type, setType] = useState<ServiceRequestType | ''>('');
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
-    useEffect(() => setPage(1), [search, status, type, tab]);
+    }, [searchInput, search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Switch tab: leaving or entering the overview clears the list keys (?per stays); All ↔ Approvals keeps them, page 1.
+    const switchTab = (next: Tab, filters: Record<string, string> = {}) => {
+        if (next === tab) return;
+        const keys = tab === 'overview' || next === 'overview' ? LIST_KEYS : ['page'];
+        setTab(next, {
+            extra: (params) => {
+                for (const key of keys) params.delete(key);
+                for (const [key, value] of Object.entries(filters)) params.set(key, value);
+            },
+        });
+    };
 
     // Main list — powers the table AND the KPI meta (aggregates are filter-independent).
     const listParams =
@@ -302,7 +332,7 @@ export default function RequestsPage() {
                         { id: 'all', label: t('requests_tab_list'), count: meta?.total ?? null },
                     ]}
                     active={isListTab ? 'all' : 'overview'}
-                    onChange={setTab}
+                    onChange={(next) => switchTab(next)}
                 />
 
                 {tab === 'overview' ? (
@@ -313,27 +343,21 @@ export default function RequestsPage() {
                                 icon={Inbox}
                                 label={t('req_kpi_awaiting')}
                                 value={String(meta?.awaiting_me ?? 0)}
-                                onClick={() => setTab('approvals')}
+                                onClick={() => switchTab('approvals')}
                                 sub={`${t('req_kpi_awaiting_of')} ${meta?.pending ?? 0}`}
                             />
                             <Kpi
                                 icon={Check}
                                 label={t('req_kpi_approved')}
                                 value={String((meta?.approved ?? 0) + (meta?.completed ?? 0))}
-                                onClick={() => {
-                                    setTab('all');
-                                    setStatus('approved');
-                                }}
+                                onClick={() => switchTab('all', { status: 'approved' })}
                                 sub={`${meta?.completed ?? 0} ${t('req_status_completed')}`}
                             />
                             <Kpi
                                 icon={X}
                                 label={t('req_kpi_rejected')}
                                 value={String(meta?.rejected ?? 0)}
-                                onClick={() => {
-                                    setTab('all');
-                                    setStatus('rejected');
-                                }}
+                                onClick={() => switchTab('all', { status: 'rejected' })}
                                 sub={`${meta?.cancelled ?? 0} ${t('req_status_cancelled')}`}
                             />
                             <Kpi
@@ -353,7 +377,7 @@ export default function RequestsPage() {
                                 (meta?.awaiting_me ?? 0) > queue.length ? (
                                     <button
                                         type="button"
-                                        onClick={() => setTab('approvals')}
+                                        onClick={() => switchTab('approvals')}
                                         className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
                                     >
                                         {t('req_view_all')}
@@ -464,7 +488,7 @@ export default function RequestsPage() {
                             action={
                                 <button
                                     type="button"
-                                    onClick={() => setTab('all')}
+                                    onClick={() => switchTab('all')}
                                     className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
                                 >
                                     {t('req_view_all')}
@@ -530,7 +554,7 @@ export default function RequestsPage() {
                                     <button
                                         key={id}
                                         type="button"
-                                        onClick={() => setTab(id)}
+                                        onClick={() => switchTab(id)}
                                         className={cn(
                                             'flex h-full items-center rounded px-2.5 text-xs font-medium transition-colors',
                                             tab === id ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground',
@@ -556,10 +580,7 @@ export default function RequestsPage() {
                                 // two-up grid at ~120px a column, which cut every service name short.
                                 width={460}
                                 resultCount={meta?.total}
-                                onClear={() => {
-                                    setStatus('');
-                                    setType('');
-                                }}
+                                onClear={() => list.setParams({ status: null, type: null, page: null })}
                             >
                                 {() => (
                                     <div className="grid grid-cols-2 gap-3">
@@ -571,7 +592,7 @@ export default function RequestsPage() {
                                             <SearchableSelect
                                                 active={!!status}
                                                 value={status || ALL}
-                                                onChange={(v) => setStatus(v === ALL ? '' : (v as ServiceRequestStatus))}
+                                                onChange={(v) => list.setFilter('status', v === ALL ? '' : v)}
                                                 options={[
                                                     { value: ALL, label: t('all'), search: t('all'), icon: <ToneDot tone="gray" /> },
                                                     ...REQUEST_STATUSES.map((s) => ({
@@ -590,7 +611,7 @@ export default function RequestsPage() {
                                             <SearchableSelect
                                                 active={!!type}
                                                 value={type || ALL}
-                                                onChange={(v) => setType(v === ALL ? '' : (v as ServiceRequestType))}
+                                                onChange={(v) => list.setFilter('type', v === ALL ? '' : v)}
                                                 options={[
                                                     { value: ALL, label: t('all'), search: t('all'), icon: <ToneDot tone="gray" /> },
                                                     ...REQUEST_TYPES.map((k) => {
@@ -616,16 +637,7 @@ export default function RequestsPage() {
                             loading={isLoading || isFetching}
                             onRowClick={openDetail}
                             rowClassName={onboardingRowClass}
-                            server={{
-                                page,
-                                pageSize: perPage,
-                                total: meta?.total ?? 0,
-                                onPageChange: setPage,
-                                onPageSizeChange: (s) => {
-                                    setPerPage(s);
-                                    setPage(1);
-                                },
-                            }}
+                            server={{ ...list.table.paging, total: meta?.total ?? 0 }}
                         />
                     </div>
                 )}
