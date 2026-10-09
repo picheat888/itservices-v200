@@ -11,23 +11,15 @@ import { useUiStore } from '@/stores/ui';
 import { Download, FileText, Loader2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-reports';
-import type {
-    AccessDepartment,
-    AccessMemberKind,
-    AccessMembersBreakdown,
-    AccessMembersResource,
-    AccessType,
-    ChartTone,
-    TabularFilters,
-} from '../types';
+import type { AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
 import { Cols, Group, GroupRow, NUM, registryOptions, ResourceHead, scrollToRows, Segments, TD, TH, TypeLabel } from './access-overview-cards';
+import { count, deptName, type Lang, PickButton, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
 
-type Lang = 'th' | 'en';
 type Patch = (next: TabularFilters) => void;
 type Resource = AccessMembersResource;
 type Sheet = NonNullable<AccessMembersBreakdown['sheet']>;
@@ -49,8 +41,6 @@ const ROWS_SHOWN = 10;
 /** File share sizes to GB (AccessResourceMembersReport::TO_GB). */
 const TO_GB: Record<string, number> = { KB: 1 / 1048576, GB: 1, TB: 1024, PB: 1048576 };
 
-const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
-const deptName = (d: AccessDepartment, lang: Lang) => (d ? (lang === 'th' && d.name_th) || d.name : null);
 const keyOf = (r: Pick<Resource, 'type' | 'id'>) => `${r.type}:${r.id}`;
 
 /** "500 GB", or "ไม่จำกัด" for 0. */
@@ -244,18 +234,13 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                                     </td>
                                     <td className={TD}>
                                         {r.gb > 0 ? (
-                                            <div className="bg-muted h-5 min-w-[9rem] overflow-hidden rounded-full">
-                                                <div
-                                                    title={`${r.name}: ${gbText(lang, r.gb)}`}
-                                                    className={cn(
-                                                        'flex h-full items-center justify-center font-mono text-[10.5px] font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                                                        FILL['access-file'],
-                                                    )}
-                                                    style={{ width: `max(${(r.gb / scale) * 100}%, 2.75rem)` }}
-                                                >
-                                                    {pct(r.gb)}
-                                                </div>
-                                            </div>
+                                            <PieceBar
+                                                className="min-w-[9rem]"
+                                                minWidth="min-w-11"
+                                                scale={scale}
+                                                label={`${r.name}: ${gbText(lang, r.gb)}`}
+                                                pieces={[{ key: 'gb', value: r.gb, fill: FILL['access-file'], label: r.name, text: pct(r.gb) }]}
+                                            />
                                         ) : (
                                             <span className="text-muted-foreground text-xs">{t('rep_ar_space_not_counted')}</span>
                                         )}
@@ -316,34 +301,14 @@ function StorageCards({ resources }: { resources: Resource[] }) {
 /** Who the members are, one bar on the table's scale with the counts in the pieces. */
 function MixBar({ mix, scale }: { mix: Resource['mix']; scale: number }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const parts = MIX.filter((m) => mix[m.key] > 0);
-    const total = parts.reduce((s, m) => s + mix[m.key], 0);
+    const total = MIX.reduce((s, m) => s + mix[m.key], 0);
     if (total === 0) return <span className="text-muted-foreground text-xs">{t('rep_ar_no_members')}</span>;
-
     return (
-        <div className="bg-muted h-5 min-w-[8rem] overflow-hidden rounded-full">
-            <div
-                role="img"
-                aria-label={parts.map((m) => `${t(m.label)} ${count(mix[m.key], lang)}`).join(', ')}
-                className="flex h-full gap-px"
-                style={{ width: `max(${(total / scale) * 100}%, ${parts.length * 1.75}rem)` }}
-            >
-                {parts.map((m) => (
-                    <span
-                        key={m.key}
-                        title={`${t(m.label)}: ${count(mix[m.key], lang)}`}
-                        className={cn(
-                            'flex min-w-[1.5rem] basis-0 items-center justify-center font-mono text-[10.5px] font-semibold text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                            FILL[m.tone],
-                        )}
-                        style={{ flexGrow: mix[m.key] }}
-                    >
-                        {count(mix[m.key], lang)}
-                    </span>
-                ))}
-            </div>
-        </div>
+        <PieceBar
+            className="min-w-[8rem]"
+            scale={scale}
+            pieces={MIX.map((m) => ({ key: m.key, value: mix[m.key], fill: FILL[m.tone], label: t(m.label) }))}
+        />
     );
 }
 
@@ -351,30 +316,14 @@ function MixBar({ mix, scale }: { mix: Resource['mix']; scale: number }) {
 function Todo({ r }: { r: Resource }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const lines: { tone: 'bad' | 'warn' | 'ok' | 'muted'; text: string }[] = [];
+    const lines: { tone: TodoTone; text: string }[] = [];
     if (r.mix.gone > 0) lines.push({ tone: 'bad', text: t('rep_ar_todo_revoke_leavers').replace('{n}', count(r.mix.gone, lang)) });
     if (r.owner_issue === 'gone') lines.push({ tone: 'bad', text: t('rep_ar_todo_owner_gone') });
     if (r.owner_issue === 'none') lines.push({ tone: 'warn', text: t('rep_ar_todo_owner_none') });
     if (r.mix.cross > 0) lines.push({ tone: 'warn', text: t('rep_ar_todo_confirm_cross').replace('{n}', count(r.mix.cross, lang)) });
     if (r.members === 0) lines.push({ tone: 'muted', text: t('rep_ar_todo_no_members') });
     if (lines.length === 0) lines.push({ tone: 'ok', text: t('rep_ar_todo_none') });
-    const ink = {
-        bad: 'font-semibold text-red-700 dark:text-red-300',
-        warn: 'font-semibold text-amber-700 dark:text-amber-300',
-        ok: 'font-semibold text-emerald-700 dark:text-emerald-300',
-        muted: 'text-muted-foreground',
-    };
-
-    return (
-        <div className="min-w-0 text-sm">
-            <div className={ink[lines[0].tone]}>{lines[0].text}</div>
-            {lines.slice(1).map((l) => (
-                <div key={l.text} className="text-muted-foreground text-xs">
-                    {l.text}
-                </div>
-            ))}
-        </div>
-    );
+    return <TodoLines lines={lines} />;
 }
 
 function OwnerCell({ r }: { r: Resource }) {
@@ -509,20 +458,14 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                             </td>
                                             <td className={cn(TD, 'text-right')}>
                                                 {r.members > 0 ? (
-                                                    <button
-                                                        type="button"
-                                                        aria-pressed={picked}
+                                                    <PickButton
+                                                        picked={picked}
                                                         onClick={() => (picked ? patch({ resource: null }) : pick(r))}
-                                                        aria-label={t('rep_ar_pick_aria')
+                                                        text={t('rep_ar_pick').replace('{n}', count(r.members, lang))}
+                                                        label={t('rep_ar_pick_aria')
                                                             .replace('{name}', r.name ?? '')
                                                             .replace('{n}', count(r.members, lang))}
-                                                        className={cn(
-                                                            'border-border focus-visible:ring-brand rounded-full border px-2 py-px text-[11px] font-semibold whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none',
-                                                            picked ? 'bg-brand text-brand-foreground border-brand' : 'text-brand hover:bg-brand/10',
-                                                        )}
-                                                    >
-                                                        {t('rep_ar_pick').replace('{n}', count(r.members, lang))}
-                                                    </button>
+                                                    />
                                                 ) : (
                                                     <span className="text-muted-foreground font-mono">0</span>
                                                 )}

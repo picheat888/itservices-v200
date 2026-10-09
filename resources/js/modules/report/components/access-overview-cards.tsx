@@ -5,32 +5,21 @@ import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { ArrowUpRight, ChevronDown, ChevronUp } from 'lucide-react';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAccessOverviewBreakdown } from '../hooks/use-reports';
-import type { AccessDepartment, AccessOverviewBreakdown, AccessResource, AccessType, ChartTone, TabularFilters } from '../types';
-import {
-    barTop,
-    CardEmpty,
-    CardTitle,
-    currentMonth,
-    fold,
-    FoldToggle,
-    monthDensity,
-    monthLabel,
-    monthLabelPlace,
-    SCROLL_AFTER_MONTHS,
-    SCROLL_MONTH_PX,
-} from './chart-parts';
+import type { AccessOverviewBreakdown, AccessResource, AccessType, ChartTone, TabularFilters } from '../types';
+import { count, deptName, PieceBar } from './access-parts';
+import { barTop, CardEmpty, CardTitle, currentMonth, fold, FoldToggle, monthDensity, monthLabel, monthLabelPlace } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
+import { BASIS_PCT, H_PCT, pct } from './percent-classes';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
 import { niceMax } from './weekly-ticket-chart';
 
-type Lang = 'th' | 'en';
 type Patch = (next: TabularFilters) => void;
 type Month = AccessOverviewBreakdown['months'][number];
 
@@ -66,9 +55,6 @@ export const CODE_LINK =
     'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 const SEGMENT =
     'focus-visible:ring-brand focus-visible:ring-offset-background inline-flex items-center gap-1.5 rounded text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none';
-
-const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
-const deptName = (d: AccessDepartment, lang: Lang) => (d ? (lang === 'th' && d.name_th) || d.name : null);
 
 /** Scroll to the list under the cards, without motion when the reader asks for none. */
 export function scrollToRows() {
@@ -205,8 +191,8 @@ function MonthFlowCard({ months }: { months: Month[] }) {
     const down = axisTop(Math.max(Math.ceil(up / 4), ...months.map(back)));
     const sum = (k: FlowKey) => months.reduce((s, m) => s + m[k], 0);
     const peak = months.reduce<Month | null>((best, m) => (m.granted > (best?.granted ?? 0) ? m : best), null);
-    const upAt = (v: number) => ({ bottom: `${(v / up) * 100}%` });
-    const downAt = (v: number) => ({ top: `${(v / down) * 100}%` });
+    // The upper and lower halves share the plot by their axis tops; lines and labels sit at quarters of each.
+    const split = pct(up, up + down);
     const thisMonth = currentMonth();
     const hasCurrent = months.some((m) => m.month === thisMonth);
     const partialNote = t('rep_wo_month_partial_tip').replace(
@@ -216,18 +202,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
         ),
     );
     const density = monthDensity(months);
-    const scroll = months.length > SCROLL_AFTER_MONTHS;
-    const scroller = useRef<HTMLDivElement>(null);
     const bars = useRef(new Map<string, HTMLElement>());
-    const [scrollbar, setScrollbar] = useState(0);
-    useLayoutEffect(() => {
-        const element = scroller.current;
-        if (!element) return;
-        element.scrollLeft = element.scrollWidth;
-        const observer = new ResizeObserver(() => setScrollbar(element.offsetHeight - element.clientHeight));
-        observer.observe(element);
-        return () => observer.disconnect();
-    }, [months]);
     const monthText = (m: Month) =>
         [
             monthLabel(m.month, lang, false, true),
@@ -283,19 +258,24 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                     </p>
                     <div className="flex min-h-56 flex-1 gap-2">
                         <div aria-hidden className="flex w-11 shrink-0 flex-col">
-                            <div className="relative mt-[18px]" style={{ flex: up }}>
-                                {[up / 2, up].map((v) => (
+                            <div className={cn('relative mt-[18px] min-h-0', BASIS_PCT[split])}>
+                                {[
+                                    [up / 2, 'bottom-1/2'],
+                                    [up, 'bottom-full'],
+                                ].map(([v, at]) => (
                                     <span
-                                        key={v}
-                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
-                                        style={upAt(v)}
+                                        key={at}
+                                        className={cn(
+                                            'text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums',
+                                            at,
+                                        )}
                                     >
-                                        {count(v, lang)}
+                                        {count(v as number, lang)}
                                     </span>
                                 ))}
                             </div>
                             <div className="h-0.5 shrink-0" />
-                            <div className="relative mb-[18px]" style={{ flex: down }}>
+                            <div className={cn('relative mb-[18px] min-h-0', BASIS_PCT[100 - split])}>
                                 <span className="text-muted-foreground absolute top-0 left-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-start gap-2 text-[10.5px] leading-none whitespace-nowrap">
                                     <span className="inline-flex items-center gap-1">
                                         <FlowMark k="granted" />
@@ -306,29 +286,32 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                         {t('rep_ac_axis_out')}
                                     </span>
                                 </span>
-                                {[down / 2, down].map((v) => (
+                                {[
+                                    [down / 2, 'top-1/2'],
+                                    [down, 'top-full'],
+                                ].map(([v, at]) => (
                                     <span
-                                        key={v}
-                                        className="text-muted-foreground absolute right-0 -translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
-                                        style={downAt(v)}
+                                        key={at}
+                                        className={cn(
+                                            'text-muted-foreground absolute right-0 -translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums',
+                                            at,
+                                        )}
                                     >
-                                        {count(v, lang)}
+                                        {count(v as number, lang)}
                                     </span>
                                 ))}
                             </div>
-                            <div className="shrink-0" style={{ height: `calc(2.25rem + ${scrollbar}px)` }} />
+                            <div className="h-9 shrink-0" />
                         </div>
-                        <div ref={scroller} className={cn('flex min-w-0 flex-1 flex-col', scroll && 'overflow-x-auto overflow-y-hidden')}>
-                            <div className="flex min-w-full flex-1 flex-col" style={scroll ? { width: months.length * SCROLL_MONTH_PX } : undefined}>
+                        <div className="flex min-w-0 flex-1 flex-col">
+                            <div className="flex min-w-full flex-1 flex-col">
                                 <div className="relative flex flex-1 flex-col">
-                                    <div className="relative mt-[18px]" style={{ flex: up }}>
+                                    <div className={cn('relative mt-[18px] min-h-0', BASIS_PCT[split])}>
                                         <div aria-hidden>
-                                            {[up / 2, up].map((v) => (
-                                                <div key={v} className="border-border absolute inset-x-0 border-t" style={upAt(v)} />
-                                            ))}
-                                            {[up / 4, (up * 3) / 4].map((v) => (
-                                                <div key={v} className="border-border absolute inset-x-0 border-t border-dashed" style={upAt(v)} />
-                                            ))}
+                                            <div className="border-border absolute inset-x-0 bottom-1/2 border-t" />
+                                            <div className="border-border absolute inset-x-0 bottom-full border-t" />
+                                            <div className="border-border absolute inset-x-0 bottom-1/4 border-t border-dashed" />
+                                            <div className="border-border absolute inset-x-0 bottom-3/4 border-t border-dashed" />
                                         </div>
                                         <div aria-hidden className={cn('absolute inset-0 flex items-end', density.gap)}>
                                             {months.map((m) => (
@@ -338,8 +321,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                             if (el) bars.current.set(m.month, el);
                                                             else bars.current.delete(m.month);
                                                         }}
-                                                        className={cn('relative w-full', density.bar)}
-                                                        style={{ height: `${(m.granted / up) * 100}%` }}
+                                                        className={cn('relative w-full', density.bar, H_PCT[pct(m.granted, up)])}
                                                     >
                                                         {m.month === thisMonth &&
                                                             (density.thin ? (
@@ -368,18 +350,15 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                         </div>
                                     </div>
                                     <div aria-hidden className="border-muted-foreground/60 border-t-2" />
-                                    <div className="relative mb-[18px]" style={{ flex: down }}>
+                                    <div className={cn('relative mb-[18px] min-h-0', BASIS_PCT[100 - split])}>
                                         <div aria-hidden>
-                                            <div className="border-border absolute inset-x-0 border-t border-dashed" style={downAt(down / 2)} />
-                                            <div className="border-border absolute inset-x-0 border-t" style={downAt(down)} />
+                                            <div className="border-border absolute inset-x-0 top-1/2 border-t border-dashed" />
+                                            <div className="border-border absolute inset-x-0 top-full border-t" />
                                         </div>
                                         <div aria-hidden className={cn('absolute inset-0 flex items-start', density.gap)}>
                                             {months.map((m) => (
                                                 <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
-                                                    <div
-                                                        className={cn('relative w-full', density.bar)}
-                                                        style={{ height: `${(back(m) / down) * 100}%` }}
-                                                    >
+                                                    <div className={cn('relative w-full', density.bar, H_PCT[pct(back(m), down)])}>
                                                         {m.month === thisMonth && !density.thin && back(m) > 0 && (
                                                             <span className="border-brand pointer-events-none absolute -inset-x-[3px] top-0 -bottom-[3px] rounded-b-md border-2 border-t-0 border-dashed" />
                                                         )}
@@ -388,8 +367,11 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                                 m[k] > 0 ? (
                                                                     <span
                                                                         key={k}
-                                                                        className={cn('block min-h-px w-full basis-0', FILL[FLOW[k].tone])}
-                                                                        style={{ flexGrow: m[k] }}
+                                                                        className={cn(
+                                                                            'block min-h-px w-full shrink-0',
+                                                                            H_PCT[pct(m[k], back(m))],
+                                                                            FILL[FLOW[k].tone],
+                                                                        )}
                                                                     />
                                                                 ) : null,
                                                             )}
@@ -758,34 +740,13 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
 /** The registries in a department's grants, one bar on the card's scale with the counts in the pieces. */
 function TypeBar({ byType, scale }: { byType: Record<AccessType, number>; scale: number }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const parts = ACCESS_TYPES.filter((k) => byType[k] > 0);
-    const total = parts.reduce((s, k) => s + byType[k], 0);
-    if (total === 0) return <span className="text-muted-foreground">—</span>;
-
+    if (ACCESS_TYPES.every((k) => byType[k] === 0)) return <span className="text-muted-foreground">—</span>;
     return (
-        <div className="bg-muted h-5 min-w-[9rem] overflow-hidden rounded-full">
-            <div
-                role="img"
-                aria-label={parts.map((k) => `${t(`rep_ac_type_${k}`)} ${count(byType[k], lang)}`).join(', ')}
-                className="flex h-full gap-px"
-                style={{ width: `max(${(total / scale) * 100}%, ${parts.length * 1.75}rem)` }}
-            >
-                {parts.map((k) => (
-                    <span
-                        key={k}
-                        title={`${t(`rep_ac_type_${k}`)}: ${count(byType[k], lang)}`}
-                        className={cn(
-                            'flex min-w-[1.5rem] basis-0 items-center justify-center font-mono text-[10.5px] font-semibold text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                            FILL[TYPE_TONE[k]],
-                        )}
-                        style={{ flexGrow: byType[k] }}
-                    >
-                        {count(byType[k], lang)}
-                    </span>
-                ))}
-            </div>
-        </div>
+        <PieceBar
+            className="min-w-[9rem]"
+            scale={scale}
+            pieces={ACCESS_TYPES.map((k) => ({ key: k, value: byType[k], fill: FILL[TYPE_TONE[k]], label: t(`rep_ac_type_${k}`) }))}
+        />
     );
 }
 

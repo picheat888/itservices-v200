@@ -10,7 +10,7 @@ import { shortDate } from './transfer-cards';
 
 export type AccessRow = Record<string, unknown> & { _links?: Record<string, string> };
 
-const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
+export const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
 const isLabel = (v: unknown): v is ChartLabel => typeof v === 'object' && v !== null && 'name' in v;
 
