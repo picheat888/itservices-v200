@@ -13,7 +13,7 @@ export function ReportHeader({ title, description, actions }: { title: string; d
         <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
                 <h1 className="text-2xl font-bold">{title}</h1>
-                <p className="text-muted-foreground max-w-[70ch] text-sm">{description}</p>
+                <p className="text-muted-foreground max-w-[120ch] text-sm">{description}</p>
             </div>
             {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
         </div>
