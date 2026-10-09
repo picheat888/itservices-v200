@@ -63,7 +63,8 @@ interface DataTableProps<T> {
     pageSize?: number;
     /**
      * Server-side pagination. When provided, the table renders `rows` as the current
-     * page (no client slicing/searching) and delegates page/size changes to the parent.
+     * page (no client slicing/searching) and delegates page/size changes to the parent;
+     * `onPageSizeChange` also returns the parent to page 1.
      * Leave undefined for the default client-side behaviour.
      */
     server?: {
@@ -308,7 +309,7 @@ export function DataTable<T>({
                                     value={String(pageSize)}
                                     onValueChange={(v) => {
                                         setPageSize(Number(v));
-                                        setPage(1);
+                                        if (!server) setPage(1);
                                     }}
                                 >
                                     <SelectTrigger className="h-8 w-[72px]">

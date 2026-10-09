@@ -1331,7 +1331,10 @@ function DeliveryLogPane() {
                     pageSize: perPage,
                     total: meta?.total ?? 0,
                     onPageChange: setPage,
-                    onPageSizeChange: setPerPage,
+                    onPageSizeChange: (s) => {
+                        setPerPage(s);
+                        setPage(1);
+                    },
                 }}
                 emptyState={<div className="text-muted-foreground py-10 text-center text-sm">{t('email_log_empty')}</div>}
             />
