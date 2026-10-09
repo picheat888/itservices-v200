@@ -322,7 +322,12 @@ export type ChartTone =
     | 'pair-orange'
     | 'pair-green'
     | 'pair-rose'
-    | 'pair-violet';
+    | 'pair-violet'
+    // The Access module's registry colours (access-overview.tsx CHANNEL).
+    | 'access-email'
+    | 'access-file'
+    | 'access-social'
+    | 'access-software';
 
 /** A row's name from master data — the reader's language when it has one. */
 export interface ChartLabel {
@@ -532,6 +537,62 @@ export interface AssetWriteoffBreakdown {
         returned_early: number;
         flag: 'overdue' | 'ending_soon' | 'running' | 'all_returned';
     }[];
+}
+
+/** The Access registries, by their morph alias. */
+export type AccessType = 'email_group' | 'file_share' | 'social_platform' | 'software';
+
+/** A department in two languages, as master data comes. */
+export type AccessDepartment = { name: string; name_th: string | null } | null;
+
+/** A person on the access cards; `days` since the last day once they have left. */
+export interface AccessPerson {
+    employee_id: number;
+    code: string;
+    name: string;
+    department: AccessDepartment;
+    last_day: string | null;
+    days: number | null;
+}
+
+/** A resource on the access cards: its address (email, path, URL or brand) and, for email groups and file shares, its department. */
+export interface AccessResource {
+    type: AccessType;
+    id: number;
+    code: string | null;
+    name: string | null;
+    detail: string | null;
+    department: AccessDepartment;
+    owner?: AccessPerson | null;
+}
+
+/** What the "ภาพรวมสิทธิ์การเข้าถึง" page draws above its rows (AccessOverviewReport::breakdown). */
+export interface AccessOverviewBreakdown {
+    /** Active grants per registry whatever the type filter — the type segments' counts. */
+    types: Record<AccessType, number>;
+    /** The register's active / revoked / all segments. */
+    states: { active: number; revoked: number; all: number };
+    /** Every month of the range, oldest first: grants by type, revocations while working / on leaving. */
+    months: { month: string; granted: number; revoked_work: number; revoked_leave: number; by_type: Record<AccessType, number> }[];
+    leavers: {
+        /** Longest gone first. */
+        people: (AccessPerson & { grants: { type: AccessType; id: number; code: string | null; name: string | null }[] })[];
+        /** Email groups and file shares a leaver still owns. */
+        owned: (AccessResource & { owner: AccessPerson })[];
+        resigned: number;
+    };
+    /** Most grants first; a null id = no department. */
+    departments: {
+        department_id: number | null;
+        name: string | null;
+        name_th: string | null;
+        staff: number;
+        holders: number;
+        grants: number;
+        by_type: Record<AccessType, number>;
+        leavers: number;
+    }[];
+    care: { owner_gone: AccessResource[]; no_owner: AccessResource[]; empty: AccessResource[] };
 }
 
 /** What the "ประวัติโอนย้ายและรับคืน" page draws above its rows (AssetTransferHistoryReport::breakdown). */

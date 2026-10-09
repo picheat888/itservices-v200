@@ -147,6 +147,18 @@ export const useAssetWarrantyBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/** "ภาพรวมสิทธิ์การเข้าถึง" — keyed without the active / revoked segment, which narrows only the list. */
+export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
+    const { state: _state, ...rest } = filters;
+    void _state;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'access.overview', 'breakdown', rest],
+        queryFn: () => reportApi.accessOverviewBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 export const useManualSlaBreakdown = (filters: TabularFilters) => {
     const by = (filters.by as string | null | undefined) ?? 'category';
     const rest = Object.fromEntries(Object.entries(filters).filter(([name]) => name !== by));

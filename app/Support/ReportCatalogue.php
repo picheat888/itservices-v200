@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\Report\Access\AccessOverviewReport;
 use App\Services\Report\Access\SoftwareLicenseReport;
 use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
@@ -72,6 +73,8 @@ class ReportCatalogue
     public const EMPLOYEES_JOINERS_LEAVERS = 'employees.joiners_leavers';
 
     public const EMPLOYEES_LEAVER_ASSETS = 'employees.leaver_assets';
+
+    public const ACCESS_OVERVIEW = 'access.overview';
 
     public const ACCESS_SOFTWARE_LICENSES = 'access.software_licenses';
 
@@ -228,6 +231,15 @@ class ReportCatalogue
                 'class' => LeaverAssetsReport::class,
                 'requires' => ['employees.view'],
                 'formats' => ['xlsx', 'pdf'],
+            ],
+            // Every registry's grants at once — the Access module's own overview permission.
+            self::ACCESS_OVERVIEW => [
+                'domain' => 'access',
+                'kind' => 'tabular',
+                'class' => AccessOverviewReport::class,
+                'requires' => ['access.overview'],
+                'formats' => ['xlsx', 'pdf'],
+                'range' => true,
             ],
             self::ACCESS_SOFTWARE_LICENSES => [
                 'domain' => 'access',
