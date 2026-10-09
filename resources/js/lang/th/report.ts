@@ -975,7 +975,6 @@ export const report: Dict = {
     rep_ac_left_no_date: 'ลาออกแล้ว',
     rep_ac_owner_named: 'เจ้าของ {name}',
     rep_ac_find_owner: 'หาเจ้าของคนใหม่',
-    rep_ac_open_employees: 'เปิดในหน้าพนักงาน',
     rep_ac_care_title: 'Resource ที่ต้องดูแล',
     rep_ac_care_sub: 'ไม่มีเจ้าของหรือไม่มีใครใช้ ไม่ขึ้นกับตัวกรองแผนก',
     rep_ac_care_none: 'ทุก Resource มีเจ้าของและมีคนใช้',

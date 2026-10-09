@@ -317,7 +317,6 @@ function LeaversCard({ leavers }: { leavers: SoftwareLicenseBreakdown['leavers']
                     title={t('rep_sl_leavers_group')}
                     total={t('rep_ac_people_n').replace('{n}', count(leavers.length, lang))}
                     rows={leavers}
-                    link={{ href: '/employees', label: t('rep_ac_open_employees') }}
                     render={(p) => (
                         <GroupRow
                             key={p.employee_id}
