@@ -11,7 +11,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useSoftwareLicenseBreakdown } from '../hooks/use-reports';
 import type { SoftwareLicenseBreakdown, SoftwareSeats, TabularFilters } from '../types';
 import { CODE_LINK, DaysOut, Group, GroupRow, scrollToRows, Segments, TD, TH } from './access-overview-cards';
-import { count, PickButton, PieceBar, TodoLines, type TodoTone } from './access-parts';
+import { count, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -214,14 +214,16 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                 {shown.map((s, i) => {
                                     const apart = s.used === 0 && used.length > 0 && (i === 0 || shown[i - 1].used > 0);
                                     const picked = Number(filters.software_id) === s.id;
+                                    const row = pickRow(picked, s.used > 0 ? () => (picked ? patch({ software_id: null }) : pick(s)) : null);
                                     const href = `/access?tab=software&view=${s.id}`;
                                     return (
                                         <tr
                                             key={s.id}
+                                            onClick={row.onClick}
                                             className={cn(
-                                                'border-border/60 border-b last:border-b-0',
+                                                'border-border/60 border-b transition-colors last:border-b-0',
                                                 apart && '[&>td]:border-border [&>td]:border-t-2 [&>td]:border-dashed',
-                                                picked && 'bg-brand/5',
+                                                row.className,
                                             )}
                                         >
                                             <td className={TD}>
@@ -277,7 +279,6 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                                 {s.used > 0 ? (
                                                     <PickButton
                                                         picked={picked}
-                                                        onClick={() => (picked ? patch({ software_id: null }) : pick(s))}
                                                         text={t('rep_ar_pick').replace('{n}', count(s.used, lang))}
                                                         label={t('rep_sl_pick_aria').replace('{name}', s.name).replace('{n}', count(s.used, lang))}
                                                     />

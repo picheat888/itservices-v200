@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-reports';
 import type { AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
 import { Cols, Group, GroupRow, NUM, registryOptions, ResourceHead, scrollToRows, Segments, TD, TH, TypeLabel } from './access-overview-cards';
-import { count, deptName, type Lang, PickButton, PieceBar, TodoLines, type TodoTone } from './access-parts';
+import { count, deptName, type Lang, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -406,14 +406,16 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                 {shown.map((r, i) => {
                                     const apart = r.members === 0 && used.length > 0 && (i === 0 || shown[i - 1].members > 0);
                                     const picked = filters.resource === keyOf(r);
+                                    const row = pickRow(picked, r.members > 0 ? () => (picked ? patch({ resource: null }) : pick(r)) : null);
                                     const sub = [r.detail, sizeText(t, lang, r.size)].filter((s): s is string => Boolean(s));
                                     return (
                                         <tr
                                             key={keyOf(r)}
+                                            onClick={row.onClick}
                                             className={cn(
-                                                'border-border/60 border-b last:border-b-0',
+                                                'border-border/60 border-b transition-colors last:border-b-0',
                                                 apart && '[&>td]:border-border [&>td]:border-t-2 [&>td]:border-dashed',
-                                                picked && 'bg-brand/5',
+                                                row.className,
                                             )}
                                         >
                                             <td className={TD}>
@@ -460,7 +462,6 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                                 {r.members > 0 ? (
                                                     <PickButton
                                                         picked={picked}
-                                                        onClick={() => (picked ? patch({ resource: null }) : pick(r))}
                                                         text={t('rep_ar_pick').replace('{n}', count(r.members, lang))}
                                                         label={t('rep_ar_pick_aria')
                                                             .replace('{name}', r.name ?? '')
