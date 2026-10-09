@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
+use App\Http\Controllers\Api\Report\SoftwareLicenseBreakdownController;
 use App\Http\Controllers\Api\Report\TabularReportController;
 use App\Http\Controllers\Api\Report\TicketBacklogBoardController;
 use App\Http\Controllers\Api\Report\TicketManualSlaBreakdownController;
@@ -123,6 +124,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     // "ทบทวนสมาชิกและเจ้าของ" — the resource table and space cards, and one resource's member review sheet (PDF).
     Route::get('reports/access/resource-members/breakdown', [AccessResourceMembersController::class, 'breakdown'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.breakdown');
     Route::get('reports/access/resource-members/sheet', [AccessResourceMembersController::class, 'sheet'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.sheet');
+    // "การใช้ License ซอฟต์แวร์" — seats per software, leavers to take seats back from, requests waiting for one.
+    Route::get('reports/access/software-licenses/breakdown', SoftwareLicenseBreakdownController::class)->defaults('key', 'access.software_licenses')->name('api.reports.access.software-licenses.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');

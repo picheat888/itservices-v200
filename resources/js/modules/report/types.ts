@@ -627,6 +627,50 @@ export interface AccessMembersBreakdown {
         | null;
 }
 
+/** "การใช้ License ซอฟต์แวร์": a software's seats; `seats` null = not seat-limited. */
+export interface SoftwareSeats {
+    id: number;
+    code: string | null;
+    name: string;
+    brand: string | null;
+    license_type: string | null;
+    seats: number | null;
+    used: number;
+    /** Seats leavers still hold. */
+    gone: number;
+    left: number | null;
+    usage: 'full' | 'available' | 'unlimited' | 'over';
+    pct: number | null;
+    /** Software requests still pending or approved. */
+    requests: number;
+    /** Full with requests waiting: IT cannot grant until a seat is bought or taken back. */
+    blocked: boolean;
+}
+
+/** What the "การใช้ License ซอฟต์แวร์" page draws above its rows (SoftwareLicenseReport::breakdown). */
+export interface SoftwareLicenseBreakdown {
+    usage: { all: number; full: number; available: number; unlimited: number; over: number };
+    states: { active: number; revoked: number };
+    /** Most to do first. */
+    softwares: SoftwareSeats[];
+    /** Longest gone first. */
+    leavers: (AccessPerson & { grants: { id: number; code: string | null; name: string | null; requests: number; blocked: boolean }[] })[];
+    /** Oldest first. */
+    requests: {
+        id: number;
+        reference: string | null;
+        status: 'pending' | 'approved';
+        created_at: string | null;
+        days: number;
+        software: { id: number; code: string | null; name: string | null };
+        requester: { name: string; code: string | null; department: AccessDepartment };
+        seats_left: number | null;
+        gone: number;
+    }[];
+    /** The picked software's name. */
+    picked: string | null;
+}
+
 /** What the "ประวัติโอนย้ายและรับคืน" page draws above its rows (AssetTransferHistoryReport::breakdown). */
 /** "ประกันใกล้หมดอายุ": a category or vendor row of the period tables. */
 export interface WarrantyGroupFigures {

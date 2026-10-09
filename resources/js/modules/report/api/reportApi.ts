@@ -21,6 +21,7 @@ import type {
     RequestSlaBreakdown,
     ScheduleInput,
     SnapshotRange,
+    SoftwareLicenseBreakdown,
     TabularDefinition,
     TabularFilters,
     TabularRows,
@@ -129,6 +130,12 @@ export const reportApi = {
             blob: r.data as Blob,
             filename: filenameFrom(r.headers['content-disposition']) ?? 'AccessReview.pdf',
         })),
+
+    /** "การใช้ License ซอฟต์แวร์": seats per software, leavers to take seats back from, requests waiting. */
+    softwareLicenseBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: SoftwareLicenseBreakdown }>('/reports/access/software-licenses/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 

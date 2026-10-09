@@ -172,6 +172,18 @@ export const useAccessMembersBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/** "การใช้ License ซอฟต์แวร์" — keyed without the active / revoked segment, which narrows only the list. */
+export const useSoftwareLicenseBreakdown = (filters: TabularFilters) => {
+    const { state: _state, ...rest } = filters;
+    void _state;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'access.software_licenses', 'breakdown', rest],
+        queryFn: () => reportApi.softwareLicenseBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 /** Download one resource's review sheet (PDF). */
 export const useAccessReviewSheet = () =>
     useMutation({
