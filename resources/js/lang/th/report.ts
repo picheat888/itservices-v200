@@ -1072,7 +1072,7 @@ export const report: Dict = {
     rep_ar_no_department: 'ไม่ผูกแผนก',
     rep_ar_head_title: 'สมาชิกของ {name}',
     rep_ar_strip_cross: 'ข้ามแผนก {n} คน',
-    rep_ar_head_gone: 'ลาออกแล้ว {n} คน ควรถอนก่อนส่งให้เจ้าของ',
+    rep_ar_head_gone: 'ลาออกแล้ว {n} คน ควรแก้ไขก่อนส่งให้เจ้าของรีวิว',
     rep_ar_sheet_open: 'ใบทบทวนสมาชิก',
     rep_ar_sheet_title: 'ใบทบทวนสมาชิก',
     rep_ar_sheet_asof: 'IT Service Desk ข้อมูล ณ {date}',
