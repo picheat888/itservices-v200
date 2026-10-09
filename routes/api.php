@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
 use App\Http\Controllers\Api\Report\AccessOverviewBreakdownController;
+use App\Http\Controllers\Api\Report\AccessResourceMembersController;
 use App\Http\Controllers\Api\Report\AssetTransferBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWarrantyBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
@@ -119,6 +120,9 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/assets/warranty-expiring/breakdown', AssetWarrantyBreakdownController::class)->defaults('key', 'assets.warranty_expiring')->name('api.reports.assets.warranty-expiring.breakdown');
     // "ภาพรวมสิทธิ์การเข้าถึง" — months, leavers still holding, departments and resources that need someone.
     Route::get('reports/access/overview/breakdown', AccessOverviewBreakdownController::class)->defaults('key', 'access.overview')->name('api.reports.access.overview.breakdown');
+    // "ทบทวนสมาชิกและเจ้าของ" — the resource table and space cards, and one resource's member review sheet (PDF).
+    Route::get('reports/access/resource-members/breakdown', [AccessResourceMembersController::class, 'breakdown'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.breakdown');
+    Route::get('reports/access/resource-members/sheet', [AccessResourceMembersController::class, 'sheet'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.sheet');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
@@ -374,7 +378,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
             Route::match(['put', 'patch'], 'email-groups/{emailGroup}', [EmailGroupController::class, 'update']);
             Route::put('email-groups/{emailGroup}/owner', [EmailGroupController::class, 'setOwner']);
             Route::post('email-groups/{emailGroup}/members', [EmailGroupController::class, 'addMember']);
-            Route::post('email-groups/{emailGroup}/members/{membership}/revoke', [EmailGroupController::class, 'revokeMember']);
+            Route::post('email-groups/{emailGroup}/members/{membership}/revoke', [EmailGroupController::class, 'revokeMember'])->scopeBindings();
         });
         Route::delete('email-groups/{emailGroup}', [EmailGroupController::class, 'destroy'])->middleware('permission:access.email_delete');
 
@@ -384,7 +388,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
             Route::match(['put', 'patch'], 'file-shares/{fileShare}', [FileShareController::class, 'update']);
             Route::put('file-shares/{fileShare}/owner', [FileShareController::class, 'setOwner']);
             Route::post('file-shares/{fileShare}/members', [FileShareController::class, 'addMember']);
-            Route::post('file-shares/{fileShare}/members/{membership}/revoke', [FileShareController::class, 'revokeMember']);
+            Route::post('file-shares/{fileShare}/members/{membership}/revoke', [FileShareController::class, 'revokeMember'])->scopeBindings();
         });
         Route::delete('file-shares/{fileShare}', [FileShareController::class, 'destroy'])->middleware('permission:access.file_delete');
 
@@ -393,7 +397,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
         Route::middleware('permission:access.social_edit')->group(function () {
             Route::match(['put', 'patch'], 'social-platforms/{socialPlatform}', [SocialPlatformController::class, 'update']);
             Route::post('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'addMember']);
-            Route::post('social-platforms/{socialPlatform}/members/{membership}/revoke', [SocialPlatformController::class, 'revokeMember']);
+            Route::post('social-platforms/{socialPlatform}/members/{membership}/revoke', [SocialPlatformController::class, 'revokeMember'])->scopeBindings();
         });
         Route::delete('social-platforms/{socialPlatform}', [SocialPlatformController::class, 'destroy'])->middleware('permission:access.social_delete');
 
@@ -402,7 +406,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
         Route::middleware('permission:access.software_edit')->group(function () {
             Route::match(['put', 'patch'], 'software/{software}', [SoftwareController::class, 'update']);
             Route::post('software/{software}/members', [SoftwareController::class, 'addMember']);
-            Route::post('software/{software}/members/{membership}/revoke', [SoftwareController::class, 'revokeMember']);
+            Route::post('software/{software}/members/{membership}/revoke', [SoftwareController::class, 'revokeMember'])->scopeBindings();
         });
         Route::delete('software/{software}', [SoftwareController::class, 'destroy'])->middleware('permission:access.software_delete');
     });

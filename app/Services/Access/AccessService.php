@@ -10,7 +10,9 @@ use App\Models\Access\Software;
 use App\Models\Employee\Employee;
 use App\Support\EmailTable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AccessService
@@ -23,24 +25,53 @@ class AccessService
      */
     public function grant(Model $resource, int $employeeId, array $attrs): AccessMembership
     {
-        // The owner already has the resource (email groups / file shares) — don't also make them a member.
-        $owner = $resource->getAttribute('owner_employee_id');
-        if ($owner !== null && (int) $owner === $employeeId) {
-            throw ValidationException::withMessages(['employee_id' => 'This employee already owns the resource.']);
+        // Lock the resource row so concurrent grants check seats/duplicates one at a time.
+        return DB::transaction(function () use ($resource, $employeeId, $attrs): AccessMembership {
+            $locked = $resource->newQuery()->lockForUpdate()->findOrFail($resource->getKey());
+
+            // The owner already has the resource (email groups / file shares) — don't also make them a member.
+            $owner = $locked->getAttribute('owner_employee_id');
+            if ($owner !== null && (int) $owner === $employeeId) {
+                throw ValidationException::withMessages(['employee_id' => 'is_owner']);
+            }
+
+            $exists = $locked->memberships()->active()->where('employee_id', $employeeId)->exists();
+            if ($exists) {
+                throw ValidationException::withMessages(['employee_id' => 'already_granted']);
+            }
+
+            // Software with a seat count stops at that count; unlimited (null) never fills.
+            if ($locked instanceof Software && $locked->seats !== null
+                && $locked->memberships()->active()->count() >= $locked->seats) {
+                throw ValidationException::withMessages(['employee_id' => 'seats_full']);
+            }
+
+            return $locked->memberships()->create([
+                'employee_id' => $employeeId,
+                'access_level' => $attrs['access_level'] ?? null,
+                'purpose' => $attrs['purpose'] ?? null,
+                'granted_at' => $attrs['granted_at'] ?? now(),
+                'granted_by' => auth()->user()?->id,
+            ]);
+        });
+    }
+
+    /** Inside a transaction: lock the software row and refuse a changed seat count below the licences granted. */
+    public function guardSeatCount(Software $software, ?int $seats): void
+    {
+        $locked = Software::query()->lockForUpdate()->findOrFail($software->getKey());
+        if ($seats === null || $seats === $locked->seats) {
+            return;
         }
 
-        $exists = $resource->memberships()->active()->where('employee_id', $employeeId)->exists();
-        if ($exists) {
-            throw ValidationException::withMessages(['employee_id' => 'This employee already has active access to the resource.']);
+        $inUse = $locked->memberships()->active()->count();
+        if ($seats < $inUse) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'seats_below_in_use',
+                'errors' => ['seats' => ['seats_below_in_use']],
+                'in_use' => $inUse,
+            ], 422));
         }
-
-        return $resource->memberships()->create([
-            'employee_id' => $employeeId,
-            'access_level' => $attrs['access_level'] ?? null,
-            'purpose' => $attrs['purpose'] ?? null,
-            'granted_at' => $attrs['granted_at'] ?? now(),
-            'granted_by' => auth()->user()?->id,
-        ]);
     }
 
     /** Soft-revoke (idempotent), stamped with who did it. */

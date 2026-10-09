@@ -365,7 +365,7 @@ class AccessControlTest extends TestCase
         $this->assertSame('ABCDE-12345', Software::find($id)->product_key);
 
         // Turning the key switch off sends an empty value, which clears it.
-        $this->putJson("/api/software/{$id}", ['name' => 'Acrobat', 'license_type' => 'subscription', 'product_key' => ''])
+        $this->putJson("/api/software/{$id}", ['name' => 'Acrobat', 'license_type' => 'subscription', 'seats' => 10, 'product_key' => ''])
             ->assertOk()
             ->assertJsonPath('data.has_product_key', false);
         $this->assertNull(Software::find($id)->product_key);
@@ -460,7 +460,7 @@ class AccessControlTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'admin']));
 
         $this->post('/api/software', [
-            'name' => 'Acrobat', 'license_type' => 'perpetual', 'logo' => UploadedFile::fake()->image('logo.png', 128, 128),
+            'name' => 'Acrobat', 'license_type' => 'perpetual', 'seats_unlimited' => '1', 'logo' => UploadedFile::fake()->image('logo.png', 128, 128),
         ], ['Accept' => 'application/json'])
             ->assertStatus(201)
             ->assertJsonPath('data.logo_url', fn ($u) => is_string($u) && $u !== '');
@@ -510,7 +510,7 @@ class AccessControlTest extends TestCase
         ], ['Accept' => 'application/json'])->assertOk()->json('data.logo_url');
 
         $softwareAfter = $this->post("/api/software/{$software->id}", [
-            '_method' => 'PUT', 'name' => 'Acrobat', 'license_type' => 'perpetual',
+            '_method' => 'PUT', 'name' => 'Acrobat', 'license_type' => 'perpetual', 'seats_unlimited' => '1',
             'logo' => UploadedFile::fake()->image('new.png', 128, 128),
         ], ['Accept' => 'application/json'])->assertOk()->json('data.logo_url');
 

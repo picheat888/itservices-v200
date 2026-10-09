@@ -28,7 +28,7 @@ class SoftwareLicenseReport extends TabularReport
 
     // Mirrors resources/js/lang/th/access.ts.
     private const LICENSE_TH = [
-        'perpetual' => 'ซื้อขาด', 'subscription' => 'รายเดือน/รายปี', 'free' => 'ฟรี', 'open_source' => 'โอเพนซอร์ส',
+        'perpetual' => 'ซื้อขาด', 'subscription' => 'รายเดือน/รายปี', 'free' => 'ฟรี', 'open_source' => 'Open Source',
     ];
 
     private const USAGE_KEYS = [

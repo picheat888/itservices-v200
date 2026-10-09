@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\Access\SoftwareLicenseType;
+use App\Models\Access\AccessMembership;
 use App\Models\Access\Software;
+use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\Brand;
@@ -62,6 +64,54 @@ class AccessSoftwareTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('license_type');
     }
 
+    public function test_create_software_requires_seats_unless_marked_unlimited(): void
+    {
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/software', ['name' => 'X', 'license_type' => 'subscription'])
+            ->assertStatus(422)->assertJsonValidationErrors('seats');
+        $this->postJson('/api/software', ['name' => 'X', 'license_type' => 'subscription', 'seats' => ''])
+            ->assertStatus(422)->assertJsonValidationErrors('seats');
+        $this->postJson('/api/software', ['name' => 'X', 'license_type' => 'subscription', 'seats' => 0])
+            ->assertStatus(422)->assertJsonValidationErrors('seats');
+    }
+
+    public function test_unlimited_software_is_stored_without_a_seat_count(): void
+    {
+        $this->actingAs($this->super());
+
+        $id = $this->postJson('/api/software', [
+            'name' => 'VS Code',
+            'license_type' => 'open_source',
+            'seats' => 5,
+            'seats_unlimited' => true,
+        ])->assertCreated()
+            ->assertJsonPath('data.seats', null)
+            ->assertJsonMissingPath('data.seats_unlimited')
+            ->json('data.id');
+
+        $this->assertNull(Software::find($id)->seats);
+    }
+
+    public function test_marking_existing_software_unlimited_clears_its_seat_count(): void
+    {
+        $this->actingAs($this->super());
+        $sw = Software::create(['name' => 'Office', 'license_type' => 'subscription', 'seats' => 20]);
+
+        $this->putJson("/api/software/{$sw->id}", [
+            'name' => 'Office',
+            'license_type' => 'subscription',
+            'seats_unlimited' => '1',
+        ])->assertOk()->assertJsonPath('data.seats', null);
+
+        $this->putJson("/api/software/{$sw->id}", [
+            'name' => 'Office',
+            'license_type' => 'subscription',
+            'seats' => 30,
+            'seats_unlimited' => '0',
+        ])->assertOk()->assertJsonPath('data.seats', 30);
+    }
+
     public function test_reads_require_access_view(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'user']));
@@ -81,7 +131,7 @@ class AccessSoftwareTest extends TestCase
         $this->postJson('/api/software', ['name' => 'X', 'license_type' => 'free'])->assertForbidden();
     }
 
-    public function test_seats_used_counts_active_members_and_over_seat_grant_is_allowed(): void
+    public function test_seats_used_counts_active_members_and_a_full_software_rejects_more(): void
     {
         $this->actingAs($this->super());
         $sw = Software::create(['name' => 'Photoshop', 'license_type' => 'subscription', 'seats' => 1]);
@@ -89,10 +139,82 @@ class AccessSoftwareTest extends TestCase
         $e2 = Employee::create(['code' => 'EMP-SW2', 'first_name' => 'B', 'last_name' => 'Two']);
 
         $this->postJson("/api/software/{$sw->id}/members", ['employee_id' => $e1->id])->assertCreated();
-        // Over the single seat — still allowed (soft, not blocked).
+        $this->postJson("/api/software/{$sw->id}/members", ['employee_id' => $e2->id])
+            ->assertStatus(422)->assertJsonValidationErrors('employee_id')->assertJsonPath('message', 'seats_full');
+
+        $this->getJson('/api/software')->assertOk()->assertJsonPath('data.0.seats_used', 1);
+    }
+
+    public function test_a_membership_cannot_be_revoked_through_another_resource(): void
+    {
+        $this->actingAs($this->super());
+        $office = Software::create(['name' => 'Office', 'license_type' => 'subscription', 'seats' => 5]);
+        $chrome = Software::create(['name' => 'Chrome', 'license_type' => 'free']);
+        $e = Employee::create(['code' => 'EMP-SWI1', 'first_name' => 'I', 'last_name' => 'Dor']);
+        $grant = $this->postJson("/api/software/{$office->id}/members", ['employee_id' => $e->id])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/software/{$chrome->id}/members/{$grant}/revoke")->assertNotFound();
+        $this->assertNull(AccessMembership::find($grant)->revoked_at);
+    }
+
+    public function test_the_audit_log_never_stores_the_product_key(): void
+    {
+        $this->actingAs($this->super());
+        $sw = Software::create(['name' => 'Office', 'license_type' => 'subscription', 'seats' => 5, 'product_key' => 'OLD-SECRET-KEY']);
+
+        $this->putJson("/api/software/{$sw->id}", ['name' => 'Office', 'license_type' => 'subscription', 'seats' => 5, 'product_key' => 'NEW-SECRET-KEY'])
+            ->assertOk();
+
+        $details = AuditLog::where('action', 'Updated software')->latest('id')->value('details');
+        $this->assertStringNotContainsString('SECRET', (string) json_encode($details));
+        $this->assertSame(['from' => '••••', 'to' => '••••'], $details['changes']['product_key']);
+    }
+
+    public function test_a_revoked_seat_can_be_granted_again_and_unlimited_never_fills(): void
+    {
+        $this->actingAs($this->super());
+        $sw = Software::create(['name' => 'Visio', 'license_type' => 'subscription', 'seats' => 1]);
+        $free = Software::create(['name' => 'Chrome', 'license_type' => 'free']);
+        $e1 = Employee::create(['code' => 'EMP-SWR1', 'first_name' => 'R', 'last_name' => 'One']);
+        $e2 = Employee::create(['code' => 'EMP-SWR2', 'first_name' => 'R', 'last_name' => 'Two']);
+
+        $first = $this->postJson("/api/software/{$sw->id}/members", ['employee_id' => $e1->id])->assertCreated()->json('data.id');
+        $this->postJson("/api/software/{$sw->id}/members/{$first}/revoke")->assertOk();
         $this->postJson("/api/software/{$sw->id}/members", ['employee_id' => $e2->id])->assertCreated();
 
-        $this->getJson('/api/software')->assertOk()->assertJsonPath('data.0.seats_used', 2);
+        $this->postJson("/api/software/{$free->id}/members", ['employee_id' => $e1->id])->assertCreated();
+        $this->postJson("/api/software/{$free->id}/members", ['employee_id' => $e2->id])->assertCreated();
+    }
+
+    public function test_editing_cannot_lower_seats_below_the_licences_in_use(): void
+    {
+        $this->actingAs($this->super());
+        $sw = Software::create(['name' => 'AutoCAD', 'license_type' => 'subscription', 'seats' => 10]);
+        foreach (range(1, 5) as $i) {
+            $e = Employee::create(['code' => "EMP-SWS{$i}", 'first_name' => 'S', 'last_name' => "N{$i}"]);
+            $this->postJson("/api/software/{$sw->id}/members", ['employee_id' => $e->id])->assertCreated();
+        }
+        $payload = ['name' => 'AutoCAD', 'license_type' => 'subscription'];
+
+        $this->putJson("/api/software/{$sw->id}", [...$payload, 'seats' => 4])
+            ->assertStatus(422)->assertJsonValidationErrors('seats')->assertJsonPath('message', 'seats_below_in_use')->assertJsonPath('in_use', 5);
+        $this->assertSame(10, $sw->fresh()->seats);
+
+        $this->putJson("/api/software/{$sw->id}", [...$payload, 'seats' => 5])
+            ->assertOk()->assertJsonPath('data.seats', 5);
+    }
+
+    public function test_over_granted_software_can_be_edited_without_changing_its_seats(): void
+    {
+        $this->actingAs($this->super());
+        $sw = Software::create(['name' => 'Photoshop', 'license_type' => 'subscription', 'seats' => 1]);
+        foreach (range(1, 2) as $i) {
+            $e = Employee::create(['code' => "EMP-SWO{$i}", 'first_name' => 'O', 'last_name' => "N{$i}"]);
+            $sw->memberships()->create(['employee_id' => $e->id, 'granted_at' => now()]);
+        }
+
+        $this->putJson("/api/software/{$sw->id}", ['name' => 'Photoshop CC', 'license_type' => 'subscription', 'seats' => 1])
+            ->assertOk()->assertJsonPath('data.name', 'Photoshop CC');
     }
 
     public function test_revoking_a_member_decrements_seats_used(): void
