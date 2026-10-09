@@ -9,6 +9,7 @@
  */
 import type { ComponentType } from 'react';
 import AccessOverviewReportPage from './pages/access-overview';
+import AccessResourceMembersReportPage from './pages/access-resource-members';
 import AccessSoftwareLicensesReportPage from './pages/access-software-licenses';
 import AssetsOverviewReportPage from './pages/assets-overview';
 import AssetsTransferHistoryReportPage from './pages/assets-transfer-history';
@@ -63,5 +64,6 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'employees-leaver-assets', anyOf: ['employees.view'], Page: EmployeesLeaverAssetsReportPage },
     // Access
     { path: 'access-overview', anyOf: ['access.overview'], Page: AccessOverviewReportPage },
+    { path: 'access-resource-members', anyOf: ['access.email_view', 'access.file_view', 'access.social_view'], Page: AccessResourceMembersReportPage },
     { path: 'access-software-licenses', anyOf: ['access.software_view'], Page: AccessSoftwareLicensesReportPage },
 ];

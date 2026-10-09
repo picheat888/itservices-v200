@@ -595,6 +595,38 @@ export interface AccessOverviewBreakdown {
     care: { owner_gone: AccessResource[]; no_owner: AccessResource[]; empty: AccessResource[] };
 }
 
+/** Where a member sits next to the resource: its department, another, gone (has left), or it has no department. */
+export type AccessMemberKind = 'in_dept' | 'cross' | 'gone' | 'open';
+
+/** "ทบทวนสมาชิกและเจ้าของ": one resource with its owner and members. */
+export interface AccessMembersResource extends AccessResource {
+    owner: AccessPerson | null;
+    /** An email group or file share with no owner, or whose owner has left. */
+    owner_issue: 'none' | 'gone' | null;
+    members: number;
+    mix: Record<AccessMemberKind, number>;
+    read: number;
+    write: number;
+    /** A file share's size as typed; 0 = unlimited. */
+    size: { value: number; unit: string | null } | null;
+}
+
+/** What the "ทบทวนสมาชิกและเจ้าของ" page draws above its rows (AccessResourceMembersReport::breakdown). */
+export interface AccessMembersBreakdown {
+    /** Resources per registry whatever the type filter. */
+    types: Record<string, number>;
+    /** The list's active / cross-department / revoked segments. */
+    states: { active: number; cross: number; revoked: number };
+    /** Most to do first. */
+    resources: AccessMembersResource[];
+    /** The picked resource's review sheet: every active member by name. */
+    sheet:
+        | (AccessMembersResource & {
+              list: (AccessPerson & { level: 'Read' | 'Write' | 'member'; purpose: string | null; granted_at: string | null; kind: AccessMemberKind })[];
+          })
+        | null;
+}
+
 /** What the "ประวัติโอนย้ายและรับคืน" page draws above its rows (AssetTransferHistoryReport::breakdown). */
 /** "ประกันใกล้หมดอายุ": a category or vendor row of the period tables. */
 export interface WarrantyGroupFigures {

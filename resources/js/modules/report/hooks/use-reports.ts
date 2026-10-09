@@ -159,6 +159,26 @@ export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/** "ทบทวนสมาชิกและเจ้าของ" — keyed without the list's segment and order, which do not change the cards. */
+export const useAccessMembersBreakdown = (filters: TabularFilters) => {
+    const { state: _state, sort: _sort, ...rest } = filters;
+    void _state;
+    void _sort;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'access.resource_members', 'breakdown', rest],
+        queryFn: () => reportApi.accessMembersBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
+/** Download one resource's review sheet (PDF). */
+export const useAccessReviewSheet = () =>
+    useMutation({
+        mutationFn: (resource: string) => reportApi.accessReviewSheet(resource),
+        onSuccess: ({ blob, filename }) => downloadBlob(blob, filename),
+    });
+
 export const useManualSlaBreakdown = (filters: TabularFilters) => {
     const by = (filters.by as string | null | undefined) ?? 'category';
     const rest = Object.fromEntries(Object.entries(filters).filter(([name]) => name !== by));

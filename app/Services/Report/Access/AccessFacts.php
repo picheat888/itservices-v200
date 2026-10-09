@@ -66,12 +66,14 @@ final class AccessFacts
             ->where(fn (Builder $w) => $w->whereNull("{$table}.last_day")->orWhere("{$table}.last_day", '<', today()->toDateString()));
     }
 
-    /** Memberships with the resource and what naming it needs (department, brand). */
-    public static function withResource(Builder $query): Builder
+    /** Memberships with the resource and what naming it needs (department, brand), and its owner when asked. */
+    public static function withResource(Builder $query, bool $owners = false): Builder
     {
+        $ownable = $owners ? ['department', 'owner'] : ['department'];
+
         return $query->with(['resource' => fn (MorphTo $morph) => $morph->morphWith([
-            EmailGroup::class => ['department'],
-            FileShare::class => ['department'],
+            EmailGroup::class => $ownable,
+            FileShare::class => $ownable,
             Software::class => ['brand'],
         ])]);
     }
