@@ -1,6 +1,7 @@
-// Pieces the access report cards share: number and department words, a bar split into labelled pieces, the "สิ่งที่ต้องทำ" lines and the "N คน ›" pick button.
+// Pieces the access report cards share: number and department words, a bar split into labelled pieces, the "สิ่งที่ต้องทำ" lines and the clickable pick rows.
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
+import { ChevronRight } from 'lucide-react';
 import type { AccessDepartment } from '../types';
 import { pct, W_PCT } from './percent-classes';
 
@@ -95,20 +96,35 @@ export function TodoLines({ lines }: { lines: { tone: TodoTone; text: string }[]
     );
 }
 
-/** "N คน ›": narrows the list to one row of the table above; pressed while it does. */
-export function PickButton({ picked, text, label, onClick }: { picked: boolean; text: string; label: string; onClick: () => void }) {
+/** A table row that narrows the list below to itself when clicked (links inside keep their own click). */
+export function pickRow(picked: boolean, onPick: (() => void) | null) {
+    return {
+        className: cn(
+            onPick && 'group hover:bg-muted/60 cursor-pointer',
+            picked && 'bg-brand/5 hover:bg-brand/10 shadow-[inset_3px_0_0_var(--color-brand)]',
+        ),
+        onClick: onPick
+            ? (e: React.MouseEvent) => {
+                  if (!(e.target as HTMLElement).closest('a')) onPick();
+              }
+            : undefined,
+    };
+}
+
+/** The pick row's keyboard control: the count with a chevron that turns down while picked; its click bubbles to the row. */
+export function PickButton({ picked, text, label }: { picked: boolean; text: string; label: string }) {
     return (
         <button
             type="button"
             aria-pressed={picked}
-            onClick={onClick}
             aria-label={label}
             className={cn(
-                'border-border focus-visible:ring-brand rounded-full border px-2 py-px text-[11px] font-semibold whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none',
-                picked ? 'bg-brand text-brand-foreground border-brand' : 'text-brand hover:bg-brand/10',
+                'focus-visible:ring-brand inline-flex items-center gap-0.5 rounded-sm text-xs font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                picked ? 'text-brand' : 'text-muted-foreground group-hover:text-brand',
             )}
         >
             {text}
+            <ChevronRight aria-hidden className={cn('h-3.5 w-3.5 transition-transform motion-reduce:transition-none', picked && 'rotate-90')} />
         </button>
     );
 }
