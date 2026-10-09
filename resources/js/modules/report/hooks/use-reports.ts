@@ -159,7 +159,7 @@ export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
     });
 };
 
-/** "ทบทวนสมาชิกและเจ้าของ" — keyed without the list's segment and order, which do not change the cards. */
+/** "ตรวจสอบสมาชิกและเจ้าของ" — keyed without the list's segment and order, which do not change the cards. */
 export const useAccessMembersBreakdown = (filters: TabularFilters) => {
     const { state: _state, sort: _sort, ...rest } = filters;
     void _state;

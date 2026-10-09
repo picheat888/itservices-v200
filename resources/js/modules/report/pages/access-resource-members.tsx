@@ -1,4 +1,4 @@
-// "ทบทวนสมาชิกและเจ้าของ" report page (/reports/access-resource-members): shared tabular body + AccessMembersCards + the access member cells.
+// "ตรวจสอบสมาชิกและเจ้าของ" report page (/reports/access-resource-members): shared tabular body + AccessMembersCards + the access member cells.
 import { type AccessRow, DepartmentCell, EmployeeCell, LevelCell, ResourceCell, StatusCell } from '../components/access-cells';
 import { AccessMembersCards, AccessMembersListLead, AccessMembersTypeSegments } from '../components/access-members-cards';
 import { TabularReportView } from '../components/tabular-report-view';
