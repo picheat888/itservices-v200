@@ -11,10 +11,18 @@ import { useUiStore } from '@/stores/ui';
 import { Download, FileText, Loader2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-reports';
-import type { AccessDepartment, AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
+import type {
+    AccessDepartment,
+    AccessMemberKind,
+    AccessMembersBreakdown,
+    AccessMembersResource,
+    AccessType,
+    ChartTone,
+    TabularFilters,
+} from '../types';
+import { Cols, Group, GroupRow, NUM, registryOptions, ResourceHead, Segments, TD, TH, TypeLabel } from './access-overview-cards';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
-import { Cols, GroupRow, NUM, registryOptions, ResourceHead, Segments, SIDE_BODY, SIDE_CARD, TD, TH, TypeLabel } from './access-overview-cards';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
@@ -102,7 +110,11 @@ export function AccessMembersListLead({ filters, patch }: { filters: TabularFilt
             )}
             <Segments
                 label={t('rep_fl_ar_state')}
-                options={(['active', 'cross', 'revoked'] as const).map((s) => ({ value: s as string, label: t(`rep_ar_state_${s}`), count: data ? data.states[s] : null }))}
+                options={(['active', 'cross', 'revoked'] as const).map((s) => ({
+                    value: s as string,
+                    label: t(`rep_ar_state_${s}`),
+                    count: data ? data.states[s] : null,
+                }))}
                 value={(filters.state as string | null | undefined) ?? 'active'}
                 onChange={(state) => patch({ state })}
             />
@@ -154,6 +166,20 @@ function StorageCards({ resources }: { resources: Resource[] }) {
         ) : (
             <span className="text-muted-foreground font-mono">0</span>
         );
+    const shareRow = (r: Resource) => (
+        <GroupRow
+            key={keyOf(r)}
+            head={<ResourceHead r={r} />}
+            side={
+                gbOf(r) > 0 ? (
+                    <b className="font-mono text-sm tabular-nums">{sizeText(t, lang, r.size)}</b>
+                ) : (
+                    <StatusBadge tone="gray">{t('rep_ar_size_unlimited')}</StatusBadge>
+                )
+            }
+            sub={[r.detail, deptName(r.department, lang), gbOf(r) > 0 && total > 0 ? pct(gbOf(r)) : null]}
+        />
+    );
     if (shares.length === 0) return null;
 
     return (
@@ -197,12 +223,23 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                         <tbody>
                             {rows.map((r) => (
                                 <tr key={r.name} className="border-border/60 border-b last:border-b-0">
-                                    <th scope="row" className={cn(TD, 'max-w-[12rem] truncate text-left font-medium', r.muted && 'text-muted-foreground font-normal')}>
+                                    <th
+                                        scope="row"
+                                        className={cn(
+                                            TD,
+                                            'max-w-[12rem] truncate text-left font-medium',
+                                            r.muted && 'text-muted-foreground font-normal',
+                                        )}
+                                    >
                                         {r.name}
                                     </th>
                                     <td className={cn(TD, NUM)}>{count(r.count, lang)}</td>
                                     <td className={cn(TD, NUM, 'font-semibold')}>
-                                        {r.gb > 0 ? gbText(lang, r.gb) : <span className="text-muted-foreground font-normal">{t('rep_ar_size_unlimited')}</span>}
+                                        {r.gb > 0 ? (
+                                            gbText(lang, r.gb)
+                                        ) : (
+                                            <span className="text-muted-foreground font-normal">{t('rep_ar_size_unlimited')}</span>
+                                        )}
                                     </td>
                                     <td className={TD}>
                                         {r.gb > 0 ? (
@@ -245,7 +282,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                     </table>
                 </div>
             </Card>
-            <Card className={cn(SIDE_CARD, shares.length <= 4 && 'lg:min-h-0 lg:[contain:none]')}>
+            <Card className="flex flex-col overflow-hidden xl:col-span-2">
                 <CardTitle title={t('rep_ar_space_list_title')} sub={t('rep_ar_space_list_sub')} />
                 <dl className="border-border grid grid-cols-3 gap-3 border-b px-5 pt-1 pb-3">
                     {[
@@ -259,42 +296,15 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                         </div>
                     ))}
                 </dl>
-                <div className={SIDE_BODY}>
-                    {[
-                        { title: t('rep_ar_space_capped'), rows: capped },
-                        { title: t('rep_ar_size_unlimited'), rows: unlimited },
-                    ]
-                        .filter((g) => g.rows.length > 0)
-                        .map((g, i) => (
-                            <section key={g.title}>
-                                <h3
-                                    className={cn(
-                                        'bg-muted/50 border-border text-muted-foreground flex items-baseline justify-between border-b px-5 py-2 text-xs font-semibold',
-                                        i > 0 && 'border-t',
-                                    )}
-                                >
-                                    {g.title}
-                                    <b className="text-foreground font-mono tabular-nums">{count(g.rows.length, lang)}</b>
-                                </h3>
-                                <ul>
-                                    {g.rows.map((r) => (
-                                        <GroupRow
-                                            key={keyOf(r)}
-                                            head={<ResourceHead r={r} />}
-                                            side={
-                                                gbOf(r) > 0 ? (
-                                                    <b className="font-mono text-sm tabular-nums">{sizeText(t, lang, r.size)}</b>
-                                                ) : (
-                                                    <StatusBadge tone="gray">{t('rep_ar_size_unlimited')}</StatusBadge>
-                                                )
-                                            }
-                                            sub={[r.detail, deptName(r.department, lang), gbOf(r) > 0 && total > 0 ? pct(gbOf(r)) : null]}
-                                        />
-                                    ))}
-                                </ul>
-                            </section>
-                        ))}
-                </div>
+                {/* Three rows a group, the rest folded; the card grows with them. */}
+                <Group first title={t('rep_ar_space_capped')} total={count(capped.length, lang)} rows={capped} render={shareRow} />
+                <Group
+                    first={capped.length === 0}
+                    title={t('rep_ar_size_unlimited')}
+                    total={count(unlimited.length, lang)}
+                    rows={unlimited}
+                    render={shareRow}
+                />
             </Card>
         </div>
     );
@@ -425,7 +435,14 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                             <caption className="sr-only">{t('rep_ar_res_title')}</caption>
                             <thead>
                                 <tr className="bg-muted/40 border-border border-b">
-                                    {['rep_ar_col_resource', 'rep_c_ac_type', 'rep_ac_dept_col_name', 'rep_c_ar_owner', 'rep_ar_col_members', 'rep_ar_col_todo'].map((k) => (
+                                    {[
+                                        'rep_ar_col_resource',
+                                        'rep_c_ac_type',
+                                        'rep_ac_dept_col_name',
+                                        'rep_c_ar_owner',
+                                        'rep_ar_col_members',
+                                        'rep_ar_col_todo',
+                                    ].map((k) => (
                                         <th key={k} scope="col" className={cn(TH, 'text-left')}>
                                             {t(k)}
                                         </th>
@@ -443,14 +460,22 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                     return (
                                         <tr
                                             key={keyOf(r)}
-                                            className={cn('border-border/60 border-b last:border-b-0', apart && '[&>td]:border-border [&>td]:border-t-2 [&>td]:border-dashed', picked && 'bg-brand/5')}
+                                            className={cn(
+                                                'border-border/60 border-b last:border-b-0',
+                                                apart && '[&>td]:border-border [&>td]:border-t-2 [&>td]:border-dashed',
+                                                picked && 'bg-brand/5',
+                                            )}
                                         >
                                             <td className={TD}>
                                                 <div className="min-w-0">
                                                     <div className="flex items-center gap-2">
                                                         <ResourceHead r={r} />
                                                     </div>
-                                                    <div className="text-muted-foreground flex max-w-[16rem] gap-x-3 text-xs" title={sub.join('\n')} translate="no">
+                                                    <div
+                                                        className="text-muted-foreground flex max-w-[16rem] gap-x-3 text-xs"
+                                                        title={sub.join('\n')}
+                                                        translate="no"
+                                                    >
                                                         {sub.map((part) => (
                                                             <span key={part} className="truncate">
                                                                 {part}
@@ -462,7 +487,9 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                             <td className={TD}>
                                                 <TypeLabel type={r.type} />
                                             </td>
-                                            <td className={cn(TD, !r.department && 'text-muted-foreground')}>{deptName(r.department, lang) ?? '—'}</td>
+                                            <td className={cn(TD, !r.department && 'text-muted-foreground')}>
+                                                {deptName(r.department, lang) ?? '—'}
+                                            </td>
                                             <td className={TD}>
                                                 <OwnerCell r={r} />
                                             </td>
@@ -470,7 +497,9 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                                 <MixBar mix={r.mix} scale={scale} />
                                                 {r.type === 'file_share' && r.members > 0 && (
                                                     <div className="text-muted-foreground mt-1 text-xs">
-                                                        {t('rep_ar_levels').replace('{read}', count(r.read, lang)).replace('{write}', count(r.write, lang))}
+                                                        {t('rep_ar_levels')
+                                                            .replace('{read}', count(r.read, lang))
+                                                            .replace('{write}', count(r.write, lang))}
                                                     </div>
                                                 )}
                                             </td>
@@ -483,7 +512,9 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                                         type="button"
                                                         aria-pressed={picked}
                                                         onClick={() => (picked ? patch({ resource: null }) : pick(r))}
-                                                        aria-label={t('rep_ar_pick_aria').replace('{name}', r.name ?? '').replace('{n}', count(r.members, lang))}
+                                                        aria-label={t('rep_ar_pick_aria')
+                                                            .replace('{name}', r.name ?? '')
+                                                            .replace('{n}', count(r.members, lang))}
                                                         className={cn(
                                                             'border-border focus-visible:ring-brand rounded-full border px-2 py-px text-[11px] font-semibold whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none',
                                                             picked ? 'bg-brand text-brand-foreground border-brand' : 'text-brand hover:bg-brand/10',
@@ -537,7 +568,10 @@ function OwnerStrip({ sheet, onOpen }: { sheet: Sheet; onOpen: () => void }) {
                     {sheet.detail}
                 </span>,
             )}
-            {fact(t('rep_ac_dept_col_name'), deptName(sheet.department, lang) ?? <span className="text-muted-foreground">{t('rep_ar_no_department')}</span>)}
+            {fact(
+                t('rep_ac_dept_col_name'),
+                deptName(sheet.department, lang) ?? <span className="text-muted-foreground">{t('rep_ar_no_department')}</span>,
+            )}
             {fact(
                 sheet.type === 'email_group' ? t('rep_ar_owner_approver') : t('rep_c_ar_owner'),
                 sheet.type === 'social_platform' ? (
@@ -558,7 +592,11 @@ function OwnerStrip({ sheet, onOpen }: { sheet: Sheet; onOpen: () => void }) {
                     <StatusBadge tone="amber">{t('rep_ar_owner_none')}</StatusBadge>
                 ),
             )}
-            {fact(t('rep_ar_strip_members'), <b>{t('rep_ac_people_n').replace('{n}', count(sheet.list.length, lang))}</b>, flags.join(' · ') || undefined)}
+            {fact(
+                t('rep_ar_strip_members'),
+                <b>{t('rep_ac_people_n').replace('{n}', count(sheet.list.length, lang))}</b>,
+                flags.join(' · ') || undefined,
+            )}
             <Button variant="outline" size="sm" className="ml-auto" onClick={onOpen}>
                 <FileText className="h-4 w-4" />
                 {t('rep_ar_sheet_open')}
@@ -573,7 +611,9 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
     const lang = useUiStore((s) => s.lang);
     const isFile = sheet.type === 'file_share';
     const ownable = sheet.type !== 'social_platform';
-    const today = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date());
+    const today = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+        new Date(),
+    );
     const cell = 'border border-slate-300 px-2 py-1 align-top';
 
     return (
@@ -729,4 +769,3 @@ export function AccessMembersCards({ filters, patch }: { filters: TabularFilters
         </div>
     );
 }
-
