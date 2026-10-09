@@ -24,7 +24,7 @@ export function Switch({
             disabled={disabled}
             onClick={() => onChange(!checked)}
             className={cn(
-                'relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50',
+                'focus-visible:ring-brand/40 relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden disabled:opacity-50',
                 // Off-state uses muted-foreground (not bg-muted) so the track stays visible on
                 // muted surfaces (e.g. the bg-muted/40 rows in dialogs) in both themes.
                 checked ? 'bg-brand' : 'bg-muted-foreground/35',

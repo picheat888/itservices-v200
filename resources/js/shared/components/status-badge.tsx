@@ -5,6 +5,9 @@ import type { CSSProperties } from 'react';
 /** The tint a custom-colour badge sits on: the colour at 0x22 (≈13%) alpha. */
 const TINT = '22';
 
+/** Contrast the ink aims for: 4.5:1 (WCAG AA) plus headroom for colour rounding. */
+const INK_TARGET = 4.6;
+
 type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'orange' | 'pink' | 'gray';
 
 const tones: Record<Tone, string> = {
@@ -58,8 +61,8 @@ export function StatusBadge({
     if (color) {
         const ink = {
             backgroundColor: `${color}${TINT}`,
-            '--ink': readableInk(color, LIGHT_GROUND, 0x22 / 255),
-            '--ink-dark': readableInk(color, DARK_GROUND, 0x22 / 255),
+            '--ink': readableInk(color, LIGHT_GROUND, 0x22 / 255, INK_TARGET),
+            '--ink-dark': readableInk(color, DARK_GROUND, 0x22 / 255, INK_TARGET),
         } as CSSProperties;
         return (
             <span

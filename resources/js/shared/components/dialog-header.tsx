@@ -1,7 +1,9 @@
+import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { cn } from '@/shared/lib/utils';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { type LucideIcon } from 'lucide-react';
+import type { CSSProperties } from 'react';
 
 /**
  * Shared header for the app's centered focus dialogs (contract View/Edit, access
@@ -52,6 +54,14 @@ export function FocusDialogHeader({
 }) {
     const lang = useUiStore((s) => s.lang);
     const tintStyle = accent ? { background: `${accent}18`, color: accent } : undefined;
+    // Code chip text: the accent darkened/lightened only as far as 4.5:1 on its tint needs.
+    const codeStyle = accent
+        ? ({
+              background: `${accent}18`,
+              '--ink': readableInk(accent, LIGHT_GROUND, 0x18 / 255),
+              '--ink-dark': readableInk(accent, DARK_GROUND, 0x18 / 255),
+          } as CSSProperties)
+        : undefined;
     const boxCls = tileSize === 'lg' ? 'h-14 w-14' : 'h-10 w-10';
     const iconCls = tileSize === 'lg' ? 'h-7 w-7' : 'h-5 w-5';
     return (
@@ -84,8 +94,11 @@ export function FocusDialogHeader({
                     <span className="truncate">{title}</span>
                     {code && (
                         <span
-                            className={cn('shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold', !accent && 'bg-brand/10 text-brand')}
-                            style={tintStyle}
+                            className={cn(
+                                'shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold',
+                                accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : 'bg-brand/10 text-brand',
+                            )}
+                            style={codeStyle}
                         >
                             {code}
                         </span>

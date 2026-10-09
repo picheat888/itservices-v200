@@ -38,6 +38,8 @@ export function SearchableSelect({
     active = false,
     preferDown = false,
     id,
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
 }: {
     value: string;
     onChange: (v: string) => void;
@@ -52,6 +54,8 @@ export function SearchableSelect({
     preferDown?: boolean;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
+    'aria-invalid'?: boolean;
+    'aria-describedby'?: string;
 }) {
     const t = useT();
     const [open, setOpen] = useState(false);
@@ -215,6 +219,8 @@ export function SearchableSelect({
                 id={id}
                 type="button"
                 onClick={toggle}
+                aria-invalid={ariaInvalid}
+                aria-describedby={ariaDescribedBy}
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 className={cn(
