@@ -13,6 +13,7 @@ use App\Models\AuditLog;
 use App\Services\Access\AccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class SoftwareController extends Controller
@@ -53,20 +54,40 @@ class SoftwareController extends Controller
     /** Create a new software entry. */
     public function store(StoreSoftwareRequest $request): JsonResponse
     {
-        $sw = Software::create($this->handleLogo($request, $request->validated()));
+        $sw = Software::create($this->handleLogo($request, $request->safe()->except('seats_unlimited')));
         AuditLog::record('Created software', $sw->name, subject: $sw);
 
         return (new SoftwareResource($sw))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     /** Update an existing software entry. */
-    public function update(StoreSoftwareRequest $request, Software $software): JsonResponse
+    public function update(StoreSoftwareRequest $request, Software $software, AccessService $svc): JsonResponse
     {
         $before = $software->getOriginal();
-        $software->update($this->handleLogo($request, $request->validated(), $software->logo_path));
-        AuditLog::record('Updated software', $software->name, AuditLog::changes($before, $software), subject: $software);
+        DB::transaction(function () use ($request, $software, $svc): void {
+            $svc->guardSeatCount($software, $request->validated('seats'));
+            $software->update($this->handleLogo($request, $request->safe()->except('seats_unlimited'), $software->logo_path));
+        });
+        AuditLog::record('Updated software', $software->name, $this->auditChanges($before, $software), subject: $software);
 
         return (new SoftwareResource($software))->additional(['message' => 'success'])->response();
+    }
+
+    /**
+     * Audit diff with the product key masked: the log only says it changed, never the key.
+     *
+     * @param  array<string, mixed>  $before
+     * @return array<string, mixed>|null
+     */
+    private function auditChanges(array $before, Software $software): ?array
+    {
+        $changes = AuditLog::changes($before, $software, ['product_key']);
+        if ($software->wasChanged('product_key')) {
+            $mask = fn (mixed $key): ?string => filled($key) ? '••••' : null;
+            $changes['changes']['product_key'] = ['from' => $mask($before['product_key'] ?? null), 'to' => $mask($software->product_key)];
+        }
+
+        return $changes;
     }
 
     /** Delete a software entry, guarding against active members. */
