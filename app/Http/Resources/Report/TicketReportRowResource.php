@@ -26,6 +26,7 @@ class TicketReportRowResource extends JsonResource
             'subject' => $this->subject,
             'requester_name' => $this->requester?->name,
             'requester_name_th' => $this->requester?->name_th,
+            'requester_code' => $this->requester?->code,
             'department_name' => $this->requester?->department?->name,
             'department_name_th' => $this->requester?->department?->name_th,
             'category' => $this->category?->value,
