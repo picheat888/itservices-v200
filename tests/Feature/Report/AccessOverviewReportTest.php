@@ -143,6 +143,7 @@ class AccessOverviewReportTest extends TestCase
         // A, B and D hold something; E holds nothing; C has left.
         $this->assertSame(3, $summary['ac_holders']['value']);
         $this->assertSame(75, $summary['ac_holders']['share']);
+        $this->assertSame('rep_n_ac_holders', $summary['ac_holders']['note']['label_key']);
         $this->assertEquals(['staff' => 4, 'avg' => 1.3, 'none' => 1], $summary['ac_holders']['note']['values']);
 
         $this->assertSame(6, $summary['ac_granted']['value']);
@@ -155,6 +156,17 @@ class AccessOverviewReportTest extends TestCase
 
         $this->assertSame(4, $summary['ac_care']['value']);
         $this->assertSame(['owner_gone' => 1, 'no_owner' => 1, 'empty' => 2], array_column($summary['ac_care']['split'], 'value', 'key'));
+    }
+
+    public function test_the_holders_note_says_so_when_everyone_working_holds_some(): void
+    {
+        // Quality: B and D both still work and both hold something.
+        $department = Department::where('tag', 'QC')->value('id');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows?department_id='.$department)->assertOk()->json('summary'))->keyBy('key');
+
+        $this->assertSame(2, $summary['ac_holders']['value']);
+        $this->assertSame('rep_n_ac_holders_all', $summary['ac_holders']['note']['label_key']);
+        $this->assertSame(0, $summary['ac_holders']['note']['values']['none']);
     }
 
     public function test_breakdown_draws_months_leavers_departments_and_care(): void

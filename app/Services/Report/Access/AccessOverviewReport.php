@@ -188,13 +188,13 @@ class AccessOverviewReport extends TabularReport
                 'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
             ], AccessFacts::TYPES)),
             ReportSummary::make('ac_holders', 'พนักงานที่ถือสิทธิ์', $holders)->withShareOf($staff)->withNote([
-                'label_key' => 'rep_n_ac_holders',
+                'label_key' => $staff > $holders ? 'rep_n_ac_holders' : 'rep_n_ac_holders_all',
                 'values' => ['staff' => $staff, 'avg' => $holders > 0 ? round($held->count() / $holders, 1) : 0, 'none' => max(0, $staff - $holders)],
             ]),
             ReportSummary::make('ac_granted', 'ให้สิทธิ์ในช่วงวันที่', $granted)->withNote([
                 'label_key' => 'rep_n_ac_granted', 'values' => ['revoked' => $revoked], 'texts' => ['net' => ($net >= 0 ? '+' : '−').number_format(abs($net))],
             ]),
-            ReportSummary::make('ac_leavers', 'ผู้ลาออกยังถือสิทธิ์', $left->count())->withAttention('red')->withNote($left->isEmpty()
+            ReportSummary::make('ac_leavers', 'สิทธิ์ที่ผู้ลาออกยังถือ', $left->count())->withAttention('red')->withNote($left->isEmpty()
                 ? ['label_key' => 'rep_n_ac_leavers_none']
                 : ['label_key' => $longest === null ? 'rep_n_ac_leavers_people' : 'rep_n_ac_leavers', 'values' => ['people' => $leavers->count(), 'days' => (int) $longest]]),
             ReportSummary::make('ac_care', 'Resource ที่ต้องดูแล', $careCount)->withAttention('amber')->withSplit([
