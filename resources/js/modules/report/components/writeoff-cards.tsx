@@ -406,7 +406,7 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
     const label = (c: Category) => (c.name === null ? t('rep_wo_no_category') : (lang === 'th' && c.name_th) || c.name);
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_wo_cat_title')} note={t('rep_wo_cat_sub')} sub={<Legend series={BANDS} />} />
             {categories.length === 0 ? (
                 <Empty>{t('rep_wo_empty')}</Empty>
@@ -558,7 +558,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
     const canOpen = useCanOpen();
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_wo_ct_title')}
                 note={t('rep_wo_ct_sub')}
