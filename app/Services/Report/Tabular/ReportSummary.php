@@ -33,7 +33,7 @@ final class ReportSummary
         /** @var list<array{key: string, label_key: string, tone: string, value: int|float}> */
         public readonly array $split = [],
         public readonly ?int $share = null,
-        /** @var array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>, texts?: array<string, string|array{name: string, name_th: ?string}>}|null */
+        /** @var array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>, texts?: array<string, string|array{name: string, name_th: ?string}>, trend?: array{direction: 'up'|'down'|'even', label_key: string, values?: array<string, int|float>, points?: list<int|float>}}|null */
         public readonly ?array $note = null,
         public readonly ?int $goal = null,
         public readonly ?string $attention = null,

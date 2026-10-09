@@ -284,6 +284,8 @@ export interface SummaryItem {
         values?: Record<string, number>;
         /** Words by name — plain, or a master-data name the page shows in the reader's language. */
         texts?: Record<string, string | { name: string; name_th: string | null }>;
+        /** A change drawn after the note (▲ green, ▼ red, grey for none), with a small line through `points` when given. */
+        trend?: { direction: 'up' | 'down' | 'even'; label_key: string; values?: Record<string, number>; points?: number[] };
     } | null;
     /** Percent tiles: the goal the value is measured against — a meter with the goal marked. */
     goal?: number | null;
@@ -622,7 +624,12 @@ export interface AccessMembersBreakdown {
     /** The picked resource's review sheet: every active member by name. */
     sheet:
         | (AccessMembersResource & {
-              list: (AccessPerson & { level: 'Read' | 'Write' | 'member'; purpose: string | null; granted_at: string | null; kind: AccessMemberKind })[];
+              list: (AccessPerson & {
+                  level: 'Read' | 'Write' | 'member';
+                  purpose: string | null;
+                  granted_at: string | null;
+                  kind: AccessMemberKind;
+              })[];
           })
         | null;
 }

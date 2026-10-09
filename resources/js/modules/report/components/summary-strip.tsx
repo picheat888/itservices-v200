@@ -16,6 +16,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
+import { Sparkline } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { YearsTip } from './years-tip';
@@ -54,6 +55,38 @@ function noteText(t: (key: string) => string, lang: string, note: NonNullable<Su
     if (note.hours !== undefined) text = text.replace('{n}', note.hours === null ? '—' : duration(t, note.hours));
     return text.replace('{at}', note.at ? shortMoment(note.at, lang) : '—');
 }
+
+/** As the Report Center's change: ▲ green, ▼ red, no change grey; the line a shade lighter. */
+const TREND = {
+    up: { mark: '▲ ', ink: 'text-emerald-600 dark:text-emerald-400', line: 'text-emerald-500 dark:text-emerald-400' },
+    down: { mark: '▼ ', ink: 'text-red-600 dark:text-red-400', line: 'text-red-500 dark:text-red-400' },
+    even: { mark: '', ink: 'text-muted-foreground', line: 'text-muted-foreground' },
+};
+
+type Note = NonNullable<SummaryItem['note']>;
+
+const trendText = (t: (key: string) => string, trend: NonNullable<Note['trend']>) =>
+    Object.entries(trend.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), t(trend.label_key));
+
+/** The note's words, then its trend (when it has one) in the trend's colour. */
+function NoteLine({ note }: { note: Note }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    if (!note.trend) return <>{noteText(t, lang, note)}</>;
+    const { mark, ink } = TREND[note.trend.direction];
+    return (
+        <>
+            {noteText(t, lang, note)}{' '}
+            <span className={cn('font-semibold whitespace-nowrap', ink)}>
+                <span aria-hidden>{mark}</span>
+                {trendText(t, note.trend)}
+            </span>
+        </>
+    );
+}
+
+const noteTitle = (t: (key: string) => string, lang: string, note: Note) =>
+    note.trend ? `${noteText(t, lang, note)} ${trendText(t, note.trend)}` : noteText(t, lang, note);
 
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const t = useT();
@@ -156,11 +189,20 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                         </span>
                                     ))}
                                     {/* What the split is over ("จาก 7 เคสที่เสร็จสิ้น"), when the report says. */}
-                                    {item.note && <span>{noteText(t, lang, item.note)}</span>}
+                                    {item.note && (
+                                        <span>
+                                            <NoteLine note={item.note} />
+                                        </span>
+                                    )}
                                 </span>
                             ) : item.note ? (
-                                <span className="line-clamp-2" title={noteText(t, lang, item.note)}>
-                                    {noteText(t, lang, item.note)}
+                                <span className="flex items-end justify-between gap-3">
+                                    <span className="line-clamp-2 min-w-0" title={noteTitle(t, lang, item.note)}>
+                                        <NoteLine note={item.note} />
+                                    </span>
+                                    {item.note.trend?.points && (
+                                        <Sparkline values={item.note.trend.points} className={TREND[item.note.trend.direction].line} />
+                                    )}
                                 </span>
                             ) : undefined
                         }

@@ -18,6 +18,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { Link } from 'react-router-dom';
 import { useReportCatalogue, useReportSnapshot } from '../hooks/use-reports';
 import type { SnapshotPeriod, SnapshotRange, SnapshotTile } from '../types';
+import { Sparkline } from './chart-parts';
 import { reportRoute } from './report-catalogue';
 import { periodRange } from './report-scope';
 
@@ -61,28 +62,6 @@ function Delta({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod })
             </span>{' '}
             {base}
         </span>
-    );
-}
-
-/** A 70×20 line of the tile's value across the period; empty points are skipped. */
-function Sparkline({ values, className }: { values: (number | null)[]; className: string }) {
-    const known = values.map((v, i) => [i, v] as const).filter((p): p is readonly [number, number] => p[1] !== null);
-    if (known.length < 2) return null;
-    const W = 70;
-    const H = 20;
-    const lo = Math.min(...known.map((p) => p[1]));
-    const hi = Math.max(...known.map((p) => p[1]));
-    const x = (i: number) => 2 + (i * (W - 4)) / (values.length - 1);
-    const y = (v: number) => H - 3 - ((v - lo) / (hi - lo || 1)) * (H - 6);
-    const line = known.map(([i, v], n) => `${n ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
-    const [lastI, lastV] = known[known.length - 1];
-
-    return (
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className={cn('shrink-0', className)} aria-hidden="true">
-            <path d={`${line} L${x(lastI).toFixed(1)} ${H} L${x(known[0][0]).toFixed(1)} ${H} Z`} fill="currentColor" fillOpacity={0.12} />
-            <path d={line} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" />
-            <circle cx={x(lastI)} cy={y(lastV)} r={2.4} fill="currentColor" />
-        </svg>
     );
 }
 
