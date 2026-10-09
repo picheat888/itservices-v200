@@ -601,12 +601,15 @@ function PersonHead({ id, name, code }: { id: number; name: string; code: string
 export const SIDE_CARD = 'flex flex-col overflow-hidden xl:col-span-2 lg:[contain:size] lg:min-h-96';
 export const SIDE_BODY = 'flex min-h-0 flex-1 flex-col lg:overflow-y-auto lg:overscroll-contain';
 
+/** A right-hand card of grouped lists: grows with its rows (three a group, an opened group scrolls inside itself). */
+const GROUP_CARD = 'flex flex-col overflow-hidden xl:col-span-2';
+
 function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
 
     return (
-        <Card className={SIDE_CARD}>
+        <Card className={GROUP_CARD}>
             <CardTitle title={t('rep_ac_leavers_title')} sub={t('rep_ac_leavers_sub')} />
             {leavers.people.length === 0 && leavers.owned.length === 0 ? (
                 <CardEmpty>
@@ -616,7 +619,7 @@ function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] 
                     </span>
                 </CardEmpty>
             ) : (
-                <div className={SIDE_BODY}>
+                <div className="flex flex-col">
                     <Group
                         first
                         title={t('rep_ac_leavers_holding')}
@@ -678,12 +681,12 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
     );
 
     return (
-        <Card className={SIDE_CARD}>
+        <Card className={GROUP_CARD}>
             <CardTitle title={t('rep_ac_care_title')} sub={t('rep_ac_care_sub')} />
             {care.owner_gone.length + care.no_owner.length + care.empty.length === 0 ? (
                 <CardEmpty>{t('rep_ac_care_none')}</CardEmpty>
             ) : (
-                <div className={SIDE_BODY}>
+                <div className="flex flex-col">
                     <Group
                         first
                         title={t('rep_ac_care_owner_gone')}
