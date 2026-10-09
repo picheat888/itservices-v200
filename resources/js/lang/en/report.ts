@@ -492,6 +492,7 @@ export const report: Dict = {
     rep_tickets_backlog_desc: 'Tickets still open. The most overdue are at the top.',
     rep_assets_overview_title: 'Asset overview',
     rep_assets_overview_desc: 'Every asset by department, warehouse, shared location and write-off, with the full list',
+    rep_ov_rows_title: 'Assets',
     rep_assets_transfer_history_title: 'Transfer and return history',
     rep_assets_transfer_history_desc: 'Asset moves, how fast staff accept, and what is still waiting',
     rep_assets_writeoffs_title: 'Asset write-offs',

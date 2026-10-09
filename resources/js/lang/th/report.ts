@@ -491,6 +491,7 @@ export const report: Dict = {
     rep_tickets_backlog_desc: 'Ticket ที่ยังไม่ปิด ใบที่เกิน SLA นานที่สุดอยู่บนสุด',
     rep_assets_overview_title: 'ภาพรวมของทรัพย์สิน',
     rep_assets_overview_desc: 'ทุกเครื่อง แยกตามแผนก คลัง ส่วนกลาง และตัดจำหน่าย พร้อมรายการ',
+    rep_ov_rows_title: 'รายการทรัพย์สิน',
     rep_assets_transfer_history_title: 'ประวัติโอนย้ายและรับคืน',
     rep_assets_transfer_history_desc: 'การเคลื่อนไหวของทรัพย์สิน ความเร็วในการกดรับ และเครื่องที่ยังค้างอยู่',
     rep_assets_writeoffs_title: 'การตัดจำหน่ายทรัพย์สิน',
