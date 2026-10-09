@@ -190,14 +190,12 @@ export function MembersDrawer({
         if (tgt?.ownerEmployeeId) ids.add(tgt.ownerEmployeeId);
         return ids;
     }, [members, tgt?.ownerEmployeeId]);
-    // Show the most recently added member first (granted_at desc, id as the tiebreaker
-    // since it auto-increments in insertion order and granted_at may be null on old rows).
+    // Newest grant first ("YYYY-MM-DD HH:mm" sorts as text), then id
     const sortedMembers = useMemo(
         () =>
             [...members].sort((a, b) => {
-                const ta = a.granted_at ? Date.parse(a.granted_at) : 0;
-                const tb = b.granted_at ? Date.parse(b.granted_at) : 0;
-                return tb !== ta ? tb - ta : b.id - a.id;
+                const byTime = (b.granted_at ?? '').localeCompare(a.granted_at ?? '');
+                return byTime !== 0 ? byTime : b.id - a.id;
             }),
         [members],
     );

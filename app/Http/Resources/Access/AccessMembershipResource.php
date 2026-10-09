@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Access;
 
 use App\Models\Access\AccessMembership;
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,9 +19,9 @@ class AccessMembershipResource extends JsonResource
             'photo_url' => $this->whenLoaded('employee', fn () => $this->employee?->photo_url),
             'access_level' => $this->access_level,
             'purpose' => $this->purpose,
-            'granted_at' => $this->granted_at?->toDateString(),
+            'granted_at' => SystemTime::dateTime($this->granted_at),
             'granted_by' => $this->whenLoaded('grantedBy', fn () => $this->grantedBy?->name),
-            'revoked_at' => $this->revoked_at?->toDateString(),
+            'revoked_at' => SystemTime::dateTime($this->revoked_at),
             'revoked_by' => $this->whenLoaded('revokedBy', fn () => $this->revokedBy?->name),
         ];
     }

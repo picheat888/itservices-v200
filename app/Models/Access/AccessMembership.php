@@ -15,7 +15,7 @@ class AccessMembership extends Model
 
     protected function casts(): array
     {
-        return ['granted_at' => 'date', 'revoked_at' => 'date'];
+        return ['granted_at' => 'datetime', 'revoked_at' => 'datetime'];
     }
 
     public function scopeActive(Builder $q): Builder

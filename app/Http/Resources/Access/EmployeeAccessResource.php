@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Access;
 
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,7 +26,7 @@ class EmployeeAccessResource extends JsonResource
             'resource_logo' => $m->resource?->logo_url,
             'access_level' => $m->access_level,
             'purpose' => $m->purpose,
-            'granted_at' => $m->granted_at?->toDateString(),
+            'granted_at' => SystemTime::dateTime($m->granted_at),
             // True when this employee is the resource's owner/approver (email groups + file shares).
             'is_owner' => $employeeId !== null && $m->resource?->owner_employee_id === $employeeId,
         ])->values();

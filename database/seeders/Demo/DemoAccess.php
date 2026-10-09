@@ -67,7 +67,7 @@ final class DemoAccess implements DemoStep
             $this->access->grant($resource, $ctx->employee($employeeKey)->id, [
                 'access_level' => $level,
                 'purpose' => 'Daily work',
-                'granted_at' => $clock->daysAgo($daysAgo)->toDateString(),
+                'granted_at' => $clock->daysAgo($daysAgo, 10),
             ]);
             $ctx->audit('Added member to '.$this->noun($resource), $resource->name, ['employee' => $ctx->employee($employeeKey)->name]);
         }
