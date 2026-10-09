@@ -919,6 +919,8 @@ export interface AccessMember {
     /** Display name of the admin who granted this membership (audit). */
     granted_by?: string | null;
     revoked_at: string | null;
+    /** Display name of the admin who revoked it, when loaded. */
+    revoked_by?: string | null;
 }
 
 export interface EmployeeAccessRow {
