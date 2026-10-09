@@ -148,8 +148,13 @@ class AccessOverviewReportTest extends TestCase
         $this->assertSame(['staff' => 4, 'median' => 1, 'none' => 1], $summary['ac_holders']['note']['values']);
 
         $this->assertSame(6, $summary['ac_granted']['value']);
-        $this->assertSame('rep_n_ac_granted_up', $summary['ac_granted']['note']['label_key']);
-        $this->assertSame(['revoked' => 2, 'net' => 4], $summary['ac_granted']['note']['values']);
+        $note = $summary['ac_granted']['note'];
+        $this->assertSame(['label_key' => 'rep_n_ac_granted', 'values' => ['revoked' => 2]], array_diff_key($note, ['trend' => 0]));
+        $this->assertSame(['direction' => 'up', 'label_key' => 'rep_n_ac_net_up', 'values' => ['net' => 4]], array_diff_key($note['trend'], ['points' => 0]));
+        // The line climbs by the same four over the range, ending on what is active now.
+        $this->assertCount(7, $note['trend']['points']);
+        $this->assertSame(4, end($note['trend']['points']) - $note['trend']['points'][0]);
+        $this->assertSame(5, end($note['trend']['points']));
 
         $this->assertSame(1, $summary['ac_leavers']['value']);
         $this->assertSame('red', $summary['ac_leavers']['attention']);
@@ -207,8 +212,10 @@ class AccessOverviewReportTest extends TestCase
             ->firstWhere('key', 'ac_granted')['note'];
 
         // June: LINE taken back from B, nothing granted.
-        $this->assertSame(['label_key' => 'rep_n_ac_granted_down', 'values' => ['revoked' => 1, 'net' => 1]], $note('from=2026-06-01&to=2026-06-30'));
-        $this->assertSame(['label_key' => 'rep_n_ac_granted_even', 'values' => ['revoked' => 0, 'net' => 0]], $note('from=2026-07-01&to=2026-07-31'));
+        $june = $note('from=2026-06-01&to=2026-06-30')['trend'];
+        $this->assertSame(['direction' => 'down', 'label_key' => 'rep_n_ac_net_down', 'values' => ['net' => 1]], array_diff_key($june, ['points' => 0]));
+        $this->assertSame(-1, end($june['points']) - $june['points'][0]);
+        $this->assertSame(['direction' => 'even', 'label_key' => 'rep_n_ac_net_even', 'values' => ['net' => 0]], array_diff_key($note('from=2026-07-01&to=2026-07-31')['trend'], ['points' => 0]));
     }
 
     public function test_the_department_filter_narrows_the_cards_but_not_the_resources_to_look_after(): void

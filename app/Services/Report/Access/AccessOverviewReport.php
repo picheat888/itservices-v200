@@ -153,6 +153,24 @@ class AccessOverviewReport extends TabularReport
     }
 
     /**
+     * Access active at seven even steps from just before the range to its end: the granted tile's line.
+     *
+     * @param  Collection<int, AccessMembership>  $grants
+     * @return list<int>
+     */
+    private function activeAcross(Collection $grants, Carbon $from, Carbon $to): array
+    {
+        $start = $from->copy()->subSecond();
+        $step = ($to->getTimestamp() - $start->getTimestamp()) / 6;
+
+        return array_map(function (int $k) use ($grants, $start, $step): int {
+            $at = $start->copy()->addSeconds((int) round($k * $step));
+
+            return $grants->filter(fn (AccessMembership $m) => $m->granted_at?->lte($at) && ($m->revoked_at === null || $m->revoked_at->gt($at)))->count();
+        }, range(0, 6));
+    }
+
+    /**
      * People still working (not left), in the chosen department.
      *
      * @param  array<string, mixed>  $filters
@@ -177,6 +195,11 @@ class AccessOverviewReport extends TabularReport
         $granted = $all->filter(fn (AccessMembership $m) => $m->granted_at?->between($from, $to))->count();
         $revoked = $all->filter(fn (AccessMembership $m) => $m->revoked_at?->between($from, $to))->count();
         $net = $granted - $revoked;
+        $direction = match (true) {
+            $net > 0 => 'up',
+            $net < 0 => 'down',
+            default => 'even',
+        };
         $left = $active->filter(fn (AccessMembership $m) => $m->employee?->hasLeft());
         $leavers = $left->pluck('employee')->unique('id');
         $longest = $leavers->map(fn (Employee $e) => AccessFacts::daysOut($e))->filter(fn ($d) => $d !== null)->max();
@@ -192,12 +215,9 @@ class AccessOverviewReport extends TabularReport
                 'values' => ['staff' => $staff, 'median' => (int) round($held->countBy('employee_id')->median() ?? 0), 'none' => max(0, $staff - $holders)],
             ]),
             ReportSummary::make('ac_granted', 'ให้สิทธิ์ในช่วงวันที่', $granted)->withNote([
-                'label_key' => match (true) {
-                    $net > 0 => 'rep_n_ac_granted_up',
-                    $net < 0 => 'rep_n_ac_granted_down',
-                    default => 'rep_n_ac_granted_even',
-                },
-                'values' => ['revoked' => $revoked, 'net' => abs($net)],
+                'label_key' => 'rep_n_ac_granted',
+                'values' => ['revoked' => $revoked],
+                'trend' => ['direction' => $direction, 'label_key' => 'rep_n_ac_net_'.$direction, 'values' => ['net' => abs($net)], 'points' => $this->activeAcross($all, $from, $to)],
             ]),
             ReportSummary::make('ac_leavers', 'สิทธิ์ที่ผู้ลาออกยังถือ', $left->count())->withAttention('red')->withNote($left->isEmpty()
                 ? ['label_key' => 'rep_n_ac_leavers_none']
