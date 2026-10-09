@@ -14,7 +14,7 @@ import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-re
 import type { AccessDepartment, AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
-import { GroupRow, NUM, registryOptions, ResourceHead, Segments, SIDE_BODY, SIDE_CARD, TD, TH, TypeLabel } from './access-overview-cards';
+import { Cols, GroupRow, NUM, registryOptions, ResourceHead, Segments, SIDE_BODY, SIDE_CARD, TD, TH, TypeLabel } from './access-overview-cards';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
@@ -59,6 +59,9 @@ function gbText(lang: Lang, gb: number): string {
 }
 
 const gbOf = (r: Resource) => (r.size && r.size.value > 0 ? r.size.value * (TO_GB[r.size.unit ?? ''] ?? 0) : 0);
+
+/** แผนก · แชร์ · จัดสรร · สัดส่วน · ไม่จำกัด */
+const SPACE_COLS = ['w-[24%]', 'w-[10%]', 'w-[14%]', 'w-[40%]', 'w-[12%]'];
 
 /* ─────────────────────────── segments and the list's heading ─────────────────────────── */
 
@@ -168,9 +171,10 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                         </span>
                     }
                 />
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                <div className="flex flex-1 flex-col overflow-x-auto">
+                    <table className="w-full min-w-[36rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_ar_space_title')}</caption>
+                        <Cols widths={SPACE_COLS} />
                         <thead>
                             <tr className="bg-muted/40 border-border border-b">
                                 <th scope="col" className={cn(TH, 'text-left')}>
@@ -182,7 +186,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                                 <th scope="col" className={cn(TH, 'text-right')}>
                                     {t('rep_ar_space_col_allocated')}
                                 </th>
-                                <th scope="col" className={cn(TH, 'w-1/2 text-left')}>
+                                <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_ar_space_col_share')}
                                 </th>
                                 <th scope="col" className={cn(TH, 'text-right')}>
@@ -221,7 +225,14 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                                     <td className={cn(TD, 'text-right')}>{flag(r.unlimited)}</td>
                                 </tr>
                             ))}
-                            <tr className="bg-muted/40 border-border border-t font-semibold">
+                        </tbody>
+                    </table>
+                    {/* The total stays at the card's foot however tall the card beside it makes this one. */}
+                    <table className="bg-muted/40 border-border mt-auto w-full min-w-[36rem] table-fixed border-t text-sm font-semibold">
+                        <caption className="sr-only">{t('rep_ac_dept_total').replace('{n}', count(rows.length, lang))}</caption>
+                        <Cols widths={SPACE_COLS} />
+                        <tbody>
+                            <tr>
                                 <th scope="row" className={cn(TD, 'text-left')}>
                                     {t('rep_ac_dept_total').replace('{n}', count(rows.length, lang))}
                                 </th>
