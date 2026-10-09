@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\User;
 use App\Services\Report\Access\AccessOverviewReport;
+use App\Services\Report\Access\AccessResourceMembersReport;
 use App\Services\Report\Access\SoftwareLicenseReport;
 use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
@@ -75,6 +76,8 @@ class ReportCatalogue
     public const EMPLOYEES_LEAVER_ASSETS = 'employees.leaver_assets';
 
     public const ACCESS_OVERVIEW = 'access.overview';
+
+    public const ACCESS_RESOURCE_MEMBERS = 'access.resource_members';
 
     public const ACCESS_SOFTWARE_LICENSES = 'access.software_licenses';
 
@@ -240,6 +243,14 @@ class ReportCatalogue
                 'requires' => ['access.overview'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
+            ],
+            // Members of the three registries an owner reviews — all three registries' view permissions.
+            self::ACCESS_RESOURCE_MEMBERS => [
+                'domain' => 'access',
+                'kind' => 'tabular',
+                'class' => AccessResourceMembersReport::class,
+                'requires' => ['access.email_view', 'access.file_view', 'access.social_view'],
+                'formats' => ['xlsx', 'pdf'],
             ],
             self::ACCESS_SOFTWARE_LICENSES => [
                 'domain' => 'access',

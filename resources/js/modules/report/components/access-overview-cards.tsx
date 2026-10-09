@@ -59,10 +59,10 @@ const GROUP_SHOWN = 3;
 /** Department rows listed before the rest fold. */
 const ROWS_SHOWN = 10;
 
-const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
-const TD = 'px-3 py-2.5 align-middle';
-const NUM = 'text-right font-mono tabular-nums';
-const CODE_LINK =
+export const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
+export const TD = 'px-3 py-2.5 align-middle';
+export const NUM = 'text-right font-mono tabular-nums';
+export const CODE_LINK =
     'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 const SEGMENT =
     'focus-visible:ring-brand focus-visible:ring-offset-background inline-flex items-center gap-1.5 rounded text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none';
@@ -88,64 +88,77 @@ export function TypeLabel({ type }: { type: AccessType }) {
 
 /* ─────────────────────────── segments ─────────────────────────── */
 
-/** The type filter as segments in the filter bar, each with its active grants. */
-export function AccessTypeSegments({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
-    const t = useT();
+/** Segments: one pressed, each with its count once known. `size` sm sits on a list heading, md in the filter bar. */
+export function Segments<T extends string | null>({
+    label,
+    options,
+    value,
+    onChange,
+    size = 'sm',
+}: {
+    label: string;
+    options: { value: T; label: string; count: number | null }[];
+    value: T;
+    onChange: (value: T) => void;
+    size?: 'sm' | 'md';
+}) {
     const lang = useUiStore((s) => s.lang);
-    const { data } = useAccessOverviewBreakdown(filters);
-    const active = (filters.type as AccessType | null | undefined) ?? null;
-    const options: (AccessType | null)[] = [null, ...ACCESS_TYPES];
-    const n = (type: AccessType | null) =>
-        data ? (type === null ? ACCESS_TYPES.reduce((s, k) => s + data.types[k], 0) : data.types[type]) : null;
-
     return (
-        <div role="group" aria-label={t('rep_fl_ac_type')} className="border-border bg-card dark:bg-background inline-flex flex-wrap gap-0.5 rounded-md border p-0.5">
-            {options.map((type) => (
+        <div role="group" aria-label={label} className="border-border bg-card dark:bg-background inline-flex flex-wrap gap-0.5 rounded-md border p-0.5">
+            {options.map((o) => (
                 <button
-                    key={type ?? 'all'}
+                    key={o.value ?? 'all'}
                     type="button"
-                    aria-pressed={active === type}
-                    onClick={() => patch({ type })}
+                    aria-pressed={value === o.value}
+                    onClick={() => onChange(o.value)}
                     className={cn(
                         SEGMENT,
-                        'h-8 px-3',
-                        active === type ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
+                        size === 'md' ? 'h-8 px-3' : 'h-6 px-2.5',
+                        value === o.value ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
                     )}
                 >
-                    {t(type ? `rep_ac_type_${type}` : 'rep_ac_type_all')}
-                    {n(type) !== null && <span className="font-mono opacity-80">{count(n(type) ?? 0, lang)}</span>}
+                    {o.label}
+                    {o.count !== null && <span className="font-mono opacity-80">{count(o.count, lang)}</span>}
                 </button>
             ))}
         </div>
     );
 }
 
+/** The registries as filter-bar segments: "ทั้งหมด" then each with its count. */
+export function registryOptions(t: (key: string) => string, types: AccessType[], counts: Record<string, number> | undefined) {
+    return [
+        { value: null as AccessType | null, label: t('rep_ac_type_all'), count: counts ? types.reduce((s, k) => s + (counts[k] ?? 0), 0) : null },
+        ...types.map((k) => ({ value: k as AccessType | null, label: t(`rep_ac_type_${k}`), count: counts ? (counts[k] ?? 0) : null })),
+    ];
+}
+
+/** The type filter as segments in the filter bar, each with its active grants. */
+export function AccessTypeSegments({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
+    const t = useT();
+    const { data } = useAccessOverviewBreakdown(filters);
+    return (
+        <Segments
+            size="md"
+            label={t('rep_fl_ac_type')}
+            options={registryOptions(t, ACCESS_TYPES, data?.types)}
+            value={(filters.type as AccessType | null | undefined) ?? null}
+            onChange={(type) => patch({ type })}
+        />
+    );
+}
+
 /** Active / revoked / all on the register's heading — narrows only the list. */
 export function AccessStateSegments({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { data } = useAccessOverviewBreakdown(filters);
-    const active = (filters.state as string | null | undefined) ?? 'active';
-
     return (
-        <div role="group" aria-label={t('rep_fl_ac_state')} className="border-border bg-card dark:bg-background inline-flex gap-0.5 rounded-md border p-0.5">
-            {(['active', 'revoked', 'all'] as const).map((state) => (
-                <button
-                    key={state}
-                    type="button"
-                    aria-pressed={active === state}
-                    onClick={() => patch({ state })}
-                    className={cn(
-                        SEGMENT,
-                        'h-6 px-2.5',
-                        active === state ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-                    )}
-                >
-                    {t(`rep_ac_state_${state}`)}
-                    {data && <span className="font-mono opacity-80">{count(data.states[state], lang)}</span>}
-                </button>
-            ))}
-        </div>
+        <Segments
+            label={t('rep_fl_ac_state')}
+            options={(['active', 'revoked', 'all'] as const).map((s) => ({ value: s as string, label: t(`rep_ac_state_${s}`), count: data ? data.states[s] : null }))}
+            value={(filters.state as string | null | undefined) ?? 'active'}
+            onChange={(state) => patch({ state })}
+        />
     );
 }
 
@@ -443,7 +456,7 @@ function FlowDetail({ month, partialNote }: { month: Month; partialNote: string 
 /* ─────────────────────────── grouped lists (leavers, resources to look after) ─────────────────────────── */
 
 /** A days-gone pill: red past a week. */
-function DaysOut({ days }: { days: number | null }) {
+export function DaysOut({ days }: { days: number | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     if (days === null) return <StatusBadge tone="red">{t('rep_ac_left_no_date')}</StatusBadge>;
@@ -455,7 +468,7 @@ function DaysOut({ days }: { days: number | null }) {
 }
 
 /** WaitingGroup: a heading with its count, three rows, the rest folded under "แสดงทั้งหมด" with a link to the module. */
-function Group<T>({
+export function Group<T>({
     title,
     total,
     rows,
@@ -517,7 +530,7 @@ function Group<T>({
 }
 
 /** One row of a grouped list: what it is (linked), a pill on the right, the details under it, chips at the foot. */
-function GroupRow({
+export function GroupRow({
     head,
     side,
     sub,
@@ -546,7 +559,7 @@ function GroupRow({
 }
 
 /** A resource's code (opening it on the Access page) and its name. */
-function ResourceHead({ r }: { r: Pick<AccessResource, 'type' | 'id' | 'code' | 'name'> }) {
+export function ResourceHead({ r }: { r: Pick<AccessResource, 'type' | 'id' | 'code' | 'name'> }) {
     const canOpen = useCanOpen();
     const href = `/access?tab=${TYPE_TAB[r.type]}&view=${r.id}`;
     return (
@@ -584,8 +597,8 @@ function PersonHead({ id, name, code }: { id: number; name: string; code: string
 }
 
 /** A right-hand card that keeps the height of the card beside it and scrolls inside (side by side from lg). */
-const SIDE_CARD = 'flex flex-col overflow-hidden xl:col-span-2 lg:[contain:size] lg:min-h-96';
-const SIDE_BODY = 'flex min-h-0 flex-1 flex-col lg:overflow-y-auto lg:overscroll-contain';
+export const SIDE_CARD = 'flex flex-col overflow-hidden xl:col-span-2 lg:[contain:size] lg:min-h-96';
+export const SIDE_BODY = 'flex min-h-0 flex-1 flex-col lg:overflow-y-auto lg:overscroll-contain';
 
 function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] }) {
     const t = useT();

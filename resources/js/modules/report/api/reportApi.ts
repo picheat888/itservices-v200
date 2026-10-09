@@ -5,6 +5,7 @@
  */
 import { http } from '@/shared/lib/http';
 import type {
+    AccessMembersBreakdown,
     AccessOverviewBreakdown,
     AssetTransferBreakdown,
     AssetWarrantyBreakdown,
@@ -115,6 +116,19 @@ export const reportApi = {
         http
             .get<{ data: AccessOverviewBreakdown }>('/reports/access/overview/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
+
+    /** "ทบทวนสมาชิกและเจ้าของ": the resource table, segment counts and the picked resource's review sheet. */
+    accessMembersBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: AccessMembersBreakdown }>('/reports/access/resource-members/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** One resource's review sheet as a PDF ("type:id"). */
+    accessReviewSheet: (resource: string) =>
+        http.get('/reports/access/resource-members/sheet', { params: { resource }, responseType: 'blob' }).then((r) => ({
+            blob: r.data as Blob,
+            filename: filenameFrom(r.headers['content-disposition']) ?? 'AccessReview.pdf',
+        })),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 
