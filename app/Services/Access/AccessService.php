@@ -43,11 +43,11 @@ class AccessService
         ]);
     }
 
-    /** Soft-revoke (idempotent). */
+    /** Soft-revoke (idempotent), stamped with who did it. */
     public function revoke(AccessMembership $membership): AccessMembership
     {
         if (! $membership->revoked_at) {
-            $membership->update(['revoked_at' => now()->toDateString()]);
+            $membership->update(['revoked_at' => now()->toDateString(), 'revoked_by' => auth()->id()]);
         }
 
         return $membership;
@@ -68,7 +68,7 @@ class AccessService
 
         if ($ownerEmployeeId !== null) {
             $resource->memberships()->active()->where('employee_id', $ownerEmployeeId)
-                ->update(['revoked_at' => now()->toDateString()]);
+                ->update(['revoked_at' => now()->toDateString(), 'revoked_by' => auth()->id()]);
         }
 
         // Demote the replaced owner to a member (skip if it's the same person, or already a member).

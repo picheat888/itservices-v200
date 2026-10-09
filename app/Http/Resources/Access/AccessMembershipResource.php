@@ -21,6 +21,7 @@ class AccessMembershipResource extends JsonResource
             'granted_at' => $this->granted_at?->toDateString(),
             'granted_by' => $this->whenLoaded('grantedBy', fn () => $this->grantedBy?->name),
             'revoked_at' => $this->revoked_at?->toDateString(),
+            'revoked_by' => $this->whenLoaded('revokedBy', fn () => $this->revokedBy?->name),
         ];
     }
 }

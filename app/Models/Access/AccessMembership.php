@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AccessMembership extends Model
 {
-    protected $fillable = ['resource_type', 'resource_id', 'employee_id', 'access_level', 'purpose', 'granted_at', 'granted_by', 'revoked_at'];
+    protected $fillable = ['resource_type', 'resource_id', 'employee_id', 'access_level', 'purpose', 'granted_at', 'granted_by', 'revoked_at', 'revoked_by'];
 
     protected function casts(): array
     {
@@ -36,5 +36,10 @@ class AccessMembership extends Model
     public function grantedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'granted_by');
+    }
+
+    public function revokedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revoked_by');
     }
 }
