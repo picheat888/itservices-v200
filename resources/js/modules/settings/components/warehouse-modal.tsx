@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Warehouse } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -23,6 +24,7 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
+    const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -30,8 +32,13 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
             setName(warehouse?.name ?? '');
             setDescription(warehouse?.description ?? '');
             setNameError(undefined);
+            setSaved(false);
         }
     }, [open, warehouse]);
+
+    // Dirty = differs from the values the dialog was seeded with (create = blank).
+    const isDirty = !saved && (name !== (warehouse?.name ?? '') || description !== (warehouse?.description ?? ''));
+    const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {
         if (!name.trim()) {
@@ -45,6 +52,7 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
             } else {
                 await create.mutateAsync(payload);
             }
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
             useToastStore
@@ -58,7 +66,7 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{warehouse ? t('md_edit_warehouse') : t('md_add_warehouse')}</DialogTitle>
@@ -86,7 +94,7 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} onClick={submit} disabled={!name.trim()} />

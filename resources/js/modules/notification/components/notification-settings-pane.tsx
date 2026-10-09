@@ -4,6 +4,8 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SettingToggle } from '@/shared/components/setting-toggle';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -159,6 +161,9 @@ function NotificationEditDialog({ bell, onClose }: { bell: NotificationTemplate 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bell?.key]);
 
+    const isDirty = !!bell && (en !== bell.message_en || th !== bell.message_th || enabled !== bell.enabled);
+    const guardClose = useDiscardGuard(isDirty);
+
     if (!bell) return null;
 
     const tokens = placeholdersIn(bell.message_en);
@@ -171,7 +176,7 @@ function NotificationEditDialog({ bell, onClose }: { bell: NotificationTemplate 
     };
 
     return (
-        <Dialog open onOpenChange={(o) => !o && onClose()}>
+        <Dialog open onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-2xl">
                 <FocusDialogHeader
                     icon={PenLine}
@@ -247,7 +252,7 @@ function NotificationEditDialog({ bell, onClose }: { bell: NotificationTemplate 
                         {t('notification_reset')}
                     </Button>
                     <div className="flex-1" />
-                    <Button variant="outline" onClick={onClose} disabled={busy}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={busy}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={save} disabled={busy || !en.trim() || !th.trim()}>
@@ -286,21 +291,17 @@ export function NotificationSettingsStats() {
     );
 }
 
-/**
- * The Notification tab of Email & Notifications.
- *
- * In-app alerts used to be the one thing nobody could configure: they fired whenever their
- * event happened and said whatever was compiled into the bundle. This lists every one of
- * them with what makes it fire and who receives it, and lets an administrator reword it in
- * both languages or switch it off.
- */
+/** The Notification tab of Email & Notifications: every in-app alert, reworded or switched off per row. */
 export function NotificationSettingsPane() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useNotificationTemplates();
     const { update } = useNotificationTemplateMutations();
-    const [module, setModule] = useState('');
-    const [search, setSearch] = useState('');
+    // Module chip, search, page and rows-per-page live in the URL (?module, search, page, per).
+    const list = useListParams();
+    const search = list.get('search');
+    const setSearch = (value: string) => list.setFilter('search', value);
+    const setModule = (value: string) => list.setFilter('module', value);
 
     const all = useMemo(() => data?.data ?? [], [data]);
 
@@ -340,6 +341,9 @@ export function NotificationSettingsPane() {
         const order = NOTIFICATION_GROUPS.map((g) => g.id);
         return Object.entries(counts).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
     }, [all]);
+    // An unknown ?module= reads as All once the list has loaded.
+    const urlModule = list.get('module');
+    const module = !data || modules.some(([mod]) => mod === urlModule) ? urlModule : '';
 
     const rows = useMemo(() => {
         let list = module ? all.filter((n) => n.module === module) : all;
@@ -518,6 +522,7 @@ export function NotificationSettingsPane() {
                 loading={isLoading}
                 rowHeight={58}
                 onRowClick={setEditing}
+                paging={list.table.paging}
                 emptyState={
                     <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
                         <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">

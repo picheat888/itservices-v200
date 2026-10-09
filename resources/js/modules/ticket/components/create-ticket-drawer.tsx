@@ -3,6 +3,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { TicketCategory } from '@/shared/types';
@@ -126,9 +127,11 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     // Overall upload progress = average of the per-file percents (missing = 0),
     // shown as one bar so it stays visible no matter how many files scroll off.
     const overallPct = files.length ? Math.round(Object.values(progress).reduce((a, b) => a + b, 0) / files.length) : 0;
+    const isDirty = category !== null || subject !== '' || description !== '' || phone !== '' || hasFiles;
+    const guardClose = useDiscardGuard(open && isDirty);
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && !pending && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={MessageSquarePlus}
@@ -273,7 +276,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
 
                 {/* Footer: actions */}
                 <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={onClose} disabled={pending}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={pending}>

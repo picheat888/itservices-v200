@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useLocations } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -41,8 +42,7 @@ export function AssetLocationDialog({
 
     const locationOptions = useMemo(() => locations.map((l) => ({ value: String(l.id), label: l.name, search: l.name })), [locations]);
 
-    // Retain the last asset so the dialog keeps rendering content while it animates closed —
-    // the parent nulls the prop the moment it closes, which would blank the header mid-fade.
+    // Retain the last asset so the header doesn't blank while the dialog animates closed.
     const [shown, setShown] = useState<Asset | null>(asset ?? null);
     useEffect(() => {
         if (asset) setShown(asset);
@@ -53,16 +53,17 @@ export function AssetLocationDialog({
     const [note, setNote] = useState('');
     const [err, setErr] = useState<string | undefined>();
 
-    // Reset whenever the dialog (re)opens for a new asset / batch. A single asset starts on
-    // where it is now, so the picker shows the current place rather than an empty box.
-    // Guarded by `isOpen` for the same reason as `shown`: a closing dialog must not wipe the
-    // form the viewer is still watching fade out.
+    // Single asset starts on its current place; reset only while open so a closing dialog keeps its content.
+    const seedLocation = !isBulk && asset?.location_id ? String(asset.location_id) : '';
     useEffect(() => {
         if (!isOpen) return;
-        setLocation(!isBulk && asset?.location_id ? String(asset.location_id) : '');
+        setLocation(seedLocation);
         setNote('');
         setErr(undefined);
-    }, [asset, open, isBulk, isOpen]);
+    }, [asset, open, isBulk, isOpen, seedLocation]);
+
+    const isDirty = location !== seedLocation || note !== '';
+    const guardClose = useDiscardGuard(isOpen && isDirty);
 
     const submit = async () => {
         if (!location) {
@@ -87,7 +88,7 @@ export function AssetLocationDialog({
           : '';
 
     return (
-        <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={isOpen} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-lg">
                 <DialogTitle>{isBulk ? t('asset_bulk_location_title') : t('asset_location_title')}</DialogTitle>
                 <DialogDescription>{description}</DialogDescription>
@@ -117,7 +118,7 @@ export function AssetLocationDialog({
                 </div>
 
                 <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={onClose}>
+                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button className="flex-1" onClick={submit} disabled={updateLocation.isPending}>

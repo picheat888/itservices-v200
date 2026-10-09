@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { IconPicker } from '@/shared/components/icon-picker';
 import { SaveButton } from '@/shared/components/save-button';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Category } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -26,6 +27,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     const [icon, setIcon] = useState<string | null>(null);
     const [description, setDescription] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
+    const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -35,8 +37,18 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             setIcon(category?.icon ?? null);
             setDescription(category?.description ?? '');
             setNameError(undefined);
+            setSaved(false);
         }
     }, [open, category]);
+
+    // Dirty = differs from the values the dialog was seeded with (create = blank).
+    const isDirty =
+        !saved &&
+        (name !== (category?.name ?? '') ||
+            nameTh !== (category?.name_th ?? '') ||
+            (icon || null) !== (category?.icon || null) ||
+            description !== (category?.description ?? ''));
+    const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {
         if (!name.trim()) {
@@ -55,6 +67,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             } else {
                 await create.mutateAsync(payload);
             }
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
             useToastStore
@@ -68,7 +81,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{category ? t('md_edit_category') : t('md_add_category')}</DialogTitle>
@@ -109,7 +122,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} onClick={submit} disabled={!name.trim()} />

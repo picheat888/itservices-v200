@@ -1,10 +1,13 @@
 import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employee';
+import { PAGE_SIZES } from '@/shared/components/data-table';
 import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
+import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
@@ -67,6 +70,8 @@ import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '.
 const TABS = ['templates', 'groups', 'logs'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
+// URL keys of the Logs list; cleared when the tab changes.
+const AUDIT_LIST_KEYS = ['search', 'category', 'user', 'page'];
 
 /**
  * The right each tab's own endpoints ask for. The page itself opens on
@@ -92,6 +97,14 @@ export default function PermissionsPage() {
     // this page does not have (or this reader may not open) falls back to the first allowed tab.
     const [allowedTab, setTab] = useTabParam(isAllowedTab, allowed[0] ?? 'templates');
     const tab: Tab | null = allowed.length > 0 ? allowedTab : null;
+    // The Logs list keys go with the tab; rows-per-page stays.
+    // Unsaved role-permission draft; leaving the matrix tab asks first.
+    const [rolesDirty, setRolesDirty] = useState(false);
+    const guardTabSwitch = useDiscardGuard(tab === 'templates' && rolesDirty);
+    const changeTab = (next: Tab) => {
+        if (next === tab) return;
+        guardTabSwitch(() => setTab(next, { extra: (params) => AUDIT_LIST_KEYS.forEach((key) => params.delete(key)) }));
+    };
 
     const labels: Record<Tab, string> = { templates: t('perm_roles'), groups: t('perm_groups'), logs: t('perm_audit') };
     const tabs = allowed.map((id) => ({ id, label: labels[id] }));
@@ -108,7 +121,7 @@ export default function PermissionsPage() {
                     {tabs.map((tb) => (
                         <button
                             key={tb.id}
-                            onClick={() => setTab(tb.id)}
+                            onClick={() => changeTab(tb.id)}
                             className={cn(
                                 '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
                                 tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
@@ -119,7 +132,7 @@ export default function PermissionsPage() {
                     ))}
                 </div>
 
-                {tab === 'templates' && <RolesTab />}
+                {tab === 'templates' && <RolesTab onDirtyChange={setRolesDirty} />}
                 {tab === 'groups' && <GroupRolesTab />}
                 {tab === 'logs' && <AuditTab />}
                 {tab === null && <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_no_tabs')}</div>}
@@ -191,7 +204,7 @@ const ADMIN_CARD_META: Record<string, { subtitleKey: string; master: ModuleMaste
     },
 };
 
-function RolesTab() {
+function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
@@ -250,6 +263,11 @@ function RolesTab() {
         for (const p of draft) if (!orig.has(p)) return true;
         return false;
     }, [draft, role]);
+    const guardRoleSwitch = useDiscardGuard(dirty);
+    useEffect(() => {
+        onDirtyChange(dirty);
+        return () => onDirtyChange(false);
+    }, [dirty, onDirtyChange]);
 
     // A refused or failed load is said as such — it used to leave the skeleton up for good.
     if (isError) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
@@ -308,7 +326,7 @@ function RolesTab() {
                     {roles.map((r) => (
                         <div
                             key={r.value}
-                            onClick={() => setSelected(r.value)}
+                            onClick={() => r.value !== role.value && guardRoleSwitch(() => setSelected(r.value))}
                             className={cn(
                                 'group border-border hover:bg-accent/50 flex cursor-pointer items-center justify-between border-b px-4 py-3.5 transition-colors',
                                 r.value === role.value && 'bg-brand/10',
@@ -923,7 +941,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
     );
 }
 
-const PAGE_SIZES = [20, 50, 100] as const;
+const AUDIT_CATEGORIES = ['created', 'updated', 'deleted', 'workflow', 'auth'];
 
 /** Tinted icon-chip classes for the audit feed, keyed by action tone. */
 const AUDIT_TONE: Record<string, string> = {
@@ -1004,12 +1022,14 @@ function auditDiffSummary(d: AuditDetails | null): string | null {
 function AuditTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState<10 | 20 | 50 | 100>(20);
     const [expandedId, setExpandedId] = useState<number | null>(null);
-    const [q, setQ] = useState('');
-    const [category, setCategory] = useState('all');
-    const [user, setUser] = useState('all');
+    // Search, filters, page and rows-per-page live in the URL (?search, category, user, page, per).
+    const list = useListParams();
+    const { page, perPage: pageSize } = list;
+    const q = list.get('search');
+    const categoryParam = list.get('category');
+    const category = AUDIT_CATEGORIES.includes(categoryParam) ? categoryParam : 'all';
+    const user = list.get('user') || 'all';
     const filters: AuditFilters = { q, category, user };
 
     const { data, isLoading } = useAuditLogs(page, pageSize, filters);
@@ -1037,16 +1057,25 @@ function AuditTab() {
     const logs = data?.data ?? [];
     const meta = data?.meta;
     const totalPages = meta?.last_page ?? 1;
+    usePageInRange(list, meta?.last_page);
     const total = meta?.total ?? 0;
     const users = meta?.users ?? [];
     const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
     const to = Math.min(page * pageSize, total);
 
-    // Reset to the first page whenever a filter changes.
+    // A ?user= naming nobody in the log falls back to all users.
+    const unknownUser = meta?.users !== undefined && user !== 'all' && !meta.users.includes(user);
     useEffect(() => {
-        setPage(1);
+        if (unknownUser) list.setFilter('user', '');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [unknownUser]);
+
+    // A filter change returns to page 1 (in the same URL write) and folds any open row.
+    const setFilter = (key: 'search' | 'category' | 'user', value: string) => {
+        list.setFilter(key, value === 'all' ? '' : value);
         setExpandedId(null);
-    }, [q, category, user]);
+    };
+    const setPage = (update: (current: number) => number) => list.table.paging.onPageChange(update(page));
 
     const categoryOptions = [
         { value: 'all', label: translate(lang, 'perm_ui_all_actions') },
@@ -1077,9 +1106,8 @@ function AuditTab() {
         );
     };
 
-    const handlePageSize = (size: 10 | 20 | 50 | 100) => {
-        setPageSize(size);
-        setPage(1);
+    const handlePageSize = (size: number) => {
+        list.table.paging.onPageSizeChange(size);
         setExpandedId(null);
     };
 
@@ -1089,13 +1117,13 @@ function AuditTab() {
             <div className="border-border flex flex-wrap items-center gap-2 border-b px-5 py-3">
                 <div className="relative w-full max-w-xs">
                     <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                    <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search_placeholder')} className="pl-9" />
+                    <Input value={q} onChange={(e) => setFilter('search', e.target.value)} placeholder={t('search_placeholder')} className="pl-9" />
                 </div>
                 <div className="w-44">
-                    <SearchableSelect value={category} onChange={setCategory} options={categoryOptions} />
+                    <SearchableSelect value={category} onChange={(v) => setFilter('category', v)} options={categoryOptions} />
                 </div>
                 <div className="w-44">
-                    <SearchableSelect value={user} onChange={setUser} options={userOptions} />
+                    <SearchableSelect value={user} onChange={(v) => setFilter('user', v)} options={userOptions} />
                 </div>
             </div>
 
@@ -1219,7 +1247,7 @@ function AuditTab() {
             <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3 text-sm">
                 <div className="flex items-center gap-2">
                     <span>{translate(lang, 'perm_ui_rows_per_page')}</span>
-                    <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v) as 10 | 20 | 50 | 100)}>
+                    <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v))}>
                         <SelectTrigger className="h-8 w-[72px]">
                             <SelectValue />
                         </SelectTrigger>

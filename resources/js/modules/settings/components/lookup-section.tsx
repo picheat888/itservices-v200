@@ -2,6 +2,8 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { hasFieldError, toastDeleteError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -44,15 +46,11 @@ interface LookupSectionProps {
     addButtonLabel: string;
 }
 
-/**
- * LookupSection — reusable CRUD list for a {name, description} master-data
- * lookup (Unit, Stock status, Warranty type). Renders the shared DataTable with
- * an Add button in the search row and an add/edit dialog whose Save button shows
- * a spinner then a checkmark before auto-closing.
- */
+/** LookupSection — CRUD list for a {name, description} lookup; search and page live in the URL (?search, page, per). */
 export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel, addButtonLabel }: LookupSectionProps) {
     const t = useT();
     const confirm = useConfirm();
+    const list = useListParams();
     const { create, update, remove } = mutations;
     const [addOpen, setAddOpen] = useState(false);
     const [editItem, setEditItem] = useState<LookupItem | null>(null);
@@ -105,6 +103,8 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
                 columns={columns}
                 rows={rows}
                 rowKey={(r) => r.id}
+                search={list.table.search}
+                paging={list.table.paging}
                 searchable={(r) => `${r.name} ${r.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -154,6 +154,7 @@ function LookupModal({
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
+    const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -161,8 +162,13 @@ function LookupModal({
             setName(item?.name ?? '');
             setDescription(item?.description ?? '');
             setNameError(undefined);
+            setSaved(false);
         }
     }, [open, item]);
+
+    // Dirty = differs from the values the dialog was seeded with (create = blank).
+    const isDirty = !saved && (name !== (item?.name ?? '') || description !== (item?.description ?? ''));
+    const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {
         if (!name.trim()) return;
@@ -174,6 +180,7 @@ function LookupModal({
             } else {
                 await create.mutateAsync(payload as never);
             }
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
             useToastStore
@@ -187,7 +194,7 @@ function LookupModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{item ? editLabel : addLabel}</DialogTitle>
@@ -215,7 +222,7 @@ function LookupModal({
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} onClick={submit} disabled={!name.trim()} />

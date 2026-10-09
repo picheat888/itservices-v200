@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { fieldError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -30,6 +31,8 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
         setError(undefined);
     }, [open]);
 
+    const guardClose = useDiscardGuard(open && note !== '');
+
     const submit = async () => {
         try {
             await returnToVendor.mutateAsync({ ids, reason: note.trim() || undefined });
@@ -42,7 +45,7 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-lg">
                 <DialogTitle className="flex items-center gap-2">
                     <Undo2 className="text-brand h-5 w-5" aria-hidden="true" />
@@ -66,7 +69,7 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
                 </div>
 
                 <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={onClose} disabled={returnToVendor.isPending}>
+                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)} disabled={returnToVendor.isPending}>
                         {t('cancel')}
                     </Button>
                     <Button className="flex-1" onClick={submit} disabled={returnToVendor.isPending}>

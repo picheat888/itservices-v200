@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { Contract } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -23,6 +24,8 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
         }
     }, [contract]);
 
+    const guardClose = useDiscardGuard(!!contract && reason !== '');
+
     const submit = async () => {
         if (!reason.trim()) {
             setError(t('contract_cancel_reason_required'));
@@ -38,7 +41,7 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
     };
 
     return (
-        <Dialog open={!!contract} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={!!contract} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -64,7 +67,7 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                 </Field>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={cancel.isPending}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={cancel.isPending}>
                         {t('cancel')}
                     </Button>
                     <Button variant="destructive" onClick={submit} disabled={cancel.isPending}>

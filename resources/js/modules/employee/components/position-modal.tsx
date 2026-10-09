@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -23,6 +24,9 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
         }
     }, [open, position]);
 
+    const isDirty = title !== (position?.title ?? '') || allowSpecial !== (position?.allow_special_position ?? false);
+    const guardClose = useDiscardGuard(open && isDirty);
+
     // Warn before flipping the special flag (both when adding and editing).
     const toggleSpecial = (next: boolean) =>
         confirm({
@@ -40,7 +44,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{position ? t('edit_position') : t('add_position')}</DialogTitle>
@@ -57,7 +61,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                     <Switch checked={allowSpecial} onChange={toggleSpecial} aria-label={t('pos_allow_special')} />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={!title.trim() || create.isPending || update.isPending}>

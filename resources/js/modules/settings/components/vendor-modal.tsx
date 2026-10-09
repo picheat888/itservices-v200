@@ -1,19 +1,33 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useVendorMutations } from '../hooks/use-master-data';
 
 /** How long the success checkmark stays visible before the dialog closes. */
 const CLOSE_DELAY_MS = 1100;
 
 const emptyForm = { name: '', name_th: '', contact: '', phone: '', email: '', address: '' };
+
+/** Seed the form from an existing vendor (edit) or blank (create). */
+function fromVendor(vendor?: Vendor | null): typeof emptyForm {
+    if (!vendor) return emptyForm;
+    return {
+        name: vendor.name,
+        name_th: vendor.name_th ?? '',
+        contact: vendor.contact ?? '',
+        phone: vendor.phone ?? '',
+        email: vendor.email ?? '',
+        address: vendor.address ?? '',
+    };
+}
 
 /**
  * VendorModal — dialog for adding or editing a supplier/vendor (both the
@@ -25,23 +39,18 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
     const { create, update } = useVendorMutations();
     const [form, setForm] = useState(emptyForm);
     const [nameError, setNameError] = useState<string | undefined>();
+    const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
+
+    const initialForm = useMemo(() => fromVendor(vendor), [vendor]);
+    const isDirty = !saved && JSON.stringify(form) !== JSON.stringify(initialForm);
+    const guardClose = useDiscardGuard(open && isDirty);
 
     useEffect(() => {
         if (open) {
-            setForm(
-                vendor
-                    ? {
-                          name: vendor.name,
-                          name_th: vendor.name_th ?? '',
-                          contact: vendor.contact ?? '',
-                          phone: vendor.phone ?? '',
-                          email: vendor.email ?? '',
-                          address: vendor.address ?? '',
-                      }
-                    : emptyForm,
-            );
+            setForm(fromVendor(vendor));
             setNameError(undefined);
+            setSaved(false);
         }
     }, [open, vendor]);
 
@@ -66,6 +75,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
             } else {
                 await create.mutateAsync(payload);
             }
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
             useToastStore
@@ -79,7 +89,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{vendor ? t('md_edit_vendor') : t('md_add_vendor')}</DialogTitle>
@@ -117,7 +127,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} onClick={submit} disabled={!form.name.trim() || !form.name_th.trim()} />

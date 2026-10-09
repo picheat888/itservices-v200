@@ -3,6 +3,7 @@ import { useAssets } from '@/modules/asset';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority } from '@/shared/types';
@@ -104,9 +105,11 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     };
 
     const pending = take.isPending;
+    const isDirty = (!fromRequest && priority !== 'medium') || note.trim() !== '' || assetId !== '';
+    const guardClose = useDiscardGuard(!!ticket && isDirty);
 
     return (
-        <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && onClose()}>
+        <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={Zap}
@@ -194,7 +197,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                 </div>
 
                 <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={onClose} disabled={pending}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={pending}>

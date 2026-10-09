@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
 import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
@@ -135,9 +136,11 @@ export function TicketUpdateModal({
 
     const saving = addUpdate.isPending;
     const blocked = reclassifying && !forecastAvailable;
+    const isDirty = body.trim() !== '' || reclassifying;
+    const guardClose = useDiscardGuard(open && isDirty);
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && !saving && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={MessageSquarePlus}
@@ -222,7 +225,7 @@ export function TicketUpdateModal({
                 </div>
 
                 <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={saving || blocked}>

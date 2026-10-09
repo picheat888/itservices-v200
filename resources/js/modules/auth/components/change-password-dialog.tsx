@@ -3,7 +3,9 @@ import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi'
 import { useLogout } from '@/modules/auth/hooks/use-auth';
 import { Field } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword } from '@/shared/lib/password-policy';
+import { cn } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -50,6 +52,16 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
         },
     });
 
+    // Only the voluntary form can be cancelled, so only it asks before dropping typed passwords.
+    const guardClose = useDiscardGuard(!!onClose && (current !== '' || next !== '' || confirm !== ''));
+    // The overlay steps below the shared confirm (z-50) while it asks.
+    const [asking, setAsking] = useState(false);
+    const cancel = async (close: () => void) => {
+        setAsking(true);
+        await guardClose(close);
+        setAsking(false);
+    };
+
     const submit = () => {
         setError(null);
         // Mirrors the API rule; the checklist below spells out which part failed.
@@ -65,7 +77,12 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgb(15_23_42_/_0.5)] backdrop-blur-[2px]">
+        <div
+            className={cn(
+                'fixed inset-0 flex items-center justify-center bg-[rgb(15_23_42_/_0.5)] backdrop-blur-[2px]',
+                asking ? 'z-40' : 'z-[9999]',
+            )}
+        >
             <div className="bg-background border-border mx-4 w-full max-w-sm overflow-hidden rounded-[14px] border shadow-2xl">
                 <div className="p-6">
                     <div className="mb-4 flex justify-center">
@@ -127,7 +144,7 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
                                 type="button"
                                 variant="ghost"
                                 className="text-muted-foreground w-full"
-                                onClick={() => (onClose ? onClose() : logout.mutate())}
+                                onClick={() => (onClose ? cancel(onClose) : logout.mutate())}
                             >
                                 {onClose ? t('cancel') : t('profile_signout')}
                             </Button>

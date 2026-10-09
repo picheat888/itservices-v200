@@ -4,6 +4,7 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -203,6 +204,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     );
     // Dirty when any field differs from the snapshot, or a new photo was picked.
     const isDirty = useMemo(() => photo != null || JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm, photo]);
+    const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     // A "special position" skips both the Department and Report-to requirements.
     const posIsSpecial = positions.find((p) => String(p.id) === form.positionId)?.allow_special_position ?? false;
@@ -512,8 +514,10 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 open={open}
                 onOpenChange={(o) => {
                     if (!o) {
-                        setOrgConfirm(false);
-                        onClose();
+                        guardClose(() => {
+                            setOrgConfirm(false);
+                            onClose();
+                        });
                     }
                 }}
             >
@@ -644,7 +648,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
                             {/* ── Footer ── */}
                             <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
-                                <Button variant="outline" onClick={onClose}>
+                                <Button variant="outline" onClick={() => guardClose(onClose)}>
                                     {t('cancel')}
                                 </Button>
                                 <Button onClick={submit} disabled={update.isPending || saved || !isDirty}>

@@ -3,6 +3,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketAttachment, TicketCategory } from '@/shared/types';
@@ -151,9 +152,18 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     // each deleted file counts as one done step (delete has no byte-level progress).
     const totalOps = pending.length + removedIds.length;
     const overallPct = totalOps ? Math.round(((Object.values(progress).reduce((a, b) => a + b, 0) / 100 + deleted) / totalOps) * 100) : 0;
+    const isDirty =
+        !!ticket &&
+        (category !== ticket.category ||
+            subject !== ticket.subject ||
+            description !== (ticket.description ?? '') ||
+            phone !== (ticket.callback_phone ?? '') ||
+            removedIds.length > 0 ||
+            pending.length > 0);
+    const guardClose = useDiscardGuard(isDirty);
 
     return (
-        <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && onClose()}>
+        <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader icon={Pencil} eyebrow="Edit Ticket" title={t('ticket_edit_title')} srDescription={t('ticket_edit_sub')} />
 
@@ -287,7 +297,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                             <span className="text-muted-foreground font-mono text-xs">{overallPct}%</span>
                         </div>
                     )}
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={saving}>

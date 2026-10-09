@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
@@ -56,6 +57,9 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
         }
     }, [employee]);
 
+    const isDirty = reason !== '' || lastDay !== '';
+    const guardClose = useDiscardGuard(!!employee && isDirty);
+
     const submit = async () => {
         const e: typeof errors = {};
         if (!lastDay) e.lastDay = t('resign_err_lastday');
@@ -100,7 +104,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     const pageRows = heldAssets.slice(start, start + ASSETS_PER_PAGE);
 
     return (
-        <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* No overflow on DialogContent, ever. DateInput portals its calendar INTO this node
                 (the modal guard would otherwise eat its clicks), and the centering transform makes
                 this element the containing block for that fixed-position popper — so any overflow
@@ -232,7 +236,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button variant="destructive" onClick={submit} disabled={resign.isPending}>

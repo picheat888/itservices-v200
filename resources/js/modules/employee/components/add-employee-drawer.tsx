@@ -3,6 +3,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
@@ -186,6 +187,9 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         setErrors({});
         setForm(empty);
     }, [open]);
+
+    const isDirty = photo != null || JSON.stringify(form) !== JSON.stringify(empty);
+    const guardClose = useDiscardGuard(open && isDirty);
 
     const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
     useEffect(
@@ -439,7 +443,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const typedName = `${form.firstName} ${form.lastName}`.trim();
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent
                 className={focusDialogContentClass}
                 onKeyDown={(e) => {
@@ -874,7 +878,11 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 
                 {/* Footer — Cancel/Back · step dots · Next/Save */}
                 <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={step === 1 ? onClose : () => setStep((s) => s - 1)} disabled={create.isPending}>
+                    <Button
+                        variant="outline"
+                        onClick={step === 1 ? () => guardClose(onClose) : () => setStep((s) => s - 1)}
+                        disabled={create.isPending}
+                    >
                         {step === 1 ? (
                             t('cancel')
                         ) : (

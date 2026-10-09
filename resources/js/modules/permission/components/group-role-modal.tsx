@@ -2,6 +2,7 @@ import { translate, useT } from '@/lang';
 import { departmentApi, useDepartments, useEmployees } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -65,6 +66,10 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             setSaved(false);
         }
     }, [open, group]);
+
+    const sortedIds = (ids: number[]) => JSON.stringify([...ids].sort((a, b) => a - b));
+    const isDirty = name !== (group?.name ?? '') || role !== (group?.role ?? '') || sortedIds(empIds) !== sortedIds(group?.employee_ids ?? []);
+    const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     /** Load employees for a department and toggle the expansion panel. */
     const handleDeptToggle = async (deptId: number) => {
@@ -177,7 +182,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
 
     return (
         <>
-            <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+            <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
                 <DialogContent className="max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{group ? t('gr_edit') : t('gr_add')}</DialogTitle>
@@ -308,7 +313,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={onClose}>
+                        <Button variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
                         <Button onClick={submit} disabled={!name.trim() || saving || saved}>

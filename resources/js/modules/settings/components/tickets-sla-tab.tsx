@@ -89,7 +89,7 @@ function expandRequestRows(stored: TicketSlaRequestTarget[], fallback: { resolve
 }
 
 /** Settings → Tickets: edit the per-priority SLA targets + the working window they count against. */
-export function TicketsSlaTab() {
+export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
     const { data } = useSettings();
     const update = useUpdateTicketSla();
@@ -185,6 +185,12 @@ export function TicketsSlaTab() {
         (storedResponse != null && respTarget !== storedResponse) ||
         (storedGoal != null && goal !== storedGoal) ||
         (!!stored && SLA_PRIORITIES.some((p) => draft[p] && (draft[p].resolve !== stored[p]?.resolve || draft[p].clock !== stored[p]?.clock)));
+
+    // Report unsaved edits up so the page asks before switching section.
+    useEffect(() => {
+        onDirtyChange(dirty);
+        return () => onDirtyChange(false);
+    }, [dirty, onDirtyChange]);
 
     const setRequestTarget = (type: string, patch: Partial<TicketSlaRequestTarget>) => {
         setReqTargets((rows) => rows.map((r) => (r.type === type ? { ...r, ...patch } : r)));
@@ -504,7 +510,10 @@ export function TicketsSlaTab() {
                                                         label: t(`ticket_cat_${c}`),
                                                         icon: <TicketCategoryIcon category={c} className="text-muted-foreground h-4 w-4" />,
                                                         disabled: c !== row.category && taken.has(`${c}:${row.work_class}`),
-                                                        note: c !== row.category && taken.has(`${c}:${row.work_class}`) ? t('set_sla_pair_taken') : undefined,
+                                                        note:
+                                                            c !== row.category && taken.has(`${c}:${row.work_class}`)
+                                                                ? t('set_sla_pair_taken')
+                                                                : undefined,
                                                     }))}
                                                 />
                                             </span>
@@ -518,7 +527,10 @@ export function TicketsSlaTab() {
                                                         value: w,
                                                         label: t(WORK_CLASS_LABEL_KEY[w]),
                                                         disabled: w !== row.work_class && taken.has(`${row.category}:${w}`),
-                                                        note: w !== row.work_class && taken.has(`${row.category}:${w}`) ? t('set_sla_pair_taken') : undefined,
+                                                        note:
+                                                            w !== row.work_class && taken.has(`${row.category}:${w}`)
+                                                                ? t('set_sla_pair_taken')
+                                                                : undefined,
                                                     }))}
                                                 />
                                             </span>

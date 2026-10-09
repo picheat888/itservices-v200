@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -104,8 +105,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
               }
             : EMPTY;
         setForm(next);
-        // Snapshot the initial values so the Save button can stay disabled until the user
-        // actually changes something (edit mode only — a new asset is always "dirty").
+        // Baseline for the dirty check (Save enable + discard guard).
         setInitial(next);
     }, [open, editing]);
 
@@ -139,8 +139,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         }
     };
     const rented = form.source === 'rented';
-    // In edit mode, disable Save until the form differs from the loaded asset.
     const isDirty = JSON.stringify(form) !== JSON.stringify(initial);
+    const guardClose = useDiscardGuard(open && isDirty && saveState !== 'done');
     // A warehouse only applies while the asset sits in the pool: on registration (it enters as
     // Ready) or when editing a Ready asset. Once deployed/pending it has left the pool and its
     // location is driven by transfer/receive — so the field is neither shown nor required there.
@@ -235,7 +235,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const saving = create.isPending || update.isPending;
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* Fixed height + centered: same size for rented & purchased, and tall enough that the
                 (taller) purchased form shows in full on desktop without an inner scroll. Caps at 92vh
                 on short viewports so it never spills off-screen. */}
@@ -475,7 +475,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                     <span className="text-muted-foreground mr-auto text-xs">
                         <span className="text-destructive">*</span> {lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required'}
                     </span>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={saving || saveState === 'done' || (!!editing && !isDirty)}>

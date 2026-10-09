@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -34,10 +35,10 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
     const isDirty =
-        !section ||
         form.department_id !== initial.current.department_id ||
         form.name.trim() !== initial.current.name.trim() ||
         form.name_th.trim() !== initial.current.name_th.trim();
+    const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     const deptOptions = useMemo(
         () =>
@@ -60,7 +61,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -82,7 +83,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button

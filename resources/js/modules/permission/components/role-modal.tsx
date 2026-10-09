@@ -1,5 +1,6 @@
 import { translate, useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -30,6 +31,9 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
             setSaved(false);
         }
     }, [open, role]);
+
+    const isDirty = name !== (role?.label ?? '') || color.toLowerCase() !== (role?.color ?? COLORS[0]).toLowerCase();
+    const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     const submit = async () => {
         if (!name.trim()) return;
@@ -79,7 +83,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{role ? t('perm_change_props') : t('perm_new_role')}</DialogTitle>
@@ -107,7 +111,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving || saved}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving || saved}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={!name.trim() || saving || saved}>

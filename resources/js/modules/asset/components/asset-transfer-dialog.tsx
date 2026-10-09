@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useEmployees, useLocations } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -75,8 +76,7 @@ export function AssetTransferDialog({
         if (asset) setShownAsset(asset);
     }, [asset]);
 
-    // Reset the form whenever the dialog (re)opens for a new asset / batch. Skipped while
-    // closed so a dialog on its way out does not blank the form mid-animation.
+    // Reset on (re)open only, so a closing dialog keeps its content mid-animation.
     useEffect(() => {
         if (!isOpen) return;
         setMode('employee');
@@ -86,6 +86,9 @@ export function AssetTransferDialog({
         setReason('');
         setErr({});
     }, [asset, open, isOpen]);
+
+    const isDirty = mode !== 'employee' || employeeId !== '' || sharedLabel !== '' || location !== '' || reason !== '';
+    const guardClose = useDiscardGuard(isOpen && isDirty);
 
     // Why the picked employee cannot press Accept, or undefined when they can. IT may still
     // hand the asset over — most staff have no login and receive their kit in person — so
@@ -125,7 +128,7 @@ export function AssetTransferDialog({
           : '';
 
     return (
-        <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={isOpen} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-lg">
                 <DialogTitle>{isBulk ? t('asset_bulk_transfer_title') : t('transfer_asset')}</DialogTitle>
                 <DialogDescription>{description}</DialogDescription>
@@ -201,7 +204,7 @@ export function AssetTransferDialog({
                 </div>
 
                 <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={onClose}>
+                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button className="flex-1" onClick={submit} disabled={busy}>

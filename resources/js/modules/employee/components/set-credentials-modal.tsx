@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useSettings } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
@@ -77,6 +78,9 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         // Re-run only when a different employee opens (id), not on every employee object change.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee?.id]);
+
+    const isDirty = username !== '' || password !== '' || confirm !== '' || !forceChange;
+    const guardClose = useDiscardGuard(!!employee && isDirty && !saved);
 
     // Auto-fill: username = first name + "_" + first 2 letters of last name (lowercased);
     // password = a fresh random string — revealed in the form itself (showPw). The share/copy
@@ -178,7 +182,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
 
     return (
         <>
-            <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
+            <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -300,7 +304,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={onClose}>
+                        <Button variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
                         <Button onClick={handleSubmit} disabled={setCredentials.isPending || saved}>

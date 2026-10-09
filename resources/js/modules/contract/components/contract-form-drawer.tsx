@@ -4,6 +4,7 @@ import { useCurrency, useVendors } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -187,7 +188,36 @@ export function ContractFormDrawer({
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
 
-    // Hydrate the form when opening; editing populates from the contract.
+    // Seed values: the contract being edited, or EMPTY for a new one (also the dirty-check baseline).
+    const seedForm = useMemo<FormState>(
+        () =>
+            editing
+                ? {
+                      code: editing.code,
+                      type: editing.type,
+                      vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
+                      details: editing.details ?? '',
+                      name: editing.name,
+                      start_date: editing.start,
+                      end_date: editing.end,
+                      value: String(editing.value),
+                      total_value: editing.total_value != null ? String(editing.total_value) : '',
+                      billing_cycle: editing.billing_cycle,
+                      notify_150: editing.notify_150,
+                      notify_120: editing.notify_120,
+                      notify_90: editing.notify_90,
+                      notify_60: editing.notify_60,
+                      notify_45: editing.notify_45,
+                      notify_30: editing.notify_30,
+                      notify_7: editing.notify_7,
+                      notes: editing.notes ?? '',
+                      asset_ids: editing.linked_assets?.map((a) => a.id) ?? [],
+                  }
+                : EMPTY,
+        [editing],
+    );
+
+    // Hydrate the form when opening.
     useEffect(() => {
         if (!open) return;
         setErr({});
@@ -198,32 +228,8 @@ export function ContractFormDrawer({
         setRemovedIds([]);
         setPending([]);
         setFileErr('');
-        if (editing) {
-            setForm({
-                code: editing.code,
-                type: editing.type,
-                vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
-                details: editing.details ?? '',
-                name: editing.name,
-                start_date: editing.start,
-                end_date: editing.end,
-                value: String(editing.value),
-                total_value: editing.total_value != null ? String(editing.total_value) : '',
-                billing_cycle: editing.billing_cycle,
-                notify_150: editing.notify_150,
-                notify_120: editing.notify_120,
-                notify_90: editing.notify_90,
-                notify_60: editing.notify_60,
-                notify_45: editing.notify_45,
-                notify_30: editing.notify_30,
-                notify_7: editing.notify_7,
-                notes: editing.notes ?? '',
-                asset_ids: editing.linked_assets?.map((a) => a.id) ?? [],
-            });
-        } else {
-            setForm(EMPTY);
-        }
-    }, [open, editing]);
+        setForm(seedForm);
+    }, [open, editing, seedForm]);
 
     /** Update one field and drop its validation error — editing counts as fixing it.
      *  Error keys match field names, except the notify_* checkboxes which share 'notify'. */
@@ -391,6 +397,10 @@ export function ContractFormDrawer({
     };
 
     const saving = create.isPending || update.isPending || uploadAttachments.isPending || deleteAttachment.isPending;
+    // Asset links compare as a set — unticking then re-ticking only reorders them.
+    const comparable = (f: FormState) => JSON.stringify({ ...f, asset_ids: [...f.asset_ids].sort((a, b) => a - b) });
+    const isDirty = comparable(form) !== comparable(seedForm) || removedIds.length > 0 || pending.length > 0;
+    const guardClose = useDiscardGuard(open && isDirty && saveState !== 'done');
     // Mirrors ContractService::assertKeepsRetiredAssets — the server refuses the switch too.
     const typeLocked = editing?.type === 'hardware' && (editing.linked_assets ?? []).some((a) => a.status === 'writeoff');
 
@@ -409,7 +419,7 @@ export function ContractFormDrawer({
     const attachmentCount = visibleExisting.length + pending.length;
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 {/* Header */}
                 <FocusDialogHeader
@@ -884,7 +894,7 @@ export function ContractFormDrawer({
 
                 {/* Footer — Back / Next / Save */}
                 <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={step === 0 ? onClose : goBack} disabled={saving}>
+                    <Button variant="outline" onClick={step === 0 ? () => guardClose(onClose) : goBack} disabled={saving}>
                         {step === 0 ? (
                             t('cancel')
                         ) : (

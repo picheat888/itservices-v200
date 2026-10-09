@@ -4,6 +4,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { SectionLabel } from '@/shared/components/section-label';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import { cn } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
@@ -173,9 +174,11 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
     // Nothing to save until the field actually differs from the name on the account.
     const usernameDirty = username.trim() !== savedUsername;
+    const isDirty = !newPassword && (usernameDirty || password !== '' || !forceChange);
+    const guardClose = useDiscardGuard(!!employee && isDirty);
 
     return (
-        <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={ShieldCheck}
@@ -331,7 +334,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                 )}
 
                 <div className="border-border bg-muted/20 flex justify-end border-t px-6 py-3.5">
-                    <Button variant={newPassword ? 'default' : 'outline'} onClick={onClose}>
+                    <Button variant={newPassword ? 'default' : 'outline'} onClick={() => guardClose(onClose)}>
                         {newPassword ? t('emp_cred_done') : t('close')}
                     </Button>
                 </div>

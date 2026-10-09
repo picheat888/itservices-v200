@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { ListSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { toastDeleteError } from '@/shared/lib/api-errors';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
@@ -315,6 +316,11 @@ interface OptionForm {
     active: boolean;
 }
 
+/** Seed the dialog from an existing choice (edit) or blank + offered (create). */
+function optionSeed(option: RequestOption | null): OptionForm {
+    return { label_en: option?.label_en ?? '', label_th: option?.label_th ?? '', active: option?.active ?? true };
+}
+
 /** Add / edit one choice: the two labels and whether it is offered. */
 function OptionModal({
     open,
@@ -333,17 +339,17 @@ function OptionModal({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [form, setForm] = useState<OptionForm>({ label_en: '', label_th: '', active: true });
+    const [form, setForm] = useState<OptionForm>(() => optionSeed(null));
     const [err, setErr] = useState('');
+
+    const initialForm = useMemo(() => optionSeed(option), [option]);
+    const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
+    const guardClose = useDiscardGuard(open && isDirty);
 
     useEffect(() => {
         if (!open) return;
         setErr('');
-        setForm({
-            label_en: option?.label_en ?? '',
-            label_th: option?.label_th ?? '',
-            active: option?.active ?? true,
-        });
+        setForm(optionSeed(option));
     }, [open, option]);
 
     const submit = () => {
@@ -355,7 +361,7 @@ function OptionModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-[440px]">
                 <DialogTitle className="text-[15px] font-bold">{option ? t('rd_edit') : t('rd_add')}</DialogTitle>
                 {list && (
@@ -390,7 +396,7 @@ function OptionModal({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={busy}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={busy}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={busy}>

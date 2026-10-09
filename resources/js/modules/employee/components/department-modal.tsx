@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { Department } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -29,10 +30,10 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
     }, [open, department]);
 
     const isDirty =
-        !department ||
         form.name.trim() !== initial.current.name.trim() ||
         form.name_th.trim() !== initial.current.name_th.trim() ||
         form.tag.trim() !== initial.current.tag.trim();
+    const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -57,7 +58,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{department ? t('edit_department') : t('add_department')}</DialogTitle>
@@ -90,7 +91,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={!form.name.trim() || !isDirty || tagInvalid || create.isPending || update.isPending || saved}>

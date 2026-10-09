@@ -3,6 +3,8 @@ import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
@@ -20,8 +22,9 @@ import { stockRefusalText } from '../../lib/refusal';
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const t = useT();
     const confirm = useConfirm();
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
+    // Page and rows-per-page live in the URL (?page, ?per).
+    const list = useListParams();
+    const { page, perPage } = list;
     const {
         data: sessionsPage,
         isLoading: sessionsLoading,
@@ -90,15 +93,15 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         useToastStore.getState().push(stockRefusalText(e, t), 'error');
     };
 
-    // Seed the inputs from the session's stored counts whenever it loads/changes.
+    // Seed the inputs from the session's stored counts whenever it loads/changes or the sheet reopens.
     useEffect(() => {
-        if (!session) return;
+        if (!session || !sheetOpen) return;
         const seed: Record<number, string> = {};
         (session.lines ?? []).forEach((l) => {
             seed[l.id] = l.counted_qty === null ? '' : String(l.counted_qty);
         });
         setEntries(seed);
-    }, [session?.id, session?.status]);
+    }, [session?.id, session?.status, sheetOpen]);
 
     // Reset the New count picker back to its defaults.
     const resetPicker = () => {
@@ -176,6 +179,15 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     // ── Session list + create form (count sheet opens in a dialog) ──
     const isDraft = session?.status === 'draft';
     const anyCounted = Object.values(entries).some((v) => v.trim() !== '');
+    // Typed counts that differ from what the session has stored (same parsing as the save payload).
+    const sheetDirty =
+        isDraft &&
+        (session?.lines ?? []).some((l) => {
+            const raw = (entries[l.id] ?? '').trim();
+            return (raw === '' ? null : Math.max(0, parseInt(raw, 10) || 0)) !== l.counted_qty;
+        });
+    const guardSheetClose = useDiscardGuard(sheetOpen && sheetDirty);
+    const closeSheet = () => setSheetOpen(false);
 
     // Live audit summary for the open sheet: counted progress, # of discrepancies, net variance.
     // In draft it reflects what's typed (entries); once committed it reads the stored line values.
@@ -308,16 +320,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                     setSheetOpen(true);
                 }}
                 loading={sessionsLoading || sessionsFetching}
-                server={{
-                    page,
-                    pageSize: perPage,
-                    total: sessionsPage?.meta.total ?? 0,
-                    onPageChange: setPage,
-                    onPageSizeChange: (s) => {
-                        setPerPage(s);
-                        setPage(1);
-                    },
-                }}
+                server={{ ...list.table.paging, total: sessionsPage?.meta.total ?? 0 }}
             />
 
             {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}
@@ -418,7 +421,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             </Dialog>
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
-            <Dialog open={sheetOpen} onOpenChange={(o) => !o && setSheetOpen(false)}>
+            <Dialog open={sheetOpen} onOpenChange={(o) => !o && guardSheetClose(closeSheet)}>
                 <DialogContent className="max-w-3xl">
                     {session ? (
                         <>

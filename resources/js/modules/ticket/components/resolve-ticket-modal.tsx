@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket } from '@/shared/types';
@@ -55,9 +56,10 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
     };
 
     const pending = resolve.isPending;
+    const guardClose = useDiscardGuard(open && resolution.trim() !== '');
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && !pending && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={isComplete ? CheckCircle2 : XCircle}
@@ -91,7 +93,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                 </div>
 
                 <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={onClose} disabled={pending}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
                     <Button variant={isComplete ? 'default' : 'destructive'} onClick={submit} disabled={pending}>

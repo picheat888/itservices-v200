@@ -6,6 +6,7 @@ import { Field } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { REQUEST_BLOCK_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, isEmail } from '@/shared/lib/utils';
 import type { RequestFieldSchema, ServiceRequest, ServiceRequestType } from '@/shared/types';
@@ -32,6 +33,14 @@ const LAST_STEP = 2;
  * anything readable — so the wizard turns the files away itself, with a sentence.
  */
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
+
+// Non-empty field values only, so a blanked field compares equal to an untouched one.
+const filledKey = (values: Record<string, string>) =>
+    JSON.stringify(
+        Object.entries(values)
+            .filter(([, v]) => v !== '')
+            .sort(),
+    );
 
 /**
  * New Request — a 3-step focus-dialog wizard (the Contract wizard chrome):
@@ -83,6 +92,15 @@ export function RequestCreateDialog({
 
     const selected: RequestTypeOption | null = useMemo(() => options?.types.find((o) => o.type === type) ?? null, [options, type]);
     const schema = selected?.fields ?? [];
+
+    // Any picked service, typed value beyond the schema defaults, or attached file counts as input.
+    const seededFields = useMemo(() => {
+        const seeded: Record<string, string> = {};
+        for (const f of selected?.fields ?? []) if (f.default != null) seeded[f.key] = String(f.default);
+        return seeded;
+    }, [selected]);
+    const isDirty = type !== null || reason !== '' || files.length > 0 || filledKey(fields) !== filledKey(seededFields);
+    const guardClose = useDiscardGuard(open && isDirty && saveState !== 'done');
 
     const pickType = (option: RequestTypeOption) => {
         setType(option.type);
@@ -232,7 +250,7 @@ export function RequestCreateDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* 1100px matches every other focus dialog in the app. Fixed height on
                 purpose: the dialog must not resize as you move between steps —
                 short steps centre their content instead of leaving a void. */}
@@ -519,7 +537,7 @@ export function RequestCreateDialog({
 
                 {/* Footer */}
                 <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={step === 0 ? onClose : () => goToStep(step - 1)} disabled={submit.isPending}>
+                    <Button variant="outline" onClick={step === 0 ? () => guardClose(onClose) : () => goToStep(step - 1)} disabled={submit.isPending}>
                         {step === 0 ? (
                             t('cancel')
                         ) : (

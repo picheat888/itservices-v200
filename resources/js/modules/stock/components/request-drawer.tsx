@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -24,11 +25,15 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const [qtyInput, setQtyInput] = useState('1');
     const qty = parseInt(qtyInput, 10) || 0;
     const [reason, setReason] = useState('');
+    const [initialSku, setInitialSku] = useState('');
+    const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         if (!open) return;
         const first = items[0];
         setSku(first ? String(first.id) : '');
+        setInitialSku(first ? String(first.id) : '');
+        setSaved(false);
         setQtyInput('1');
         setReason('');
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,11 +47,14 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const available = Math.max(0, onHand - reserved);
     const over = qty > available;
     const canSubmit = !!sku && qty >= 1 && !!reason.trim() && !over;
+    const isDirty = sku !== initialSku || qtyInput !== '1' || reason !== '';
+    const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     const send = async () => {
         if (!canSubmit) return;
         try {
             await submit.mutateAsync({ stock_item_id: Number(sku), qty, reason: reason.trim() });
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (e) {
             useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -54,7 +62,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{t('stock_new_request')}</DialogTitle>
@@ -103,7 +111,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={submit.isPending}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={submit.isPending}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={submit.isPending} onClick={send} disabled={!canSubmit}>

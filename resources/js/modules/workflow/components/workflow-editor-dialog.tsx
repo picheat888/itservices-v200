@@ -5,6 +5,7 @@ import { Field } from '@/shared/components/field';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
@@ -109,6 +110,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     const [openRanks, setOpenRanks] = useState<number | null>(null);
     const [serverError, setServerError] = useState('');
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
+    // Editable values as hydrated, for the unsaved-changes check.
+    const [baseline, setBaseline] = useState('');
     /** Index of the rung whose title list is open — one at a time keeps the list calm. */
 
     // Hydrate from the opened workflow. Everything transient resets here, including
@@ -118,19 +121,19 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setName(workflow.name);
         setActive(workflow.active);
         setAutoTicket(workflow.auto_ticket);
-        setSteps(
-            workflow.steps.map((s) => ({
-                actor_type: s.actor_type,
-                // A saved step's label is somebody's decision already; only new steps follow.
-                label_touched: true,
-                department_id: s.department_id ?? null,
-                approver_employee_ids: (s.approvers ?? []).map((a) => a.id),
-                by_person: (s.approvers ?? []).length > 0,
-                label: s.label,
-                kind: s.kind,
-                position_ids: s.positions.map((p) => p.id),
-            })),
-        );
+        const hydrated: EditableStep[] = workflow.steps.map((s) => ({
+            actor_type: s.actor_type,
+            // A saved step's label is somebody's decision already; only new steps follow.
+            label_touched: true,
+            department_id: s.department_id ?? null,
+            approver_employee_ids: (s.approvers ?? []).map((a) => a.id),
+            by_person: (s.approvers ?? []).length > 0,
+            label: s.label,
+            kind: s.kind,
+            position_ids: s.positions.map((p) => p.id),
+        }));
+        setSteps(hydrated);
+        setBaseline(JSON.stringify([workflow.name, workflow.active, workflow.auto_ticket, hydrated]));
         setServerError('');
         setSaveState('idle');
         setPreviewEmployee('');
@@ -208,6 +211,9 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         return () => clearTimeout(timer);
     }, [previewEmployee, steps, wf?.request_type]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const isDirty = JSON.stringify([name, active, autoTicket, steps]) !== baseline;
+    const guardClose = useDiscardGuard(!!workflow && isDirty && saveState !== 'done');
+
     if (!wf) return null;
     const ownerAllowed = OWNER_TYPES.includes(wf.request_type);
     const hasEmptyRung = steps.some((s) => s.actor_type === 'chain' && s.position_ids.length === 0);
@@ -242,7 +248,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     };
 
     return (
-        <Dialog open={!!workflow} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={!!workflow} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={WorkflowIcon}
@@ -486,7 +492,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                 <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
                     {serverError && <p className="text-destructive min-w-0 flex-1 truncate text-xs">{serverError}</p>}
                     <div className={cn('flex items-center gap-3', !serverError && 'ml-auto')}>
-                        <Button variant="outline" onClick={onClose} disabled={update.isPending}>
+                        <Button variant="outline" onClick={() => guardClose(onClose)} disabled={update.isPending}>
                             {t('cancel')}
                         </Button>
                         {/* A rung naming no position is refused by the API; say so here
