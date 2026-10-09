@@ -53,7 +53,7 @@ export const TYPE_TAB: Record<AccessType, string> = {
     software: 'software',
 };
 
-/** Groups list this many rows before the rest fold. */
+/** Groups show this many rows; any more fold under "แสดงทั้งหมด". */
 const GROUP_SHOWN = 3;
 
 /** Department rows listed before the rest fold. */
@@ -487,7 +487,7 @@ export function Group<T>({
     const lang = useUiStore((s) => s.lang);
     const canOpen = useCanOpen();
     const [open, setOpen] = useState(false);
-    const { folds, shown } = fold(rows, GROUP_SHOWN, open);
+    const { folds, shown } = fold(rows, GROUP_SHOWN, open, 0);
     if (rows.length === 0) return null;
     const Icon = open ? ChevronUp : ChevronDown;
 
@@ -622,7 +622,6 @@ function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] 
                         title={t('rep_ac_leavers_holding')}
                         total={t('rep_ac_people_n').replace('{n}', count(leavers.people.length, lang))}
                         rows={leavers.people}
-                        link={{ href: '/employees', label: t('rep_ac_open_employees') }}
                         render={(p) => (
                             <GroupRow
                                 key={p.employee_id}
@@ -651,7 +650,6 @@ function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] 
                         title={t('rep_ac_leavers_owned')}
                         total={count(leavers.owned.length, lang)}
                         rows={leavers.owned}
-                        link={{ href: '/access', label: t('rep_ac_open_access') }}
                         render={(r) => (
                             <GroupRow
                                 key={`${r.type}-${r.id}`}
@@ -678,7 +676,6 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
             sub={[r.detail, deptName(r.department, lang), note]}
         />
     );
-    const link = { href: '/access', label: t('rep_ac_open_access') };
 
     return (
         <Card className={SIDE_CARD}>
@@ -692,7 +689,6 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
                         title={t('rep_ac_care_owner_gone')}
                         total={count(care.owner_gone.length, lang)}
                         rows={care.owner_gone}
-                        link={link}
                         render={(r) =>
                             row(
                                 r,
@@ -709,7 +705,6 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
                         title={t('rep_ac_care_no_owner')}
                         total={count(care.no_owner.length, lang)}
                         rows={care.no_owner}
-                        link={link}
                         render={(r) => row(r, null)}
                     />
                     <Group
@@ -717,7 +712,6 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
                         title={t('rep_ac_care_empty')}
                         total={count(care.empty.length, lang)}
                         rows={care.empty}
-                        link={link}
                         render={(r) => row(r, null)}
                     />
                 </div>
