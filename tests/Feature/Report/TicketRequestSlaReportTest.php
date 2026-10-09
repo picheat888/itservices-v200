@@ -307,6 +307,8 @@ class TicketRequestSlaReportTest extends TestCase
         $screen = array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla')->assertOk()->json('data.columns'), 'key');
         $this->assertNotContains('description', $screen);
         $this->assertNotContains('take_hours', $screen);
+        // The requester shows on the page, after the request type, with code and department kept in the rows.
+        $this->assertSame(['request_type', 'requester', 'requester_code', 'department'], array_slice($screen, 2, 4));
 
         $this->actingAs($user)->exportReport('/api/reports/r/tickets.request_sla/export?format=xlsx&'.self::RANGE)->assertAccepted();
 
@@ -316,7 +318,7 @@ class TicketRequestSlaReportTest extends TestCase
             $headings = $sheet->headings();
             $this->assertSame([
                 'เลขที่ Ticket', 'เลขที่คำขอ', 'ประเภทคำขอ', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ลักษณะงาน', 'ความสำคัญ',
-                'ผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
+                'ผู้แจ้ง', 'รหัสพนักงานผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
                 'สถานะ', 'วันที่แจ้ง', 'เดือนที่แจ้ง', 'รับเคสเมื่อ', 'ปิดเคสเมื่อ', 'ยกเลิกเมื่อ',
                 'วันที่ครบกำหนด SLA รับเคส', 'รับเคสทัน SLA', 'รอคนรับ (ชม.)',
                 'วันที่ครบกำหนด SLA ปิดเคส', 'ปิดทัน SLA', 'ลงมือแก้ (ชม.)', 'เวลาปิดเคส (ชม.)',

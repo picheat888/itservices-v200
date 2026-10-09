@@ -29,7 +29,38 @@ function FixHours({ value }: { value: unknown }) {
     return <span className="font-mono">{typeof value === 'number' ? oneDecimal(value, lang) : '—'}</span>;
 }
 
+type Label = { name?: string; name_th?: string | null } | null;
+
+/** The person behind the request, with their employee code and department under the name. */
+function RequesterCell({ row }: { row: Record<string, unknown> }) {
+    const lang = useUiStore((s) => s.lang);
+    const pick = (label: Label) => (label ? (lang === 'th' && label.name_th) || label.name || null : null);
+    const name = pick(row.requester as Label);
+    if (!name) return <span className="text-muted-foreground">—</span>;
+    const sub = [typeof row.requester_code === 'string' ? row.requester_code : null, pick(row.department as Label)].filter((s): s is string =>
+        Boolean(s),
+    );
+
+    return (
+        <div className="min-w-0">
+            <div className="max-w-[14rem] truncate font-medium" title={name}>
+                {name}
+            </div>
+            {sub.length > 0 && (
+                <div className="text-muted-foreground flex max-w-[14rem] gap-x-3 text-xs" title={sub.join('\n')}>
+                    {sub.map((part) => (
+                        <span key={part} className="truncate">
+                            {part}
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function requestSlaCell(key: string, row: Record<string, unknown>) {
+    if (key === 'requester') return <RequesterCell row={row} />;
     if (key === 'ticket_status') return <TicketStatusBadge status={row.ticket_status as string | null} />;
     if (key === 'fix_hours') return <FixHours value={row.fix_hours} />;
     if (key === 'take_sla' || key === 'close_sla') return <SlaPill value={row[key]} />;
@@ -41,6 +72,7 @@ export default function TicketsRequestSlaReportPage() {
         <TabularReportView
             reportKey="tickets.request_sla"
             extras={{
+                innerColumns: ['requester_code', 'department'],
                 beforeTable: ({ filters, patch }) => <RequestSlaCards filters={filters} patch={patch} />,
                 rowsTitle: 'rep_rs_rows_title',
                 renderCell: requestSlaCell,
