@@ -476,7 +476,7 @@ export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilte
         <div className="space-y-4">
             <SeatTableCard softwares={data.softwares} filters={filters} patch={patch} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2">
                 <LeaversCard leavers={data.leavers} />
                 <RequestsCard requests={data.requests} />
             </div>
