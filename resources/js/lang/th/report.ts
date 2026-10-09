@@ -976,7 +976,6 @@ export const report: Dict = {
     rep_ac_owner_named: 'เจ้าของ {name}',
     rep_ac_find_owner: 'หาผู้ดูแลคนใหม่',
     rep_ac_open_employees: 'เปิดในหน้าพนักงาน',
-    rep_ac_open_access: 'เปิดในหน้า Access',
     rep_ac_care_title: 'ทรัพยากรที่ต้องดูแล',
     rep_ac_care_sub: 'ไม่มีผู้ดูแล หรือไม่มีใครใช้ · ไม่ขึ้นกับตัวกรองแผนก',
     rep_ac_care_none: 'ทุกทรัพยากรมีเจ้าของและมีผู้ใช้',
