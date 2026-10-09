@@ -1,6 +1,6 @@
 // "ตรวจสอบสมาชิกและเจ้าของ" report page (/reports/access-resource-members): shared tabular body + AccessMembersCards + the access member cells.
 import { type AccessRow, DepartmentCell, EmployeeCell, LevelCell, ResourceCell, StatusCell } from '../components/access-cells';
-import { AccessMembersCards, AccessMembersListLead, AccessMembersTypeSegments } from '../components/access-members-cards';
+import { AccessMembersCards, AccessMembersListLead, AccessMembersTypeSegments, PickedResourceHead } from '../components/access-members-cards';
 import { TabularReportView } from '../components/tabular-report-view';
 
 /** Columns drawn inside the resource, employee, department and status cells — kept in the rows and files. */
@@ -26,6 +26,7 @@ export default function AccessResourceMembersReportPage() {
                 innerColumns: INNER,
                 filterLead: ({ filters, patch }) => <AccessMembersTypeSegments filters={filters} patch={patch} />,
                 rowsLead: ({ filters, patch }) => <AccessMembersListLead filters={filters} patch={patch} />,
+                rowsHead: ({ filters, patch }) => (filters.resource ? <PickedResourceHead filters={filters} patch={patch} /> : null),
                 beforeTable: ({ filters, patch }) => <AccessMembersCards filters={filters} patch={patch} />,
                 rowsTitle: 'rep_ar_rows_title',
                 rowClassName: (row) => (row.status === 'left' ? 'bg-red-500/5' : undefined),

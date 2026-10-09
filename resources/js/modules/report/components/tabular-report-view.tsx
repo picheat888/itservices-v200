@@ -100,6 +100,7 @@ function TabularReportRows({
     const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, filters, page, perPage, true);
     const canOpen = useCanOpen();
     const rowsTitle = t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic');
+    const rowsHead = extras.rowsHead?.({ filters, patch: onPatch }) ?? null;
 
     useEffect(() => {
         if (data) onTotalChange(data.meta.total);
@@ -133,7 +134,8 @@ function TabularReportRows({
             {extras.beforeTable?.({ filters, patch: onPatch })}
             {showsTable && (
                 <Card id="report-rows" className="scroll-mt-4 overflow-clip">
-                    <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
+                    {rowsHead}
+                    <div className={cn(!rowsHead && CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
                         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
                             <h2 className="text-sm font-semibold">{rowsTitle}</h2>
                             {extras.rowsLead?.({ filters, patch: onPatch })}
@@ -308,6 +310,8 @@ export interface TabularReportExtras {
     filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     /** A control beside the rows card's heading, for a filter that narrows only the list. */
     rowsLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
+    /** A band at the top of the rows card, above its heading (what the list is narrowed to); null draws nothing. */
+    rowsHead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     beforeTable?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     rowClassName?: (row: Record<string, unknown>) => string | undefined;
     /** i18n key of the rows card's heading when the generic "รายการ" says too little for this page —
