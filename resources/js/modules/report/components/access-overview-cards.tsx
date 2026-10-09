@@ -104,7 +104,11 @@ export function Segments<T extends string | null>({
 }) {
     const lang = useUiStore((s) => s.lang);
     return (
-        <div role="group" aria-label={label} className="border-border bg-card dark:bg-background inline-flex flex-wrap gap-0.5 rounded-md border p-0.5">
+        <div
+            role="group"
+            aria-label={label}
+            className="border-border bg-card dark:bg-background inline-flex flex-wrap gap-0.5 rounded-md border p-0.5"
+        >
             {options.map((o) => (
                 <button
                     key={o.value ?? 'all'}
@@ -155,7 +159,11 @@ export function AccessStateSegments({ filters, patch }: { filters: TabularFilter
     return (
         <Segments
             label={t('rep_fl_ac_state')}
-            options={(['active', 'revoked', 'all'] as const).map((s) => ({ value: s as string, label: t(`rep_ac_state_${s}`), count: data ? data.states[s] : null }))}
+            options={(['active', 'revoked', 'all'] as const).map((s) => ({
+                value: s as string,
+                label: t(`rep_ac_state_${s}`),
+                count: data ? data.states[s] : null,
+            }))}
             value={(filters.state as string | null | undefined) ?? 'active'}
             onChange={(state) => patch({ state })}
         />
@@ -345,7 +353,9 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                                 {count(m.granted, lang)}
                                                             </span>
                                                         )}
-                                                        <span className={cn('block h-full', !density.thin && 'rounded-t-md', FILL[FLOW.granted.tone])} />
+                                                        <span
+                                                            className={cn('block h-full', !density.thin && 'rounded-t-md', FILL[FLOW.granted.tone])}
+                                                        />
                                                     </div>
                                                 </div>
                                             ))}
@@ -360,7 +370,10 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                         <div aria-hidden className={cn('absolute inset-0 flex items-start', density.gap)}>
                                             {months.map((m) => (
                                                 <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
-                                                    <div className={cn('relative w-full', density.bar)} style={{ height: `${(back(m) / down) * 100}%` }}>
+                                                    <div
+                                                        className={cn('relative w-full', density.bar)}
+                                                        style={{ height: `${(back(m) / down) * 100}%` }}
+                                                    >
                                                         {m.month === thisMonth && !density.thin && back(m) > 0 && (
                                                             <span className="border-brand pointer-events-none absolute -inset-x-[3px] top-0 -bottom-[3px] rounded-b-md border-2 border-t-0 border-dashed" />
                                                         )}
@@ -408,8 +421,18 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                     {months.map((m, i) => (
                                         <div key={m.month} className="relative min-w-0 flex-1">
                                             {density.label(i, m.month) && (
-                                                <div className={cn('absolute top-0 text-[10.5px] whitespace-nowrap', monthLabelPlace(density, i, months.length))}>
-                                                    <b className={cn('block font-semibold', m.month === thisMonth ? 'text-brand' : 'text-foreground')}>
+                                                <div
+                                                    className={cn(
+                                                        'absolute top-0 text-[10.5px] whitespace-nowrap',
+                                                        monthLabelPlace(density, i, months.length),
+                                                    )}
+                                                >
+                                                    <b
+                                                        className={cn(
+                                                            'block font-semibold',
+                                                            m.month === thisMonth ? 'text-brand' : 'text-foreground',
+                                                        )}
+                                                    >
                                                         {monthLabel(m.month, lang, false)}
                                                     </b>
                                                     <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
@@ -445,7 +468,9 @@ function FlowDetail({ month, partialNote }: { month: Month; partialNote: string 
         <div className="space-y-1">
             <div className="font-semibold">{monthLabel(month.month, lang, false, true)}</div>
             {line('granted', <FlowMark k="granted" />, t(FLOW.granted.label), month.granted)}
-            {ACCESS_TYPES.filter((k) => month.by_type[k] > 0).map((k) => line(k, <TypeDot type={k} />, t(`rep_ac_type_${k}`), month.by_type[k], true))}
+            {ACCESS_TYPES.filter((k) => month.by_type[k] > 0).map((k) =>
+                line(k, <TypeDot type={k} />, t(`rep_ac_type_${k}`), month.by_type[k], true),
+            )}
             {line('revoked_work', <FlowMark k="revoked_work" />, t(FLOW.revoked_work.label), month.revoked_work)}
             {line('revoked_leave', <FlowMark k="revoked_leave" />, t(FLOW.revoked_leave.label), month.revoked_leave)}
             {partialNote && <div className="text-muted-foreground border-border border-t pt-1">{partialNote}</div>}
@@ -586,7 +611,10 @@ function PersonHead({ id, name, code }: { id: number; name: string; code: string
     return (
         <>
             {canOpen(href) ? (
-                <Link to={href} className="text-brand focus-visible:ring-brand rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none">
+                <Link
+                    to={href}
+                    className="text-brand focus-visible:ring-brand rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
                     {name}
                 </Link>
             ) : (
@@ -596,10 +624,6 @@ function PersonHead({ id, name, code }: { id: number; name: string; code: string
         </>
     );
 }
-
-/** A right-hand card that keeps the height of the card beside it and scrolls inside (side by side from lg). */
-export const SIDE_CARD = 'flex flex-col overflow-hidden xl:col-span-2 lg:[contain:size] lg:min-h-96';
-export const SIDE_BODY = 'flex min-h-0 flex-1 flex-col lg:overflow-y-auto lg:overscroll-contain';
 
 /** A right-hand card of grouped lists: grows with its rows (three a group, an opened group scrolls inside itself). */
 const GROUP_CARD = 'flex flex-col overflow-hidden xl:col-span-2';
@@ -780,7 +804,10 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
     const { folds, shown } = fold(departments, ROWS_SHOWN, open);
     const scale = Math.max(1, ...departments.map((d) => d.grants));
     const sumOf = (k: 'staff' | 'holders' | 'grants' | 'leavers') => departments.reduce((s, d) => s + d[k], 0);
-    const totalByType = Object.fromEntries(ACCESS_TYPES.map((k) => [k, departments.reduce((s, d) => s + d.by_type[k], 0)])) as Record<AccessType, number>;
+    const totalByType = Object.fromEntries(ACCESS_TYPES.map((k) => [k, departments.reduce((s, d) => s + d.by_type[k], 0)])) as Record<
+        AccessType,
+        number
+    >;
     const used = ACCESS_TYPES.filter((k) => totalByType[k] > 0);
     const flag = (v: number) =>
         v > 0 ? (
@@ -809,47 +836,51 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
             ) : (
                 <div className="flex flex-1 flex-col overflow-x-auto">
                     <table className="w-full min-w-[36rem] table-fixed text-sm">
-                            <caption className="sr-only">{t('rep_ac_dept_title')}</caption>
-                            <Cols widths={DEPT_COLS} />
-                            <thead>
-                                <tr className="bg-muted/40 border-border border-b">
-                                    <th scope="col" className={cn(TH, 'text-left')}>
-                                        {t('rep_ac_dept_col_name')}
+                        <caption className="sr-only">{t('rep_ac_dept_title')}</caption>
+                        <Cols widths={DEPT_COLS} />
+                        <thead>
+                            <tr className="bg-muted/40 border-border border-b">
+                                <th scope="col" className={cn(TH, 'text-left')}>
+                                    {t('rep_ac_dept_col_name')}
+                                </th>
+                                <th scope="col" className={cn(TH, 'text-right')}>
+                                    {t('rep_ac_dept_col_people')}
+                                </th>
+                                <th scope="col" className={cn(TH, 'text-right')}>
+                                    {t('rep_ac_dept_col_grants')}
+                                </th>
+                                <th scope="col" className={cn(TH, 'text-left')}>
+                                    {t('rep_ac_dept_col_types')}
+                                </th>
+                                <th scope="col" className={cn(TH, 'text-right')}>
+                                    {t('rep_ac_dept_col_leavers')}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {shown.map((d) => (
+                                <tr key={d.department_id ?? 'none'} className="border-border/60 border-b last:border-b-0">
+                                    <th
+                                        scope="row"
+                                        className={cn(
+                                            TD,
+                                            'max-w-[12rem] truncate text-left font-medium',
+                                            d.name === null && 'text-muted-foreground font-normal',
+                                        )}
+                                    >
+                                        {deptName(d.name === null ? null : { name: d.name, name_th: d.name_th }, lang) ?? t('rep_ac_no_department')}
                                     </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('rep_ac_dept_col_people')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('rep_ac_dept_col_grants')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-left')}>
-                                        {t('rep_ac_dept_col_types')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('rep_ac_dept_col_leavers')}
-                                    </th>
+                                    <td className={cn(TD, NUM)}>
+                                        {count(d.holders, lang)} <span className="text-muted-foreground">/ {count(d.staff, lang)}</span>
+                                    </td>
+                                    <td className={cn(TD, NUM, 'font-semibold')}>{count(d.grants, lang)}</td>
+                                    <td className={TD}>
+                                        <TypeBar byType={d.by_type} scale={scale} />
+                                    </td>
+                                    <td className={cn(TD, 'text-right')}>{flag(d.leavers)}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {shown.map((d) => (
-                                    <tr key={d.department_id ?? 'none'} className="border-border/60 border-b last:border-b-0">
-                                        <th
-                                            scope="row"
-                                            className={cn(TD, 'max-w-[12rem] truncate text-left font-medium', d.name === null && 'text-muted-foreground font-normal')}
-                                        >
-                                            {deptName(d.name === null ? null : { name: d.name, name_th: d.name_th }, lang) ?? t('rep_ac_no_department')}
-                                        </th>
-                                        <td className={cn(TD, NUM)}>
-                                            {count(d.holders, lang)} <span className="text-muted-foreground">/ {count(d.staff, lang)}</span>
-                                        </td>
-                                        <td className={cn(TD, NUM, 'font-semibold')}>{count(d.grants, lang)}</td>
-                                        <td className={TD}>
-                                            <TypeBar byType={d.by_type} scale={scale} />
-                                        </td>
-                                        <td className={cn(TD, 'text-right')}>{flag(d.leavers)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
+                            ))}
+                        </tbody>
                     </table>
                     {folds && (
                         <div>
@@ -866,7 +897,8 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
                                     {t('rep_ac_dept_total').replace('{n}', count(departments.length, lang))}
                                 </th>
                                 <td className={cn(TD, NUM)}>
-                                    {count(sumOf('holders'), lang)} <span className="text-muted-foreground font-normal">/ {count(sumOf('staff'), lang)}</span>
+                                    {count(sumOf('holders'), lang)}{' '}
+                                    <span className="text-muted-foreground font-normal">/ {count(sumOf('staff'), lang)}</span>
                                 </td>
                                 <td className={cn(TD, NUM)}>{count(sumOf('grants'), lang)}</td>
                                 <td className={TD}>
