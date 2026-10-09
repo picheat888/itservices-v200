@@ -598,7 +598,7 @@ export interface AccessOverviewBreakdown {
 /** Where a member sits next to the resource: its department, another, gone (has left), or it has no department. */
 export type AccessMemberKind = 'in_dept' | 'cross' | 'gone' | 'open';
 
-/** "ทบทวนสมาชิกและเจ้าของ": one resource with its owner and members. */
+/** "ตรวจสอบสมาชิกและเจ้าของ": one resource with its owner and members. */
 export interface AccessMembersResource extends AccessResource {
     owner: AccessPerson | null;
     /** An email group or file share with no owner, or whose owner has left. */
@@ -611,7 +611,7 @@ export interface AccessMembersResource extends AccessResource {
     size: { value: number; unit: string | null } | null;
 }
 
-/** What the "ทบทวนสมาชิกและเจ้าของ" page draws above its rows (AccessResourceMembersReport::breakdown). */
+/** What the "ตรวจสอบสมาชิกและเจ้าของ" page draws above its rows (AccessResourceMembersReport::breakdown). */
 export interface AccessMembersBreakdown {
     /** Resources per registry whatever the type filter. */
     types: Record<string, number>;

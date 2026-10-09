@@ -416,11 +416,11 @@ export const report: Dict = {
     rep_employees_leaver_assets_title: 'Assets held by leavers',
     rep_employees_leaver_assets_desc: 'Devices still to collect from people who have resigned',
     rep_access_software_licenses_title: 'Software license usage',
-    rep_access_software_licenses_desc: 'Licenses bought and in use, who holds them, licenses to take back, and requests waiting for one',
+    rep_access_software_licenses_desc: 'Licenses bought and used, who holds them, and requests waiting',
     rep_access_overview_title: 'Access overview',
-    rep_access_overview_desc: 'All the access employees hold, leavers who still hold some, resources that need an owner, and what was granted or revoked in a date range',
-    rep_access_resource_members_title: 'Members and owners review',
-    rep_access_resource_members_desc: 'Who owns and who belongs to each email group, file share and social account, with a review sheet for the owner and file share space by department',
+    rep_access_overview_desc: 'Who holds what, leavers still holding access, and grants and revokes by date',
+    rep_access_resource_members_title: 'Members and owners check',
+    rep_access_resource_members_desc: 'Owners and members of each email group, file share and social account, with a sheet for owners to check',
     rep_c_request_type: 'Request type',
     rep_c_total_count: 'Total',
     rep_c_pending_count: 'Pending',
@@ -997,7 +997,7 @@ export const report: Dict = {
     rep_ac_revoked_on: 'Revoked {date}',
     rep_ac_revoked_by: 'by {name}',
 
-    // pages/access-resource-members.tsx · components/access-members-cards.tsx — ทบทวนสมาชิกและเจ้าของ
+    // pages/access-resource-members.tsx · components/access-members-cards.tsx — ตรวจสอบสมาชิกและเจ้าของ
     rep_fl_ar_department: 'Resource department',
     rep_fl_ar_todo: 'To do',
     rep_fl_ar_resource: 'Resource',

@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * GET /api/reports/access/resource-members/breakdown and /sheet — the "ทบทวนสมาชิกและเจ้าของ" page's
+ * GET /api/reports/access/resource-members/breakdown and /sheet — the "ตรวจสอบสมาชิกและเจ้าของ" page's
  * cards, and one resource's member review sheet as a PDF for its owner. The routes pin {key} to
  * access.resource_members, so TabularReportRequest gates and validates both as it does the rows.
  */

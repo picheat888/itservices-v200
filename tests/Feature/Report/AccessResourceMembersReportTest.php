@@ -18,7 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * "ทบทวนสมาชิกและเจ้าของ" (access.resource_members): one row per member of the email groups, file
+ * "ตรวจสอบสมาชิกและเจ้าของ" (access.resource_members): one row per member of the email groups, file
  * shares and social accounts, the tiles, the resource table, and one resource's review sheet (PDF).
  */
 class AccessResourceMembersReportTest extends TestCase

@@ -118,7 +118,7 @@ export const reportApi = {
             .get<{ data: AccessOverviewBreakdown }>('/reports/access/overview/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
 
-    /** "ทบทวนสมาชิกและเจ้าของ": the resource table, segment counts and the picked resource's review sheet. */
+    /** "ตรวจสอบสมาชิกและเจ้าของ": the resource table, segment counts and the picked resource's review sheet. */
     accessMembersBreakdown: (filters: TabularFilters) =>
         http
             .get<{ data: AccessMembersBreakdown }>('/reports/access/resource-members/breakdown', { params: tabularParams(filters) })

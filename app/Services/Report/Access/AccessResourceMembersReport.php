@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
- * "ทบทวนสมาชิกและเจ้าของ": each email group, file share and social account with its owner and members,
+ * "ตรวจสอบสมาชิกและเจ้าของ": each email group, file share and social account with its owner and members,
  * one row per member, for the owner to review; breakdown() feeds the resource table, the File Share
  * space cards and one resource's member review sheet (sheet(), also printed as a PDF).
  */
@@ -63,7 +63,7 @@ class AccessResourceMembersReport extends TabularReport
 
     public function title(): string
     {
-        return 'ทบทวนสมาชิกและเจ้าของ';
+        return 'ตรวจสอบสมาชิกและเจ้าของ';
     }
 
     public function filters(): array
