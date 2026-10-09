@@ -178,6 +178,7 @@ export interface TicketReportRow {
     subject: string;
     requester_name: string | null;
     requester_name_th: string | null;
+    requester_code: string | null;
     department_name: string | null;
     department_name_th: string | null;
     category: string | null;

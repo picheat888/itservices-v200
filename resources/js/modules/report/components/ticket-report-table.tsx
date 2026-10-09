@@ -1,7 +1,7 @@
 /**
  * Server-paginated ticket rows under the report charts (DataTable `server` mode, shimmer on
  * isLoading || isFetching — the app's server-table standard). Two-line cells keep the subject
- * wide: the ticket number sits under the subject, the department under the requester.
+ * wide: the ticket number sits under the subject, the employee code and department under the requester.
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
@@ -51,21 +51,26 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             ),
         },
         {
-            // Requester with their department under it.
+            // Requester, with their employee code and department under it
             key: 'requester',
             header: t('rep_col_requester'),
-            width: '170px',
+            width: '190px',
             render: (r) => {
-                const name = (lang === 'th' && r.requester_name_th) || r.requester_name || '—';
-                const dept = (lang === 'th' && r.department_name_th) || r.department_name;
+                const name = (lang === 'th' && r.requester_name_th) || r.requester_name;
+                if (!name) return <span className="text-muted-foreground">—</span>;
+                const sub = [r.requester_code, (lang === 'th' && r.department_name_th) || r.department_name].filter((s): s is string => Boolean(s));
                 return (
                     <div className="min-w-0">
-                        <div className="truncate" title={name}>
+                        <div className="truncate font-medium" title={name}>
                             {name}
                         </div>
-                        {dept && (
-                            <div className="text-muted-foreground truncate text-xs" title={dept}>
-                                {dept}
+                        {sub.length > 0 && (
+                            <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs" title={sub.join('\n')}>
+                                {sub.map((part) => (
+                                    <span key={part} className="truncate">
+                                        {part}
+                                    </span>
+                                ))}
                             </div>
                         )}
                     </div>
@@ -127,9 +132,8 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             rows={data?.data ?? []}
             rowKey={(r) => r.id}
             loading={isLoading || isFetching}
-            // Fixed columns add up to 1,180px; the floor keeps the subject at least ~230px wide and
-            // lets the table scroll sideways on a laptop instead of squeezing the subject to nothing.
-            tableClassName="min-w-[1410px]"
+            // Fixed columns 1,200px + a ~230px subject; narrower screens scroll sideways
+            tableClassName="min-w-[1430px]"
             server={{
                 page,
                 pageSize: perPage,
