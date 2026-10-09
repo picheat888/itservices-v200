@@ -1,11 +1,12 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
-import { Column, DataTable } from '@/shared/components/data-table';
+import { Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
 import { type PageTab, PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
@@ -64,6 +65,10 @@ const TAB_IDS = ['overview', 'directory', 'positions', 'departments', 'sections'
 type Tab = (typeof TAB_IDS)[number];
 
 const isTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+
+// List keys shared by the tabs; cleared when the tab changes (rows-per-page stays).
+const LIST_KEYS = ['search', 'dept', 'status', 'sort', 'page'];
+const clearListKeys = (params: URLSearchParams) => LIST_KEYS.forEach((key) => params.delete(key));
 
 /** One entry on the sub-tab bar; `count` renders as a small badge with `countTitle` as its tooltip. */
 type TabItem = PageTab<Tab>;
@@ -206,8 +211,13 @@ export default function EmployeesPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [highlightId]);
 
-    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
-    const changeTab = (next: Tab) => setTab(next);
+    // Switch tab and mirror it in the URL (?tab=); the new tab starts unfiltered on page 1.
+    const changeTab = (next: Tab) => {
+        if (next === tab) return;
+        setTab(next, { extra: clearListKeys });
+    };
+    // Positions / Departments tables: search, page and rows-per-page in the URL (?search, page, per).
+    const list = useListParams();
 
     // The Directory badge counts active staff still waiting for a login account — work left to do,
     // not a headcount — so it is tinted amber and hidden once everyone has one.
@@ -230,7 +240,7 @@ export default function EmployeesPage() {
     // replace, so Back does not bounce the reader into it again.
     useEffect(() => {
         if (tabs.length > 0 && !tabs.some((tb) => tb.id === tab)) {
-            setTab(tabs[0].id, { replace: true });
+            setTab(tabs[0].id, { replace: true, extra: clearListKeys });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tabs.map((tb) => tb.id).join(','), tab]);
@@ -513,7 +523,13 @@ export default function EmployeesPage() {
                                     </Button>
                                 )}
                             </div>
-                            <DataTable columns={posColumns} rows={positions} rowKey={(p) => p.id} onRowClick={(p) => setViewPos(p)} />
+                            <DataTable
+                                columns={posColumns}
+                                rows={positions}
+                                rowKey={(p) => p.id}
+                                onRowClick={(p) => setViewPos(p)}
+                                paging={list.table.paging}
+                            />
                         </div>
                     )}
 
@@ -524,6 +540,8 @@ export default function EmployeesPage() {
                             rowKey={(d) => d.id}
                             onRowClick={(d) => setViewDept(d)}
                             searchable={(d) => `${d.code} ${d.tag} ${d.name} ${d.name_th ?? ''}`}
+                            search={list.table.search}
+                            paging={list.table.paging}
                             actions={
                                 canDeptAdd && (
                                     <Button
@@ -599,7 +617,8 @@ export default function EmployeesPage() {
     );
 }
 
-const DIR_PAGE_SIZES = [20, 50, 100] as const;
+const DIR_STATUSES = ['active', 'has_account', 'no_account', 'resigned'] as const;
+const isDirStatus = (v: string): v is (typeof DIR_STATUSES)[number] => (DIR_STATUSES as readonly string[]).includes(v);
 
 interface DirectoryTabProps {
     departments: Department[];
@@ -634,36 +653,30 @@ function DirectoryTab({
 }: DirectoryTabProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [search, setSearch] = useState('');
-    const [deptFilter, setDeptFilter] = useState('all');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState<10 | 20 | 50 | 100>(20);
+    // Search, filters, page and rows-per-page live in the URL (?search, dept, status, page, per).
+    const list = useListParams();
+    const search = list.get('search');
+    const deptParam = list.get('dept');
+    const deptKnown = departments.length === 0 ? /^\d+$/.test(deptParam) : departments.some((d) => String(d.id) === deptParam);
+    const deptFilter = deptKnown ? deptParam : 'all';
+    const statusParam = list.get('status');
+    const statusFilter = isDirStatus(statusParam) ? statusParam : 'all';
+    const { page, perPage: pageSize } = list;
+    const setPage = (update: (current: number) => number) => list.table.paging.onPageChange(update(page));
 
     const { data, isLoading } = useEmployeeDirectory({ page, per_page: pageSize, search, department_id: deptFilter, status: statusFilter });
     const rows = data?.data ?? [];
     const meta = data?.meta;
     const total = meta?.total ?? 0;
     const totalPages = meta?.last_page ?? 1;
+    usePageInRange(list, meta?.last_page);
     const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
     const to = Math.min(page * pageSize, total);
 
-    const handleSearch = (v: string) => {
-        setSearch(v);
-        setPage(1);
-    };
-    const handleDept = (v: string) => {
-        setDeptFilter(v);
-        setPage(1);
-    };
-    const handleStatus = (v: string) => {
-        setStatusFilter(v);
-        setPage(1);
-    };
-    const handlePageSize = (v: 10 | 20 | 50 | 100) => {
-        setPageSize(v);
-        setPage(1);
-    };
+    const handleSearch = (v: string) => list.setFilter('search', v);
+    const handleDept = (v: string) => list.setFilter('dept', v === 'all' ? '' : v);
+    const handleStatus = (v: string) => list.setFilter('status', v === 'all' ? '' : v);
+    const handlePageSize = (v: number) => list.table.paging.onPageSizeChange(v);
 
     const columns: Column<Employee>[] = [
         {
@@ -832,12 +845,12 @@ function DirectoryTab({
             <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
                 <div className="flex items-center gap-2">
                     <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                    <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v) as 10 | 20 | 50 | 100)}>
+                    <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v))}>
                         <SelectTrigger className="h-8 w-[72px]">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {DIR_PAGE_SIZES.map((s) => (
+                            {PAGE_SIZES.map((s) => (
                                 <SelectItem key={s} value={String(s)}>
                                     {s}
                                 </SelectItem>

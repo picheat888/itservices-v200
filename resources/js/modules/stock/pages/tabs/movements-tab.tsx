@@ -3,6 +3,7 @@ import { useCurrency } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
@@ -10,21 +11,23 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { ArrowRight, Filter, Printer } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
+
+// Types offered by the filter (and accepted from ?type=).
+const MOVEMENT_TYPES: StockMovementType[] = ['receive', 'issue', 'return', 'transfer'];
 
 export function MovementsTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { format } = useCurrency();
-    const [type, setType] = useState('all');
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
-    // Changing the type filter resets to page 1 (the result set changes).
-    useEffect(() => {
-        setPage(1);
-    }, [type]);
+    // Type filter, page and rows-per-page live in the URL (?type, ?page, ?per).
+    const list = useListParams();
+    const { page, perPage } = list;
+    const typeParam = list.get('type');
+    const type = MOVEMENT_TYPES.includes(typeParam as StockMovementType) ? typeParam : 'all';
+    const setType = (value: string) => list.setFilter('type', value === 'all' ? '' : value);
     const {
         data: movementsPage,
         isLoading: movementsLoading,
@@ -92,7 +95,7 @@ export function MovementsTab() {
                         onChange={setType}
                         options={[
                             { value: 'all', label: t('stock_all_types'), search: t('stock_all_types') },
-                            ...(['receive', 'issue', 'return', 'transfer'] as StockMovementType[]).map((k) => ({
+                            ...MOVEMENT_TYPES.map((k) => ({
                                 value: k,
                                 label: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
                                 search: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
@@ -110,16 +113,7 @@ export function MovementsTab() {
                     setMoveOpen(true);
                 }}
                 loading={movementsLoading || movementsFetching}
-                server={{
-                    page,
-                    pageSize: perPage,
-                    total: movementsPage?.meta.total ?? 0,
-                    onPageChange: setPage,
-                    onPageSizeChange: (s) => {
-                        setPerPage(s);
-                        setPage(1);
-                    },
-                }}
+                server={{ ...list.table.paging, total: movementsPage?.meta.total ?? 0 }}
             />
 
             {/* Movement detail — the per-entry audit-log view. */}

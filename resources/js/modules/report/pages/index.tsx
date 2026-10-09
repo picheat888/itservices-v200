@@ -9,10 +9,11 @@
  * Server decides visibility (GET /api/reports → ReportCatalogue) and remembers pins.
  */
 import { useT } from '@/lang';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { LineChart, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { MyExports } from '../components/my-exports';
 import { PeriodSwitch } from '../components/period-switch';
 import { byDomainOrder, ReportCatalogue, ReportCatalogueSkeleton, reportStem } from '../components/report-catalogue';
@@ -27,11 +28,15 @@ type Chip = ReportDomain | 'all';
 export default function ReportsPage() {
     const t = useT();
     const { data: reports = [], isLoading } = useReportCatalogue();
-    const [query, setQuery] = useState('');
-    const [chip, setChip] = useState<Chip>('all');
+    // Search (?search) and module chip (?domain) live in the URL; a domain this user has no report in reads as all
+    const list = useListParams();
+    const query = list.get('search');
+    const setQuery = (value: string) => list.setFilter('search', value);
     const [range, setRange] = useSnapshotRange();
     const domains = [...new Set(reports.map((r) => r.domain))].sort(byDomainOrder);
-    const domain: Chip = chip;
+    const domainParam = list.get('domain');
+    const domain: Chip = domains.find((d) => d === domainParam) ?? 'all';
+    const setChip = (next: Chip) => list.setFilter('domain', next === 'all' ? '' : next);
     const chips: { id: Chip; label: string; count: number }[] = [
         { id: 'all', label: t('rep_filter_all'), count: reports.length },
         ...domains.map((d) => ({ id: d, label: t(`rep_domain_${d}`), count: reports.filter((r) => r.domain === d).length })),

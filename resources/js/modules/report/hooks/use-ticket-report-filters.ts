@@ -135,6 +135,8 @@ export function useTicketReportFilters() {
             (next) => {
                 URL_NAMES.forEach((n) => next.delete(n));
                 Object.entries(wanted).forEach(([n, v]) => next.set(n, v));
+                // New filters send the rows table back to page 1
+                next.delete('page');
                 return next;
             },
             { replace: true },

@@ -5,9 +5,9 @@
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime } from '@/shared/lib/datetime';
 import { useUiStore } from '@/stores/ui';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useTicketOverviewRows } from '../hooks/use-reports';
@@ -18,9 +18,9 @@ import { categoryKey } from './ticket-labels';
 export function TicketReportTable({ filters }: { filters: TicketReportFilters }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
-    const { data, isLoading, isFetching } = useTicketOverviewRows(filters, page, perPage);
+    // Page and rows-per-page live in the URL (?page, ?per); a filter change drops ?page
+    const list = useListParams();
+    const { data, isLoading, isFetching } = useTicketOverviewRows(filters, list.page, list.perPage);
     const canOpenTickets = useCanOpen()('/tickets');
 
     const columns: Column<TicketReportRow>[] = [
@@ -134,16 +134,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             loading={isLoading || isFetching}
             // Fixed columns 1,200px + a ~230px subject; narrower screens scroll sideways
             tableClassName="min-w-[1430px]"
-            server={{
-                page,
-                pageSize: perPage,
-                total: data?.meta.total ?? 0,
-                onPageChange: setPage,
-                onPageSizeChange: (s) => {
-                    setPerPage(s);
-                    setPage(1);
-                },
-            }}
+            server={{ ...list.table.paging, total: data?.meta.total ?? 0 }}
         />
     );
 }

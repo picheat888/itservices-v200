@@ -1,13 +1,14 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
-import { type Column, DataTable } from '@/shared/components/data-table';
+import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
+import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
@@ -69,6 +70,8 @@ const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isAssetTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+// List keys of the Inventory and Transfers tabs (rows-per-page `per` is shared and kept).
+const LIST_KEYS = ['search', 'type', 'source', 'status', 'warehouse', 'page'];
 
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof Box }) {
     return (
@@ -226,9 +229,6 @@ function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) 
     );
 }
 
-/** Rows-per-page choices for the inventory table; the first is the default (left out of the URL). */
-const PER_PAGE_OPTIONS = [20, 50, 100];
-
 export default function AssetsPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -252,7 +252,11 @@ export default function AssetsPage() {
     // state rather than a URL parameter.
     const [showAllTypes, setShowAllTypes] = useState(false);
 
-    const changeTab = (next: Tab) => setTab(next);
+    // A tab switch drops the list keys of the tab being left (rows-per-page stays).
+    const changeTab = (next: Tab) => {
+        if (next === tab) return;
+        setTab(next, { extra: (p) => LIST_KEYS.forEach((key) => p.delete(key)) });
+    };
 
     // The Overview tab is gated by assets.view_dashboard — bounce a role without it to Inventory
     // (replace: the reader never chose Overview, so Back must not bounce them into it again).
@@ -262,43 +266,17 @@ export default function AssetsPage() {
         }
     }, [tab, canViewOverview]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // The inventory list's search, filters and page live in the URL (?q, type, source, status,
-    // warehouse, page, per), so a reload or a shared link shows the same list. Defaults are left
-    // out of the URL, and every change replaces the entry (typing a search must not fill Back
-    // with one step per letter). Several setters called in one handler — a filter plus "back to
-    // page 1" — are merged into one URL write: separate writes would each start from the same
-    // old URL and the last would undo the others.
-    const pendingListParams = useRef<Record<string, string | null> | null>(null);
-    const setListParams = (patch: Record<string, string | null>) => {
-        const first = pendingListParams.current === null;
-        pendingListParams.current = { ...(pendingListParams.current ?? {}), ...patch };
-        if (!first) return;
-        queueMicrotask(() => {
-            const merged = pendingListParams.current ?? {};
-            pendingListParams.current = null;
-            setSearchParams(
-                (sp) => {
-                    const next = new URLSearchParams(sp);
-                    for (const [key, value] of Object.entries(merged)) {
-                        if (value === null || value === '') next.delete(key);
-                        else next.set(key, value);
-                    }
-                    return next;
-                },
-                { replace: true },
-            );
-        });
-    };
-    const search = searchParams.get('q') ?? '';
+    // Inventory search, filters and page live in the URL (?search, type, source, status, warehouse, page, per).
+    const list = useListParams();
+    const setListParams = list.setParams;
+    const search = searchParams.get('search') ?? '';
     const typeFilter = (searchParams.get('type') ?? '') as AssetType | '';
     const sourceFilter = searchParams.get('source') ?? '';
     const statusParam = searchParams.get('status');
     const statusFilter: AssetStatus | '' = statusParam && statusParam in ASSET_STATUS_META ? (statusParam as AssetStatus) : '';
     const warehouseFilter = searchParams.get('warehouse') ?? '';
-    const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1);
-    const perPageParam = Number(searchParams.get('per'));
-    const perPage = PER_PAGE_OPTIONS.includes(perPageParam) ? perPageParam : PER_PAGE_OPTIONS[0];
-    const setSearch = (value: string) => setListParams({ q: value });
+    const { page, perPage } = list;
+    const setSearch = (value: string) => setListParams({ search: value });
     const setTypeFilter = (value: AssetType | '') => setListParams({ type: value });
     const setSourceFilter = (value: string) => setListParams({ source: value });
     const setStatusFilter = (value: AssetStatus | '') => setListParams({ status: value });
@@ -313,6 +291,7 @@ export default function AssetsPage() {
         }
         setSearchParams((sp) => {
             const next = new URLSearchParams(sp);
+            if (tab !== 'inventory') LIST_KEYS.forEach((key) => next.delete(key));
             next.set('tab', 'inventory');
             next.set('status', 'pending_return');
             next.delete('page');
@@ -323,7 +302,7 @@ export default function AssetsPage() {
         const next = typeof value === 'function' ? value(page) : value;
         setListParams({ page: next > 1 ? String(next) : null });
     };
-    const setPerPage = (value: number) => setListParams({ per: value === PER_PAGE_OPTIONS[0] ? null : String(value) });
+    const setPerPage = (value: number) => setListParams({ per: value === PAGE_SIZES[0] ? null : String(value) });
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     // Multi-select is locked to one status group; `selectionStatus` is that group.
     const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
@@ -394,9 +373,10 @@ export default function AssetsPage() {
         isLoading,
         isFetching,
     } = useAssets({
-        page,
+        // ?search and ?page belong to the Transfers log while that tab is open
+        page: tab === 'transfers' ? 1 : page,
         per_page: perPage,
-        search,
+        search: tab === 'transfers' ? '' : search,
         type: typeFilter || undefined,
         source: sourceFilter || undefined,
         status: statusFilter || undefined,
@@ -450,6 +430,7 @@ export default function AssetsPage() {
     const perPageDisplay = meta?.per_page ?? perPage;
     const currentPage = meta?.current_page ?? page;
     const lastPage = meta?.last_page ?? 1;
+    usePageInRange(list, tab === 'inventory' ? meta?.last_page : undefined);
 
     // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;
@@ -1349,7 +1330,7 @@ export default function AssetsPage() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {PER_PAGE_OPTIONS.map((n) => (
+                                        {PAGE_SIZES.map((n) => (
                                             <SelectItem key={n} value={String(n)}>
                                                 {n}
                                             </SelectItem>
@@ -1399,15 +1380,15 @@ export default function AssetsPage() {
                             rowKey={(tr) => tr.id}
                             rowHeight={32}
                             loading={transfersLoading}
-                            // One box answers "what happened to INK-IT-014" and "what did Somchai
-                            // hand back" — the questions this log is opened with.
+                            search={list.table.search}
+                            paging={list.table.paging}
+                            // Search by asset, either holder or the performer
                             searchable={(tr) =>
                                 `${tr.asset_tag} ${tr.asset_model ?? ''} ${tr.from_name ?? ''} ${tr.from_owner ?? ''} ${tr.to_name ?? ''} ${tr.to_owner} ${tr.performed_by ?? ''}`
                             }
                             onRowClick={(tr) => tr.asset_id && openAssetId(tr.asset_id)}
                         />
-                        {/* The endpoint stops at a fixed number of rows. Saying so beats a footer
-                            that reads "1-20 of 100" as though 100 were everything there ever was. */}
+                        {/* The endpoint caps the rows — say so */}
                         {transfersCapped && (
                             <p className="text-muted-foreground text-xs">{t('asset_log_capped').replace('{n}', String(transfers.length))}</p>
                         )}

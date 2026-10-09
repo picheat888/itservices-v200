@@ -6,6 +6,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -34,7 +35,7 @@ import {
     X,
 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MovementDrawer } from '../components/movement-drawer';
 import { RequestDrawer } from '../components/request-drawer';
@@ -51,9 +52,62 @@ const STOCK_TABS = ['overview', 'items', 'movements', 'requests', 'audit'] as co
 type StockTab = (typeof STOCK_TABS)[number];
 const isStockTab = (v: string | null): v is StockTab => STOCK_TABS.includes(v as StockTab);
 
-// localStorage key for the Items-tab filters (search + category + warehouse + status).
-// Kept out of the URL so personal filters survive a reload without cluttering shareable links.
+// localStorage key for the reader's last-used Items-tab filters (the URL stays the source of truth).
 const STOCK_FILTER_KEY = 'stock.item-filters';
+
+// Default sort for the Items table — alphabetical by name.
+const DEFAULT_ITEM_SORT = 'name_asc';
+const ITEM_SORTS = ['name_asc', 'name_desc', 'stock_desc', 'stock_asc', 'value_desc', 'value_asc'];
+const ITEM_STATUSES = ['alerts', 'ok', 'low', 'out', 'over', 'dead'];
+// Every tab's list keys in the URL; a tab switch clears them (rows-per-page stays).
+const LIST_KEYS = ['search', 'cat', 'wh', 'status', 'sort', 'type', 'page'];
+const ITEM_LIST_KEYS = ['search', 'cat', 'wh', 'status', 'sort', 'page', 'per'];
+
+type ItemFilters = { search: string; cat: string; wh: string; status: string; sort: string };
+
+const toItemFilters = (raw: Partial<Record<keyof ItemFilters, unknown>>): ItemFilters => ({
+    search: typeof raw.search === 'string' ? raw.search : '',
+    cat: typeof raw.cat === 'string' && raw.cat ? raw.cat : 'all',
+    wh: typeof raw.wh === 'string' && raw.wh ? raw.wh : 'all',
+    status: ITEM_STATUSES.includes(raw.status as string) ? (raw.status as string) : 'all',
+    sort: ITEM_SORTS.includes(raw.sort as string) ? (raw.sort as string) : DEFAULT_ITEM_SORT,
+});
+
+const readSavedItemFilters = (): ItemFilters => {
+    try {
+        return toItemFilters(JSON.parse(localStorage.getItem(STOCK_FILTER_KEY) || '{}'));
+    } catch {
+        return toItemFilters({});
+    }
+};
+
+const saveItemFilters = (filters: ItemFilters) => {
+    try {
+        localStorage.setItem(STOCK_FILTER_KEY, JSON.stringify(filters));
+    } catch {
+        // Storage unavailable — the URL still holds the filters.
+    }
+};
+
+// URL form of the Items filters: defaults are left out, and the page returns to 1.
+const itemFilterParams = (f: ItemFilters): ListParamPatch => ({
+    search: f.search || null,
+    cat: f.cat === 'all' ? null : f.cat,
+    wh: f.wh === 'all' ? null : f.wh,
+    status: f.status === 'all' ? null : f.status,
+    sort: f.sort === DEFAULT_ITEM_SORT ? null : f.sort,
+    page: null,
+});
+
+const applyParams = (params: URLSearchParams, patch: ListParamPatch) => {
+    for (const [key, value] of Object.entries(patch)) {
+        if (value) {
+            params.set(key, value);
+        } else {
+            params.delete(key);
+        }
+    }
+};
 
 const STATUS_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
     ok: 'green',
@@ -219,28 +273,59 @@ export default function StockPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isStockTab, 'overview');
-    const changeTab = (next: StockTab) => setTab(next);
 
-    // Restore the last-used Items-tab filters so a reload lands on the same view.
-    const savedFilters = useMemo<{ search?: string; cat?: string; wh?: string; status?: string; sort?: string }>(() => {
-        try {
-            return JSON.parse(localStorage.getItem(STOCK_FILTER_KEY) || '{}');
-        } catch {
-            return {};
+    // Items search, filters, sort and page live in the URL (?search, cat, wh, status, sort, page, per).
+    const list = useListParams();
+    const itemFilters = toItemFilters({
+        search: list.get('search'),
+        cat: list.get('cat'),
+        wh: list.get('wh'),
+        status: list.get('status'),
+        sort: list.get('sort'),
+    });
+    const { search, cat, wh, status: statusFilter, sort: itemSort } = itemFilters;
+    // A filter the reader picks is also remembered for their next visit; a shared link's filters are not.
+    const setItemFilters = (patch: Partial<ItemFilters>) => {
+        const next = { ...itemFilters, ...patch };
+        saveItemFilters(next);
+        list.setParams(itemFilterParams(next));
+    };
+    const setSearch = (value: string) => setItemFilters({ search: value });
+    const setCat = (value: string) => setItemFilters({ cat: value });
+    const setWh = (value: string) => setItemFilters({ wh: value });
+    const setStatusFilter = (value: string) => setItemFilters({ status: value });
+    const setItemSort = (value: string) => setItemFilters({ sort: value });
+
+    // Open the Items tab in one URL write: coming from another tab starts from the remembered filters.
+    const openItems = (patch: Partial<ItemFilters> = {}) => {
+        const next = { ...(tab === 'items' ? itemFilters : readSavedItemFilters()), ...patch };
+        if (Object.keys(patch).length > 0) saveItemFilters(next);
+        setTab('items', {
+            replace: tab === 'items',
+            extra: (p) => {
+                LIST_KEYS.forEach((key) => p.delete(key));
+                applyParams(p, itemFilterParams(next));
+            },
+        });
+    };
+    const changeTab = (next: StockTab) => {
+        if (next === tab) return;
+        if (next === 'items') {
+            openItems();
+            return;
         }
-    }, []);
-    // Default sort for the Items table — alphabetical by name.
-    const DEFAULT_ITEM_SORT = 'name_asc';
-    const [search, setSearch] = useState(savedFilters.search ?? '');
-    const [cat, setCat] = useState(savedFilters.cat ?? 'all');
-    const [wh, setWh] = useState(savedFilters.wh ?? 'all');
-    const [statusFilter, setStatusFilter] = useState(savedFilters.status ?? 'all');
-    const [itemSort, setItemSort] = useState(savedFilters.sort ?? DEFAULT_ITEM_SORT);
+        setTab(next, { extra: (p) => LIST_KEYS.forEach((key) => p.delete(key)) });
+    };
 
-    // Persist the Items-tab filters across reloads.
+    // First time the Items tab shows with no list keys in the URL, bring back the remembered filters.
+    const restoreChecked = useRef(false);
     useEffect(() => {
-        localStorage.setItem(STOCK_FILTER_KEY, JSON.stringify({ search, cat, wh, status: statusFilter, sort: itemSort }));
-    }, [search, cat, wh, statusFilter, itemSort]);
+        if (restoreChecked.current || tab !== 'items') return;
+        restoreChecked.current = true;
+        if (ITEM_LIST_KEYS.some((key) => searchParams.has(key))) return;
+        const saved = itemFilterParams(readSavedItemFilters());
+        if (Object.values(saved).some(Boolean)) list.setParams(saved);
+    }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
     const [editItem, setEditItem] = useState<StockItem | null>(null);
     // Item detail is URL-driven (?view=<id>) so a reload / shared link reopens it; closing drops it.
     // Only a real record id opens the modal: Number('abc') is NaN, which passes an
@@ -286,12 +371,7 @@ export default function StockPage() {
     const { data: categories = [] } = useCategories();
     const { data: warehouses = [] } = useWarehouses();
     // Server-side pagination for the Items table.
-    const [itemsPage, setItemsPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(20);
-    // Reset to page 1 whenever a filter/sort/search changes (the result set changes).
-    useEffect(() => {
-        setItemsPage(1);
-    }, [search, cat, wh, statusFilter, itemSort]);
+    const { page: itemsPage, perPage: itemsPerPage } = list;
 
     const {
         data: itemsPageData,
@@ -313,9 +393,6 @@ export default function StockPage() {
     const pendingRequests = requestsPage?.meta.pending ?? 0;
     // Outstanding work = awaiting approval (pending) + awaiting fulfillment (approved).
     const outstandingRequests = requestsPage?.meta.outstanding ?? 0;
-    // Requests-tab pagination lives here (not in the tab) so it survives switching tabs.
-    const [reqPage, setReqPage] = useState(1);
-    const [reqPerPage, setReqPerPage] = useState(20);
 
     // Outstanding counting work = draft (not-yet-committed) count sessions.
     const { data: countsPage } = useStockCounts({}, can('view_count'));
@@ -458,12 +535,7 @@ export default function StockPage() {
     ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
     // Anything to clear = an active chip filter OR a non-default sort order (drives the popover badge).
     const activeItemFilterCount = activeChips.length + (itemSort !== DEFAULT_ITEM_SORT ? 1 : 0);
-    const resetItemFilters = () => {
-        setCat('all');
-        setWh('all');
-        setStatusFilter('all');
-        setItemSort(DEFAULT_ITEM_SORT);
-    };
+    const resetItemFilters = () => setItemFilters({ cat: 'all', wh: 'all', status: 'all', sort: DEFAULT_ITEM_SORT });
 
     return (
         <div className="space-y-6">
@@ -482,16 +554,7 @@ export default function StockPage() {
                 </div>
             </div>
 
-            {hasAlerts && summary && (
-                <AlertCard
-                    summary={summary}
-                    t={t}
-                    onViewItems={() => {
-                        changeTab('items');
-                        setStatusFilter('alerts');
-                    }}
-                />
-            )}
+            {hasAlerts && summary && <AlertCard summary={summary} t={t} onViewItems={() => openItems({ status: 'alerts' })} />}
 
             <Card className="overflow-clip">
                 {/* Outstanding work and stock alerts: red pills. */}
@@ -504,22 +567,9 @@ export default function StockPage() {
                             t={t}
                             kpis={kpis}
                             canEvents={can('view_events')}
-                            onSelectWarehouse={(w) => {
-                                // Jump to the Items tab showing only the chosen warehouse.
-                                setSearch('');
-                                setCat('all');
-                                setStatusFilter('all');
-                                setWh(w);
-                                changeTab('items');
-                            }}
-                            onSelectCategory={(c) => {
-                                // Jump to the Items tab showing only the chosen category.
-                                setSearch('');
-                                setWh('all');
-                                setStatusFilter('all');
-                                setCat(c);
-                                changeTab('items');
-                            }}
+                            // Jump to the Items tab showing only the chosen warehouse / category.
+                            onSelectWarehouse={(w) => openItems({ search: '', cat: 'all', status: 'all', wh: w })}
+                            onSelectCategory={(c) => openItems({ search: '', wh: 'all', status: 'all', cat: c })}
                         />
                     )}
 
@@ -705,31 +755,13 @@ export default function StockPage() {
                                 rowKey={(i) => i.id}
                                 onRowClick={(i) => setViewId(i.id)}
                                 loading={itemsLoading || itemsFetching}
-                                server={{
-                                    page: itemsPage,
-                                    pageSize: itemsPerPage,
-                                    total: itemsTotal,
-                                    onPageChange: setItemsPage,
-                                    onPageSizeChange: (s) => {
-                                        setItemsPerPage(s);
-                                        setItemsPage(1);
-                                    },
-                                }}
+                                server={{ ...list.table.paging, total: itemsTotal }}
                             />
                         </div>
                     )}
 
                     {tab === 'movements' && <MovementsTab />}
-                    {tab === 'requests' && (
-                        <RequestsTab
-                            can={can}
-                            onNew={() => setReqOpen(true)}
-                            page={reqPage}
-                            setPage={setReqPage}
-                            perPage={reqPerPage}
-                            setPerPage={setReqPerPage}
-                        />
-                    )}
+                    {tab === 'requests' && <RequestsTab can={can} onNew={() => setReqOpen(true)} />}
 
                     {tab === 'audit' && <AuditTab can={can} />}
                 </div>
