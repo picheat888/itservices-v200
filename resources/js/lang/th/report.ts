@@ -759,7 +759,7 @@ export const report: Dict = {
     rep_k_th_accept_median: 'เวลากดรับมอบ (มัธยฐาน)',
     rep_k_th_relocations: 'ย้ายที่ตั้ง',
     rep_th_reloc_title: 'อัปเดตสถานที่',
-    rep_th_reloc_sub: 'ย้ายที่ตั้งในช่วงวันที่ที่เลือก เครื่องยังอยู่กับผู้ถือคนเดิม',
+    rep_th_reloc_sub: 'ย้ายที่ตั้งโดยไม่เปลี่ยนผู้ถือ',
     rep_th_reloc_count: '{n} รายการ',
     rep_th_reloc_empty: 'ไม่มีการย้ายที่ตั้งในช่วงนี้',
     rep_th_reloc_col_at: 'วันที่',

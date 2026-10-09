@@ -763,7 +763,7 @@ export const report: Dict = {
     rep_k_th_accept_median: 'Time to accept (median)',
     rep_k_th_relocations: 'Relocated',
     rep_th_reloc_title: 'Location updates',
-    rep_th_reloc_sub: 'Moves in the selected range; the holder stays the same',
+    rep_th_reloc_sub: 'Moved without changing the holder',
     rep_th_reloc_count: '{n} entries',
     rep_th_reloc_empty: 'No location updates in this range',
     rep_th_reloc_col_at: 'Date',
