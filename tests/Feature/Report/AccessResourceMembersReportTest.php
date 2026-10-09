@@ -135,7 +135,7 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertSame(5, $summary['ar_resources']['value']);
         $this->assertSame(['email_group' => 1, 'file_share' => 3, 'social_platform' => 1], array_column($summary['ar_resources']['split'], 'value', 'key'));
         $this->assertSame(5, $summary['ar_members']['value']);
-        $this->assertEquals(['people' => 3, 'avg' => 1.0], $summary['ar_members']['note']['values']);
+        $this->assertSame(['people' => 3, 'median' => 1], $summary['ar_members']['note']['values']);
         $this->assertSame(1, $summary['ar_cross']['value']);
         $this->assertSame(33, $summary['ar_cross']['share']);
         $this->assertSame(1, $summary['ar_leavers']['value']);
