@@ -8,6 +8,7 @@
  * An address not listed here opens UnknownReportPage.
  */
 import type { ComponentType } from 'react';
+import AccessOverviewReportPage from './pages/access-overview';
 import AccessSoftwareLicensesReportPage from './pages/access-software-licenses';
 import AssetsOverviewReportPage from './pages/assets-overview';
 import AssetsTransferHistoryReportPage from './pages/assets-transfer-history';
@@ -61,5 +62,6 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'employees-joiners-leavers', anyOf: ['employees.view'], Page: EmployeesJoinersLeaversReportPage },
     { path: 'employees-leaver-assets', anyOf: ['employees.view'], Page: EmployeesLeaverAssetsReportPage },
     // Access
+    { path: 'access-overview', anyOf: ['access.overview'], Page: AccessOverviewReportPage },
     { path: 'access-software-licenses', anyOf: ['access.software_view'], Page: AccessSoftwareLicensesReportPage },
 ];

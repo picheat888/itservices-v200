@@ -32,6 +32,10 @@ export const FILL: Record<ChartTone, string> = {
     'pair-green': 'bg-chart-pair-green',
     'pair-rose': 'bg-chart-pair-rose',
     'pair-violet': 'bg-chart-pair-violet',
+    'access-email': 'bg-violet-600',
+    'access-file': 'bg-teal-600',
+    'access-social': 'bg-indigo-500',
+    'access-software': 'bg-amber-500',
 };
 /** Each tone as text, for the counts printed over a stacked bar. */
 export const TEXT: Record<ChartTone, string> = {
@@ -60,6 +64,10 @@ export const TEXT: Record<ChartTone, string> = {
     'pair-green': 'text-chart-pair-green-ink',
     'pair-rose': 'text-chart-pair-rose-ink',
     'pair-violet': 'text-chart-pair-violet-ink',
+    'access-email': 'text-violet-600 dark:text-violet-400',
+    'access-file': 'text-teal-600 dark:text-teal-400',
+    'access-social': 'text-indigo-600 dark:text-indigo-400',
+    'access-software': 'text-amber-600 dark:text-amber-400',
 };
 export const STROKE: Record<ChartTone, string> = {
     green: 'stroke-emerald-500',
@@ -87,4 +95,8 @@ export const STROKE: Record<ChartTone, string> = {
     'pair-green': 'stroke-chart-pair-green',
     'pair-rose': 'stroke-chart-pair-rose',
     'pair-violet': 'stroke-chart-pair-violet',
+    'access-email': 'stroke-violet-600',
+    'access-file': 'stroke-teal-600',
+    'access-social': 'stroke-indigo-500',
+    'access-software': 'stroke-amber-500',
 };

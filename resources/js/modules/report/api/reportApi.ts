@@ -5,6 +5,7 @@
  */
 import { http } from '@/shared/lib/http';
 import type {
+    AccessOverviewBreakdown,
     AssetTransferBreakdown,
     AssetWarrantyBreakdown,
     AssetWriteoffBreakdown,
@@ -107,6 +108,12 @@ export const reportApi = {
     assetWarrantyBreakdown: (filters: TabularFilters) =>
         http
             .get<{ data: AssetWarrantyBreakdown }>('/reports/assets/warranty-expiring/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "ภาพรวมสิทธิ์การเข้าถึง": months, leavers still holding, departments and resources that need someone. */
+    accessOverviewBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: AccessOverviewBreakdown }>('/reports/access/overview/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
