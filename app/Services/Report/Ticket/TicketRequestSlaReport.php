@@ -91,6 +91,9 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::text('ticket_no', 'เลขที่ Ticket', fn (Ticket $t) => $t->ticket_no)->linkTo('/tickets', fn (Ticket $t) => $t->id),
             ReportColumn::text('request_no', 'เลขที่คำขอ', fn (Ticket $t) => $t->serviceRequest?->reference)->linkTo('/requests', fn (Ticket $t) => $t->serviceRequest?->id),
             ReportColumn::enum('request_type', 'ประเภทคำขอ', fn (Ticket $t) => $t->serviceRequest?->type, self::typeKeys(), self::typeTh()),
+            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null),
+            ReportColumn::text('requester_code', 'รหัสพนักงานผู้แจ้ง', fn (Ticket $t) => $t->requester?->code),
+            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
             ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
@@ -105,8 +108,6 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, [], self::categoryTh())->sheetOnly(),
             ReportColumn::enum('work_class', 'ลักษณะงาน', fn (Ticket $t) => $t->work_class, [], self::workClassTh())->sheetOnly(),
             ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, [], self::priorityTh())->sheetOnly(),
-            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null)->sheetOnly(),
-            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null)->sheetOnly(),
             // "2026-09" — a column to pivot the cases by month.
             ReportColumn::text('opened_month', 'เดือนที่แจ้ง', fn (Ticket $t) => $t->created_at?->format('Y-m'))->sheetOnly(),
             ReportColumn::dateTime('canceled_at', 'ยกเลิกเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Canceled ? $t->resolved_at : null)->sheetOnly(),
@@ -139,7 +140,7 @@ class TicketRequestSlaReport extends TabularReport
     {
         return [
             'ticket_no', 'request_no', 'request_type', 'subject', 'description', 'category', 'work_class', 'priority',
-            'requester', 'department', 'assignee',
+            'requester', 'requester_code', 'department', 'assignee',
             'ticket_status', 'opened_at', 'opened_month', 'taken_at', 'closed_at', 'canceled_at',
             'response_due_at', 'take_sla', 'take_hours',
             'resolve_due_at', 'close_sla', 'work_hours', 'fix_hours',
