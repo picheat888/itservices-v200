@@ -742,7 +742,7 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
     const max = Math.max(1, ...warehouses.map((w) => Math.max(w.out, w.back)));
 
     return (
-        <Card className="overflow-hidden xl:col-span-2">
+        <Card className="flex flex-col overflow-hidden xl:col-span-2">
             <CardTitle
                 title={t('rep_th_wh_title')}
                 sub={
