@@ -1,9 +1,12 @@
 // A small note on a figure that opens on hover, tap (iPad) or Enter/Space — a tooltip that touch and keyboard can reach.
 import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 type Side = 'top' | 'right' | 'left';
+
+/** Space kept between a note and the top of the scrolling area. */
+const VIEW_GAP = 8;
 
 export function InfoPopover({
     label,
@@ -33,18 +36,26 @@ export function InfoPopover({
     const openedByHover = useRef(false);
     const trigger = useRef<HTMLButtonElement>(null);
     const [note, setNote] = useState<HTMLDivElement | null>(null);
+    // The page's scrolling area starts under the top bar; a bar top scrolled out of it is held at its edge
+    const viewTop = useCallback(() => (trigger.current?.closest('main')?.getBoundingClientRect().top ?? 0) + VIEW_GAP, []);
+    const anchorInView = useCallback(() => {
+        const at = anchor?.();
+        if (!at) return null;
+        const top = Math.max(at.top, viewTop());
+        return top === at.top ? at : new DOMRect(at.left, top, at.width, 0);
+    }, [anchor, viewTop]);
     const virtualRef = useMemo(
-        () => ({ current: { getBoundingClientRect: () => anchor?.() ?? trigger.current?.getBoundingClientRect() ?? new DOMRect() } }),
-        [anchor],
+        () => ({ current: { getBoundingClientRect: () => anchorInView() ?? trigger.current?.getBoundingClientRect() ?? new DOMRect() } }),
+        [anchorInView],
     );
 
-    // Above the bar while the note fits between it and the top of the trigger, else beside it on the left
+    // Above the bar while the note fits in view between it and the top of the trigger, else beside it on the left
     useLayoutEffect(() => {
         if (!open || !anchor || !note) return;
-        const at = anchor();
+        const at = anchorInView();
         const box = trigger.current?.getBoundingClientRect();
-        if (at && box) setPlace(at.top - box.top >= note.offsetHeight + 8 ? 'top' : 'left');
-    }, [open, anchor, note]);
+        if (at && box) setPlace(at.top - Math.max(box.top, viewTop()) >= note.offsetHeight + 8 ? 'top' : 'left');
+    }, [open, anchor, anchorInView, viewTop, note]);
 
     const hover = (next: boolean) => (event: React.PointerEvent) => {
         if (event.pointerType !== 'mouse') return;
