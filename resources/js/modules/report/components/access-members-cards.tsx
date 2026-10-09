@@ -8,7 +8,7 @@ import { Card } from '@/shared/ui/card';
 import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
-import { Download, FileText, Loader2, X } from 'lucide-react';
+import { Download, FileText, Folder, Globe, Loader2, type LucideIcon, Package, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-reports';
 import type { AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
@@ -79,26 +79,14 @@ export function AccessMembersTypeSegments({ filters, patch }: { filters: Tabular
     );
 }
 
-/** Beside the list's heading: the picked resource (cleared with ✕), active / cross / revoked, and the order. */
+/** Beside the list's heading: active / cross / revoked, and the order. */
 export function AccessMembersListLead({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const { data } = useAccessMembersBreakdown(filters);
-    const picked = data?.sheet ?? null;
     const sort = (filters.sort as string | null | undefined) ?? 'resource';
 
     return (
         <>
-            {filters.resource && (
-                <button
-                    type="button"
-                    onClick={() => patch({ resource: null })}
-                    className="bg-brand/10 text-brand hover:bg-brand/20 focus-visible:ring-brand inline-flex h-6 max-w-[14rem] items-center gap-1 rounded-full px-2.5 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
-                >
-                    <span className="truncate">{picked?.name ?? String(filters.resource)}</span>
-                    <span className="sr-only">{t('rep_ar_unpick')}</span>
-                    <X aria-hidden className="h-3 w-3 shrink-0" />
-                </button>
-            )}
             <Segments
                 label={t('rep_fl_ar_state')}
                 options={(['active', 'cross', 'revoked'] as const).map((s) => ({
@@ -487,73 +475,86 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
 
 /* ─────────────────────────── the picked resource: owner strip and review sheet ─────────────────────────── */
 
-function OwnerStrip({ sheet, onOpen }: { sheet: Sheet; onOpen: () => void }) {
+/** The type's icon as on the Access pages, on a tint of its colour. */
+const TYPE_ICON: Record<AccessType, { icon: LucideIcon; tile: string }> = {
+    email_group: { icon: Users, tile: 'bg-violet-600/10 text-violet-600 dark:text-violet-400' },
+    file_share: { icon: Folder, tile: 'bg-teal-600/10 text-teal-600 dark:text-teal-400' },
+    social_platform: { icon: Globe, tile: 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400' },
+    software: { icon: Package, tile: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+};
+
+/** Owner words in the head line: name, code and department, or why there is none. */
+function OwnerWords({ sheet }: { sheet: Sheet }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const fact = (label: string, value: React.ReactNode, sub?: React.ReactNode) => (
-        <div className="min-w-0 px-5 py-3">
-            <dt className="text-muted-foreground text-xs">{label}</dt>
-            <dd className="mt-1 text-sm">{value}</dd>
-            {sub && <dd className="mt-1.5 flex flex-wrap gap-1.5">{sub}</dd>}
-        </div>
+    if (sheet.type === 'social_platform') return <span>{t('rep_ar_no_owner_registry')}</span>;
+    if (!sheet.owner) return <StatusBadge tone="amber">{t('rep_ar_owner_none')}</StatusBadge>;
+    return (
+        <span className="inline-flex flex-wrap items-center gap-x-1.5">
+            {sheet.type === 'email_group' ? t('rep_ar_owner_approver') : t('rep_c_ar_owner')}
+            <b className="text-foreground font-semibold">{sheet.owner.name}</b>
+            <span className="font-mono">{sheet.owner.code}</span>
+            {deptName(sheet.owner.department, lang)}
+            {sheet.owner_issue === 'gone' && <StatusBadge tone="red">{t('rep_ar_owner_left')}</StatusBadge>}
+        </span>
     );
+}
+
+/** Head of the member list while one resource is picked: what it is, its owner, the review sheet and ✕. */
+export function PickedResourceHead({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const { data } = useAccessMembersBreakdown(filters);
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const sheet = filters.resource ? (data?.sheet ?? null) : null;
+    if (!sheet) return null;
+    const { icon: Icon, tile } = TYPE_ICON[sheet.type];
 
     return (
-        <Card className="border-l-brand overflow-clip border-l-[3px]">
-            {/* Heading: the picked resource and its sheet */}
-            <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-5 py-3')}>
-                <div className="min-w-0">
-                    <h2 className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
-                        {sheet.name}
-                        <span className="text-muted-foreground font-mono text-xs font-normal">{sheet.code}</span>
-                    </h2>
-                    <p className="text-muted-foreground mt-0.5 inline-flex flex-wrap items-center gap-x-3 text-xs" translate="no">
-                        <TypeLabel type={sheet.type} />
-                        {sheet.detail}
+        <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center gap-x-4 gap-y-3 border-b px-5 py-4')}>
+            <span aria-hidden className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', tile)}>
+                <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+                <h2 className="flex flex-wrap items-baseline gap-x-2 text-[15px] font-semibold">
+                    {t('rep_ar_head_title').replace('{name}', sheet.name ?? '')}
+                    <span className="text-muted-foreground font-mono text-xs font-normal">{sheet.code}</span>
+                </h2>
+                <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs">
+                    <span>{t(`rep_ac_type_${sheet.type}`)}</span>
+                    {sheet.detail && <span translate="no">{sheet.detail}</span>}
+                    <span>{deptName(sheet.department, lang) ?? t('rep_ar_no_department')}</span>
+                    <OwnerWords sheet={sheet} />
+                </p>
+                {(sheet.mix.gone > 0 || sheet.mix.cross > 0) && (
+                    <p className="mt-2 flex flex-wrap gap-1.5">
+                        {sheet.mix.gone > 0 && (
+                            <StatusBadge tone="red">{t('rep_ar_head_gone').replace('{n}', count(sheet.mix.gone, lang))}</StatusBadge>
+                        )}
+                        {sheet.mix.cross > 0 && (
+                            <StatusBadge tone="amber">{t('rep_ar_strip_cross').replace('{n}', count(sheet.mix.cross, lang))}</StatusBadge>
+                        )}
                     </p>
-                </div>
-                <Button size="sm" onClick={onOpen}>
+                )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+                <Button size="sm" onClick={() => setSheetOpen(true)}>
                     <FileText className="h-4 w-4" />
                     {t('rep_ar_sheet_open')}
                 </Button>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => patch({ resource: null })}
+                    aria-label={t('rep_ar_unpick_named').replace('{name}', sheet.name ?? '')}
+                    title={t('rep_ar_unpick')}
+                >
+                    <X className="h-4 w-4" />
+                </Button>
             </div>
-            {/* Facts: department, owner, members */}
-            <dl className="divide-border/60 grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                {fact(
-                    t('rep_ac_dept_col_name'),
-                    deptName(sheet.department, lang) ?? <span className="text-muted-foreground">{t('rep_ar_no_department')}</span>,
-                )}
-                {fact(
-                    sheet.type === 'email_group' ? t('rep_ar_owner_approver') : t('rep_c_ar_owner'),
-                    sheet.type === 'social_platform' ? (
-                        <span className="text-muted-foreground">{t('rep_ar_no_owner_registry')}</span>
-                    ) : sheet.owner ? (
-                        <span className="inline-flex flex-wrap items-baseline gap-x-2">
-                            <b className="font-semibold">{sheet.owner.name}</b>
-                            <span className="text-muted-foreground font-mono text-xs">{sheet.owner.code}</span>
-                            <span className="text-muted-foreground text-xs">{deptName(sheet.owner.department, lang) ?? '—'}</span>
-                        </span>
-                    ) : (
-                        <StatusBadge tone="amber">{t('rep_ar_owner_none')}</StatusBadge>
-                    ),
-                    sheet.owner && sheet.owner_issue === 'gone' ? <StatusBadge tone="red">{t('rep_ar_owner_left')}</StatusBadge> : undefined,
-                )}
-                {fact(
-                    t('rep_ar_strip_members'),
-                    <b className="text-base font-semibold tabular-nums">{t('rep_ac_people_n').replace('{n}', count(sheet.list.length, lang))}</b>,
-                    sheet.mix.cross > 0 || sheet.mix.gone > 0 ? (
-                        <>
-                            {sheet.mix.cross > 0 && (
-                                <StatusBadge tone="amber">{t('rep_ar_strip_cross').replace('{n}', count(sheet.mix.cross, lang))}</StatusBadge>
-                            )}
-                            {sheet.mix.gone > 0 && (
-                                <StatusBadge tone="red">{t('rep_ar_strip_gone').replace('{n}', count(sheet.mix.gone, lang))}</StatusBadge>
-                            )}
-                        </>
-                    ) : undefined,
-                )}
-            </dl>
-        </Card>
+            <ReviewSheetDialog sheet={sheet} open={sheetOpen} onOpenChange={setSheetOpen} />
+        </div>
     );
 }
 
@@ -702,7 +703,6 @@ function CardsSkeleton() {
 export function AccessMembersCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const { data, isLoading, isError, error, isPlaceholderData } = useAccessMembersBreakdown(filters);
-    const [sheetOpen, setSheetOpen] = useState(false);
     // A pick the other filters have since left out: drop it rather than show an empty list under its chip.
     const stalePick = Boolean(data && !isPlaceholderData && filters.resource && !data.sheet);
     useEffect(() => {
@@ -717,12 +717,6 @@ export function AccessMembersCards({ filters, patch }: { filters: TabularFilters
         <div className="space-y-4">
             {showSpace && <StorageCards resources={data.resources} />}
             <ResourceTableCard resources={data.resources} filters={filters} patch={patch} />
-            {data.sheet && (
-                <>
-                    <OwnerStrip sheet={data.sheet} onOpen={() => setSheetOpen(true)} />
-                    <ReviewSheetDialog sheet={data.sheet} open={sheetOpen} onOpenChange={setSheetOpen} />
-                </>
-            )}
         </div>
     );
 }
