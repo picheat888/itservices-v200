@@ -8,6 +8,8 @@ import { SearchableSelect, type SearchOption } from '@/shared/components/searcha
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { refusalReason, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -15,7 +17,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToastStore, type ToastIcon } from '@/stores/toast';
-import { Folder, Globe, Package, Pencil, Plus, SquarePen, Trash2, User, Users } from 'lucide-react';
+import { Folder, Globe, Package, Pencil, Plus, SquarePen, Trash2, TriangleAlert, User, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAccessMutations, useResourceMembers, useSetEmailGroupOwner, useSetFileShareOwner } from '../hooks/use-access';
 import { AccessBadge } from './access-badge';
@@ -40,6 +42,8 @@ export type MemberTarget = {
     color?: string | null;
     /** Uploaded logo URL (social platforms / software) — shown round in the header. */
     logo?: string | null;
+    /** Software seat count (null = unlimited); adding stops once it is reached. */
+    seats?: number | null;
     /** When and by whom the resource was added / last changed. */
     stamps?: { createdAt?: string | null; createdBy?: string | null; updatedAt?: string | null; updatedBy?: string | null };
 };
@@ -135,6 +139,20 @@ export function MembersDrawer({
         setEditingOwner(false);
     }, [tgt?.id, tgt?.ownerEmployeeId]);
 
+    // Every opening starts with an empty add-member picker and the owner in display mode.
+    const openId = target?.id ?? null;
+    useEffect(() => {
+        if (openId === null) return;
+        setEmpId('');
+        setLevel('');
+        setEditingOwner(false);
+        setOwnerId(target?.ownerEmployeeId ? String(target.ownerEmployeeId) : '');
+    }, [openId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const savedOwnerId = tgt?.ownerEmployeeId ? String(tgt.ownerEmployeeId) : '';
+    const isDirty = empId !== '' || (editingOwner && ownerId !== savedOwnerId);
+    const guardClose = useDiscardGuard(!!target && isDirty);
+
     // Commit the owner change explicitly (Save), then drop back to display mode.
     const saveOwner = async () => {
         if (!tgt) return;
@@ -154,7 +172,7 @@ export function MembersDrawer({
                 // Delete reads clearer in the destructive palette — red card + trash icon.
                 // It borrows the error tone for the colour only: this succeeded, so it
                 // expires like any other confirmation instead of waiting to be dismissed.
-                useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'trash', { duration: 4000 });
+                useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'trash', { duration: 4000, polite: true });
             },
         });
 
@@ -172,7 +190,7 @@ export function MembersDrawer({
         });
         if (ok) {
             // Red for "deleted", but it succeeded — same 4s life as any confirmation.
-            useToastStore.getState().push(t('access_resource_deleted'), 'error', undefined, 'trash', { duration: 4000 });
+            useToastStore.getState().push(t('access_resource_deleted'), 'error', undefined, 'trash', { duration: 4000, polite: true });
             onClose();
         }
     };
@@ -219,18 +237,25 @@ export function MembersDrawer({
     const isEmail = kind === 'email-groups';
     const isFileShare = kind === 'file-shares';
     const tileColor = isSocial && tgt?.color ? tgt.color : meta.color;
+    const seatsFull = kind === 'software' && tgt?.seats != null && !isLoading && members.length >= tgt.seats;
     // Display name of the currently-selected owner (resolved from the picked id).
     const ownerName = ownerId ? (empById.get(Number(ownerId))?.name ?? tgt?.owner ?? null) : null;
 
     const add = async () => {
         if (!empId || !tgt) return;
-        await addMember.mutateAsync({
-            id: tgt.id,
-            payload: {
-                employee_id: Number(empId),
-                access_level: levels.length ? level || levels[levels.length - 1] : null,
-            },
-        });
+        try {
+            await addMember.mutateAsync({
+                id: tgt.id,
+                payload: {
+                    employee_id: Number(empId),
+                    access_level: levels.length ? level || levels[levels.length - 1] : null,
+                },
+            });
+        } catch (err) {
+            if (!refusalReason(err)) throw err;
+            useToastStore.getState().push(refusalText(err, t, 'access_add_err_'), 'error');
+            return;
+        }
         setEmpId('');
         setLevel('');
         toast(t('access_member_added'), 'users');
@@ -283,7 +308,8 @@ export function MembersDrawer({
                               <button
                                   type="button"
                                   title={t('access_remove')}
-                                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid h-7 w-7 place-items-center rounded-md transition-colors"
+                                  aria-label={`${t('access_remove')} ${m.employee ?? ''}`.trim()}
+                                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-brand/40 grid h-8 w-8 place-items-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
                                   onClick={() => askRemove(m)}
                               >
                                   <Trash2 className="h-4 w-4" />
@@ -302,7 +328,7 @@ export function MembersDrawer({
     };
 
     return (
-        <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={!!target} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-72px)] w-full max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 {tgt && (
                     <>
@@ -365,8 +391,9 @@ export function MembersDrawer({
                                             <button
                                                 type="button"
                                                 title={t('edit')}
+                                                aria-label={t('edit')}
                                                 onClick={() => setEditingOwner(true)}
-                                                className="text-muted-foreground hover:bg-accent hover:text-foreground -mr-1 grid h-7 w-7 shrink-0 place-items-center rounded-md transition-colors"
+                                                className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-brand/40 -mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
                                             >
                                                 <Pencil className="h-3.5 w-3.5" />
                                             </button>
@@ -404,11 +431,21 @@ export function MembersDrawer({
                                         </div>
                                     }
                                     actions={
-                                        mayEdit ? (
+                                        mayEdit && seatsFull ? (
+                                            <p className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-400">
+                                                <TriangleAlert className="h-4 w-4 shrink-0" />
+                                                {t('access_seats_full')
+                                                    .replace('{used}', String(members.length))
+                                                    .replace('{seats}', String(tgt.seats))}
+                                            </p>
+                                        ) : mayEdit ? (
                                             <div className="flex items-center gap-2">
-                                                <span className="text-muted-foreground shrink-0 text-sm font-medium">{t('access_add_member')}</span>
+                                                <label htmlFor="add-member-employee" className="text-muted-foreground shrink-0 text-sm font-medium">
+                                                    {t('access_add_member')}
+                                                </label>
                                                 <div className="w-96">
                                                     <SearchableSelect
+                                                        id="add-member-employee"
                                                         value={empId}
                                                         onChange={setEmpId}
                                                         options={addOpts}
@@ -418,7 +455,7 @@ export function MembersDrawer({
                                                 </div>
                                                 {levels.length > 0 && (
                                                     <Select value={level || levels[levels.length - 1]} onValueChange={setLevel}>
-                                                        <SelectTrigger className="h-9 w-32 shrink-0">
+                                                        <SelectTrigger className="h-9 w-32 shrink-0" aria-label={t('access_access_level')}>
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>

@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import type { AccessIssueItem, AccessKind, AccessSummary } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
@@ -67,16 +68,16 @@ function StatusRow({
     onClick?: () => void;
 }) {
     const toneClass = {
-        amber: 'text-amber-600 dark:text-amber-400',
+        amber: 'text-amber-700 dark:text-amber-400',
         red: 'text-destructive',
-        green: 'text-emerald-600 dark:text-emerald-400',
+        green: 'text-emerald-700 dark:text-emerald-400',
         ink: 'text-muted-foreground',
     }[tone];
     // Alert rows (amber/red) get a soft tinted background + a count pill so they
     // stand out from the all-clear rows; same paddings, so the card height is unchanged.
     const isAlert = tone === 'amber' || tone === 'red';
     const rowTint = {
-        amber: 'bg-amber-500/[0.07] hover:bg-amber-500/15',
+        amber: 'bg-amber-500/[0.05] hover:bg-amber-500/10',
         red: 'bg-destructive/[0.06] hover:bg-destructive/10',
         green: '',
         ink: '',
@@ -92,7 +93,7 @@ function StatusRow({
                 <span
                     className={cn(
                         'rounded-full px-2 py-px font-mono text-xs font-bold',
-                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
                     )}
                 >
                     {value}
@@ -108,7 +109,10 @@ function StatusRow({
             <button
                 type="button"
                 onClick={onClick}
-                className={cn('flex w-full items-start gap-3 rounded-lg px-3 py-2.5 transition-colors', rowTint || 'hover:bg-muted/40')}
+                className={cn(
+                    'focus-visible:ring-brand/40 flex w-full items-start gap-3 rounded-lg px-3 py-2.5 transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
+                    rowTint || 'hover:bg-muted/40',
+                )}
             >
                 {body}
             </button>
@@ -144,7 +148,7 @@ function IssueSection({
     t: (k: string) => string;
 }) {
     if (items.length === 0) return null;
-    const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-600 dark:text-amber-400';
+    const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-700 dark:text-amber-400';
     const toneRail = tone === 'red' ? 'border-l-destructive' : 'border-l-amber-500';
     return (
         // Severity is carried by the rail and the header icon together — one treatment, read
@@ -172,7 +176,7 @@ function IssueSection({
                             <button
                                 type="button"
                                 onClick={() => onPick(item.kind, item.id)}
-                                className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-2.5 py-2.5 text-left"
+                                className="focus-visible:ring-brand/40 flex min-w-0 flex-1 items-center gap-3 rounded-md px-2.5 py-2.5 text-left focus-visible:ring-[3px] focus-visible:outline-hidden"
                             >
                                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={tint(meta.color)}>
                                     <ChannelIcon className="h-4 w-4" />
@@ -262,7 +266,7 @@ function IssuesDrawer({
             entity: { name: item.employee ?? '—', sub: item.name ?? undefined },
             action: async () => {
                 await revoke.mutateAsync({ kind: item.kind, id: item.id, membershipId: item.membership_id as number });
-                useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'users', { duration: 4000 });
+                useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'users', { duration: 4000, polite: true });
             },
         });
     return (
@@ -366,7 +370,7 @@ export function AccessOverview({
                     const Icon = meta.icon;
                     // Signed 30-day change drives the delta line's arrow, wording and colour.
                     const net = stat.net_30d;
-                    const deltaTone = net > 0 ? 'text-emerald-600 dark:text-emerald-400' : net < 0 ? 'text-destructive' : 'text-muted-foreground';
+                    const deltaTone = net > 0 ? 'text-emerald-700 dark:text-emerald-400' : net < 0 ? 'text-destructive' : 'text-muted-foreground';
                     const deltaKey = net > 0 ? 'access_dash_up' : net < 0 ? 'access_dash_down' : 'access_dash_flat';
                     return (
                         <Card
@@ -374,8 +378,13 @@ export function AccessOverview({
                             role="button"
                             tabIndex={0}
                             onClick={() => onOpenTab(kind)}
-                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpenTab(kind)}
-                            className="hover:border-brand/40 cursor-pointer p-5 transition-colors"
+                            onKeyDown={(e) => {
+                                if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
+                                    e.preventDefault();
+                                    onOpenTab(kind);
+                                }
+                            }}
+                            className="hover:border-brand/40 focus-visible:ring-brand/40 cursor-pointer p-5 transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
                         >
                             <div className="flex items-start justify-between">
                                 <div className="text-muted-foreground text-sm">{t(meta.labelKey)}</div>
@@ -603,7 +612,16 @@ export function AccessOverview({
                                                     </span>
                                                 )}
                                                 <div className="min-w-0">
-                                                    <div className="font-medium">{r.name}</div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onOpenResource(r.kind, r.id);
+                                                        }}
+                                                        className="focus-visible:ring-brand/40 rounded-sm text-left font-medium hover:underline focus-visible:ring-[3px] focus-visible:outline-hidden"
+                                                    >
+                                                        {r.name}
+                                                    </button>
                                                     {r.detail && (
                                                         <div className="text-muted-foreground max-w-[260px] truncate font-mono text-[11px]">
                                                             {r.detail}
@@ -613,12 +631,9 @@ export function AccessOverview({
                                             </div>
                                         </td>
                                         <td className="px-5 py-2.5">
-                                            <span
-                                                className="inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                                                style={tint(meta.color)}
-                                            >
+                                            <StatusBadge color={meta.color} dot={false}>
                                                 {t(meta.labelKey)}
-                                            </span>
+                                            </StatusBadge>
                                         </td>
                                         <td className="px-5 py-2.5">
                                             <div className="flex items-center justify-end gap-3">
