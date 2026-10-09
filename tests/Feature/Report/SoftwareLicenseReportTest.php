@@ -161,9 +161,28 @@ class SoftwareLicenseReportTest extends TestCase
         $report = app(SoftwareLicenseReport::class);
         $sections = $report->exportSections($this->userWith(), $report->resolveFilters([]));
 
-        $this->assertSame(['การใช้ License ต่อซอฟต์แวร์', 'เรียกคืนได้จากผู้ลาออก', 'คำขอที่รอใช้ seat'], array_column($sections, 'title'));
+        $this->assertSame(['การใช้ License ต่อซอฟต์แวร์', 'เรียกคืนได้จากผู้ลาออก', 'คำขอที่รอ License'], array_column($sections, 'title'));
         $this->assertSame(['Adobe', 2, 3, -1, 150, 'ใช้เกิน'], [$sections[0]['rows'][0][1], ...array_slice($sections[0]['rows'][0], 4, 5)]);
         $this->assertSame('ผู้ถือ License', $report->sheetTitle());
+    }
+
+    public function test_searching_a_holder_lists_that_holder_not_every_holder_of_their_software(): void
+    {
+        $rows = $this->rows('?search=Holder1+Test');
+        $this->assertSame(['EMP-001'], array_column($rows, 'employee_code'));
+
+        // A software found by its own name keeps all its holders.
+        $this->assertCount(3, $this->rows('?search=Adobe'));
+    }
+
+    public function test_a_picked_software_the_filters_leave_out_is_not_named(): void
+    {
+        $data = $this->actingAs($this->userWith())
+            ->getJson('/api/reports/access/software-licenses/breakdown?software_id='.$this->sw['zoom']->id.'&license_type=free')->json('data');
+        $this->assertNull($data['picked']);
+
+        $kept = $this->actingAs($this->userWith())->getJson('/api/reports/access/software-licenses/breakdown?software_id='.$this->sw['zoom']->id)->json('data');
+        $this->assertSame('Zoom', $kept['picked']);
     }
 
     public function test_needs_software_view(): void

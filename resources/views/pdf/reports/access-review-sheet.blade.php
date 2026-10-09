@@ -48,21 +48,21 @@
             <td>
                 @if ($logo)<img class="logo" src="{{ $logo }}" alt="">@endif
                 <h1>ใบทบทวนสมาชิก</h1>
-                <div class="muted">{{ $company }} · ข้อมูล ณ {{ $printedAt }} · พิมพ์โดย {{ $printedBy }}</div>
+                <div class="muted">{{ $company }}, ข้อมูล ณ {{ $printedAt }}, พิมพ์โดย {{ $printedBy }}</div>
             </td>
             <td class="code">{{ $sheet['code'] }}</td>
         </tr>
     </table>
 
     <table class="facts">
-        <tr><td class="k">ทรัพยากร</td><td><b>{{ $sheet['name'] }}</b> · {{ $types[$sheet['type']] }}</td></tr>
+        <tr><td class="k">Resource</td><td><b>{{ $sheet['name'] }}</b> ({{ $types[$sheet['type']] }})</td></tr>
         <tr><td class="k">{{ $address[$sheet['type']] }}</td><td>{{ $sheet['detail'] ?? '—' }}</td></tr>
         <tr><td class="k">แผนก</td><td>{{ $ownable ? $dept($sheet['department']) : 'ไม่ผูกแผนก' }}</td></tr>
         <tr><td class="k">เจ้าของ</td><td>
             @if (! $ownable)
                 — (ไม่มีเจ้าของในทะเบียนนี้ IT เป็นผู้ทบทวน)
             @elseif ($sheet['owner'])
-                <b>{{ $sheet['owner']['name'] }}</b> ({{ $sheet['owner']['code'] }}) · {{ $dept($sheet['owner']['department']) }}{{ $sheet['owner_issue'] === 'gone' ? ' · ลาออกแล้ว' : '' }}
+                <b>{{ $sheet['owner']['name'] }}</b> ({{ $sheet['owner']['code'] }}), {{ $dept($sheet['owner']['department']) }}{{ $sheet['owner_issue'] === 'gone' ? ', ลาออกแล้ว' : '' }}
             @else
                 ยังไม่มี
             @endif
@@ -93,7 +93,7 @@
         @endforelse
         </tbody>
     </table>
-    <div class="tot">รวม {{ count($sheet['list']) }} คน{{ $sheet['mix']['cross'] ? ' · ข้ามแผนก '.$sheet['mix']['cross'] : '' }}{{ $sheet['mix']['gone'] ? ' · ลาออก '.$sheet['mix']['gone'] : '' }}</div>
+    <div class="tot">รวม {{ count($sheet['list']) }} คน{{ $sheet['mix']['cross'] ? ', ข้ามแผนก '.$sheet['mix']['cross'] : '' }}{{ $sheet['mix']['gone'] ? ', ลาออก '.$sheet['mix']['gone'] : '' }}</div>
 
     <table class="sign">
         <tr>

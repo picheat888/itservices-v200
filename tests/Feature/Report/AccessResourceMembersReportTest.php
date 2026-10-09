@@ -193,10 +193,31 @@ class AccessResourceMembersReportTest extends TestCase
         $report = app(AccessResourceMembersReport::class);
         $sections = $report->exportSections($this->userWith(), $report->resolveFilters([]));
 
-        $this->assertSame(['ทรัพยากร', 'พื้นที่ File Share ตามแผนก'], array_column($sections, 'title'));
+        $this->assertSame(['Resource', 'พื้นที่ File Share ตามแผนก'], array_column($sections, 'title'));
         $space = collect($sections[1]['rows'])->keyBy(0);
         $this->assertEquals(['ฝ่ายควบคุมคุณภาพ', 2, 500, 1], $space['ฝ่ายควบคุมคุณภาพ']);
         $this->assertEquals(['ฝ่ายผลิต', 1, 1024, 0], $space['ฝ่ายผลิต']);
+    }
+
+    public function test_a_picked_resource_the_filters_leave_out_has_no_sheet(): void
+    {
+        $prod = Department::where('tag', 'PD')->value('id');
+        $data = $this->actingAs($this->userWith())
+            ->getJson('/api/reports/access/resource-members/breakdown?resource='.$this->pick('fs1').'&department_id='.$prod)->json('data');
+
+        $this->assertNull($data['sheet']);
+    }
+
+    public function test_a_member_with_no_department_is_not_counted_across_departments(): void
+    {
+        $nobody = Employee::create(['code' => 'EMP-N', 'first_name' => 'No', 'last_name' => 'Dept', 'status' => 'active']);
+        AccessMembership::create([
+            'resource_type' => 'email_group', 'resource_id' => $this->set['eg1']->id, 'employee_id' => $nobody->id, 'granted_at' => '2026-05-01 09:00',
+        ]);
+
+        $eg1 = collect($this->actingAs($this->userWith())->getJson('/api/reports/access/resource-members/breakdown')->json('data.resources'))
+            ->firstWhere('code', 'MG-0001');
+        $this->assertSame(['in_dept' => 1, 'cross' => 1, 'gone' => 0, 'open' => 1], $eg1['mix']);
     }
 
     public function test_the_report_needs_all_three_registries(): void

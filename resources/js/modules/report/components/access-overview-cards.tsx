@@ -70,6 +70,12 @@ const SEGMENT =
 const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
 const deptName = (d: AccessDepartment, lang: Lang) => (d ? (lang === 'th' && d.name_th) || d.name : null);
 
+/** Scroll to the list under the cards, without motion when the reader asks for none. */
+export function scrollToRows() {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('report-rows')?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+}
+
 /** A registry's dot in its colour. */
 export function TypeDot({ type }: { type: AccessType }) {
     return <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', FILL[TYPE_TONE[type]])} />;
@@ -682,7 +688,7 @@ function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] 
                                 key={`${r.type}-${r.id}`}
                                 head={<ResourceHead r={r} />}
                                 side={<DaysOut days={r.owner.days} />}
-                                sub={[t('rep_ac_owner_named').replace('{name}', `${r.owner.name} · ${r.owner.code}`), t('rep_ac_find_owner')]}
+                                sub={[t('rep_ac_owner_named').replace('{name}', `${r.owner.name} (${r.owner.code})`), t('rep_ac_find_owner')]}
                             />
                         )}
                     />
@@ -867,6 +873,9 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
                                             'max-w-[12rem] truncate text-left font-medium',
                                             d.name === null && 'text-muted-foreground font-normal',
                                         )}
+                                        title={
+                                            deptName(d.name === null ? null : { name: d.name, name_th: d.name_th }, lang) ?? t('rep_ac_no_department')
+                                        }
                                     >
                                         {deptName(d.name === null ? null : { name: d.name, name_th: d.name_th }, lang) ?? t('rep_ac_no_department')}
                                     </th>

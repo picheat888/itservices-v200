@@ -203,7 +203,7 @@ class AccessOverviewReportTest extends TestCase
         $report = app(AccessOverviewReport::class);
         $sections = $report->exportSections($this->userWith(), $report->resolveFilters([]));
 
-        $this->assertSame(['ให้–ถอนรายเดือน', 'ตามแผนก', 'ผู้ลาออกที่ยังถือสิทธิ์', 'ทรัพยากรที่ต้องดูแล'], array_column($sections, 'title'));
+        $this->assertSame(['ให้–ถอนรายเดือน', 'ตามแผนก', 'ผู้ลาออกที่ยังถือสิทธิ์', 'Resource ที่ต้องดูแล'], array_column($sections, 'title'));
         $this->assertSame('ม.ค. 2026', $sections[0]['rows'][0][0]);
         $this->assertSame('เจ้าของลาออกแล้ว', $sections[3]['rows'][0][0]);
     }

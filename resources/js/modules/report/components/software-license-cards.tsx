@@ -5,14 +5,14 @@ import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useSoftwareLicenseBreakdown } from '../hooks/use-reports';
 import type { SoftwareLicenseBreakdown, SoftwareSeats, TabularFilters } from '../types';
+import { CODE_LINK, DaysOut, Group, GroupRow, scrollToRows, Segments, TD, TH } from './access-overview-cards';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
-import { CODE_LINK, DaysOut, Group, GroupRow, Segments, TD, TH } from './access-overview-cards';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
@@ -35,7 +35,9 @@ const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH
 export function SoftwareUsageSegments({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const { data } = useSoftwareLicenseBreakdown(filters);
-    const usages = (['full', 'available', 'unlimited', 'over'] as const).filter((u) => u !== 'over' || (data?.usage.over ?? 0) > 0 || filters.usage === 'over');
+    const usages = (['full', 'available', 'unlimited', 'over'] as const).filter(
+        (u) => u !== 'over' || (data?.usage.over ?? 0) > 0 || filters.usage === 'over',
+    );
     return (
         <Segments
             size="md"
@@ -60,16 +62,20 @@ export function SoftwareListLead({ filters, patch }: { filters: TabularFilters; 
                 <button
                     type="button"
                     onClick={() => patch({ software_id: null })}
-                    aria-label={t('rep_sl_unpick')}
                     className="bg-brand/10 text-brand hover:bg-brand/20 focus-visible:ring-brand inline-flex h-6 max-w-[14rem] items-center gap-1 rounded-full px-2.5 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <span className="truncate">{data?.picked ?? String(filters.software_id)}</span>
+                    <span className="sr-only">{t('rep_sl_unpick')}</span>
                     <X aria-hidden className="h-3 w-3 shrink-0" />
                 </button>
             )}
             <Segments
                 label={t('rep_fl_sl_state')}
-                options={(['active', 'revoked'] as const).map((s) => ({ value: s as string, label: t(`rep_sl_state_${s}`), count: data ? data.states[s] : null }))}
+                options={(['active', 'revoked'] as const).map((s) => ({
+                    value: s as string,
+                    label: t(`rep_sl_state_${s}`),
+                    count: data ? data.states[s] : null,
+                }))}
                 value={(filters.state as string | null | undefined) ?? 'active'}
                 onChange={(state) => patch({ state })}
             />
@@ -89,7 +95,10 @@ function SeatBar({ s }: { s: SoftwareSeats }) {
         { key: 'work', value: s.used - s.gone, tone: FILL['soft-blue'], label: t('rep_sl_bar_work') },
         { key: 'gone', value: s.gone, tone: FILL['soft-red'], label: t('rep_sl_bar_gone') },
     ].filter((p) => p.value > 0);
-    const words = [...parts.map((p) => `${p.label} ${count(p.value, lang)}`), `${t('rep_sl_bar_free')} ${count(Math.max(0, s.left ?? 0), lang)}`].join(', ');
+    const words = [
+        ...parts.map((p) => `${p.label} ${count(p.value, lang)}`),
+        `${t('rep_sl_bar_free')} ${count(Math.max(0, s.left ?? 0), lang)}`,
+    ].join(', ');
 
     return (
         <div className="min-w-[9rem]">
@@ -117,7 +126,9 @@ function SeatBar({ s }: { s: SoftwareSeats }) {
             </div>
             {s.usage === 'full' && <div className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">{t('rep_sl_full_label')}</div>}
             {s.usage === 'over' && (
-                <div className="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">{t('rep_sl_over_label').replace('{n}', count(s.used - s.seats, lang))}</div>
+                <div className="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
+                    {t('rep_sl_over_label').replace('{n}', count(s.used - s.seats, lang))}
+                </div>
             )}
         </div>
     );
@@ -130,9 +141,18 @@ function Todo({ s }: { s: SoftwareSeats }) {
     const lines: { tone: 'bad' | 'warn' | 'ok' | 'muted'; text: string }[] = [];
     if (s.usage === 'over') lines.push({ tone: 'bad', text: t('rep_sl_todo_over').replace('{n}', count(s.used - (s.seats ?? 0), lang)) });
     if (s.blocked) lines.push({ tone: 'bad', text: t('rep_sl_todo_blocked').replace('{n}', count(s.requests, lang)) });
-    if (s.gone > 0) lines.push({ tone: s.blocked ? 'bad' : 'warn', text: t(s.blocked ? 'rep_sl_todo_gone_for_requests' : 'rep_sl_todo_gone').replace('{n}', count(s.gone, lang)) });
-    if (!s.blocked && s.left !== null && s.requests > s.left) {
-        lines.push({ tone: 'warn', text: t('rep_sl_todo_short').replace('{n}', count(s.requests, lang)).replace('{left}', count(Math.max(0, s.left), lang)) });
+    if (s.gone > 0)
+        lines.push({
+            tone: s.blocked ? 'bad' : 'warn',
+            text: t(s.blocked ? 'rep_sl_todo_gone_for_requests' : 'rep_sl_todo_gone').replace('{n}', count(s.gone, lang)),
+        });
+    if (!s.blocked && s.left !== null && s.requests > 0 && s.requests > Math.max(0, s.left)) {
+        lines.push({
+            tone: 'warn',
+            text: t('rep_sl_todo_short')
+                .replace('{n}', count(s.requests, lang))
+                .replace('{left}', count(Math.max(0, s.left), lang)),
+        });
     } else if (!s.blocked && s.requests > 0) {
         lines.push({ tone: 'muted', text: t('rep_sl_todo_enough').replace('{n}', count(s.requests, lang)) });
     }
@@ -168,7 +188,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
     const { folds, shown } = fold(ordered, ROWS_SHOWN, open);
     const pick = (s: SoftwareSeats) => {
         patch({ software_id: s.id, state: 'active' });
-        requestAnimationFrame(() => document.getElementById('report-rows')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+        requestAnimationFrame(scrollToRows);
     };
 
     return (
@@ -234,7 +254,11 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                     return (
                                         <tr
                                             key={s.id}
-                                            className={cn('border-border/60 border-b last:border-b-0', apart && '[&>td]:border-border [&>td]:border-t-2 [&>td]:border-dashed', picked && 'bg-brand/5')}
+                                            className={cn(
+                                                'border-border/60 border-b last:border-b-0',
+                                                apart && '[&>td]:border-border [&>td]:border-t-2 [&>td]:border-dashed',
+                                                picked && 'bg-brand/5',
+                                            )}
                                         >
                                             <td className={TD}>
                                                 <div className="min-w-0">
@@ -252,8 +276,9 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                                 </div>
                                             </td>
                                             <td className={TD}>{s.license_type ? t(`access_lic_${s.license_type}`) : '—'}</td>
-                                            <td className={cn(TD, 'text-right font-mono tabular-nums whitespace-nowrap')}>
-                                                <b>{count(s.used, lang)}</b> <span className="text-muted-foreground">/ {s.seats === null ? '∞' : count(s.seats, lang)}</span>
+                                            <td className={cn(TD, 'text-right font-mono whitespace-nowrap tabular-nums')}>
+                                                <b>{count(s.used, lang)}</b>{' '}
+                                                <span className="text-muted-foreground">/ {s.seats === null ? '∞' : count(s.seats, lang)}</span>
                                                 {s.pct !== null && (
                                                     <div
                                                         className={cn(
@@ -290,7 +315,9 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                                         type="button"
                                                         aria-pressed={picked}
                                                         onClick={() => (picked ? patch({ software_id: null }) : pick(s))}
-                                                        aria-label={t('rep_sl_pick_aria').replace('{name}', s.name).replace('{n}', count(s.used, lang))}
+                                                        aria-label={t('rep_sl_pick_aria')
+                                                            .replace('{name}', s.name)
+                                                            .replace('{n}', count(s.used, lang))}
                                                         className={cn(
                                                             'border-border focus-visible:ring-brand rounded-full border px-2 py-px text-[11px] font-semibold whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none',
                                                             picked ? 'bg-brand text-brand-foreground border-brand' : 'text-brand hover:bg-brand/10',
@@ -340,7 +367,10 @@ function LeaversCard({ leavers }: { leavers: SoftwareLicenseBreakdown['leavers']
                             head={
                                 <>
                                     {canOpen(`/employees?view=${p.employee_id}`) ? (
-                                        <Link to={`/employees?view=${p.employee_id}`} className="text-brand rounded-sm font-medium hover:underline">
+                                        <Link
+                                            to={`/employees?view=${p.employee_id}`}
+                                            className="text-brand focus-visible:ring-brand rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                                        >
                                             {p.name}
                                         </Link>
                                     ) : (
@@ -359,7 +389,11 @@ function LeaversCard({ leavers }: { leavers: SoftwareLicenseBreakdown['leavers']
                                 <span key={g.id} className="bg-muted inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px]">
                                     <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL['access-software'])} />
                                     {g.name}
-                                    {g.blocked && <b className="text-red-700 dark:text-red-300">{t('rep_sl_chip_waiting').replace('{n}', count(g.requests, lang))}</b>}
+                                    {g.blocked && (
+                                        <b className="text-red-700 dark:text-red-300">
+                                            {t('rep_sl_chip_waiting').replace('{n}', count(g.requests, lang))}
+                                        </b>
+                                    )}
                                 </span>
                             ))}
                         />
@@ -398,12 +432,13 @@ function RequestsCard({ requests }: { requests: Request[] }) {
                     </StatusBadge>
                 }
                 sub={[
-                    [r.requester.name, dept].filter(Boolean).join(' · '),
+                    r.requester.name,
+                    dept,
                     r.created_at ? t('rep_sl_asked_on').replace('{date}', shortDate(r.created_at, lang)) : null,
                     r.seats_left === null ? null : r.seats_left <= 0 ? (
                         <b className="text-red-700 dark:text-red-300">
                             {t('rep_sl_req_full')}
-                            {r.gone > 0 && ` · ${t('rep_sl_req_take_back').replace('{n}', count(r.gone, lang))}`}
+                            {r.gone > 0 && `, ${t('rep_sl_req_take_back').replace('{n}', count(r.gone, lang))}`}
                         </b>
                     ) : (
                         t('rep_sl_req_left').replace('{n}', count(r.seats_left, lang))
@@ -423,8 +458,22 @@ function RequestsCard({ requests }: { requests: Request[] }) {
                 <CardEmpty>{t('rep_sl_requests_empty')}</CardEmpty>
             ) : (
                 <>
-                    <Group first title={t('rep_sl_requests_approved')} total={count(approved.length, lang)} rows={approved} link={link} render={row} />
-                    <Group first={approved.length === 0} title={t('rep_sl_requests_pending')} total={count(pending.length, lang)} rows={pending} link={link} render={row} />
+                    <Group
+                        first
+                        title={t('rep_sl_requests_approved')}
+                        total={count(approved.length, lang)}
+                        rows={approved}
+                        link={link}
+                        render={row}
+                    />
+                    <Group
+                        first={approved.length === 0}
+                        title={t('rep_sl_requests_pending')}
+                        total={count(pending.length, lang)}
+                        rows={pending}
+                        link={link}
+                        render={row}
+                    />
                 </>
             )}
         </Card>
@@ -456,7 +505,12 @@ function CardsSkeleton() {
 
 export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useSoftwareLicenseBreakdown(filters);
+    const { data, isLoading, isError, error, isPlaceholderData } = useSoftwareLicenseBreakdown(filters);
+    // A pick the other filters have since left out: drop it rather than show an empty list under its chip.
+    const stalePick = Boolean(data && !isPlaceholderData && filters.software_id && !data.picked);
+    useEffect(() => {
+        if (stalePick) patch({ software_id: null });
+    }, [stalePick, patch]);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;

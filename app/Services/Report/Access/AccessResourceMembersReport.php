@@ -53,6 +53,9 @@ class AccessResourceMembersReport extends TabularReport
     /** @var array<string, Collection<int, array<string, mixed>>> resources() per filter set, within one request */
     private array $figures = [];
 
+    /** @var array<string, Collection<int, AccessMembership>> activeMembers() per filter set, within one request */
+    private array $members = [];
+
     public function key(): string
     {
         return 'access.resource_members';
@@ -83,14 +86,16 @@ class AccessResourceMembersReport extends TabularReport
      */
     private static function resourceOptions(): array
     {
-        $options = [];
-        foreach (self::TYPES as $type) {
-            foreach (AccessFacts::MODELS[$type]::query()->orderBy('code')->get(['id', 'code', 'name']) as $r) {
-                $options[] = ['value' => "{$type}:{$r->id}", 'label' => trim("{$r->code} {$r->name}")];
+        return once(function (): array {
+            $options = [];
+            foreach (self::TYPES as $type) {
+                foreach (AccessFacts::MODELS[$type]::query()->orderBy('code')->get(['id', 'code', 'name']) as $r) {
+                    $options[] = ['value' => "{$type}:{$r->id}", 'label' => trim("{$r->code} {$r->name}")];
+                }
             }
-        }
 
-        return $options;
+            return $options;
+        });
     }
 
     /**
@@ -185,7 +190,7 @@ class AccessResourceMembersReport extends TabularReport
 
         return match (true) {
             (bool) $m->employee?->hasLeft() => 'gone',
-            $department === null => 'open',
+            $department === null, $m->employee?->department_id === null => 'open',
             (int) $department === (int) $m->employee?->department_id => 'in_dept',
             default => 'cross',
         };
@@ -253,7 +258,7 @@ class AccessResourceMembersReport extends TabularReport
      */
     private function activeMembers(array $filters): Collection
     {
-        return AccessFacts::withResource($this->memberships($filters))->with('employee.department')
+        return $this->members[md5(serialize($filters))] ??= AccessFacts::withResource($this->memberships($filters))->with('employee.department')
             ->whereNull('access_memberships.revoked_at')->get()
             ->each(fn (AccessMembership $m) => $m->setAttribute('kind', $m->resource ? $this->kindOf($m, $m->resource, $m->resource_type) : 'open'));
     }
@@ -261,15 +266,15 @@ class AccessResourceMembersReport extends TabularReport
     public function columns(): array
     {
         return [
-            ReportColumn::text('resource', 'ทรัพยากร', fn (AccessMembership $m) => $m->resource?->getAttribute('name'))->labelKey('rep_c_ac_resource'),
+            ReportColumn::text('resource', 'Resource', fn (AccessMembership $m) => $m->resource?->getAttribute('name'))->labelKey('rep_c_ac_resource'),
             // Drawn under the resource, the name and the status on the page.
             ReportColumn::enum('resource_type', 'ประเภท', fn (AccessMembership $m) => $m->resource_type, AccessFacts::TYPE_KEYS, AccessFacts::TYPE_TH)
                 ->labelKey('rep_c_ac_type')->hiddenByDefault(),
-            ReportColumn::text('resource_code', 'รหัสทรัพยากร', fn (AccessMembership $m) => $m->resource?->getAttribute('code'))
+            ReportColumn::text('resource_code', 'รหัส Resource', fn (AccessMembership $m) => $m->resource?->getAttribute('code'))
                 ->labelKey('rep_c_ac_resource_code')->hiddenByDefault(),
             ReportColumn::text('resource_detail', 'อีเมล / Path / URL', fn (AccessMembership $m) => AccessFacts::detail($m->resource))
                 ->labelKey('rep_c_ac_resource_detail')->hiddenByDefault(),
-            ReportColumn::localized('resource_department', 'แผนกของทรัพยากร', fn (AccessMembership $m) => in_array($m->resource_type, AccessFacts::OWNABLE, true) ? AccessFacts::department($m->resource) : null)
+            ReportColumn::localized('resource_department', 'แผนกของ Resource', fn (AccessMembership $m) => in_array($m->resource_type, AccessFacts::OWNABLE, true) ? AccessFacts::department($m->resource) : null)
                 ->labelKey('rep_c_ac_resource_department')->hiddenByDefault(),
             ReportColumn::text('owner', 'เจ้าของ', fn (AccessMembership $m) => $this->ownerLabel($m))->labelKey('rep_c_ar_owner')->sheetOnly(),
             ReportColumn::text('employee', 'พนักงาน', fn (AccessMembership $m) => $m->employee?->name)
@@ -320,7 +325,7 @@ class AccessResourceMembersReport extends TabularReport
         $ownable = $resources->whereIn('type', AccessFacts::OWNABLE);
 
         return [
-            ReportSummary::make('ar_resources', 'ทรัพยากร', $resources->count())->withSplit(array_map(fn (string $type) => [
+            ReportSummary::make('ar_resources', 'Resource', $resources->count())->withSplit(array_map(fn (string $type) => [
                 'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
             ], self::TYPES)),
             ReportSummary::make('ar_members', 'สมาชิกทั้งหมด', $total)->withNote([
@@ -361,7 +366,8 @@ class AccessResourceMembersReport extends TabularReport
             'types' => collect(self::TYPES)->mapWithKeys(fn (string $t) => [$t => $everyType->where('type', $t)->count()])->all(),
             'states' => ['active' => $members->count(), 'cross' => $members->where('kind', 'cross')->count(), 'revoked' => $revoked],
             'resources' => $resources->map(fn (array $r) => collect($r)->except('rank')->all())->all(),
-            'sheet' => ($filters['resource'] ?? null) ? $this->sheet($filters) : null,
+            // Only while the picked resource is still among the filtered ones; the page clears a stale pick.
+            'sheet' => $resources->contains(fn (array $r) => "{$r['type']}:{$r['id']}" === ($filters['resource'] ?? null)) ? $this->sheet($filters) : null,
         ];
     }
 
@@ -415,7 +421,7 @@ class AccessResourceMembersReport extends TabularReport
 
         return [
             [
-                'title' => 'ทรัพยากร',
+                'title' => 'Resource',
                 'headings' => ['ประเภท', 'รหัส', 'ชื่อ', 'อีเมล / Path / URL', 'แผนก', 'เจ้าของ', 'สมาชิก', 'ในแผนก', 'ข้ามแผนก', 'ผู้ลาออก', 'Read', 'Read/Write', 'ขนาด'],
                 'rows' => $resources->map(fn (array $r) => [
                     AccessFacts::TYPE_TH[$r['type']], $r['code'], $r['name'], $r['detail'], $name($r['department']),

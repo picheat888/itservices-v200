@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
 import { Download, FileText, Loader2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-reports';
 import type {
     AccessDepartment,
@@ -20,7 +20,7 @@ import type {
     ChartTone,
     TabularFilters,
 } from '../types';
-import { Cols, Group, GroupRow, NUM, registryOptions, ResourceHead, Segments, TD, TH, TypeLabel } from './access-overview-cards';
+import { Cols, Group, GroupRow, NUM, registryOptions, ResourceHead, scrollToRows, Segments, TD, TH, TypeLabel } from './access-overview-cards';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -101,10 +101,10 @@ export function AccessMembersListLead({ filters, patch }: { filters: TabularFilt
                 <button
                     type="button"
                     onClick={() => patch({ resource: null })}
-                    aria-label={t('rep_ar_unpick')}
                     className="bg-brand/10 text-brand hover:bg-brand/20 focus-visible:ring-brand inline-flex h-6 max-w-[14rem] items-center gap-1 rounded-full px-2.5 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <span className="truncate">{picked?.name ?? String(filters.resource)}</span>
+                    <span className="sr-only">{t('rep_ar_unpick')}</span>
                     <X aria-hidden className="h-3 w-3 shrink-0" />
                 </button>
             )}
@@ -230,6 +230,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                                             'max-w-[12rem] truncate text-left font-medium',
                                             r.muted && 'text-muted-foreground font-normal',
                                         )}
+                                        title={r.name}
                                     >
                                         {r.name}
                                     </th>
@@ -407,7 +408,7 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
     const legend = MIX.filter((m) => resources.some((r) => r.mix[m.key] > 0));
     const pick = (r: Resource) => {
         patch({ resource: keyOf(r), state: 'active' });
-        requestAnimationFrame(() => document.getElementById('report-rows')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+        requestAnimationFrame(scrollToRows);
     };
 
     return (
@@ -577,16 +578,11 @@ function OwnerStrip({ sheet, onOpen }: { sheet: Sheet; onOpen: () => void }) {
                 sheet.type === 'social_platform' ? (
                     <span className="text-muted-foreground">{t('rep_ar_no_owner_registry')}</span>
                 ) : sheet.owner ? (
-                    <span>
-                        <b>{sheet.owner.name}</b>{' '}
-                        <span className="text-muted-foreground text-xs">
-                            {sheet.owner.code} · {deptName(sheet.owner.department, lang) ?? '—'}
-                        </span>
-                        {sheet.owner_issue === 'gone' && (
-                            <StatusBadge tone="red" className="ml-2">
-                                {t('rep_ar_owner_left')}
-                            </StatusBadge>
-                        )}
+                    <span className="inline-flex flex-wrap items-baseline gap-x-2">
+                        <b>{sheet.owner.name}</b>
+                        <span className="text-muted-foreground font-mono text-xs">{sheet.owner.code}</span>
+                        <span className="text-muted-foreground text-xs">{deptName(sheet.owner.department, lang) ?? '—'}</span>
+                        {sheet.owner_issue === 'gone' && <StatusBadge tone="red">{t('rep_ar_owner_left')}</StatusBadge>}
                     </span>
                 ) : (
                     <StatusBadge tone="amber">{t('rep_ar_owner_none')}</StatusBadge>
@@ -595,7 +591,7 @@ function OwnerStrip({ sheet, onOpen }: { sheet: Sheet; onOpen: () => void }) {
             {fact(
                 t('rep_ar_strip_members'),
                 <b>{t('rep_ac_people_n').replace('{n}', count(sheet.list.length, lang))}</b>,
-                flags.join(' · ') || undefined,
+                flags.join(', ') || undefined,
             )}
             <Button variant="outline" size="sm" className="ml-auto" onClick={onOpen}>
                 <FileText className="h-4 w-4" />
@@ -628,7 +624,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
             <dl className="mb-3 grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1">
                 <dt className="text-slate-500">{t('rep_ar_col_resource')}</dt>
                 <dd>
-                    <b>{sheet.name}</b> · {t(`rep_ac_type_${sheet.type}`)}
+                    <b>{sheet.name}</b> ({t(`rep_ac_type_${sheet.type}`)})
                 </dd>
                 <dt className="text-slate-500">{t(`rep_ar_sheet_address_${sheet.type}`)}</dt>
                 <dd translate="no">{sheet.detail ?? '—'}</dd>
@@ -639,7 +635,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                     {!ownable
                         ? t('rep_ar_sheet_no_owner')
                         : sheet.owner
-                          ? `${sheet.owner.name} (${sheet.owner.code}) · ${deptName(sheet.owner.department, lang) ?? '—'}${sheet.owner_issue === 'gone' ? ` · ${t('rep_ar_owner_left')}` : ''}`
+                          ? `${sheet.owner.name} (${sheet.owner.code}), ${deptName(sheet.owner.department, lang) ?? '—'}${sheet.owner_issue === 'gone' ? `, ${t('rep_ar_owner_left')}` : ''}`
                           : t('rep_ar_owner_none')}
                 </dd>
             </dl>
@@ -749,8 +745,13 @@ function CardsSkeleton() {
 
 export function AccessMembersCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useAccessMembersBreakdown(filters);
+    const { data, isLoading, isError, error, isPlaceholderData } = useAccessMembersBreakdown(filters);
     const [sheetOpen, setSheetOpen] = useState(false);
+    // A pick the other filters have since left out: drop it rather than show an empty list under its chip.
+    const stalePick = Boolean(data && !isPlaceholderData && filters.resource && !data.sheet);
+    useEffect(() => {
+        if (stalePick) patch({ resource: null });
+    }, [stalePick, patch]);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;

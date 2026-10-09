@@ -99,12 +99,12 @@ class AccessOverviewReport extends TabularReport
             ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee)),
             ReportColumn::enum('resource_type', 'ประเภท', fn (AccessMembership $m) => $m->resource_type, AccessFacts::TYPE_KEYS, AccessFacts::TYPE_TH)
                 ->labelKey('rep_c_ac_type'),
-            ReportColumn::text('resource', 'ทรัพยากร', fn (AccessMembership $m) => $m->resource?->getAttribute('name'))->labelKey('rep_c_ac_resource'),
-            ReportColumn::text('resource_code', 'รหัสทรัพยากร', fn (AccessMembership $m) => $m->resource?->getAttribute('code'))
+            ReportColumn::text('resource', 'Resource', fn (AccessMembership $m) => $m->resource?->getAttribute('name'))->labelKey('rep_c_ac_resource'),
+            ReportColumn::text('resource_code', 'รหัส Resource', fn (AccessMembership $m) => $m->resource?->getAttribute('code'))
                 ->labelKey('rep_c_ac_resource_code')->hiddenByDefault(),
             ReportColumn::text('resource_detail', 'อีเมล / Path / URL', fn (AccessMembership $m) => AccessFacts::detail($m->resource))
                 ->labelKey('rep_c_ac_resource_detail')->hiddenByDefault(),
-            ReportColumn::localized('resource_department', 'แผนกของทรัพยากร', fn (AccessMembership $m) => $this->resourceDepartment($m))
+            ReportColumn::localized('resource_department', 'แผนกของ Resource', fn (AccessMembership $m) => $this->resourceDepartment($m))
                 ->labelKey('rep_c_ac_resource_department')->hiddenByDefault(),
             ReportColumn::enum('level', 'ระดับ', fn (AccessMembership $m) => AccessFacts::level($m), AccessFacts::LEVEL_KEYS, AccessFacts::LEVEL_TH)
                 ->labelKey('rep_c_ac_level'),
@@ -136,7 +136,9 @@ class AccessOverviewReport extends TabularReport
         }
         $owner = in_array($m->resource_type, AccessFacts::OWNABLE, true) ? $m->resource?->getAttribute('department_id') : null;
 
-        return $owner !== null && (int) $owner !== (int) $m->employee?->department_id ? 'cross' : 'active';
+        $own = $m->employee?->department_id;
+
+        return $owner !== null && $own !== null && (int) $owner !== (int) $own ? 'cross' : 'active';
     }
 
     /**
@@ -195,7 +197,7 @@ class AccessOverviewReport extends TabularReport
             ReportSummary::make('ac_leavers', 'ผู้ลาออกยังถือสิทธิ์', $left->count())->withAttention('red')->withNote($left->isEmpty()
                 ? ['label_key' => 'rep_n_ac_leavers_none']
                 : ['label_key' => $longest === null ? 'rep_n_ac_leavers_people' : 'rep_n_ac_leavers', 'values' => ['people' => $leavers->count(), 'days' => (int) $longest]]),
-            ReportSummary::make('ac_care', 'ทรัพยากรที่ต้องดูแล', $careCount)->withAttention('amber')->withSplit([
+            ReportSummary::make('ac_care', 'Resource ที่ต้องดูแล', $careCount)->withAttention('amber')->withSplit([
                 ['key' => 'owner_gone', 'label_key' => 'rep_ac_care_owner_gone', 'tone' => 'soft-red', 'value' => count($care['owner_gone'])],
                 ['key' => 'no_owner', 'label_key' => 'rep_ac_care_no_owner', 'tone' => 'soft-amber', 'value' => count($care['no_owner'])],
                 ['key' => 'empty', 'label_key' => 'rep_ac_care_empty', 'tone' => 'gray', 'value' => count($care['empty'])],
@@ -431,7 +433,7 @@ class AccessOverviewReport extends TabularReport
                 ], $b['leavers']['people']),
             ],
             [
-                'title' => 'ทรัพยากรที่ต้องดูแล',
+                'title' => 'Resource ที่ต้องดูแล',
                 'headings' => ['เรื่อง', 'ประเภท', 'รหัส', 'ชื่อ', 'อีเมล / Path / URL', 'แผนก', 'เจ้าของ'],
                 'rows' => [
                     ...array_map(fn (array $r) => $resourceRow($r, 'เจ้าของลาออกแล้ว'), $b['care']['owner_gone']),
