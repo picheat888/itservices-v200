@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
 use App\Http\Controllers\Api\Report\AssetTransferBreakdownController;
+use App\Http\Controllers\Api\Report\AssetWarrantyBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
@@ -113,6 +114,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/assets/writeoffs/breakdown', AssetWriteoffBreakdownController::class)->defaults('key', 'assets.writeoffs')->name('api.reports.assets.writeoffs.breakdown');
     // "ประวัติโอนย้ายและรับคืน" — months, acceptance, warehouses, departments, categories and assets waiting now above its rows.
     Route::get('reports/assets/transfer-history/breakdown', AssetTransferBreakdownController::class)->defaults('key', 'assets.transfer_history')->name('api.reports.assets.transfer-history.breakdown');
+    // "ประกันใกล้หมดอายุ" — the next 12 months, time left, categories and vendors above its rows.
+    Route::get('reports/assets/warranty-expiring/breakdown', AssetWarrantyBreakdownController::class)->defaults('key', 'assets.warranty_expiring')->name('api.reports.assets.warranty-expiring.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');

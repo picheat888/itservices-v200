@@ -126,7 +126,7 @@ class AssetReportsTest extends TestCase
         $narrow = $this->actingAs($user)->getJson('/api/reports/r/assets.warranty_expiring/rows?within=30')->assertOk()->json();
         $this->assertSame(1, $narrow['meta']['total']);
         $summary = collect($narrow['summary'])->keyBy('key');
-        $this->assertSame(1, $summary['within_30']['value']);
+        $this->assertSame(1, $summary['wty_within_30']['value']);
     }
 
     public function test_asset_reports_need_assets_view(): void
