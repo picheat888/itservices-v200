@@ -415,7 +415,7 @@ class AccessResourceMembersReport extends TabularReport
     {
         $resources = $this->resources($filters);
         $name = fn (?array $l) => $l === null ? null : (($l['name_th'] ?? null) ?: $l['name']);
-        $size = fn (?array $s) => $s === null ? null : ($s['value'] === 0 ? 'ไม่จำกัด' : "{$s['value']} {$s['unit']}");
+        $size = fn (?array $s) => $s === null ? null : ($s['value'] === 0 ? 'ไม่จำกัดขนาด' : "{$s['value']} {$s['unit']}");
         $shares = $resources->where('type', 'file_share')->filter(fn (array $r) => $r['size'] !== null);
         $gb = fn (array $r) => $r['size']['value'] * (self::TO_GB[$r['size']['unit']] ?? 0);
 
@@ -432,7 +432,7 @@ class AccessResourceMembersReport extends TabularReport
             ],
             [
                 'title' => 'พื้นที่ File Share ตามแผนก',
-                'headings' => ['แผนก', 'แชร์', 'ขนาดที่จัดสรร (GB)', 'แชร์ไม่จำกัด'],
+                'headings' => ['แผนก', 'แชร์', 'ขนาดที่จัดสรร (GB)', 'ไม่จำกัดขนาด'],
                 'rows' => $shares->groupBy(fn (array $r) => $name($r['department']) ?? 'ไม่ระบุแผนก')
                     ->map(fn (Collection $group, string $department) => [
                         $department, $group->count(),
