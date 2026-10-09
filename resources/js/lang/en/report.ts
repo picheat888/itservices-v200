@@ -1152,5 +1152,4 @@ export const report: Dict = {
     rep_sl_req_full: 'Full. Cannot be granted',
     rep_sl_req_take_back: '{n} to take back from leavers',
     rep_sl_req_left: '{n} licenses left',
-    rep_sl_open_requests: 'Open Requests',
 };

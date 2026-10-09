@@ -4,7 +4,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { ArrowUpRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -480,25 +480,22 @@ export function DaysOut({ days }: { days: number | null }) {
     );
 }
 
-/** WaitingGroup: a heading with its count, three rows, the rest folded under "แสดงทั้งหมด" with a link to the module. */
+/** WaitingGroup: a heading with its count, three rows, the rest folded under "แสดงทั้งหมด". */
 export function Group<T>({
     title,
     total,
     rows,
     first,
     render,
-    link,
 }: {
     title: string;
     total: string;
     rows: T[];
     first?: boolean;
     render: (row: T) => React.ReactNode;
-    link?: { href: string; label: string };
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const canOpen = useCanOpen();
     const [open, setOpen] = useState(false);
     const { folds, shown } = fold(rows, GROUP_SHOWN, open, 0);
     if (rows.length === 0) return null;
@@ -517,7 +514,7 @@ export function Group<T>({
             </h3>
             <ul className={cn(open && 'max-h-80 overflow-y-auto overscroll-contain')}>{shown.map(render)}</ul>
             {folds && (
-                <div className="border-border/60 flex items-center justify-between gap-3 border-t px-5 py-2 text-xs font-medium">
+                <div className="border-border/60 border-t px-5 py-2 text-xs font-medium">
                     <button
                         type="button"
                         onClick={() => setOpen((v) => !v)}
@@ -527,15 +524,6 @@ export function Group<T>({
                         <Icon aria-hidden className="h-3.5 w-3.5" />
                         {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', count(rows.length, lang))}
                     </button>
-                    {link && canOpen(link.href) && (
-                        <Link
-                            to={link.href}
-                            className="text-brand focus-visible:ring-brand inline-flex items-center gap-1 rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                            {link.label}
-                            <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
-                        </Link>
-                    )}
                 </div>
             )}
         </section>

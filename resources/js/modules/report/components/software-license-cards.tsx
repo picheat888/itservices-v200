@@ -405,7 +405,6 @@ function RequestsCard({ requests }: { requests: Request[] }) {
     };
     const approved = requests.filter((r) => r.status === 'approved');
     const pending = requests.filter((r) => r.status === 'pending');
-    const link = { href: '/requests', label: t('rep_sl_open_requests') };
 
     return (
         <Card className="flex flex-col overflow-hidden">
@@ -414,20 +413,12 @@ function RequestsCard({ requests }: { requests: Request[] }) {
                 <CardEmpty>{t('rep_sl_requests_empty')}</CardEmpty>
             ) : (
                 <>
-                    <Group
-                        first
-                        title={t('rep_sl_requests_approved')}
-                        total={count(approved.length, lang)}
-                        rows={approved}
-                        link={link}
-                        render={row}
-                    />
+                    <Group first title={t('rep_sl_requests_approved')} total={count(approved.length, lang)} rows={approved} render={row} />
                     <Group
                         first={approved.length === 0}
                         title={t('rep_sl_requests_pending')}
                         total={count(pending.length, lang)}
                         rows={pending}
-                        link={link}
                         render={row}
                     />
                 </>
