@@ -332,6 +332,8 @@ export const report: Dict = {
     rep_c_location: 'Location',
     rep_c_purchase_date: 'Purchase date',
     rep_c_cover_end: 'Warranty/contract until',
+    rep_c_registered_at: 'Registered on',
+    rep_c_registered_by: 'Registered by',
     rep_c_warranty_end: 'Warranty until',
     rep_fl_within: 'Within',
     rep_fl_type: 'Type',
