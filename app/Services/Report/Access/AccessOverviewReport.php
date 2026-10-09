@@ -189,7 +189,7 @@ class AccessOverviewReport extends TabularReport
             ], AccessFacts::TYPES)),
             ReportSummary::make('ac_holders', 'พนักงานที่ถือสิทธิ์', $holders)->withShareOf($staff)->withNote([
                 'label_key' => $staff > $holders ? 'rep_n_ac_holders' : 'rep_n_ac_holders_all',
-                'values' => ['staff' => $staff, 'avg' => $holders > 0 ? round($held->count() / $holders, 1) : 0, 'none' => max(0, $staff - $holders)],
+                'values' => ['staff' => $staff, 'median' => (int) round($held->countBy('employee_id')->median() ?? 0), 'none' => max(0, $staff - $holders)],
             ]),
             ReportSummary::make('ac_granted', 'ให้สิทธิ์ในช่วงวันที่', $granted)->withNote([
                 'label_key' => 'rep_n_ac_granted', 'values' => ['revoked' => $revoked], 'texts' => ['net' => ($net >= 0 ? '+' : '−').number_format(abs($net))],
