@@ -148,8 +148,8 @@ class AccessOverviewReportTest extends TestCase
         $this->assertSame(['staff' => 4, 'median' => 1, 'none' => 1], $summary['ac_holders']['note']['values']);
 
         $this->assertSame(6, $summary['ac_granted']['value']);
-        $this->assertSame(2, $summary['ac_granted']['note']['values']['revoked']);
-        $this->assertSame('+4', $summary['ac_granted']['note']['texts']['net']);
+        $this->assertSame('rep_n_ac_granted_up', $summary['ac_granted']['note']['label_key']);
+        $this->assertSame(['revoked' => 2, 'net' => 4], $summary['ac_granted']['note']['values']);
 
         $this->assertSame(1, $summary['ac_leavers']['value']);
         $this->assertSame('red', $summary['ac_leavers']['attention']);
@@ -199,6 +199,16 @@ class AccessOverviewReportTest extends TestCase
         $this->assertSame(['QC Docs'], array_column($data['care']['owner_gone'], 'name'));
         $this->assertSame(['Spare'], array_column($data['care']['no_owner'], 'name'));
         $this->assertEqualsCanonicalizing(['Spare', 'LINE'], array_column($data['care']['empty'], 'name'));
+    }
+
+    public function test_the_granted_note_says_whether_the_range_ended_with_more_fewer_or_the_same(): void
+    {
+        $note = fn (string $range) => collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows?'.$range)->assertOk()->json('summary'))
+            ->firstWhere('key', 'ac_granted')['note'];
+
+        // June: LINE taken back from B, nothing granted.
+        $this->assertSame(['label_key' => 'rep_n_ac_granted_down', 'values' => ['revoked' => 1, 'net' => 1]], $note('from=2026-06-01&to=2026-06-30'));
+        $this->assertSame(['label_key' => 'rep_n_ac_granted_even', 'values' => ['revoked' => 0, 'net' => 0]], $note('from=2026-07-01&to=2026-07-31'));
     }
 
     public function test_the_department_filter_narrows_the_cards_but_not_the_resources_to_look_after(): void

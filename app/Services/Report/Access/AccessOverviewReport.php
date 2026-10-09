@@ -192,7 +192,12 @@ class AccessOverviewReport extends TabularReport
                 'values' => ['staff' => $staff, 'median' => (int) round($held->countBy('employee_id')->median() ?? 0), 'none' => max(0, $staff - $holders)],
             ]),
             ReportSummary::make('ac_granted', 'ให้สิทธิ์ในช่วงวันที่', $granted)->withNote([
-                'label_key' => 'rep_n_ac_granted', 'values' => ['revoked' => $revoked], 'texts' => ['net' => ($net >= 0 ? '+' : '−').number_format(abs($net))],
+                'label_key' => match (true) {
+                    $net > 0 => 'rep_n_ac_granted_up',
+                    $net < 0 => 'rep_n_ac_granted_down',
+                    default => 'rep_n_ac_granted_even',
+                },
+                'values' => ['revoked' => $revoked, 'net' => abs($net)],
             ]),
             ReportSummary::make('ac_leavers', 'สิทธิ์ที่ผู้ลาออกยังถือ', $left->count())->withAttention('red')->withNote($left->isEmpty()
                 ? ['label_key' => 'rep_n_ac_leavers_none']
