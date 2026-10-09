@@ -135,6 +135,18 @@ export const useAssetTransferBreakdown = (filters: TabularFilters) =>
         retry: noRetryOn4xx,
     });
 
+/** "ประกันใกล้หมดอายุ" — keyed without the soon / expired segment, which narrows only the list. */
+export const useAssetWarrantyBreakdown = (filters: TabularFilters) => {
+    const { state: _state, ...rest } = filters;
+    void _state;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'assets.warranty_expiring', 'breakdown', rest],
+        queryFn: () => reportApi.assetWarrantyBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 export const useManualSlaBreakdown = (filters: TabularFilters) => {
     const by = (filters.by as string | null | undefined) ?? 'category';
     const rest = Object.fromEntries(Object.entries(filters).filter(([name]) => name !== by));

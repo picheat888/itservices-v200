@@ -6,6 +6,7 @@
 import { http } from '@/shared/lib/http';
 import type {
     AssetTransferBreakdown,
+    AssetWarrantyBreakdown,
     AssetWriteoffBreakdown,
     BacklogBoardTicket,
     ExportFormat,
@@ -100,6 +101,12 @@ export const reportApi = {
     assetTransferBreakdown: (filters: TabularFilters) =>
         http
             .get<{ data: AssetTransferBreakdown }>('/reports/assets/transfer-history/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "ประกันใกล้หมดอายุ": the next 12 months, time left, and the categories and vendors in periods. */
+    assetWarrantyBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: AssetWarrantyBreakdown }>('/reports/assets/warranty-expiring/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),

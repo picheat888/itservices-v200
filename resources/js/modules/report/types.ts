@@ -535,6 +535,35 @@ export interface AssetWriteoffBreakdown {
 }
 
 /** What the "ประวัติโอนย้ายและรับคืน" page draws above its rows (AssetTransferHistoryReport::breakdown). */
+/** "ประกันใกล้หมดอายุ": a category or vendor row of the period tables. */
+export interface WarrantyGroupFigures {
+    total: number;
+    /** One place each: expired, in the window, window to a year (0 for a year-long window), beyond a year. */
+    periods: { expired: number; within: number; mid: number; later: number };
+    within_year: number;
+    /** The asset due soonest inside the window. */
+    nearest: { id: number; code: string; days_left: number } | null;
+    more_in_window: number;
+    more_same_day: number;
+    /** Days to the next asset due at all (expired ones aside). */
+    next_days: number | null;
+}
+
+export type WarrantyStatus = 'ready' | 'deployed' | 'common' | 'pending_acceptance' | 'pending_return';
+
+export interface AssetWarrantyBreakdown {
+    /** The "ภายใน" window in days. */
+    within: number;
+    /** This month and the next 11, by where each asset due is now. */
+    months: { month: string; total: number; statuses: Record<WarrantyStatus, number> }[];
+    bands: { key: 'expired' | 'd30' | 'd90' | 'd180' | 'd365' | 'later'; total: number; statuses: Record<WarrantyStatus, number> }[];
+    /** Most due in the window first; a null id = no category. */
+    categories: (WarrantyGroupFigures & { category_id: number | null; name: string | null; name_th: string | null })[];
+    category_totals: WarrantyGroupFigures | null;
+    /** Most due in the window first; a null id = no vendor, always last. */
+    vendors: (WarrantyGroupFigures & { vendor_id: number | null; name: string | null; name_th: string | null })[];
+}
+
 export interface AssetTransferBreakdown {
     /** Every month of the range, oldest first, empty months included. */
     months: { month: string; handover: number; return: number; recall: number; relocate: number }[];

@@ -132,10 +132,13 @@ function TabularReportRows({
             {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
             {extras.beforeTable?.({ filters, patch: onPatch })}
             {showsTable && (
-                <Card className="overflow-clip">
+                <Card id="report-rows" className="scroll-mt-4 overflow-clip">
                     <div className={cn(CARD_HEADING_TINT, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3')}>
-                        <h2 className="text-sm font-semibold">{rowsTitle}</h2>
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                            <h2 className="text-sm font-semibold">{rowsTitle}</h2>
+                            {extras.rowsLead?.({ filters, patch: onPatch })}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-3">
                             {data && (
                                 <span className="text-muted-foreground text-xs tabular-nums">
                                     {t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString())}
@@ -303,6 +306,8 @@ export interface TabularReportExtras {
      *  each row and in the files, left out of the table's own columns and the column picker. */
     innerColumns?: string[];
     filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
+    /** A control beside the rows card's heading, for a filter that narrows only the list. */
+    rowsLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     beforeTable?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     rowClassName?: (row: Record<string, unknown>) => string | undefined;
     /** i18n key of the rows card's heading when the generic "รายการ" says too little for this page —
