@@ -779,7 +779,6 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
                 title={t('rep_ac_dept_title')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span>{t('rep_ac_dept_sub')}</span>
                         {used.map((k) => (
                             <TypeLabel key={k} type={k} />
                         ))}
