@@ -74,9 +74,19 @@ interface DataTableProps<T> {
         onPageChange: (page: number) => void;
         onPageSizeChange: (size: number) => void;
     };
+    /** Client-side search text owned by the parent (e.g. kept in the URL as ?search=). */
+    search?: { value: string; onChange: (value: string) => void };
+    /** Client-side pagination with the page + size owned by the parent (e.g. kept in the URL). */
+    paging?: {
+        page: number;
+        pageSize: number;
+        onPageChange: (page: number) => void;
+        onPageSizeChange: (size: number) => void;
+    };
 }
 
-const PAGE_SIZES = [20, 50, 100];
+/** Rows-per-page choices; the first is the default. */
+export const PAGE_SIZES = [20, 50, 100];
 
 export function DataTable<T>({
     columns,
@@ -97,10 +107,20 @@ export function DataTable<T>({
     rowHeight,
     pageSize: fixedPageSize,
     server,
+    paging,
+    search,
 }: DataTableProps<T>) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [query, setQuery] = useState('');
+    // The box keeps its own text (a URL-backed value lands a tick late and would jump the caret).
+    const [query, setOwnQuery] = useState(search?.value ?? '');
+    useEffect(() => {
+        if (search) setOwnQuery((current) => (current === search.value ? current : search.value));
+    }, [search?.value]); // eslint-disable-line react-hooks/exhaustive-deps
+    const setQuery = (value: string) => {
+        setOwnQuery(value);
+        search?.onChange(value);
+    };
     const [clientPageSize, setClientPageSize] = useState(fixedPageSize ?? 20);
     const [clientPage, setClientPage] = useState(1);
 
@@ -131,13 +151,17 @@ export function DataTable<T>({
 
     // Server-paginated tables render `rows` as-is (the parent fetched just this page);
     // client tables slice the filtered set locally. Pagination state/handlers route accordingly.
-    const pageSize = server ? server.pageSize : fillHeight ? autoSize : clientPageSize;
+    const pageSize = server ? server.pageSize : fillHeight ? autoSize : (paging?.pageSize ?? clientPageSize);
     const total = server ? server.total : filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
-    const safePage = server ? server.page : Math.min(clientPage, pageCount);
+    const safePage = server ? server.page : Math.min(paging?.page ?? clientPage, pageCount);
+    // A server page past the end (an old link, a shrunk list) moves to the last page.
+    useEffect(() => {
+        if (server && !loading && server.total > 0 && server.page > pageCount) server.onPageChange(pageCount);
+    }, [server?.page, server?.total, pageCount, loading]); // eslint-disable-line react-hooks/exhaustive-deps
     const start = (safePage - 1) * pageSize;
-    const setPage = (p: number) => (server ? server.onPageChange(p) : setClientPage(p));
-    const setPageSize = (s: number) => (server ? server.onPageSizeChange(s) : setClientPageSize(s));
+    const setPage = (p: number) => (server ? server.onPageChange(p) : paging ? paging.onPageChange(p) : setClientPage(p));
+    const setPageSize = (s: number) => (server ? server.onPageSizeChange(s) : paging ? paging.onPageSizeChange(s) : setClientPageSize(s));
     // Server: rows are already the page. Client: slice (unless pagination is hidden).
     const pageRows = server ? rows : hidePagination ? filtered : filtered.slice(start, start + pageSize);
 
@@ -167,6 +191,7 @@ export function DataTable<T>({
                                         setPage(1);
                                     }}
                                     placeholder={t('search_placeholder')}
+                                    aria-label={t('search_placeholder')}
                                     className="pl-9"
                                 />
                             </div>
