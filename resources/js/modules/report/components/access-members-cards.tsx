@@ -14,6 +14,7 @@ import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-re
 import type { AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
 import { Cols, Group, GroupRow, NUM, registryOptions, ResourceHead, scrollToRows, Segments, TD, TH, TypeLabel } from './access-overview-cards';
 import { count, deptName, type Lang, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
+import { CARD_HEADING_TINT } from './card-heading';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -489,58 +490,69 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
 function OwnerStrip({ sheet, onOpen }: { sheet: Sheet; onOpen: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const flags = [
-        sheet.mix.cross > 0 ? t('rep_ar_strip_cross').replace('{n}', count(sheet.mix.cross, lang)) : null,
-        sheet.mix.gone > 0 ? t('rep_ar_strip_gone').replace('{n}', count(sheet.mix.gone, lang)) : null,
-    ].filter(Boolean);
     const fact = (label: string, value: React.ReactNode, sub?: React.ReactNode) => (
-        <div className="min-w-0">
-            <div className="text-muted-foreground text-xs">{label}</div>
-            <div className="text-sm">{value}</div>
-            {sub && <div className="text-muted-foreground text-xs">{sub}</div>}
+        <div className="min-w-0 px-5 py-3">
+            <dt className="text-muted-foreground text-xs">{label}</dt>
+            <dd className="mt-1 text-sm">{value}</dd>
+            {sub && <dd className="mt-1.5 flex flex-wrap gap-1.5">{sub}</dd>}
         </div>
     );
 
     return (
-        <Card className="bg-muted/40 flex flex-wrap items-end gap-x-8 gap-y-3 px-5 py-3">
-            {fact(
-                t('rep_ar_col_resource'),
-                <span>
-                    <b>{sheet.name}</b> <span className="text-muted-foreground font-mono text-xs">{sheet.code}</span>
-                </span>,
-                <span className="inline-flex items-center gap-2" translate="no">
-                    <TypeLabel type={sheet.type} />
-                    {sheet.detail}
-                </span>,
-            )}
-            {fact(
-                t('rep_ac_dept_col_name'),
-                deptName(sheet.department, lang) ?? <span className="text-muted-foreground">{t('rep_ar_no_department')}</span>,
-            )}
-            {fact(
-                sheet.type === 'email_group' ? t('rep_ar_owner_approver') : t('rep_c_ar_owner'),
-                sheet.type === 'social_platform' ? (
-                    <span className="text-muted-foreground">{t('rep_ar_no_owner_registry')}</span>
-                ) : sheet.owner ? (
-                    <span className="inline-flex flex-wrap items-baseline gap-x-2">
-                        <b>{sheet.owner.name}</b>
-                        <span className="text-muted-foreground font-mono text-xs">{sheet.owner.code}</span>
-                        <span className="text-muted-foreground text-xs">{deptName(sheet.owner.department, lang) ?? '—'}</span>
-                        {sheet.owner_issue === 'gone' && <StatusBadge tone="red">{t('rep_ar_owner_left')}</StatusBadge>}
-                    </span>
-                ) : (
-                    <StatusBadge tone="amber">{t('rep_ar_owner_none')}</StatusBadge>
-                ),
-            )}
-            {fact(
-                t('rep_ar_strip_members'),
-                <b>{t('rep_ac_people_n').replace('{n}', count(sheet.list.length, lang))}</b>,
-                flags.join(', ') || undefined,
-            )}
-            <Button variant="outline" size="sm" className="ml-auto" onClick={onOpen}>
-                <FileText className="h-4 w-4" />
-                {t('rep_ar_sheet_open')}
-            </Button>
+        <Card className="border-l-brand overflow-clip border-l-[3px]">
+            {/* Heading: the picked resource and its sheet */}
+            <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-5 py-3')}>
+                <div className="min-w-0">
+                    <h2 className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
+                        {sheet.name}
+                        <span className="text-muted-foreground font-mono text-xs font-normal">{sheet.code}</span>
+                    </h2>
+                    <p className="text-muted-foreground mt-0.5 inline-flex flex-wrap items-center gap-x-3 text-xs" translate="no">
+                        <TypeLabel type={sheet.type} />
+                        {sheet.detail}
+                    </p>
+                </div>
+                <Button size="sm" onClick={onOpen}>
+                    <FileText className="h-4 w-4" />
+                    {t('rep_ar_sheet_open')}
+                </Button>
+            </div>
+            {/* Facts: department, owner, members */}
+            <dl className="divide-border/60 grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                {fact(
+                    t('rep_ac_dept_col_name'),
+                    deptName(sheet.department, lang) ?? <span className="text-muted-foreground">{t('rep_ar_no_department')}</span>,
+                )}
+                {fact(
+                    sheet.type === 'email_group' ? t('rep_ar_owner_approver') : t('rep_c_ar_owner'),
+                    sheet.type === 'social_platform' ? (
+                        <span className="text-muted-foreground">{t('rep_ar_no_owner_registry')}</span>
+                    ) : sheet.owner ? (
+                        <span className="inline-flex flex-wrap items-baseline gap-x-2">
+                            <b className="font-semibold">{sheet.owner.name}</b>
+                            <span className="text-muted-foreground font-mono text-xs">{sheet.owner.code}</span>
+                            <span className="text-muted-foreground text-xs">{deptName(sheet.owner.department, lang) ?? '—'}</span>
+                        </span>
+                    ) : (
+                        <StatusBadge tone="amber">{t('rep_ar_owner_none')}</StatusBadge>
+                    ),
+                    sheet.owner && sheet.owner_issue === 'gone' ? <StatusBadge tone="red">{t('rep_ar_owner_left')}</StatusBadge> : undefined,
+                )}
+                {fact(
+                    t('rep_ar_strip_members'),
+                    <b className="text-base font-semibold tabular-nums">{t('rep_ac_people_n').replace('{n}', count(sheet.list.length, lang))}</b>,
+                    sheet.mix.cross > 0 || sheet.mix.gone > 0 ? (
+                        <>
+                            {sheet.mix.cross > 0 && (
+                                <StatusBadge tone="amber">{t('rep_ar_strip_cross').replace('{n}', count(sheet.mix.cross, lang))}</StatusBadge>
+                            )}
+                            {sheet.mix.gone > 0 && (
+                                <StatusBadge tone="red">{t('rep_ar_strip_gone').replace('{n}', count(sheet.mix.gone, lang))}</StatusBadge>
+                            )}
+                        </>
+                    ) : undefined,
+                )}
+            </dl>
         </Card>
     );
 }
