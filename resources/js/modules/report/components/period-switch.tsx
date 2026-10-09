@@ -18,7 +18,7 @@ import type { SnapshotRange } from '../types';
 import { compactRange, periodRange } from './report-scope';
 
 const SEGMENT =
-    'focus-visible:ring-brand/30 inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none';
+    'focus-visible:ring-brand inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none';
 const SEGMENT_ON = 'bg-brand text-brand-foreground dark:bg-background dark:text-foreground dark:shadow-sm';
 const SEGMENT_OFF = 'text-muted-foreground hover:text-foreground hover:bg-accent dark:hover:bg-transparent';
 

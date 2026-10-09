@@ -144,7 +144,7 @@ function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRa
         <Link
             // Opens the report on the strip's own period, so it shows the days this number counts.
             to={reportRoute({ key: tile.report_key, range: hasRange }, periodRange(range))}
-            className="bg-card hover:bg-accent focus-visible:ring-brand/30 flex min-w-0 flex-col gap-1 px-4 py-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+            className="bg-card hover:bg-accent focus-visible:ring-brand flex min-w-0 flex-col gap-1 px-4 py-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
             <span className="text-muted-foreground truncate text-xs" title={label}>
                 {label}

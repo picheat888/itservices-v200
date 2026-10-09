@@ -79,7 +79,7 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
                                     aria-pressed={by === d}
                                     onClick={() => by !== d && patch({ by: d })}
                                     className={cn(
-                                        'focus-visible:ring-brand/30 inline-flex h-7 items-center rounded px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                                        'focus-visible:ring-brand focus-visible:ring-offset-background inline-flex h-7 items-center rounded px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
                                         by === d ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
                                     )}
                                 >

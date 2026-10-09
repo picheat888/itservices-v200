@@ -51,7 +51,7 @@ function ViewSwitch({ views, active, onChange }: { views: Stacks['views']; activ
                     aria-pressed={active === view.key}
                     onClick={() => onChange(view.key)}
                     className={cn(
-                        'focus-visible:ring-brand/30 h-6 rounded px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                        'focus-visible:ring-brand focus-visible:ring-offset-background h-6 rounded px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
                         active === view.key ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
                     )}
                 >

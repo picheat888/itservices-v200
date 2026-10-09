@@ -138,7 +138,7 @@ export function BacklogSlaSegments({ filters, patch }: { filters: TabularFilters
                     aria-pressed={active === s.value}
                     onClick={() => patch({ sla: s.value })}
                     className={cn(
-                        'focus-visible:ring-brand/30 inline-flex h-8 items-center gap-1.5 rounded px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                        'focus-visible:ring-brand focus-visible:ring-offset-background inline-flex h-8 items-center gap-1.5 rounded px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
                         active === s.value ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
                     )}
                 >
@@ -253,7 +253,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                             type="button"
                                             onClick={() => toggleLane(lane.key)}
                                             aria-expanded={open}
-                                            className="border-border text-muted-foreground hover:border-brand/50 hover:bg-accent hover:text-foreground focus-visible:ring-brand/30 flex items-center justify-center gap-1 rounded-lg border border-dashed py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                                            className="border-border text-muted-foreground hover:border-brand/50 hover:bg-accent hover:text-foreground focus-visible:ring-brand flex items-center justify-center gap-1 rounded-lg border border-dashed py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                                         >
                                             {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                                             {open ? t('rep_chart_show_less') : t('rep_bl_more').replace('{n}', String(folding.rest.length))}
@@ -318,7 +318,7 @@ function FilterRow({
             title={`${label}\n${t(selected ? 'rep_bl_filter_clear' : 'rep_bl_filter_hint')}`}
             className={cn(
                 grid,
-                'focus-visible:ring-brand/30 w-full items-center rounded-md px-2 py-1.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                'focus-visible:ring-brand w-full items-center rounded-md px-2 py-1.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none',
                 selected ? 'bg-brand/10 ring-brand/40 ring-1' : 'hover:bg-accent',
                 className,
             )}

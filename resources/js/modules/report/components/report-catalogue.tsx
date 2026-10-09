@@ -104,7 +104,7 @@ function PinButton({ report }: { report: ReportDefinition }) {
             aria-label={label}
             title={label}
             className={cn(
-                'focus-visible:ring-brand/30 hover:text-brand mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none',
+                'focus-visible:ring-brand hover:text-brand mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none',
                 report.pinned ? 'text-brand' : 'text-muted-foreground/70',
             )}
         >
@@ -121,7 +121,7 @@ function ReportRow({ report, latest, range }: { report: ReportDefinition; latest
         <div className="border-border hover:bg-accent flex items-center border-b transition-colors last:border-b-0">
             <Link
                 to={reportRoute(report, range && periodRange(range))}
-                className="focus-visible:ring-brand/30 flex min-w-0 flex-1 items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                className="focus-visible:ring-brand flex min-w-0 flex-1 items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
             >
                 <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{t(`rep_${reportStem(report.key)}_title`)}</div>

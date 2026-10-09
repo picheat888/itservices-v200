@@ -229,7 +229,7 @@ function DeleteAllButton({ count }: { count: number }) {
         <button
             type="button"
             onClick={onDeleteAll}
-            className="focus-visible:ring-brand/30 rounded-sm font-medium text-red-600 transition-colors hover:text-red-700 hover:underline focus-visible:ring-2 focus-visible:outline-none dark:text-red-400 dark:hover:text-red-300"
+            className="focus-visible:ring-brand rounded-sm font-medium text-red-600 transition-colors hover:text-red-700 hover:underline focus-visible:ring-2 focus-visible:outline-none dark:text-red-400 dark:hover:text-red-300"
         >
             {t('rep_my_exports_delete_all')}
         </button>
