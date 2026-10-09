@@ -290,7 +290,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                         [t('rep_ar_space_col_shares'), count(shares.length, lang)],
                         [t('rep_ar_size_unlimited'), count(unlimited.length, lang)],
                     ].map(([k, v]) => (
-                        <div key={k} className="min-w-0">
+                        <div key={k} className="min-w-0 text-center">
                             <dt className="text-muted-foreground text-xs">{k}</dt>
                             <dd className="font-mono text-xl font-bold tabular-nums">{v}</dd>
                         </div>
