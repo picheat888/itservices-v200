@@ -759,6 +759,20 @@ function TypeBar({ byType, scale }: { byType: Record<AccessType, number>; scale:
     );
 }
 
+/** One column width set for a table and its separate total table, so their columns line up. */
+export function Cols({ widths }: { widths: string[] }) {
+    return (
+        <colgroup>
+            {widths.map((w, i) => (
+                <col key={i} className={w} />
+            ))}
+        </colgroup>
+    );
+}
+
+/** แผนก · พนักงาน · สิทธิ์ · ตามประเภท · ผู้ลาออก */
+const DEPT_COLS = ['w-[24%]', 'w-[13%]', 'w-[9%]', 'w-[42%]', 'w-[12%]'];
+
 function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown['departments'] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -793,10 +807,10 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
             {departments.length === 0 ? (
                 <CardEmpty>{t('rep_ac_empty')}</CardEmpty>
             ) : (
-                <>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                <div className="flex flex-1 flex-col overflow-x-auto">
+                    <table className="w-full min-w-[36rem] table-fixed text-sm">
                             <caption className="sr-only">{t('rep_ac_dept_title')}</caption>
+                            <Cols widths={DEPT_COLS} />
                             <thead>
                                 <tr className="bg-muted/40 border-border border-b">
                                     <th scope="col" className={cn(TH, 'text-left')}>
@@ -808,7 +822,7 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
                                     <th scope="col" className={cn(TH, 'text-right')}>
                                         {t('rep_ac_dept_col_grants')}
                                     </th>
-                                    <th scope="col" className={cn(TH, 'w-1/2 text-left')}>
+                                    <th scope="col" className={cn(TH, 'text-left')}>
                                         {t('rep_ac_dept_col_types')}
                                     </th>
                                     <th scope="col" className={cn(TH, 'text-right')}>
@@ -835,24 +849,34 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
                                         <td className={cn(TD, 'text-right')}>{flag(d.leavers)}</td>
                                     </tr>
                                 ))}
-                                <tr className="bg-muted/40 border-border border-t font-semibold">
-                                    <th scope="row" className={cn(TD, 'text-left')}>
-                                        {t('rep_ac_dept_total').replace('{n}', count(departments.length, lang))}
-                                    </th>
-                                    <td className={cn(TD, NUM)}>
-                                        {count(sumOf('holders'), lang)} <span className="text-muted-foreground font-normal">/ {count(sumOf('staff'), lang)}</span>
-                                    </td>
-                                    <td className={cn(TD, NUM)}>{count(sumOf('grants'), lang)}</td>
-                                    <td className={TD}>
-                                        <TypeBar byType={totalByType} scale={sumOf('grants')} />
-                                    </td>
-                                    <td className={cn(TD, 'text-right')}>{flag(sumOf('leavers'))}</td>
-                                </tr>
                             </tbody>
-                        </table>
-                    </div>
-                    {folds && <FoldToggle open={open} total={departments.length} onToggle={() => setOpen((v) => !v)} />}
-                </>
+                    </table>
+                    {folds && (
+                        <div>
+                            <FoldToggle open={open} total={departments.length} onToggle={() => setOpen((v) => !v)} />
+                        </div>
+                    )}
+                    {/* The total stays at the card's foot however tall the card beside it makes this one. */}
+                    <table className="bg-muted/40 border-border mt-auto w-full min-w-[36rem] table-fixed border-t text-sm font-semibold">
+                        <caption className="sr-only">{t('rep_ac_dept_total').replace('{n}', count(departments.length, lang))}</caption>
+                        <Cols widths={DEPT_COLS} />
+                        <tbody>
+                            <tr>
+                                <th scope="row" className={cn(TD, 'text-left')}>
+                                    {t('rep_ac_dept_total').replace('{n}', count(departments.length, lang))}
+                                </th>
+                                <td className={cn(TD, NUM)}>
+                                    {count(sumOf('holders'), lang)} <span className="text-muted-foreground font-normal">/ {count(sumOf('staff'), lang)}</span>
+                                </td>
+                                <td className={cn(TD, NUM)}>{count(sumOf('grants'), lang)}</td>
+                                <td className={TD}>
+                                    <TypeBar byType={totalByType} scale={sumOf('grants')} />
+                                </td>
+                                <td className={cn(TD, 'text-right')}>{flag(sumOf('leavers'))}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             )}
         </Card>
     );
