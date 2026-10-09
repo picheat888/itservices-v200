@@ -1024,7 +1024,7 @@ export const report: Dict = {
     rep_k_ar_cross: 'Members from other departments',
     rep_k_ar_leavers: 'Leavers still members',
     rep_k_ar_owner: 'Need an owner',
-    rep_n_ar_members: '{people} people, typically {median} per resource',
+    rep_n_ar_members: '{people} people, some in several resources',
     rep_n_ar_cross: 'In {n} resources',
     rep_n_ar_cross_none: 'Everyone sits in the resource\'s department',
     rep_n_ar_cross_social: 'Social / Internet has no department',
