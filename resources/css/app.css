@@ -277,13 +277,20 @@
         font-feature-settings: 'tnum';
     }
 
-    /* Tables on a narrow screen (a tablet in portrait): a reference like RQ-2026-0018 or
-       INK-IT-26-0017 broke at every hyphen into three lines, and column headings split
-       mid-word. Codes (always set in mono) and headings stay on one line; a table that
-       runs out of room scrolls inside its own frame instead. */
+    /* Tables: codes and headings stay on one line; a narrow table scrolls in its frame */
     table .font-mono,
     table th {
         white-space: nowrap;
+    }
+
+    /* Keyboard focus: the brand ring on any control without one of its own */
+    :focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+    }
+
+    [tabindex='-1']:focus-visible {
+        outline: none;
     }
 }
 
