@@ -979,7 +979,6 @@ export const report: Dict = {
     rep_ac_left_no_date: 'Left',
     rep_ac_owner_named: 'Owner {name}',
     rep_ac_find_owner: 'Find a new owner',
-    rep_ac_open_employees: 'Open Employees',
     rep_ac_care_title: 'Resources to look after',
     rep_ac_care_sub: 'No owner or nobody uses it. The department filter does not apply',
     rep_ac_care_none: 'Every resource has an owner and members',
