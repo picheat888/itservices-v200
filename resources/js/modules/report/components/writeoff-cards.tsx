@@ -26,7 +26,7 @@ import {
     StackBar,
     Swatch,
 } from './chart-parts';
-import { FILL } from './chart-tones';
+import { FILL, ON_FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
@@ -259,8 +259,9 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                                 <span
                                                                     key={s.key}
                                                                     className={cn(
-                                                                        'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
+                                                                        'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold tabular-nums',
                                                                         FILL[s.tone],
+                                                                        ON_FILL[s.tone],
                                                                     )}
                                                                     style={{ flexGrow: m[s.key] }}
                                                                 >

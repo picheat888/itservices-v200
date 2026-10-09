@@ -65,3 +65,11 @@ export function readableInk(hex: string, ground: Rgb, tintAlpha: number, target 
     }
     return toHex(toward);
 }
+
+/** True when a count printed on `hex` mixed with white (`share` of the colour) reads better in white than in near-black. */
+export function whiteReadsOn(hex: string, share: number): boolean {
+    const base = hexToRgb(hex);
+    if (!base) return false;
+    const fill = blend(base, LIGHT_GROUND, share);
+    return contrastRatio(fill, LIGHT_GROUND) >= contrastRatio(fill, [15, 23, 42]);
+}

@@ -1,4 +1,5 @@
 import { brandForeground, resolveBrand } from '@/shared/lib/brand-color';
+import { whiteReadsOn } from '@/shared/lib/contrast';
 import { useUiStore } from '@/stores/ui';
 import { useEffect } from 'react';
 
@@ -19,18 +20,26 @@ export function useApplyTheme() {
     }, [radius]);
 
     useEffect(() => {
-        // A near-black accent collides with the dark canvas — resolveBrand lightens
-        // it in dark mode; brandForeground keeps on-brand text legible either way.
+        // Dark mode lightens a near-black accent; on-brand text stays legible either way
         const brand = resolveBrand(accent, dark);
         document.documentElement.style.setProperty('--brand', brand);
         document.documentElement.style.setProperty('--brand-foreground', brandForeground(brand));
     }, [accent, dark]);
 
     useEffect(() => {
-        // Settings → Assets status colours as CSS variables (--asset-status-pending-return …), so the
-        // reports' charts follow them the moment an administrator changes one (app.css --color-asset-*).
+        // Settings → Assets status colours for the reports' charts (app.css --color-asset-*), with each count's ink
+        const root = document.documentElement.style;
         for (const [status, color] of Object.entries(assetStatusColors)) {
-            document.documentElement.style.setProperty(`--asset-status-${status.replace(/_/g, '-')}`, color);
+            const key = status.replace(/_/g, '-');
+            root.setProperty(`--asset-status-${key}`, color);
+            root.setProperty(
+                `--asset-on-${key}`,
+                whiteReadsOn(color, dark ? ASSET_SOFT_DARK : ASSET_SOFT_LIGHT) ? '#ffffff' : `color-mix(in oklch, ${color} 25%, black)`,
+            );
         }
-    }, [assetStatusColors]);
+    }, [assetStatusColors, dark]);
 }
+
+/** app.css --asset-soft: how much of the status colour a chart fill keeps, per theme. */
+const ASSET_SOFT_LIGHT = 0.72;
+const ASSET_SOFT_DARK = 0.82;
