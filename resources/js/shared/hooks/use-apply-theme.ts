@@ -2,13 +2,19 @@ import { brandForeground, resolveBrand } from '@/shared/lib/brand-color';
 import { useUiStore } from '@/stores/ui';
 import { useEffect } from 'react';
 
-// Applies UI preferences (dark mode, brand accent, corner radius) to the document
-// root so the whole app reacts to theme changes.
+// Applies UI preferences (language, dark mode, brand accent, corner radius) to the document
+// root so the whole app reacts to them.
 export function useApplyTheme() {
+    const lang = useUiStore((s) => s.lang);
     const dark = useUiStore((s) => s.dark);
     const radius = useUiStore((s) => s.radius);
     const accent = useUiStore((s) => s.accent);
     const assetStatusColors = useUiStore((s) => s.assetStatusColors);
+
+    // Screen readers pick their voice from <html lang>; the server renders the page as en.
+    useEffect(() => {
+        document.documentElement.lang = lang;
+    }, [lang]);
 
     useEffect(() => {
         document.documentElement.classList.toggle('dark', dark);
@@ -19,16 +25,14 @@ export function useApplyTheme() {
     }, [radius]);
 
     useEffect(() => {
-        // A near-black accent collides with the dark canvas — resolveBrand lightens
-        // it in dark mode; brandForeground keeps on-brand text legible either way.
+        // resolveBrand lightens a near-black accent in dark mode; brandForeground keeps text on it legible.
         const brand = resolveBrand(accent, dark);
         document.documentElement.style.setProperty('--brand', brand);
         document.documentElement.style.setProperty('--brand-foreground', brandForeground(brand));
     }, [accent, dark]);
 
     useEffect(() => {
-        // Settings → Assets status colours as CSS variables (--asset-status-pending-return …), so the
-        // reports' charts follow them the moment an administrator changes one (app.css --color-asset-*).
+        // Settings → Assets status colours as CSS variables, read by the report charts (app.css --color-asset-*).
         for (const [status, color] of Object.entries(assetStatusColors)) {
             document.documentElement.style.setProperty(`--asset-status-${status.replace(/_/g, '-')}`, color);
         }

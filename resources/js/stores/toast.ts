@@ -51,6 +51,8 @@ export interface ToastOptions {
     Icon?: LucideIcon;
     /** Makes the whole card activatable (click / Enter / Space). */
     onActivate?: () => void;
+    /** Announce as a status even in the error tone (a red card for a successful delete). */
+    polite?: boolean;
 }
 
 export interface Toast {
@@ -71,6 +73,7 @@ export interface Toast {
     duration: number | null;
     group?: string;
     onActivate?: () => void;
+    polite?: boolean;
     // When the toast was created (ms) — used to collapse only rapid duplicates.
     createdAt: number;
 }
@@ -154,6 +157,7 @@ export const useToastStore = create<ToastState>((set) => ({
                 duration: options?.duration !== undefined ? options.duration : TOAST_DURATION[tone],
                 group: options?.group,
                 onActivate: options?.onActivate,
+                polite: options?.polite,
                 createdAt: now,
             };
             return { toasts: [...s.toasts, toast] };

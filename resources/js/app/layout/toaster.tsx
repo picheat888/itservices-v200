@@ -167,8 +167,8 @@ function ToastItem({ toast }: { toast: Toast }) {
         <div
             // An error interrupts (assertive); everything else waits its turn in the
             // reading order (polite). `alert` carries assertive on its own.
-            role={toast.tone === 'error' ? 'alert' : 'status'}
-            aria-live={toast.tone === 'error' ? undefined : 'polite'}
+            role={toast.tone === 'error' && !toast.polite ? 'alert' : 'status'}
+            aria-live={toast.tone === 'error' && !toast.polite ? undefined : 'polite'}
             aria-atomic="true"
             onMouseEnter={pause}
             onMouseLeave={resume}
