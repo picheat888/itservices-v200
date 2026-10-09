@@ -11,13 +11,13 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useSoftwareLicenseBreakdown } from '../hooks/use-reports';
 import type { SoftwareLicenseBreakdown, SoftwareSeats, TabularFilters } from '../types';
 import { CODE_LINK, DaysOut, Group, GroupRow, scrollToRows, Segments, TD, TH } from './access-overview-cards';
+import { count, PickButton, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
 
-type Lang = 'th' | 'en';
 type Patch = (next: TabularFilters) => void;
 type Request = SoftwareLicenseBreakdown['requests'][number];
 
@@ -26,8 +26,6 @@ const ROWS_SHOWN = 10;
 
 /** A request waiting longer than this many days is flagged. */
 const LONG_WAIT_DAYS = 7;
-
-const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
 
 /* ─────────────────────────── segments and the list's heading ─────────────────────────── */
 
@@ -90,40 +88,22 @@ function SeatBar({ s }: { s: SoftwareSeats }) {
     const t = useT();
     const lang = useUiStore((st) => st.lang);
     if (s.seats === null) return <span className="text-muted-foreground text-xs">{t('rep_sl_unlimited')}</span>;
-    const cap = Math.max(s.seats, s.used, 1);
-    const parts = [
-        { key: 'work', value: s.used - s.gone, tone: FILL['soft-blue'], label: t('rep_sl_bar_work') },
-        { key: 'gone', value: s.gone, tone: FILL['soft-red'], label: t('rep_sl_bar_gone') },
-    ].filter((p) => p.value > 0);
+    const pieces = [
+        { key: 'work', value: s.used - s.gone, fill: FILL['soft-blue'], label: t('rep_sl_bar_work') },
+        { key: 'gone', value: s.gone, fill: FILL['soft-red'], label: t('rep_sl_bar_gone') },
+    ];
     const words = [
-        ...parts.map((p) => `${p.label} ${count(p.value, lang)}`),
+        ...pieces.filter((p) => p.value > 0).map((p) => `${p.label} ${count(p.value, lang)}`),
         `${t('rep_sl_bar_free')} ${count(Math.max(0, s.left ?? 0), lang)}`,
     ].join(', ');
 
     return (
         <div className="min-w-[9rem]">
-            <div className="bg-muted h-5 overflow-hidden rounded-full">
-                <div
-                    role="img"
-                    aria-label={t('rep_sl_bar_aria').replace('{parts}', words).replace('{n}', count(s.seats, lang))}
-                    className="flex h-full gap-px"
-                    style={{ width: `max(${(s.used / cap) * 100}%, ${parts.length * 1.75}rem)` }}
-                >
-                    {parts.map((p) => (
-                        <span
-                            key={p.key}
-                            title={`${p.label}: ${count(p.value, lang)}`}
-                            className={cn(
-                                'flex min-w-[1.5rem] basis-0 items-center justify-center font-mono text-[10.5px] font-semibold text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                                p.tone,
-                            )}
-                            style={{ flexGrow: p.value }}
-                        >
-                            {count(p.value, lang)}
-                        </span>
-                    ))}
-                </div>
-            </div>
+            <PieceBar
+                scale={Math.max(s.seats, s.used, 1)}
+                label={t('rep_sl_bar_aria').replace('{parts}', words).replace('{n}', count(s.seats, lang))}
+                pieces={pieces}
+            />
             {s.usage === 'full' && <div className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">{t('rep_sl_full_label')}</div>}
             {s.usage === 'over' && (
                 <div className="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
@@ -138,7 +118,7 @@ function SeatBar({ s }: { s: SoftwareSeats }) {
 function Todo({ s }: { s: SoftwareSeats }) {
     const t = useT();
     const lang = useUiStore((st) => st.lang);
-    const lines: { tone: 'bad' | 'warn' | 'ok' | 'muted'; text: string }[] = [];
+    const lines: { tone: TodoTone; text: string }[] = [];
     if (s.usage === 'over') lines.push({ tone: 'bad', text: t('rep_sl_todo_over').replace('{n}', count(s.used - (s.seats ?? 0), lang)) });
     if (s.blocked) lines.push({ tone: 'bad', text: t('rep_sl_todo_blocked').replace('{n}', count(s.requests, lang)) });
     if (s.gone > 0)
@@ -159,23 +139,7 @@ function Todo({ s }: { s: SoftwareSeats }) {
     if (s.usage === 'full' && s.requests === 0) lines.push({ tone: 'warn', text: t('rep_sl_todo_full') });
     if (s.used === 0 && s.requests === 0) lines.push({ tone: 'muted', text: t('rep_sl_todo_unused') });
     if (lines.length === 0) lines.push({ tone: 'ok', text: t('rep_ar_todo_none') });
-    const ink = {
-        bad: 'font-semibold text-red-700 dark:text-red-300',
-        warn: 'font-semibold text-amber-700 dark:text-amber-300',
-        ok: 'font-semibold text-emerald-700 dark:text-emerald-300',
-        muted: 'text-muted-foreground',
-    };
-
-    return (
-        <div className="min-w-0 text-sm">
-            <div className={ink[lines[0].tone]}>{lines[0].text}</div>
-            {lines.slice(1).map((l) => (
-                <div key={l.text} className="text-muted-foreground text-xs">
-                    {l.text}
-                </div>
-            ))}
-        </div>
-    );
+    return <TodoLines lines={lines} />;
 }
 
 function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats[]; filters: TabularFilters; patch: Patch }) {
@@ -311,20 +275,12 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                             </td>
                                             <td className={cn(TD, 'text-right')}>
                                                 {s.used > 0 ? (
-                                                    <button
-                                                        type="button"
-                                                        aria-pressed={picked}
+                                                    <PickButton
+                                                        picked={picked}
                                                         onClick={() => (picked ? patch({ software_id: null }) : pick(s))}
-                                                        aria-label={t('rep_sl_pick_aria')
-                                                            .replace('{name}', s.name)
-                                                            .replace('{n}', count(s.used, lang))}
-                                                        className={cn(
-                                                            'border-border focus-visible:ring-brand rounded-full border px-2 py-px text-[11px] font-semibold whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none',
-                                                            picked ? 'bg-brand text-brand-foreground border-brand' : 'text-brand hover:bg-brand/10',
-                                                        )}
-                                                    >
-                                                        {t('rep_ar_pick').replace('{n}', count(s.used, lang))}
-                                                    </button>
+                                                        text={t('rep_ar_pick').replace('{n}', count(s.used, lang))}
+                                                        label={t('rep_sl_pick_aria').replace('{name}', s.name).replace('{n}', count(s.used, lang))}
+                                                    />
                                                 ) : (
                                                     <span className="text-muted-foreground font-mono">0</span>
                                                 )}

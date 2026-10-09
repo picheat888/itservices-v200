@@ -5,14 +5,12 @@
  * software, leavers, requests waiting). Routed by ../routes.tsx.
  */
 import { useT } from '@/lang';
-import { type AccessRow, EmployeeCell, StatusCell } from '../components/access-cells';
+import { type AccessRow, EmployeeCell, StatusCell, str } from '../components/access-cells';
 import { SoftwareLicenseCards, SoftwareListLead, SoftwareUsageSegments } from '../components/software-license-cards';
 import { TabularReportView } from '../components/tabular-report-view';
 
 /** Columns drawn inside the software, employee and status cells — kept in the rows and files. */
 const INNER = ['software_code', 'publisher', 'license_type', 'employee_code', 'left_days', 'revoked_at', 'revoked_by'];
-
-const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 
 /** The software's name with its code and licence type under it. */
 function SoftwareCell({ row }: { row: AccessRow }) {
