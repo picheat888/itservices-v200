@@ -619,7 +619,6 @@ const ACCEPT_TILES: {
     fill: string;
     tint: string;
     ink: string;
-    on: string;
 }[] = [
     {
         key: 'same_day',
@@ -628,7 +627,6 @@ const ACCEPT_TILES: {
         fill: 'bg-emerald-500',
         tint: 'bg-emerald-500/10',
         ink: 'text-emerald-700 dark:text-emerald-300',
-        on: 'text-emerald-950',
     },
     {
         key: 'next_day',
@@ -637,7 +635,6 @@ const ACCEPT_TILES: {
         fill: 'bg-blue-500',
         tint: 'bg-blue-500/10',
         ink: 'text-blue-700 dark:text-blue-300',
-        on: 'text-slate-950',
     },
     {
         key: 'later',
@@ -646,7 +643,6 @@ const ACCEPT_TILES: {
         fill: 'bg-amber-500',
         tint: 'bg-amber-500/10',
         ink: 'text-amber-700 dark:text-amber-300',
-        on: 'text-amber-950',
     },
     {
         key: 'waiting',
@@ -655,7 +651,6 @@ const ACCEPT_TILES: {
         fill: 'bg-red-500',
         tint: 'bg-red-500/10',
         ink: 'text-red-700 dark:text-red-300',
-        on: 'text-slate-950',
     },
     {
         key: 'closed',
@@ -664,7 +659,6 @@ const ACCEPT_TILES: {
         fill: 'bg-slate-400',
         tint: 'bg-slate-500/10',
         ink: 'text-slate-700 dark:text-slate-300',
-        on: 'text-slate-950',
     },
 ];
 
@@ -723,9 +717,8 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                                         contentClassName="whitespace-nowrap"
                                         // Grows by its share but never narrower than its label
                                         className={cn(
-                                            'flex h-full min-w-[1.375rem] basis-0 cursor-pointer items-center justify-center rounded-none font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap tabular-nums focus-visible:ring-inset',
+                                            'flex h-full min-w-[1.375rem] basis-0 cursor-pointer items-center justify-center rounded-none font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)] focus-visible:ring-inset',
                                             tile.fill,
-                                            tile.on,
                                         )}
                                         style={{ flexGrow: values[tile.key] }}
                                     >
