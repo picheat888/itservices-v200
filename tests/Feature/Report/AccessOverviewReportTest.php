@@ -144,7 +144,8 @@ class AccessOverviewReportTest extends TestCase
         $this->assertSame(3, $summary['ac_holders']['value']);
         $this->assertSame(75, $summary['ac_holders']['share']);
         $this->assertSame('rep_n_ac_holders', $summary['ac_holders']['note']['label_key']);
-        $this->assertEquals(['staff' => 4, 'avg' => 1.3, 'none' => 1], $summary['ac_holders']['note']['values']);
+        // A holds two, B and D one each: the typical holder holds one.
+        $this->assertSame(['staff' => 4, 'median' => 1, 'none' => 1], $summary['ac_holders']['note']['values']);
 
         $this->assertSame(6, $summary['ac_granted']['value']);
         $this->assertSame(2, $summary['ac_granted']['note']['values']['revoked']);
