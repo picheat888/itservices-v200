@@ -6,12 +6,13 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Building2, Folder, Globe, KeyRound, Package, Plus, Tag, Users } from 'lucide-react';
+import { Building2, Folder, Globe, InfinityIcon, KeyRound, Package, Plus, Tag, TriangleAlert, Users } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AccessOverview } from '../components/access-overview';
@@ -143,6 +144,8 @@ export default function AccessControlPage() {
             const p = new URLSearchParams(sp);
             p.delete('view');
             p.delete('add');
+            // Each registry has its own filters; a new tab starts unfiltered on page 1 (rows-per-page stays).
+            for (const key of ['page', 'search', 'dept', 'license', 'brand']) p.delete(key);
             if (next === 'overview') {
                 p.delete('tab');
             } else {
@@ -202,11 +205,16 @@ export default function AccessControlPage() {
             { replace: true },
         );
     };
-    // Client-side filters per tab (department for email/file; licence + brand for software).
-    const [egDept, setEgDept] = useState('');
-    const [fsDept, setFsDept] = useState('');
-    const [swLicense, setSwLicense] = useState('');
-    const [swPublisher, setSwPublisher] = useState('');
+    // Search, filters, page and rows-per-page live in the URL (?search, dept, license, brand, page, per).
+    const list = useListParams();
+    const egDept = list.get('dept');
+    const fsDept = egDept;
+    const swLicense = list.get('license');
+    const swPublisher = list.get('brand');
+    const setEgDept = (v: string) => list.setFilter('dept', v);
+    const setFsDept = setEgDept;
+    const setSwLicense = (v: string) => list.setFilter('license', v);
+    const setSwPublisher = (v: string) => list.setFilter('brand', v);
 
     const emailGroups = useEmailGroups(canView['email-groups']);
     const fileShares = useFileShares(canView['file-shares']);
@@ -232,11 +240,11 @@ export default function AccessControlPage() {
     );
 
     // Small label above a filter select (icon + text), matching the Asset filter panel.
-    const fieldLabel = (icon: ReactNode, label: string) => (
-        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+    const fieldLabel = (htmlFor: string, icon: ReactNode, label: string) => (
+        <label htmlFor={htmlFor} className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
             {icon}
             {label}
-        </div>
+        </label>
     );
 
     // "Filters" popover next to the search box (client-side), one per tab that needs it.
@@ -244,8 +252,9 @@ export default function AccessControlPage() {
         <FilterPopover count={egDept ? 1 : 0} onClear={() => setEgDept('')} resultCount={egFiltered.length}>
             {() => (
                 <div>
-                    {fieldLabel(<Building2 className="h-3.5 w-3.5" />, t('access_department'))}
+                    {fieldLabel('eg-dept', <Building2 className="h-3.5 w-3.5" aria-hidden />, t('access_department'))}
                     <SearchableSelect
+                        id="eg-dept"
                         active={!!egDept}
                         value={egDept || ALL}
                         onChange={(v) => setEgDept(v === ALL ? '' : v)}
@@ -259,8 +268,9 @@ export default function AccessControlPage() {
         <FilterPopover count={fsDept ? 1 : 0} onClear={() => setFsDept('')} resultCount={fsFiltered.length}>
             {() => (
                 <div>
-                    {fieldLabel(<Building2 className="h-3.5 w-3.5" />, t('access_department'))}
+                    {fieldLabel('fs-dept', <Building2 className="h-3.5 w-3.5" aria-hidden />, t('access_department'))}
                     <SearchableSelect
+                        id="fs-dept"
                         active={!!fsDept}
                         value={fsDept || ALL}
                         onChange={(v) => setFsDept(v === ALL ? '' : v)}
@@ -283,8 +293,9 @@ export default function AccessControlPage() {
             {() => (
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        {fieldLabel(<KeyRound className="h-3.5 w-3.5" />, t('access_license_type'))}
+                        {fieldLabel('sw-license', <KeyRound className="h-3.5 w-3.5" aria-hidden />, t('access_license_type'))}
                         <SearchableSelect
+                            id="sw-license"
                             active={!!swLicense}
                             value={swLicense || ALL}
                             onChange={(v) => setSwLicense(v === ALL ? '' : v)}
@@ -295,8 +306,9 @@ export default function AccessControlPage() {
                         />
                     </div>
                     <div>
-                        {fieldLabel(<Tag className="h-3.5 w-3.5" />, t('access_publisher'))}
+                        {fieldLabel('sw-publisher', <Tag className="h-3.5 w-3.5" aria-hidden />, t('access_publisher'))}
                         <SearchableSelect
+                            id="sw-publisher"
                             active={!!swPublisher}
                             value={swPublisher || ALL}
                             onChange={(v) => setSwPublisher(v === ALL ? '' : v)}
@@ -407,6 +419,7 @@ export default function AccessControlPage() {
             logo: s.logo_url,
             metaLabel: t('access_license_type'),
             metaValue: t(`access_lic_${s.license_type}`),
+            seats: s.seats,
         };
     };
 
@@ -514,9 +527,20 @@ export default function AccessControlPage() {
                 const used = s.seats_used ?? s.members?.length ?? 0;
                 const over = s.seats != null && used > s.seats;
                 return (
-                    <span className={cn('font-mono text-[12.5px]', over && 'text-destructive font-semibold')}>
-                        {used}
-                        {s.seats != null ? `/${s.seats}` : ''}
+                    <span className={cn('inline-flex items-center font-mono text-[12.5px]', over && 'text-destructive font-semibold')}>
+                        {used}/
+                        {s.seats != null ? (
+                            s.seats
+                        ) : (
+                            <span title={t('access_seats_unlimited')} role="img" aria-label={t('access_seats_unlimited')} className="inline-flex">
+                                <InfinityIcon className="h-3.5 w-3.5" aria-hidden />
+                            </span>
+                        )}
+                        {over && (
+                            <span title={t('access_seats_over')} role="img" aria-label={t('access_seats_over')} className="ml-1 inline-flex">
+                                <TriangleAlert className="h-3.5 w-3.5" aria-hidden />
+                            </span>
+                        )}
                     </span>
                 );
             },
@@ -550,6 +574,8 @@ export default function AccessControlPage() {
                             onRowClick={openEmailGroup}
                             loading={emailGroups.isLoading}
                             filters={emailFilter}
+                            paging={list.table.paging}
+                            search={list.table.search}
                             actions={addButton('email-groups')}
                         />
                     )}
@@ -562,6 +588,8 @@ export default function AccessControlPage() {
                             onRowClick={openFileShare}
                             loading={fileShares.isLoading}
                             filters={fileFilter}
+                            paging={list.table.paging}
+                            search={list.table.search}
                             actions={addButton('file-shares')}
                         />
                     )}
@@ -573,6 +601,8 @@ export default function AccessControlPage() {
                             searchable={(p) => `${p.name} ${p.url ?? ''} ${p.policy ?? ''}`}
                             onRowClick={openSocial}
                             loading={social.isLoading}
+                            paging={list.table.paging}
+                            search={list.table.search}
                             actions={addButton('social-platforms')}
                         />
                     )}
@@ -585,6 +615,8 @@ export default function AccessControlPage() {
                             onRowClick={openSoftware}
                             loading={software.isLoading}
                             filters={softwareFilter}
+                            paging={list.table.paging}
+                            search={list.table.search}
                             actions={addButton('software')}
                         />
                     )}

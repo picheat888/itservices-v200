@@ -5,32 +5,22 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { refusalReason } from '@/shared/lib/api-errors';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import {
-    Code2,
-    Eye,
-    EyeOff,
-    Folder,
-    Gift,
-    Globe,
-    KeyRound,
-    Lock,
-    Package,
-    RotateCw,
-    ShieldCheck,
-    Upload,
-    Users,
-    type LucideIcon,
-} from 'lucide-react';
+import { Folder, Globe, Package, Users, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAccessMutations } from '../hooks/use-access';
+import { LogoPicker } from './logo-picker';
+import { isFreeLicense, LICENSE_CARDS, LicenseTypePicker, ProductKeySection, SeatsField } from './software-form-sections';
 
 /** Attach a non-passive wheel listener to a text input so hovering + scrolling nudges the value by ±1 (min 0). */
 function useWheelStep(onStep: (delta: 1 | -1) => void) {
@@ -47,14 +37,6 @@ function useWheelStep(onStep: (delta: 1 | -1) => void) {
     return setEl;
 }
 
-/** License types shown as segmented cards; `key` = whether a product key is expected by default. */
-const LICENSE_CARDS: { value: SoftwareLicenseType; icon: LucideIcon; expectsKey: boolean }[] = [
-    { value: 'subscription', icon: RotateCw, expectsKey: true },
-    { value: 'perpetual', icon: ShieldCheck, expectsKey: true },
-    { value: 'open_source', icon: Code2, expectsKey: false },
-    { value: 'free', icon: Gift, expectsKey: false },
-];
-
 type AnyResource = EmailGroup | FileShare | SocialPlatform | Software;
 
 /** Storage size units offered on the file share "Size" field. */
@@ -67,50 +49,6 @@ function formatSizeValue(raw: string): string {
     const [intPart, decPart] = raw.split('.');
     const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
-}
-
-/**
- * Logo upload control (preview tile + upload/remove buttons), shared by software
- * and social platforms. Picking a file goes through the parent's crop flow.
- */
-function LogoField({
-    preview,
-    fallbackIcon: Icon,
-    onPick,
-    onRemove,
-    error,
-}: {
-    preview: string | null;
-    fallbackIcon: LucideIcon;
-    onPick: (file?: File) => void;
-    onRemove: () => void;
-    error: string | null;
-}) {
-    const t = useT();
-    return (
-        <div className="flex items-center gap-4">
-            <span className="bg-brand/10 text-brand grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full">
-                {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : <Icon className="h-6 w-6" />}
-            </span>
-            <div>
-                <label className="border-input bg-background hover:bg-accent inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium">
-                    <Upload className="h-4 w-4" />
-                    {preview ? t('access_logo_change') : t('access_logo')}
-                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onPick(e.target.files?.[0])} />
-                </label>
-                {preview && (
-                    <button type="button" onClick={onRemove} className="text-destructive ml-2 text-sm hover:underline">
-                        {t('access_logo_remove')}
-                    </button>
-                )}
-                {error ? (
-                    <p className="text-destructive mt-2 text-xs">{error}</p>
-                ) : (
-                    <p className="text-muted-foreground mt-2 text-xs">{t('access_logo_help')}</p>
-                )}
-            </div>
-        </div>
-    );
 }
 
 /** Per-kind icon tile accent for the dialog header (matches the registry tables). */
@@ -138,6 +76,7 @@ type FormState = {
     brand_id: string;
     license_type: SoftwareLicenseType;
     seats: string;
+    seats_unlimited: boolean;
     product_key: string;
     notes: string;
 };
@@ -157,6 +96,7 @@ const empty: FormState = {
     brand_id: '',
     license_type: 'subscription',
     seats: '',
+    seats_unlimited: false,
     product_key: '',
     notes: '',
 };
@@ -197,6 +137,7 @@ function fromRow(kind: AccessKind, row: AnyResource | null): FormState {
             brand_id: r.brand_id ? String(r.brand_id) : '',
             license_type: r.license_type,
             seats: r.seats != null ? String(r.seats) : '',
+            seats_unlimited: r.seats == null,
             product_key: r.product_key ?? '',
             notes: r.notes ?? '',
         };
@@ -233,7 +174,8 @@ function toPayload(kind: AccessKind, form: FormState): Record<string, unknown> {
             name: form.name.trim(),
             brand_id: form.brand_id ? Number(form.brand_id) : null,
             license_type: form.license_type,
-            seats: form.seats.trim() === '' ? null : Number(form.seats),
+            seats: form.seats_unlimited ? null : Number(form.seats),
+            seats_unlimited: form.seats_unlimited,
             notes: form.notes.trim() || null,
         };
     }
@@ -265,7 +207,6 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [logoError, setLogoError] = useState<string | null>(null);
     const [storeKey, setStoreKey] = useState(false);
-    const [showKey, setShowKey] = useState(false);
     // Employee's department resolved to its short tag (abbreviation) for the option chip.
     const deptTag = useMemo(() => new Map(departments.map((d) => [d.id, d.tag])), [departments]);
 
@@ -279,6 +220,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         return sw ? !!sw.product_key : (LICENSE_CARDS.find((c) => c.value === licence)?.expectsKey ?? false);
     }, [kind, row]);
     const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm) || logo !== null || removeLogo || storeKey !== initialStoreKey;
+    const guardClose = useDiscardGuard(open && isDirty);
 
     useEffect(() => {
         if (open) {
@@ -288,7 +230,6 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
             setRemoveLogo(false);
             setCropSrc(null);
             setLogoError(null);
-            setShowKey(false);
             // Key switch: on when a key is already stored, else follow the licence's default.
             const sw = kind === 'software' ? (row as Software | null) : null;
             const licence = sw?.license_type ?? 'subscription';
@@ -345,6 +286,20 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
     };
 
+    const setUnlimitedSeats = (unlimited: boolean) => {
+        setForm((f) => ({ ...f, seats_unlimited: unlimited }));
+        setErrors((e) => (e.seats ? { ...e, seats: undefined } : e));
+    };
+
+    // Free / open source → unlimited, key off unless one is on file; back to paid counts seats again.
+    const pickLicense = (type: SoftwareLicenseType) => {
+        const free = isFreeLicense(type);
+        const wasFree = isFreeLicense(form.license_type);
+        setForm((f) => ({ ...f, license_type: type, seats_unlimited: free ? true : wasFree ? false : f.seats_unlimited }));
+        setStoreKey(free ? !!form.product_key.trim() : true);
+        if (free) setErrors((e) => (e.seats ? { ...e, seats: undefined } : e));
+    };
+
     // Hovering the Size input + scrolling nudges the value by ±1 instead of the browser's spinner arrows.
     const sizeInputRef = useWheelStep((delta) => {
         setForm((f) => ({ ...f, size_value: String(Math.max(0, (parseFloat(f.size_value) || 0) + delta)) }));
@@ -372,6 +327,9 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         [departments, lang],
     );
     const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
+    // Licences already granted; an edited seat count may not go below this.
+    const seatsInUse = curKind === 'software' && curRow ? ((curRow as Software).seats_used ?? 0) : 0;
+    const seatsBelowUseMsg = t('access_err_seats_below_used').replaceAll('{n}', String(seatsInUse));
 
     // Basic email shape check for instant feedback (backend re-validates with the full rule).
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -393,6 +351,11 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
             if (!form.size_value.trim()) e.size_value = t('access_err_required');
             // A new file share must also pick an owner (matches email groups).
             if (!curRow && !form.owner_employee_id) e.owner_employee_id = t('access_err_required');
+        }
+        if (curKind === 'software' && !form.seats_unlimited) {
+            if (!form.seats.trim()) e.seats = t('access_err_seats_required');
+            else if (Number(form.seats) < 1) e.seats = t('access_err_seats_min');
+            else if (form.seats !== initialForm.seats && Number(form.seats) < seatsInUse) e.seats = seatsBelowUseMsg;
         }
         return e;
     };
@@ -428,8 +391,10 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                 const mapped: Partial<Record<keyof FormState, string>> = {};
                 for (const [k, msgs] of Object.entries(fieldErrors)) {
                     const key = k as keyof FormState;
-                    mapped[key] =
-                        key === 'email' && /taken/i.test(msgs[0] ?? '') ? t('access_err_email_taken') : (msgs[0] ?? t('access_err_required'));
+                    if (key === 'email' && /taken/i.test(msgs[0] ?? '')) mapped[key] = t('access_err_email_taken');
+                    else if (key === 'seats' && msgs[0] === 'seats_below_in_use')
+                        mapped[key] = t('access_err_seats_below_used').replaceAll('{n}', String(refusalReason(err)?.body.in_use ?? seatsInUse));
+                    else mapped[key] = msgs[0] ?? t('access_err_required');
                 }
                 setErrors(mapped);
                 focusFirstError(mapped as Record<string, string>);
@@ -449,32 +414,38 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-[540px]">
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
+            <DialogContent
+                className={cn('gap-0 overflow-hidden p-0', curKind === 'software' ? 'sm:max-w-[600px]' : 'sm:max-w-[540px]')}
+                // Start on the first text field (the name), not the logo picker that sits before it.
+                onOpenAutoFocus={(e) => {
+                    const first = (e.currentTarget as HTMLElement).querySelector<HTMLElement>('input:not([type=file]):not([type=color])');
+                    if (first) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }}
+            >
                 <FocusDialogHeader
                     icon={HEAD[curKind].icon}
                     accent={HEAD[curKind].color}
                     round
                     eyebrow={titleByKind[curKind]}
-                    title={curRow ? t('edit') : t('access_add')}
+                    title={curKind === 'software' ? t(curRow ? 'access_edit_software' : 'access_add_software') : curRow ? t('edit') : t('access_add')}
                     code={curRow?.code ?? undefined}
                     srDescription={titleByKind[curKind]}
                 />
 
-                <div className="space-y-4 px-6 py-5">
-                    {/* Software leads with its logo + a paired Publisher/Name row instead of the shared Name. */}
-                    {curKind !== 'software' && (
+                <div
+                    className={cn('max-h-[calc(100dvh-10rem)] overflow-y-auto px-6', curKind === 'software' ? 'space-y-3.5 py-4' : 'space-y-4 py-5')}
+                >
+                    {/* Software and Social lead with their logo beside the name instead of the shared Name. */}
+                    {(curKind === 'email-groups' || curKind === 'file-shares') && (
                         <Field label={t('access_name')} required name="name" error={errors.name}>
                             <Input
                                 value={form.name}
                                 onChange={(e) => set('name', e.target.value)}
-                                placeholder={
-                                    curKind === 'email-groups'
-                                        ? t('access_ph_group_name')
-                                        : curKind === 'file-shares'
-                                          ? t('access_ph_share_name')
-                                          : t('access_ph_platform_name')
-                                }
+                                placeholder={curKind === 'email-groups' ? t('access_ph_group_name') : t('access_ph_share_name')}
                                 autoFocus
                             />
                         </Field>
@@ -532,6 +503,8 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                         value={formatSizeValue(form.size_value)}
                                         onChange={(e) => set('size_value', e.target.value.replace(/,/g, '').replace(/[^\d.]/g, ''))}
                                         placeholder={t('access_ph_size')}
+                                        aria-label={t('access_size')}
+                                        aria-invalid={!!errors.size_value}
                                         title={lang === 'th' ? 'เลื่อนเมาส์ค้างแล้ว scroll เพื่อปรับทีละ 1' : 'Hover + scroll to nudge by 1'}
                                         className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-3 py-2 text-right text-sm outline-hidden"
                                     />
@@ -542,7 +515,10 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                         </span>
                                     ) : (
                                         <Select value={form.size_unit} onValueChange={(v) => set('size_unit', v as SizeUnit)}>
-                                            <SelectTrigger className="border-input bg-muted/40 h-full w-24 shrink-0 justify-center gap-1 rounded-none border-0 border-l px-3 text-sm focus:ring-0 focus:ring-offset-0">
+                                            <SelectTrigger
+                                                aria-label={t('access_size_unit')}
+                                                className="border-input bg-muted/40 h-full w-24 shrink-0 justify-center gap-1 rounded-none border-0 border-l px-3 text-sm focus:ring-0 focus:ring-offset-0"
+                                            >
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="min-w-0">
@@ -574,29 +550,58 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
 
                     {curKind === 'social-platforms' && (
                         <>
-                            {/* Platform logo — same upload/crop control as software. */}
-                            <LogoField
-                                preview={logoPreview}
-                                fallbackIcon={Globe}
-                                onPick={onLogo}
-                                onRemove={() => {
-                                    setLogo(null);
-                                    setRemoveLogo(true);
-                                }}
-                                error={logoError}
-                            />
-                            <Field label={t('access_url')}>
-                                <Input value={form.url} onChange={(e) => set('url', e.target.value)} placeholder={t('access_ph_url')} />
-                            </Field>
+                            {/* Identity — logo beside name + URL (same layout as Software) */}
+                            <div className="grid grid-cols-[104px_minmax(0,1fr)] items-start gap-5">
+                                <LogoPicker
+                                    preview={logoPreview}
+                                    icon={Globe}
+                                    tone="indigo"
+                                    onPick={onLogo}
+                                    onRemove={() => {
+                                        setLogo(null);
+                                        setRemoveLogo(true);
+                                    }}
+                                />
+                                <div className="min-w-0 space-y-3">
+                                    <Field label={t('access_name')} required name="name" error={errors.name}>
+                                        <Input
+                                            value={form.name}
+                                            onChange={(e) => set('name', e.target.value)}
+                                            placeholder={t('access_ph_platform_name')}
+                                            autoFocus
+                                        />
+                                    </Field>
+                                    <Field label={t('access_url')}>
+                                        <Input
+                                            value={form.url}
+                                            onChange={(e) => set('url', e.target.value)}
+                                            placeholder={t('access_ph_url')}
+                                            spellCheck={false}
+                                        />
+                                    </Field>
+                                </div>
+                            </div>
+                            {logoError && (
+                                <p role="alert" className="text-destructive -mt-1.5 text-xs">
+                                    {logoError}
+                                </p>
+                            )}
                             <Field label={t('access_color')}>
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="color"
                                         value={form.color || '#6366f1'}
                                         onChange={(e) => set('color', e.target.value)}
-                                        className="border-input bg-background h-10 w-12 shrink-0 rounded-md border p-1"
+                                        aria-label={t('access_color')}
+                                        className="border-input bg-background focus-visible:ring-brand/40 h-10 w-12 shrink-0 rounded-md border p-1 focus-visible:ring-[3px] focus-visible:outline-hidden"
                                     />
-                                    <Input value={form.color} onChange={(e) => set('color', e.target.value)} placeholder={t('access_ph_color')} />
+                                    <Input
+                                        value={form.color}
+                                        onChange={(e) => set('color', e.target.value)}
+                                        placeholder={t('access_ph_color')}
+                                        aria-label={t('access_color_hex')}
+                                        spellCheck={false}
+                                    />
                                 </div>
                             </Field>
                             <Field label={t('access_policy')}>
@@ -607,149 +612,103 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
 
                     {curKind === 'software' && (
                         <>
-                            {/* Logo — same control as the employee profile photo (preview + upload/remove + crop). */}
-                            <LogoField
-                                preview={logoPreview}
-                                fallbackIcon={Package}
-                                onPick={onLogo}
-                                onRemove={() => {
-                                    setLogo(null);
-                                    setRemoveLogo(true);
-                                }}
-                                error={logoError}
-                            />
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <Field label={t('access_publisher')}>
-                                    <SearchableSelect
-                                        value={form.brand_id}
-                                        onChange={(v) => set('brand_id', v)}
-                                        options={brandOptions}
-                                        placeholder={t('access_select_brand')}
-                                        clearable
-                                    />
-                                </Field>
-                                <Field label={t('access_name')} required name="name" error={errors.name}>
-                                    <Input
-                                        value={form.name}
-                                        onChange={(e) => set('name', e.target.value)}
-                                        placeholder={t('access_ph_software_name')}
-                                    />
-                                </Field>
-                            </div>
-
-                            {/* License as segmented cards */}
-                            <div>
-                                <label className="mb-1.5 block text-sm font-medium">{t('access_license_type')}</label>
-                                <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label={t('access_license_type')}>
-                                    {LICENSE_CARDS.map(({ value, icon: LicIcon, expectsKey }) => {
-                                        const on = form.license_type === value;
-                                        return (
-                                            <button
-                                                key={value}
-                                                type="button"
-                                                role="radio"
-                                                aria-checked={on}
-                                                onClick={() => {
-                                                    set('license_type', value);
-                                                    setStoreKey(expectsKey);
-                                                }}
-                                                className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-center transition-colors ${
-                                                    on ? 'border-brand bg-brand/10 text-brand' : 'border-input hover:border-brand/40'
-                                                }`}
-                                            >
-                                                <LicIcon className={`h-[18px] w-[18px] ${on ? 'text-brand' : 'text-muted-foreground'}`} />
-                                                <span className="text-[12.5px] leading-tight font-semibold">{t(`access_lic_${value}`)}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Seats — its own field so it reads as a real, countable attribute */}
-                            <div>
-                                <label htmlFor="sw-seats" className="mb-1.5 block text-sm font-medium">
-                                    {t('access_seats')}
-                                </label>
-                                <div className="border-input bg-background hover:border-brand/50 focus-within:border-brand focus-within:ring-brand/15 flex h-10 max-w-[220px] items-center gap-2.5 rounded-md border px-3 transition-colors focus-within:ring-[3px]">
-                                    <Users className="text-muted-foreground h-4 w-4 shrink-0" />
-                                    <input
-                                        id="sw-seats"
-                                        type="number"
-                                        min="0"
-                                        value={form.seats}
-                                        onChange={(e) => set('seats', e.target.value)}
-                                        placeholder={t('access_ph_seats')}
-                                        className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-hidden"
-                                    />
-                                    <span className="text-muted-foreground shrink-0 text-xs">{t('access_seats_unit')}</span>
-                                </div>
-                                <p className="text-muted-foreground mt-1.5 text-xs">{t('access_seats_help')}</p>
-                            </div>
-
-                            {/* Product key — switch reveals a masked, monospace field (it is a secret). */}
-                            <div className={`overflow-hidden rounded-xl border ${storeKey ? 'border-brand/40' : 'border-border'}`}>
-                                <div className="flex items-center gap-3 p-3">
-                                    <span
-                                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${storeKey ? 'bg-brand/10 text-brand' : 'bg-muted text-muted-foreground'}`}
-                                    >
-                                        <KeyRound className="h-[17px] w-[17px]" />
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="text-sm font-semibold">{t('access_store_key')}</div>
-                                        <div className="text-muted-foreground text-xs">{t('access_store_key_hint')}</div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={storeKey}
-                                        onClick={() => setStoreKey((v) => !v)}
-                                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${storeKey ? 'bg-brand' : 'bg-input'}`}
-                                    >
-                                        <span
-                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${storeKey ? 'left-0.5 translate-x-5' : 'left-0.5'}`}
+                            {/* Identity — logo beside name + brand */}
+                            <div className="grid grid-cols-[104px_minmax(0,1fr)] items-start gap-5">
+                                <LogoPicker
+                                    preview={logoPreview}
+                                    icon={Package}
+                                    tone="amber"
+                                    onPick={onLogo}
+                                    onRemove={() => {
+                                        setLogo(null);
+                                        setRemoveLogo(true);
+                                    }}
+                                />
+                                <div className="min-w-0 space-y-3">
+                                    <Field label={t('access_software_name')} required name="name" error={errors.name}>
+                                        <Input
+                                            value={form.name}
+                                            onChange={(e) => set('name', e.target.value)}
+                                            placeholder={t('access_ph_software_name')}
+                                            autoFocus
                                         />
-                                    </button>
+                                    </Field>
+                                    <Field label={t('access_publisher')}>
+                                        <SearchableSelect
+                                            value={form.brand_id}
+                                            onChange={(v) => set('brand_id', v)}
+                                            options={brandOptions}
+                                            placeholder={t('access_select_brand')}
+                                            clearable
+                                        />
+                                    </Field>
                                 </div>
-                                {storeKey && (
-                                    <div className="px-3 pb-3">
-                                        <div className="relative">
-                                            <Input
-                                                type={showKey ? 'text' : 'password'}
-                                                value={form.product_key}
-                                                onChange={(e) => set('product_key', e.target.value)}
-                                                placeholder={t('access_ph_product_key')}
-                                                className="pr-11 font-mono tracking-wider"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowKey((v) => !v)}
-                                                aria-label={showKey ? t('access_key_hide') : t('access_key_show')}
-                                                className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1/2 right-1.5 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md"
-                                            >
-                                                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                            </button>
-                                        </div>
-                                        <p className="text-muted-foreground mt-1.5 flex items-center gap-1.5 text-[11.5px]">
-                                            <Lock className="h-3 w-3 shrink-0" />
-                                            {t('access_key_secure')}
-                                        </p>
-                                    </div>
-                                )}
+                            </div>
+                            {logoError && (
+                                <p role="alert" className="text-destructive -mt-1.5 text-xs">
+                                    {logoError}
+                                </p>
+                            )}
+
+                            {/* License */}
+                            <div className="border-border space-y-3 border-t pt-3.5">
+                                <h3 className="text-[14.5px] font-bold">{t('access_license_group')}</h3>
+                                <LicenseTypePicker value={form.license_type} onChange={pickLicense} />
+                                <SeatsField
+                                    seats={form.seats}
+                                    unlimited={form.seats_unlimited}
+                                    autoUnlimited={form.seats_unlimited && isFreeLicense(form.license_type)}
+                                    min={Math.max(1, seatsInUse)}
+                                    error={errors.seats}
+                                    onSeatsChange={(v) => set('seats', v)}
+                                    onUnlimitedChange={setUnlimitedSeats}
+                                />
                             </div>
 
-                            <Field label={t('access_notes')}>
-                                <Input value={form.notes} onChange={(e) => set('notes', e.target.value)} />
-                            </Field>
+                            {/* Product key */}
+                            <div className="border-border border-t pt-3.5">
+                                <ProductKeySection
+                                    enabled={storeKey}
+                                    onEnabledChange={setStoreKey}
+                                    value={form.product_key}
+                                    onChange={(v) => set('product_key', v)}
+                                />
+                            </div>
+
+                            {/* Notes */}
+                            <div className="border-border border-t pt-3.5">
+                                <Field
+                                    label={t('access_notes')}
+                                    action={
+                                        <span className="text-muted-foreground text-[11.5px] tabular-nums">
+                                            {form.notes.length.toLocaleString()} / 2,000
+                                        </span>
+                                    }
+                                >
+                                    <Textarea
+                                        rows={2}
+                                        maxLength={2000}
+                                        value={form.notes}
+                                        onChange={(e) => set('notes', e.target.value)}
+                                        placeholder={t('access_ph_notes')}
+                                        className="min-h-16"
+                                    />
+                                </Field>
+                            </div>
                         </>
                     )}
                 </div>
 
-                <div className="border-border/60 bg-muted/30 flex items-center justify-end gap-2 border-t px-6 py-3">
-                    <Button variant="ghost" onClick={onClose}>
-                        {t('cancel')}
-                    </Button>
-                    <SaveButton loading={create.isPending || update.isPending} onClick={submit} disabled={!!row && !isDirty} />
+                <div className="border-border/60 bg-muted/30 flex items-center justify-between gap-2 border-t px-6 py-3">
+                    <span className="text-muted-foreground text-[12.5px]">
+                        <span className="text-destructive">*</span> {t('access_required_note')}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" onClick={() => guardClose(onClose)}>
+                            {t('cancel')}
+                        </Button>
+                        <SaveButton loading={create.isPending || update.isPending} onClick={submit} disabled={!!row && !isDirty} />
+                    </div>
                 </div>
             </DialogContent>
 

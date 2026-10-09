@@ -90,7 +90,8 @@ export function useAccessMutations(kind: AccessKind) {
         addMember: useMutation({
             mutationFn: (v: { id: number; payload: { employee_id: number; access_level?: string | null; purpose?: string | null } }) =>
                 accessApi.addMember(kind, v.id, v.payload),
-            onSuccess: invalidate,
+            // Refetch on a refusal too, so a seat count that filled meanwhile shows up.
+            onSettled: invalidate,
         }),
         revokeMember: useMutation({
             mutationFn: (v: { id: number; membershipId: number }) => accessApi.revokeMember(kind, v.id, v.membershipId),
