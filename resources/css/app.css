@@ -68,7 +68,8 @@
     --color-chart-pair-rose-ink: var(--chart-pair-rose-ink);
     --color-chart-pair-violet-ink: var(--chart-pair-violet-ink);
 
-    /* Asset statuses in reports: Settings → Assets colours mixed with white; "-ink" text, "-on" a count on the fill */
+    /* Asset statuses in the reports: the colours chosen in Settings → Assets (--asset-status-*, set by
+       useApplyTheme), mixed with white so a chart reads softer than the badges; "-ink" is the colour itself. */
     --color-asset-deployed: color-mix(in oklch, var(--asset-status-deployed) var(--asset-soft), white);
     --color-asset-ready: color-mix(in oklch, var(--asset-status-ready) var(--asset-soft), white);
     --color-asset-pending-acceptance: color-mix(in oklch, var(--asset-status-pending-acceptance) var(--asset-soft), white);
@@ -81,12 +82,6 @@
     --color-asset-common-ink: color-mix(in oklch, var(--asset-status-common) var(--asset-ink), white);
     --color-asset-pending-return-ink: color-mix(in oklch, var(--asset-status-pending-return) var(--asset-ink), white);
     --color-asset-writeoff-ink: color-mix(in oklch, var(--asset-status-writeoff) var(--asset-ink), white);
-    --color-asset-deployed-on: var(--asset-on-deployed, color-mix(in oklch, var(--asset-status-deployed) 25%, black));
-    --color-asset-ready-on: var(--asset-on-ready, color-mix(in oklch, var(--asset-status-ready) 25%, black));
-    --color-asset-pending-acceptance-on: var(--asset-on-pending-acceptance, color-mix(in oklch, var(--asset-status-pending-acceptance) 25%, black));
-    --color-asset-common-on: var(--asset-on-common, color-mix(in oklch, var(--asset-status-common) 25%, black));
-    --color-asset-pending-return-on: var(--asset-on-pending-return, color-mix(in oklch, var(--asset-status-pending-return) 25%, black));
-    --color-asset-writeoff-on: var(--asset-on-writeoff, color-mix(in oklch, var(--asset-status-writeoff) 25%, black));
 
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
