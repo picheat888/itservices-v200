@@ -87,7 +87,11 @@ export function StatusCell({ row }: { row: AccessRow }) {
             return (
                 <span
                     className="inline-flex whitespace-nowrap"
-                    title={isLabel(department) ? t('rep_ac_cross_of').replace('{dept}', (lang === 'th' && department.name_th) || department.name || '') : undefined}
+                    title={
+                        isLabel(department)
+                            ? t('rep_ac_cross_of').replace('{dept}', (lang === 'th' && department.name_th) || department.name || '')
+                            : undefined
+                    }
                 >
                     <StatusBadge tone="green" className="rounded-r-none">
                         {t('rep_ac_status_active')}
@@ -99,14 +103,18 @@ export function StatusCell({ row }: { row: AccessRow }) {
             );
         case 'left': {
             const days = num(row.left_days);
-            return <StatusBadge tone="red">{days === null ? t('rep_ac_left_no_date') : t('rep_ac_left_days').replace('{n}', String(days))}</StatusBadge>;
+            return (
+                <StatusBadge tone="red">{days === null ? t('rep_ac_left_no_date') : t('rep_ac_left_days').replace('{n}', String(days))}</StatusBadge>
+            );
         }
         case 'revoked': {
             const at = str(row.revoked_at);
             const by = str(row.revoked_by);
             return (
                 <div>
-                    <StatusBadge tone="gray">{at ? t('rep_ac_revoked_on').replace('{date}', shortDate(at, lang)) : t('rep_ac_status_revoked')}</StatusBadge>
+                    <StatusBadge tone="gray">
+                        {at ? t('rep_ac_revoked_on').replace('{date}', shortDate(at, lang)) : t('rep_ac_status_revoked')}
+                    </StatusBadge>
                     {by && <div className="text-muted-foreground mt-0.5 text-xs">{t('rep_ac_revoked_by').replace('{name}', by)}</div>}
                 </div>
             );
@@ -129,7 +137,11 @@ export function DepartmentCell({ row }: { row: AccessRow }) {
     return (
         <div className="min-w-0">
             <div className="max-w-[12rem] truncate">{own}</div>
-            {theirs && <div className="max-w-[12rem] truncate text-xs text-amber-700 dark:text-amber-300">{t('rep_ar_cross_to').replace('{dept}', theirs)}</div>}
+            {theirs && (
+                <div className="max-w-[12rem] truncate text-xs text-amber-700 dark:text-amber-300">
+                    {t('rep_ar_cross_to').replace('{dept}', theirs)}
+                </div>
+            )}
         </div>
     );
 }

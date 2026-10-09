@@ -52,6 +52,9 @@ class SoftwareLicenseReport extends TabularReport
     /** @var array<string, Collection<int, array<string, mixed>>> softwares() per filter set, within one request */
     private array $figures = [];
 
+    /** @var array<string, Collection<int, AccessMembership>> activeMembers() per filter set, within one request */
+    private array $members = [];
+
     public function key(): string
     {
         return 'access.software_licenses';
@@ -77,15 +80,15 @@ class SoftwareLicenseReport extends TabularReport
     /** @return list<array{value: int, label: string}> */
     private static function brandOptions(): array
     {
-        return Brand::query()->whereIn('id', Software::query()->select('brand_id')->whereNotNull('brand_id'))->orderBy('name')->get(['id', 'name'])
-            ->map(fn (Brand $b) => ['value' => $b->id, 'label' => $b->name])->all();
+        return once(fn (): array => Brand::query()->whereIn('id', Software::query()->select('brand_id')->whereNotNull('brand_id'))->orderBy('name')->get(['id', 'name'])
+            ->map(fn (Brand $b) => ['value' => $b->id, 'label' => $b->name])->all());
     }
 
     /** @return list<array{value: int, label: string}> */
     private static function softwareOptions(): array
     {
-        return Software::query()->orderBy('code')->get(['id', 'code', 'name'])
-            ->map(fn (Software $s) => ['value' => $s->id, 'label' => trim("{$s->code} {$s->name}")])->all();
+        return once(fn (): array => Software::query()->orderBy('code')->get(['id', 'code', 'name'])
+            ->map(fn (Software $s) => ['value' => $s->id, 'label' => trim("{$s->code} {$s->name}")])->all());
     }
 
     /**
@@ -117,8 +120,7 @@ class SoftwareLicenseReport extends TabularReport
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.$search.'%';
                 $q->where(fn (Builder $w) => $w->where('name', 'like', $like)->orWhere('code', 'like', $like)
-                    ->orWhereHas('memberships', fn (Builder $m) => $m->whereNull('revoked_at')->whereHas('employee', fn (Builder $e) => $e
-                        ->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('code', 'like', $like))));
+                    ->orWhereHas('memberships', fn (Builder $m) => $m->whereNull('revoked_at')->whereHas('employee', fn (Builder $e) => self::holderLike($e, 'employees', $like))));
             })
             ->orderBy('name')->get()
             ->map(function (Software $s) use ($requests) {
@@ -140,7 +142,7 @@ class SoftwareLicenseReport extends TabularReport
                     'left' => $left, 'usage' => $usage, 'pct' => $s->seats ? (int) round($used / $s->seats * 100) : null,
                     'requests' => $waiting, 'blocked' => $blocked,
                     'rank' => ($usage === 'over' ? 1e6 : 0) + ($blocked ? 1e5 : 0) + $gone * 1000 + ($usage === 'full' ? 500 : 0)
-                        + ($left !== null && $waiting > $left ? 100 : 0) + ($s->seats ? $used / $s->seats * 100 : 0),
+                        + ($waiting > 0 && $left !== null && $waiting > max(0, $left) ? 100 : 0) + ($s->seats ? $used / $s->seats * 100 : 0),
                 ];
             })
             ->filter(fn (array $s) => ! ($filters['usage'] ?? null) || $s['usage'] === $filters['usage'])
@@ -160,7 +162,22 @@ class SoftwareLicenseReport extends TabularReport
             ->join('employees', 'employees.id', '=', 'access_memberships.employee_id')
             ->where('access_memberships.resource_type', 'software')
             ->whereIn('access_memberships.resource_id', $this->softwares($filters)->pluck('id')->all() ?: [0])
-            ->when($filters['software_id'] ?? null, fn (Builder $q, $id) => $q->where('access_memberships.resource_id', (int) $id));
+            ->when($filters['software_id'] ?? null, fn (Builder $q, $id) => $q->where('access_memberships.resource_id', (int) $id))
+            // A software found by its own name keeps all its holders; one found through a holder keeps that holder.
+            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
+                $like = '%'.$search.'%';
+                $q->where(fn (Builder $w) => $w
+                    ->whereIn('access_memberships.resource_id', Software::query()->select('id')->where(fn (Builder $s) => $s->where('name', 'like', $like)->orWhere('code', 'like', $like)))
+                    ->orWhere(fn (Builder $e) => self::holderLike($e, 'employees', $like)));
+            });
+    }
+
+    /** A holder whose code, name or Thai name contains the search. */
+    private static function holderLike(Builder $q, string $table, string $like): Builder
+    {
+        return $q->where(fn (Builder $w) => $w->where("{$table}.code", 'like', $like)
+            ->orWhereRaw("CONCAT_WS(' ', {$table}.first_name, {$table}.last_name) LIKE ?", [$like])
+            ->orWhereRaw("CONCAT_WS(' ', {$table}.first_name_th, {$table}.last_name_th) LIKE ?", [$like]));
     }
 
     public function query(User $viewer, array $filters): Builder
@@ -258,7 +275,7 @@ class SoftwareLicenseReport extends TabularReport
      */
     private function activeMembers(array $filters): Collection
     {
-        return AccessFacts::withResource($this->memberships(['software_id' => null] + $filters))
+        return $this->members[md5(serialize($filters))] ??= AccessFacts::withResource($this->memberships(['software_id' => null] + $filters))
             ->with('employee.department')->whereNull('access_memberships.revoked_at')->get();
     }
 
@@ -313,7 +330,8 @@ class SoftwareLicenseReport extends TabularReport
             'softwares' => $softwares->map(fn (array $s) => collect($s)->except('rank')->all())->all(),
             'leavers' => $leavers,
             'requests' => $requests,
-            'picked' => ($filters['software_id'] ?? null) ? Software::query()->whereKey((int) $filters['software_id'])->value('name') : null,
+            // Only while the picked software is still among the filtered ones; the page clears a stale pick.
+            'picked' => $bySoftware->has((int) ($filters['software_id'] ?? 0)) ? $bySoftware[(int) $filters['software_id']]['name'] : null,
         ];
     }
 
@@ -346,8 +364,8 @@ class SoftwareLicenseReport extends TabularReport
                 ], $b['leavers']),
             ],
             [
-                'title' => 'คำขอที่รอใช้ seat',
-                'headings' => ['เลขที่คำขอ', 'ซอฟต์แวร์', 'ผู้ขอ', 'แผนก', 'สถานะ', 'ขอเมื่อ', 'รอมาแล้ว (วัน)', 'seat ที่เหลือ'],
+                'title' => 'คำขอที่รอ License',
+                'headings' => ['เลขที่คำขอ', 'ซอฟต์แวร์', 'ผู้ขอ', 'แผนก', 'สถานะ', 'ขอเมื่อ', 'รอมาแล้ว (วัน)', 'License ที่เหลือ'],
                 'rows' => array_map(fn (array $r) => [
                     $r['reference'], $r['software']['name'], $r['requester']['name'], $dept($r['requester']['department']),
                     $r['status'] === 'approved' ? 'อนุมัติแล้ว รอติดตั้ง' : 'รออนุมัติ', $r['created_at'], $r['days'], $r['seats_left'],
