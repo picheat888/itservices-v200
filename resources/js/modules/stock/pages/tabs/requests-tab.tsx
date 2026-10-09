@@ -1,6 +1,8 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';
@@ -21,24 +23,20 @@ const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> =
     rejected: 'red',
 };
 
-export function RequestsTab({
-    can,
-    onNew,
-    page,
-    setPage,
-    perPage,
-    setPerPage,
-}: {
-    can: (p: string) => boolean;
-    onNew: () => void;
-    // Pagination lives in the parent so switching tabs (which unmounts this tab) keeps your place.
-    page: number;
-    setPage: (p: number) => void;
-    perPage: number;
-    setPerPage: (n: number) => void;
-}) {
+// Order-independent key of the drawn quantities (zero rows ignored).
+const allocKey = (a: Record<string, number>) =>
+    JSON.stringify(
+        Object.entries(a)
+            .filter(([, n]) => n > 0)
+            .sort(),
+    );
+
+export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const t = useT();
     const confirm = useConfirm();
+    // Page and rows-per-page live in the URL (?page, ?per).
+    const list = useListParams();
+    const { page, perPage } = list;
     // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
     // `loading` tracks only the first load (isLoading), not background refetches (isFetching), so
     // returning to this tab shows the cached page instantly instead of a shimmer every time.
@@ -54,12 +52,14 @@ export function RequestsTab({
     const [serialWh, setSerialWh] = useState<string>('all');
     // Per-warehouse qty to draw when fulfilling a quantity-only item (warehouse → qty).
     const [alloc, setAlloc] = useState<Record<string, number>>({});
+    const [seedAlloc, setSeedAlloc] = useState<Record<string, number>>({});
     // Live item detail (on-hand + per-unit serials + balances) for the request being fulfilled.
     const { data: fulfillItem } = useStockItem(fulfillReq?.stock_item_id ?? null);
 
     // Reset selection and greedily pre-fill the allocation (largest warehouse first)
-    // whenever a different request opens or its stock detail loads.
+    // whenever the dialog opens or its stock detail loads.
     useEffect(() => {
+        if (!fulfillOpen) return;
         setIssueSerialIds([]);
         setSerialWh('all');
         const bals = [...(fulfillItem?.balances ?? [])].filter((b) => b.qty > 0).sort((a, b) => b.qty - a.qty);
@@ -72,7 +72,8 @@ export function RequestsTab({
             remaining -= take;
         }
         setAlloc(next);
-    }, [fulfillReq?.id, fulfillItem]);
+        setSeedAlloc(next);
+    }, [fulfillOpen, fulfillReq?.id, fulfillItem]);
 
     const onError = (e: unknown) => {
         useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -185,6 +186,10 @@ export function RequestsTab({
     // Ready when the chosen units cover exactly the requested qty.
     const fulfillReady = fulfillSerialized ? !!fulfillReq && issueSerialIds.length === fulfillReq.qty : !!fulfillReq && allocTotal === fulfillReq.qty;
     const toggleIssueSerial = (id: number) => setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    const fulfillDirty = issueSerialIds.length > 0 || allocKey(alloc) !== allocKey(seedAlloc);
+    const guardFulfillClose = useDiscardGuard(fulfillOpen && fulfillDirty);
+    const closeFulfill = () => setFulfillOpen(false);
+
     const setAllocFor = (warehouse: string, max: number, raw: number) =>
         setAlloc((a) => ({ ...a, [warehouse]: Math.max(0, Math.min(max, Math.trunc(raw) || 0)) }));
 
@@ -204,20 +209,11 @@ export function RequestsTab({
                 rows={requests}
                 rowKey={(r) => r.id}
                 loading={requestsLoading}
-                server={{
-                    page,
-                    pageSize: perPage,
-                    total: requestsPage?.meta.total ?? 0,
-                    onPageChange: setPage,
-                    onPageSizeChange: (s) => {
-                        setPerPage(s);
-                        setPage(1);
-                    },
-                }}
+                server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
             />
 
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
-            <Dialog open={fulfillOpen} onOpenChange={(o) => !o && setFulfillOpen(false)}>
+            <Dialog open={fulfillOpen} onOpenChange={(o) => !o && guardFulfillClose(closeFulfill)}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -373,7 +369,7 @@ export function RequestsTab({
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setFulfillOpen(false)} disabled={fulfill.isPending}>
+                        <Button variant="outline" onClick={() => guardFulfillClose(closeFulfill)} disabled={fulfill.isPending}>
                             {t('cancel')}
                         </Button>
                         <Button

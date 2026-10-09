@@ -3,6 +3,7 @@ import { useVendors, useWarehouses } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -84,6 +85,9 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
 
     // Success step (receive only).
     const [done, setDone] = useState<{ item: StockItem; serials: string[]; qty: number; prevStock: number; movementId: number } | null>(null);
+    // Form snapshot taken right after seeding; null = capture on the next render.
+    const [baseline, setBaseline] = useState<string | null>(null);
+    const [saved, setSaved] = useState(false);
 
     const selected = items.find((i) => String(i.id) === sku);
     const isSerial = isReceive && !!selected?.track_serial;
@@ -121,6 +125,8 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
         setDone(null);
         setTransferSerialIds(new Set());
         setReturnSerialIds(new Set());
+        setBaseline(null);
+        setSaved(false);
         // Sensible from/to defaults per movement kind, prefilled from the item's
         // own master-data fields (supplier / warehouse) when receiving.
         // Transfer: From = item's default warehouse, To = empty (user must pick).
@@ -251,6 +257,15 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
           ? returnSerialValid
           : !!selected && (isSerial ? serialValid : qty >= 1) && receiveValid;
 
+    const snapshot = JSON.stringify([sku, qty, unitCost, from, to, reference, notes, serials, scan, [...transferSerialIds], [...returnSerialIds]]);
+    useEffect(() => {
+        if (open && baseline === null) {
+            setBaseline(snapshot);
+        }
+    }, [open, baseline, snapshot]);
+    const isDirty = baseline !== null && snapshot !== baseline;
+    const guardClose = useDiscardGuard(open && !done && !saved && isDirty);
+
     // Always give the action button a full label (never an empty/shrunk button).
     // Serial modes append the selected/valid count.
     const actionLabel = (() => {
@@ -284,6 +299,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     notes: notes.trim() || undefined,
                     serial_ids: transferIsSerial ? [...transferSerialIds] : undefined,
                 });
+                setSaved(true);
                 setTimeout(onClose, CLOSE_DELAY_MS);
             } catch (e) {
                 useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -302,6 +318,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     notes: notes.trim() || undefined,
                     serial_ids: [...returnSerialIds],
                 });
+                setSaved(true);
                 setTimeout(onClose, CLOSE_DELAY_MS);
             } catch (e) {
                 useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -333,6 +350,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     movementId: movement.id,
                 });
             } else {
+                setSaved(true);
                 setTimeout(onClose, CLOSE_DELAY_MS);
             }
         } catch (e) {
@@ -394,6 +412,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                 setReference('');
                                 setNotes('');
                                 onSkuChange(sku);
+                                setBaseline(null);
                             }}
                         >
                             <Plus className="h-4 w-4" />
@@ -410,7 +429,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
     }
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-xl">
                 <DialogHeader>
                     <DialogTitle>{k ? t(`stock_mv_${k}` as Parameters<typeof t>[0]) : ''}</DialogTitle>
@@ -969,7 +988,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={record.isPending}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={record.isPending}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={record.isPending} onClick={submit} disabled={!canSubmit}>

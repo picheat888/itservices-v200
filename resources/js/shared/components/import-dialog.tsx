@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { FileDropZone } from '@/shared/components/file-drop-zone';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, downloadBlob } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -166,9 +167,11 @@ export function ImportDialog<Row>({
     // chosen a file is all the dialog can know.
     const ready = preview ? result !== null && result.meta.invalid === 0 && result.meta.valid > 0 : file !== null;
     const truncated = result != null && result.meta.shown != null && result.meta.shown < result.meta.total;
+    // A picked file not yet imported is unsaved work; a finished import clears it.
+    const guardClose = useDiscardGuard(open && file !== null);
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && !importPending && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && !importPending && guardClose(onClose)}>
             <DialogContent className={cn(result ? 'max-w-3xl' : guide ? 'max-w-2xl' : 'max-w-lg')}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -292,7 +295,7 @@ export function ImportDialog<Row>({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="ghost" onClick={onClose} disabled={importPending}>
+                    <Button variant="ghost" onClick={() => guardClose(onClose)} disabled={importPending}>
                         {success != null ? t('import_close') : t('cancel')}
                     </Button>
                     <Button onClick={handleImport} disabled={!ready || importPending || preview?.pending}>

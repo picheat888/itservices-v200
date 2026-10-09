@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useWriteoffReasons } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { fieldError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -40,6 +41,9 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
         setNoteErr(undefined);
     }, [open]);
 
+    const isDirty = reasonId !== '' || note !== '';
+    const guardClose = useDiscardGuard(open && isDirty);
+
     const submit = async () => {
         if (!reasonId) {
             setReasonErr(t('asset_writeoff_reason_required'));
@@ -55,7 +59,7 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-lg">
                 <DialogTitle className="flex items-center gap-2">
                     <FlaskConicalOff className="text-destructive h-5 w-5" />
@@ -87,7 +91,7 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
                 </div>
 
                 <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={onClose} disabled={bulk.isPending}>
+                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)} disabled={bulk.isPending}>
                         {t('cancel')}
                     </Button>
                     <Button variant="destructive" className="flex-1" onClick={submit} disabled={bulk.isPending}>

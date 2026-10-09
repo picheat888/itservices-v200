@@ -4,6 +4,7 @@ import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SerialToggle } from '@/shared/components/serial-toggle';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -67,12 +68,14 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     const [form, setForm] = useState<StockItemPayload>(empty);
     // When on, the item name is generated from Brand + Model instead of typed.
     const [autoName, setAutoName] = useState(false);
+    const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
         if (!open) return;
         setForm(item ? itemToForm(item) : empty);
         setAutoName(false);
+        setSaved(false);
     }, [open, item]);
 
     // Auto item name = "Brand Model" (whichever parts exist), resolved from the
@@ -87,8 +90,9 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
         }
     }, [autoName, autoItemName]);
 
-    // When editing, the Save button stays disabled until something actually changes.
-    const isDirty = !item || JSON.stringify(form) !== JSON.stringify(itemToForm(item));
+    // Save stays disabled until something changes; the same check guards closing.
+    const isDirty = JSON.stringify(form) !== JSON.stringify(item ? itemToForm(item) : empty);
+    const guardClose = useDiscardGuard(open && isDirty && !saved);
     // SKU is auto-generated on create; everything else below is required.
     const isValid =
         !!form.name.trim() &&
@@ -120,6 +124,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
             } else {
                 await create.mutateAsync(form);
             }
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (e) {
             useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -127,7 +132,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{item ? t('stock_edit_item') : t('stock_new_item')}</DialogTitle>
@@ -240,7 +245,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} onClick={submit} disabled={!isValid || !isDirty} />

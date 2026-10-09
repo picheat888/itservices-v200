@@ -12,6 +12,8 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { SettingToggle } from '@/shared/components/setting-toggle';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useListParams, type ListParamPatch } from '@/shared/hooks/use-list-params';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
@@ -373,8 +375,43 @@ const LOG_STATUS_META: Record<EmailLogStatus, { tone: 'green' | 'red' | 'amber';
 /** Filter chips over the log: everything, then one per outcome. '' means no filter. */
 const LOG_FILTERS = ['', 'sent', 'failed', 'skipped'] as const;
 
-// localStorage key for the page's remembered list filters (search + module tab).
+// localStorage key for the Email tab's remembered filters (search + module chip).
 const FILTER_KEY = 'email-templates.filters';
+
+// List params of the three tabs; a tab switch clears these (rows-per-page stays).
+const TAB_LIST_KEYS = ['search', 'module', 'status', 'page'];
+
+/** The Email tab's remembered filters as URL params, or null when nothing is saved. */
+function readRememberedFilters(): ListParamPatch | null {
+    try {
+        const saved: unknown = JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
+        const { search, module } = (saved ?? {}) as { search?: unknown; module?: unknown };
+        const patch: ListParamPatch = {};
+        if (typeof search === 'string' && search) patch.search = search;
+        if (typeof module === 'string' && module) patch.module = module;
+        return Object.keys(patch).length > 0 ? patch : null;
+    } catch {
+        return null;
+    }
+}
+
+function rememberFilters(search: string, module: string) {
+    try {
+        localStorage.setItem(FILTER_KEY, JSON.stringify({ search, module }));
+    } catch {
+        // Storage blocked: the URL still holds the filters.
+    }
+}
+
+function applyParamPatch(params: URLSearchParams, patch: ListParamPatch | null) {
+    for (const [key, value] of Object.entries(patch ?? {})) {
+        if (value) {
+            params.set(key, value);
+        } else {
+            params.delete(key);
+        }
+    }
+}
 
 function render(text: string, vars: Record<string, string>): string {
     return text.replace(/\{\{([\w.]+)\}\}/g, (_m, k) => vars[k] ?? `{{${k}}}`);
@@ -540,26 +577,27 @@ export default function EmailTemplatesPage() {
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useEmailTemplates();
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
-    // Restore the last-used filters so a reload lands on the same view.
-    const savedFilters = useMemo<{ search?: string; module?: string }>(() => {
-        try {
-            return JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
-        } catch {
-            return {};
-        }
-    }, []);
-    const [search, setSearch] = useState(savedFilters.search ?? '');
-    const [module, setModule] = useState(savedFilters.module ?? '');
-
-    // The active tab lives in the URL only (?tab=), so a reload or a shared link lands on
-    // the same half of the screen, and Back steps through the tabs pressed (useTabParam).
-    // List filters keep using localStorage; a tab is a place.
+    // Active tab in ?tab=; each tab's search, filter chip, page and rows-per-page in ?search, module|status, page, per.
     const [tab, changeTab] = useTabParam(isEmailTab, 'email');
+    const list = useListParams();
+    const search = list.get('search');
 
-    // Remember search + module across reloads.
-    useEffect(() => {
-        localStorage.setItem(FILTER_KEY, JSON.stringify({ search, module }));
-    }, [search, module]);
+    // A new tab starts unfiltered on page 1; the Email tab gets its remembered filters back.
+    const switchTab = (next: EmailTab) => {
+        if (next === tab) return;
+        changeTab(next, {
+            extra: (params) => {
+                for (const key of TAB_LIST_KEYS) params.delete(key);
+                if (next === 'email') applyParamPatch(params, readRememberedFilters());
+            },
+        });
+    };
+
+    // A bare Email-tab URL takes the remembered filters once; a link with list params wins.
+    const [initialRestore] = useState(() =>
+        tab === 'email' && !['search', 'module', 'page', 'per'].some((key) => list.searchParams.has(key)) ? readRememberedFilters() : null,
+    );
+    const restorePending = useRef(initialRestore !== null);
 
     const templates = useMemo(() => data?.data ?? [], [data]);
     const stats = data?.stats;
@@ -583,10 +621,15 @@ export default function EmailTemplatesPage() {
             },
             { replace: true },
         );
-    // The tab shows in the URL from the first visit (the menu, the old /email-templates link),
-    // not only after a tab press. A redirect, so it replaces: Back never lands on the bare URL.
+    // ?tab= and the remembered filters land in the URL in one replace on the first visit.
     useEffect(() => {
-        if (searchParams.get('tab') === null) changeTab(tab, { replace: true, extra: () => undefined });
+        if (searchParams.has('search') || searchParams.has('module')) restorePending.current = false;
+        const restore = restorePending.current ? initialRestore : null;
+        if (searchParams.get('tab') === null) {
+            changeTab(tab, { replace: true, extra: (params) => applyParamPatch(params, restore) });
+        } else if (restore) {
+            list.setParams(restore);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
 
@@ -605,6 +648,17 @@ export default function EmailTemplatesPage() {
         });
         return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
     }, [templates]);
+    // An unknown ?module= reads as All once the templates have loaded.
+    const urlModule = list.get('module');
+    const module = !data || modules.some(([mod]) => mod === urlModule) ? urlModule : '';
+    const setSearch = (value: string) => {
+        list.setFilter('search', value);
+        rememberFilters(value, module);
+    };
+    const setModule = (value: string) => {
+        list.setFilter('module', value);
+        rememberFilters(search, value);
+    };
 
     const rows = useMemo(() => {
         let list = templates;
@@ -755,7 +809,7 @@ export default function EmailTemplatesPage() {
                         label={t('email_delivery')}
                         value={stats?.delivery_rate != null ? `${stats.delivery_rate}%` : '—'}
                         icon={Mail}
-                        onClick={() => changeTab('log')}
+                        onClick={() => switchTab('log')}
                     />
                 </div>
             )}
@@ -768,7 +822,7 @@ export default function EmailTemplatesPage() {
                         <button
                             key={id}
                             type="button"
-                            onClick={() => changeTab(id)}
+                            onClick={() => switchTab(id)}
                             className={cn(
                                 'relative px-3 py-3 text-sm font-medium',
                                 tab === id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
@@ -849,6 +903,7 @@ export default function EmailTemplatesPage() {
                             loading={isLoading}
                             rowHeight={45}
                             onRowClick={setEditing}
+                            paging={list.table.paging}
                             emptyState={
                                 <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
                                     <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
@@ -1215,25 +1270,24 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
 function DeliveryLogPane() {
     const t = useT();
     const [viewing, setViewing] = useState<number | null>(null);
-    const [status, setStatus] = useState<EmailLogStatus | ''>('');
-    const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
+    // Status chip, search, page and rows-per-page live in the URL (?status, search, page, per).
+    const list = useListParams();
+    const { page, perPage } = list;
+    const urlStatus = list.get('status');
+    const status = LOG_FILTERS.find((value) => value === urlStatus) ?? '';
+    const setStatus = (value: EmailLogStatus | '') => list.setFilter('status', value);
+    const query = list.get('search');
 
-    // Debounced so typing does not fire a request per keystroke.
-    const [debounced, setDebounced] = useState('');
+    // The box updates as typed; ?search (and page 1) follow 350ms after the last key, re-armed on any URL change.
+    const [search, setSearch] = useState(query);
     useEffect(() => {
-        const id = window.setTimeout(() => setDebounced(search), 350);
+        if (search === query) return;
+        const id = window.setTimeout(() => list.setFilter('search', search), 350);
         return () => window.clearTimeout(id);
-    }, [search]);
-    // Any change of filter starts again at the first page — page 4 of a different list is
-    // not where anybody meant to be.
-    useEffect(() => setPage(1), [debounced, status, perPage]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, query, list.searchParams]);
 
-    const { data, isLoading, isFetching } = useEmailLogs(
-        { page, per_page: perPage, search: debounced || undefined, status: status || undefined },
-        true,
-    );
+    const { data, isLoading, isFetching } = useEmailLogs({ page, per_page: perPage, search: query || undefined, status: status || undefined }, true);
 
     const rows = data?.data ?? [];
     const meta = data?.meta;
@@ -1330,11 +1384,8 @@ function DeliveryLogPane() {
                     page,
                     pageSize: perPage,
                     total: meta?.total ?? 0,
-                    onPageChange: setPage,
-                    onPageSizeChange: (s) => {
-                        setPerPage(s);
-                        setPage(1);
-                    },
+                    onPageChange: list.table.paging.onPageChange,
+                    onPageSizeChange: list.table.paging.onPageSizeChange,
                 }}
                 emptyState={<div className="text-muted-foreground py-10 text-center text-sm">{t('email_log_empty')}</div>}
             />
@@ -1584,20 +1635,8 @@ function EditorDialog({
     };
 
     // Confirm before discarding unsaved edits (X / Esc / click-outside / Cancel).
-    const requestClose = async () => {
-        if (dirty) {
-            if (
-                !(await confirm({
-                    variant: 'warn',
-                    title: t('email_discard_title'),
-                    description: t('email_discard_text'),
-                    confirmText: t('email_discard_confirm'),
-                }))
-            )
-                return;
-        }
-        onClose();
-    };
+    const guardClose = useDiscardGuard(!!template && dirty);
+    const requestClose = () => guardClose(onClose);
 
     // Ctrl/⌘+S saves without leaving the editor.
     useEffect(() => {

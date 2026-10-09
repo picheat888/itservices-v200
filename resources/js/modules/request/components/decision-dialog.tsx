@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_ONBOARDING_BADGE, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
@@ -52,6 +53,8 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
         setNote('');
         setNoteErr('');
     }, [request?.id, action]);
+    const isOpen = !!request && !!action;
+    const guardClose = useDiscardGuard(isOpen && note.trim() !== '');
 
     if (!ctx) return null;
     const rejecting = ctx.action === 'reject';
@@ -93,7 +96,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
     };
 
     return (
-        <Dialog open={!!request && !!action} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={isOpen} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-[520px]">
                 {/* Where the approver stands leads; the reference is filing information and
                     sits out of the way, in mono so it reads as a code rather than a sentence. */}
@@ -206,7 +209,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                             )}
                         </p>
                     )}
-                    <Button variant="outline" onClick={onClose} disabled={pending}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
                     <Button

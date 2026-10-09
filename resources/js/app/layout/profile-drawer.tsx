@@ -7,9 +7,10 @@ import { useTickets } from '@/modules/ticket';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
-import type { EmployeeAccessRow } from '@/shared/types';
+import type { EmployeeAccessRow, User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -17,7 +18,7 @@ import { Label } from '@/shared/ui/label';
 import { useUiStore } from '@/stores/ui';
 import { AtSign, Box, Briefcase, Building2, Camera, Hash, IdCard, KeyRound, Phone, Shield, Ticket, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // Names are stored as a single space-joined string ("First Last"); the first
 // word is the given name and everything after it the surname. This mirrors the
@@ -25,6 +26,20 @@ import { Link } from 'react-router-dom';
 function splitName(full: string | null | undefined): [string, string] {
     const parts = (full ?? '').trim().split(' ');
     return [parts[0] ?? '', parts.slice(1).join(' ')];
+}
+
+/** The editable fields as the form is seeded from the user — also the baseline for unsaved changes. */
+function profileFields(user: User) {
+    // Prefer the linked employee's split fields; fall back to splitting the composed name.
+    const [fn, ln] = splitName(user.name);
+    const [fnTh, lnTh] = splitName(user.name_th);
+    return {
+        firstName: user.first_name ?? fn,
+        lastName: user.last_name ?? ln,
+        firstNameTh: user.first_name_th ?? fnTh,
+        lastNameTh: user.last_name_th ?? lnTh,
+        phone: user.phone ?? '',
+    };
 }
 
 /** One fact in the left rail: an icon, what it is, and what it says. */
@@ -96,6 +111,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const { user, can } = useAuth();
     const update = useUpdateProfile();
     const inputRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
 
     // Pull the full employee record so the drawer can show every field
     // (department, position, joined date, ...), not just what's on the user.
@@ -126,15 +142,12 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     // Prefill from the current user each time the drawer opens.
     useEffect(() => {
         if (open && user) {
-            // Prefer the linked employee's split fields; fall back to splitting
-            // the composed name for accounts without an employee record.
-            const [fn, ln] = splitName(user.name);
-            const [fnTh, lnTh] = splitName(user.name_th);
-            setFirstName(user.first_name ?? fn);
-            setLastName(user.last_name ?? ln);
-            setFirstNameTh(user.first_name_th ?? fnTh);
-            setLastNameTh(user.last_name_th ?? lnTh);
-            setPhone(user.phone ?? '');
+            const fields = profileFields(user);
+            setFirstName(fields.firstName);
+            setLastName(fields.lastName);
+            setFirstNameTh(fields.firstNameTh);
+            setLastNameTh(fields.lastNameTh);
+            setPhone(fields.phone);
             setPhoto(null);
             setCropSrc(null);
             setError('');
@@ -143,6 +156,23 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
             if (inputRef.current) inputRef.current.value = '';
         }
     }, [open, user]);
+
+    const isDirty =
+        !!user && (JSON.stringify({ firstName, lastName, firstNameTh, lastNameTh, phone }) !== JSON.stringify(profileFields(user)) || photo !== null);
+    const hasUnsaved = open && isDirty && !saved;
+    const guardClose = useDiscardGuard(hasUnsaved);
+    // A "see all" link with unsaved input waits for the discard answer before navigating.
+    const leaveTo = (to: string) => (e: React.MouseEvent) => {
+        if (!hasUnsaved) {
+            onClose();
+            return;
+        }
+        e.preventDefault();
+        guardClose(() => {
+            onClose();
+            navigate(to);
+        });
+    };
 
     if (!user) return null;
 
@@ -221,7 +251,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     ];
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="flex h-[88vh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
                 <DialogTitle className="sr-only">{t('profile')}</DialogTitle>
                 {cropSrc && (
@@ -419,7 +449,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                         ))}
                                         <Link
                                             to="/my-assets-access"
-                                            onClick={onClose}
+                                            onClick={leaveTo('/my-assets-access')}
                                             className="text-brand mt-4 inline-block text-sm font-medium hover:underline"
                                         >
                                             {t('profile_see_all')}
@@ -449,7 +479,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                         ))}
                                         <Link
                                             to="/tickets?tab=my"
-                                            onClick={onClose}
+                                            onClick={leaveTo('/tickets?tab=my')}
                                             className="text-brand mt-4 inline-block text-sm font-medium hover:underline"
                                         >
                                             {t('profile_see_all')}
@@ -469,7 +499,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                         ))}
                                         <Link
                                             to="/my-assets-access"
-                                            onClick={onClose}
+                                            onClick={leaveTo('/my-assets-access')}
                                             className="text-brand mt-4 inline-block text-sm font-medium hover:underline"
                                         >
                                             {t('profile_see_all')}
@@ -490,15 +520,17 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                     <Button
                         variant="outline"
                         className="mr-auto"
-                        onClick={() => {
-                            onClose();
-                            setPasswordDialog(true);
-                        }}
+                        onClick={() =>
+                            guardClose(() => {
+                                onClose();
+                                setPasswordDialog(true);
+                            })
+                        }
                     >
                         <KeyRound className="h-4 w-4" />
                         {t('pwd_change_title')}
                     </Button>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('close')}
                     </Button>
                     {canEdit && tab === 'profile' && <SaveButton onClick={save} loading={update.isPending} success={saved} />}

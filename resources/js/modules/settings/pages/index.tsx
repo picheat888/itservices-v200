@@ -6,6 +6,8 @@ import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { toastDeleteError } from '@/shared/lib/api-errors';
 import { resolveBrand } from '@/shared/lib/brand-color';
@@ -82,6 +84,9 @@ import {
     useUploadLogo,
 } from '../hooks/use-settings';
 
+/** A section tells the page whether it holds unsaved local edits. */
+type OnDirtyChange = (dirty: boolean) => void;
+
 type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'request-data' | 'assets' | 'security';
 
 // Theme accent options — kept to Blue / Purple / Black per branding guidelines.
@@ -110,13 +115,24 @@ const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 
 /** A ?tab= value this page has — checked, never cast, so ?tab=garbage falls back instead of opening nothing. */
 const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v as Section);
 
+/** Drops the shown list's search, page and Master Data sub-tab (?search, page, list); ?per stays. */
+const clearListParams = (params: URLSearchParams) => {
+    for (const key of ['search', 'page', 'list']) params.delete(key);
+};
+
 export default function SettingsPage() {
     const t = useT();
     const { can } = useAuth();
-    // The active section lives in the URL (?tab=) and nowhere else (useTabParam): a reload, a
-    // shared link (/settings?tab=tickets) and Back / Forward always show the section the URL
-    // names (no ?tab= = Company), and each click is a history entry.
+    // Active section in ?tab= (no ?tab= = Company); each press is a history entry.
     const [section, changeSection] = useTabParam(isSection, 'company');
+    // Unsaved local edits in the open section (it reports them up); switching away asks first.
+    const [sectionDirty, setSectionDirty] = useState(false);
+    const guardSwitch = useDiscardGuard(sectionDirty);
+    // A new section starts with no search on page 1 (rows-per-page stays).
+    const openSection = (next: Section) => {
+        if (next === section) return;
+        guardSwitch(() => changeSection(next, { extra: clearListParams }));
+    };
     const { data } = useSettings();
     const update = useUpdateCompany();
     const [form, setForm] = useState<SettingsForm>(emptyForm);
@@ -160,6 +176,9 @@ export default function SettingsPage() {
             form.address !== data.address ||
             form.country !== data.country ||
             form.currency !== data.currency);
+    const brandingFormDirty = !!data && (form.brand_name !== data.brand_name || form.brand_sub !== data.brand_sub);
+    // Company/System edits survive section switches, but reload/close still warns.
+    useDiscardGuard(companyDirty || brandingFormDirty);
 
     const allNav: { id: Section; label: string; icon: typeof Building2; perm: string }[] = [
         { id: 'company', label: t('set_company'), icon: Building2, perm: 'settings.company' },
@@ -192,7 +211,7 @@ export default function SettingsPage() {
                         return (
                             <button
                                 key={n.id}
-                                onClick={() => changeSection(n.id)}
+                                onClick={() => openSection(n.id)}
                                 className={cn(
                                     'flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
                                     activeSection === n.id ? 'bg-brand/10 text-brand font-semibold' : 'text-muted-foreground hover:bg-accent/50',
@@ -206,7 +225,9 @@ export default function SettingsPage() {
                 </nav>
 
                 <div className="p-6">
-                    {activeSection === 'system' && <SystemTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
+                    {activeSection === 'system' && (
+                        <SystemTab form={form} set={set} logoUrl={data?.logo_url ?? null} onDirtyChange={setSectionDirty} />
+                    )}
                     {activeSection === 'company' && (
                         <CompanyTab
                             form={form}
@@ -218,11 +239,11 @@ export default function SettingsPage() {
                         />
                     )}
                     {activeSection === 'master-data' && <MasterDataTab />}
-                    {activeSection === 'email' && <EmailTab />}
-                    {activeSection === 'assets' && <AssetsTab />}
-                    {activeSection === 'tickets' && <TicketsSlaTab />}
+                    {activeSection === 'email' && <EmailTab onDirtyChange={setSectionDirty} />}
+                    {activeSection === 'assets' && <AssetsTab onDirtyChange={setSectionDirty} onOpenSection={openSection} />}
+                    {activeSection === 'tickets' && <TicketsSlaTab onDirtyChange={setSectionDirty} />}
                     {activeSection === 'request-data' && <RequestDataTab />}
-                    {activeSection === 'security' && <SecurityTab />}
+                    {activeSection === 'security' && <SecurityTab onDirtyChange={setSectionDirty} />}
                     {!VALID_SECTIONS.includes(activeSection) && <ComingSoon />}
                 </div>
             </Card>
@@ -254,16 +275,19 @@ function RequestDataTab() {
 
 // ─── Master Data Tab ─────────────────────────────────────────────────────────
 
-type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'warranty-types';
+const MD_TABS = ['brands', 'models', 'categories', 'vendors', 'warehouses', 'locations', 'units', 'warranty-types'] as const;
+type MdTab = (typeof MD_TABS)[number];
 
-/**
- * MasterDataTab — top-level container with sub-tab navigation.
- * Renders one of: BrandsList, ModelsList, CategoriesList, VendorsList,
- * WarehousesList, or LocationsList based on the selected tab.
- */
+/** MasterDataTab — sub-tab navigation (?list=, no ?list= = Brands) over the lookup lists. */
 function MasterDataTab() {
     const t = useT();
-    const [tab, setTab] = useState<MdTab>('brands');
+    const list = useListParams();
+    const tab: MdTab = MD_TABS.find((id) => id === list.get('list')) ?? MD_TABS[0];
+    // A new sub-tab starts with no search on page 1, in the same URL write.
+    const setTab = (next: MdTab) => {
+        if (next === tab) return;
+        list.setParams({ list: next === MD_TABS[0] ? null : next, search: null, page: null });
+    };
 
     const tabs: { id: MdTab; label: string }[] = [
         { id: 'brands', label: t('md_brands') },
@@ -362,6 +386,7 @@ function RowActions({
 function BrandsList() {
     const t = useT();
     const confirm = useConfirm();
+    const list = useListParams();
     const { data: brands = [] } = useBrands();
     const { remove } = useBrandMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -404,6 +429,8 @@ function BrandsList() {
                 columns={columns}
                 rows={brands}
                 rowKey={(b) => b.id}
+                search={list.table.search}
+                paging={list.table.paging}
                 searchable={(b) => `${b.name} ${b.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -431,6 +458,7 @@ function BrandsList() {
 function ModelsList() {
     const t = useT();
     const confirm = useConfirm();
+    const list = useListParams();
     const { data: models = [] } = useAssetModels();
     const { remove } = useAssetModelMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -485,6 +513,8 @@ function ModelsList() {
                 columns={columns}
                 rows={models}
                 rowKey={(m) => m.id}
+                search={list.table.search}
+                paging={list.table.paging}
                 searchable={(m) => `${m.name} ${m.brand?.name ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -512,6 +542,7 @@ function ModelsList() {
 function CategoriesList() {
     const t = useT();
     const confirm = useConfirm();
+    const list = useListParams();
     const lang = useUiStore((s) => s.lang);
     const { data: categories = [] } = useCategories();
     const { remove } = useCategoryMutations();
@@ -566,6 +597,8 @@ function CategoriesList() {
                 columns={columns}
                 rows={categories}
                 rowKey={(c) => c.id}
+                search={list.table.search}
+                paging={list.table.paging}
                 searchable={(c) => `${c.name} ${c.name_th ?? ''} ${c.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -593,6 +626,7 @@ function CategoriesList() {
 function VendorsList() {
     const t = useT();
     const confirm = useConfirm();
+    const list = useListParams();
     const lang = useUiStore((s) => s.lang);
     const { data: vendors = [] } = useVendors();
     const { remove } = useVendorMutations();
@@ -661,6 +695,8 @@ function VendorsList() {
                 columns={columns}
                 rows={vendors}
                 rowKey={(v) => v.id}
+                search={list.table.search}
+                paging={list.table.paging}
                 searchable={(v) => `${v.name} ${v.name_th ?? ''} ${v.contact ?? ''} ${v.email ?? ''} ${v.phone ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -688,6 +724,7 @@ function VendorsList() {
 function WarehousesList() {
     const t = useT();
     const confirm = useConfirm();
+    const list = useListParams();
     const { data: warehouses = [] } = useWarehouses();
     const { remove } = useWarehouseMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -730,6 +767,8 @@ function WarehousesList() {
                 columns={columns}
                 rows={warehouses}
                 rowKey={(w) => w.id}
+                search={list.table.search}
+                paging={list.table.paging}
                 searchable={(w) => `${w.name} ${w.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -755,6 +794,7 @@ function WarehousesList() {
 function LocationsList() {
     const t = useT();
     const confirm = useConfirm();
+    const list = useListParams();
     const { data: locations = [] } = useLocations();
     const { remove } = useLocationMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -797,6 +837,8 @@ function LocationsList() {
                 columns={columns}
                 rows={locations}
                 rowKey={(loc) => loc.id}
+                search={list.table.search}
+                paging={list.table.paging}
                 searchable={(loc) => loc.name}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -864,7 +906,7 @@ function ComingSoon() {
 const MAIL_KEY = ['mail-settings'] as const;
 
 /** SMTP server settings (mail_settings) — host/port/credentials/from + test send. */
-function EmailTab() {
+function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
     const qc = useQueryClient();
     const { data } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail });
@@ -967,6 +1009,11 @@ function EmailTab() {
             form.from_address !== (data.from_address ?? '') ||
             form.from_name !== (data.from_name ?? '') ||
             (form.password ?? '') !== '');
+    // Report unsaved edits up so the page asks before switching section.
+    useEffect(() => {
+        onDirtyChange(dirty);
+        return () => onDirtyChange(false);
+    }, [dirty, onDirtyChange]);
 
     return (
         <div className="max-w-xl">
@@ -1077,7 +1124,7 @@ function EmailTab() {
 const SECURITY_KEY = ['security-settings'] as const;
 
 /** Session inactivity timeout + password expiry policy (app_settings). */
-function SecurityTab() {
+function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
     const qc = useQueryClient();
     const { data } = useQuery({ queryKey: SECURITY_KEY, queryFn: settingsApi.getSecurity });
@@ -1114,6 +1161,11 @@ function SecurityTab() {
     // Save is enabled only once a policy value differs from what was loaded. Comparing every
     // key rather than naming two of them, so a window added later cannot be left out of this.
     const dirty = !!data && (Object.keys(data) as (keyof SecuritySettings)[]).some((k) => form[k] !== data[k]);
+    // Report unsaved edits up so the page asks before switching section.
+    useEffect(() => {
+        onDirtyChange(dirty);
+        return () => onDirtyChange(false);
+    }, [dirty, onDirtyChange]);
 
     return (
         <div className="max-w-xl">
@@ -1320,7 +1372,7 @@ const ASSET_STATUS_ROWS: { key: string; labelKey: string }[] = [
  * status from a fixed palette; on Save the colors persist to app_settings and
  * sync into the UI store so every asset badge updates across the system.
  */
-function AssetsTab() {
+function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyChange; onOpenSection: (next: Section) => void }) {
     const t = useT();
     const storeColors = useUiStore((s) => s.assetStatusColors);
     const update = useUpdateAssetColors();
@@ -1332,6 +1384,11 @@ function AssetsTab() {
     }, [storeColors]);
 
     const dirty = ASSET_STATUS_ROWS.some((r) => draft[r.key] !== storeColors[r.key]);
+    // Report unsaved edits up so the page asks before switching section.
+    useEffect(() => {
+        onDirtyChange(dirty);
+        return () => onDirtyChange(false);
+    }, [dirty, onDirtyChange]);
 
     const setColor = (key: string, color: string) => {
         setDraft((d) => ({ ...d, [key]: color }));
@@ -1349,7 +1406,16 @@ function AssetsTab() {
                 <Boxes className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>
                     {t('set_assets_masterdata_note')}{' '}
-                    <Link to="/settings?tab=master-data" className="text-foreground font-semibold underline-offset-2 hover:underline">
+                    <Link
+                        to="/settings?tab=master-data"
+                        onClick={(e) => {
+                            // Plain clicks switch through the page's guard; modified clicks still open a new tab.
+                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                            e.preventDefault();
+                            onOpenSection('master-data');
+                        }}
+                        className="text-foreground font-semibold underline-offset-2 hover:underline"
+                    >
                         {t('set_master_data')}
                     </Link>
                 </span>
@@ -1594,17 +1660,29 @@ function SystemSectionHead({ icon: Icon, title, desc }: { icon: typeof Sparkles;
  * the system-wide theme color — all saved with one button. Corner radius and
  * density are fixed (no per-user controls).
  */
-function SystemTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; logoUrl: string | null }) {
+function SystemTab({ form, set, logoUrl, onDirtyChange }: { form: SettingsForm; set: SetFn; logoUrl: string | null; onDirtyChange: OnDirtyChange }) {
     const t = useT();
     return (
         <div className="max-w-2xl">
             <SystemSectionHead icon={Sparkles} title={t('set_branding')} desc={t('set_branding_desc')} />
-            <BrandingTab form={form} set={set} logoUrl={logoUrl} embedded />
+            <BrandingTab form={form} set={set} logoUrl={logoUrl} onDirtyChange={onDirtyChange} embedded />
         </div>
     );
 }
 
-function BrandingTab({ form, set, logoUrl, embedded = false }: { form: SettingsForm; set: SetFn; logoUrl: string | null; embedded?: boolean }) {
+function BrandingTab({
+    form,
+    set,
+    logoUrl,
+    onDirtyChange,
+    embedded = false,
+}: {
+    form: SettingsForm;
+    set: SetFn;
+    logoUrl: string | null;
+    onDirtyChange: OnDirtyChange;
+    embedded?: boolean;
+}) {
     const t = useT();
     const { data } = useSettings();
     const update = useUpdateBranding();
@@ -1630,6 +1708,13 @@ function BrandingTab({ form, set, logoUrl, embedded = false }: { form: SettingsF
     // pending reset differs from what was loaded — an untouched form stays disabled.
     const dirty =
         !!data && (form.brand_name !== data.brand_name || form.brand_sub !== data.brand_sub || accent !== storeAccent || !!file || pendingReset);
+    // Only the logo/colour drafts live here; brand name/sub are held by the page and survive a switch.
+    const localDirty = accent !== storeAccent || !!file || pendingReset;
+    // Report unsaved edits up so the page asks before switching section.
+    useEffect(() => {
+        onDirtyChange(localDirty);
+        return () => onDirtyChange(false);
+    }, [localDirty, onDirtyChange]);
 
     // When pendingReset is true, show no logo (as if already cleared).
     // When a new file is picked after reset, cancel the pending reset.

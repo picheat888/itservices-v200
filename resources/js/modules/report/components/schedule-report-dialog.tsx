@@ -11,6 +11,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -92,22 +93,44 @@ export function ScheduleReportDialog({
     const [recipients, setRecipients] = useState<string[]>([]);
     const [draft, setDraft] = useState('');
     const [draftError, setDraftError] = useState<string | null>(null);
+    const [seed, setSeed] = useState<ScheduleInput | null>(null);
 
     // Reset the form each time the dialog opens — to the schedule being edited, or to defaults.
     useEffect(() => {
         if (!open) return;
-        setFormat(initial?.format ?? formats[0] ?? 'pdf');
-        setFrequency(initial?.frequency ?? 'weekly');
-        setHour(initial?.send_hour ?? 7);
-        setRecipients(initial?.recipients ?? (user?.email ? [user.email] : []));
+        const next: ScheduleInput = {
+            format: initial?.format ?? formats[0] ?? 'pdf',
+            frequency: initial?.frequency ?? 'weekly',
+            send_hour: initial?.send_hour ?? 7,
+            recipients: initial?.recipients ?? (user?.email ? [user.email] : []),
+        };
+        setFormat(next.format);
+        setFrequency(next.frequency);
+        setHour(next.send_hour);
+        setRecipients(next.recipients);
+        setSeed(next);
         setDraft('');
         setDraftError(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
     }, [open]);
 
+    const sameRecipients = (a: string[], b: string[]) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+    const isDirty =
+        seed != null &&
+        (format !== seed.format ||
+            frequency !== seed.frequency ||
+            hour !== seed.send_hour ||
+            !sameRecipients(recipients, seed.recipients) ||
+            draft.trim() !== '');
+    const guardClose = useDiscardGuard(open && isDirty);
+
+    const close = () => {
+        onReset();
+        onOpenChange(false);
+    };
     const handleOpenChange = (next: boolean) => {
-        if (!next) onReset();
-        onOpenChange(next);
+        if (next) onOpenChange(true);
+        else guardClose(close);
     };
 
     /** Add what is typed; returns the list it produced (or the current one when refused). */

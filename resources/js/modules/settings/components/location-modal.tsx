@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useLocationMutations } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { LocationItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -22,14 +23,20 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
     const { create, update } = useLocationMutations();
     const [name, setName] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
+    const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
         if (open) {
             setName(location?.name ?? '');
             setNameError(undefined);
+            setSaved(false);
         }
     }, [open, location]);
+
+    // Dirty = differs from the values the dialog was seeded with (create = blank).
+    const isDirty = !saved && name !== (location?.name ?? '');
+    const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {
         if (!name.trim()) {
@@ -42,6 +49,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
             } else {
                 await create.mutateAsync(name.trim());
             }
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
             useToastStore
@@ -55,7 +63,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{location ? t('edit_location') : t('add_location')}</DialogTitle>
@@ -73,7 +81,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
                     />
                 </Field>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} onClick={submit} disabled={!name.trim()} />

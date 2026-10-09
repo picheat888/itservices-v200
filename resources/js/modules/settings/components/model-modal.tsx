@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { AssetModel, Brand } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -28,6 +29,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
     const [name, setName] = useState('');
     const [brandId, setBrandId] = useState<string>(NO_BRAND);
     const [nameError, setNameError] = useState<string | undefined>();
+    const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -35,8 +37,13 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
             setName(model?.name ?? '');
             setBrandId(model?.brand_id ? String(model.brand_id) : NO_BRAND);
             setNameError(undefined);
+            setSaved(false);
         }
     }, [open, model]);
+
+    // Dirty = differs from the values the dialog was seeded with (create = blank).
+    const isDirty = !saved && (name !== (model?.name ?? '') || brandId !== (model?.brand_id ? String(model.brand_id) : NO_BRAND));
+    const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {
         if (!name.trim()) {
@@ -50,6 +57,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
             } else {
                 await create.mutateAsync(payload);
             }
+            setSaved(true);
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
             useToastStore
@@ -63,7 +71,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{model ? t('md_edit_model') : t('md_add_model')}</DialogTitle>
@@ -98,7 +106,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} onClick={submit} disabled={!name.trim()} />
