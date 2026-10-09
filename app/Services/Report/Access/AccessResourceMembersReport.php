@@ -330,7 +330,7 @@ class AccessResourceMembersReport extends TabularReport
             ], self::TYPES)),
             ReportSummary::make('ar_members', 'สมาชิกทั้งหมด', $total)->withNote([
                 'label_key' => 'rep_n_ar_members',
-                'values' => ['people' => $members->pluck('employee_id')->unique()->count(), 'median' => (int) round($resources->pluck('members')->median() ?? 0)],
+                'values' => ['people' => $members->pluck('employee_id')->unique()->count()],
             ]),
             ReportSummary::make('ar_cross', 'สมาชิกข้ามแผนก', $socialOnly ? null : $sum('cross'))
                 ->withShareOf($resources->sum(fn (array $r) => $r['mix']['in_dept'] + $r['mix']['cross']))

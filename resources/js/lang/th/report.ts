@@ -1020,7 +1020,7 @@ export const report: Dict = {
     rep_k_ar_cross: 'สมาชิกข้ามแผนก',
     rep_k_ar_leavers: 'ผู้ลาออกยังเป็นสมาชิก',
     rep_k_ar_owner: 'ต้องหาเจ้าของ',
-    rep_n_ar_members: 'พนักงาน {people} คน โดยทั่วไป {median} คนต่อ Resource',
+    rep_n_ar_members: 'เป็นพนักงาน {people} คน บางคนอยู่หลาย Resource',
     rep_n_ar_cross: 'ใน {n} Resource',
     rep_n_ar_cross_none: 'ทุกคนอยู่แผนกเดียวกับ Resource',
     rep_n_ar_cross_social: 'Social / Internet ไม่ผูกแผนก',
