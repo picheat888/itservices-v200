@@ -331,6 +331,8 @@ export const report: Dict = {
     rep_c_location: 'สถานที่',
     rep_c_purchase_date: 'วันที่ซื้อ',
     rep_c_cover_end: 'ประกัน/สัญญาถึง',
+    rep_c_registered_at: 'วันที่ลงทะเบียน',
+    rep_c_registered_by: 'ลงทะเบียนโดย',
     rep_c_warranty_end: 'ประกันถึง',
     rep_fl_within: 'ภายใน',
     rep_fl_type: 'ประเภท',

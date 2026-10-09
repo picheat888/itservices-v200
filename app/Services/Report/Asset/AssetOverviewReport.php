@@ -123,7 +123,7 @@ class AssetOverviewReport extends TabularReport
         return $this->filtered($filters)
             ->with([
                 'category:id,name,name_th', 'brand:id,name', 'model:id,name', 'ownerEmployee.department:id,name,name_th',
-                'location:id,name', 'warehouse:id,name', 'contract:id,end_date,value',
+                'location:id,name', 'warehouse:id,name', 'contract:id,end_date,value', 'creator:id,name',
             ])
             ->orderBy('asset_code');
     }
@@ -149,6 +149,8 @@ class AssetOverviewReport extends TabularReport
             ReportColumn::money('value', 'มูลค่า', fn (Asset $a) => $a->source === AssetSource::Rented ? $a->contract?->value : $a->value),
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date),
             ReportColumn::date('cover_end', 'ประกัน/สัญญาถึง', fn (Asset $a) => $a->coverEndsOn()),
+            ReportColumn::date('registered_at', 'วันที่ลงทะเบียน', fn (Asset $a) => $a->created_at)->hiddenByDefault(),
+            ReportColumn::text('registered_by', 'ลงทะเบียนโดย', fn (Asset $a) => $a->creator?->name)->hiddenByDefault(),
         ];
     }
 
