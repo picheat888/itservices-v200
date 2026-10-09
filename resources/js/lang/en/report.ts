@@ -1054,7 +1054,7 @@ export const report: Dict = {
     rep_ar_col_resource: 'Resource',
     rep_ar_col_members: 'Members',
     rep_ar_col_todo: 'To do',
-    rep_ar_col_list: 'List',
+    rep_ar_col_list: 'People',
     rep_ar_levels: 'Read {read}, Read/Write {write}',
     rep_ar_pick: '{n} people',
     rep_ar_pick_aria: 'List the members of {name} ({n} people)',
