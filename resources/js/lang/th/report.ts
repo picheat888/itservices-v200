@@ -1148,5 +1148,4 @@ export const report: Dict = {
     rep_sl_req_full: 'License เต็ม ให้สิทธิ์ไม่ได้',
     rep_sl_req_take_back: 'เรียกคืนจากผู้ลาออกได้ {n}',
     rep_sl_req_left: 'เหลือ {n} License',
-    rep_sl_open_requests: 'เปิดในหน้าคำขอ',
 };
