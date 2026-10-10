@@ -441,7 +441,7 @@ export default function TicketsPage() {
                 {tab === 'overview' && canOverview && (
                     <div className="p-5">
                         {/* Window selector stays put while the numbers below reload. */}
-                        <OverviewHeader value={range} onChange={setRange} className="mb-5" />
+                        <OverviewHeader value={range} onChange={setRange} />
 
                         {summaryLoading ? (
                             <TicketOverviewBodySkeleton />

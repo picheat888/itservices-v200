@@ -475,7 +475,7 @@ export default function EmployeesPage() {
                 <PageTabs tabs={tabs} active={tab} onChange={changeTab} />
 
                 <div className="p-5">
-                    {tab === 'overview' && <OverviewHeader value={period} onChange={setPeriod} className="mb-5" />}
+                    {tab === 'overview' && <OverviewHeader value={period} onChange={setPeriod} />}
                     {tab === 'overview' && summaryLoading && <EmployeeOverviewSkeleton />}
                     {tab === 'overview' && !summaryLoading && (
                         <OverviewTab

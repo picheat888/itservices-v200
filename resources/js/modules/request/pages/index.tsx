@@ -312,7 +312,7 @@ export default function RequestsPage() {
                 />
 
                 {tab === 'overview' ? (
-                    <div className="space-y-4 p-4">
+                    <div className="space-y-4 p-5">
                         <OverviewHeader value={period} onChange={setPeriod} />
                         {/* KPI row — the awaiting card is as of now, the rest count requests filed in the period */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
