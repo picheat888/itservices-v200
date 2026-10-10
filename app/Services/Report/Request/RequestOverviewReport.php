@@ -114,7 +114,7 @@ class RequestOverviewReport extends TabularReport
             ReportColumn::date('submitted_at', 'วันที่ยื่น', fn (ServiceRequest $r) => $r->created_at),
             ReportColumn::enum('request_type', 'ประเภทคำขอ', fn (ServiceRequest $r) => $r->type, self::typeKeys(), self::typeTh()),
             // Drawn as a badge in the type cell on the page.
-            ReportColumn::enum('origin', 'ยื่นโดย', fn (ServiceRequest $r) => $r->origin, self::ORIGIN_KEYS, self::ORIGIN_TH)->hiddenByDefault(),
+            ReportColumn::enum('origin', 'ที่มา', fn (ServiceRequest $r) => $r->origin, self::ORIGIN_KEYS, self::ORIGIN_TH)->hiddenByDefault(),
             ReportColumn::text('requester', 'ผู้ขอ', fn (ServiceRequest $r) => $r->requester_name),
             // Drawn under the name on the page.
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (ServiceRequest $r) => $r->employee?->code)->hiddenByDefault(),
@@ -122,7 +122,7 @@ class RequestOverviewReport extends TabularReport
             ReportColumn::enum('status', 'สถานะ', fn (ServiceRequest $r) => $r->status, self::STATUS_KEYS, self::STATUS_TH),
             ReportColumn::date('approved_at', 'อนุมัติครบ', fn (ServiceRequest $r) => $r->approved_at)->labelKey('rep_c_rqo_approved_at'),
             ReportColumn::date('completed_at', 'เสร็จสิ้น', fn (ServiceRequest $r) => $r->completed_at)->labelKey('rep_c_rqo_completed_at'),
-            ReportColumn::number('total_days', 'ยื่นจนเสร็จ (วัน)', fn (ServiceRequest $r) => $r->completed_at ? self::wholeDays($r->created_at, $r->completed_at) : null)
+            ReportColumn::number('total_days', 'ยื่นจนเสร็จสิ้น (วัน)', fn (ServiceRequest $r) => $r->completed_at ? self::wholeDays($r->created_at, $r->completed_at) : null)
                 ->labelKey('rep_c_rqo_total_days'),
             // Still open (pending or approved): whole days since it was submitted.
             ReportColumn::number('open_days', 'ผ่านมาแล้ว (วัน)', fn (ServiceRequest $r) => self::isOpen($r) ? self::wholeDays($r->created_at, now()) : null)
@@ -251,15 +251,11 @@ class RequestOverviewReport extends TabularReport
         [$waiting, $weekly] = $this->pendingNow($filters);
         $oldest = $waiting->sortBy('created_at')->first();
         $oldestDays = $oldest ? self::wholeDays($oldest->created_at, now()) : 0;
-        $pendingTile = ReportSummary::make('rqo_pending', 'รออนุมัติ', $waiting->count())->withNote([
-            'label_key' => 'rep_n_rqo_pending',
-            'values' => ['days' => $oldestDays],
-            'texts' => ['reference' => (string) $oldest?->reference],
-            'trend' => self::trend($waiting->count(), $weekly[self::PENDING_WEEKS - 2], 'since_7d', $weekly, false),
-        ]);
-
+        // Trend tiles carry only their trend: the footer is Delta + Sparkline.
+        $carry = fn (array $trend) => ['label_key' => $trend['label_key'], 'trend' => $trend];
+        $pendingTile = ReportSummary::make('rqo_pending', 'รออนุมัติ', $waiting->count())
+            ->withNote($carry(self::trend($waiting->count(), $weekly[self::PENDING_WEEKS - 2], 'since_7d', $weekly, false)));
         $lead = self::leadMedian($rows);
-        $done = $rows->filter(fn (ServiceRequest $r) => $r->status->value === 'completed' && $r->approved_at && $r->completed_at);
 
         return [
             ReportSummary::make('rqo_total', 'คำขอทั้งหมด', $total)->withSplit([
@@ -272,22 +268,10 @@ class RequestOverviewReport extends TabularReport
                 'label_key' => 'rep_n_rqo_waiting_it',
                 'values' => ['n' => (int) $count->get('approved', 0)],
             ]),
-            ReportSummary::make('rqo_rejected', 'ไม่อนุมัติ', $rejected)->withNote([
-                'label_key' => 'rep_n_rqo_rejected',
-                'values' => [
-                    'cancelled' => (int) $count->get('cancelled', 0),
-                    'cancelled_after_approval' => $rows->filter(fn (ServiceRequest $r) => $r->status->value === 'cancelled' && $r->approved_at)->count(),
-                ],
-                'trend' => self::trend($rejected, $before?->filter($is('rejected'))->count(), $basis, $perMonth(fn (Collection $c) => $c->filter($is('rejected'))->count()), false),
-            ]),
-            ReportSummary::make('rqo_lead', 'ยื่นจนเสร็จสิ้น (มัธยฐาน วัน)', $lead)->withNote([
-                'label_key' => 'rep_n_rqo_lead',
-                'values' => array_filter([
-                    'approval' => self::median($done->map(fn (ServiceRequest $r) => self::wholeDays($r->created_at, $r->approved_at))->values()->all()),
-                    'it' => self::median($done->map(fn (ServiceRequest $r) => self::wholeDays($r->approved_at, $r->completed_at))->values()->all()),
-                ], fn ($v) => $v !== null),
-                'trend' => self::trend($lead, $before ? self::leadMedian($before) : null, $basis, $perMonth(fn (Collection $c) => self::leadMedian($c)), false),
-            ]),
+            ReportSummary::make('rqo_rejected', 'ไม่อนุมัติ', $rejected)
+                ->withNote($carry(self::trend($rejected, $before?->filter($is('rejected'))->count(), $basis, $perMonth(fn (Collection $c) => $c->filter($is('rejected'))->count()), false))),
+            ReportSummary::make('rqo_lead', 'ยื่นจนเสร็จสิ้น (มัธยฐาน วัน)', $lead, null, 'days')
+                ->withNote($carry(self::trend($lead, $before ? self::leadMedian($before) : null, $basis, $perMonth(fn (Collection $c) => self::leadMedian($c)), false))),
         ];
     }
 
@@ -543,8 +527,8 @@ class RequestOverviewReport extends TabularReport
                 'rows' => array_map(fn (array $t) => [$types[$t['type']], $t['total'], ...array_values($t['by_status']), $rate($t)], $b['types']),
             ],
             [
-                'title' => 'กี่วันจึงส่งมอบ',
-                'headings' => ['ประเภทคำขอ', 'คำขอที่เสร็จสิ้น', 'ขั้นอนุมัติ (มัธยฐาน วัน)', 'ขั้น IT (มัธยฐาน วัน)', 'ยื่นจนเสร็จ (มัธยฐาน วัน)'],
+                'title' => 'ใช้เวลากี่วันจนเสร็จสิ้น',
+                'headings' => ['ประเภทคำขอ', 'คำขอที่เสร็จสิ้น', 'ขั้นอนุมัติ (มัธยฐาน วัน)', 'ขั้น IT (มัธยฐาน วัน)', 'ยื่นจนเสร็จสิ้น (มัธยฐาน วัน)'],
                 'rows' => [
                     ...array_map(fn (array $d) => [$types[$d['type']], $d['count'], $d['approval'], $d['it'], $d['total']], $b['delivery']['types']),
                     ['ทุกประเภท', $b['delivery']['all']['count'], $b['delivery']['all']['approval'], $b['delivery']['all']['it'], $b['delivery']['all']['total']],
@@ -552,7 +536,7 @@ class RequestOverviewReport extends TabularReport
             ],
             [
                 'title' => 'รายการที่ขอบ่อย',
-                'headings' => ['รายการ', 'ประเภทคำขอ', 'ยื่นโดย', 'คำขอ'],
+                'headings' => ['รายการ', 'ประเภทคำขอ', 'ที่มา', 'คำขอ'],
                 'rows' => array_map(fn (array $i) => [$i['name_th'] ?: $i['name'], $types[$i['type']], self::ORIGIN_TH[$i['origin']], $i['count']], $b['items']['list']),
             ],
             [

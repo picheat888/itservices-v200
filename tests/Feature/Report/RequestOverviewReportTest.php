@@ -155,19 +155,21 @@ class RequestOverviewReportTest extends TestCase
 
         $this->assertSame(2, $tiles['rqo_pending']['value']);
         $this->assertSame('amber', $tiles['rqo_pending']['attention']);
-        $this->assertSame(15, $tiles['rqo_pending']['note']['values']['days']);
-        $this->assertSame($this->r['waiting_old']->reference, $tiles['rqo_pending']['note']['texts']['reference']);
+        // Trend tiles carry only their trend.
+        foreach (['rqo_pending', 'rqo_rejected', 'rqo_lead'] as $key) {
+            $this->assertSame(['label_key', 'trend'], array_keys($tiles[$key]['note']));
+            $this->assertSame($tiles[$key]['note']['trend']['label_key'], $tiles[$key]['note']['label_key']);
+        }
 
         $this->assertSame(2, $tiles['rqo_completed']['value']);
         $this->assertSame(25, $tiles['rqo_completed']['share']);
         $this->assertSame(1, $tiles['rqo_completed']['note']['values']['n']);
 
         $this->assertSame(1, $tiles['rqo_rejected']['value']);
-        $this->assertSame(['cancelled' => 2, 'cancelled_after_approval' => 1], $tiles['rqo_rejected']['note']['values']);
 
-        // Completed: 3 and 1 days in all; approval 1 and 0; IT 2 and 1.
+        // Completed: 3 and 1 days submitted to completed.
         $this->assertEquals(2, $tiles['rqo_lead']['value']);
-        $this->assertEquals(['approval' => 0.5, 'it' => 1.5], $tiles['rqo_lead']['note']['values']);
+        $this->assertSame('days', $tiles['rqo_lead']['format']);
     }
 
     public function test_pending_trend_reconstructs_the_last_eight_weeks(): void

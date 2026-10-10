@@ -133,7 +133,7 @@ class ItPendingRequestReportTest extends TestCase
         // เกิน 3 วัน = 4–7 + เกิน 7.
         $this->assertSame(3, $summary['rqi_over_3']['value']);
         $this->assertSame(60, $summary['rqi_over_3']['share']);
-        $this->assertSame(['pct' => 60], $summary['rqi_over_3']['note']['values']);
+        $this->assertNull($summary['rqi_over_3']['note']);
         $this->assertSame(1, $summary['rqi_over_7']['value']);
         $this->assertSame(['days' => 8], $summary['rqi_over_7']['note']['values']);
         $this->assertSame('RQ-2026-0004', $summary['rqi_over_7']['note']['texts']['reference']);
@@ -303,9 +303,8 @@ class ItPendingRequestReportTest extends TestCase
         $this->assertSame([], $b['joiners']['rows']);
 
         $summary = collect($this->rows()['summary'])->keyBy('key');
-        $this->assertNull($summary['rqi_over_3']['note']);
         $this->assertNull($summary['rqi_over_7']['note']);
-        $this->assertSame('rep_n_rqi_window', $summary['rqi_joiners']['note']['label_key']);
+        $this->assertSame('rep_n_rqi_no_joiners', $summary['rqi_joiners']['note']['label_key']);
         $this->assertNull($summary['rqi_joiners']['attention']);
     }
 

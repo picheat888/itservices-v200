@@ -199,21 +199,14 @@ class RequestApprovalsReport extends TabularReport
         $reached = ApprovalFacts::reached($steps, $from, $to, $approver);
         $waiting = ApprovalFacts::waitingNow($steps, $approver);
         $bands = $waiting->countBy(fn (RequestApproval $s) => self::ageBand(ApprovalFacts::days($s)));
-        $oldest = $waiting->sortByDesc(fn (RequestApproval $s) => ApprovalFacts::days($s))->first();
         $endings = collect(ApprovalFacts::endings($steps, $from, $to, $approver));
-        $rejected = $endings->where('outcome', 'rejected')->count();
-        $skipped = ApprovalFacts::skipped($steps, $from, $to);
-        $skippedRequests = $skipped->pluck('service_request_id')->unique()->values()->all();
         $blocked = $waiting->map(fn (RequestApproval $s) => ApprovalFacts::blockedBecause($s))->filter();
         $trend = $this->trends($steps, $filters, $previous);
 
-        $waitTile = ReportSummary::make('rqa_waiting', 'รออนุมัติอยู่ตอนนี้', $waiting->count())
+        $waitTile = ReportSummary::make('rqa_waiting', 'รออนุมัติตอนนี้', $waiting->count())
             ->withSplit(array_map(fn (string $band) => [
                 'key' => $band, 'label_key' => self::AGE_BAND_KEYS[$band], 'tone' => ['over_7' => 'red', 'days_4_7' => 'amber', 'upto_3' => 'gray'][$band], 'value' => (int) $bands->get($band, 0),
-            ], self::AGE_BANDS))
-            ->withNote($oldest === null ? null : [
-                'label_key' => 'rep_rqa_n_oldest', 'values' => ['days' => ApprovalFacts::days($oldest)], 'texts' => ['who' => ApprovalFacts::key($oldest)],
-            ]);
+            ], self::AGE_BANDS));
         $blockedTile = ReportSummary::make('rqa_blocked', 'คำขอที่ติดค้าง', $blocked->count())->withSplit([
             ['key' => 'left', 'label_key' => 'rep_rqa_blocked_left', 'tone' => 'red', 'value' => $blocked->filter(fn (string $b) => $b === 'left')->count()],
             ['key' => 'no_account', 'label_key' => 'rep_rqa_blocked_no_account', 'tone' => 'amber', 'value' => $blocked->filter(fn (string $b) => $b === 'no_account')->count()],
@@ -221,19 +214,13 @@ class RequestApprovalsReport extends TabularReport
 
         return [
             $bands->get('over_7', 0) > 0 ? $waitTile->withAttention('amber') : $waitTile,
-            ReportSummary::make('rqa_avg_days', 'เวลาพิจารณาเฉลี่ย', ApprovalFacts::average($reached), null, 'days')->withNote([
-                'label_key' => 'rep_rqa_n_avg',
-                'values' => ['steps' => $reached->count(), 'decided' => ApprovalFacts::average($reached->reject(fn (RequestApproval $s) => ApprovalFacts::isWaiting($s))) ?? 0],
-                'trend' => $trend['avg_days'],
-            ]),
-            ReportSummary::make('rqa_rejected', 'ไม่อนุมัติ', $rejected)->withNote([
-                'label_key' => 'rep_rqa_n_rejected', 'values' => ['cancelled' => $endings->count() - $rejected], 'trend' => $trend['rejected'],
-            ]),
-            ReportSummary::make('rqa_skipped', 'ระบบข้ามให้', $skipped->count())->withNote([
-                'label_key' => 'rep_rqa_n_skipped',
-                'values' => ['requests' => count($skippedRequests), 'unapproved' => ApprovalFacts::unapproved($steps, $skippedRequests)],
-                'trend' => $trend['skipped'],
-            ]),
+            // Trend tiles carry only their trend: the footer is Delta + Sparkline.
+            ReportSummary::make('rqa_avg_days', 'เวลาพิจารณาเฉลี่ย', ApprovalFacts::average($reached), null, 'days')
+                ->withNote(['label_key' => $trend['avg_days']['label_key'], 'trend' => $trend['avg_days']]),
+            ReportSummary::make('rqa_rejected', 'ไม่อนุมัติ', $endings->where('outcome', 'rejected')->count())
+                ->withNote(['label_key' => $trend['rejected']['label_key'], 'trend' => $trend['rejected']]),
+            ReportSummary::make('rqa_skipped', 'ระบบข้าม', ApprovalFacts::skipped($steps, $from, $to)->count())
+                ->withNote(['label_key' => $trend['skipped']['label_key'], 'trend' => $trend['skipped']]),
             $blocked->isNotEmpty() ? $blockedTile->withAttention('red') : $blockedTile,
         ];
     }
@@ -505,7 +492,7 @@ class RequestApprovalsReport extends TabularReport
         $b = $this->breakdown($viewer, $filters);
         $type = fn (string $t) => self::typeTh()[$t] ?? $t;
         $dept = fn (?array $d) => $d === null ? null : (($d['name_th'] ?? null) ?: $d['name']);
-        $why = ['left' => 'ผู้อนุมัติลาออกแล้ว', 'no_account' => 'ผู้อนุมัติยังไม่มีบัญชีเข้าระบบ', 'over7' => 'รอเกิน 7 วัน', 'upto7' => 'รอไม่เกิน 7 วัน'];
+        $why = ['left' => 'ผู้อนุมัติลาออกแล้ว', 'no_account' => 'ผู้อนุมัติยังไม่มีบัญชี', 'over7' => 'รอเกิน 7 วัน', 'upto7' => 'รอไม่เกิน 7 วัน'];
         $stuck = [];
         foreach ($b['stuck'] as $group => $rows) {
             foreach ($rows as $r) {
@@ -515,13 +502,13 @@ class RequestApprovalsReport extends TabularReport
 
         return [
             [
-                'title' => 'ค้างอยู่ตอนนี้',
+                'title' => 'รออนุมัติตอนนี้',
                 'headings' => ['สาเหตุ', 'เลขที่คำขอ', 'ประเภทคำขอ', 'ขั้น', 'รอใคร', 'รหัส', 'ผู้ขอ', 'ถึงคิว', 'รอมาแล้ว (วัน)', 'กลุ่ม'],
                 'rows' => $stuck,
             ],
             [
                 'title' => 'ผู้อนุมัติ',
-                'headings' => ['ผู้อนุมัติ', 'รหัส', 'แผนก', 'ขั้นที่ถึงคิว', 'อนุมัติ', 'ไม่อนุมัติ', 'ค้างอยู่ตอนนี้', 'เฉลี่ย (วัน)', 'นานสุด (วัน)', 'ค้างนานสุด (วัน)'],
+                'headings' => ['ผู้อนุมัติ', 'รหัส', 'แผนก', 'ขั้นที่ถึงคิว', 'อนุมัติ', 'ไม่อนุมัติ', 'รออนุมัติ', 'เฉลี่ย (วัน)', 'นานสุด (วัน)', 'ค้างนานสุด (วัน)'],
                 'rows' => array_map(fn (array $r) => [
                     $r['name'], $r['code'], $dept($r['department']), $r['steps'], $r['approved'], $r['rejected'], $r['waiting'], $r['avg_days'], $r['max_days'], $r['oldest_waiting_days'],
                 ], $b['approvers']['rows']),
@@ -531,11 +518,11 @@ class RequestApprovalsReport extends TabularReport
                 'headings' => ['เลขที่คำขอ', 'ประเภทคำขอ', 'ผล', 'หยุดที่', 'ใคร', 'เหตุผล', 'วันที่'],
                 'rows' => array_map(fn (array $r) => [
                     $r['reference'], $type($r['type']), self::OUTCOME_TH[$r['outcome']], $r['stop_label'] ?? 'ทีม IT', $r['decided_by'],
-                    $r['reason'] ?? ($r['outcome'] === 'withdrawn' ? 'ไม่ได้บันทึกเหตุผล (ยกเลิกก่อนระบบบังคับกรอก)' : null), $r['at'],
+                    $r['reason'] ?? 'ไม่ได้บันทึกเหตุผล', $r['at'],
                 ], $b['endings']['rows']),
             ],
             [
-                'title' => 'ขั้นที่ระบบข้ามให้',
+                'title' => 'ขั้นที่ระบบข้าม',
                 'headings' => ['เหตุผลที่ข้าม', 'ขั้น', 'คำขอ', 'ไม่มีใครอนุมัติเลย', 'ขั้นที่ถูกข้าม'],
                 'rows' => array_map(fn (array $s) => [
                     self::SKIP_TH[$s['reason']], $s['steps'], $s['requests'], $s['unapproved_requests'],

@@ -97,7 +97,10 @@ function TabularReportRows({
             },
             { replace: true },
         );
-    const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, filters, page, perPage, true);
+    // Filters that only shape the cards above stay out of the rows request, so switching one does not refetch the list.
+    const cardOnly = extras.cardOnlyFilters ?? [];
+    const rowFilters = cardOnly.length > 0 ? Object.fromEntries(Object.entries(filters).filter(([name]) => !cardOnly.includes(name))) : filters;
+    const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, rowFilters, page, perPage, true);
     const canOpen = useCanOpen();
     const rowsTitle = t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic');
     const rowsHead = extras.rowsHead?.({ filters, patch: onPatch }) ?? null;
@@ -194,7 +197,7 @@ function TabularReportBody({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { filters, patch, reset } = useTabularFilters(definition);
+    const { filters, patch, reset } = useTabularFilters(definition, { keepPage: extras.cardOnlyFilters });
     const { hidden, visibleColumns, toggle, reset: resetColumns } = useHiddenColumns(definition);
     // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
     const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
@@ -248,6 +251,7 @@ function TabularReportBody({
                 hidden={[...(extras.hiddenFilters ?? []), ...viewFilters]}
                 viewOnly={viewFilters}
                 leading={extras.filterLead?.({ filters, patch })}
+                trailing={extras.filterTrail?.({ filters, patch })}
             />
             <TabularReportRows
                 reportKey={reportKey}
@@ -308,6 +312,11 @@ export interface TabularReportExtras {
      *  each row and in the files, left out of the table's own columns and the column picker. */
     innerColumns?: string[];
     filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
+    /** Something at the end of the bar, after its controls (a "data as of" note). */
+    filterTrail?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
+    /** View filters that only shape the cards above the list (a card's "แยกตาม"): left out of the rows
+     *  request and its cache key, and changing one keeps the list's page. */
+    cardOnlyFilters?: string[];
     /** A control beside the rows card's heading, for a filter that narrows only the list. */
     rowsLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     /** A band at the top of the rows card, above its heading (what the list is narrowed to); null draws nothing. */

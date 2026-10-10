@@ -61,7 +61,8 @@ trait RequestLabels
 
     /**
      * A tile's trend for the Delta + Sparkline footer, one shape for every request report.
-     * `basis`: 'prev' (previous period), 'since_7d' (7 days ago) or 'no_base' (nothing fair to compare with).
+     * `basis`: 'prev' (previous period), 'since_7d' (7 days ago) or 'no_base' (nothing fair to compare with);
+     * a basis with a missing value on either side reads 'none'.
      *
      * @param  list<int|float|null>  $points
      * @return array{direction: 'up'|'down'|'even', label_key: string, values: array<string, int|float>, points: list<int|float|null>, up_is_good: ?bool}
@@ -77,7 +78,7 @@ trait RequestLabels
 
         return [
             'direction' => $direction,
-            'label_key' => "rep_req_trend_{$basis}",
+            'label_key' => $delta === null && $basis !== 'no_base' ? 'rep_req_trend_none' : "rep_req_trend_{$basis}",
             'values' => $delta === null ? [] : ['delta' => abs($delta)],
             'points' => $points,
             'up_is_good' => $upIsGood,

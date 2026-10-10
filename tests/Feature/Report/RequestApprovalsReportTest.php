@@ -228,22 +228,17 @@ class RequestApprovalsReportTest extends TestCase
         $this->assertSame(4, $waiting['value']);
         $this->assertSame(['over_7' => 2, 'days_4_7' => 1, 'upto_3' => 1], array_column($waiting['split'], 'value', 'key'));
         $this->assertSame('amber', $waiting['attention']);
-        $this->assertSame(15, $waiting['note']['values']['days']);
-        $this->assertSame('Wichai', $waiting['note']['texts']['who']);
 
-        // [2, 15, 4, 3, 1, 0, 1, 14, 1, 1] days over 10 steps; decided ones [2, 1, 0, 1, 1, 1].
+        // [2, 15, 4, 3, 1, 0, 1, 14, 1, 1] days over 10 steps.
         $avg = $tiles['rqa_avg_days'];
         $this->assertEquals(4.2, $avg['value']);
         $this->assertSame('days', $avg['format']);
-        $this->assertSame(10, $avg['note']['values']['steps']);
-        $this->assertEquals(1.0, $avg['note']['values']['decided']);
-
         $this->assertSame(2, $tiles['rqa_rejected']['value']);
-        $this->assertSame(3, $tiles['rqa_rejected']['note']['values']['cancelled']);
-
         $this->assertSame(6, $tiles['rqa_skipped']['value']);
-        $this->assertSame(6, $tiles['rqa_skipped']['note']['values']['requests']);
-        $this->assertSame(4, $tiles['rqa_skipped']['note']['values']['unapproved']);
+        // Trend tiles carry only their trend.
+        foreach (['rqa_avg_days', 'rqa_rejected', 'rqa_skipped'] as $key) {
+            $this->assertSame(['label_key', 'trend'], array_keys($tiles[$key]['note']));
+        }
 
         $this->assertSame(2, $tiles['rqa_blocked']['value']);
         $this->assertSame(['left' => 1, 'no_account' => 1], array_column($tiles['rqa_blocked']['split'], 'value', 'key'));
@@ -278,6 +273,11 @@ class RequestApprovalsReportTest extends TestCase
 
         $skipped = $tiles['rqa_skipped']['note']['trend'];
         $this->assertSame('up', $skipped['direction']);
+
+        // Nothing decided in August for this type: the change has no base to stand on.
+        $cctv = collect($this->rows(['from' => '2026-09-01', 'to' => '2026-09-25', 'type' => 'cctv'])['summary'])->keyBy('key');
+        $this->assertSame('rep_req_trend_none', $cctv['rqa_avg_days']['note']['trend']['label_key']);
+        $this->assertSame([], $cctv['rqa_avg_days']['note']['trend']['values']);
         $this->assertEquals(6, $skipped['values']['delta']);
         $this->assertNull($skipped['up_is_good']);
     }
@@ -396,8 +396,8 @@ class RequestApprovalsReportTest extends TestCase
         $tiles = collect($this->rows(['from' => '2026-09-01', 'to' => '2026-09-25'])['summary'])->keyBy('key');
         $this->assertSame(5, $tiles['rqa_waiting']['value']);
         $this->assertSame(['over_7' => 3, 'days_4_7' => 1, 'upto_3' => 1], array_column($tiles['rqa_waiting']['split'], 'value', 'key'));
-        $this->assertSame(279, $tiles['rqa_waiting']['note']['values']['days']);
-        $this->assertSame(9, $tiles['rqa_avg_days']['note']['values']['steps']);
+        $this->assertSame(279, $this->breakdown(['from' => '2026-09-01', 'to' => '2026-09-25'])['stuck']['over7'][0]['days']);
+        $this->assertSame(9, $this->breakdown(['from' => '2026-09-01', 'to' => '2026-09-25'])['approvers']['total']['steps']);
 
         $data = $this->breakdown(['from' => '2026-09-01', 'to' => '2026-09-25']);
         $this->assertSame($this->r['R30']->reference, $data['stuck']['over7'][0]['reference']);
@@ -409,10 +409,10 @@ class RequestApprovalsReportTest extends TestCase
         $report = app(RequestApprovalsReport::class);
         $sections = $report->exportSections($this->userWith(), $report->resolveFilters([]));
 
-        $this->assertSame(['ค้างอยู่ตอนนี้', 'ผู้อนุมัติ', 'ไม่อนุมัติและยกเลิก', 'ขั้นที่ระบบข้ามให้'], array_column($sections, 'title'));
+        $this->assertSame(['รออนุมัติตอนนี้', 'ผู้อนุมัติ', 'ไม่อนุมัติและยกเลิก', 'ขั้นที่ระบบข้าม'], array_column($sections, 'title'));
         $this->assertSame('ผู้อนุมัติลาออกแล้ว', $sections[0]['rows'][0][0]);
         $withdrawnNoReason = collect($sections[2]['rows'])->firstWhere(0, $this->r['R6']->reference);
-        $this->assertSame('ไม่ได้บันทึกเหตุผล (ยกเลิกก่อนระบบบังคับกรอก)', $withdrawnNoReason[5]);
+        $this->assertSame('ไม่ได้บันทึกเหตุผล', $withdrawnNoReason[5]);
     }
 
     public function test_needs_view_all(): void

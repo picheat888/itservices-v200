@@ -270,7 +270,7 @@ export interface SummaryItem {
         | 'asset-writeoff'
         | null;
     /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping) | 'percent' (whole %) | 'hours' / 'years' (one decimal). */
-    format: 'count' | 'money' | 'percent' | 'hours' | 'years';
+    format: 'count' | 'money' | 'percent' | 'hours' | 'years' | 'days';
     /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
     /** `counts`: a count even on an hours tile (how many accepted same day, next day…). */
     split?: { key: string; label_key: string; tone: ChartTone; value: number; counts?: boolean }[];
@@ -285,7 +285,14 @@ export interface SummaryItem {
         /** Words by name — plain, or a master-data name the page shows in the reader's language. */
         texts?: Record<string, string | { name: string; name_th: string | null }>;
         /** A change drawn after the note (▲ green, ▼ red, grey for none), with a small line through `points` when given. */
-        trend?: { direction: 'up' | 'down' | 'even'; label_key: string; values?: Record<string, number>; points?: number[] };
+        trend?: {
+            direction: 'up' | 'down' | 'even';
+            label_key: string;
+            values?: Record<string, number>;
+            points?: (number | null)[];
+            /** The request reports' trend (RequestLabels::trend): drawn as the snapshot strip's Delta + Sparkline, coloured by whether up is good (null = neither). */
+            up_is_good?: boolean | null;
+        };
     } | null;
     /** Percent tiles: the goal the value is measured against — a meter with the goal marked. */
     goal?: number | null;
@@ -759,6 +766,213 @@ export interface AssetTransferBreakdown {
         to: string;
         reason: string | null;
         by: string | null;
+    }[];
+}
+
+/** A request type value (App\Enums\Request\RequestType). */
+export type RequestTypeKey = import('@/shared/types').ServiceRequestType;
+
+/** A request status value (App\Enums\Request\RequestStatus). */
+export type RequestStatusKey = 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled';
+
+/** The ticket category a request type opens (RequestType::ticketCategory). */
+export type RequestCategoryKey = 'hardware' | 'software' | 'network' | 'cctv' | 'telephone' | 'other';
+
+/** Median whole days of completed requests: submitted → approved, approved → completed, submitted → completed. */
+export interface RequestDelivery {
+    count: number;
+    approval: number | null;
+    it: number | null;
+    total: number | null;
+}
+
+/** What the "ภาพรวมคำขอ" page draws above its rows (RequestOverviewReport::breakdown). */
+export interface RequestOverviewBreakdown {
+    /** Every month of the range: submitted in it, and completed in it whatever the submit date. */
+    months: { month: string; submitted: number; completed: number }[];
+    /** Most requests first; `approved` = got through approval (approved_at set), `rejected` = turned down. */
+    types: { type: RequestTypeKey; total: number; by_status: Record<RequestStatusKey, number>; approved: number; rejected: number }[];
+    /** Slowest type first, and the same over every type. */
+    delivery: { types: (RequestDelivery & { type: RequestTypeKey })[]; all: RequestDelivery };
+    items: {
+        /** Requests by origin, for the segment counts. */
+        origins: { all: number; direct: number; onboarding: number };
+        /** New employees HR filed requests for. */
+        people: number;
+        /** Requests that picked an item, by origin. */
+        picked: { all: number; direct: number; onboarding: number };
+        /** One entry per origin and item, most asked for first. */
+        list: {
+            origin: 'direct' | 'onboarding';
+            type: RequestTypeKey;
+            kind: 'option' | 'software' | 'file_share' | 'email_group' | 'social_platform';
+            id: number;
+            name: string;
+            name_th: string | null;
+            count: number;
+        }[];
+    };
+    /** By the requester's department, most first; department_id null = none (or only the written name). */
+    departments: {
+        department_id: number | null;
+        name: string | null;
+        name_th: string | null;
+        total: number;
+        by_category: Record<RequestCategoryKey, number>;
+        top_type: { type: RequestTypeKey; count: number; ties: number };
+        onboarding: number;
+    }[];
+}
+
+/** Age groups the request approvals and IT pages share (RequestLabels::ageBand). */
+export type RequestAgeBand = 'over_7' | 'days_4_7' | 'upto_3';
+
+/** What the "การอนุมัติคำขอ" page draws above its rows (RequestApprovalsReport::breakdown). */
+export interface RequestApprovalsBreakdown {
+    /** Waiting now, longest first, by what keeps it waiting. */
+    stuck: Record<'left' | 'no_account' | 'over7' | 'upto7', RequestStuckStep[]>;
+    approvers: {
+        rows: RequestApproverRow[];
+        total: RequestApproverStats & { approvers: number };
+    };
+    endings: {
+        counts: { all: number; rejected: number; withdrawn: number; not_delivered: number };
+        rows: RequestEnding[];
+    };
+    skips: RequestSkipReasonRow[];
+}
+
+export interface RequestStuckStep {
+    request_id: number;
+    reference: string;
+    type: string;
+    label: string;
+    position: number;
+    approver: { name: string; code: string | null; kind: 'person' | 'group_step' | 'unlinked_account' };
+    /** "Y-m-d", the approver's last day when they have left. */
+    approver_left_on: string | null;
+    requester: string;
+    became_current_at: string;
+    days: number;
+    age_band: RequestAgeBand;
+}
+
+export interface RequestApproverStats {
+    steps: number;
+    approved: number;
+    rejected: number;
+    waiting: number;
+    avg_days: number | null;
+    max_days: number | null;
+    oldest_waiting_days: number | null;
+    oldest_age_band: RequestAgeBand | null;
+}
+
+export interface RequestApproverRow extends RequestApproverStats {
+    key: string;
+    name: string;
+    code: string | null;
+    department: ChartLabel | null;
+    kind: 'person' | 'group_step' | 'unlinked_account';
+    /** A department step nobody took, or an account with no employee: set apart under the dashed rule. */
+    apart: boolean;
+    left: boolean;
+    no_account: boolean;
+}
+
+export type RequestEndingOutcome = 'rejected' | 'withdrawn' | 'not_delivered';
+
+export interface RequestEnding {
+    request_id: number;
+    reference: string;
+    type: string;
+    outcome: RequestEndingOutcome;
+    /** The step the request stopped at; null for IT's closing step. */
+    stop_label: string | null;
+    stop_position: number | null;
+    /** The rejecting approver, the canceller, or IT's closer; null when not recorded. */
+    decided_by: string | null;
+    /** The note or cancel reason; null when not recorded. */
+    reason: string | null;
+    at: string;
+}
+
+export interface RequestSkipReasonRow {
+    reason: 'no_matching_position' | 'no_resource_owner' | 'no_manager' | 'no_department_approver' | 'requester_is_owner';
+    steps: number;
+    requests: number;
+    labels: Record<string, number>;
+    unapproved_requests: number;
+    top_requesters: { name: string; count: number }[];
+    ownerless_resources: { name: string; code: string | null }[];
+    managerless_requesters: { name: string; code: string | null }[];
+    resources: { name: string; code: string | null }[];
+    departments: { department: ChartLabel | null; positions: string[] }[];
+}
+
+/** What the "คำขอที่รอ IT ส่งมอบ" page draws above its rows (ItPendingRequestReport::breakdown). */
+export interface ItPendingBreakdown {
+    waiting: {
+        total: number;
+        avg_days: number | null;
+        /** Each age group with who has its requests (the bucket popovers). */
+        bands: Record<RequestAgeBand, { total: number; unassigned: number; no_ticket: number; assigned: number }>;
+    };
+    /** Requests finished in the last 30 days (today included) and how long IT took from approval. */
+    delivered: { from: string; to: string; total: number; avg_days: number | null; bands: Record<RequestAgeBand, number> };
+    /** Named staff by most waiting, then 'none' and 'no_ticket' (always listed). */
+    by_assignee: ItPendingGroup[];
+    by_type: (Omit<ItPendingGroup, 'key' | 'name' | 'in_progress' | 'open'> & { type: string })[];
+    joiners: ItPendingJoiners;
+}
+
+export interface ItPendingGroup {
+    /** A user id, 'none' (ticket with nobody on it) or 'no_ticket'. */
+    key: string;
+    name: string | null;
+    total: number;
+    in_progress: number;
+    open: number;
+    bands: Record<RequestAgeBand, number>;
+    oldest_days: number | null;
+}
+
+export interface ItPendingJoiners {
+    from: string;
+    to: string;
+    counts: { on_time: number; late: number; open: number; past_start: number; before_start: number };
+    /** The request types any listed joiner has, in the Request module's order: the table's columns. */
+    types: string[];
+    /** Urgency order: not ready past the start day, not ready before it, ready late, ready on time. */
+    rows: ItPendingJoiner[];
+    /** Resigned before starting with onboarding requests still open. */
+    left_early: ItPendingJoiner[];
+}
+
+export interface ItPendingJoiner {
+    employee_id: number;
+    code: string;
+    name: string;
+    name_th: string | null;
+    department: ChartLabel | null;
+    joined_at: string;
+    last_day: string | null;
+    days_to_start: number;
+    started: boolean;
+    verdict: 'on_time' | 'late' | 'open' | null;
+    late_days: number;
+    open: number;
+    pending: number;
+    requests: {
+        id: number;
+        reference: string;
+        type: string;
+        status: 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled';
+        completed_on: string | null;
+        late_days: number;
+        has_ticket: boolean;
+        assignee: string | null;
+        current_approver: string | null;
     }[];
 }
 
