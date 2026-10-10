@@ -112,8 +112,8 @@ export function ItPendingCards({ filters, patch }: { filters: TabularFilters; pa
     );
 }
 
-// Age card beside "อยู่กับใคร" on wide screens, both the same height
-const PAIR = 'grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]';
+// Age card beside the workload card on wide screens; it keeps its own height and stays in view
+const PAIR = 'grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:items-start';
 
 function CardsSkeleton() {
     return (
@@ -157,9 +157,9 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
     const { waiting, delivered } = data;
 
     return (
-        <Card className="flex flex-col overflow-clip">
+        <Card className="overflow-clip xl:sticky xl:top-4">
             <CardTitle title={t('rep_rqi_age_title')} note={t('rep_rqi_age_note')} sub={<BandLegend />} />
-            <div className="divide-border grid flex-1 divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:grid-cols-1 xl:grid-rows-[1fr_1fr] xl:divide-x-0 xl:divide-y">
+            <div className="divide-border grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
                 <section aria-labelledby="rqi-age-now" className={SECTION}>
                     <h3 id="rqi-age-now" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
                         {t('rep_rqi_age_now')}
@@ -170,7 +170,7 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
                             </span>
                         )}
                     </h3>
-                    <div className="grid flex-1 grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                         {BANDS.map((b) => (
                             <WaitingBucket key={b.key} band={b} figures={waiting.bands[b.key]} />
                         ))}
@@ -187,7 +187,7 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
                                 t('rep_rqi_range').replace('{from}', f.date(delivered.from)).replace('{to}', f.date(delivered.to))}
                         </p>
                     </div>
-                    <div className="grid flex-1 grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                         {BANDS.map((b) => (
                             <Bucket key={b.key} band={b} count={delivered.bands[b.key]} />
                         ))}
@@ -200,7 +200,7 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
 
 const SECTION = 'flex flex-col gap-2 px-5 py-3.5';
 
-const BUCKET = 'relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border-t-[3px] px-2 pt-2 pb-2.5 text-center';
+const BUCKET = 'relative flex w-full min-w-0 flex-col items-center gap-0.5 rounded-lg border-t-[3px] px-2 pt-2 pb-2.5 text-center';
 
 function BucketFace({ band, count }: { band: (typeof BANDS)[number]; count: number }) {
     const t = useT();
@@ -259,7 +259,7 @@ function WaitingBucket({ band, figures }: { band: (typeof BANDS)[number]; figure
     );
 }
 
-// "อยู่กับใคร" — one card, by owner or by request type; a press on a row filters the page
+// Workload card — by owner or by request type; a press on a row filters the page
 
 const BY = ['owner', 'type'] as const;
 type By = (typeof BY)[number];
