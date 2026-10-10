@@ -291,7 +291,7 @@ export function EmployeeViewDrawer({
                         <div className="mb-1 flex flex-wrap items-center gap-2.5">
                             <h2 className="text-xl leading-tight font-extrabold tracking-tight">{name}</h2>
                             {resigned ? (
-                                <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 text-[11px] font-semibold">
+                                <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-[11px] font-semibold text-red-700">
                                     {t('resigned')}
                                 </span>
                             ) : (
@@ -355,7 +355,7 @@ export function EmployeeViewDrawer({
 
                 {/* ── RESIGN STRIP ── */}
                 {resigned && (
-                    <div className="bg-destructive/10 text-destructive border-border flex shrink-0 items-center gap-2 border-b px-7 py-2 text-[12.5px] font-medium">
+                    <div className="bg-destructive/10 dark:text-destructive border-border flex shrink-0 items-center gap-2 border-b px-7 py-2 text-[12.5px] font-medium text-red-700">
                         <TriangleAlert className="h-[15px] w-[15px] shrink-0" />
                         <span>{t('emp_v_resigned_note')}</span>
                         {emp.last_day && (

@@ -174,7 +174,7 @@ export function ContractDetailDrawer({
             className={cn(
                 'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-semibold',
                 days <= 0
-                    ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                    ? 'border-destructive/30 bg-destructive/10 dark:text-destructive text-red-700'
                     : c.in_reminder
                       ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
                       : 'border-brand/30 bg-brand/10 text-brand',

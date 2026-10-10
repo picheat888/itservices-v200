@@ -326,7 +326,10 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                         )}
 
                         {formError && (
-                            <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3 py-2 text-sm">
+                            <div
+                                key={formError}
+                                className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3 py-2 text-sm text-red-700"
+                            >
                                 {formError}
                             </div>
                         )}

@@ -206,7 +206,9 @@ function AlertCard({
                     <span
                         className={cn(
                             'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-                            hasCritical ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                            hasCritical
+                                ? 'bg-destructive/10 dark:text-destructive text-red-700'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                         )}
                     >
                         <AlertTriangle className="cf-blink h-5 w-5" />

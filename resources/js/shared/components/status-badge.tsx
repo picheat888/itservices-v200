@@ -12,13 +12,13 @@ type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'orange' | 'pink' | 
 
 const tones: Record<Tone, string> = {
     blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-    green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    red: 'bg-destructive/10 text-destructive',
+    green: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    red: 'bg-destructive/10 text-red-700 dark:text-destructive',
     violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
     orange: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
     pink: 'bg-pink-500/10 text-pink-700 dark:text-pink-300',
-    gray: 'bg-muted text-muted-foreground',
+    gray: 'bg-muted text-foreground/65 dark:text-muted-foreground',
 };
 
 // Solid dot color per tone — same hues the badge tones use for their text/dot. Exported so a

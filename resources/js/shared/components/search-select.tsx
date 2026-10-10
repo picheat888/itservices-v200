@@ -176,7 +176,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                     {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}
                     <span className="truncate">{selected ? selected.label : (placeholder ?? t('select_placeholder'))}</span>
                 </span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <ChevronsUpDown className="text-muted-foreground ml-2 h-4 w-4 shrink-0" />
             </button>
 
             {/* Dropdown rendered at document.body to escape any overflow:hidden ancestor */}

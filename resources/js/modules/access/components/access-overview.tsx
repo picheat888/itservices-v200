@@ -93,7 +93,9 @@ function StatusRow({
                 <span
                     className={cn(
                         'rounded-full px-2 py-px font-mono text-xs font-bold',
-                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
+                        tone === 'red'
+                            ? 'bg-destructive/10 dark:text-destructive text-red-700'
+                            : 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
                     )}
                 >
                     {value}

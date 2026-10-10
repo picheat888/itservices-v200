@@ -228,7 +228,9 @@ export function ImportDialog<Row>({
                         </div>
                     )}
 
-                    {generalError && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{generalError}</div>}
+                    {generalError && (
+                        <div className="bg-destructive/10 dark:text-destructive rounded-lg px-3 py-2 text-sm text-red-700">{generalError}</div>
+                    )}
 
                     {result && preview && (
                         <div className="space-y-2">
@@ -241,7 +243,7 @@ export function ImportDialog<Row>({
                                     {t('import_preview_valid')}: {result.meta.valid}
                                 </span>
                                 {result.meta.invalid > 0 && (
-                                    <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5">
+                                    <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-red-700">
                                         {t('import_preview_invalid')}: {result.meta.invalid}
                                     </span>
                                 )}

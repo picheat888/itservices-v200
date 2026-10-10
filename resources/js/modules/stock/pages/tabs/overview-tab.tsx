@@ -100,7 +100,7 @@ export function OverviewTab({
                                     <span className="text-sm font-semibold">{t('stock_action_queue')}</span>
                                 </div>
                                 {reorderItems.length > 0 && (
-                                    <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-mono text-[11px] font-bold">
+                                    <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 font-mono text-[11px] font-bold text-red-700">
                                         {reorderItems.length}
                                     </span>
                                 )}

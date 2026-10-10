@@ -427,7 +427,11 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                             disabled={!canEdit}
                                         />
                                     </div>
-                                    {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
+                                    {error && (
+                                        <div className="bg-destructive/10 dark:text-destructive rounded-lg px-3 py-2 text-sm text-red-700">
+                                            {error}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
