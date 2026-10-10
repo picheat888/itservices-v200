@@ -514,9 +514,9 @@ export interface TicketSummary {
     // Inbound / closed flow over the window, each with a trend vs the previous window
     // (created trends by absolute ticket count, resolved by percent change).
     created: number;
-    created_delta_count: number;
+    created_delta_count: number | null;
     resolved: number;
-    resolved_delta_count: number;
+    resolved_delta_count: number | null;
     // Point-in-time unresolved backlog (open + in progress).
     backlog: number;
     backlog_open: number;

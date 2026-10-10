@@ -204,7 +204,7 @@ class TicketController extends Controller
 
     /**
      * Dashboard aggregates over a selectable window — a preset (7 / 30 / 90 days,
-     * default 30) or a custom inclusive ?from=&to= date pair (capped at 366 days):
+     * default 30), every ticket since the first (?days=all) or a custom inclusive ?from=&to= date pair (capped at 366 days):
      * inbound (created) and closed (resolved) flow each with a trend vs the previous
      * equal-length window, the current unresolved backlog (open + in progress), and
      * the window's SLA %, average response, and per-category mix.
@@ -212,6 +212,9 @@ class TicketController extends Controller
     public function summary(Request $request, TicketOverviewReportService $report): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.view_dashboard'), 403);
+
+        // Nothing comes before the first ticket, so the whole history has no trend to show.
+        $wholeHistory = ! $request->filled('from') && ! $request->filled('to') && $request->query('days') === 'all';
 
         if ($request->filled('from') || $request->filled('to')) {
             $request->validate([
@@ -223,6 +226,11 @@ class TicketController extends Controller
             if ($curStart->diffInDays($curEnd) > 366) {
                 $curStart = $curEnd->copy()->subDays(366)->startOfDay();
             }
+            $days = (int) round($curStart->diffInDays($curEnd));
+        } elseif ($request->query('days') === 'all') {
+            $curEnd = now();
+            $first = Ticket::min('created_at');
+            $curStart = $first === null ? $curEnd->copy()->startOfDay() : Carbon::parse($first)->startOfDay();
             $days = (int) round($curStart->diffInDays($curEnd));
         } else {
             $days = (int) $request->query('days', 30);
@@ -306,11 +314,11 @@ class TicketController extends Controller
             'created' => $createdCur,
             // Absolute change in tickets vs the previous window (always computable,
             // unlike a % change which has no baseline when the prior window is empty).
-            'created_delta_count' => $createdCur - $createdPrev,
+            'created_delta_count' => $wholeHistory ? null : $createdCur - $createdPrev,
 
             'resolved' => $resolvedCur,
             // Absolute change in tickets vs the previous window — same reading as `created`.
-            'resolved_delta_count' => $resolvedCur - $resolvedPrev,
+            'resolved_delta_count' => $wholeHistory ? null : $resolvedCur - $resolvedPrev,
 
             'backlog' => $open + $inProgress,
             'backlog_open' => $open,

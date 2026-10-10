@@ -56,7 +56,7 @@ async function mutate<T>(method: 'post' | 'put' | 'patch' | 'delete', url: strin
 }
 
 /** Dashboard window: a preset day count (7/30/90) or a custom inclusive date pair. */
-export type SummaryRange = number | { from: string; to: string };
+export type SummaryRange = number | 'all' | { from: string; to: string };
 
 export const ticketApi = {
     list: (params: TicketListParams) => http.get<TicketPageResponse>('/tickets', { params }).then((r) => r.data),

@@ -146,6 +146,26 @@ class TicketSlaTest extends TestCase
         $this->getJson('/api/tickets/summary?from=2026-01-05')->assertStatus(422);
     }
 
+    public function test_summary_covers_every_ticket_since_the_first_and_shows_no_trend(): void
+    {
+        $this->actingAs($this->super());
+        Ticket::factory()->create(['created_at' => '2025-03-02 10:00:00']);
+        Ticket::factory()->create(['created_at' => '2026-01-12 10:00:00']);
+        Ticket::factory()->create([
+            'status' => 'completed', 'created_at' => '2025-06-02 09:00:00',
+            'resolved_at' => '2025-06-02 10:00:00', 'sla_resolve_due_at' => '2025-06-02 12:00:00',
+        ]);
+
+        $this->getJson('/api/tickets/summary?days=all')->assertOk()
+            ->assertJsonPath('created', 3)
+            ->assertJsonPath('created_delta_count', null)
+            ->assertJsonPath('resolved_delta_count', null)
+            ->assertJsonPath('period_sla.from', '2025-03-02')
+            ->assertJsonPath('period_sla.to', '2026-01-14')
+            ->assertJsonPath('period_sla.rate', 100)
+            ->assertJsonPath('period_sla.delta_pts', null);
+    }
+
     public function test_metrics_are_null_without_data(): void
     {
         $this->actingAs($this->super());
