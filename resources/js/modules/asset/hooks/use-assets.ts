@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { useToastStore } from '@/stores/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -80,7 +81,8 @@ export const useMyAssets = (enabled = true) =>
 // The Assets badge (awaiting IT receipt) now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
-export const useAssetSummary = () => useQuery({ queryKey: SUMMARY, queryFn: assetApi.summary });
+export const useAssetSummary = (period: OverviewPeriod = 'all') =>
+    useQuery({ queryKey: [...SUMMARY, overviewPeriodKey(period)], queryFn: () => assetApi.summary(period), placeholderData: (prev) => prev });
 
 export const useAssetTransfers = () => useQuery({ queryKey: ['asset-transfers'], queryFn: assetApi.transfers });
 

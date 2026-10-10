@@ -14,8 +14,8 @@ use Tests\TestCase;
 
 /**
  * The custody trail records WHAT each move was, and the Assets dashboard counts those kinds
- * per month. Both halves are tested here: the service stamping `kind`, and the summary
- * turning those rows into twelve months of bars.
+ * over the Overview period. Both halves are tested here: the service stamping `kind`, and the
+ * summary turning those rows into chart columns.
  */
 class AssetActivityChartTest extends TestCase
 {
@@ -97,60 +97,80 @@ class AssetActivityChartTest extends TestCase
         $row->forceFill(['created_at' => $when])->saveQuietly();
     }
 
-    public function test_summary_returns_twelve_months_ending_this_month(): void
+    /** A twelve-month custom range: one column per month, oldest first. */
+    private const YEAR = '/api/assets/summary?from=2025-11-01&to=2026-10-14';
+
+    public function test_summary_returns_one_column_per_month_of_the_period(): void
     {
+        $this->travelTo('2026-10-14 12:00:00');
         $this->actingAs($this->super());
 
-        $response = $this->getJson('/api/assets/summary')->assertOk();
+        $activity = $this->getJson(self::YEAR)->assertOk()->json('activity');
 
-        $months = $response->json('activity_12m');
-        $this->assertCount(12, $months);
-        $this->assertSame(now()->format('Y-m'), $months[11]['month']);
-        $this->assertSame(now()->startOfMonth()->subMonths(11)->format('Y-m'), $months[0]['month']);
+        $this->assertSame('month', $activity['unit']);
+        $this->assertCount(12, $activity['data']);
+        $this->assertSame('2025-11', $activity['data'][0]['month']);
+        $this->assertSame('2026-10', $activity['data'][11]['month']);
     }
 
     public function test_summary_counts_handovers_and_returns_into_their_month(): void
     {
+        $this->travelTo('2026-10-14 12:00:00');
         $this->actingAs($this->super());
-        $thisMonth = now()->startOfMonth()->addDay();
-        $twoMonthsAgo = now()->startOfMonth()->subMonths(2)->addDay();
 
-        $this->trail(AssetTransferKind::Handover, $thisMonth->toDateTimeString());
-        $this->trail(AssetTransferKind::Handover, $thisMonth->toDateTimeString());
-        $this->trail(AssetTransferKind::Return, $thisMonth->toDateTimeString());
-        $this->trail(AssetTransferKind::Handover, $twoMonthsAgo->toDateTimeString());
+        $this->trail(AssetTransferKind::Handover, '2026-10-02 10:00:00');
+        $this->trail(AssetTransferKind::Handover, '2026-10-02 11:00:00');
+        $this->trail(AssetTransferKind::Return, '2026-10-02 12:00:00');
+        $this->trail(AssetTransferKind::Handover, '2026-08-02 10:00:00');
 
-        $months = collect($this->getJson('/api/assets/summary')->json('activity_12m'))->keyBy('month');
+        $months = collect($this->getJson(self::YEAR)->json('activity.data'))->keyBy('month');
 
-        $this->assertSame(2, $months[now()->format('Y-m')]['handover']);
-        $this->assertSame(1, $months[now()->format('Y-m')]['returned']);
-        $this->assertSame(1, $months[$twoMonthsAgo->format('Y-m')]['handover']);
+        $this->assertSame(2, $months['2026-10']['handover']);
+        $this->assertSame(1, $months['2026-10']['returned']);
+        $this->assertSame(1, $months['2026-08']['handover']);
         // A month nothing happened in is still present, at zero — otherwise the bars would
         // slide along the axis and carry the wrong labels.
-        $this->assertSame(0, $months[now()->startOfMonth()->subMonth()->format('Y-m')]['handover']);
-        $this->assertSame(0, $months[now()->startOfMonth()->subMonth()->format('Y-m')]['returned']);
+        $this->assertSame(0, $months['2026-09']['handover']);
+        $this->assertSame(0, $months['2026-09']['returned']);
     }
 
     /** Recalls are assets back in the pool, so the returns bar counts them. */
     public function test_summary_counts_recalls_as_returns(): void
     {
+        $this->travelTo('2026-10-14 12:00:00');
         $this->actingAs($this->super());
-        $this->trail(AssetTransferKind::Recall, now()->startOfMonth()->addDay()->toDateTimeString());
+        $this->trail(AssetTransferKind::Recall, '2026-10-02 10:00:00');
 
-        $months = collect($this->getJson('/api/assets/summary')->json('activity_12m'))->keyBy('month');
+        $months = collect($this->getJson(self::YEAR)->json('activity.data'))->keyBy('month');
 
-        $this->assertSame(1, $months[now()->format('Y-m')]['returned']);
-        $this->assertSame(0, $months[now()->format('Y-m')]['handover']);
+        $this->assertSame(1, $months['2026-10']['returned']);
+        $this->assertSame(0, $months['2026-10']['handover']);
     }
 
-    public function test_summary_ignores_activity_older_than_the_window(): void
+    public function test_summary_ignores_activity_outside_the_period(): void
     {
+        $this->travelTo('2026-10-14 12:00:00');
         $this->actingAs($this->super());
-        $this->trail(AssetTransferKind::Handover, now()->startOfMonth()->subMonths(12)->toDateTimeString());
+        $this->trail(AssetTransferKind::Handover, '2025-10-20 10:00:00');
 
-        $months = $this->getJson('/api/assets/summary')->json('activity_12m');
+        $data = $this->getJson(self::YEAR)->json('activity.data');
 
-        $this->assertSame(0, collect($months)->sum('handover'));
-        $this->assertCount(12, $months);
+        $this->assertSame(0, collect($data)->sum('handover'));
+        $this->assertCount(12, $data);
+    }
+
+    public function test_all_time_starts_at_the_first_move(): void
+    {
+        $this->travelTo('2026-10-14 12:00:00');
+        $this->actingAs($this->super());
+        $this->trail(AssetTransferKind::Handover, '2026-09-28 10:00:00');
+        $this->trail(AssetTransferKind::Handover, '2026-10-13 10:00:00');
+
+        $activity = $this->getJson('/api/assets/summary')->assertOk()->json('activity');
+
+        // 16 days of history reads in weeks, from the Monday of the first move.
+        $this->assertSame('week', $activity['unit']);
+        $this->assertSame('2026-09-28', $activity['data'][0]['month']);
+        $this->assertSame(2, collect($activity['data'])->sum('handover'));
     }
 }

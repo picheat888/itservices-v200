@@ -1,3 +1,4 @@
+import { overviewPeriodParams, type OverviewPeriod } from '@/shared/components/overview-period';
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog, Contract, ContractLinkableAsset } from '@/shared/types';
 
@@ -66,7 +67,7 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 export const assetApi = {
     list: (params: { page: number; per_page: number; search?: string; type?: string; source?: string; status?: string; warehouse?: string }) =>
         http.get<AssetPageResponse>('/assets', { params }).then((r) => r.data),
-    summary: () => http.get<AssetSummary>('/assets/summary').then((r) => r.data),
+    summary: (period: OverviewPeriod) => http.get<AssetSummary>('/assets/summary', { params: overviewPeriodParams(period) }).then((r) => r.data),
     // Assets selectable in the contract form's link picker (free assets + this contract's own).
     linkable: (contractId?: number) =>
         http
