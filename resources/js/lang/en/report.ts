@@ -812,7 +812,7 @@ export const report: Dict = {
     rep_th_wh_col_back: 'Back in',
     rep_th_wh_col_out: 'Handed out',
     rep_th_wh_col_bar: 'In-Out',
-    rep_th_dept_title: 'Handed out to which department',
+    rep_th_dept_title: 'Handed out by department',
     rep_th_dept_sub: '{n} departments | {m} handovers',
     rep_th_dept_shared: 'Common (no employee)',
     rep_th_no_department: 'No department',
