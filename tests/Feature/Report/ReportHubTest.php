@@ -226,9 +226,10 @@ class ReportHubTest extends TestCase
         $this->actingAs($user)
             ->exportReport('/api/reports/r/assets.overview/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
 
+        // Picked columns in report order; hidden-by-default columns always stay in the file
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
-            return last($export->sheets())->headings() === ['รหัสทรัพย์สิน', 'สถานะ']
-                && count(last($export->sheets())->map($export->rows->first())) === 2;
+            return last($export->sheets())->headings() === ['รหัสทรัพย์สิน', 'สถานะ', 'วันที่ลงทะเบียน', 'ลงทะเบียนโดย']
+                && count(last($export->sheets())->map($export->rows->first())) === 4;
         });
     }
 
