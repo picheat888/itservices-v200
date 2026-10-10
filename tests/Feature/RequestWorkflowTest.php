@@ -476,12 +476,32 @@ class RequestWorkflowTest extends TestCase
     {
         $request = $this->submitComputer();
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/cancel")->assertForbidden();
-        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertForbidden();
+        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertOk();
         $this->assertSame(RequestStatus::Cancelled, $request->fresh()->status);
 
         // Nothing further can happen to a cancelled request.
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable();
+    }
+
+    public function test_cancel_needs_a_reason_and_keeps_it_with_who_cancelled(): void
+    {
+        $request = $this->submitComputer();
+        $url = "/api/service-requests/{$request->id}/cancel";
+
+        $this->actingAs($this->requester)->postJson($url)->assertUnprocessable()->assertJsonValidationErrors('reason');
+        $this->actingAs($this->requester)->postJson($url, ['reason' => '   '])->assertUnprocessable()->assertJsonValidationErrors('reason');
+        $this->assertSame(RequestStatus::Pending, $request->fresh()->status);
+
+        $this->actingAs($this->requester)->postJson($url, ['reason' => '  Bought one myself.  '])
+            ->assertOk()
+            ->assertJsonPath('data.cancel_reason', 'Bought one myself.')
+            ->assertJsonPath('data.cancelled_by', $this->requester->name)
+            ->assertJsonPath('data.activity.by', $this->requester->name);
+
+        $fresh = $request->fresh();
+        $this->assertSame('Bought one myself.', $fresh->cancel_reason);
+        $this->assertSame($this->requester->id, $fresh->cancelled_by_user_id);
     }
 
     /**
@@ -494,7 +514,7 @@ class RequestWorkflowTest extends TestCase
         $waitingOnSup = fn () => array_column($this->actingAs($this->supUser)->getJson('/api/service-requests?scope=approvals')->assertOk()->json('data'), 'id');
         $this->assertSame([$request->id], $waitingOnSup());
 
-        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel")->assertOk();
+        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertOk();
 
         $this->assertSame([], $waitingOnSup());
         $this->assertSame(0, $this->actingAs($this->supUser)->getJson('/api/sidebar-badges')->assertOk()->json('data.requests'));

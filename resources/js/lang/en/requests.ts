@@ -167,6 +167,7 @@ export const requests: Dict = {
     req_trail_ticket_in_progress: '{name} is working on it',
     req_trail_not_delivered: 'Cancelled',
     req_trail_cancelled_by: 'Cancelled by {name}',
+    req_trail_withdrawn: 'Cancelled the request',
 
     // request-detail-dialog.tsx — linked ticket block
     req_linked_ticket: 'Linked ticket',
@@ -188,4 +189,8 @@ export const requests: Dict = {
     req_complete_hint: 'The requester is told the work is done.',
     req_cancel_title: 'Cancel this request?',
     req_cancel_hint: 'The waiting approver is told, and the request closes.',
+    req_cancel_reason: 'Reason for cancelling',
+    req_cancel_reason_ph: 'e.g. No longer needed, or filed under the wrong type',
+    req_cancel_reason_required: 'Enter why you are cancelling',
+    req_cancel_keep: 'Keep request',
 };

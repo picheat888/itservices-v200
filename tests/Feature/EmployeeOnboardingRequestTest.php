@@ -663,7 +663,7 @@ class EmployeeOnboardingRequestTest extends TestCase
         $this->actingAs($own)->getJson("/api/service-requests/{$request->id}")
             ->assertOk()
             ->assertJsonPath('data.can_cancel', false);
-        $this->actingAs($own)->postJson("/api/service-requests/{$request->id}/cancel")->assertForbidden();
+        $this->actingAs($own)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertForbidden();
     }
 
     public function test_provisioning_an_account_with_nothing_waiting_sends_nothing(): void
@@ -706,7 +706,7 @@ class EmployeeOnboardingRequestTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.reference', $request->reference);
 
-        $this->actingAs($this->hrUser)->postJson("/api/service-requests/{$request->id}/cancel")
+        $this->actingAs($this->hrUser)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])
             ->assertOk()
             ->assertJsonPath('data.status', 'cancelled');
     }

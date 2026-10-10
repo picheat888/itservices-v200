@@ -135,7 +135,7 @@ class RequestStalledReminderTest extends TestCase
     {
         $request = $this->submitComputer();
         $this->ageCurrentRung($request, 9);
-        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel")->assertOk();
+        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertOk();
 
         $this->artisan('requests:send-stalled-reminders')->assertSuccessful();
 

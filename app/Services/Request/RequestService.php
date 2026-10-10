@@ -408,7 +408,7 @@ class RequestService
             : $this->notifications->notDelivered($fresh, $queueRow?->note);
     }
 
-    public function cancel(ServiceRequest $request, User $actor): ServiceRequest
+    public function cancel(ServiceRequest $request, User $actor, string $reason): ServiceRequest
     {
         // The owner withdraws their own request; for one filed on somebody's behalf
         // the filer may too, since the owner has no login to withdraw it with.
@@ -417,7 +417,7 @@ class RequestService
             403,
         );
 
-        [$request, $wasCurrent] = DB::transaction(function () use ($request) {
+        [$request, $wasCurrent] = DB::transaction(function () use ($request, $actor, $reason) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             $this->assertStatus($fresh, RequestStatus::Pending);
             $wasCurrent = $fresh->currentApproval();
@@ -425,6 +425,9 @@ class RequestService
             $fresh->update([
                 'status' => RequestStatus::Cancelled->value,
                 'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+                'cancelled_by_user_id' => $actor->id,
+                'cancelled_by_name' => $actor->name,
                 'last_activity_at' => now(),
             ]);
 
