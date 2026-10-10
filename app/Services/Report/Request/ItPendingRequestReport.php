@@ -370,7 +370,7 @@ class ItPendingRequestReport extends TabularReport
         return [
             [
                 'title' => 'ตามระยะเวลารอ',
-                'headings' => ['ช่วงเวลารอ', 'คำขอที่รอ', 'ยังไม่มีผู้รับผิดชอบ', 'ยังไม่มี Ticket', 'มีผู้รับผิดชอบแล้ว', 'เสร็จสิ้นใน 30 วันล่าสุด'],
+                'headings' => ['ช่วงเวลารอ', 'คำขอที่รอ', 'ยังไม่มีผู้รับผิดชอบ', 'ยังไม่มี Ticket', 'มีผู้รับผิดชอบแล้ว', 'ส่งมอบแล้วใน 30 วันล่าสุด'],
                 'rows' => array_map(fn (string $band) => [
                     self::AGE_BAND_TH[$band], $b['waiting']['bands'][$band]['total'], $b['waiting']['bands'][$band]['unassigned'],
                     $b['waiting']['bands'][$band]['no_ticket'], $b['waiting']['bands'][$band]['assigned'], $b['delivered']['bands'][$band],

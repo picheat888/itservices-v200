@@ -53,8 +53,8 @@ const SERIES: ChartSeries[] = BANDS.map((b) => ({ key: b.key, label_key: b.label
 
 const NONE = 'none';
 const NO_TICKET = 'no_ticket';
-const OWNER_ROWS = 8;
-const TYPE_ROWS = 8;
+const OWNER_ROWS = 5;
+const TYPE_ROWS = 5;
 const JOINER_ROWS = 5;
 const UNOWNED = 'font-semibold text-amber-600 dark:text-amber-400';
 
@@ -103,24 +103,31 @@ export function ItPendingCards({ filters, patch }: { filters: TabularFilters; pa
 
     return (
         <div className="space-y-4">
-            <AgeCard data={data} />
-            <HoldersCard data={data} filters={filters} patch={patch} />
+            <div className={PAIR}>
+                <AgeCard data={data} />
+                <HoldersCard data={data} filters={filters} patch={patch} />
+            </div>
             <JoinersCard joiners={data.joiners} />
         </div>
     );
 }
 
+// Age card beside "อยู่กับใคร" on wide screens, both the same height
+const PAIR = 'grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]';
+
 function CardsSkeleton() {
     return (
         <div className="space-y-4" aria-hidden>
-            <Card className="overflow-hidden">
-                <CardHeadingSkeleton />
-                <BarRowsSkeleton rows={2} />
-            </Card>
-            <Card className="overflow-hidden">
-                <CardHeadingSkeleton />
-                <BarRowsSkeleton rows={4} />
-            </Card>
+            <div className={PAIR}>
+                <Card className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <BarRowsSkeleton rows={2} />
+                </Card>
+                <Card className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <BarRowsSkeleton rows={4} />
+                </Card>
+            </div>
             <Card className="overflow-hidden">
                 <CardHeadingSkeleton />
                 <TableRowsSkeleton rows={5} />
@@ -129,7 +136,7 @@ function CardsSkeleton() {
     );
 }
 
-// Age card — waiting now beside what finished in the last 30 days, in the same groups
+// Age card — waiting now and what finished in the last 30 days, in the same groups
 
 function BandLegend() {
     const t = useT();
@@ -150,35 +157,37 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
     const { waiting, delivered } = data;
 
     return (
-        <Card className="overflow-clip">
+        <Card className="flex flex-col overflow-clip">
             <CardTitle title={t('rep_rqi_age_title')} note={t('rep_rqi_age_note')} sub={<BandLegend />} />
-            <div className="divide-border grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-                <section aria-labelledby="rqi-age-now" className="space-y-2 px-5 py-3.5">
+            <div className="divide-border grid flex-1 divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:grid-cols-1 xl:grid-rows-[1fr_1fr] xl:divide-x-0 xl:divide-y">
+                <section aria-labelledby="rqi-age-now" className={SECTION}>
                     <h3 id="rqi-age-now" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
                         {t('rep_rqi_age_now')}
-                        <b className="font-mono">{f.number(waiting.total)}</b>
+                        <b className="font-mono">{t('rep_rqi_n').replace('{n}', f.number(waiting.total))}</b>
                         {waiting.avg_days !== null && (
                             <span className="text-muted-foreground text-xs font-normal">
                                 {t('rep_rqi_avg').replace('{n}', f.decimal(waiting.avg_days))}
                             </span>
                         )}
                     </h3>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid flex-1 grid-cols-3 gap-2">
                         {BANDS.map((b) => (
                             <WaitingBucket key={b.key} band={b} figures={waiting.bands[b.key]} />
                         ))}
                     </div>
                 </section>
-                <section aria-labelledby="rqi-age-done" className="space-y-2 px-5 py-3.5">
-                    <h3 id="rqi-age-done" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
-                        {t('rep_rqi_age_done')}
-                        <b className="font-mono">{f.number(delivered.total)}</b>
-                        <span className="text-muted-foreground text-xs font-normal">
+                <section aria-labelledby="rqi-age-done" className={SECTION}>
+                    <div>
+                        <h3 id="rqi-age-done" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
+                            {t('rep_rqi_age_done')}
+                            <b className="font-mono">{t('rep_rqi_n').replace('{n}', f.number(delivered.total))}</b>
+                        </h3>
+                        <p className="text-muted-foreground text-xs">
                             {(delivered.avg_days !== null ? t('rep_rqi_done_avg').replace('{n}', f.decimal(delivered.avg_days)) + ' ' : '') +
                                 t('rep_rqi_range').replace('{from}', f.date(delivered.from)).replace('{to}', f.date(delivered.to))}
-                        </span>
-                    </h3>
-                    <div className="grid grid-cols-3 gap-2">
+                        </p>
+                    </div>
+                    <div className="grid flex-1 grid-cols-3 gap-2">
                         {BANDS.map((b) => (
                             <Bucket key={b.key} band={b} count={delivered.bands[b.key]} />
                         ))}
@@ -189,7 +198,9 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
     );
 }
 
-const BUCKET = 'relative flex w-full min-w-0 flex-col items-center gap-0.5 rounded-lg border-t-[3px] px-2 pt-2 pb-2.5 text-center';
+const SECTION = 'flex flex-col gap-2 px-5 py-3.5';
+
+const BUCKET = 'relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border-t-[3px] px-2 pt-2 pb-2.5 text-center';
 
 function BucketFace({ band, count }: { band: (typeof BANDS)[number]; count: number }) {
     const t = useT();
