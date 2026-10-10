@@ -7,8 +7,10 @@ import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/share
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { serverMessage } from '@/shared/lib/api-errors';
+import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { REQUEST_BLOCK_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
-import { cn, isEmail } from '@/shared/lib/utils';
+import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { RequestFieldSchema, ServiceRequest, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -21,17 +23,13 @@ import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Loader2, Send, Zap } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { type RequestTypeOption } from '../api/requestApi';
 import { useRequestMutations, useRequestOptions } from '../hooks/use-requests';
 
 const LAST_STEP = 2;
 
-/**
- * Total upload size the wizard will attempt, in bytes. PHP's post_max_size is what
- * actually refuses a larger body, and it does so before Laravel can answer with
- * anything readable — so the wizard turns the files away itself, with a sentence.
- */
+/** Total upload size the wizard will send; PHP's post_max_size would refuse more without a readable answer. */
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 
 // Non-empty field values only, so a blanked field compares equal to an untouched one.
@@ -43,14 +41,8 @@ const filledKey = (values: Record<string, string>) =>
     );
 
 /**
- * New Request — a 3-step focus-dialog wizard (the Contract wizard chrome):
- * ① pick the service (clicking a tile advances), ② fill the shared and
- * service-specific fields, ③ review, see the approval route, and submit.
- * Field schemas and select sources come from /service-requests/options, so the
- * dialog always asks for exactly what the server will validate.
- *
- * The dialog keeps a fixed height across steps so it never resizes under the
- * pointer; the chooser centres itself instead of leaving space below.
+ * New request wizard: ① pick the service, ② fill the fields, ③ review the route and submit.
+ * Schemas come from /service-requests/options, so it asks exactly what the server validates.
  */
 export function RequestCreateDialog({
     open,
@@ -74,21 +66,28 @@ export function RequestCreateDialog({
     const [files, setFiles] = useState<File[]>([]);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
+    const [formError, setFormError] = useState<{ title?: string; text: string } | null>(null);
     /** Upload percentage of the submit itself — one request, so one bar. */
     const [uploadPct, setUploadPct] = useState<number | null>(null);
 
-    // Reset when (re)opened.
-    useEffect(() => {
-        if (!open) return;
-        setStep(0);
-        setType(null);
-        setReason('');
-        setFields({});
-        setFiles([]);
-        setErr({});
-        setSaveState('idle');
-        setUploadPct(null);
-    }, [open]);
+    // Reset when (re)opened, during render so the last session never flashes
+    const [wasOpen, setWasOpen] = useState(open);
+    if (open !== wasOpen) {
+        setWasOpen(open);
+        if (open) {
+            setStep(0);
+            setType(null);
+            setReason('');
+            setFields({});
+            setFiles([]);
+            setErr({});
+            setFormError(null);
+            setSaveState('idle');
+            setUploadPct(null);
+        }
+    }
+    const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    useEffect(() => () => clearTimeout(closeTimer.current), []);
 
     const selected: RequestTypeOption | null = useMemo(() => options?.types.find((o) => o.type === type) ?? null, [options, type]);
     const schema = selected?.fields ?? [];
@@ -105,8 +104,8 @@ export function RequestCreateDialog({
     const pickType = (option: RequestTypeOption) => {
         setType(option.type);
         setErr({});
-        // The files belong to the service they were picked for — switching service
-        // drops them rather than carrying a floor plan into a software request.
+        setFormError(null);
+        // Files belong to the service they were picked for
         setFiles([]);
         // Seed schema defaults (e.g. qty = 1).
         const seeded: Record<string, string> = {};
@@ -115,7 +114,7 @@ export function RequestCreateDialog({
     };
 
     const fieldLabel = (f: RequestFieldSchema) => (lang === 'th' ? f.label_th : f.label_en);
-    const requiredMsg = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
+    const requiredMsg = t('req_err_required');
 
     /** Drop one field's error as soon as the user edits it. */
     const clearErr = (key: string) =>
@@ -128,7 +127,7 @@ export function RequestCreateDialog({
 
     const buildErrors = (): Record<string, string> => {
         const e: Record<string, string> = {};
-        if (!type) e.type = requiredMsg;
+        if (!type) e.type = t('req_err_pick_service');
         if (!reason.trim()) e.reason = requiredMsg;
         for (const f of schema) {
             if (f.internal) continue;
@@ -142,17 +141,19 @@ export function RequestCreateDialog({
                 e[`field_${f.key}`] = requiredMsg;
                 continue;
             }
-            // Catch a malformed address here rather than letting the server bounce
-            // the whole submit back on the last step.
             if (f.input === 'email' && filled && !isEmail(filled)) e[`field_${f.key}`] = t('req_bad_email');
         }
-        // The same rule the server enforces (RequestSchemas::attachmentsRequired) —
-        // said here so it is answered on step ② rather than by a 422 on step ③.
+        // Mirrors RequestSchemas::attachmentsRequired
         if (selected?.attachments_required && files.length === 0) e.files = t('req_attach_needed');
         if (files.reduce((sum, f) => sum + f.size, 0) > MAX_TOTAL_BYTES) {
             e.files = t('req_attach_too_large').replace('{mb}', String(Math.round(MAX_TOTAL_BYTES / 1048576)));
         }
         return e;
+    };
+    /** Show errors and move focus to the first one (Field names are the schema keys). */
+    const showErrors = (errors: Record<string, string>) => {
+        setErr(errors);
+        focusFirstError(Object.fromEntries(Object.entries(errors).map(([k, v]) => [k.startsWith('field_') ? k.slice(6) : k, v])));
     };
     const stepOwns = (s: number, key: string): boolean => (s === 0 ? key === 'type' : s === 1 ? key !== 'type' : false);
 
@@ -167,7 +168,7 @@ export function RequestCreateDialog({
         for (let s = step; s < clamped; s++) {
             const bad = Object.keys(all).filter((k) => stepOwns(s, k));
             if (bad.length) {
-                setErr(Object.fromEntries(bad.map((k) => [k, all[k]])));
+                showErrors(Object.fromEntries(bad.map((k) => [k, all[k]])));
                 setStep(s);
                 return;
             }
@@ -179,10 +180,11 @@ export function RequestCreateDialog({
     const doSubmit = async () => {
         const all = buildErrors();
         if (Object.keys(all).length) {
-            setErr(all);
+            showErrors(all);
             setStep(all.type ? 0 : 1);
             return;
         }
+        setFormError(null);
         try {
             const created = await submit.mutateAsync({
                 payload: {
@@ -197,49 +199,44 @@ export function RequestCreateDialog({
             setSaveState('done');
             useToastStore.getState().push(created.reference, 'success', t('req_submitted'));
             onCreated?.(created);
-            setTimeout(() => {
+            closeTimer.current = setTimeout(() => {
                 setSaveState('idle');
                 onClose();
             }, 600);
         } catch (e) {
             setUploadPct(null);
             const resp = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-            // Map server-side field errors onto the wizard's own field names. Keys
-            // with no field on screen (requester, title) fall through to the toast.
-            // `files.0` and friends all point at the one attachment block.
+            // Server field errors land on the wizard's own fields; the rest go to the banner.
+            const onScreen = new Set(['type', 'reason', 'files', ...schema.map((f) => `field_${f.key}`)]);
             const serverErrs: Record<string, string> = {};
+            const offScreen: string[] = [];
             for (const [key, msgs] of Object.entries(resp?.errors ?? {})) {
                 const local = key.startsWith('fields.') ? `field_${key.slice(7)}` : key.startsWith('files') ? 'files' : key;
-                serverErrs[local] = msgs[0] ?? '';
+                if (onScreen.has(local)) serverErrs[local] = msgs[0] ?? '';
+                else if (msgs[0]) offScreen.push(msgs[0]);
             }
             if (Object.keys(serverErrs).length) {
-                setErr(serverErrs);
+                showErrors(serverErrs);
                 setStep(serverErrs.type ? 0 : 1);
             }
-            // A refused reporting line arrives as a code (see ChainBlockReason) so it can
-            // be read in the viewer's language; anything else falls back to the server's
-            // own message.
+            // A refused reporting line arrives as a code (ChainBlockReason), worded here
             const blockKey = REQUEST_BLOCK_REASON_LABEL[resp?.errors?.requester?.[0] ?? ''];
-            useToastStore
-                .getState()
-                .push(blockKey ? t(blockKey) : (resp?.message ?? 'Something went wrong.'), 'error', blockKey ? t('req_block_title') : undefined);
+            if (blockKey) setFormError({ title: t('req_block_title'), text: t(blockKey) });
+            else if (offScreen.length) setFormError({ text: offScreen[0] });
+            else if (!Object.keys(serverErrs).length) setFormError({ text: serverMessage(e) ?? t('cd_error') });
         }
     };
 
     const steps = [t('req_step_service'), t('req_step_details'), t('req_step_review')];
     const HeaderIcon = type ? REQUEST_TYPE_META[type].icon : Inbox;
-    // An account with no employee record cannot be routed to an approver. Say so
-    // on step ① instead of letting someone fill three steps and hit a 422.
+    // No employee record means no route to an approver: said on step ①
     const noEmployee = !!user && user.employee_id == null;
-    // Fields the requester actually sees: an `internal` field is revealed by its
-    // `allow_other` partner rather than standing on its own.
+    // An `internal` field is revealed by its `allow_other` partner
     const visibleSchema = schema.filter((f) => !f.internal);
     const hasServiceFields = visibleSchema.length > 0;
-    // The column count is the service's own choice (RequestSchemas::layouts) —
-    // with nothing to put beside the reason it always collapses to one.
+    // Column count from RequestSchemas::layouts
     const twoColumnDetails = hasServiceFields && selected?.columns === 2;
-    // Limits come from the server (RequestAttachmentService) so the two never drift;
-    // the fallback only covers the moment before the options call lands.
+    // Limits from RequestAttachmentService; the fallback covers the first load
     const attachLimits = options?.attachments ?? { max_files: 5, max_size_kb: 10240, extensions: [] };
     const acceptExtensions = attachLimits.extensions;
     const attachRequired = !!selected?.attachments_required;
@@ -250,10 +247,8 @@ export function RequestCreateDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            {/* 1100px matches every other focus dialog in the app. Fixed height on
-                purpose: the dialog must not resize as you move between steps —
-                short steps centre their content instead of leaving a void. */}
+        <Dialog open={open} onOpenChange={(o) => !o && !submit.isPending && guardClose(onClose)}>
+            {/* Fixed height so the dialog never resizes between steps */}
             <DialogContent className="!flex h-[min(760px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={HeaderIcon}
@@ -272,6 +267,7 @@ export function RequestCreateDialog({
                             <button
                                 key={i}
                                 type="button"
+                                aria-current={active ? 'step' : undefined}
                                 onClick={() => goToStep(i)}
                                 className="relative flex min-w-0 flex-1 flex-col items-center gap-2 text-center"
                             >
@@ -308,19 +304,37 @@ export function RequestCreateDialog({
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto px-6 py-6">
+                    {formError && (
+                        <div
+                            key={formError.text}
+                            role="alert"
+                            className="bg-destructive/10 dark:text-destructive animate-shake mx-auto mb-5 max-w-[960px] space-y-0.5 rounded-lg px-3.5 py-2.5 text-sm text-red-700"
+                        >
+                            {formError.title && <p className="font-semibold">{formError.title}</p>}
+                            <p>{formError.text}</p>
+                        </div>
+                    )}
                     <div key={step} className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-                        {/* ── ① Pick the service — one job, one click ─── */}
-                        {/* A chooser has nothing to scroll to, so it sits in the middle of the
-                            fixed-height dialog rather than leaving the space below it empty. */}
+                        {/* ① Pick the service — one click moves on */}
                         {step === 0 && (
-                            <div className="mx-auto flex min-h-full w-full max-w-[960px] flex-col justify-center gap-5">
+                            <div className="mx-auto flex min-h-full w-full max-w-[960px] flex-col justify-center gap-4">
                                 <div>
                                     <h2 className="text-lg font-bold tracking-tight">{t('req_pick_title')}</h2>
                                     <p className="text-muted-foreground mt-0.5 text-sm">{t('req_pick_sub')}</p>
+                                    {err.type && (
+                                        <p
+                                            key={err.type}
+                                            role="alert"
+                                            className="text-destructive animate-shake mt-1.5 flex items-center gap-1.5 text-xs"
+                                        >
+                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                            {err.type}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {noEmployee && (
-                                    <div className="border-destructive/40 bg-destructive/5 text-destructive flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-xs">
+                                    <div className="border-destructive/40 bg-destructive/5 dark:text-destructive flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-xs text-red-700">
                                         <AlertTriangle className="mt-px h-4 w-4 shrink-0" />
                                         {t('req_no_employee_hint')}
                                     </div>
@@ -336,27 +350,24 @@ export function RequestCreateDialog({
                                             <ChoiceCard
                                                 key={option.type}
                                                 selected={type === option.type}
+                                                invalid={!!err.type && !inactive}
                                                 disabled={inactive}
-                                                // Picking IS the step — one click moves on, no Next to hunt for.
                                                 onClick={() => {
                                                     pickType(option);
                                                     setStep(1);
                                                 }}
-                                                // min-h keeps every tile identical whether its name wraps to one
-                                                // line or two, so the grid never shifts between rows.
                                                 className={cn(
                                                     'flex min-h-[116px] flex-col items-center justify-center gap-2.5 rounded-lg px-3 py-4 text-center',
                                                     inactive && 'opacity-55',
                                                 )}
                                             >
                                                 <span
-                                                    className="flex h-10 w-10 items-center justify-center rounded-lg"
-                                                    style={{ background: `${meta.color}1f`, color: meta.color }}
+                                                    className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink)] dark:text-[var(--ink-dark)]"
+                                                    style={iconTile(meta.color)}
                                                 >
                                                     <Icon className="h-5 w-5" />
                                                 </span>
                                                 <span className="text-sm leading-snug font-semibold">{t(meta.labelKey)}</span>
-                                                {/* Only a closed service needs a caption — the rest speak for themselves. */}
                                                 {closed && (
                                                     <span className="text-muted-foreground text-[11px] leading-tight">{t('req_inactive')}</span>
                                                 )}
@@ -376,8 +387,6 @@ export function RequestCreateDialog({
                                 </div>
 
                                 <div className={cn('grid gap-x-10 gap-y-6', twoColumnDetails && 'md:grid-cols-2')}>
-                                    {/* The reason carries everything a form field used to ask for
-                                        piecemeal — quantity, model, timing, urgency. */}
                                     <div className="space-y-4">
                                         {hasServiceFields && <SectionLabel>{t('req_section_general')}</SectionLabel>}
                                         <Field label={t('req_field_reason')} required error={err.reason} name="reason">
@@ -394,8 +403,7 @@ export function RequestCreateDialog({
                                         </Field>
                                     </div>
 
-                                    {/* Service-specific fields. In a one-column layout they follow the
-                                        reason under a rule rather than sitting beside it. */}
+                                    {/* Service-specific fields */}
                                     {hasServiceFields && (
                                         <div className={cn('space-y-4', !twoColumnDetails && 'border-border/70 border-t pt-6')}>
                                             <SectionLabel>{t('req_service_section')}</SectionLabel>
@@ -425,9 +433,8 @@ export function RequestCreateDialog({
                                     )}
                                 </div>
 
-                                {/* Evidence. Full width under the grid, because a plan or a quote
-                                    is about the whole request rather than about one field. */}
-                                <div className="border-border/70 mt-6 border-t pt-6">
+                                {/* Attachments, full width */}
+                                <div data-field="files" className="border-border/70 mt-6 border-t pt-6">
                                     <SectionLabel>
                                         {t('req_attach_section')}
                                         {attachRequired && <span className="text-destructive ml-0.5">*</span>}
@@ -496,15 +503,14 @@ export function RequestCreateDialog({
                                     {files.length > 0 && (
                                         <ReviewRow k={t('req_attach_section')} v={t('req_attach_review').replace('{n}', String(files.length))} />
                                     )}
-                                    {/* Reason runs long — it gets the full width instead of being squeezed
-                                        into a right-aligned cell. */}
+                                    {/* Reason, full width */}
                                     <div className="odd:bg-muted/30 px-4 py-2.5">
                                         <div className="text-muted-foreground mb-1 text-xs">{t('req_field_reason')}</div>
                                         <p className="text-sm whitespace-pre-wrap">{reason}</p>
                                     </div>
                                 </div>
 
-                                {/* The files by name, so what is about to be sent is visible before it is. */}
+                                {/* Files about to be sent */}
                                 {files.length > 0 && (
                                     <div className="mt-4">
                                         <AttachmentList count={files.length} max={attachLimits.max_files}>
@@ -515,7 +521,7 @@ export function RequestCreateDialog({
                                     </div>
                                 )}
 
-                                {/* The one place the approval route lives — you are about to commit to it. */}
+                                {/* Approval route */}
                                 {selected?.workflow && (
                                     <div className="mt-6">
                                         <SectionLabel>{t('req_route_title')}</SectionLabel>
@@ -547,18 +553,24 @@ export function RequestCreateDialog({
                             </>
                         )}
                     </Button>
-                    {/* The upload's own bar — a 30 MB submit takes long enough that the
-                        spinner alone reads as a stall. */}
+                    {/* Upload progress */}
                     {uploadPct != null && (
                         <div className="ml-4 flex items-center gap-2">
-                            <div className="bg-muted h-1.5 w-40 overflow-hidden rounded-full">
-                                <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${uploadPct}%` }} />
+                            <div
+                                role="progressbar"
+                                aria-label={t('req_attach_section')}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={uploadPct}
+                                className="bg-muted h-1.5 w-40 overflow-hidden rounded-full"
+                            >
+                                <div className="bg-brand h-full rounded-full transition-[width]" style={{ width: `${uploadPct}%` }} />
                             </div>
                             <span className="text-muted-foreground font-mono text-xs">{uploadPct}%</span>
                         </div>
                     )}
                     <div className="flex-1" />
-                    {/* Step ① needs no Next — choosing a service moves the wizard on. */}
+                    {/* Step ① has no Next: picking a service moves on */}
                     {step === 1 && (
                         <Button onClick={() => goToStep(2)}>
                             {t('next')}
@@ -606,8 +618,7 @@ function SchemaField({
 
     if (schema.input === 'source') {
         const list = sources?.[schema.source ?? ''] ?? [];
-        // A catalogue with an escape hatch: tick the box when what you need is
-        // not on the list, and type it instead.
+        // Tick "not on the list" to type it instead
         const usingOther = schema.allow_other != null && (otherValue ?? '') !== '';
         return (
             <>
@@ -640,8 +651,7 @@ function SchemaField({
                             <Checkbox
                                 checked={usingOther}
                                 onCheckedChange={(on) => {
-                                    // Ticking parks a space so the field counts as "in use";
-                                    // unticking clears it and hands control back to the list.
+                                    // A parked space marks the typed field as in use
                                     onOtherChange(on ? ' ' : '');
                                     if (on) onChange('');
                                 }}
@@ -666,58 +676,31 @@ function SchemaField({
     if (schema.input === 'select') {
         const options = schema.options ?? [];
 
-        // Two choices fit side by side, so show them. A dropdown would hide half
-        // the answer behind a click and cost a second one to give it.
-        //
-        // Managed lists keep their dropdown whatever their length: how many rows
-        // an admin happens to have entered is data, and the control should not
-        // change shape under them when they add or remove one.
+        // Two fixed choices sit side by side; managed lists always keep the dropdown
         if (options.length === 2 && !schema.managed) {
             return (
                 <Field label={label} required={schema.required} error={error} name={schema.key}>
-                    <div className="grid grid-cols-2 gap-2">
-                        {options.map((o) => {
-                            const on = value === o.value;
-                            return (
-                                <button
-                                    key={o.value}
-                                    type="button"
-                                    aria-pressed={on}
-                                    // An optional field can be un-answered again by
-                                    // pressing the choice that is already on.
-                                    onClick={() => onChange(on && !schema.required ? '' : o.value)}
-                                    className={cn(
-                                        'h-10 rounded-lg border px-3 text-sm font-medium transition-colors',
-                                        on
-                                            ? 'border-brand bg-brand/10 text-brand'
-                                            : error && !value
-                                              ? 'border-destructive hover:bg-accent/50'
-                                              : 'border-input hover:bg-accent/50',
-                                    )}
-                                >
-                                    {lang === 'th' ? o.label_th : o.label_en}
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <ChoicePair
+                        label={label}
+                        options={options.map((o) => ({ value: o.value, label: lang === 'th' ? o.label_th : o.label_en }))}
+                        value={value}
+                        required={schema.required}
+                        invalid={!!error}
+                        onChange={onChange}
+                    />
                 </Field>
             );
         }
 
         return (
             <Field label={label} required={schema.required} error={error} name={schema.key}>
-                <Select value={value || undefined} onValueChange={onChange}>
-                    <SelectTrigger className={cn('h-10 w-full', error && 'border-destructive')}>
-                        <SelectValue placeholder={t('req_select_placeholder')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {options.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                                {lang === 'th' ? o.label_th : o.label_en}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <SelectField
+                    value={value}
+                    onChange={onChange}
+                    invalid={!!error}
+                    placeholder={t('req_select_placeholder')}
+                    options={options.map((o) => ({ value: o.value, label: lang === 'th' ? o.label_th : o.label_en }))}
+                />
             </Field>
         );
     }
@@ -732,7 +715,6 @@ function SchemaField({
         <Field label={label} required={schema.required} error={error} name={schema.key}>
             <Input
                 type={schema.input === 'number' ? 'number' : schema.input === 'email' ? 'email' : 'text'}
-                // An address is typed exactly as it will exist — never autocapitalised.
                 autoCapitalize={schema.input === 'email' ? 'none' : undefined}
                 spellCheck={schema.input === 'email' ? false : undefined}
                 min={schema.min}
@@ -743,6 +725,102 @@ function SchemaField({
                 className={cn(schema.mono && 'font-mono', error && 'border-destructive')}
             />
         </Field>
+    );
+}
+
+type FieldWiring = { id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string };
+
+/** Radix Select with Field's id and error wiring on the trigger (the Root renders no element). */
+function SelectField({
+    value,
+    onChange,
+    invalid,
+    placeholder,
+    options,
+    ...wiring
+}: FieldWiring & {
+    value: string;
+    onChange: (v: string) => void;
+    invalid: boolean;
+    placeholder: string;
+    options: { value: string; label: string }[];
+}) {
+    return (
+        <Select value={value || undefined} onValueChange={onChange}>
+            <SelectTrigger {...wiring} className={cn('h-10 w-full', invalid && 'border-destructive')}>
+                <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+                {options.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    );
+}
+
+/** Two fixed choices side by side, as a radio group (arrow keys move; pressing the chosen one clears an optional field). */
+function ChoicePair({
+    label,
+    options,
+    value,
+    required,
+    invalid,
+    onChange,
+    id,
+    ...wiring
+}: FieldWiring & {
+    label: string;
+    options: { value: string; label: string }[];
+    value: string;
+    required?: boolean;
+    invalid: boolean;
+    onChange: (v: string) => void;
+}) {
+    const refs = useRef<(HTMLButtonElement | null)[]>([]);
+    const current = options.findIndex((o) => o.value === value);
+
+    const onKeyDown = (e: KeyboardEvent, i: number) => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+        e.preventDefault();
+        const next = (i + 1) % options.length;
+        onChange(options[next].value);
+        refs.current[next]?.focus();
+    };
+
+    return (
+        <div role="radiogroup" aria-label={label} aria-required={required} {...wiring} className="grid grid-cols-2 gap-2">
+            {options.map((o, i) => {
+                const on = i === current;
+                return (
+                    <button
+                        key={o.value}
+                        ref={(el) => {
+                            refs.current[i] = el;
+                        }}
+                        id={i === 0 ? id : undefined}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        tabIndex={on || (current < 0 && i === 0) ? 0 : -1}
+                        onClick={() => onChange(on && !required ? '' : o.value)}
+                        onKeyDown={(e) => onKeyDown(e, i)}
+                        className={cn(
+                            'h-10 rounded-lg border px-3 text-sm font-medium transition-colors',
+                            on
+                                ? 'border-brand bg-brand/10 text-brand'
+                                : invalid
+                                  ? 'border-destructive hover:bg-accent/50'
+                                  : 'border-input hover:bg-accent/50',
+                        )}
+                    >
+                        {o.label}
+                    </button>
+                );
+            })}
+        </div>
     );
 }
 
@@ -770,4 +848,13 @@ function ReviewRow({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
             <span className={cn('min-w-0 text-right font-semibold break-words', mono && 'font-mono text-sm')}>{v}</span>
         </div>
     );
+}
+
+// Service icon on a tint of its colour, at least 3:1 in both themes
+function iconTile(color: string): CSSProperties {
+    return {
+        background: `${color}1f`,
+        '--ink': readableInk(color, LIGHT_GROUND, 0x1f / 255, 3),
+        '--ink-dark': readableInk(color, DARK_GROUND, 0x1f / 255, 3),
+    } as CSSProperties;
 }

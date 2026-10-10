@@ -2,8 +2,10 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { LoadFailed } from '@/shared/components/load-failed';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -26,8 +28,8 @@ import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
-import { Check, CheckCircle2, ChevronRight, Clock, Eye, History, Inbox, Plus, Search, X, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Check, CheckCircle2, ChevronRight, CircleDot, Clock, Eye, History, Inbox, Layers, Plus, Search, X, type LucideIcon } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DecisionDialog, type DecisionAction } from '../components/decision-dialog';
 import { RequestCreateDialog } from '../components/request-create-dialog';
@@ -35,25 +37,14 @@ import { RequestDetailDialog } from '../components/request-detail-dialog';
 import { WorkflowMini } from '../components/workflow-mini';
 import { useRequests } from '../hooks/use-requests';
 
-/**
- * What last happened to a request, as a sentence: "Approved by X", "Filed by Y". The kind
- * comes from the API as a code so this reads in the language the user is in, and the name
- * is the one frozen on the row that moved.
- *
- * A movement with nobody attached (a request withdrawn by its owner, an older row with no
- * name stored) prints the event alone rather than a dangling "by".
- */
+/** What last happened to a request, as a sentence ("Approved by X"); the event alone when nobody is attached. */
 function activityLine(request: ServiceRequest, t: (key: string) => string): string {
     const what = t(`req_activity_${request.activity.kind}`);
 
     return request.activity.by ? t('req_activity_by').replace('{what}', what).replace('{name}', request.activity.by) : what;
 }
 
-/**
- * The first typed field's value — the one fact that says what a request is actually for
- * (which machine, which mailbox, which share). Only the first: a row identifies and
- * prioritises, and the rest of the specifics are in the dialog where the decision is made.
- */
+/** The first typed field's value: what the request is actually for (which machine, which mailbox). */
 function headlineValue(request: ServiceRequest, lang: 'en' | 'th'): string {
     const row = request.fields_display[0];
 
@@ -73,35 +64,38 @@ const LIST_KEYS = ['search', 'status', 'type', 'page'];
 const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T | '' =>
     (allowed as readonly string[]).includes(value) ? (value as T) : '';
 
+/** Title of an overview row: a real button whose hit area stretches over the whole row. */
+const ROW_BUTTON =
+    'block w-full truncate text-left text-sm font-medium after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring';
+
+/** Small label above a filter select (icon + text), matching the other modules' filter panels. */
+const fieldLabel = (htmlFor: string, icon: ReactNode, label: string) => (
+    <label htmlFor={htmlFor} className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+        {icon}
+        {label}
+    </label>
+);
+
 /**
- * Requests page — the whole service-request lifecycle in three tabs:
- * a dashboard (your approval queue + the service catalog + recent activity),
- * the full server-paginated list, and the "awaiting my approval" queue.
+ * Requests page: an overview (KPIs, your approval queue, recent activity) and the server-paginated list.
  * Deep links: ?add=1 opens the wizard, ?view=<id> opens a request.
  */
 export default function RequestsPage() {
     const t = useT();
-    // The queue rows print a stored value in the reader's language (value_th || value).
     const lang = useUiStore((s) => s.lang);
     const { can } = useAuth();
     const canSubmit = can('requests.submit');
 
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Active tab lives in the URL and nowhere else, so a reload or a shared link is
-    // exact. Validated rather than cast: `?tab=` with a slug this page does not have used
-    // to leave the whole card empty, since no branch below matched it.
-    // Read on every render (useTabParam), and each tab press is a history entry, so Back
-    // steps back through the tabs pressed.
+    // Active tab lives in the URL only (validated); each press is a history entry.
     const [tab, setTab] = useTabParam(isTab, 'overview');
-    // Either list scope means the list tab is the one on screen.
     const isListTab = tab !== 'overview';
 
     // List search, filters and page live in the URL (?search, status, type, page, per).
     const list = useListParams();
     const { page, perPage } = list;
     const search = list.get('search');
-    // Typed as the unions (plus '' for "all") so the status/type registries can be indexed directly.
     const status = pickAllowed(list.get('status'), REQUEST_STATUSES);
     const type = pickAllowed(list.get('type'), REQUEST_TYPES);
 
@@ -135,26 +129,28 @@ export default function RequestsPage() {
         });
     };
 
-    // Main list — powers the table AND the KPI meta (aggregates are filter-independent).
+    // Main list: the table, or on the overview the activity feed; its meta feeds the KPIs.
     const listParams =
         tab === 'approvals'
             ? { page, per_page: perPage, search, status, type, scope: 'approvals' as const }
             : tab === 'all'
               ? { page, per_page: perPage, search, status, type }
-              : { page: 1, per_page: 6, sort: 'activity' as const }; // dashboard: the activity feed
-    const { data: pageData, isLoading, isFetching } = useRequests(listParams);
+              : { page: 1, per_page: 6, sort: 'activity' as const };
+    const { data: pageData, isLoading, isFetching, isError, refetch } = useRequests(listParams);
     const rows = pageData?.data ?? [];
     const meta = pageData?.meta;
 
-    // Dashboard only: the oldest requests waiting on ME (inline decisions).
-    const { data: queueData } = useRequests({ page: 1, per_page: 4, scope: 'approvals' }, tab === 'overview');
+    // Overview only: the oldest requests waiting on me.
+    const {
+        data: queueData,
+        isLoading: queueLoading,
+        isError: queueError,
+        refetch: refetchQueue,
+    } = useRequests({ page: 1, per_page: 4, scope: 'approvals', sort: 'oldest' }, tab === 'overview');
     const queue = queueData?.data ?? [];
 
-    // Dialogs — create via ?add=1, detail via ?view=<id> (bell deep links land here).
+    // Dialogs: create via ?add=1, detail via ?view=<id> (a malformed id leaves the list alone).
     const adding = searchParams.get('add') === '1';
-    // Only a real record id opens the dialog. `Number('abc')` is NaN, which still passes
-    // an `!= null` check, so a mistyped link used to fetch /service-requests/NaN and sit
-    // on the skeleton forever; a malformed link now leaves the list alone.
     const viewId = toRecordId(searchParams.get('view'));
     const openCreate = () =>
         setSearchParams(
@@ -186,36 +182,19 @@ export default function RequestsPage() {
 
     const [decide, setDecide] = useState<{ request: ServiceRequest; action: DecisionAction } | null>(null);
 
-    /**
-     * Days this request has been waiting on the CURRENT approver — from when their step
-     * became current, not from when the request was filed. Null when no step is current
-     * (nothing is waiting on anybody) or on rows old enough to predate the timestamp.
-     */
+    /** Days the request has waited on the current approver (from when their step became current). */
     const waitingDays = (r: ServiceRequest): number | null => {
         const since = (r.approvals ?? []).find((a) => a.status === 'current')?.became_current_at;
 
         return since ? Math.max(0, (Date.now() - new Date(since.replace(' ', 'T')).getTime()) / 86_400_000) : null;
     };
-    /**
-     * Short enough to sit in a fixed slot: "New" for what arrived today, otherwise the
-     * number of days. The full sentence stays as the title, so anybody wondering what the
-     * number counts can hover — the card's own heading ("Needs your decision") is the rest
-     * of that context.
-     */
-    /**
-     * "New" goes on what reached this approver today; the older rows say nothing at all.
-     *
-     * A day count read as noise in a column that has to stay narrow, and the queue is
-     * ordered oldest-first anyway — so age is carried by the order, and the only thing
-     * worth a word is what has just landed.
-     */
+    /** "New" marks what reached this approver today; the queue's order carries the age of the rest. */
     const isNewToYou = (r: ServiceRequest): boolean => {
         const days = waitingDays(r);
 
         return days !== null && days < 1;
     };
 
-    // Requests older than this many days get the amber age chip (mirrors the mockup).
     const ageDays = (iso: string) => Math.max(0, (Date.now() - new Date(iso.replace(' ', 'T')).getTime()) / 86_400_000);
     const ageLabel = (iso: string) => {
         const d = ageDays(iso);
@@ -238,7 +217,6 @@ export default function RequestsPage() {
                         <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                         <div className="min-w-0">
                             <div className="truncate text-sm font-medium">{requestTitle(r, t)}</div>
-                            {/* The reason, not the service name — the title already says the service. */}
                             <div className="text-muted-foreground truncate text-xs">{r.reason}</div>
                         </div>
                     </div>
@@ -252,8 +230,7 @@ export default function RequestsPage() {
                 <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{r.requester.name}</div>
                     <div className="text-muted-foreground truncate text-xs">{r.requester.department ?? '—'}</div>
-                    {/* A new hire has no login of their own — say so, or the approver
-                        reads it as a colleague asking for a second laptop. */}
+                    {/* A new hire has no login of their own */}
                     {isOnBehalfRequest(r) && (
                         <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="mt-1">
                             {t(REQUEST_ONBOARDING_BADGE.labelKey)}
@@ -274,7 +251,7 @@ export default function RequestsPage() {
             align: 'right',
             render: (r) => (
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    {r.can_approve ? (
+                    {r.can_approve && (
                         <>
                             <Button size="sm" className={REQUEST_APPROVE_BUTTON} onClick={() => setDecide({ request: r, action: 'approve' })}>
                                 <Check className="h-3.5 w-3.5" />
@@ -290,17 +267,18 @@ export default function RequestsPage() {
                                 {t('req_reject')}
                             </Button>
                         </>
-                    ) : (
-                        <Button size="sm" variant="ghost" onClick={() => openDetail(r)} title={t('wf_view')}>
-                            <Eye className="h-4 w-4" />
-                        </Button>
                     )}
+                    <Button size="sm" variant="ghost" onClick={() => openDetail(r)} title={t('view')} aria-label={`${t('view')} ${r.reference}`}>
+                        <Eye className="h-4 w-4" />
+                    </Button>
                 </div>
             ),
         },
     ];
 
     const filterCount = (status ? 1 : 0) + (type ? 1 : 0);
+    const visibleTotal = meta ? meta.pending + meta.approved + meta.completed + meta.rejected + meta.cancelled : null;
+    const kpiLoading = !meta;
 
     return (
         <div className="space-y-5">
@@ -320,16 +298,12 @@ export default function RequestsPage() {
                 </div>
             </div>
 
-            {/* Tab card */}
+            {/* Tab card — "awaiting my approval" is a chip inside the list, so the list tab stays lit for both scopes */}
             <Card className="overflow-clip p-0">
-                {/* Two tabs, not three. "Awaiting my approval" was the same table with
-                    `scope=approvals` on the query — a filter wearing a tab's clothes, which
-                    also split one set of filters into two modes of itself. It is a chip
-                    inside the list now; the tab stays lit for either scope. */}
                 <PageTabs<Tab>
                     tabs={[
                         { id: 'overview', label: t('requests_tab_overview') },
-                        { id: 'all', label: t('requests_tab_list'), count: meta?.total ?? null },
+                        { id: 'all', label: t('requests_tab_list'), count: visibleTotal },
                     ]}
                     active={isListTab ? 'all' : 'overview'}
                     onChange={(next) => switchTab(next)}
@@ -337,57 +311,56 @@ export default function RequestsPage() {
 
                 {tab === 'overview' ? (
                     <div className="space-y-4 p-4">
-                        {/* KPI row — each card opens the list it summarises. */}
+                        {/* KPI row — each card opens the list it counts */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                            <Kpi
+                            <StatCard
                                 icon={Inbox}
                                 label={t('req_kpi_awaiting')}
                                 value={String(meta?.awaiting_me ?? 0)}
                                 onClick={() => switchTab('approvals')}
-                                sub={`${t('req_kpi_awaiting_of')} ${meta?.pending ?? 0}`}
+                                sub={t('req_kpi_awaiting_of').replace('{n}', String(meta?.pending ?? 0))}
+                                loading={kpiLoading}
                             />
-                            <Kpi
+                            <StatCard
                                 icon={Check}
                                 label={t('req_kpi_approved')}
-                                value={String((meta?.approved ?? 0) + (meta?.completed ?? 0))}
+                                value={String(meta?.approved ?? 0)}
                                 onClick={() => switchTab('all', { status: 'approved' })}
                                 sub={`${meta?.completed ?? 0} ${t('req_status_completed')}`}
+                                loading={kpiLoading}
                             />
-                            <Kpi
+                            <StatCard
                                 icon={X}
                                 label={t('req_kpi_rejected')}
                                 value={String(meta?.rejected ?? 0)}
                                 onClick={() => switchTab('all', { status: 'rejected' })}
                                 sub={`${meta?.cancelled ?? 0} ${t('req_status_cancelled')}`}
+                                loading={kpiLoading}
                             />
-                            <Kpi
+                            <StatCard
                                 icon={Clock}
                                 label={t('req_kpi_cycle')}
                                 value={meta?.avg_cycle_days != null ? `${meta.avg_cycle_days}${t('req_kpi_days_suffix')}` : '—'}
                                 sub={t('req_kpi_cycle_sub')}
+                                loading={kpiLoading}
                             />
                         </div>
 
-                        {/* Your approval queue — the page's action centre. */}
+                        {/* Your approval queue */}
                         <DashCard
                             icon={Inbox}
                             title={t('req_queue_title')}
                             count={meta?.awaiting_me ?? 0}
-                            action={
-                                (meta?.awaiting_me ?? 0) > queue.length ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => switchTab('approvals')}
-                                        className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
-                                    >
-                                        {t('req_view_all')}
-                                        <ChevronRight className="h-3.5 w-3.5" />
-                                    </button>
-                                ) : undefined
-                            }
+                            action={(meta?.awaiting_me ?? 0) > queue.length ? <ViewAllButton onClick={() => switchTab('approvals')} /> : undefined}
                         >
                             <div className="divide-border/60 divide-y p-2">
-                                {queue.length === 0 ? (
+                                {queueLoading ? (
+                                    <RowSkeletons count={2} />
+                                ) : queueError && queue.length === 0 ? (
+                                    <div className="px-3 py-6 text-center">
+                                        <LoadFailed onRetry={() => refetchQueue()} />
+                                    </div>
+                                ) : queue.length === 0 ? (
                                     <div className="flex items-start gap-3 px-3 py-2.5">
                                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                                         <div className="min-w-0">
@@ -401,25 +374,19 @@ export default function RequestsPage() {
                                         return (
                                             <div
                                                 key={r.id}
-                                                onClick={() => openDetail(r)}
                                                 className={cn(
-                                                    'hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
+                                                    'hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
                                                     onboardingRowClass(r),
                                                 )}
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
-                                                    {/* What is being asked for, which the title alone does not say — "Mobile
-                                                        device for X" is a tablet or a phone, and an approver reads this row to
-                                                        decide which ones to open. The title stands in when a service has no
-                                                        typed fields at all (a General Request). */}
-                                                    <div className="truncate text-sm font-medium">
+                                                    {/* What is asked for; the title when the service has no typed fields */}
+                                                    <button type="button" onClick={() => openDetail(r)} className={ROW_BUTTON}>
                                                         {r.fields_display[0]
                                                             ? `${t(REQUEST_TYPE_META[r.type].labelKey)}: ${headlineValue(r, lang)}`
                                                             : requestTitle(r, t)}
-                                                    </div>
-                                                    {/* Who it is for. The reason has moved out of the row: it is a sentence, it
-                                                        was truncated mid-thought, and it belongs where the decision is made. */}
+                                                    </button>
                                                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
                                                         <span className="truncate">{r.requester.name}</span>
                                                         {r.requester.department && <span className="truncate">{r.requester.department}</span>}
@@ -430,27 +397,17 @@ export default function RequestsPage() {
                                                         )}
                                                     </div>
                                                 </div>
-                                                {/* Marks what reached THIS approver today — not what was filed today: a
-                                                    four-day-old request can have landed on your desk a minute ago, and the
-                                                    age of the request read as a reproach for somebody else's delay.
-                                                    
-                                                    Ahead of the step track, in a fixed-width slot even when empty: a slot
-                                                    that collapsed on the older rows moved the track and the buttons to a
-                                                    different x on every line. */}
+                                                {/* Fixed-width slot so the track and buttons line up on every row */}
                                                 <span className="flex w-10 shrink-0 justify-end">
                                                     {isNewToYou(r) && (
-                                                        <StatusBadge tone="red" dot={false}>
+                                                        <StatusBadge tone="blue" dot={false}>
                                                             {t('req_waiting_new')}
                                                         </StatusBadge>
                                                     )}
                                                 </span>
                                                 <WorkflowMini request={r} />
-                                                {/* Only for the person whose decision it is. The card asks the API for
-                                                    the steps waiting on you, so every row here should be yours — but a
-                                                    card that draws its buttons without checking is how an account with
-                                                    no employee record (the administrator) ended up looking at Approve
-                                                    on somebody else's step, for the API to refuse on the press. */}
-                                                <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
+                                                {/* Only the person whose decision it is can press these */}
+                                                <div className="relative z-[1] flex shrink-0 gap-1">
                                                     <Button
                                                         size="sm"
                                                         className={REQUEST_APPROVE_BUTTON}
@@ -460,9 +417,6 @@ export default function RequestsPage() {
                                                         <Check className="h-3.5 w-3.5" />
                                                         {t('req_approve')}
                                                     </Button>
-                                                    {/* Named, not an icon on its own: the destructive action was the quieter
-                                                        of the pair, and a bare ✕ beside a labelled button reads as "take this
-                                                        off the list" rather than "reject it". */}
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
@@ -481,34 +435,16 @@ export default function RequestsPage() {
                             </div>
                         </DashCard>
 
-                        {/* Recent activity — same row language as the queue, minus the decisions. */}
-                        <DashCard
-                            icon={History}
-                            title={t('req_recent_title')}
-                            action={
-                                <button
-                                    type="button"
-                                    onClick={() => switchTab('all')}
-                                    className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
-                                >
-                                    {t('req_view_all')}
-                                    <ChevronRight className="h-3.5 w-3.5" />
-                                </button>
-                            }
-                        >
+                        {/* Recent activity */}
+                        <DashCard icon={History} title={t('req_recent_title')} action={<ViewAllButton onClick={() => switchTab('all')} />}>
                             <div className="divide-border/60 divide-y p-2">
-                                {isLoading &&
-                                    Array.from({ length: 4 }).map((_, i) => (
-                                        <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-                                            <Skeleton className="h-4 w-4 shrink-0 rounded" />
-                                            <div className="min-w-0 flex-1 space-y-1.5">
-                                                <Skeleton className="h-3.5 w-1/3" />
-                                                <Skeleton className="h-3 w-1/2" />
-                                            </div>
-                                            <Skeleton className="h-5 w-20 rounded-full" />
-                                        </div>
-                                    ))}
-                                {!isLoading && rows.length === 0 && (
+                                {isLoading && <RowSkeletons count={4} />}
+                                {!isLoading && rows.length === 0 && isError && (
+                                    <div className="px-3 py-8 text-center">
+                                        <LoadFailed onRetry={() => refetch()} />
+                                    </div>
+                                )}
+                                {!isLoading && rows.length === 0 && !isError && (
                                     <p className="text-muted-foreground px-3 py-8 text-center text-sm">{t('req_recent_empty')}</p>
                                 )}
                                 {!isLoading &&
@@ -517,19 +453,18 @@ export default function RequestsPage() {
                                         return (
                                             <div
                                                 key={r.id}
-                                                onClick={() => openDetail(r)}
-                                                className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
+                                                className="hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-medium">{requestTitle(r, t)}</div>
+                                                    <button type="button" onClick={() => openDetail(r)} className={ROW_BUTTON}>
+                                                        {requestTitle(r, t)}
+                                                    </button>
                                                     <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
                                                         <span className="truncate">{activityLine(r, t)}</span>
                                                         <span className="shrink-0">{ageLabel(r.activity.at ?? r.created_at)}</span>
                                                     </div>
                                                 </div>
-                                                {/* The badge already says where this stands, so the progress ticks
-                                                    stay in the queue and the table where they drive a decision. */}
                                                 <StatusBadge tone={REQUEST_STATUS_META[r.status].tone}>
                                                     {t(REQUEST_STATUS_META[r.status].labelKey)}
                                                 </StatusBadge>
@@ -542,8 +477,7 @@ export default function RequestsPage() {
                 ) : (
                     <div className="p-4">
                         <div className="mb-3 flex flex-wrap items-center gap-2.5">
-                            {/* Reads and writes the same ?tab= as the old tab did, so a shared or
-                                bookmarked ?tab=approvals link still lands on this scope. */}
+                            {/* Scope chips — write the same ?tab= the old tabs did */}
                             <div className="border-border flex h-10 items-center gap-0.5 rounded-md border p-1">
                                 {(
                                     [
@@ -554,6 +488,7 @@ export default function RequestsPage() {
                                     <button
                                         key={id}
                                         type="button"
+                                        aria-pressed={tab === id}
                                         onClick={() => switchTab(id)}
                                         className={cn(
                                             'flex h-full items-center rounded px-2.5 text-xs font-medium transition-colors',
@@ -570,26 +505,27 @@ export default function RequestsPage() {
                                 <Input
                                     className="pl-9"
                                     placeholder={t('req_search_ph')}
+                                    aria-label={t('req_search_ph')}
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
                                 />
                             </div>
                             <FilterPopover
                                 count={filterCount}
-                                // 460 like every other filter row in the app; the 288 default left the
-                                // two-up grid at ~120px a column, which cut every service name short.
                                 width={460}
                                 resultCount={meta?.total}
                                 onClear={() => list.setParams({ status: null, type: null, page: null })}
                             >
                                 {() => (
                                     <div className="grid grid-cols-2 gap-3">
-                                        <label className="space-y-1.5">
-                                            <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
-                                                <ToneDot tone={status ? REQUEST_STATUS_META[status].tone : 'gray'} />
-                                                {t('req_filter_status')}
-                                            </span>
+                                        <div>
+                                            {fieldLabel(
+                                                'req-filter-status',
+                                                <CircleDot className="h-3.5 w-3.5" aria-hidden />,
+                                                t('req_filter_status'),
+                                            )}
                                             <SearchableSelect
+                                                id="req-filter-status"
                                                 active={!!status}
                                                 value={status || ALL}
                                                 onChange={(v) => list.setFilter('status', v === ALL ? '' : v)}
@@ -603,12 +539,11 @@ export default function RequestsPage() {
                                                     })),
                                                 ]}
                                             />
-                                        </label>
-                                        <label className="space-y-1.5">
-                                            <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                                                {t('req_filter_type')}
-                                            </span>
+                                        </div>
+                                        <div>
+                                            {fieldLabel('req-filter-type', <Layers className="h-3.5 w-3.5" aria-hidden />, t('req_filter_type'))}
                                             <SearchableSelect
+                                                id="req-filter-type"
                                                 active={!!type}
                                                 value={type || ALL}
                                                 onChange={(v) => list.setFilter('type', v === ALL ? '' : v)}
@@ -625,7 +560,7 @@ export default function RequestsPage() {
                                                     }),
                                                 ]}
                                             />
-                                        </label>
+                                        </div>
                                     </div>
                                 )}
                             </FilterPopover>
@@ -638,6 +573,13 @@ export default function RequestsPage() {
                             onRowClick={openDetail}
                             rowClassName={onboardingRowClass}
                             server={{ ...list.table.paging, total: meta?.total ?? 0 }}
+                            emptyState={
+                                isError ? (
+                                    <LoadFailed onRetry={() => refetch()} />
+                                ) : tab === 'approvals' && !search && filterCount === 0 ? (
+                                    <ApprovalsEmpty />
+                                ) : undefined
+                            }
                         />
                     </div>
                 )}
@@ -650,11 +592,7 @@ export default function RequestsPage() {
     );
 }
 
-/**
- * Card wrapper for one dashboard section: a hairline header row carrying a muted
- * icon, the section name, an optional count, and an optional right-edge action —
- * the same idiom the Ticket overview and Access Directory dashboards use.
- */
+/** Card for one overview section: icon, name, optional count and a right-edge action. */
 function DashCard({
     icon: Icon,
     title,
@@ -665,15 +603,19 @@ function DashCard({
     icon: LucideIcon;
     title: string;
     count?: number;
-    action?: React.ReactNode;
-    children: React.ReactNode;
+    action?: ReactNode;
+    children: ReactNode;
 }) {
     return (
         <Card className="overflow-hidden">
             <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
                 <Icon className="text-muted-foreground h-4 w-4" />
-                <span className="text-sm font-semibold">{title}</span>
-                {count != null && <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 font-mono text-[11px]">{count}</span>}
+                <h2 className="text-sm font-semibold">{title}</h2>
+                {count != null && (
+                    <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-1.5 py-0.5 font-mono text-[11px]">
+                        {count}
+                    </span>
+                )}
                 {action}
             </div>
             {children}
@@ -681,37 +623,42 @@ function DashCard({
     );
 }
 
-function Kpi({
-    icon: Icon,
-    label,
-    value,
-    sub,
-    onClick,
-}: {
-    icon: LucideIcon;
-    label: string;
-    value: string;
-    sub: React.ReactNode;
-    /** Opens the tab this number summarises. Omit for a read-only metric. */
-    onClick?: () => void;
-}) {
+function ViewAllButton({ onClick }: { onClick: () => void }) {
+    const t = useT();
+
     return (
-        <Card
-            role={onClick ? 'button' : undefined}
-            tabIndex={onClick ? 0 : undefined}
+        <button
+            type="button"
             onClick={onClick}
-            onKeyDown={(e) => onClick && (e.key === 'Enter' || e.key === ' ') && onClick()}
-            className={cn('p-5 transition-colors', onClick && 'hover:border-brand/40 cursor-pointer')}
+            className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
         >
-            <div className="flex items-start justify-between gap-3">
-                <div className="text-muted-foreground min-w-0 text-sm">{label}</div>
-                {/* Brand-tinted tile — follows the theme colour set in Settings, like every other module's stat card. */}
-                <span className="bg-brand/10 text-brand flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-                    <Icon className="h-[18px] w-[18px]" />
-                </span>
+            {t('req_view_all')}
+            <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+    );
+}
+
+/** Pulse rows shaped like the overview list rows. */
+function RowSkeletons({ count }: { count: number }) {
+    return Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+            <Skeleton className="h-4 w-4 shrink-0 rounded" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-1/3" />
+                <Skeleton className="h-3 w-1/2" />
             </div>
-            <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-            <div className="text-muted-foreground mt-1 truncate text-xs">{sub}</div>
-        </Card>
+            <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+    ));
+}
+
+function ApprovalsEmpty() {
+    const t = useT();
+
+    return (
+        <span className="inline-flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            {t('req_queue_empty')}
+        </span>
     );
 }

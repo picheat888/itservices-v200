@@ -84,6 +84,8 @@ export const common: Dict = {
     all_departments: 'ทุกแผนก',
     actions: 'จัดการ',
     view: 'ดูข้อมูล',
+    load_failed: 'โหลดข้อมูลไม่สำเร็จ',
+    retry: 'ลองใหม่',
     edit: 'แก้ไข',
     delete: 'ลบ',
     clear: 'ล้าง',

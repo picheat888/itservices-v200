@@ -23,8 +23,8 @@ export interface RequestPageResponse {
 }
 
 export interface RequestListParams {
-    /** 'activity' orders by when each request last moved — the dashboard feed. */
-    sort?: 'activity';
+    /** activity = last moved first (dashboard feed); oldest = filed first (approval queue card). */
+    sort?: 'activity' | 'oldest';
     page: number;
     per_page: number;
     search?: string;
