@@ -29,6 +29,7 @@ import { Ban, Check, PackageCheck, Paperclip, Ticket as TicketIcon, UserPlus, X,
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRequest, useRequestMutations } from '../hooks/use-requests';
+import { CancelRequestDialog } from './cancel-request-dialog';
 import { DecisionDialog, type DecisionAction } from './decision-dialog';
 import { RequestTrail } from './request-trail';
 
@@ -41,11 +42,13 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
     const { record: request, switching } = useRecordView(requestId, data);
 
     const [decision, setDecision] = useState<DecisionAction | null>(null);
+    const [cancelling, setCancelling] = useState(false);
     // File viewer, rendered beside the dialog so the two never nest.
     const [preview, setPreview] = useState<RequestAttachment | null>(null);
     // A decision belongs to the request it was opened on; switching requests drops it.
     useEffect(() => {
         setDecision(null);
+        setCancelling(false);
         setPreview(null);
     }, [requestId]);
 
@@ -62,7 +65,13 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
                     )}
                 >
                     {request ? (
-                        <RequestDetailBody request={request} onClose={onClose} onDecide={setDecision} onPreview={setPreview} />
+                        <RequestDetailBody
+                            request={request}
+                            onClose={onClose}
+                            onDecide={setDecision}
+                            onCancel={() => setCancelling(true)}
+                            onPreview={setPreview}
+                        />
                     ) : isError ? (
                         // Deleted, or not readable by this account
                         <RecordMissing onClose={onClose} />
@@ -73,6 +82,14 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
             </Dialog>
 
             <DecisionDialog request={decision && request ? request : null} action={decision} onClose={() => setDecision(null)} />
+            <CancelRequestDialog
+                request={cancelling && request ? request : null}
+                onClose={() => setCancelling(false)}
+                onCancelled={() => {
+                    setCancelling(false);
+                    onClose();
+                }}
+            />
 
             {/* Attachment viewer — images zoom/pan, PDFs embed, the rest show a file card. */}
             <AttachmentPreview file={preview} onClose={() => setPreview(null)} />
@@ -135,18 +152,20 @@ function RequestDetailBody({
     request,
     onClose,
     onDecide,
+    onCancel,
     onPreview,
 }: {
     request: ServiceRequest;
     onClose: () => void;
     onDecide: (action: DecisionAction) => void;
+    onCancel: () => void;
     onPreview: (attachment: RequestAttachment) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const { can } = useAuth();
-    const { complete, cancel } = useRequestMutations();
+    const { complete } = useRequestMutations();
 
     const meta = REQUEST_TYPE_META[request.type];
     // From `type` in the reader's language; `request.title` is the server's English subject.
@@ -166,20 +185,6 @@ function RequestDetailBody({
             action: () => complete.mutateAsync(request.id),
             errorMessage: serverMessage,
         });
-
-    // Closes only once the cancel went through; a refusal stays in the confirm dialog.
-    const confirmCancel = async () => {
-        const cancelled = await confirm({
-            variant: 'danger',
-            title: t('req_cancel_title'),
-            description: t('req_cancel_hint'),
-            entity: { name: `${request.reference} - ${shownTitle}` },
-            confirmText: t('req_cancel_request'),
-            action: () => cancel.mutateAsync(request.id),
-            errorMessage: serverMessage,
-        });
-        if (cancelled) onClose();
-    };
 
     return (
         <>
@@ -295,7 +300,7 @@ function RequestDetailBody({
                     </span>
                 )}
                 {request.can_cancel && (
-                    <Button variant="destructive" onClick={confirmCancel}>
+                    <Button variant="destructive" onClick={onCancel}>
                         <Ban className="h-4 w-4" />
                         {t('req_cancel_request')}
                     </Button>

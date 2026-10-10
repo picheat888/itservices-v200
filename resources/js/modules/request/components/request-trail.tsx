@@ -3,9 +3,9 @@ import { formatDateTime } from '@/shared/lib/datetime';
 import { REQUEST_SKIP_REASON_LABEL } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
-import { Bell, Check, Flag, KeyRound, SkipForward, X } from 'lucide-react';
+import { Ban, Bell, Check, Flag, KeyRound, SkipForward, X } from 'lucide-react';
 
-/** `cancelled` = the IT step closed without delivery (muted, not the red of a refusal). */
+/** `cancelled` = withdrawn by the requester, or the IT step closed without delivery (muted, not the red of a refusal). */
 type TrailTone = 'done' | 'current' | 'rejected' | 'cancelled' | 'skipped' | 'queued';
 
 interface TrailItem {
@@ -126,6 +126,19 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             note: row.note,
             awaitingAccount: row.awaiting_account,
             skipReason: row.skip_reason,
+        });
+    }
+
+    // Withdrawn while pending: placed before the steps it never reached
+    if (request.status === 'cancelled' && request.cancel_reason) {
+        const firstQueued = items.findIndex((item) => item.tone === 'queued');
+        items.splice(firstQueued < 0 ? items.length : firstQueued, 0, {
+            tone: 'cancelled',
+            glyph: <Ban className="h-3 w-3" />,
+            title: request.cancelled_by ?? request.requester.name,
+            meta: t('req_trail_withdrawn'),
+            metaTime: formatDateTime(request.cancelled_at),
+            note: request.cancel_reason,
         });
     }
 

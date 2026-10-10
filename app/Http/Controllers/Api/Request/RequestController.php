@@ -221,7 +221,8 @@ class RequestController extends Controller
     /** Requester withdraws their own pending request. */
     public function cancel(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
     {
-        $serviceRequest = $this->service->cancel($serviceRequest, $request->user());
+        $data = $request->validate(['reason' => ['required', 'string', 'max:2000']]);
+        $serviceRequest = $this->service->cancel($serviceRequest, $request->user(), trim($data['reason']));
 
         AuditLog::record('Cancelled service request', $serviceRequest->reference, subject: $serviceRequest);
 

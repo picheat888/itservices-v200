@@ -40,6 +40,7 @@ class ServiceRequest extends Model
         // `fields._display` snapshot still holds the label it was submitted with.
         'request_option_id', 'file_share_id', 'email_group_id', 'social_platform_id', 'software_id', 'location_id',
         'approved_at', 'rejected_at', 'completed_at', 'cancelled_at', 'last_activity_at',
+        'cancel_reason', 'cancelled_by_user_id', 'cancelled_by_name',
     ];
 
     /**

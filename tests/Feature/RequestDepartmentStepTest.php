@@ -297,7 +297,7 @@ class RequestDepartmentStepTest extends TestCase
         $this->actingAs($this->userFor($this->sup))
             ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
 
-        $this->actingAs($this->requesterUser)->postJson("/api/service-requests/{$request->id}/cancel")->assertOk();
+        $this->actingAs($this->requesterUser)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertOk();
 
         foreach ([$qcManager, $qcAsst] as $member) {
             $subtypes = User::where('employee_id', $member->id)->firstOrFail()->notifications()->get()

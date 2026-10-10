@@ -164,6 +164,7 @@ export const requests: Dict = {
     req_trail_ticket_in_progress: '{name} กำลังดำเนินการ',
     req_trail_not_delivered: 'ยกเลิก',
     req_trail_cancelled_by: 'ยกเลิก โดย {name}',
+    req_trail_withdrawn: 'ยกเลิกคำขอ',
 
     // request-detail-dialog.tsx — กล่อง Ticket ที่เชื่อมโยง
     req_linked_ticket: 'Ticket ที่เชื่อมโยง',
@@ -185,4 +186,8 @@ export const requests: Dict = {
     req_complete_hint: 'ยืนยันว่าทำเสร็จแล้ว ระบบจะแจ้งผู้ขอให้ทราบ',
     req_cancel_title: 'ยกเลิกคำขอนี้?',
     req_cancel_hint: 'ผู้อนุมัติที่รออยู่จะได้รับแจ้ง และคำขอนี้จะปิด',
+    req_cancel_reason: 'เหตุผลที่ยกเลิก',
+    req_cancel_reason_ph: 'เช่น ไม่ต้องการแล้ว หรือยื่นผิดประเภท',
+    req_cancel_reason_required: 'กรุณาระบุเหตุผลที่ยกเลิก',
+    req_cancel_keep: 'ไม่ยกเลิก',
 };

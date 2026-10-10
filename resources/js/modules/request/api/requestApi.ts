@@ -117,5 +117,5 @@ export const requestApi = {
     approve: (id: number, note?: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/approve`, { note: note || null }),
     reject: (id: number, note: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/reject`, { note }),
     complete: (id: number) => mutate<ServiceRequest>('post', `/service-requests/${id}/complete`),
-    cancel: (id: number) => mutate<ServiceRequest>('post', `/service-requests/${id}/cancel`),
+    cancel: (id: number, reason: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/cancel`, { reason }),
 };

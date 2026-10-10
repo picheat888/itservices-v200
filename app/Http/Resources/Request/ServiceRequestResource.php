@@ -129,6 +129,8 @@ class ServiceRequestResource extends JsonResource
             'rejected_at' => $this->rejected_at?->toDateTimeString(),
             'completed_at' => $this->completed_at?->toDateTimeString(),
             'cancelled_at' => $this->cancelled_at?->toDateTimeString(),
+            'cancel_reason' => $this->cancel_reason,
+            'cancelled_by' => $this->cancelled_by_name,
             'created_at' => $this->created_at?->toDateTimeString(),
         ];
     }
@@ -156,7 +158,7 @@ class ServiceRequestResource extends JsonResource
             RequestStatus::Rejected => ['at' => $at, 'kind' => 'rejected', 'by' => $signed?->acted_by_name],
             // Cancelled by the requester withdrawing it, or by IT closing the case without
             // delivering — the completion row names the second one.
-            RequestStatus::Cancelled => ['at' => $at, 'kind' => 'cancelled', 'by' => $queueRow?->acted_by_name],
+            RequestStatus::Cancelled => ['at' => $at, 'kind' => 'cancelled', 'by' => $this->cancelled_by_name ?? $queueRow?->acted_by_name],
             RequestStatus::Completed => ['at' => $at, 'kind' => 'completed', 'by' => $queueRow?->acted_by_name],
             RequestStatus::Approved => ['at' => $at, 'kind' => 'approved', 'by' => $signed?->acted_by_name],
             // Still in the chain: either somebody has signed a rung, or nothing has happened

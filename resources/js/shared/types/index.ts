@@ -1151,6 +1151,9 @@ export interface ServiceRequest {
     rejected_at: string | null;
     completed_at: string | null;
     cancelled_at: string | null;
+    /** Why the requester (or the HR filer) withdrew it, and who did. */
+    cancel_reason: string | null;
+    cancelled_by: string | null;
     created_at: string;
 }
 
