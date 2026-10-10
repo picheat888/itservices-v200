@@ -31,6 +31,9 @@ use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
+use App\Http\Controllers\Api\Report\RequestApprovalsBreakdownController;
+use App\Http\Controllers\Api\Report\RequestItPendingBreakdownController;
+use App\Http\Controllers\Api\Report\RequestOverviewBreakdownController;
 use App\Http\Controllers\Api\Report\SoftwareLicenseBreakdownController;
 use App\Http\Controllers\Api\Report\TabularReportController;
 use App\Http\Controllers\Api\Report\TicketBacklogBoardController;
@@ -126,6 +129,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/access/resource-members/sheet', [AccessResourceMembersController::class, 'sheet'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.sheet');
     // "การใช้ License ซอฟต์แวร์" — seats per software, leavers to take seats back from, requests waiting for one.
     Route::get('reports/access/software-licenses/breakdown', SoftwareLicenseBreakdownController::class)->defaults('key', 'access.software_licenses')->name('api.reports.access.software-licenses.breakdown');
+    // "การอนุมัติคำขอ" — what waits now and why, each approver's speed, requests that ended without delivery, skipped steps.
+    Route::get('reports/requests/approvals/breakdown', RequestApprovalsBreakdownController::class)->defaults('key', 'requests.approvals')->name('api.reports.requests.approvals.breakdown');
+    // "ภาพรวมคำขอ" — months, types by status, days to delivery, items asked for and departments above its rows.
+    Route::get('reports/requests/overview/breakdown', RequestOverviewBreakdownController::class)->defaults('key', 'requests.overview')->name('api.reports.requests.overview.breakdown');
+    // "คำขอที่รอ IT ส่งมอบ" — age groups, owners, types and new joiners above its rows.
+    Route::get('reports/requests/it-pending/breakdown', RequestItPendingBreakdownController::class)->defaults('key', 'requests.it_pending')->name('api.reports.requests.it-pending.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');

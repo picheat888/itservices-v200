@@ -14,9 +14,9 @@ use App\Services\Report\Contract\ContractExpiringReport;
 use App\Services\Report\Contract\ContractMonthlyCostReport;
 use App\Services\Report\Employee\JoinersLeaversReport;
 use App\Services\Report\Employee\LeaverAssetsReport;
-use App\Services\Report\Request\ApprovalTimeReport;
 use App\Services\Report\Request\ItPendingRequestReport;
-use App\Services\Report\Request\RequestSummaryReport;
+use App\Services\Report\Request\RequestApprovalsReport;
+use App\Services\Report\Request\RequestOverviewReport;
 use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Stock\StockMovementReport;
 use App\Services\Report\Stock\StockValuationReport;
@@ -65,9 +65,9 @@ class ReportCatalogue
 
     public const STOCK_VALUATION = 'stock.valuation';
 
-    public const REQUESTS_SUMMARY = 'requests.summary';
+    public const REQUESTS_OVERVIEW = 'requests.overview';
 
-    public const REQUESTS_APPROVAL_TIME = 'requests.approval_time';
+    public const REQUESTS_APPROVALS = 'requests.approvals';
 
     public const REQUESTS_IT_PENDING = 'requests.it_pending';
 
@@ -195,18 +195,18 @@ class ReportCatalogue
                 'requires' => ['stock.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
-            self::REQUESTS_SUMMARY => [
+            self::REQUESTS_OVERVIEW => [
                 'domain' => 'requests',
                 'kind' => 'tabular',
-                'class' => RequestSummaryReport::class,
+                'class' => RequestOverviewReport::class,
                 'requires' => ['requests.view_all'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
-            self::REQUESTS_APPROVAL_TIME => [
+            self::REQUESTS_APPROVALS => [
                 'domain' => 'requests',
                 'kind' => 'tabular',
-                'class' => ApprovalTimeReport::class,
+                'class' => RequestApprovalsReport::class,
                 'requires' => ['requests.view_all'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
