@@ -51,13 +51,15 @@ class ServiceRequest extends Model
     {
         static::creating(function (ServiceRequest $request) {
             if (blank($request->reference)) {
-                $year = now()->year;
-                $last = static::where('reference', 'like', "RQ-{$year}-%")
+                $prefix = 'RQ-'.now()->year.'-';
+                // Longest first, then by string: numeric order once the sequence passes 9999.
+                $last = static::where('reference', 'like', "{$prefix}%")
+                    ->orderByRaw('LENGTH(reference) DESC')
                     ->orderByDesc('reference')
                     ->lockForUpdate()
                     ->value('reference');
-                $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
-                $request->reference = sprintf('RQ-%d-%04d', $year, $seq);
+                $seq = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+                $request->reference = $prefix.sprintf('%04d', $seq);
             }
         });
     }

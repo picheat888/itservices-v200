@@ -238,6 +238,37 @@ class RequestWorkflowTest extends TestCase
             ->assertJsonPath('data.0.reference', $newer->reference);
     }
 
+    public function test_sort_oldest_lists_the_longest_waiting_requests_first(): void
+    {
+        $first = $this->submitComputer();
+        $this->travel(1)->minutes();
+        $second = $this->submitComputer();
+        // Same second as $second: the id breaks the tie.
+        $third = $this->submitComputer();
+
+        $this->actingAs($this->supUser)->getJson('/api/service-requests?scope=approvals&sort=oldest')
+            ->assertOk()
+            ->assertJsonPath('data.*.id', [$first->id, $second->id, $third->id]);
+
+        // The default order stays newest first.
+        $this->actingAs($this->supUser)->getJson('/api/service-requests?scope=approvals')
+            ->assertJsonPath('data.0.id', $third->id);
+    }
+
+    public function test_reference_sequence_keeps_counting_past_9999(): void
+    {
+        $prefix = 'RQ-'.now()->year.'-';
+        foreach (['9998', '9999', '10000'] as $seq) {
+            ServiceRequest::create([
+                'reference' => $prefix.$seq, 'type' => 'computer', 'requester_name' => 'X',
+                'title' => 'T', 'reason' => 'r', 'status' => RequestStatus::Pending->value,
+            ]);
+        }
+
+        $this->assertSame($prefix.'10001', $this->submitComputer()->reference);
+        $this->assertSame($prefix.'10002', $this->submitComputer()->reference);
+    }
+
     public function test_submit_creates_request_with_rq_reference_and_frozen_chain(): void
     {
         $request = $this->submitComputer();

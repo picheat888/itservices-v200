@@ -127,7 +127,8 @@ class EmailNotificationService
         }
 
         $vars += $this->globalVars();
-        $subject = $this->render($template->subject, $vars);
+        // Subject is plain text: undo the HTML escaping callers apply to vars meant for the body.
+        $subject = html_entity_decode($this->render($template->subject, $vars), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $html = $this->render($template->body_html, $vars);
 
         if (blank($toEmail)) {

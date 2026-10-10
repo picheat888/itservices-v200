@@ -15,6 +15,7 @@ use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Services\Request\RequestService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -86,7 +87,7 @@ class RequestController extends Controller
         // approver.user comes along because each row reports whether its approver still
         // lacks a login — without it that is one extra query per approval row. Same for
         // ticket.assignee: every row with a case serializes who holds it.
-        $query = $visible(ServiceRequest::with(['approvals.approver.user', 'ticket.assignee']));
+        $query = $visible(ServiceRequest::with([...self::approvalsWithParent(), 'approvals.approver.user', 'ticket.assignee']));
         // Two orders, because the two readers want different things. The list wants what is
         // actionable first; the dashboard's activity feed wants what moved last — and under
         // the actionable order a request approved five minutes ago sat below one that has
@@ -95,12 +96,15 @@ class RequestController extends Controller
         // Both end on the id so the order is total: two requests filed in the same second
         // otherwise tie, and this list is paginated server-side, where an unstable tie can
         // repeat a row on one page and drop it from the next.
-        $request->query('sort') === 'activity'
-            ? $query->orderByDesc('last_activity_at')->latest('id')
-            : $query
+        match ($request->query('sort')) {
+            'activity' => $query->orderByDesc('last_activity_at')->latest('id'),
+            // Overview "waiting on you" card: longest-waiting first.
+            'oldest' => $query->oldest()->oldest('id'),
+            default => $query
                 ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'completed' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
                 ->latest()
-                ->latest('id');
+                ->latest('id'),
+        };
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -152,6 +156,7 @@ class RequestController extends Controller
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);
+        RequestApproval::preloadGroupNames($paginator->getCollection()->flatMap->approvals);
 
         return response()->json([
             'data' => ServiceRequestResource::collection($paginator->items()),
@@ -168,8 +173,7 @@ class RequestController extends Controller
             'type' => $serviceRequest->type->value,
         ], subject: $serviceRequest);
 
-        return (new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS)))
-            ->response()->setStatusCode(201);
+        return $this->detail($serviceRequest)->response()->setStatusCode(201);
     }
 
     public function show(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
@@ -178,7 +182,7 @@ class RequestController extends Controller
         // ServiceRequest::isVisibleTo.
         abort_unless($serviceRequest->isVisibleTo($request->user()), 403);
 
-        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
+        return $this->detail($serviceRequest);
     }
 
     /** Approve the current step (note optional). */
@@ -189,7 +193,7 @@ class RequestController extends Controller
 
         AuditLog::record('Approved service request step', $serviceRequest->reference, subject: $serviceRequest);
 
-        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
+        return $this->detail($serviceRequest);
     }
 
     /** Reject the current step — a remark is always required. */
@@ -200,7 +204,7 @@ class RequestController extends Controller
 
         AuditLog::record('Rejected service request', $serviceRequest->reference, subject: $serviceRequest);
 
-        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
+        return $this->detail($serviceRequest);
     }
 
     /** Mark an approved request done (IT queue). */
@@ -210,7 +214,7 @@ class RequestController extends Controller
 
         AuditLog::record('Completed service request', $serviceRequest->reference, subject: $serviceRequest);
 
-        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
+        return $this->detail($serviceRequest);
     }
 
     /** Requester withdraws their own pending request. */
@@ -220,7 +224,26 @@ class RequestController extends Controller
 
         AuditLog::record('Cancelled service request', $serviceRequest->reference, subject: $serviceRequest);
 
-        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
+        return $this->detail($serviceRequest);
+    }
+
+    /** One request with everything its detail view renders, group-step names included. */
+    private function detail(ServiceRequest $serviceRequest): ServiceRequestResource
+    {
+        $serviceRequest->load([...self::approvalsWithParent(), ...self::DETAIL_RELATIONS]);
+        RequestApproval::preloadGroupNames($serviceRequest->approvals);
+
+        return new ServiceRequestResource($serviceRequest);
+    }
+
+    /**
+     * Approvals with their request set back on each row, so can_approve does not re-query it.
+     *
+     * @return array<string, \Closure(HasMany): HasMany>
+     */
+    private static function approvalsWithParent(): array
+    {
+        return ['approvals' => fn (HasMany $approvals) => $approvals->chaperone('request')];
     }
 
     /**

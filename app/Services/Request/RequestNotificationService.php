@@ -2,6 +2,7 @@
 
 namespace App\Services\Request;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\WorkflowStepKind;
 use App\Models\Employee\Employee;
@@ -184,14 +185,15 @@ class RequestNotificationService
         // A step open to a group has no single approver: everybody who could
         // act is told, and whoever gets there first takes it. Belling one of them would
         // leave the rest waiting on a request they are equally responsible for.
-        $group = $this->groupApprovers($row);
-        if ($group->isNotEmpty()) {
-            $this->sendBell(
-                $group,
-                new RequestWorkflowNotification($request, 'waiting', $row->label, $request->requester_name),
-                ['service_request_id' => $request->id, 'subtype' => 'waiting'],
-            );
-            $this->emailEach($group, 'request.approval_needed', $request, ['step.label' => $row->label]);
+        if ($row->isOpenToGroup()) {
+            $group = $this->groupApprovers($row);
+            if ($group->isEmpty()) {
+                $this->notifyCredentialSettersOfBlock($request, $row, $this->groupCandidates($row)->first());
+
+                return;
+            }
+
+            $this->bellWaiting($request, $row, $group);
 
             return;
         }
@@ -208,12 +210,38 @@ class RequestNotificationService
             return;
         }
 
+        $this->bellWaiting($request, $row, collect([$approver]));
+    }
+
+    /**
+     * Bell + email these people that a step waits on them.
+     *
+     * @param  Collection<int, User>  $recipients
+     */
+    private function bellWaiting(ServiceRequest $request, RequestApproval $row, Collection $recipients): void
+    {
         $this->sendBell(
-            collect([$approver]),
+            $recipients,
             new RequestWorkflowNotification($request, 'waiting', $row->label, $request->requester_name),
             ['service_request_id' => $request->id, 'subtype' => 'waiting'],
         );
-        $this->emailEach(collect([$approver]), 'request.approval_needed', $request, ['step.label' => $row->label]);
+        $this->emailEach($recipients, 'request.approval_needed', $request, ['step.label' => $row->label]);
+    }
+
+    /** A member took a group step: withdraw the others' waiting/stalled bells, which would now open a 403. */
+    public function groupStepTaken(ServiceRequest $request, RequestApproval $decided, User $actor): void
+    {
+        $others = User::whereIn('employee_id', $this->groupCandidates($decided, onlyActive: false)->pluck('id'))
+            ->where('id', '!=', $actor->id)
+            ->get();
+
+        foreach ($others as $user) {
+            $user->notifications()
+                ->where('type', RequestWorkflowNotification::class)
+                ->where('data->service_request_id', $request->id)
+                ->whereIn('data->subtype', ['waiting', 'stalled'])
+                ->delete();
+        }
     }
 
     /**
@@ -230,17 +258,28 @@ class RequestNotificationService
     public function deliverPendingApprovals(Employee $employee): int
     {
         $rows = RequestApproval::with('request')
-            ->where('approver_employee_id', $employee->id)
             ->where('status', ApprovalStatus::Current->value)
             ->where('kind', WorkflowStepKind::Approval->value)
+            ->where(fn ($q) => $q
+                ->where('approver_employee_id', $employee->id)
+                ->orWhere(fn ($group) => $group->whereNull('approver_employee_id')->actionableBy($employee)))
             ->get()
             ->filter(fn (RequestApproval $row) => $row->request !== null);
 
+        $user = User::where('employee_id', $employee->id)->first();
+        $delivered = 0;
         foreach ($rows as $row) {
-            $this->notifyApprover($row->request, $row);
+            if (! $row->isOpenToGroup()) {
+                $this->notifyApprover($row->request, $row);
+                $delivered++;
+            } elseif ($user !== null) {
+                // Only the newcomer: the rest of the group was told when the step arrived.
+                $this->bellWaiting($row->request, $row, collect([$user]));
+                $delivered++;
+            }
         }
 
-        return $rows->count();
+        return $delivered;
     }
 
     /**
@@ -251,9 +290,10 @@ class RequestNotificationService
      * Without this the request simply sits there: the approver learns of it only when
      * an account happens to be created, and no one else learns of it at all.
      */
-    private function notifyCredentialSettersOfBlock(ServiceRequest $request, RequestApproval $row): void
+    private function notifyCredentialSettersOfBlock(ServiceRequest $request, RequestApproval $row, ?Employee $employee = null): void
     {
-        $employee = $row->approver;
+        // A group step has no single approver: the caller names the first candidate to provision.
+        $employee ??= $row->approver;
         if ($employee === null) {
             return;
         }
@@ -265,7 +305,7 @@ class RequestNotificationService
 
         $this->sendBell(
             $setters,
-            new RequestWorkflowNotification($request, 'blocked_no_account', $row->label, $row->approver_name, null, $employee),
+            new RequestWorkflowNotification($request, 'blocked_no_account', $row->label, $row->approver_name ?? $employee->name, null, $employee),
             ['service_request_id' => $request->id, 'subtype' => 'blocked_no_account'],
         );
     }
@@ -279,26 +319,41 @@ class RequestNotificationService
      */
     private function groupApprovers(?RequestApproval $row): Collection
     {
-        if ($row === null) {
+        if ($row === null || ! $row->isOpenToGroup()) {
             return collect();
         }
 
-        if ($row->isOpenToNamedGroup()) {
-            return User::whereIn('employee_id', $row->namedApproverIds())->get();
-        }
+        return User::whereIn('employee_id', $this->groupCandidates($row)->pluck('id'))->get();
+    }
 
-        if (! $row->isOpenToDepartment()) {
+    /**
+     * Employees a group step accepts (read from its criteria, even once taken); never the requester, no resigned unless $onlyActive is false.
+     *
+     * @return Collection<int, Employee>
+     */
+    private function groupCandidates(RequestApproval $row, bool $onlyActive = true): Collection
+    {
+        $namedIds = array_map('intval', array_values($row->approver_employee_ids ?? []));
+        $positionIds = array_map('intval', array_values($row->approver_position_ids ?? []));
+
+        if ($namedIds !== []) {
+            $query = Employee::whereIn('id', $namedIds);
+        } elseif ($row->approver_department_id !== null && $positionIds !== []) {
+            $query = Employee::where('department_id', $row->approver_department_id)->whereIn('position_id', $positionIds);
+        } else {
             return collect();
         }
 
-        // The requester can hold one of the group's positions; they are not asked to sign
-        // their own request (RequestApproval::acceptsEmployee refuses them too).
-        $employeeIds = Employee::where('department_id', $row->approver_department_id)
-            ->whereIn('position_id', array_map('intval', $row->approver_position_ids))
+        $candidates = $query
+            ->when($onlyActive, fn ($q) => $q->where('status', '!=', EmployeeStatus::Resigned->value))
             ->when($row->request?->employee_id, fn ($q, $ownerId) => $q->where('id', '!=', $ownerId))
-            ->pluck('id');
+            ->orderBy('id')
+            ->get();
 
-        return User::whereIn('employee_id', $employeeIds)->get();
+        // Named steps keep the workflow's order: the first name is who the route means to ask.
+        return $namedIds !== []
+            ? $candidates->sortBy(fn (Employee $e) => array_search((int) $e->id, $namedIds, true))->values()
+            : $candidates;
     }
 
     /** The login account behind an approval row, or null for queue/skipped rows. */
@@ -318,7 +373,7 @@ class RequestNotificationService
      */
     private function recipients(string $permission): Collection
     {
-        return User::all()->filter(fn (User $u) => $u->hasPermission($permission))->values();
+        return User::holdingPermission($permission)->with('role')->orderBy('id')->get();
     }
 
     /**
@@ -420,11 +475,11 @@ class RequestNotificationService
      * presentation. Two copies of a sentence is the cost of a mail that can explain itself.
      */
     public const SKIP_REASONS = [
-        'no_manager' => 'Skipped - the requester has no manager',
-        'no_matching_position' => 'Skipped - nobody above the requester holds this position',
-        'no_resource_owner' => 'Skipped - this resource has no owner',
-        'requester_is_owner' => 'Skipped - the requester owns this resource',
-        'no_department_approver' => 'Skipped - that department has nobody in the positions this step accepts',
+        'no_manager' => 'Skipped: the requester has no manager',
+        'no_matching_position' => 'Skipped: nobody above the requester holds this position',
+        'no_resource_owner' => 'Skipped: this resource has no owner',
+        'requester_is_owner' => 'Skipped: the requester owns this resource',
+        'no_department_approver' => 'Skipped: that department has nobody in the positions this step accepts',
     ];
 
     /**
@@ -499,9 +554,12 @@ class RequestNotificationService
         ];
     }
 
+    /** Vars already rendered as safe HTML here; every other value is escaped in emailUser(). */
+    private const HTML_VARS = ['remark', 'request.reason', 'request.details', 'request.approval_history'];
+
     private function emailUser(User $recipient, string $templateKey, ServiceRequest $request, array $extraVars = []): void
     {
-        $this->email->sendTemplate($templateKey, $recipient->email, $extraVars + [
+        $vars = $extraVars + [
             'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
             // An approver reading this in their inbox needs to know it is a new hire
             // before they open anything, and the templates carry no origin field.
@@ -528,7 +586,15 @@ class RequestNotificationService
             'request.details' => $this->detailLines($request),
             'request.approval_history' => $this->approvalHistory($request),
             ...$this->approverVars($request),
-        ], $this->requestUrl($request), 'View request', $recipient->name);
+        ];
+
+        foreach ($vars as $key => $value) {
+            if (! in_array($key, self::HTML_VARS, true)) {
+                $vars[$key] = e((string) $value);
+            }
+        }
+
+        $this->email->sendTemplate($templateKey, $recipient->email, $vars, $this->requestUrl($request), 'View request', $recipient->name);
     }
 
     /**
@@ -585,7 +651,7 @@ class RequestNotificationService
         }
 
         $this->email->sendTemplate('request.stalled_digest', $recipient->email, [
-            'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
+            'user.first_name' => e(explode(' ', (string) $recipient->name)[0] ?: 'there'),
             'digest.count' => (string) $items->count(),
             'digest.table' => $this->digestTable($items),
         ], rtrim((string) config('app.url'), '/').'/requests?tab=mine', 'Open my approvals', $recipient->name);

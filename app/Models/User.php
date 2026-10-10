@@ -10,6 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Support\Permissions;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -183,6 +184,22 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         return $this->isSuper() || in_array($permission, $this->permissions(), true);
+    }
+
+    /**
+     * Users for whom hasPermission($permission) is true, as one query.
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeHoldingPermission(Builder $query, string $permission): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->whereHas('role', fn (Builder $role) => $role->where('key', UserRole::SuperAdmin->value))
+            ->orWhereIn('role_id', RolePermission::query()
+                ->select('role_id')
+                ->where('permission', $permission)
+                ->where('allowed', true)));
     }
 
     /** How long before the expiry the account starts being warned at sign-in. */

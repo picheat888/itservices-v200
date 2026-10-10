@@ -108,7 +108,7 @@ class ServiceRequestResource extends JsonResource
             // completes the request, so the button would only ever return the 422 that
             // RequestService::complete answers with.
             'can_complete' => $viewer !== null && $this->status === RequestStatus::Approved
-                && (bool) $viewer->hasPermission('requests.complete')
+                && $this->viewerMayComplete($request)
                 && ! $this->hasCaseInFlight(),
             // Evidence filed with the request. Only on the detail read — a list row
             // has nowhere to show a file and would pay a query per row for it.
@@ -165,6 +165,17 @@ class ServiceRequestResource extends JsonResource
                 ? ['at' => $at, 'kind' => 'approved_step', 'by' => $signed->acted_by_name]
                 : ['at' => $at, 'kind' => 'submitted', 'by' => $this->submitted_by_name],
         };
+    }
+
+    /** requests.complete for the viewer, asked once per HTTP request rather than once per row. */
+    private function viewerMayComplete(Request $request): bool
+    {
+        $key = 'service_request_resource.may_complete';
+        if (! $request->attributes->has($key)) {
+            $request->attributes->set($key, (bool) $request->user()?->hasPermission('requests.complete'));
+        }
+
+        return $request->attributes->get($key);
     }
 
     /**

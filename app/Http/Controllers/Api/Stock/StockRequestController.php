@@ -110,6 +110,7 @@ class StockRequestController extends Controller
         // Approving claims the stock, so check again: two requisitions filed while the same
         // units were free must not both be approved against them.
         DB::transaction(function () use ($request, $stockRequest) {
+            $this->lockInStatus($stockRequest, 'pending');
             $available = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id)->availableToRequest();
             if ($stockRequest->qty > $available) {
                 Refusal::fail('not_enough_stock', ['available' => $available], 'qty');
@@ -134,11 +135,14 @@ class StockRequestController extends Controller
         $this->assertNotOwn($request, $stockRequest);
         $this->assertStatus($stockRequest, 'pending');
 
-        $stockRequest->update([
-            'status' => 'rejected',
-            'approver_name' => $request->user()->name,
-            'rejected_at' => now(),
-        ]);
+        DB::transaction(function () use ($request, $stockRequest) {
+            $this->lockInStatus($stockRequest, 'pending');
+            $stockRequest->update([
+                'status' => 'rejected',
+                'approver_name' => $request->user()->name,
+                'rejected_at' => now(),
+            ]);
+        });
         AuditLog::record('Rejected stock request', "#{$stockRequest->id}", subject: $stockRequest);
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'rejected');
 
@@ -166,6 +170,8 @@ class StockRequestController extends Controller
         ]);
 
         DB::transaction(function () use ($stockRequest, $user, $data) {
+            $this->lockInStatus($stockRequest, 'approved');
+
             /** @var StockItem $item */
             $item = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id);
 
@@ -254,13 +260,20 @@ class StockRequestController extends Controller
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
 
-    /** Guard a workflow transition, returning 422 when the request isn't in the expected state. */
     /** Nobody decides their own requisition — holding stock.approve included. */
     private function assertNotOwn(Request $request, StockRequest $stockRequest): void
     {
         abort_if((int) $stockRequest->user_id === (int) $request->user()?->id, 403, 'You cannot decide your own requisition.');
     }
 
+    /** Re-read the row under lock inside the transaction so concurrent decisions cannot both pass. */
+    private function lockInStatus(StockRequest $stockRequest, string $expected): void
+    {
+        $stockRequest->setRawAttributes(StockRequest::lockForUpdate()->findOrFail($stockRequest->id)->getAttributes(), true);
+        $this->assertStatus($stockRequest, $expected);
+    }
+
+    /** Guard a workflow transition, returning 422 when the request isn't in the expected state. */
     private function assertStatus(StockRequest $stockRequest, string $expected): void
     {
         if ($stockRequest->status !== $expected) {

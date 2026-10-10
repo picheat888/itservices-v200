@@ -13,6 +13,8 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use App\Notifications\RequestWorkflowNotification;
+use App\Services\Request\RequestNotificationService;
 use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -313,5 +315,93 @@ class RequestNamedApproversTest extends TestCase
                 "{$person->first_name} was not told the step waits on them",
             );
         }
+    }
+
+    /** This person's request bells for one request, by subtype. */
+    private function bellSubtypes(User $user, ServiceRequest $request): array
+    {
+        return $user->notifications()->get()
+            ->filter(fn ($n) => ($n->data['service_request_id'] ?? null) === $request->id)
+            ->map(fn ($n) => $n->data['subtype'] ?? null)
+            ->values()
+            ->all();
+    }
+
+    public function test_once_one_named_person_signs_the_others_waiting_bell_is_withdrawn(): void
+    {
+        $boss = $this->staffIn($this->qc, 'Manager', 'QcBoss');
+        $deputy = $this->staffIn($this->qc, 'Asst. Manager', 'QcDeputy');
+        $this->qcStepNames($boss, $deputy);
+        $request = $this->submitCctv();
+        $this->passTheSupervisorRung($request);
+        $deputyUser = User::where('employee_id', $deputy->id)->firstOrFail();
+        $deputyUser->notify(new RequestWorkflowNotification($request, 'approved_step'));
+        $this->assertContains('waiting', $this->bellSubtypes($deputyUser, $request));
+
+        $this->actingAs(User::where('employee_id', $boss->id)->firstOrFail())
+            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        // Only the waiting bell goes; other kinds for the same request stay.
+        $this->assertSame(['approved_step'], $this->bellSubtypes($deputyUser, $request));
+    }
+
+    public function test_rejecting_a_named_group_step_withdraws_the_others_waiting_bell(): void
+    {
+        $boss = $this->staffIn($this->qc, 'Manager', 'QcBoss');
+        $deputy = $this->staffIn($this->qc, 'Asst. Manager', 'QcDeputy');
+        $this->qcStepNames($boss, $deputy);
+        $request = $this->submitCctv();
+        $this->passTheSupervisorRung($request);
+
+        $this->actingAs(User::where('employee_id', $deputy->id)->firstOrFail())
+            ->postJson("/api/service-requests/{$request->id}/reject", ['note' => 'Not this quarter.'])->assertOk();
+
+        $this->assertNotContains('waiting', $this->bellSubtypes(User::where('employee_id', $boss->id)->firstOrFail(), $request));
+    }
+
+    public function test_a_named_group_with_no_accounts_alerts_credential_setters_and_the_first_account_gets_the_backlog(): void
+    {
+        // Named people with no login yet.
+        $boss = Employee::create(['first_name' => 'QcBoss', 'department_id' => $this->qc->id, 'position_id' => $this->positionId('Manager')]);
+        $deputy = Employee::create(['first_name' => 'QcDeputy', 'department_id' => $this->qc->id, 'position_id' => $this->positionId('Asst. Manager')]);
+        $this->qcStepNames($boss, $deputy);
+        $setter = $this->userFor(
+            Employee::create(['first_name' => 'Hr', 'position_id' => $this->positionId('Staff/Officer')]),
+            ['employees.set_credentials'],
+        );
+
+        $request = $this->submitCctv();
+        $this->passTheSupervisorRung($request);
+
+        $blocked = $setter->notifications()->get()
+            ->first(fn ($n) => ($n->data['subtype'] ?? null) === 'blocked_no_account');
+        $this->assertNotNull($blocked, 'Nobody was told the group step has no account behind it.');
+        $this->assertSame($boss->id, $blocked->data['employee_id']);
+
+        // The deputy is provisioned: the step waiting on their group reaches them.
+        $deputyUser = $this->userFor($deputy);
+        $this->assertSame(1, app(RequestNotificationService::class)->deliverPendingApprovals($deputy));
+        $this->assertContains('waiting', $this->bellSubtypes($deputyUser, $request));
+    }
+
+    public function test_a_resigned_member_of_a_named_group_can_neither_sign_nor_is_told(): void
+    {
+        $boss = $this->staffIn($this->qc, 'Manager', 'QcBoss');
+        $deputy = $this->staffIn($this->qc, 'Asst. Manager', 'QcDeputy');
+        $this->qcStepNames($boss, $deputy);
+        $request = $this->submitCctv();
+        // Resignation recorded after the chain was frozen; still working out the notice period.
+        $boss->update(['status' => EmployeeStatus::Resigned->value, 'last_day' => now()->addMonth()->toDateString()]);
+        $this->passTheSupervisorRung($request);
+
+        $bossUser = User::where('employee_id', $boss->id)->firstOrFail();
+        $this->assertNotContains('waiting', $this->bellSubtypes($bossUser, $request));
+        $this->assertContains('waiting', $this->bellSubtypes(User::where('employee_id', $deputy->id)->firstOrFail(), $request));
+
+        $row = $this->qcRow($request);
+        $this->assertFalse($row->acceptsEmployee($boss->fresh()));
+        $this->assertFalse($row->newQuery()->whereKey($row->id)->actionableBy($boss->fresh())->exists());
+        $this->actingAs($bossUser)
+            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
     }
 }
