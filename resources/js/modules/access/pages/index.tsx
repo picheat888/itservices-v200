@@ -563,7 +563,7 @@ export default function AccessControlPage() {
             <Card className="overflow-clip p-0">
                 <PageTabs tabs={tabs} active={tab} onChange={setTab} />
 
-                <div className="p-4">
+                <div className="p-5">
                     {tab === 'overview' && <AccessOverview onOpenTab={setTab} onOpenResource={openResource} canEdit={canEdit} />}
                     {tab === 'email-groups' && (
                         <DataTable

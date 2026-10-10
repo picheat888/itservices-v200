@@ -81,7 +81,7 @@ export function OverviewPeriodSelect({ value, onChange }: { value: OverviewPerio
     );
 }
 
-/** The row above an Overview tab's cards: icon + "ภาพรวม" on the left, the period buttons on the right (only when given a period). */
+/** The row above an Overview tab's cards: icon + "ภาพรวม", the period buttons when given a period; owns its height and the 20px under it. */
 export function OverviewHeader({
     value,
     onChange,
@@ -93,7 +93,7 @@ export function OverviewHeader({
 }) {
     const t = useT();
     return (
-        <div className={cn('flex flex-wrap items-center justify-between gap-3', className)}>
+        <div className={cn('mb-5 flex min-h-8 flex-wrap items-center justify-between gap-3', className)}>
             <div className="flex items-center gap-2">
                 <Gauge className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm font-semibold">{t('sub_overview')}</span>

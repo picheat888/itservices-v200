@@ -632,7 +632,7 @@ export default function AssetsPage() {
 
                 {tab === 'overview' && (
                     <div className="px-5 pt-5">
-                        <OverviewHeader value={period} onChange={setPeriod} className="mb-6" />
+                        <OverviewHeader value={period} onChange={setPeriod} />
                     </div>
                 )}
                 {tab === 'overview' && summaryLoading && <AssetOverviewSkeleton />}

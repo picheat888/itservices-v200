@@ -41,7 +41,7 @@ export function OverviewTab({
     const reorderItems = summary ? [...summary.out_items, ...summary.low_items] : [];
     return (
         <div className="space-y-8">
-            <OverviewHeader className="mb-5" />
+            <OverviewHeader />
             {/* KPI cards live on the Overview tab. */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {kpis.map((k) => {
