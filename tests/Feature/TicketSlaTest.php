@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TicketSlaTest extends TestCase
@@ -156,6 +157,20 @@ class TicketSlaTest extends TestCase
             ->assertJsonPath('period_sla.rate', null)
             ->assertJsonPath('period_sla.delta_pts', null)
             ->assertJsonCount(6, 'flow');
+    }
+
+    public function test_summary_reads_request_types_in_one_query(): void
+    {
+        $this->actingAs($this->super());
+        Ticket::factory()->count(5)->create([
+            'status' => 'completed', 'created_at' => '2026-01-12 09:00:00', 'resolved_at' => '2026-01-13 09:00:00',
+        ]);
+
+        DB::enableQueryLog();
+        $this->getJson('/api/tickets/summary')->assertOk();
+        $lookups = collect(DB::getQueryLog())->filter(fn (array $q) => str_contains($q['query'], 'service_requests'));
+
+        $this->assertCount(1, $lookups);
     }
 
     public function test_period_sla_counts_like_the_overview_report_and_splits_by_source(): void
