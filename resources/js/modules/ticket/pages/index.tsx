@@ -17,33 +17,7 @@ import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-    Activity,
-    AlertTriangle,
-    ArrowDown,
-    ArrowUp,
-    ArrowUpDown,
-    Box,
-    CheckCircle2,
-    ChevronRight,
-    CircleDot,
-    Clock,
-    Flag,
-    Gauge,
-    History,
-    Inbox,
-    Layers,
-    LayoutGrid,
-    Minus,
-    Plus,
-    RefreshCcw,
-    Search,
-    Tag,
-    Timer,
-    Wrench,
-    X,
-    Zap,
-} from 'lucide-react';
+import { ArrowUpDown, ChevronRight, CircleDot, Flag, Gauge, History, LayoutGrid, Plus, Search, Tag, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ticketApi, type SummaryRange } from '../api/ticketApi';
@@ -55,7 +29,6 @@ import { ResolveTicketModal, type ResolveMode } from '../components/resolve-tick
 import { TakeCaseModal } from '../components/take-case-modal';
 import { TicketDetailDrawer } from '../components/ticket-detail-drawer';
 import {
-    slaDuration,
     TICKET_CATEGORIES,
     TICKET_PRIORITY_META,
     TICKET_STATUS_META,
@@ -65,6 +38,7 @@ import {
     TicketStatusBadge,
     TicketSubject,
 } from '../components/ticket-meta';
+import { TicketOverviewTiles } from '../components/ticket-overview-tiles';
 import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 
@@ -107,149 +81,6 @@ function readRange(range: string, from: string, to: string): SummaryRange {
 }
 
 /**
- * A ↑/↓ change pill spelled out in words ("เพิ่มขึ้น 33%" / "ลดลง 33%"), colored by
- * direction: up = green, down = red, flat = gray. `goodUp: false` flips the meaning
- * for a metric where rising is bad (up → red). Time-based metrics can swap the
- * direction words via upKey/downKey (e.g. ช้าลง/เร็วขึ้น N นาที).
- */
-function TrendPill({
-    delta,
-    goodUp,
-    suffix,
-    upKey = 'ticket_trend_up',
-    downKey = 'ticket_trend_down',
-}: {
-    delta: number;
-    goodUp?: boolean;
-    suffix?: string;
-    upKey?: string;
-    downKey?: string;
-}) {
-    const t = useT();
-    const flat = delta === 0;
-    const up = delta > 0;
-    const good = goodUp === undefined ? up : up === goodUp;
-    const tone = flat ? 'text-muted-foreground' : good ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive';
-    const Icon = flat ? Minus : up ? ArrowUp : ArrowDown;
-    return (
-        <span className={cn('inline-flex items-center gap-0.5 font-medium', tone)}>
-            <Icon className="h-3.5 w-3.5" />
-            {flat ? t('ticket_trend_flat') : `${t(up ? upKey : downKey)} ${Math.abs(delta).toLocaleString('en-US')}${suffix ?? '%'}`}
-        </span>
-    );
-}
-
-function StatCard({
-    label,
-    value,
-    icon: Icon,
-    trend,
-    hint,
-}: {
-    label: string;
-    value: string | number;
-    icon: typeof Box;
-    trend?: { delta: number | null; goodUp?: boolean; suffix?: string; upKey?: string; downKey?: string };
-    hint?: React.ReactNode;
-}) {
-    return (
-        <Card className="p-5">
-            <div className="flex items-start justify-between">
-                <div className="text-muted-foreground text-sm">{label}</div>
-                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
-                    <Icon className="h-[18px] w-[18px]" />
-                </span>
-            </div>
-            {/* Counts get thousand separators; preformatted strings (%, durations) pass through. */}
-            <div className="mt-2 font-mono text-3xl font-bold">{typeof value === 'number' ? value.toLocaleString('en-US') : value}</div>
-            {(trend?.delta != null || hint) && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-xs">
-                    {trend?.delta != null && (
-                        <TrendPill delta={trend.delta} goodUp={trend.goodUp} suffix={trend.suffix} upKey={trend.upKey} downKey={trend.downKey} />
-                    )}
-                    {hint && <span className="text-muted-foreground">{hint}</span>}
-                </div>
-            )}
-        </Card>
-    );
-}
-
-/**
- * A single "right now" status row (icon + title/sub + trailing value) in the
- * Access-dashboard idiom: red = act now, amber = needs a look, green = all clear,
- * ink = neutral info. With `onClick` the row becomes a drill-down button into
- * the Tickets tab with the matching filter applied.
- */
-function NowRow({
-    icon: Icon,
-    tone,
-    title,
-    sub,
-    value,
-    onClick,
-}: {
-    icon: typeof Box;
-    tone: 'red' | 'amber' | 'green' | 'ink';
-    title: string;
-    sub: string;
-    value: string | number;
-    onClick?: () => void;
-}) {
-    const toneClass = {
-        red: 'text-destructive',
-        amber: 'text-amber-600 dark:text-amber-400',
-        green: 'text-emerald-600 dark:text-emerald-400',
-        ink: 'text-muted-foreground',
-    }[tone];
-    // Alert rows (red/amber) get a soft tinted background + a count pill so they
-    // stand out from the all-clear rows; same paddings keep the card height stable.
-    const isAlert = tone === 'red' || tone === 'amber';
-    const rowTint = {
-        red: 'bg-destructive/[0.06] hover:bg-destructive/10',
-        amber: 'bg-amber-500/[0.07] hover:bg-amber-500/15',
-        green: '',
-        ink: '',
-    }[tone];
-    const body = (
-        <>
-            <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', toneClass)} />
-            <div className="min-w-0 flex-1 text-left">
-                <div className="text-sm font-medium">{title}</div>
-                <div className="text-muted-foreground text-xs">{sub}</div>
-            </div>
-            {isAlert ? (
-                <span
-                    className={cn(
-                        'rounded-full px-2 py-px font-mono text-xs font-bold',
-                        tone === 'red'
-                            ? 'bg-destructive/10 dark:text-destructive text-red-700'
-                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-                    )}
-                >
-                    {typeof value === 'number' ? value.toLocaleString('en-US') : value}
-                </span>
-            ) : (
-                <span className={cn('font-mono text-sm font-semibold', toneClass)}>
-                    {typeof value === 'number' ? value.toLocaleString('en-US') : value}
-                </span>
-            )}
-        </>
-    );
-    if (onClick) {
-        return (
-            <button
-                type="button"
-                onClick={onClick}
-                className={cn('flex w-full items-start gap-3 rounded-lg px-3 py-2.5 transition-colors', rowTint || 'hover:bg-muted/40')}
-            >
-                {body}
-            </button>
-        );
-    }
-    return <div className={cn('flex items-start gap-3 rounded-lg px-3 py-2.5', rowTint)}>{body}</div>;
-}
-
-/**
  * 7 / 30 / 90-day window selector for the dashboard, plus a custom from–to range. "กำหนดเอง"
  * opens the shared two-month range calendar (as the reports do), which applies only on
  * "นำไปใช้" — so a half-picked range never fetches — and can't pick an end before the start.
@@ -287,30 +118,31 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
     );
 }
 
-/** Loading placeholder for the dashboard body (KPI cards + category bars + latest list). */
+/** Loading placeholder for the dashboard body (four tiles, then category bars beside the latest list). */
 function TicketOverviewBodySkeleton() {
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                    <Card key={i} className="p-5">
-                        <div className="flex items-start justify-between">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <Card key={i} className="space-y-3 p-5">
+                        <div className="flex items-center justify-between">
                             <div className="bg-muted h-4 w-20 animate-pulse rounded" />
-                            <div className="bg-muted h-9 w-9 animate-pulse rounded-lg" />
+                            <div className="bg-muted h-4 w-14 animate-pulse rounded-full" />
                         </div>
-                        <div className="bg-muted mt-3 h-8 w-14 animate-pulse rounded" />
-                        <div className="bg-muted mt-2 h-3 w-24 animate-pulse rounded" />
+                        <div className="bg-muted h-8 w-16 animate-pulse rounded" />
+                        <div className="bg-muted h-3 w-28 animate-pulse rounded" />
+                        <div className="bg-muted h-3 w-20 animate-pulse rounded" />
                     </Card>
                 ))}
             </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <Card className="overflow-hidden">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+                <Card className="overflow-hidden xl:col-span-2">
                     <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
                         <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                         <div className="bg-muted h-4 w-36 animate-pulse rounded" />
                     </div>
                     <div className="space-y-4 p-5">
-                        {Array.from({ length: 4 }).map((_, i) => (
+                        {Array.from({ length: 5 }).map((_, i) => (
                             <div key={i} className="flex items-center gap-3">
                                 <div className="bg-muted h-4 w-28 shrink-0 animate-pulse rounded" />
                                 <div className="bg-muted h-2 flex-1 animate-pulse rounded-full" />
@@ -319,29 +151,18 @@ function TicketOverviewBodySkeleton() {
                         ))}
                     </div>
                 </Card>
-                <Card className="overflow-hidden">
+                <Card className="overflow-hidden xl:col-span-3">
                     <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
                         <div className="bg-muted h-4 w-4 animate-pulse rounded" />
-                        <div className="bg-muted h-4 w-32 animate-pulse rounded" />
+                        <div className="bg-muted h-4 w-24 animate-pulse rounded" />
                     </div>
-                    <div className="space-y-2 p-3">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                            <div key={i} className="bg-muted h-11 w-full animate-pulse rounded-lg" />
+                    <div className="space-y-2 p-5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="bg-muted h-8 w-full animate-pulse rounded" />
                         ))}
                     </div>
                 </Card>
             </div>
-            <Card className="overflow-hidden">
-                <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
-                    <div className="bg-muted h-4 w-4 animate-pulse rounded" />
-                    <div className="bg-muted h-4 w-24 animate-pulse rounded" />
-                </div>
-                <div className="space-y-2 p-5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="bg-muted h-8 w-full animate-pulse rounded" />
-                    ))}
-                </div>
-            </Card>
         </div>
     );
 }
@@ -489,15 +310,7 @@ export default function TicketsPage() {
     };
 
     const { data: summary, isLoading: summaryLoading } = useTicketSummary(canOverview, range);
-    // Not just `has_repair_rules`: a case can be classified repair before an administrator
-    // configures a work-class target (a valid order of operations — TicketService::setWorkClass
-    // never requires one to exist). When that happens TicketController already excludes it from
-    // sla_met_pct regardless of has_repair_rules, so gating the card on rules alone would let
-    // that work disappear from both the standard SLA figure AND the only card that shows the
-    // repair figure. Show the card whenever there is anything repair-shaped to show — a
-    // configured rule, an open repair case, or one that has already closed under the KPI — and
-    // only omit it when all three are empty, i.e. the feature is genuinely unused.
-    const showsRepairKpi = !!(summary?.has_repair_rules || (summary?.repair_backlog ?? 0) > 0 || summary?.repair_kpi_met_pct != null);
+    const lang = useUiStore((s) => s.lang);
     const {
         data: listData,
         isLoading,
@@ -698,86 +511,19 @@ export default function TicketsPage() {
                             <TicketOverviewBodySkeleton />
                         ) : (
                             <div className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                                    <StatCard
-                                        label={t('ticket_kpi_new')}
-                                        value={summary?.created ?? 0}
-                                        icon={Inbox}
-                                        trend={{ delta: summary?.created_delta_count ?? null, suffix: ` ${t('ticket_trend_tickets')}` }}
-                                        hint={t('ticket_kpi_vs_prev')}
-                                    />
-                                    <StatCard
-                                        label={t('ticket_kpi_resolved')}
-                                        value={summary?.resolved ?? 0}
-                                        icon={CheckCircle2}
-                                        trend={{
-                                            delta: summary?.resolved_delta_count ?? null,
-                                            goodUp: true,
-                                            suffix: ` ${t('ticket_trend_tickets')}`,
-                                        }}
-                                        hint={t('ticket_kpi_in_range')}
-                                    />
-                                    <StatCard
-                                        label={t('ticket_kpi_backlog')}
-                                        value={summary?.backlog ?? 0}
-                                        icon={Layers}
-                                        hint={
-                                            // Colored per status, matching the Open / In-progress badge tones.
-                                            // "Right now" marks this card as a live value — it ignores the range selector.
-                                            <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
-                                                <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                                                    <Clock className="h-3.5 w-3.5" />
-                                                    {(summary?.backlog_open ?? 0).toLocaleString('en-US')} {t('ticket_kpi_waiting')}
-                                                </span>
-                                                <span className="flex items-center gap-1 text-violet-600 dark:text-violet-400">
-                                                    <RefreshCcw className="h-3.5 w-3.5" />
-                                                    {(summary?.backlog_in_progress ?? 0).toLocaleString('en-US')} {t('ticket_kpi_working')}
-                                                </span>
-                                                <span className="text-muted-foreground/80">({t('ticket_kpi_now')})</span>
-                                            </span>
+                                {summary && (
+                                    <TicketOverviewTiles
+                                        summary={summary}
+                                        when={
+                                            typeof range === 'object' ? formatRangeShort(range.from, range.to, lang) : `${range} ${t('ticket_days')}`
                                         }
+                                        canOpenReport={isIT}
+                                        onOpenOverSla={() => changeTab('all', { sla: 'over_sla' })}
+                                        onOpenWaiting={() => changeTab('all', { status: 'open' })}
                                     />
-                                    <StatCard
-                                        label={t('ticket_sla_response_met').replace('{n}', String(summary?.response_target_minutes ?? '—'))}
-                                        value={summary?.response_sla_met_pct == null ? '—' : `${summary.response_sla_met_pct}%`}
-                                        icon={Zap}
-                                        trend={{ delta: summary?.response_sla_delta_pts ?? null, goodUp: true }}
-                                    />
-                                    <StatCard
-                                        label={showsRepairKpi ? t('ticket_sla_met_standard') : t('ticket_sla_met')}
-                                        value={summary?.sla_met_pct == null ? '—' : `${summary.sla_met_pct}%`}
-                                        icon={Gauge}
-                                        trend={{ delta: summary?.sla_delta_pts ?? null, goodUp: true }}
-                                    />
-                                    {/* Repair work is measured against its own work-class KPI target. The card
-                                        (and this card's label narrowing above) both key off showsRepairKpi, not
-                                        has_repair_rules alone — see its definition for why. */}
-                                    {showsRepairKpi && (
-                                        <StatCard
-                                            label={t('ticket_repair_kpi')}
-                                            value={summary?.repair_kpi_met_pct == null ? '—' : `${summary.repair_kpi_met_pct}%`}
-                                            icon={Wrench}
-                                            trend={{ delta: summary?.repair_kpi_delta_pts ?? null, goodUp: true }}
-                                            hint={t('ticket_repair_backlog').replace('{n}', String(summary?.repair_backlog ?? 0))}
-                                        />
-                                    )}
-                                    <StatCard
-                                        label={t('ticket_kpi_avg_response')}
-                                        value={summary?.avg_response_minutes == null ? '—' : slaDuration(summary.avg_response_minutes, t)}
-                                        icon={Timer}
-                                        trend={{
-                                            delta: summary?.avg_response_delta_minutes ?? null,
-                                            goodUp: false,
-                                            suffix: ` ${t('ticket_trend_minutes')}`,
-                                            upKey: 'ticket_trend_slower',
-                                            downKey: 'ticket_trend_faster',
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Card-wrapped sections with an icon header row, mirroring the Access dashboard idiom. */}
-                                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                    <Card className="overflow-hidden">
+                                )}
+                                <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+                                    <Card className="overflow-hidden xl:col-span-2">
                                         <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
                                             <div className="flex items-center gap-2">
                                                 <LayoutGrid className="text-muted-foreground h-4 w-4" />
@@ -813,98 +559,22 @@ export default function TicketsPage() {
                                         </div>
                                     </Card>
 
-                                    {/* Right-now status checklist — rows drill into the Tickets tab with the matching filter. */}
-                                    <Card className="overflow-hidden">
-                                        <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
-                                            <div className="flex items-center gap-2">
-                                                <Activity className="text-muted-foreground h-4 w-4" />
-                                                <span className="text-sm font-semibold">{t('ticket_dash_now_title')}</span>
-                                            </div>
-                                            <span className="text-muted-foreground flex items-center gap-2 text-xs">
-                                                {((summary?.over_sla_now ?? 0) > 0 || (summary?.backlog_open ?? 0) > 0) && (
-                                                    // Blinking dot = something below needs attention (red beats amber).
-                                                    <span className="relative flex h-2 w-2">
-                                                        <span
-                                                            className={cn(
-                                                                'absolute inline-flex h-full w-full animate-ping rounded-full motion-reduce:hidden',
-                                                                (summary?.over_sla_now ?? 0) > 0 ? 'bg-destructive/60' : 'bg-amber-500/60',
-                                                            )}
-                                                        />
-                                                        <span
-                                                            className={cn(
-                                                                'relative inline-flex h-2 w-2 rounded-full',
-                                                                (summary?.over_sla_now ?? 0) > 0 ? 'bg-destructive' : 'bg-amber-500',
-                                                            )}
-                                                        />
-                                                    </span>
-                                                )}
-                                                {t('ticket_dash_now_hint')}
-                                            </span>
+                                    <Card className="overflow-hidden xl:col-span-3">
+                                        <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                                            <History className="text-muted-foreground h-4 w-4" />
+                                            <span className="text-sm font-semibold">{t('ticket_latest')}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => changeTab('all')}
+                                                className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
+                                            >
+                                                {t('ticket_view_all')}
+                                                <ChevronRight className="h-3.5 w-3.5" />
+                                            </button>
                                         </div>
-                                        <div className="divide-border/60 divide-y p-2">
-                                            {(summary?.over_sla_now ?? 0) > 0 ? (
-                                                <NowRow
-                                                    icon={AlertTriangle}
-                                                    tone="red"
-                                                    title={t('ticket_dash_over_sla')}
-                                                    sub={t('ticket_dash_over_sla_sub')}
-                                                    value={summary?.over_sla_now ?? 0}
-                                                    onClick={() => changeTab('all', { sla: 'over_sla' })}
-                                                />
-                                            ) : (
-                                                <NowRow
-                                                    icon={CheckCircle2}
-                                                    tone="green"
-                                                    title={t('ticket_dash_over_sla_ok')}
-                                                    sub={t('ticket_dash_over_sla_ok_sub')}
-                                                    value="✓"
-                                                />
-                                            )}
-                                            {(summary?.backlog_open ?? 0) > 0 ? (
-                                                <NowRow
-                                                    icon={Clock}
-                                                    tone="amber"
-                                                    title={t('ticket_dash_waiting_row')}
-                                                    sub={t('ticket_dash_waiting_sub')}
-                                                    value={summary?.backlog_open ?? 0}
-                                                    onClick={() => changeTab('all', { status: 'open' })}
-                                                />
-                                            ) : (
-                                                <NowRow
-                                                    icon={CheckCircle2}
-                                                    tone="green"
-                                                    title={t('ticket_dash_waiting_ok')}
-                                                    sub={t('ticket_dash_waiting_ok_sub')}
-                                                    value="✓"
-                                                />
-                                            )}
-                                            <NowRow
-                                                icon={RefreshCcw}
-                                                tone="ink"
-                                                title={t('ticket_dash_working_row')}
-                                                sub={t('ticket_dash_working_sub')}
-                                                value={summary?.backlog_in_progress ?? 0}
-                                                onClick={() => changeTab('all', { status: 'in_progress' })}
-                                            />
-                                        </div>
+                                        <TicketTable rows={latestRows} t={t} onRow={openDetail} compact showPriority={canTake} />
                                     </Card>
                                 </div>
-
-                                <Card className="overflow-hidden">
-                                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
-                                        <History className="text-muted-foreground h-4 w-4" />
-                                        <span className="text-sm font-semibold">{t('ticket_latest')}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => changeTab('all')}
-                                            className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
-                                        >
-                                            {t('ticket_view_all')}
-                                            <ChevronRight className="h-3.5 w-3.5" />
-                                        </button>
-                                    </div>
-                                    <TicketTable rows={latestRows} t={t} onRow={openDetail} compact showPriority={canTake} />
-                                </Card>
                             </div>
                         )}
                     </div>

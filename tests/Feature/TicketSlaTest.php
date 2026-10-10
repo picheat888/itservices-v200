@@ -151,7 +151,58 @@ class TicketSlaTest extends TestCase
 
         $this->getJson('/api/tickets/summary')->assertOk()
             ->assertJsonPath('sla_met_pct', null)
-            ->assertJsonPath('avg_response_minutes', null);
+            ->assertJsonPath('avg_response_minutes', null)
+            ->assertJsonPath('over_sla_oldest_days', null)
+            ->assertJsonPath('period_sla.rate', null)
+            ->assertJsonPath('period_sla.delta_pts', null)
+            ->assertJsonCount(6, 'flow');
+    }
+
+    public function test_period_sla_counts_like_the_overview_report_and_splits_by_source(): void
+    {
+        $this->actingAs($this->super());
+        $closed = fn (string $source, string $created, string $resolved, string $due) => Ticket::factory()->create([
+            'source' => $source, 'status' => 'completed',
+            'created_at' => $created, 'resolved_at' => $resolved, 'sla_resolve_due_at' => $due,
+        ]);
+
+        // This window (Dec 15 – Jan 14): requests 1 of 2 on time, manual 1 of 1.
+        $closed('auto_request', '2026-01-05 09:00:00', '2026-01-06 09:00:00', '2026-01-07 09:00:00');
+        $closed('auto_request', '2026-01-05 09:00:00', '2026-01-09 09:00:00', '2026-01-07 09:00:00');
+        $closed('manual', '2026-01-08 09:00:00', '2026-01-08 10:00:00', '2026-01-08 12:00:00');
+        // The window before: one late close.
+        $closed('manual', '2025-12-01 09:00:00', '2025-12-05 09:00:00', '2025-12-02 09:00:00');
+
+        $this->getJson('/api/tickets/summary')->assertOk()
+            ->assertJsonPath('period_sla.from', '2025-12-15')
+            ->assertJsonPath('period_sla.to', '2026-01-14')
+            ->assertJsonPath('period_sla.goal', TicketSla::goalPercent())
+            ->assertJsonPath('period_sla.met', 2)
+            ->assertJsonPath('period_sla.measured', 3)
+            ->assertJsonPath('period_sla.rate', 66.7)
+            ->assertJsonPath('period_sla.delta_pts', 66.7)
+            ->assertJsonPath('period_sla.request_rate', 50)
+            ->assertJsonPath('period_sla.manual_rate', 100);
+    }
+
+    public function test_summary_reports_the_oldest_past_sla_case_and_the_flow_slices(): void
+    {
+        $this->actingAs($this->super());
+        Ticket::factory()->create(['status' => 'open', 'created_at' => now()->subDays(10), 'sla_response_due_at' => now()->subDays(9)]);
+        Ticket::factory()->create(['status' => 'open', 'created_at' => now()->subDays(3), 'sla_response_due_at' => now()->subDays(2)]);
+        // Old but still inside its deadline: not the oldest past-SLA case.
+        Ticket::factory()->create(['status' => 'in_progress', 'created_at' => now()->subDays(20), 'sla_resolve_due_at' => now()->addDay()]);
+        Ticket::factory()->create(['status' => 'completed', 'created_at' => now()->subDays(28), 'resolved_at' => now()->subHour()]);
+
+        $body = $this->getJson('/api/tickets/summary')->assertOk()
+            ->assertJsonPath('over_sla_oldest_days', 10)
+            ->assertJsonCount(6, 'flow')
+            ->json();
+
+        $this->assertSame($body['created'], array_sum(array_column($body['flow'], 'opened')));
+        $this->assertSame($body['resolved'], array_sum(array_column($body['flow'], 'closed')));
+        $this->assertSame(1, $body['flow'][0]['opened']);
+        $this->assertSame(1, $body['flow'][5]['closed']);
     }
 
     public function test_settings_expose_and_persist_sla_targets(): void
