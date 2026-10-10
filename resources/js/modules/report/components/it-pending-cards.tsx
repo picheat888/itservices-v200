@@ -20,10 +20,34 @@ import { ErrorCard, errorMessageFor } from './tabular-report-view';
 type Patch = (next: TabularFilters) => void;
 
 /** The shared age groups, worst first, in the approvals page's tones. */
-const BANDS: { key: RequestAgeBand; label: string; tone: ChartSeries['tone']; top: string }[] = [
-    { key: 'over_7', label: 'rep_age_over_7', tone: 'soft-red', top: 'border-t-red-400' },
-    { key: 'days_4_7', label: 'rep_age_days_4_7', tone: 'soft-amber', top: 'border-t-amber-400' },
-    { key: 'upto_3', label: 'rep_age_upto_3', tone: 'gray', top: 'border-t-slate-400 dark:border-t-slate-500' },
+const BANDS: { key: RequestAgeBand; label: string; tone: ChartSeries['tone']; top: string; tint: string; hover: string; ink: string }[] = [
+    {
+        key: 'over_7',
+        label: 'rep_age_over_7',
+        tone: 'soft-red',
+        top: 'border-t-red-400',
+        tint: 'bg-red-500/[0.07] dark:bg-red-500/10',
+        hover: 'hover:ring-red-400/70',
+        ink: 'text-red-700 dark:text-red-300',
+    },
+    {
+        key: 'days_4_7',
+        label: 'rep_age_days_4_7',
+        tone: 'soft-amber',
+        top: 'border-t-amber-400',
+        tint: 'bg-amber-500/[0.07] dark:bg-amber-500/10',
+        hover: 'hover:ring-amber-400/70',
+        ink: 'text-amber-700 dark:text-amber-300',
+    },
+    {
+        key: 'upto_3',
+        label: 'rep_age_upto_3',
+        tone: 'gray',
+        top: 'border-t-slate-400 dark:border-t-slate-500',
+        tint: 'bg-slate-500/[0.07] dark:bg-slate-500/10',
+        hover: 'hover:ring-slate-400/70',
+        ink: 'text-slate-700 dark:text-slate-300',
+    },
 ];
 const SERIES: ChartSeries[] = BANDS.map((b) => ({ key: b.key, label_key: b.label, tone: b.tone }));
 
@@ -165,15 +189,16 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
     );
 }
 
-const BUCKET =
-    'bg-card border-border relative flex w-full min-w-0 flex-col items-center gap-0.5 rounded-lg border border-t-[3px] px-2 pt-2 pb-2.5 text-center';
+const BUCKET = 'relative flex w-full min-w-0 flex-col items-center gap-0.5 rounded-lg border-t-[3px] px-2 pt-2 pb-2.5 text-center';
 
 function BucketFace({ band, count }: { band: (typeof BANDS)[number]; count: number }) {
     const t = useT();
     const f = useFormat();
     return (
         <>
-            <b className={cn('font-mono text-xl leading-tight', count === 0 && 'text-muted-foreground font-medium')}>{f.number(count)}</b>
+            <b className={cn('font-mono text-xl leading-tight font-bold', count === 0 ? 'text-muted-foreground font-medium' : band.ink)}>
+                {f.number(count)}
+            </b>
             <span className="text-muted-foreground max-w-full truncate text-xs">{t(band.label)}</span>
         </>
     );
@@ -181,7 +206,7 @@ function BucketFace({ band, count }: { band: (typeof BANDS)[number]; count: numb
 
 function Bucket({ band, count }: { band: (typeof BANDS)[number]; count: number }) {
     return (
-        <div className={cn(BUCKET, band.top)}>
+        <div className={cn(BUCKET, band.top, band.tint)}>
             <BucketFace band={band} count={count} />
         </div>
     );
@@ -202,7 +227,7 @@ function WaitingBucket({ band, figures }: { band: (typeof BANDS)[number]; figure
     return (
         <InfoPopover
             label={t('rep_rqi_bucket_label').replace('{band}', t(band.label)).replace('{n}', f.number(figures.total))}
-            className={cn(BUCKET, band.top, 'hover:bg-accent cursor-pointer transition-colors')}
+            className={cn(BUCKET, band.top, band.tint, band.hover, 'cursor-pointer ring-1 ring-transparent transition-shadow')}
             content={
                 <div className="min-w-44">
                     <div className="mb-1 font-semibold">{heading}</div>
