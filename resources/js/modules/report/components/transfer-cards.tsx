@@ -625,7 +625,7 @@ const ACCEPT_TILES: {
         label_key: 'rep_th_acc_same_day',
         edge: 'border-t-emerald-500',
         fill: 'bg-emerald-500',
-        tint: 'bg-emerald-500/10',
+        tint: 'bg-emerald-500/[0.07] dark:bg-emerald-500/10',
         ink: 'text-emerald-700 dark:text-emerald-300',
     },
     {
@@ -633,7 +633,7 @@ const ACCEPT_TILES: {
         label_key: 'rep_th_acc_next_day',
         edge: 'border-t-blue-500',
         fill: 'bg-blue-500',
-        tint: 'bg-blue-500/10',
+        tint: 'bg-blue-500/[0.07] dark:bg-blue-500/10',
         ink: 'text-blue-700 dark:text-blue-300',
     },
     {
@@ -641,7 +641,7 @@ const ACCEPT_TILES: {
         label_key: 'rep_th_acc_later',
         edge: 'border-t-amber-500',
         fill: 'bg-amber-500',
-        tint: 'bg-amber-500/10',
+        tint: 'bg-amber-500/[0.07] dark:bg-amber-500/10',
         ink: 'text-amber-700 dark:text-amber-300',
     },
     {
@@ -649,7 +649,7 @@ const ACCEPT_TILES: {
         label_key: 'rep_th_acc_waiting',
         edge: 'border-t-red-500',
         fill: 'bg-red-500',
-        tint: 'bg-red-500/10',
+        tint: 'bg-red-500/[0.07] dark:bg-red-500/10',
         ink: 'text-red-700 dark:text-red-300',
     },
     {
@@ -657,7 +657,7 @@ const ACCEPT_TILES: {
         label_key: 'rep_th_acc_closed',
         edge: 'border-t-slate-400',
         fill: 'bg-slate-400',
-        tint: 'bg-slate-500/10',
+        tint: 'bg-slate-500/[0.07] dark:bg-slate-500/10',
         ink: 'text-slate-700 dark:text-slate-300',
     },
 ];
