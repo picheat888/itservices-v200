@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { useCurrency } from '@/modules/settings';
 import { PAGE_SIZES } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { OverviewHeader } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -689,6 +690,7 @@ function OverviewTab({
     if (!summary)
         return (
             <div className="space-y-6 p-5">
+                <OverviewHeader />
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     {Array.from({ length: 4 }).map((_, i) => (
                         <Card key={i} className="p-5">
@@ -768,6 +770,7 @@ function OverviewTab({
 
     return (
         <div className="space-y-6 p-5">
+            <OverviewHeader />
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard label={t('contract_total')} value={summary.total} icon={FileText} />
                 <StatCard label={t('contract_active')} value={summary.active} icon={CheckCircle2} />
