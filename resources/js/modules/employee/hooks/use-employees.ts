@@ -1,3 +1,4 @@
+import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +6,13 @@ import { employeeApi, type EmployeePayload, type UpdateCredentialsPayload } from
 import { DEPT, EMP } from './query-keys';
 
 export const useEmployees = () => useQuery({ queryKey: EMP, queryFn: employeeApi.list });
-export const useEmployeeSummary = (enabled = true) => useQuery({ queryKey: ['employees-summary'], queryFn: employeeApi.summary, enabled });
+export const useEmployeeSummary = (period: OverviewPeriod = 'all', enabled = true) =>
+    useQuery({
+        queryKey: ['employees-summary', overviewPeriodKey(period)],
+        queryFn: () => employeeApi.summary(period),
+        enabled,
+        placeholderData: (prev) => prev,
+    });
 
 // The Employees badge (active staff without a login account) now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges. The same number still

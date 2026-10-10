@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
+import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
 import { type PageTab, PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { TableSkeleton } from '@/shared/components/skeletons';
@@ -107,7 +108,8 @@ export default function EmployeesPage() {
 
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isTab, 'overview');
-    const { data: summary, isLoading: summaryLoading } = useEmployeeSummary();
+    const [period, setPeriod] = useOverviewPeriod();
+    const { data: summary, isLoading: summaryLoading } = useEmployeeSummary(period);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
 
@@ -473,10 +475,12 @@ export default function EmployeesPage() {
                 <PageTabs tabs={tabs} active={tab} onChange={changeTab} />
 
                 <div className="p-5">
+                    {tab === 'overview' && <OverviewHeader value={period} onChange={setPeriod} className="mb-5" />}
                     {tab === 'overview' && summaryLoading && <EmployeeOverviewSkeleton />}
                     {tab === 'overview' && !summaryLoading && (
                         <OverviewTab
                             summary={summary}
+                            highlightLast={periodReachesToday(period)}
                             departments={departments}
                             positions={positions}
                             onViewDepartments={() => changeTab('departments')}
@@ -940,11 +944,13 @@ function EmployeeOverviewSkeleton() {
 
 function OverviewTab({
     summary,
+    highlightLast,
     departments,
     positions,
     onViewDepartments,
 }: {
     summary: EmployeeSummary | undefined;
+    highlightLast: boolean;
     departments: Department[];
     positions: Position[];
     onViewDepartments: () => void;
@@ -965,7 +971,6 @@ function OverviewTab({
         active: total ? Math.round(((summary?.active ?? 0) / total) * 100) : 0,
         resigned: total ? Math.round(((summary?.resigned ?? 0) / total) * 100) : 0,
     };
-    const currentYear = new Date().getFullYear();
 
     return (
         <div className="space-y-6">
@@ -985,7 +990,7 @@ function OverviewTab({
                     );
                 })}
             </div>
-            <HiresTrendCard data={summary?.hires_by_month ?? []} />
+            <HiresTrendCard trend={summary?.hires_trend ?? { unit: 'month', data: [] }} highlightLast={highlightLast} />
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Employee status — active vs resigned */}
@@ -1021,8 +1026,8 @@ function OverviewTab({
                             </span>
                         </div>
                         <div className="border-border mt-4 flex items-center gap-3 border-t border-dashed pt-3.5">
-                            <span className="text-destructive font-mono text-[32px] leading-none font-bold">{summary?.resigned_this_year ?? 0}</span>
-                            <span className="text-muted-foreground text-[12.5px]">{t('emp_resigned_year').replace('{y}', String(currentYear))}</span>
+                            <span className="text-destructive font-mono text-[32px] leading-none font-bold">{summary?.resigned_in_period ?? 0}</span>
+                            <span className="text-muted-foreground text-[12.5px]">{t('emp_resigned_period')}</span>
                         </div>
                     </div>
                 </Card>

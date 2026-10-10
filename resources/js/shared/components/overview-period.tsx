@@ -27,6 +27,13 @@ export function overviewPeriodParams(period: OverviewPeriod): Record<string, str
     return typeof period === 'object' ? { from: period.from, to: period.to } : { days: period };
 }
 
+/** Whether the period runs up to today, so its last chart column is the one still being lived through. */
+export function periodReachesToday(period: OverviewPeriod, today = new Date()): boolean {
+    if (typeof period !== 'object') return true;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return period.to >= `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+}
+
 /** A stable query-key part for a period. */
 export const overviewPeriodKey = (period: OverviewPeriod) => (typeof period === 'object' ? `${period.from}_${period.to}` : String(period));
 

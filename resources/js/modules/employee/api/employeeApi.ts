@@ -1,3 +1,5 @@
+import type { BarUnit, MonthBar } from '@/shared/components/month-bar-chart';
+import { overviewPeriodParams, type OverviewPeriod } from '@/shared/components/overview-period';
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type {
     ApiEnvelope,
@@ -14,21 +16,17 @@ import type {
 } from '@/shared/types';
 import { mutate } from './http-helpers';
 
-/** One month on the hiring-trend chart. `month` is 'YYYY-MM'. */
-export interface EmployeeHiresMonth {
-    month: string;
-    count: number;
-}
-
 export interface EmployeeSummary {
     total: number;
     new_hires: number;
     active: number;
     resigned: number;
-    resigned_this_year: number;
+    /** Leavers whose last day falls in the chosen period. */
+    resigned_in_period: number;
     /** Active employees still without a login account — drives the Directory tab badge. */
     no_account: number;
-    hires_by_month: EmployeeHiresMonth[];
+    /** Hires per chart column over the period. */
+    hires_trend: { unit: BarUnit; data: MonthBar[] };
     recent: Employee[];
     recent_resignations: Employee[];
 }
@@ -238,7 +236,8 @@ export const employeeApi = {
     tickets: (id: number) => http.get<ApiEnvelope<EmployeeRequestedTicket[]>>(`/employees/${id}/tickets`).then((r) => r.data.data),
     // Service requests the employee owns — filed by themselves or for them (onboarding).
     requests: (id: number) => http.get<ApiEnvelope<EmployeeServiceRequest[]>>(`/employees/${id}/requests`).then((r) => r.data.data),
-    summary: () => http.get<EmployeeSummary>('/employees/summary').then((r) => r.data),
+    summary: (period: OverviewPeriod) =>
+        http.get<EmployeeSummary>('/employees/summary', { params: overviewPeriodParams(period) }).then((r) => r.data),
     listDirectory: (params: { page: number; per_page: number; search?: string; department_id?: string; status?: string }) =>
         http.get<EmployeePageResponse>('/employees', { params }).then((r) => r.data),
     /**
