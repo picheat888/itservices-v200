@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Workflow } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { Pencil, Workflow as WorkflowIcon, Zap } from 'lucide-react';
+import { Flag, Pencil, Workflow as WorkflowIcon, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { WorkflowStrip } from './workflow-strip';
 
@@ -101,10 +101,14 @@ export function WorkflowViewDialog({
                                             'flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold',
                                             s.kind === 'completion'
                                                 ? 'bg-brand/10 text-brand'
-                                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                                                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
                                         )}
                                     >
-                                        {i + 1}
+                                        {s.kind === 'completion' ? (
+                                            <Flag className="h-3.5 w-3.5" />
+                                        ) : (
+                                            wf.steps.slice(0, i + 1).filter((x) => x.kind === 'approval').length
+                                        )}
                                     </span>
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-sm font-semibold">{s.label}</div>
@@ -115,7 +119,10 @@ export function WorkflowViewDialog({
                                         {s.positions.length > 0 && (
                                             <div className="mt-1.5 flex flex-wrap gap-1">
                                                 {s.positions.map((p) => (
-                                                    <span key={p.id} className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px]">
+                                                    <span
+                                                        key={p.id}
+                                                        className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-2 py-0.5 text-[11px]"
+                                                    >
                                                         {p.title}
                                                     </span>
                                                 ))}
@@ -145,7 +152,9 @@ export function WorkflowViewDialog({
 function InfoCell({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
     return (
         <div>
-            <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</div>
+            <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase [&:lang(th)]:tracking-normal [&:lang(th)]:normal-case">
+                {label}
+            </div>
             <div className={cn('mt-0.5 text-sm font-semibold', mono && 'font-mono')}>{value}</div>
         </div>
     );

@@ -84,6 +84,8 @@ export const common: Dict = {
     all_departments: 'All Departments',
     actions: 'Actions',
     view: 'View',
+    load_failed: 'Could not load the data',
+    retry: 'Try again',
     edit: 'Edit',
     delete: 'Delete',
     clear: 'Clear',

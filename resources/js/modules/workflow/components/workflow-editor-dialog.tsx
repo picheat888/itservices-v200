@@ -3,11 +3,12 @@ import { useDepartmentMembers, useDepartments } from '@/modules/employee';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { RecordStamps } from '@/shared/components/record-stamps';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
-import { cn } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
@@ -16,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/shared/ui/switch';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Check, Flag, Loader2, Plus, Trash2, Users, Workflow as WorkflowIcon, X, Zap } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { workflowApi, type ResolvedPreviewRow, type WorkflowStepPayload } from '../api/workflowApi';
 import { useWorkflowMutations } from '../hooks/use-workflows';
 
@@ -26,36 +27,17 @@ type EditableStep = {
     label: string;
     kind: WorkflowStep['kind'];
     position_ids: number[];
-    /**
-     * True once somebody has typed their own label. Until then the label follows the rule,
-     * so the two cannot drift into a step called "Manager" that a Supervisor signs.
-     */
+    /** True once somebody typed their own label; until then it follows the rule. */
     label_touched?: boolean;
     /** Department steps only: which department signs. */
     department_id: number | null;
-    /**
-     * Department steps only: the people named, or empty to accept the positions above.
-     * Several are alternates — whoever signs first settles the step.
-     */
+    /** Department steps only: the people named (alternates), or empty to accept the positions. */
     approver_employee_ids: number[];
-    /**
-     * Which of the two shapes a department step is being edited in. Held rather than
-     * derived from the list being non-empty, because the mode has to survive the moment
-     * BEFORE a name is chosen — a department with nobody in it yet would otherwise bounce
-     * straight back to positions, having cleared them on the way.
-     */
+    /** Department step shape (people vs positions), held so it survives before a name is picked. */
     by_person?: boolean;
 };
 
-/**
- * The steps as the API takes them.
- *
- * The shape a department step is in decides which of the two "who signs" fields travels,
- * which is what lets the editor keep the other one. Clearing on the toggle instead meant a
- * mis-click wiped a rung somebody had picked title by title, with nothing to undo it —
- * and the server must still never be sent a step that names both a person and a rung,
- * because then two different rules would claim the same step.
- */
+/** The steps as the API takes them: a department step sends only the "who signs" field of its shape. */
 function toPayload(steps: EditableStep[]): WorkflowStepPayload[] {
     return steps.map((s) => {
         const byPerson = s.actor_type === 'department' && !!s.by_person;
@@ -78,18 +60,8 @@ const OWNER_TYPES: ServiceRequestType[] = ['mailgroup', 'fileshare', 'recovery']
 const CHAIN_LABEL_PRESETS = ['Supervisor / Head', 'Manager / Asst. Manager', 'Department Manager', 'Vice President'];
 
 /**
- * Focus-dialog editor for one workflow.
- *
- * The steps are drawn as a ladder on a rail, because that is what a route is: each
- * rung a level of authority above the last, ending in a flag rather than a number
- * (the destination is not a level). A rung states the positions that may sign it —
- * chosen a whole level at a time, since that is how the org names its own tiers —
- * and the full title list opens for one rung at a time so the page stays readable.
- *
- * There is no separate route-strip preview: the ladder IS the sequence, and the
- * one thing it cannot show is people, which the "test with employee" panel does.
- *
- * Edits never touch in-flight requests — they run on their submit-time snapshot.
+ * Editor for one workflow: the steps as a ladder of rungs, plus a "test with employee" preview.
+ * Edits never touch in-flight requests (they run on their submit-time snapshot).
  */
 export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow | null; onClose: () => void }) {
     const t = useT();
@@ -102,28 +74,26 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     const wf = workflow ?? shown;
 
     const [name, setName] = useState('');
+    const [nameErr, setNameErr] = useState('');
     const [active, setActive] = useState(true);
     const [autoTicket, setAutoTicket] = useState(true);
     const [steps, setSteps] = useState<EditableStep[]>([]);
-    // Which step has its position palette open. The chosen titles show on every step; the
-    // full fourteen-title palette is what folds, or five steps would be seventy chips.
+    // Which step has its full position palette open (one at a time)
     const [openRanks, setOpenRanks] = useState<number | null>(null);
     const [serverError, setServerError] = useState('');
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
     // Editable values as hydrated, for the unsaved-changes check.
     const [baseline, setBaseline] = useState('');
-    /** Index of the rung whose title list is open — one at a time keeps the list calm. */
 
-    // Hydrate from the opened workflow. Everything transient resets here, including
-    // the open rank panel: it used to survive a close and reopen of the dialog.
+    // Hydrate from the opened workflow; everything transient resets here
     useEffect(() => {
         if (!workflow) return;
         setName(workflow.name);
+        setNameErr('');
         setActive(workflow.active);
         setAutoTicket(workflow.auto_ticket);
         const hydrated: EditableStep[] = workflow.steps.map((s) => ({
             actor_type: s.actor_type,
-            // A saved step's label is somebody's decision already; only new steps follow.
             label_touched: true,
             department_id: s.department_id ?? null,
             approver_employee_ids: (s.approvers ?? []).map((a) => a.id),
@@ -136,6 +106,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setBaseline(JSON.stringify([workflow.name, workflow.active, workflow.auto_ticket, hydrated]));
         setServerError('');
         setSaveState('idle');
+        setOpenRanks(null);
         setPreviewEmployee('');
         setPreviewRows(null);
     }, [workflow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -163,8 +134,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
             { actor_type: 'chain', label: '', kind: 'approval', position_ids: [], department_id: null, approver_employee_ids: [], by_person: false },
         ]);
 
-    // The job titles a rung can name — Employee-module master data, read through the
-    // workflows.manage gate so editing a route needs no position permission.
+    // Position titles, read through the workflows.manage gate
     const { data: positionData } = useQuery({
         queryKey: ['workflow-position-options'],
         queryFn: workflowApi.positionOptions,
@@ -172,7 +142,6 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         enabled: !!workflow,
     });
     const positions = positionData ?? [];
-    // Same query the department fields use — React Query serves both from one request.
     const { data: departments = [] } = useDepartments();
 
     // ── "Test with employee" resolution preview ──────────────────────────────
@@ -195,18 +164,30 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     );
     const [previewEmployee, setPreviewEmployee] = useState('');
     const [previewRows, setPreviewRows] = useState<ResolvedPreviewRow[] | null>(null);
+    const [previewFailed, setPreviewFailed] = useState(false);
+    const previewSeq = useRef(0);
 
     // Re-resolve (debounced) whenever the tested employee or the step list changes.
     useEffect(() => {
+        const seq = ++previewSeq.current;
         if (!wf || !previewEmployee || steps.length === 0) {
             setPreviewRows(null);
+            setPreviewFailed(false);
             return;
         }
         const timer = setTimeout(() => {
             preview
                 .mutateAsync({ request_type: wf.request_type, employee_id: Number(previewEmployee), steps: toPayload(steps) })
-                .then((res) => setPreviewRows(res.rows))
-                .catch(() => setPreviewRows(null));
+                .then((res) => {
+                    if (seq !== previewSeq.current) return;
+                    setPreviewRows(res.rows);
+                    setPreviewFailed(false);
+                })
+                .catch(() => {
+                    if (seq !== previewSeq.current) return;
+                    setPreviewRows(null);
+                    setPreviewFailed(true);
+                });
         }, 350);
         return () => clearTimeout(timer);
     }, [previewEmployee, steps, wf?.request_type]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -217,12 +198,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     if (!wf) return null;
     const ownerAllowed = OWNER_TYPES.includes(wf.request_type);
     const hasEmptyRung = steps.some((s) => s.actor_type === 'chain' && s.position_ids.length === 0);
-    // Counted the way the card outside counts it, so one route does not report two numbers.
     const approvalCount = steps.filter((s) => s.kind === 'approval').length;
-    // A department step has to say which department, and then who in it — the people who
-    // sign or the positions it accepts. Either gap leaves a step that can never resolve, and
-    // each shape is judged on its own terms: judging both at once let a half-filled step
-    // look complete.
+    // A department step needs its department, then people or positions for its own shape
     const hasIncompleteDepartment = steps.some(
         (s) =>
             s.actor_type === 'department' &&
@@ -231,10 +208,15 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
     const submit = async () => {
         setServerError('');
+        if (!name.trim()) {
+            setNameErr(t('wf_name_required'));
+            focusFirstError({ name: 'required' });
+            return;
+        }
         try {
             await update.mutateAsync({
                 id: wf.id,
-                payload: { name: name.trim() || wf.name, active, auto_ticket: autoTicket, steps: toPayload(steps) },
+                payload: { name: name.trim(), active, auto_ticket: autoTicket, steps: toPayload(steps) },
             });
             setSaveState('done');
             setTimeout(() => {
@@ -248,7 +230,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     };
 
     return (
-        <Dialog open={!!workflow} onOpenChange={(o) => !o && guardClose(onClose)}>
+        <Dialog open={!!workflow} onOpenChange={(o) => !o && !update.isPending && guardClose(onClose)}>
             <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={WorkflowIcon}
@@ -264,8 +246,14 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                 <div className="border-border/60 flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
                     {/* Name + flags */}
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <Field label={t('wf_name')} name="name">
-                            <Input value={name} onChange={(e) => setName(e.target.value)} />
+                        <Field label={t('wf_name')} name="name" required error={nameErr}>
+                            <Input
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    if (nameErr) setNameErr('');
+                                }}
+                            />
                         </Field>
                         <div className="grid grid-cols-2 gap-3">
                             <FlagCard label={t('wf_active')} on={active} onChange={setActive} icon={<Check className="h-4 w-4" />} />
@@ -279,10 +267,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                         </div>
                     </div>
 
-                    {/* ── The ladder ───────────────────────────────────────────────
-                        Rungs stacked on a rail, because that is what a route is: each
-                        one a level of authority above the last. The final step carries a
-                        flag instead of a number — it is the destination, not a level. */}
+                    {/* The ladder — the last step carries a flag, not a number */}
                     <div>
                         <div className="mb-3 flex items-end justify-between gap-3">
                             <SectionLabel className="mb-0">
@@ -303,22 +288,18 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                 const chosen = positions.filter((p) => s.position_ids.includes(p.id));
                                 return (
                                     <div key={i} className="relative">
-                                        {/* The rail is drawn in segments BETWEEN markers, not as one line
-                                            behind them: a tinted marker is translucent, so a continuous
-                                            rail showed through it — and it also has no reason to carry on
-                                            past the last rung. */}
+                                        {/* Rail segment to the next rung */}
                                         {i < steps.length - 1 && (
                                             <span aria-hidden className="bg-border/70 absolute top-[30px] -bottom-[22px] left-[-18px] w-px" />
                                         )}
-                                        {/* Rung marker. The opaque base is what keeps the rail from
-                                            showing through the tint. */}
+                                        {/* Rung marker on an opaque base */}
                                         <span className="bg-background absolute top-2 -left-[29px] h-[22px] w-[22px] rounded-full">
                                             <span
                                                 className={cn(
                                                     'flex h-full w-full items-center justify-center rounded-full border-2 font-mono text-[11px] font-bold',
                                                     isEnd
                                                         ? 'border-brand/40 bg-brand/10 text-brand'
-                                                        : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                                                        : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
                                                 )}
                                             >
                                                 {isEnd ? <Flag className="h-3 w-3" /> : i + 1}
@@ -336,14 +317,13 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                             department_id: actor === 'department' ? s.department_id : null,
                                                             approver_employee_ids: actor === 'department' ? s.approver_employee_ids : [],
                                                             by_person: actor === 'department' ? s.by_person : false,
-                                                            // Derived, never asked: IT staff completes, people approve.
                                                             kind: actor === 'it_staff' ? 'completion' : 'approval',
                                                             label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
                                                             position_ids: actor === 'chain' || actor === 'department' ? s.position_ids : [],
                                                         });
                                                     }}
                                                 >
-                                                    <SelectTrigger className="h-9 w-[168px] shrink-0 font-medium">
+                                                    <SelectTrigger aria-label={t('wf_step_type')} className="h-9 w-[168px] shrink-0 font-medium">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -363,15 +343,23 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                     aria-label={t('wf_step_label')}
                                                 />
                                                 <div className="flex shrink-0 items-center">
-                                                    <IconBtn disabled={i === 0} onClick={() => moveStep(i, -1)} label="up">
+                                                    <IconBtn
+                                                        disabled={i === 0}
+                                                        onClick={() => moveStep(i, -1)}
+                                                        label={t('wf_step_move_up').replace('{n}', String(i + 1))}
+                                                    >
                                                         <ArrowUp className="h-3.5 w-3.5" />
                                                     </IconBtn>
-                                                    <IconBtn disabled={i === steps.length - 1} onClick={() => moveStep(i, 1)} label="down">
+                                                    <IconBtn
+                                                        disabled={i === steps.length - 1}
+                                                        onClick={() => moveStep(i, 1)}
+                                                        label={t('wf_step_move_down').replace('{n}', String(i + 1))}
+                                                    >
                                                         <ArrowDown className="h-3.5 w-3.5" />
                                                     </IconBtn>
                                                     <IconBtn
                                                         onClick={() => removeStep(i)}
-                                                        label="remove"
+                                                        label={t('wf_step_remove').replace('{n}', String(i + 1))}
                                                         className="text-destructive/70 hover:text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -379,8 +367,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                 </div>
                                             </div>
 
-                                            {/* Who may sign this rung — the chosen titles read as a sentence;
-                                                the full list opens for one rung at a time. */}
+                                            {/* Who may sign this rung */}
                                             {s.actor_type === 'department' && (
                                                 <DepartmentStepFields step={s} onChange={(patch) => updStep(i, patch)} t={t} />
                                             )}
@@ -400,8 +387,6 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                         {positions.length > 0 && chosen.length === 0 && (
                                                             <span className="text-destructive text-xs">{t('wf_step_positions_required')}</span>
                                                         )}
-                                                        {/* The one behaviour a first-time configurer would not guess, said where
-                                                            the rule it applies to is set rather than in a footnote after the list. */}
                                                         <span className="text-muted-foreground ml-auto text-[11px]">
                                                             {s.actor_type === 'chain'
                                                                 ? t('wf_step_skip_note_chain')
@@ -409,6 +394,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                         </span>
                                                         <button
                                                             type="button"
+                                                            aria-expanded={openRanks === i}
+                                                            aria-controls={`wf-ranks-${i}`}
                                                             onClick={() => setOpenRanks(openRanks === i ? null : i)}
                                                             className="text-brand text-xs font-semibold hover:underline"
                                                         >
@@ -417,7 +404,10 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                     </div>
 
                                                     {openRanks === i && (
-                                                        <div className="border-border/70 bg-muted/30 mt-2 rounded-lg border p-2.5">
+                                                        <div
+                                                            id={`wf-ranks-${i}`}
+                                                            className="border-border/70 bg-muted/30 mt-2 rounded-lg border p-2.5"
+                                                        >
                                                             <div className="flex flex-wrap gap-1.5">
                                                                 {positions.map((p) => {
                                                                     const on = s.position_ids.includes(p.id);
@@ -425,6 +415,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                                         <button
                                                                             key={p.id}
                                                                             type="button"
+                                                                            aria-pressed={on}
                                                                             onClick={() =>
                                                                                 updStep(i, {
                                                                                     position_ids: on
@@ -463,44 +454,65 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
                     {/* Resolve against a real reporting line */}
                     <div className="border-brand/40 bg-brand/5 rounded-xl border px-4 py-4">
-                        <div className="text-brand flex items-center gap-2 text-xs font-bold tracking-wide uppercase">
+                        <div className="text-brand flex items-center gap-2 text-xs font-bold tracking-wide uppercase [&:lang(th)]:tracking-normal [&:lang(th)]:normal-case">
                             <Users className="h-4 w-4" />
                             {t('wf_resolve_title')}
                         </div>
-                        <p className="text-muted-foreground mt-1.5 mb-3 text-xs leading-relaxed">{t('wf_resolve_hint')}</p>
+                        <p className="text-foreground/65 dark:text-muted-foreground mt-1.5 mb-3 text-xs leading-relaxed">{t('wf_resolve_hint')}</p>
                         <div className="flex items-center gap-2.5">
-                            <span className="text-xs font-semibold whitespace-nowrap">{t('wf_test_with')}</span>
+                            <label htmlFor="wf-test-with" className="text-xs font-semibold whitespace-nowrap">
+                                {t('wf_test_with')}
+                            </label>
                             <div className="min-w-0 flex-1">
-                                <SearchableSelect value={previewEmployee} onChange={setPreviewEmployee} options={employeeOptions} clearable />
+                                <SearchableSelect
+                                    id="wf-test-with"
+                                    value={previewEmployee}
+                                    onChange={setPreviewEmployee}
+                                    options={employeeOptions}
+                                    clearable
+                                />
                             </div>
                         </div>
-                        {preview.isPending && (
-                            <div className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />…
-                            </div>
-                        )}
-                        {previewRows && !preview.isPending && (
-                            <div className="bg-background mt-3 space-y-3 rounded-xl px-4 py-4">
-                                {previewRows.map((row, i) => (
-                                    <ResolvedRow key={i} row={row} t={t} />
-                                ))}
-                            </div>
-                        )}
+                        <div aria-live="polite">
+                            {preview.isPending && (
+                                <div className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                    {t('wf_preview_loading')}
+                                </div>
+                            )}
+                            {previewFailed && !preview.isPending && <p className="text-destructive mt-3 text-xs">{t('wf_preview_error')}</p>}
+                            {previewRows && !preview.isPending && (
+                                <div className="bg-background mt-3 space-y-3 rounded-xl px-4 py-4">
+                                    {previewRows.map((row, i) => (
+                                        <ResolvedRow key={i} row={row} t={t} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
-                    {serverError && <p className="text-destructive min-w-0 flex-1 truncate text-xs">{serverError}</p>}
-                    <div className={cn('flex items-center gap-3', !serverError && 'ml-auto')}>
+                    {serverError && (
+                        <div
+                            key={serverError}
+                            role="alert"
+                            className="bg-destructive/10 dark:text-destructive animate-shake min-w-0 flex-1 rounded-lg px-3.5 py-2 text-sm text-red-700"
+                        >
+                            {serverError}
+                        </div>
+                    )}
+                    <div className={cn('flex shrink-0 items-center gap-3', !serverError && 'ml-auto')}>
                         <Button variant="outline" onClick={() => guardClose(onClose)} disabled={update.isPending}>
                             {t('cancel')}
                         </Button>
-                        {/* A rung naming no position is refused by the API; say so here
-                            instead of spending a round trip to find out. */}
-                        <Button onClick={submit} disabled={update.isPending || saveState === 'done' || hasEmptyRung || hasIncompleteDepartment}>
-                            {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                            {saveState === 'done' ? t('saved') : t('save')}
-                        </Button>
+                        {/* Disabled while a rung names no position (the API refuses it) */}
+                        <SaveButton
+                            onClick={submit}
+                            loading={update.isPending}
+                            success={saveState === 'done'}
+                            disabled={saveState === 'done' || hasEmptyRung || hasIncompleteDepartment}
+                        />
                     </div>
                 </div>
             </DialogContent>
@@ -513,17 +525,16 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
     const skipped = row.status === 'skipped';
     const queue = row.actor_type === 'it_staff';
     const owner = row.actor_type === 'owner' && row.approver_employee_id === null && !skipped;
-    // A step open to several people resolves to no single name; the preview has to say who
-    // it reached, or the one shape that names more than one reads as though it found nobody.
+    // A step open to several people lists them all
     const candidates = row.approver_candidates ?? [];
     return (
         <div className="flex items-start gap-3">
             <span
                 className={cn(
                     'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                    skipped && 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-                    queue && 'bg-brand/10 text-brand',
-                    !skipped && !queue && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                    skipped && 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+                    queue && 'bg-brand/8 text-brand',
+                    !skipped && !queue && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
                 )}
             >
                 {row.position}
@@ -534,12 +545,7 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
                 </div>
                 <div className="text-muted-foreground text-xs">
                     {skipped
-                        ? // The reason is a code, not free text: `note` is only ever what a person
-                          // wrote, so a skipped preview row read "ข้ามขั้นนี้ - " with nothing after
-                          // the dash — the one thing the reader needed was missing. Each reason
-                          // already opens with "skipped", so it stands alone rather than after a
-                          // prefix that says the word twice.
-                          row.skip_reason
+                        ? row.skip_reason
                             ? t(REQUEST_SKIP_REASON_LABEL[row.skip_reason])
                             : t('wf_skipped')
                         : queue
@@ -550,11 +556,10 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
                               ? t('wf_any_of_preview')
                               : row.approver_position || row.label}
                 </div>
-                {/* Merged steps say so with covered_steps — not by a comma in the label, which a
-                    single step's own name may contain. */}
+                {/* Merged steps (covered_steps) */}
                 {!skipped && !queue && row.approver_name && (row.covered_steps ?? 1) > 1 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                        <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                        <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
                             {t('wf_covers')}: {row.label}
                         </span>
                     </div>
@@ -584,20 +589,12 @@ function FlagCard({
                 <div className="truncate text-sm font-semibold">{label}</div>
                 {hint && <div className="text-muted-foreground truncate text-[11px]">{hint}</div>}
             </div>
-            <Switch checked={on} onChange={onChange} />
+            <Switch checked={on} onChange={onChange} aria-label={label} />
         </div>
     );
 }
 
-/**
- * The department half of a department step: which department, and then who in it.
- *
- * Two shapes rather than one, because they are different promises. Naming people says
- * "one of these signs"; naming positions says "anybody in the department at this level
- * does". Both end the same way — the first to act takes the step — so naming two people
- * is how a route gets a deputy without opening itself to a whole rank. The position chips
- * below are the same control a chain rung uses, so the second shape needs nothing here.
- */
+/** The department half of a department step: which department, then named people or its positions. */
 function DepartmentStepFields({
     step,
     onChange,
@@ -611,21 +608,21 @@ function DepartmentStepFields({
     const { data: members = [] } = useDepartmentMembers(step.department_id);
     const byPerson = !!step.by_person;
     const named = step.approver_employee_ids.map((id) => members.find((m) => m.id === id)).filter((m): m is (typeof members)[number] => !!m);
-    // Only people still here can be added: the resolver drops somebody who has left, so
-    // offering them would be offering a name that quietly does nothing. Already-named
-    // people are still drawn as chips whatever their status — the list shows what it holds.
+    // Only active people can be added (the resolver drops leavers)
     const addable = members.filter((m) => m.status === 'active' && !step.approver_employee_ids.includes(m.id));
+    const uid = useId();
 
     return (
         <div className="mt-2 space-y-2 border-t border-dashed pt-2">
             <div className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground shrink-0 text-xs">{t('wf_step_department')}</span>
+                <label htmlFor={`${uid}-dept`} className="text-muted-foreground shrink-0 text-xs">
+                    {t('wf_step_department')}
+                </label>
                 <span className="inline-block w-56">
                     <SearchableSelect
+                        id={`${uid}-dept`}
                         value={step.department_id === null ? '' : String(step.department_id)}
-                        // Changing department drops the person chosen from the previous one:
-                        // keeping them would be a step whose approver is not in the department
-                        // it names, which the server would refuse anyway.
+                        // A new department drops the people named in the old one
                         onChange={(v) => onChange({ department_id: v ? Number(v) : null, approver_employee_ids: [] })}
                         options={departments.map((d) => ({ value: String(d.id), label: d.name, search: `${d.name} ${d.name_th ?? ''}` }))}
                         placeholder={t('wf_step_department_pick')}
@@ -637,6 +634,7 @@ function DepartmentStepFields({
                 <span className="text-muted-foreground shrink-0 text-xs">{t('wf_step_who')}</span>
                 <button
                     type="button"
+                    aria-pressed={!byPerson}
                     onClick={() => onChange({ by_person: false })}
                     className={cn(
                         'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
@@ -647,10 +645,8 @@ function DepartmentStepFields({
                 </button>
                 <button
                     type="button"
+                    aria-pressed={byPerson}
                     disabled={step.department_id === null}
-                    // Switching says which shape this step is, and nothing more: no name is
-                    // chosen for the editor, because a name nobody picked is a route decision
-                    // made by a default.
                     onClick={() => onChange({ by_person: true })}
                     className={cn(
                         'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40',
@@ -661,9 +657,7 @@ function DepartmentStepFields({
                 </button>
             </div>
 
-            {/* The people named, as removable chips. A list rather than one slot, because a
-                route that rests on one person stalls the week they are away — and naming a
-                deputy must not mean opening the step to their whole rank. */}
+            {/* The people named, as removable chips */}
             {byPerson && (
                 <div className="flex flex-wrap items-center gap-1.5 pl-1">
                     {named.map((m) => (
@@ -682,12 +676,14 @@ function DepartmentStepFields({
                             </button>
                         </span>
                     ))}
-                    {/* No picker at all when the department is empty: an open dropdown with
-                        nothing in it invites a click that cannot do anything, and the line
-                        below says what is actually wrong. */}
+                    {/* No picker for an empty department */}
                     {members.length > 0 && (
                         <span className="inline-block w-56">
+                            <label htmlFor={`${uid}-person`} className="sr-only">
+                                {t('wf_step_person_add')}
+                            </label>
                             <SearchableSelect
+                                id={`${uid}-person`}
                                 value=""
                                 onChange={(v) => {
                                     const id = Number(v);
@@ -699,16 +695,12 @@ function DepartmentStepFields({
                             />
                         </span>
                     )}
-                    {/* Said where the list is built, once there is a list: a second name is a
-                        stand-in, not a second signature — a route needing both asks twice. */}
                     {named.length > 0 && <span className="text-muted-foreground text-[11px]">{t('wf_step_people_note')}</span>}
                 </div>
             )}
 
             {step.department_id === null && <p className="text-destructive text-xs">{t('wf_step_department_required')}</p>}
-            {/* Two different gaps, said apart. A department with nobody in it cannot be asked
-                to name anybody — that is a staffing fact, and telling the editor to "choose a
-                person" from an empty list would be an instruction they cannot follow. */}
+            {/* An empty department is a different gap from "no person chosen" */}
             {byPerson && step.department_id !== null && members.length === 0 && (
                 <p className="text-destructive text-xs">{t('wf_step_department_empty')}</p>
             )}
@@ -719,21 +711,13 @@ function DepartmentStepFields({
     );
 }
 
-/**
- * What a step's label says when nobody has written one.
- *
- * The label decides nothing — the actor type and the positions do — so a step called
- * "Manager" that a Supervisor actually signs is a lie the screen tells about itself. Until
- * somebody types their own, it reads back the rule underneath it.
- */
+/** A step's label until somebody writes one: it reads back the rule underneath it. */
 function withDerivedLabel(step: EditableStep, positions: { id: number; title: string }[], departments: { id: number; name: string }[]): EditableStep {
     if (step.label_touched) {
         return step;
     }
 
-    // A step naming people reads back as its department alone: the positions it still holds
-    // are the other shape's, kept in case the editor switches back, and do not describe what
-    // this step now does.
+    // A step naming people reads back as its department alone
     const titles = step.by_person ? [] : positions.filter((p) => step.position_ids.includes(p.id)).map((p) => p.title);
     const department = departments.find((d) => d.id === step.department_id)?.name;
 

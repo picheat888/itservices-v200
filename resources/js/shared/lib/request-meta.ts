@@ -125,7 +125,7 @@ export const REQUEST_REJECT_BUTTON = 'border-destructive/50 text-destructive hov
  * table and the dialogs had a filled one — the same decision looking like two different
  * weights depending on where you met it.
  */
-export const REQUEST_APPROVE_BUTTON = 'bg-emerald-600 text-white hover:bg-emerald-700';
+export const REQUEST_APPROVE_BUTTON = 'bg-emerald-700 text-white hover:bg-emerald-800';
 
 /**
  * The row tint for a new employee's request, or nothing.

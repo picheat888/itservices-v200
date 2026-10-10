@@ -25,6 +25,12 @@ export function fieldError(error: unknown, field: string): string | undefined {
     return e?.response?.data?.errors?.[field]?.[0];
 }
 
+/** The server's own `message` on a failed request, if it sent one. */
+export function serverMessage(error: unknown): string | undefined {
+    const message = (error as ApiErrorShape)?.response?.data?.message;
+    return typeof message === 'string' && message !== '' ? message : undefined;
+}
+
 /**
  * Show the standard toast for a failed master-data delete. A 409 means the item
  * is still referenced — the body shows the {count} of records still using it;
