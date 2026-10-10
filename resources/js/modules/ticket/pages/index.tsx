@@ -71,8 +71,9 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T | '' =>
     (allowed as readonly string[]).includes(value) ? (value as T) : '';
 
-/** The dashboard window from ?range (7 / 90, or custom with ?from & ?to); anything else is 30 days. */
+/** The dashboard window from ?range (7 / 90 / all, or custom with ?from & ?to); anything else is 30 days. */
 function readRange(range: string, from: string, to: string): SummaryRange {
+    if (range === 'all') return 'all';
     if (range === 'custom') {
         return ISO_DATE.test(from) && ISO_DATE.test(to) && from <= to ? { from, to } : DEFAULT_RANGE;
     }
@@ -81,7 +82,7 @@ function readRange(range: string, from: string, to: string): SummaryRange {
 }
 
 /**
- * 7 / 30 / 90-day window selector for the dashboard, plus a custom from–to range. "กำหนดเอง"
+ * 7 / 30 / 90-day or whole-history window selector for the dashboard, plus a custom from–to range. "กำหนดเอง"
  * opens the shared two-month range calendar (as the reports do), which applies only on
  * "นำไปใช้" — so a half-picked range never fetches — and can't pick an end before the start.
  */
@@ -91,16 +92,17 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
 
     return (
         <div className="border-border inline-flex rounded-lg border p-0.5">
-            {[7, 30, 90].map((d) => (
+            {([7, 30, 90, 'all'] as const).map((d) => (
                 <button
                     key={d}
+                    type="button"
                     onClick={() => onChange(d)}
                     className={cn(
                         'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
                         value === d ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground',
                     )}
                 >
-                    {d} {t('ticket_days')}
+                    {d === 'all' ? t('ticket_all') : `${d} ${t('ticket_days')}`}
                 </button>
             ))}
             <DateRangeInput from={custom ? value.from : ''} to={custom ? value.to : ''} align="end" onChange={(from, to) => onChange({ from, to })}>
@@ -212,7 +214,7 @@ export default function TicketsPage() {
     // No sorting by a column this reader is not shown.
     const sortOptions = SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due'));
     const sort = pickAllowed(list.get('sort'), sortOptions) || DEFAULT_SORT;
-    // Dashboard window (?range=7|90|custom with ?from&to); 30 days stays out of the URL.
+    // Dashboard window (?range=7|90|all|custom with ?from&to); 30 days stays out of the URL.
     const range = readRange(list.get('range'), list.get('from'), list.get('to'));
     const setRange = (next: SummaryRange) =>
         list.setParams(
