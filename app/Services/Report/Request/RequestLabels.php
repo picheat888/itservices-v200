@@ -3,6 +3,9 @@
 namespace App\Services\Report\Request;
 
 use App\Enums\Request\RequestType;
+use App\Models\Request\ServiceRequest;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 
 /**
  * Request type / status wording shared by the request tabular reports: the i18n key the page
@@ -21,6 +24,65 @@ trait RequestLabels
         'pending' => 'รออนุมัติ', 'approved' => 'อนุมัติแล้ว', 'completed' => 'เสร็จสิ้น',
         'rejected' => 'ไม่อนุมัติ', 'cancelled' => 'ยกเลิก',
     ];
+
+    // Age groups the approvals and IT pages share, worst first, in whole days
+    private const AGE_BANDS = ['over_7', 'days_4_7', 'upto_3'];
+
+    private const AGE_BAND_KEYS = ['over_7' => 'rep_age_over_7', 'days_4_7' => 'rep_age_days_4_7', 'upto_3' => 'rep_age_upto_3'];
+
+    private const AGE_BAND_TH = ['over_7' => 'เกิน 7 วัน', 'days_4_7' => '4–7 วัน', 'upto_3' => 'ไม่เกิน 3 วัน'];
+
+    private static function ageBand(int $days): string
+    {
+        return $days > 7 ? 'over_7' : ($days > 3 ? 'days_4_7' : 'upto_3');
+    }
+
+    /** Whole days from one moment to another by their dates (same day = 0); negative when `to` is earlier. */
+    private static function wholeDays(CarbonInterface $from, CarbonInterface $to): int
+    {
+        return (int) $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay(), false);
+    }
+
+    /**
+     * The period of the same length that ends the day before `from`, and whether it is fair to compare
+     * with: not when it starts before the first request the system holds.
+     *
+     * @return array{from: Carbon, to: Carbon, comparable: bool}
+     */
+    private static function previousPeriod(CarbonInterface $from, CarbonInterface $to): array
+    {
+        $length = self::wholeDays($from, $to) + 1;
+        $prevTo = Carbon::parse($from)->subDay()->endOfDay();
+        $prevFrom = $prevTo->copy()->subDays($length - 1)->startOfDay();
+        $first = ServiceRequest::query()->min('created_at');
+
+        return ['from' => $prevFrom, 'to' => $prevTo, 'comparable' => $first !== null && $prevFrom->gte(Carbon::parse($first)->startOfDay())];
+    }
+
+    /**
+     * A tile's trend for the Delta + Sparkline footer, one shape for every request report.
+     * `basis`: 'prev' (previous period), 'since_7d' (7 days ago) or 'no_base' (nothing fair to compare with).
+     *
+     * @param  list<int|float|null>  $points
+     * @return array{direction: 'up'|'down'|'even', label_key: string, values: array<string, int|float>, points: list<int|float|null>, up_is_good: ?bool}
+     */
+    private static function trend(int|float|null $now, int|float|null $before, string $basis, array $points, ?bool $upIsGood): array
+    {
+        $delta = $basis === 'no_base' || $now === null || $before === null ? null : round($now - $before, 1);
+        $direction = match (true) {
+            $delta === null, abs($delta) < 0.05 => 'even',
+            $delta > 0 => 'up',
+            default => 'down',
+        };
+
+        return [
+            'direction' => $direction,
+            'label_key' => "rep_req_trend_{$basis}",
+            'values' => $delta === null ? [] : ['delta' => abs($delta)],
+            'points' => $points,
+            'up_is_good' => $upIsGood,
+        ];
+    }
 
     /** @return array<string, string> type value → i18n key */
     private static function typeKeys(): array

@@ -176,13 +176,13 @@ class ReportSnapshotService
     /** @return array<string, mixed>|null */
     private function requestsPending(User $viewer, CarbonImmutable $from, CarbonImmutable $to): ?array
     {
-        if (! ReportCatalogue::allows($viewer, ReportCatalogue::REQUESTS_SUMMARY)) {
+        if (! ReportCatalogue::allows($viewer, ReportCatalogue::REQUESTS_OVERVIEW)) {
             return null;
         }
 
         return $this->tile(
             'requests_pending',
-            ReportCatalogue::REQUESTS_SUMMARY,
+            ReportCatalogue::REQUESTS_OVERVIEW,
             ServiceRequest::query()->where('status', 'pending')->count(),
             secondary: ['key' => 'submitted', 'value' => ServiceRequest::query()->whereBetween('created_at', [$from, $to])->count()],
         );
