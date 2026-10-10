@@ -283,7 +283,7 @@ export default function RequestsPage() {
     const kpiLoading = !meta;
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
             {/* Page head */}
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

@@ -52,11 +52,11 @@ export default function ReportsPage() {
     }, [reports, query, domain, t]);
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div className="min-w-0">
                     <h1 className="text-2xl font-bold">{t('rep_center_title')}</h1>
-                    <p className="text-muted-foreground mt-1 max-w-[72ch] text-sm">{t('rep_center_sub')}</p>
+                    <p className="text-muted-foreground max-w-[72ch] text-sm">{t('rep_center_sub')}</p>
                 </div>
                 <PeriodSwitch range={range} onChange={setRange} />
             </div>
