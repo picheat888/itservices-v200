@@ -626,7 +626,6 @@ export interface AccessMembersBreakdown {
         | (AccessMembersResource & {
               list: (AccessPerson & {
                   level: 'Read' | 'Write' | 'member';
-                  purpose: string | null;
                   granted_at: string | null;
                   kind: AccessMemberKind;
               })[];

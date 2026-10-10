@@ -604,7 +604,6 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                         <th className={cell}>{t('rep_c_ac_employee')}</th>
                         <th className={cell}>{t('rep_ac_dept_col_name')}</th>
                         {isFile && <th className={cell}>{t('rep_c_ac_level')}</th>}
-                        <th className={cell}>{t('rep_c_ac_purpose')}</th>
                         <th className={cell}>{t('rep_c_ac_granted_at')}</th>
                         <th className={cell}>{t('rep_ar_sheet_note')}</th>
                         <th className={cn(cell, 'w-14 text-center')}>{t('rep_ar_sheet_keep')}</th>
@@ -620,7 +619,6 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                             </td>
                             <td className={cell}>{deptName(m.department, lang) ?? '—'}</td>
                             {isFile && <td className={cell}>{t(`rep_ac_level_${m.level.toLowerCase()}`)}</td>}
-                            <td className={cell}>{m.purpose ?? '—'}</td>
                             <td className={cell}>{m.granted_at ?? '—'}</td>
                             <td className={cell}>
                                 {m.kind === 'gone' ? t('rep_ar_sheet_gone') : m.kind === 'cross' ? t('rep_ac_status_cross_short') : ''}

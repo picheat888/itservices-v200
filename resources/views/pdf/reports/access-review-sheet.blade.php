@@ -73,7 +73,7 @@
 
     <table class="data">
         <thead><tr>
-            <th class="r">#</th><th>พนักงาน</th><th>แผนก</th>@if ($isFile)<th>ระดับ</th>@endif<th>วัตถุประสงค์</th><th>วันที่ให้</th><th>หมายเหตุ</th><th class="c">ยังใช้</th><th class="c">ถอน</th>
+            <th class="r">#</th><th>พนักงาน</th><th>แผนก</th>@if ($isFile)<th>ระดับ</th>@endif<th>วันที่ให้</th><th>หมายเหตุ</th><th class="c">ยังใช้</th><th class="c">ถอน</th>
         </tr></thead>
         <tbody>
         @forelse ($sheet['list'] as $i => $m)
@@ -82,14 +82,13 @@
                 <td><b>{{ $m['name'] }}</b> <span class="muted">{{ $m['code'] }}</span></td>
                 <td>{{ $dept($m['department']) }}</td>
                 @if ($isFile)<td>{{ $levels[$m['level']] ?? $m['level'] }}</td>@endif
-                <td>{{ $m['purpose'] ?? '—' }}</td>
                 <td>{{ $m['granted_at'] ?? '—' }}</td>
                 <td>{{ $m['kind'] === 'gone' ? 'ลาออก'.($m['last_day'] ? ' '.$m['last_day'] : '') : ($m['kind'] === 'cross' ? 'ข้ามแผนก' : '') }}</td>
                 <td class="c"><span class="box"></span></td>
                 <td class="c"><span class="box"></span></td>
             </tr>
         @empty
-            <tr><td colspan="{{ $isFile ? 9 : 8 }}" class="muted">ไม่มีสมาชิก</td></tr>
+            <tr><td colspan="{{ $isFile ? 8 : 7 }}" class="muted">ไม่มีสมาชิก</td></tr>
         @endforelse
         </tbody>
     </table>

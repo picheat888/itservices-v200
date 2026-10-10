@@ -93,6 +93,13 @@ class SoftwareLicenseReportTest extends TestCase
         return $this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses/rows'.$query)->assertOk()->json('data');
     }
 
+    public function test_purpose_starts_hidden_but_stays_in_the_file(): void
+    {
+        $columns = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses')->assertOk()->json('data.columns'))->keyBy('key');
+
+        $this->assertTrue($columns['purpose']['hidden']);
+    }
+
     public function test_the_list_has_a_row_per_holder_leavers_first(): void
     {
         $rows = $this->rows();
