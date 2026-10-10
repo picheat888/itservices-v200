@@ -203,11 +203,12 @@ class RequestService
     /** Approve the current step as its resolved approver. */
     public function approve(ServiceRequest $request, User $actor, ?string $note): ServiceRequest
     {
-        [$request, $decided, $isFinal] = DB::transaction(function () use ($request, $actor, $note) {
+        [$request, $decided, $isFinal, $wasGroup] = DB::transaction(function () use ($request, $actor, $note) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             $this->assertStatus($fresh, RequestStatus::Pending);
             $row = $this->currentActionableRow($fresh);
             $this->assertActorIsApprover($actor, $row);
+            $wasGroup = $row->isOpenToGroup();
             $this->claimForActor($actor, $row);
 
             $row->update([
@@ -227,10 +228,13 @@ class RequestService
                 $fresh->update(['last_activity_at' => now()]);
             }
 
-            return [$fresh, $row, $next === null];
+            return [$fresh, $row, $next === null, $wasGroup];
         });
 
         $request->refresh()->load('approvals');
+        if ($wasGroup) {
+            $this->notifications->groupStepTaken($request, $decided, $actor);
+        }
         $isFinal
             ? $this->notifications->finalApproved($request)
             : $this->notifications->advanced($request, $decided);
@@ -241,11 +245,12 @@ class RequestService
     /** Reject the current step (remark required — enforced at the HTTP layer). */
     public function reject(ServiceRequest $request, User $actor, string $note): ServiceRequest
     {
-        [$request, $row] = DB::transaction(function () use ($request, $actor, $note) {
+        [$request, $row, $wasGroup] = DB::transaction(function () use ($request, $actor, $note) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             $this->assertStatus($fresh, RequestStatus::Pending);
             $row = $this->currentActionableRow($fresh);
             $this->assertActorIsApprover($actor, $row);
+            $wasGroup = $row->isOpenToGroup();
             $this->claimForActor($actor, $row);
 
             $row->update([
@@ -261,10 +266,13 @@ class RequestService
                 'last_activity_at' => now(),
             ]);
 
-            return [$fresh, $row];
+            return [$fresh, $row, $wasGroup];
         });
 
         $request->refresh()->load('approvals');
+        if ($wasGroup) {
+            $this->notifications->groupStepTaken($request, $row, $actor);
+        }
         $this->notifications->rejected($request, $row);
 
         return $request;

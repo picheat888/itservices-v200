@@ -10,7 +10,10 @@ use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class StockWorkflowTest extends TestCase
@@ -221,6 +224,56 @@ class StockWorkflowTest extends TestCase
             ->assertJsonPath('message', 'request_wrong_status')
             ->assertJsonPath('expected', 'approved')
             ->assertJsonPath('current', 'pending');
+    }
+
+    /** Flips the request's status in the DB the moment the action's transaction begins (a concurrent decision). */
+    private function changeStatusOnTransactionStart(StockRequest $req, string $status): void
+    {
+        $fired = false;
+        Event::listen(TransactionBeginning::class, function () use (&$fired, $req, $status) {
+            if (! $fired) {
+                $fired = true;
+                DB::table('stock_requests')->where('id', $req->id)->update(['status' => $status]);
+            }
+        });
+    }
+
+    public function test_fulfill_rechecks_status_under_lock_so_stock_is_not_issued_twice(): void
+    {
+        $item = $this->item();
+        $req = StockRequest::create([
+            'stock_item_id' => $item->id, 'requester_name' => 'X', 'qty' => 2, 'reason' => 'r', 'status' => 'approved',
+        ]);
+        $fulfiller = $this->superUser();
+        $this->changeStatusOnTransactionStart($req, 'fulfilled');
+
+        $this->actingAs($fulfiller)
+            ->postJson("/api/stock-requests/{$req->id}/fulfill")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'request_wrong_status')
+            ->assertJsonPath('current', 'fulfilled');
+
+        $this->assertSame(10, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::where('type', 'issue')->where('stock_item_id', $item->id)->count());
+    }
+
+    public function test_approve_and_reject_recheck_status_under_lock(): void
+    {
+        $item = $this->item();
+        $approver = $this->superUser();
+        foreach (['approve', 'reject'] as $action) {
+            $req = StockRequest::create([
+                'stock_item_id' => $item->id, 'requester_name' => 'X', 'qty' => 1, 'reason' => 'r', 'status' => 'pending',
+            ]);
+            $this->changeStatusOnTransactionStart($req, 'rejected');
+
+            $this->actingAs($approver)
+                ->postJson("/api/stock-requests/{$req->id}/{$action}", ['remark' => 'no'])
+                ->assertUnprocessable()
+                ->assertJsonPath('message', 'request_wrong_status');
+            $this->assertNull($req->fresh()->approver_name);
+            Event::forget(TransactionBeginning::class);
+        }
     }
 
     public function test_fulfill_deducts_from_chosen_source_warehouse(): void

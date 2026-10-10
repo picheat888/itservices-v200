@@ -35,10 +35,10 @@ class RequestRemarkEscapingTest extends TestCase
     }
 
     /** Renders one template for one recipient, whatever extras the caller passes. */
-    private function render(string $key, array $extras): string
+    private function render(string $key, array $extras, array $requestAttributes = []): string
     {
         $recipient = User::factory()->create(['email' => 'piches@inaba.co.th', 'name' => 'Piches Srisuk']);
-        $request = ServiceRequest::create([
+        $request = ServiceRequest::create($requestAttributes + [
             'reference' => 'RQ-2026-9001',
             'type' => RequestType::Mobile->value,
             'origin' => RequestOrigin::Direct->value,
@@ -86,6 +86,29 @@ class RequestRemarkEscapingTest extends TestCase
         $this->assertStringNotContainsString('<b>not</b>', $html);
         // Written over two lines on purpose, so it stays that way.
         $this->assertStringContainsString('<br />', $html);
+    }
+
+    public function test_names_and_titles_arrive_as_text_not_as_markup(): void
+    {
+        Bus::fake();
+        EmailTemplate::where('key', 'request.rejected')->update([
+            'subject' => 'From {{requester.name}}',
+            'body_html' => '<p>{{requester.name}}|{{request.title}}|{{actor.name}}|{{step.label}}</p>',
+        ]);
+        $attributes = ['requester_name' => '<a href=x>y</a>', 'title' => 'Phone <b>now</b>'];
+        $extras = ['actor.name' => '<i>Boss</i>', 'step.label' => '<u>QC</u>'];
+
+        $html = $this->render('request.rejected', $extras, $attributes);
+
+        $this->assertStringContainsString('&lt;a href=x&gt;y&lt;/a&gt;', $html);
+        $this->assertStringContainsString('Phone &lt;b&gt;now&lt;/b&gt;', $html);
+        $this->assertStringContainsString('&lt;i&gt;Boss&lt;/i&gt;', $html);
+        $this->assertStringContainsString('&lt;u&gt;QC&lt;/u&gt;', $html);
+        $this->assertStringNotContainsString('<a href=x>', $html);
+
+        // The subject is plain text, so it carries the name as typed, not as entities.
+        $job = collect(Bus::dispatched(SendTemplatedEmail::class))->first();
+        $this->assertSame('From <a href=x>y</a>', $this->prop($job, 'subject'));
     }
 
     public function test_an_empty_remark_reads_as_a_dash(): void

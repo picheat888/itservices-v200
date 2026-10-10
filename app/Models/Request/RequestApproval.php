@@ -2,11 +2,14 @@
 
 namespace App\Models\Request;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalSkipReason;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\StepActorType;
 use App\Enums\Request\WorkflowStepKind;
+use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +30,9 @@ class RequestApproval extends Model
         'status', 'note', 'skip_reason', 'acted_by_user_id', 'acted_by_name',
         'became_current_at', 'acted_at',
     ];
+
+    /** @var array{department: string|null, positions: list<string>, candidates: list<string>}|null */
+    protected ?array $preloadedGroupNames = null;
 
     protected function casts(): array
     {
@@ -88,13 +94,63 @@ class RequestApproval extends Model
     }
 
     /**
+     * What a group step shows instead of one name: its department, position titles and named people.
+     *
+     * @return array{department: string|null, positions: list<string>, candidates: list<string>}
+     */
+    public function groupNames(): array
+    {
+        if ($this->preloadedGroupNames === null) {
+            static::preloadGroupNames([$this]);
+        }
+
+        return $this->preloadedGroupNames;
+    }
+
+    /**
+     * Fills groupNames() for many rows at once — one query per lookup table instead of per row.
+     *
+     * @param  iterable<RequestApproval>  $approvals
+     */
+    public static function preloadGroupNames(iterable $approvals): void
+    {
+        $rows = collect($approvals);
+        $departmentRows = $rows->filter(fn (self $row) => $row->isOpenToDepartment());
+        $namedRows = $rows->filter(fn (self $row) => $row->isOpenToNamedGroup());
+
+        $departmentIds = $departmentRows->pluck('approver_department_id')->unique()->values();
+        $positionIds = $departmentRows->flatMap(fn (self $row) => $row->approver_position_ids)->unique()->values();
+        $employeeIds = $namedRows->flatMap(fn (self $row) => $row->namedApproverIds())->unique()->values();
+
+        $departments = $departmentIds->isEmpty() ? collect() : Department::whereIn('id', $departmentIds)->pluck('name', 'id');
+        $positions = $positionIds->isEmpty() ? collect() : Position::whereIn('id', $positionIds)->pluck('title', 'id');
+        $employees = $employeeIds->isEmpty() ? collect() : Employee::whereIn('id', $employeeIds)->get()->keyBy('id');
+
+        foreach ($rows as $row) {
+            $row->preloadedGroupNames = [
+                'department' => $row->isOpenToDepartment() ? $departments->get($row->approver_department_id) : null,
+                // Id order, the order a whereIn on positions returns.
+                'positions' => $row->isOpenToDepartment()
+                    ? collect($row->approver_position_ids)->map(fn ($id) => (int) $id)->unique()->sort()
+                        ->filter(fn (int $id) => $positions->has($id))
+                        ->map(fn (int $id) => $positions->get($id))->values()->all()
+                    : [],
+                // The workflow's own order: the first name is who the route means to ask.
+                'candidates' => collect($row->namedApproverIds())
+                    ->map(fn (int $id) => $employees->get($id)?->name)
+                    ->filter()->values()->all(),
+            ];
+        }
+    }
+
+    /**
      * Whether this employee may act on a group step. Never the person the request is for:
      * a department group can include the requester (they hold one of its positions), and
      * the resolver only keeps them out of the "is anybody left?" check, not out of the row.
      */
     public function acceptsEmployee(?Employee $employee): bool
     {
-        if ($employee === null || $this->isRequestOf($employee)) {
+        if ($employee === null || $employee->status === EmployeeStatus::Resigned || $this->isRequestOf($employee)) {
             return false;
         }
 
@@ -130,10 +186,16 @@ class RequestApproval extends Model
             ->orWhere('employee_id', '!=', $employee->id));
 
         return $query->where(function (Builder $q) use ($employee) {
-            $q->where('approver_employee_id', $employee->id)
-                ->orWhere(fn (Builder $named) => $named
-                    ->whereNull('approver_employee_id')
-                    ->whereJsonContains('approver_employee_ids', (int) $employee->id));
+            $q->where('approver_employee_id', $employee->id);
+
+            // Group steps accept only people who can still hold a step (see acceptsEmployee).
+            if ($employee->status === EmployeeStatus::Resigned) {
+                return;
+            }
+
+            $q->orWhere(fn (Builder $named) => $named
+                ->whereNull('approver_employee_id')
+                ->whereJsonContains('approver_employee_ids', (int) $employee->id));
 
             if ($employee->department_id !== null && $employee->position_id !== null) {
                 $q->orWhere(fn (Builder $group) => $group
