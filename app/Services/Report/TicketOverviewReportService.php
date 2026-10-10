@@ -163,6 +163,21 @@ class TicketOverviewReportService
     }
 
     /**
+     * The report's SLA figure for one window and ticket source, unfiltered otherwise (the Tickets overview tab).
+     *
+     * @return array{sla_measured: int, sla_met: int, sla_rate: ?float}
+     */
+    public function slaFor(User $viewer, CarbonImmutable $from, CarbonImmutable $to, ?string $source = null): array
+    {
+        $filters = self::resolveFilters(['from' => $from->toDateString(), 'to' => $to->toDateString(), 'source' => $source]);
+        $completed = $this->inRange($viewer, $filters)
+            ->where('status', TicketStatus::Completed->value)
+            ->get(['id', 'resolved_at', 'sla_resolve_due_at']);
+
+        return $this->slaCounts($completed);
+    }
+
+    /**
      * @param  Collection<int, Ticket>  $completed
      * @return array{sla_measured: int, sla_met: int, sla_rate: ?float}
      */

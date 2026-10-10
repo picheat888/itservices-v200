@@ -523,6 +523,21 @@ export interface TicketSummary {
     backlog_in_progress: number;
     // Active cases currently past their SLA deadline (right now, not window-scoped).
     over_sla_now: number;
+    over_sla_oldest_days: number | null;
+    // Opened vs closed in six even slices of the window, oldest first.
+    flow: { opened: number; closed: number }[];
+    // The window's SLA as the "ภาพรวม Ticket & SLA" report counts it.
+    period_sla: {
+        from: string;
+        to: string;
+        goal: number;
+        met: number;
+        measured: number;
+        rate: number | null;
+        delta_pts: number | null;
+        request_rate: number | null;
+        manual_rate: number | null;
+    };
     // Window SLA % and its change in percentage points vs the previous window.
     sla_met_pct: number | null;
     sla_delta_pts: number | null;

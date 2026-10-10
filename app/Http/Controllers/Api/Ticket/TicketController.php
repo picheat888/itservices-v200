@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Ticket;
 use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketSource;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Http\Controllers\Controller;
@@ -15,11 +16,13 @@ use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Report\TicketOverviewReportService;
 use App\Services\Request\RequestService;
 use App\Services\Sidebar\SidebarBadgeService;
 use App\Services\Ticket\TicketService;
 use App\Support\Permissions;
 use App\Support\TicketSla;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -206,7 +209,7 @@ class TicketController extends Controller
      * equal-length window, the current unresolved backlog (open + in progress), and
      * the window's SLA %, average response, and per-category mix.
      */
-    public function summary(Request $request): JsonResponse
+    public function summary(Request $request, TicketOverviewReportService $report): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.view_dashboard'), 403);
 
@@ -260,7 +263,7 @@ class TicketController extends Controller
 
         // Cases currently past their active SLA deadline (response clock while open
         // and untaken, resolution clock afterwards) — the dashboard's red status row.
-        $overSlaNow = $tickets
+        $overSla = $tickets
             ->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::live(), true))
             ->filter(function (Ticket $t) {
                 $due = ($t->status === TicketStatus::Open && $t->responded_at === null)
@@ -268,8 +271,8 @@ class TicketController extends Controller
                     : $t->sla_resolve_due_at;
 
                 return $due !== null && $due->isPast();
-            })
-            ->count();
+            });
+        $overSlaNow = $overSla->count();
 
         // SLA % over the tickets resolved within each window, so the trend is comparable.
         $slaCur = $this->slaMetPct($standardIn($curStart, $curEnd));
@@ -313,6 +316,9 @@ class TicketController extends Controller
             'backlog_open' => $open,
             'backlog_in_progress' => $inProgress,
             'over_sla_now' => $overSlaNow,
+            'over_sla_oldest_days' => $overSla->isEmpty() ? null : (int) floor($overSla->max(fn (Ticket $t) => $t->created_at->diffInDays(now()))),
+            'flow' => $this->flowSlices($tickets, $curStart, $curEnd),
+            'period_sla' => $this->periodSla($request->user(), $report, $curStart, $curEnd),
 
             'sla_met_pct' => $slaCur,
             'sla_delta_pts' => ($slaCur === null || $slaPrev === null) ? null : $slaCur - $slaPrev,
@@ -382,6 +388,56 @@ class TicketController extends Controller
             ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'employee_id' => $u->employee_id]);
 
         return response()->json(['data' => $staff]);
+    }
+
+    /**
+     * Opened vs closed in six even slices of the window, oldest first.
+     *
+     * @param  Collection<int, Ticket>  $tickets
+     * @return list<array{opened: int, closed: int}>
+     */
+    private function flowSlices(Collection $tickets, Carbon $start, Carbon $end): array
+    {
+        $step = max(1, intdiv((int) $start->diffInSeconds($end), 6));
+        $slice = fn (Carbon $at): int => min(5, intdiv((int) $start->diffInSeconds($at), $step));
+        $slices = array_fill(0, 6, ['opened' => 0, 'closed' => 0]);
+
+        foreach ($tickets as $ticket) {
+            if ($ticket->created_at >= $start && $ticket->created_at <= $end) {
+                $slices[$slice($ticket->created_at)]['opened']++;
+            }
+            if ($ticket->resolved_at !== null && $ticket->resolved_at >= $start && $ticket->resolved_at <= $end) {
+                $slices[$slice($ticket->resolved_at)]['closed']++;
+            }
+        }
+
+        return $slices;
+    }
+
+    /**
+     * The window's SLA as the "ภาพรวม Ticket & SLA" report counts it, split by ticket source.
+     *
+     * @return array{from: string, to: string, goal: int, met: int, measured: int, rate: ?float, delta_pts: ?float, request_rate: ?float, manual_rate: ?float}
+     */
+    private function periodSla(User $viewer, TicketOverviewReportService $report, Carbon $start, Carbon $end): array
+    {
+        $from = CarbonImmutable::parse($start->toDateString());
+        $to = CarbonImmutable::parse($end->toDateString());
+        $days = (int) $from->diffInDays($to) + 1;
+        $all = $report->slaFor($viewer, $from, $to);
+        $previous = $report->slaFor($viewer, $from->subDays($days), $from->subDay())['sla_rate'];
+
+        return [
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'goal' => TicketSla::goalPercent(),
+            'met' => $all['sla_met'],
+            'measured' => $all['sla_measured'],
+            'rate' => $all['sla_rate'],
+            'delta_pts' => $all['sla_rate'] === null || $previous === null ? null : round($all['sla_rate'] - $previous, 1),
+            'request_rate' => $report->slaFor($viewer, $from, $to, TicketSource::AutoRequest->value)['sla_rate'],
+            'manual_rate' => $report->slaFor($viewer, $from, $to, TicketSource::Manual->value)['sla_rate'],
+        ];
     }
 
     /**
