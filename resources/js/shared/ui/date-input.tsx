@@ -16,6 +16,8 @@ interface DateInputProps {
     /** Receives the same ISO date-only string (or "" when cleared). */
     onChange: (value: string) => void;
     id?: string;
+    'aria-invalid'?: boolean;
+    'aria-describedby'?: string;
     disabled?: boolean;
     className?: string;
     placeholder?: string;
@@ -40,7 +42,16 @@ function toDate(value: string): Date | undefined {
  * across timezones. The trigger keeps the canonical field states and latches the brand
  * ring while the calendar is open (data-[state=open]).
  */
-export function DateInput({ value, onChange, id, disabled, className, placeholder }: DateInputProps) {
+export function DateInput({
+    value,
+    onChange,
+    id,
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
+    disabled,
+    className,
+    placeholder,
+}: DateInputProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [open, setOpen] = React.useState(false);
@@ -65,6 +76,8 @@ export function DateInput({ value, onChange, id, disabled, className, placeholde
                     ref={triggerRef}
                     type="button"
                     id={id}
+                    aria-invalid={ariaInvalid}
+                    aria-describedby={ariaDescribedBy}
                     disabled={disabled}
                     className={cn(
                         'border-input bg-background flex h-10 w-full items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors',
