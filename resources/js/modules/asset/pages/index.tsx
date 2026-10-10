@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
 import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -132,7 +133,7 @@ function foldTypeBars(rest: AssetSummary['by_type']): TypeBar {
 /** Pulse skeleton mirroring the dashboard layout (KPI row + card pair + table) while the summary loads. */
 function AssetOverviewSkeleton() {
     return (
-        <div className="space-y-6 p-5">
+        <div className="space-y-6 px-5 pb-5">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
@@ -367,7 +368,8 @@ export default function AssetsPage() {
     const [transferAsset, setTransferAsset] = useState<Asset | null>(null);
     const [recallAsset, setRecallAsset] = useState<Asset | null>(null);
 
-    const { data: summary, isLoading: summaryLoading } = useAssetSummary();
+    const [period, setPeriod] = useOverviewPeriod();
+    const { data: summary, isLoading: summaryLoading } = useAssetSummary(period);
     const {
         data: listData,
         isLoading,
@@ -628,9 +630,14 @@ export default function AssetsPage() {
                     onChange={changeTab}
                 />
 
+                {tab === 'overview' && (
+                    <div className="px-5 pt-5">
+                        <OverviewHeader value={period} onChange={setPeriod} className="mb-6" />
+                    </div>
+                )}
                 {tab === 'overview' && summaryLoading && <AssetOverviewSkeleton />}
                 {tab === 'overview' && !summaryLoading && (
-                    <div className="space-y-6 p-5">
+                    <div className="space-y-6 px-5 pb-5">
                         {/* Summary stats live on the Overview tab. */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                             <StatCard label={t('asset_total')} value={summary?.total ?? 0} icon={Box} />
@@ -732,7 +739,10 @@ export default function AssetsPage() {
                                 </div>
                             </Card>
 
-                            <AssetActivityCard data={summary?.activity_12m ?? []} />
+                            <AssetActivityCard
+                                activity={summary?.activity ?? { unit: 'month', data: [] }}
+                                highlightLast={periodReachesToday(period)}
+                            />
                         </div>
 
                         <Card className="overflow-hidden">

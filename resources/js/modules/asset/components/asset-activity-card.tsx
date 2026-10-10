@@ -9,7 +9,7 @@ import { useState } from 'react';
 type View = 'handover' | 'returned';
 
 /**
- * Custody activity over the last 12 months: how many assets went out to people and how many
+ * Custody activity over the chosen period: how many assets went out to people and how many
  * came back into the pool. Two series in a half-width card would be twenty-four bars wide,
  * so one shows at a time and a pair of buttons switches which — the same reading the rest of
  * the dashboard gives, one question at a time.
@@ -20,11 +20,11 @@ type View = 'handover' | 'returned';
  * The card fills the height its grid row gives it (the "By type" card beside it sets that), and
  * the chart grows into it — never shorter than its own 172px.
  */
-export function AssetActivityCard({ data }: { data: AssetSummary['activity_12m'] }) {
+export function AssetActivityCard({ activity, highlightLast }: { activity: AssetSummary['activity']; highlightLast: boolean }) {
     const t = useT();
     const [view, setView] = useState<View>('handover');
 
-    const bars = data.map((m) => ({ month: m.month, count: view === 'handover' ? m.handover : m.returned }));
+    const bars = activity.data.map((m) => ({ month: m.month, count: view === 'handover' ? m.handover : m.returned }));
 
     return (
         <Card className="flex h-full flex-col overflow-hidden">
@@ -53,13 +53,18 @@ export function AssetActivityCard({ data }: { data: AssetSummary['activity_12m']
             <div className="flex flex-1 flex-col px-5 pt-5 pb-3.5">
                 <div className="mb-2.5 flex items-center justify-between gap-3">
                     <p className="text-muted-foreground text-xs">
-                        {t(view === 'handover' ? 'asset_activity_cap_handover' : 'asset_activity_cap_returned')}
+                        {t(view === 'handover' ? 'asset_activity_cap_handover' : 'asset_activity_cap_returned').replace(
+                            '{unit}',
+                            t(`period_unit_${activity.unit}`),
+                        )}
                     </p>
-                    <CurrentMonthLegend />
+                    {highlightLast && <CurrentMonthLegend />}
                 </div>
 
                 <MonthBarChart
                     data={bars}
+                    unit={activity.unit}
+                    highlightLast={highlightLast}
                     emptyLabel={t(view === 'handover' ? 'asset_activity_none_handover' : 'asset_activity_none_returned')}
                     className="h-auto min-h-[172px] flex-1"
                 />
