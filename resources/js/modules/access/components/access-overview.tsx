@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import type { AccessIssueItem, AccessKind, AccessSummary } from '@/shared/types';
@@ -352,11 +353,20 @@ export function AccessOverview({
     canEdit: Record<AccessKind, boolean>;
 }) {
     const t = useT();
-    const { data, isLoading } = useAccessSummary();
+    const [period, setPeriod] = useOverviewPeriod();
+    const { data, isLoading } = useAccessSummary(period);
     // Whether the governance triage drawer is open (every issue group in one panel).
     const [issuesOpen, setIssuesOpen] = useState(false);
 
-    if (isLoading || !data) return <OverviewSkeleton />;
+    const header = <OverviewHeader value={period} onChange={setPeriod} />;
+    if (isLoading || !data) {
+        return (
+            <div className="space-y-4">
+                {header}
+                <OverviewSkeleton />
+            </div>
+        );
+    }
 
     const total = data.total_grants || 0;
     const maxGrants = Math.max(1, ...CHANNELS.map((c) => data.channels[c.key].grants));
@@ -364,14 +374,15 @@ export function AccessOverview({
 
     return (
         <div className="space-y-4">
-            {/* KPI row — one card per channel (count + last-30-day activity) */}
+            {header}
+            {/* KPI row — one card per channel (count + the period's net change) */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {CHANNELS.map(({ key, kind }) => {
                     const stat = data.channels[key];
                     const meta = CHANNEL[kind];
                     const Icon = meta.icon;
-                    // Signed 30-day change drives the delta line's arrow, wording and colour.
-                    const net = stat.net_30d;
+                    // The period's signed change drives the delta line's arrow, wording and colour.
+                    const net = stat.net_in_period;
                     const deltaTone = net > 0 ? 'text-emerald-700 dark:text-emerald-400' : net < 0 ? 'text-destructive' : 'text-muted-foreground';
                     const deltaKey = net > 0 ? 'access_dash_up' : net < 0 ? 'access_dash_down' : 'access_dash_flat';
                     return (
@@ -559,7 +570,7 @@ export function AccessOverview({
                                         tone="ink"
                                         title={t('access_dash_recent_title')}
                                         sub={t('access_dash_recent_sub')}
-                                        value={gov.added_30d}
+                                        value={gov.added_in_period}
                                     />
                                 ),
                             },

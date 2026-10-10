@@ -1,3 +1,4 @@
+import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import type { AccessKind } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,7 +13,13 @@ import { accessApi } from '../api/accessApi';
  */
 export const useMyAccess = (enabled = true) => useQuery({ queryKey: ['access-mine'], queryFn: accessApi.mine, enabled });
 
-export const useAccessSummary = (enabled = true) => useQuery({ queryKey: ['access-summary'], queryFn: accessApi.summary, enabled });
+export const useAccessSummary = (period: OverviewPeriod = 'all', enabled = true) =>
+    useQuery({
+        queryKey: ['access-summary', overviewPeriodKey(period)],
+        queryFn: () => accessApi.summary(period),
+        enabled,
+        placeholderData: (prev) => prev,
+    });
 
 // The Access sidebar badge (governance anomalies) now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
