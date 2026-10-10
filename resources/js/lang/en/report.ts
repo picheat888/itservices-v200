@@ -797,7 +797,7 @@ export const report: Dict = {
     rep_th_cause_request: 'Return asked {date}',
     rep_th_cause_resign: 'Resigned {date}',
     rep_th_cause_since: 'Since {date}',
-    rep_th_acc_title: 'How fast employees accept',
+    rep_th_acc_title: 'Time for employees to accept',
     rep_th_acc_sub: '{n} handovers to employees',
     rep_th_acc_within2: 'accepted within 2 days',
     rep_th_acc_within2_of: 'of all {n} handovers',

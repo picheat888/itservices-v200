@@ -793,7 +793,7 @@ export const report: Dict = {
     rep_th_cause_request: 'แจ้งคืน {date}',
     rep_th_cause_resign: 'ลาออก {date}',
     rep_th_cause_since: 'ตั้งแต่ {date}',
-    rep_th_acc_title: 'พนักงานกดรับมอบเร็วแค่ไหน',
+    rep_th_acc_title: 'ระยะเวลาที่พนักงานกดรับมอบ',
     rep_th_acc_sub: 'ส่งมอบให้พนักงาน {n} ครั้ง',
     rep_th_acc_within2: 'กดรับภายใน 2 วัน',
     rep_th_acc_within2_of: 'จากทั้งหมด {n} ครั้ง',
