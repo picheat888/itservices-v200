@@ -64,21 +64,20 @@ const isTicketTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[
 const LIST_KEYS = ['search', 'status', 'category', 'priority', 'sla', 'sort', 'page'];
 const TICKET_STATUSES = Object.keys(TICKET_STATUS_META) as TicketStatus[];
 const TICKET_PRIORITIES = Object.keys(TICKET_PRIORITY_META) as TicketPriority[];
-const DEFAULT_RANGE = 30;
+const DEFAULT_RANGE: SummaryRange = 'all';
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A URL value when it is one of `allowed`, else '' (all). */
 const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T | '' =>
     (allowed as readonly string[]).includes(value) ? (value as T) : '';
 
-/** The dashboard window from ?range (7 / 90 / all, or custom with ?from & ?to); anything else is 30 days. */
+/** The dashboard window from ?range (7 / 30 / 90, or custom with ?from & ?to); anything else is all time. */
 function readRange(range: string, from: string, to: string): SummaryRange {
-    if (range === 'all') return 'all';
     if (range === 'custom') {
         return ISO_DATE.test(from) && ISO_DATE.test(to) && from <= to ? { from, to } : DEFAULT_RANGE;
     }
     const days = Number(range);
-    return days === 7 || days === 90 ? days : DEFAULT_RANGE;
+    return days === 7 || days === 30 || days === 90 ? days : DEFAULT_RANGE;
 }
 
 /**
@@ -214,7 +213,7 @@ export default function TicketsPage() {
     // No sorting by a column this reader is not shown.
     const sortOptions = SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due'));
     const sort = pickAllowed(list.get('sort'), sortOptions) || DEFAULT_SORT;
-    // Dashboard window (?range=7|90|all|custom with ?from&to); 30 days stays out of the URL.
+    // Dashboard window (?range=7|30|90|custom with ?from&to); all time, the default, stays out of the URL.
     const range = readRange(list.get('range'), list.get('from'), list.get('to'));
     const setRange = (next: SummaryRange) =>
         list.setParams(
