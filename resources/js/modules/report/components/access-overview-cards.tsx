@@ -1,6 +1,7 @@
 // Access overview report cards: type / state segments, grants and revocations by month, leavers, departments, resources to look after (data: useAccessOverviewBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -505,7 +506,8 @@ export function Group<T>({
         <section>
             <h3
                 className={cn(
-                    'bg-muted/50 border-border text-muted-foreground flex items-baseline justify-between border-b px-5 py-2 text-xs font-semibold',
+                    TABLE_HEAD,
+                    'border-border text-muted-foreground flex items-baseline justify-between border-b px-5 py-2 text-xs font-semibold',
                     !first && 'border-t',
                 )}
             >
@@ -793,7 +795,7 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
                         <caption className="sr-only">{t('rep_ac_dept_title')}</caption>
                         <Cols widths={DEPT_COLS} />
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_ac_dept_col_name')}
                                 </th>

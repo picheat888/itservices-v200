@@ -14,6 +14,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -150,7 +151,7 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-muted/40">
+                            <tr className={TABLE_HEAD}>
                                 <th rowSpan={2} scope="col" className={cn(TH, 'border-border border-b text-left align-bottom')}>
                                     {t('rep_c_request_type')}
                                 </th>
@@ -182,7 +183,7 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                                     {t('rep_rs_col_fix_avg')}
                                 </th>
                             </tr>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, GROUP, 'pt-1 text-right')}>
                                     {t('rep_rs_col_all')}
                                 </th>

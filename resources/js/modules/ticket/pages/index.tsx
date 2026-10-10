@@ -10,7 +10,8 @@ import { ToneDot } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
-import { toRecordId } from '@/shared/lib/utils';
+import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -86,7 +87,7 @@ function TicketOverviewBodySkeleton() {
             </div>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
                 <Card className="overflow-hidden xl:col-span-2">
-                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                         <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                         <div className="bg-muted h-4 w-36 animate-pulse rounded" />
                     </div>
@@ -101,7 +102,7 @@ function TicketOverviewBodySkeleton() {
                     </div>
                 </Card>
                 <Card className="overflow-hidden xl:col-span-3">
-                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                         <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                         <div className="bg-muted h-4 w-24 animate-pulse rounded" />
                     </div>
@@ -457,7 +458,7 @@ export default function TicketsPage() {
                                 )}
                                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
                                     <Card className="overflow-hidden xl:col-span-2">
-                                        <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                                        <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                                             <div className="flex items-center gap-2">
                                                 <LayoutGrid className="text-muted-foreground h-4 w-4" />
                                                 <span className="text-sm font-semibold">{t('ticket_by_category')}</span>
@@ -493,7 +494,7 @@ export default function TicketsPage() {
                                     </Card>
 
                                     <Card className="overflow-hidden xl:col-span-3">
-                                        <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                                        <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                                             <History className="text-muted-foreground h-4 w-4" />
                                             <span className="text-sm font-semibold">{t('ticket_latest')}</span>
                                             <button
@@ -718,7 +719,12 @@ function TicketTable({
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                    <tr
+                        className={cn(
+                            TABLE_HEAD,
+                            'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                        )}
+                    >
                         <th className="px-4 py-2.5">ID</th>
                         <th className="px-4 py-2.5">{t('ticket_subject')}</th>
                         <th className="px-4 py-2.5">{t('ticket_category')}</th>

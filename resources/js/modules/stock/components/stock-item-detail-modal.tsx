@@ -6,6 +6,7 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -335,7 +336,7 @@ export function StockItemDetailModal({
                                     {lots.length > 0 ? (
                                         <div className="border-border overflow-hidden rounded-lg border">
                                             <table className="w-full text-sm">
-                                                <thead className="bg-muted/40">
+                                                <thead className={TABLE_HEAD}>
                                                     <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] uppercase">
                                                         <th className="px-3 py-2 font-medium">{t('stock_hist_receive_no')}</th>
                                                         <th className="px-3 py-2 font-medium">{t('stock_date')}</th>
@@ -441,7 +442,7 @@ export function StockItemDetailModal({
                                     {serials.length > 0 ? (
                                         <div className="border-border overflow-hidden rounded-lg border">
                                             <table className="w-full text-sm">
-                                                <thead className="bg-muted/40">
+                                                <thead className={TABLE_HEAD}>
                                                     <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] uppercase">
                                                         <th className="w-8 px-3 py-2 font-medium">#</th>
                                                         <th className="px-3 py-2 font-medium">Serial</th>

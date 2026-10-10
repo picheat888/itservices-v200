@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { AccessIssueItem, AccessKind, AccessSummary } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
@@ -156,8 +157,8 @@ function IssueSection({
     return (
         // Severity is carried by the rail and the header icon together — one treatment, read
         // as a unit. The count badge stays neutral: how many is information, not a warning.
-        <div className={cn('border-border rounded-lg border border-l-2', toneRail)}>
-            <div className="border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5">
+        <div className={cn('border-border overflow-clip rounded-lg border border-l-2', toneRail)}>
+            <div className={cn(CARD_HEADING, 'border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5')}>
                 <Icon className={cn('h-4 w-4 shrink-0', toneText)} />
                 <span className="text-sm font-semibold">{title}</span>
                 <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-bold">
@@ -416,7 +417,7 @@ export function AccessOverview({
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {/* Access share */}
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                         <div className="flex items-center gap-2">
                             <LayoutGrid className="text-muted-foreground h-4 w-4" />
                             <span className="text-sm font-semibold">{t('access_dash_distribution_title')}</span>
@@ -449,7 +450,7 @@ export function AccessOverview({
 
                 {/* Governance status — rows render by severity: act (red) → review (amber) → info → all-clear. */}
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="text-muted-foreground h-4 w-4" />
                             <span className="text-sm font-semibold">{t('access_dash_governance_title')}</span>
@@ -583,7 +584,7 @@ export function AccessOverview({
 
             {/* Row 2: most-reached resources */}
             <Card className="overflow-hidden">
-                <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                     <TrendingUp className="text-muted-foreground h-4 w-4" />
                     <span className="text-sm font-semibold">{t('access_dash_top_title')}</span>
                 </div>
@@ -592,7 +593,7 @@ export function AccessOverview({
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th className="text-muted-foreground px-5 py-2.5 text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                     {t('access_name')}
                                 </th>
@@ -696,7 +697,7 @@ function OverviewSkeleton() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {Array.from({ length: 2 }).map((_, i) => (
                     <Card key={i} className="overflow-hidden">
-                        <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                        <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                             <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                             <div className="bg-muted h-4 w-36 animate-pulse rounded" />
                         </div>
@@ -713,7 +714,7 @@ function OverviewSkeleton() {
                 ))}
             </div>
             <Card className="overflow-hidden">
-                <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                     <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                     <div className="bg-muted h-4 w-44 animate-pulse rounded" />
                 </div>

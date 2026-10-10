@@ -5,6 +5,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -255,7 +256,7 @@ export function MovementsTab() {
                                                 </div>
                                                 <div className="border-border max-h-48 overflow-auto rounded-lg border">
                                                     <table className="w-full text-sm">
-                                                        <thead className="bg-muted/40 sticky top-0">
+                                                        <thead className={cn(TABLE_HEAD, 'sticky top-0')}>
                                                             <tr className="text-muted-foreground text-left text-[10px] tracking-wide uppercase">
                                                                 <th className="w-10 px-3 py-1.5">#</th>
                                                                 <th className="px-3 py-1.5">{t('stock_hist_serial')}</th>

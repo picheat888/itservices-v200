@@ -1,6 +1,7 @@
 // Write-off report cards: by month, by reason, by category and rentals by contract (data: useAssetWriteoffBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -415,7 +416,7 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wo_cat_title')}</caption>
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_wo_col_category')}
                                 </th>
@@ -580,7 +581,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wo_ct_title')}</caption>
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_wo_ct_col_contract')}
                                 </th>

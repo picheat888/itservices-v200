@@ -1,5 +1,6 @@
 // "ภาพรวมคำขอ" report cards: submitted and completed by month, types by status, days to delivery, items asked for, departments (data: useRequestOverviewBreakdown).
 import { useT } from '@/lang';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -439,7 +440,7 @@ function TypesCard({ types }: { types: Breakdown['types'] }) {
                         <caption className="sr-only">{t('rep_rqo_types_title')}</caption>
                         <Cols widths={TYPE_COLS} />
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_rqo_col_type')}
                                 </th>
@@ -567,7 +568,7 @@ function DeliveryCard({ delivery }: { delivery: Breakdown['delivery'] }) {
                             <caption className="sr-only">{t('rep_rqo_days_title')}</caption>
                             <Cols widths={DAYS_COLS} />
                             <thead>
-                                <tr className="bg-muted/40 border-border border-b">
+                                <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                     <th scope="col" className={cn(TH, 'text-left')}>
                                         {t('rep_rqo_col_type')}
                                     </th>
@@ -775,7 +776,7 @@ function DepartmentCard({ departments }: { departments: Breakdown['departments']
                         <caption className="sr-only">{t('rep_rqo_dept_title')}</caption>
                         <Cols widths={DEPT_COLS} />
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_rqo_col_dept')}
                                 </th>

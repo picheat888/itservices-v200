@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { type ContractAttachment } from '@/shared/types';
 import { Download, ExternalLink, FileText } from 'lucide-react';
@@ -71,7 +72,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
 
             {/* Preview — iframe fills the frame. */}
             <div className="border-border flex min-h-0 flex-col overflow-hidden rounded-xl border">
-                <div className="border-border/60 bg-card flex items-center gap-2 border-b px-3 py-2">
+                <div className={cn(CARD_HEADING, 'border-border/60 flex items-center gap-2 border-b px-3 py-2')}>
                     <TruncName name={active.name} className="flex-1 text-[12.5px] font-semibold" />
                     <a
                         href={active.url}

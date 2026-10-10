@@ -9,6 +9,7 @@ import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge } from '@/mo
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { REQUEST_TYPES, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, TicketCategory, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -409,7 +410,12 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                        <tr
+                            className={cn(
+                                TABLE_HEAD,
+                                'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                            )}
+                        >
                             <th className="px-3 py-2">{t('ticket_priority')}</th>
                             <th className="px-3 py-2">{t('set_sla_resolution')}</th>
                             <th className="px-3 py-2">{t('set_sla_clock')}</th>
@@ -481,7 +487,12 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                            <tr
+                                className={cn(
+                                    TABLE_HEAD,
+                                    'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                                )}
+                            >
                                 <th className="px-3 py-2">{t('set_sla_col_ticket_type')}</th>
                                 <th className="px-3 py-2">{t('set_sla_col_work_class')}</th>
                                 <th className="px-3 py-2">{t('set_sla_resolution')}</th>
@@ -625,7 +636,12 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                            <tr
+                                className={cn(
+                                    TABLE_HEAD,
+                                    'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                                )}
+                            >
                                 <th className="px-3 py-2">{t('set_sla_col_request_type')}</th>
                                 <th className="px-3 py-2">{t('set_sla_resolution')}</th>
                                 <th className="px-3 py-2">{t('set_sla_clock')}</th>

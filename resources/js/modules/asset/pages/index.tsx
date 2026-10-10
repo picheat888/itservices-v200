@@ -13,6 +13,7 @@ import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -148,7 +149,7 @@ function AssetOverviewSkeleton() {
             {/* The pair stretches to one height, as the loaded cards do. */}
             <div className="grid gap-4 lg:grid-cols-2">
                 <Card className="overflow-hidden">
-                    <div className="border-border border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border border-b px-5 py-3.5')}>
                         <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                     </div>
                     {/* By type: one line per row — name, the split bar under its counts, the total —
@@ -167,7 +168,7 @@ function AssetOverviewSkeleton() {
                 {/* Activity chart: header with its view switch, then twelve bars of
                     staggered height so the placeholder reads as a chart, not a block. */}
                 <Card className="flex flex-col overflow-hidden">
-                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                         <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                         <div className="bg-muted h-6 w-28 animate-pulse rounded-lg" />
                     </div>
@@ -188,7 +189,7 @@ function AssetOverviewSkeleton() {
                 </Card>
             </div>
             <Card className="overflow-hidden">
-                <div className="border-border border-b px-5 py-3.5">
+                <div className={cn(CARD_HEADING, 'border-border border-b px-5 py-3.5')}>
                     <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                 </div>
                 <div className="space-y-2 p-5">
@@ -656,7 +657,7 @@ export default function AssetsPage() {
                             folded or opened to every category. */}
                         <div className="grid gap-4 lg:grid-cols-2">
                             <Card className="overflow-hidden">
-                                <div className="border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-3.5">
+                                <div className={cn(CARD_HEADING, 'border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-3.5')}>
                                     <div className="flex items-center gap-2">
                                         <Layers className="text-muted-foreground h-4 w-4" />
                                         <span className="text-sm font-semibold">{t('asset_by_type')}</span>
@@ -746,7 +747,7 @@ export default function AssetsPage() {
                         </div>
 
                         <Card className="overflow-hidden">
-                            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                                 <TrendingUp className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                                 <span id="asset-top-value-title" className="text-sm font-semibold">
                                     {t('asset_top_value')}
@@ -755,7 +756,12 @@ export default function AssetsPage() {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm" aria-labelledby="asset-top-value-title">
                                     <thead>
-                                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                        <tr
+                                            className={cn(
+                                                TABLE_HEAD,
+                                                'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                                            )}
+                                        >
                                             <th className="px-3 py-2">{t('asset_tag')}</th>
                                             <th className="px-3 py-2">{t('asset_model')}</th>
                                             <th className="px-3 py-2">{t('asset_owner')}</th>
@@ -1069,7 +1075,12 @@ export default function AssetsPage() {
                                             tableFitsWidth && 'bg-card sticky top-[var(--sticky-top,0px)] z-10 shadow-[0_1px_0_var(--color-border)]',
                                         )}
                                     >
-                                        <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                        <tr
+                                            className={cn(
+                                                TABLE_HEAD,
+                                                'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                                            )}
+                                        >
                                             <th
                                                 className={cn('w-10 px-2 py-2.5', eligibleStatus ? 'cursor-pointer' : 'cursor-not-allowed')}
                                                 onClick={(e) => {

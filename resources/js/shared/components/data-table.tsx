@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -238,7 +239,7 @@ export function DataTable<T>({
                             stickyHeader && (maxBodyHeight ? 'top-0' : 'top-[var(--sticky-top,0px)]'),
                         )}
                     >
-                        <tr className="border-border bg-muted/40 border-b">
+                        <tr className={cn('border-border border-b', TABLE_HEAD)}>
                             {columns.map((c) => (
                                 <th
                                     key={c.key}

@@ -1,6 +1,7 @@
 // Software licence report cards: usage segments, seats per software, leavers to take seats back from, requests waiting (data: useSoftwareLicenseBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -186,7 +187,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                         <table className="w-full text-sm">
                             <caption className="sr-only">{t('rep_sl_seats_title')}</caption>
                             <thead>
-                                <tr className="bg-muted/40 border-border border-b">
+                                <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                     <th scope="col" className={cn(TH, 'text-left')}>
                                         {t('rep_c_software')}
                                     </th>

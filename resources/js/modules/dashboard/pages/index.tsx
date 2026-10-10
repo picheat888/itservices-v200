@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { useContractSummary } from '@/modules/contract';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { relativeTime } from '@/shared/lib/datetime';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -72,7 +73,7 @@ function ListCard({
     const t = useT();
     return (
         <Card className="overflow-hidden">
-            <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                 <div className="flex items-center gap-2">
                     <Icon className="text-muted-foreground h-4 w-4" />
                     <span className="font-semibold">{title}</span>
@@ -172,7 +173,7 @@ function TicketsOverviewCard({ it }: { it: DashboardIt }) {
 
     return (
         <Card className="overflow-hidden">
-            <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                 <div className="flex items-center gap-2">
                     <Ticket className="text-muted-foreground h-4 w-4" />
                     <span className="font-semibold">{t('dash_tickets_overview')}</span>
@@ -417,7 +418,7 @@ function WorkloadCard({ it }: { it: DashboardIt }) {
 
     return (
         <Card className="overflow-hidden">
-            <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                 <div className="flex items-center gap-2">
                     <Users className="text-muted-foreground h-4 w-4" />
                     <span className="font-semibold">{t('dash_team_workload')}</span>
@@ -490,7 +491,7 @@ function RequestsOverviewCard({ requests }: { requests: DashboardRequests }) {
 
     return (
         <Card className="overflow-hidden">
-            <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                 <div className="flex items-center gap-2">
                     <Inbox className="text-muted-foreground h-4 w-4" />
                     <span className="font-semibold">{t('dash_requests_overview')}</span>
@@ -627,7 +628,7 @@ function HrSection({ hr }: { hr: DashboardHr }) {
                 </ListCard>
 
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                         <Building2 className="text-muted-foreground h-4 w-4" />
                         <span className="font-semibold">{t('dash_hr_by_department')}</span>
                     </div>

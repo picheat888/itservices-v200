@@ -1,6 +1,7 @@
 // Transfer history report cards: in/out by month, waiting now, acceptance, warehouses, departments, categories (data: useAssetTransferBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -425,7 +426,7 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
                         <table className="w-full text-sm">
                             <caption className="sr-only">{t('rep_th_reloc_title')}</caption>
                             <thead>
-                                <tr className="bg-muted/40 border-border border-b">
+                                <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                     <th scope="col" className={cn(TH, 'text-left')}>
                                         {t('rep_th_reloc_col_at')}
                                     </th>
@@ -552,7 +553,8 @@ function WaitingGroup({ title, rows, status, first }: { title: string; rows: Wai
         <section>
             <h3
                 className={cn(
-                    'bg-muted/50 border-border text-muted-foreground flex items-baseline justify-between border-b px-5 py-2 text-xs font-semibold',
+                    TABLE_HEAD,
+                    'border-border text-muted-foreground flex items-baseline justify-between border-b px-5 py-2 text-xs font-semibold',
                     !first && 'border-t',
                 )}
             >
@@ -765,7 +767,7 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_th_wh_title')}</caption>
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_th_wh_col_name')}
                                 </th>

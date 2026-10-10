@@ -12,6 +12,7 @@ import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -498,7 +499,12 @@ export default function ContractsPage() {
                                             tableFitsWidth && 'bg-card sticky top-[var(--sticky-top,0px)] z-10 shadow-[0_1px_0_var(--color-border)]',
                                         )}
                                     >
-                                        <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                        <tr
+                                            className={cn(
+                                                TABLE_HEAD,
+                                                'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                                            )}
+                                        >
                                             <th className="px-4 py-2.5">{t('contract_code')}</th>
                                             <th className="px-4 py-2.5">{t('contract_details')}</th>
                                             <th className="px-4 py-2.5">{t('contract_vendor')}</th>
@@ -706,7 +712,7 @@ function OverviewTab({
                 <div className="grid gap-6 lg:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, i) => (
                         <Card key={i} className="overflow-hidden">
-                            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                                 <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                                 <div className="bg-muted h-4 w-36 animate-pulse rounded" />
                             </div>
@@ -865,7 +871,7 @@ function OverviewTab({
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* Top vendors by spend */}
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                         <TrendingUp className="text-muted-foreground h-4 w-4" />
                         <span className="text-sm font-semibold">{t('contract_top_vendors')}</span>
                     </div>
@@ -889,7 +895,7 @@ function OverviewTab({
 
                 {/* Action queue */}
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                         <AlertTriangle className="text-muted-foreground h-4 w-4" />
                         <span className="text-sm font-semibold">{t('contract_action_queue')}</span>
                     </div>
