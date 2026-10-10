@@ -526,6 +526,24 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
     }
 
+    public function test_meta_period_counts_requests_filed_in_the_period(): void
+    {
+        $this->submitComputer();
+        $old = $this->submitComputer();
+        $old->forceFill(['created_at' => now()->subDays(60)])->save();
+
+        $this->actingAs($this->requester);
+        // All time: both, matching the status counts the tabs use.
+        $this->getJson('/api/service-requests')->assertOk()
+            ->assertJsonPath('meta.pending', 2)
+            ->assertJsonPath('meta.period.pending', 2);
+        // The last 30 days: only the recent one; the tab counts do not move.
+        $this->getJson('/api/service-requests?days=30')->assertOk()
+            ->assertJsonPath('meta.pending', 2)
+            ->assertJsonPath('meta.period.pending', 1)
+            ->assertJsonPath('meta.period.avg_cycle_days', null);
+    }
+
     public function test_index_scopes_visibility_and_reports_meta(): void
     {
         $this->submitComputer();

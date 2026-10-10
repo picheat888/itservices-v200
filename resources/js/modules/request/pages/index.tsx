@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailed } from '@/shared/components/load-failed';
+import { OverviewHeader, overviewPeriodParams, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
@@ -130,12 +131,13 @@ export default function RequestsPage() {
     };
 
     // Main list: the table, or on the overview the activity feed; its meta feeds the KPIs.
+    const [period, setPeriod] = useOverviewPeriod();
     const listParams =
         tab === 'approvals'
             ? { page, per_page: perPage, search, status, type, scope: 'approvals' as const }
             : tab === 'all'
               ? { page, per_page: perPage, search, status, type }
-              : { page: 1, per_page: 6, sort: 'activity' as const };
+              : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
     const { data: pageData, isLoading, isFetching, isError, refetch } = useRequests(listParams);
     const rows = pageData?.data ?? [];
     const meta = pageData?.meta;
@@ -311,7 +313,8 @@ export default function RequestsPage() {
 
                 {tab === 'overview' ? (
                     <div className="space-y-4 p-4">
-                        {/* KPI row — each card opens the list it counts */}
+                        <OverviewHeader value={period} onChange={setPeriod} />
+                        {/* KPI row — the awaiting card is as of now, the rest count requests filed in the period */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                             <StatCard
                                 icon={Inbox}
@@ -324,23 +327,23 @@ export default function RequestsPage() {
                             <StatCard
                                 icon={Check}
                                 label={t('req_kpi_approved')}
-                                value={String(meta?.approved ?? 0)}
+                                value={String(meta?.period.approved ?? 0)}
                                 onClick={() => switchTab('all', { status: 'approved' })}
-                                sub={`${meta?.completed ?? 0} ${t('req_status_completed')}`}
+                                sub={`${meta?.period.completed ?? 0} ${t('req_status_completed')}`}
                                 loading={kpiLoading}
                             />
                             <StatCard
                                 icon={X}
                                 label={t('req_kpi_rejected')}
-                                value={String(meta?.rejected ?? 0)}
+                                value={String(meta?.period.rejected ?? 0)}
                                 onClick={() => switchTab('all', { status: 'rejected' })}
-                                sub={`${meta?.cancelled ?? 0} ${t('req_status_cancelled')}`}
+                                sub={`${meta?.period.cancelled ?? 0} ${t('req_status_cancelled')}`}
                                 loading={kpiLoading}
                             />
                             <StatCard
                                 icon={Clock}
                                 label={t('req_kpi_cycle')}
-                                value={meta?.avg_cycle_days != null ? `${meta.avg_cycle_days}${t('req_kpi_days_suffix')}` : '—'}
+                                value={meta?.period.avg_cycle_days != null ? `${meta.period.avg_cycle_days}${t('req_kpi_days_suffix')}` : '—'}
                                 sub={t('req_kpi_cycle_sub')}
                                 loading={kpiLoading}
                             />

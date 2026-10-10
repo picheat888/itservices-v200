@@ -14,6 +14,7 @@ use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Services\Request\RequestService;
+use App\Support\OverviewPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
@@ -160,7 +161,7 @@ class RequestController extends Controller
 
         return response()->json([
             'data' => ServiceRequestResource::collection($paginator->items()),
-            'meta' => $this->meta($paginator, $visible, $canComplete, $employee),
+            'meta' => $this->meta($paginator, $visible, $canComplete, $employee, OverviewPeriod::fromRequest($request)),
         ]);
     }
 
@@ -248,12 +249,13 @@ class RequestController extends Controller
 
     /**
      * KPI aggregates over the viewer's full visible set — independent of the
-     * current page, search box and filters, so the stat cards stay stable.
+     * current page, search box and filters, so the stat cards stay stable. `period`
+     * holds the Overview's figures: requests filed in the chosen period, by status.
      *
      * @param  callable(Builder): Builder  $visible
      * @return array<string, mixed>
      */
-    private function meta($paginator, callable $visible, bool $canComplete, ?Employee $employee): array
+    private function meta($paginator, callable $visible, bool $canComplete, ?Employee $employee, OverviewPeriod $period): array
     {
         $counts = $visible(ServiceRequest::query())
             ->selectRaw('status, count(*) as n')
@@ -267,13 +269,13 @@ class RequestController extends Controller
             ->where('status', ApprovalStatus::Current->value)
             ->where('kind', WorkflowStepKind::Approval->value)
             ->count();
-        // Mean days from submit to the final decision, over the last 200 decided
-        // requests (PHP-side for cross-database portability).
-        $decided = $visible(ServiceRequest::query())
-            ->whereIn('status', [RequestStatus::Approved->value, RequestStatus::Rejected->value, RequestStatus::Completed->value])
-            ->latest()->limit(200)
-            ->get(['created_at', 'approved_at', 'rejected_at']);
-        $cycles = $decided
+        // Filed in the period: counts by status, and the mean days from submit to the final
+        // decision (PHP-side for cross-database portability).
+        $filed = $period->apply($visible(ServiceRequest::query()), 'created_at')
+            ->get(['status', 'created_at', 'approved_at', 'rejected_at']);
+        $filedCount = fn (RequestStatus $status) => $filed->where('status', $status)->count();
+        $cycles = $filed
+            ->whereIn('status', [RequestStatus::Approved, RequestStatus::Rejected, RequestStatus::Completed])
             ->map(fn (ServiceRequest $r) => ($r->approved_at ?? $r->rejected_at)?->diffInMinutes($r->created_at, true))
             ->filter(fn ($minutes) => $minutes !== null);
 
@@ -289,7 +291,14 @@ class RequestController extends Controller
             'cancelled' => (int) ($counts[RequestStatus::Cancelled->value] ?? 0),
             'awaiting_me' => $awaitingMe,
             'to_complete' => $canComplete ? (int) ($counts[RequestStatus::Approved->value] ?? 0) : 0,
-            'avg_cycle_days' => $cycles->isEmpty() ? null : round($cycles->avg() / 1440, 1),
+            'period' => [
+                'pending' => $filedCount(RequestStatus::Pending),
+                'approved' => $filedCount(RequestStatus::Approved),
+                'rejected' => $filedCount(RequestStatus::Rejected),
+                'completed' => $filedCount(RequestStatus::Completed),
+                'cancelled' => $filedCount(RequestStatus::Cancelled),
+                'avg_cycle_days' => $cycles->isEmpty() ? null : round($cycles->avg() / 1440, 1),
+            ],
         ];
     }
 }

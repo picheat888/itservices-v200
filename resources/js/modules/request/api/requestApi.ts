@@ -14,7 +14,15 @@ export interface RequestPageMeta {
     cancelled: number;
     awaiting_me: number;
     to_complete: number;
-    avg_cycle_days: number | null;
+    /** The Overview's figures: requests filed in the chosen period, by status, and their mean days to a decision. */
+    period: {
+        pending: number;
+        approved: number;
+        rejected: number;
+        completed: number;
+        cancelled: number;
+        avg_cycle_days: number | null;
+    };
 }
 
 export interface RequestPageResponse {
@@ -32,6 +40,10 @@ export interface RequestListParams {
     type?: string;
     /** Tab scopes: approvals (awaiting me) | queue (IT completion) | mine. */
     scope?: 'approvals' | 'queue' | 'mine';
+    /** The Overview period (overviewPeriodParams): ?days or ?from&to. */
+    days?: string | number;
+    from?: string | number;
+    to?: string | number;
 }
 
 export interface SubmitRequestPayload {
