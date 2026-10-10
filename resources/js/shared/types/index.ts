@@ -969,7 +969,7 @@ export interface AccessChannelStat {
     resources: number;
     grants: number;
     /** Net change in active grants over the last 30 days (positive = grew, negative = shrank). */
-    net_30d: number;
+    net_in_period: number;
 }
 
 /** A most-reached resource row (ranked by active-grant count) on the overview tab. */
@@ -999,7 +999,7 @@ export interface AccessSummary {
         no_owner: number;
         owners_complete: boolean;
         resigned_holders: number;
-        added_30d: number;
+        added_in_period: number;
         // Drill-down lists behind each status row. Resigned rows name the person whose grant
         // is still on; ownership rows say why the resource has no custodian — nobody was ever
         // named, or the one who was has left.

@@ -9,6 +9,7 @@ use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
 use App\Support\EmailTable;
+use App\Support\OverviewPeriod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Collection;
@@ -267,30 +268,30 @@ class AccessService
 
     /**
      * Aggregate figures for the Access Directory "overview" tab: per-channel
-     * counts (resources / active grants / grants added in the last 30 days), the
+     * counts (resources / active grants / net change in the period), the
      * active-grant distribution total, a handful of governance-hygiene checks,
      * and the most-reached resources. Returned as a plain array (rendered as-is).
      *
      * @return array<string, mixed>
      */
-    public function dashboard(): array
+    public function dashboard(?OverviewPeriod $period = null): array
     {
-        $since = now()->subDays(30)->startOfDay();
+        $period ??= OverviewPeriod::allTime();
 
-        // Active grants by morph type, plus the last-30-day churn (grants issued vs
-        // revoked in the window) so the UI can show a signed net change per channel.
+        // Active grants by morph type, plus the period's churn (grants issued vs revoked)
+        // so the UI can show a signed net change per channel.
         $activeByType = AccessMembership::query()->active()
             ->selectRaw('resource_type, COUNT(*) as c')->groupBy('resource_type')->pluck('c', 'resource_type');
-        $createdByType = AccessMembership::query()->where('created_at', '>=', $since)
+        $createdByType = $period->apply(AccessMembership::query(), 'created_at')
             ->selectRaw('resource_type, COUNT(*) as c')->groupBy('resource_type')->pluck('c', 'resource_type');
-        $revokedByType = AccessMembership::query()->whereNotNull('revoked_at')->where('revoked_at', '>=', $since)
+        $revokedByType = $period->apply(AccessMembership::query()->whereNotNull('revoked_at'), 'revoked_at')
             ->selectRaw('resource_type, COUNT(*) as c')->groupBy('resource_type')->pluck('c', 'resource_type');
 
         $stat = fn (string $model, string $type): array => [
             'resources' => (int) $model::count(),
             'grants' => (int) ($activeByType[$type] ?? 0),
-            // Net change in the last 30 days: positive = grew, negative = shrank.
-            'net_30d' => (int) ($createdByType[$type] ?? 0) - (int) ($revokedByType[$type] ?? 0),
+            // Net change in the period: positive = grew, negative = shrank.
+            'net_in_period' => (int) ($createdByType[$type] ?? 0) - (int) ($revokedByType[$type] ?? 0),
         ];
 
         $channels = [
@@ -385,7 +386,7 @@ class AccessService
                 // headcount and the other a work queue. Every other row on this card counts
                 // items to fix, so this one does too.
                 'resigned_holders' => $resignedList->count(),
-                'added_30d' => (int) AccessMembership::query()->active()->where('created_at', '>=', $since)->count(),
+                'added_in_period' => (int) $period->apply(AccessMembership::query()->active(), 'created_at')->count(),
                 'issues' => [
                     'empty' => $emptyList,
                     'no_owner' => $ownerlessIssues,

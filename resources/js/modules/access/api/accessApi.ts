@@ -1,3 +1,4 @@
+import { overviewPeriodParams, type OverviewPeriod } from '@/shared/components/overview-period';
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type {
     AccessKind,
@@ -37,7 +38,8 @@ function toFormData(payload: Record<string, unknown>): FormData {
 }
 
 export const accessApi = {
-    summary: () => http.get<ApiEnvelope<AccessSummary>>('/access/dashboard').then((r) => r.data.data),
+    summary: (period: OverviewPeriod) =>
+        http.get<ApiEnvelope<AccessSummary>>('/access/dashboard', { params: overviewPeriodParams(period) }).then((r) => r.data.data),
     // What the signed-in person may reach — the self-service half of My assets & access.
     // Its own key (access.my), not the directory master. See MyAccessController.
     mine: () => http.get<ApiEnvelope<EmployeeAccess>>('/access/mine').then((r) => r.data.data),

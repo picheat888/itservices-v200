@@ -125,9 +125,9 @@ export const access: Dict = {
 
     // access dashboard — Overview tab
     access_tab_overview: 'Overview',
-    access_dash_up: '↑ {n} more grants in 30 days',
-    access_dash_down: '↓ {n} fewer grants in 30 days',
-    access_dash_flat: 'No change in 30 days',
+    access_dash_up: '↑ {n} more grants in this period',
+    access_dash_down: '↓ {n} fewer grants in this period',
+    access_dash_flat: 'No change in this period',
     access_dash_distribution_title: 'Grants by type',
     access_dash_distribution_cap: 'All active access grants, split by resource type',
     access_dash_grants_total: 'total grants',
@@ -149,8 +149,8 @@ export const access: Dict = {
     access_issue_empty_hint: 'No members yet',
     access_issues_clear: 'Nothing to review',
     access_issues_clear_sub: 'No grants left over, and every resource has an owner and members.',
-    access_dash_recent_title: 'Grants added recently',
-    access_dash_recent_sub: 'New grants issued in the last 30 days',
+    access_dash_recent_title: 'Grants added in this period',
+    access_dash_recent_sub: 'New grants issued in the chosen period',
     access_dash_owners_ok: 'Every resource has a current owner',
     access_dash_owners_ok_sub: 'Every email group and file share has an owner who still works here',
     access_dash_owners_missing: 'Resources that need an owner',

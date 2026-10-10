@@ -131,9 +131,9 @@ export const access: Dict = {
 
     // access dashboard — แท็บภาพรวม
     access_tab_overview: 'ภาพรวม',
-    access_dash_up: '↑ เพิ่มขึ้น {n} สิทธิ์ใน 30 วัน',
-    access_dash_down: '↓ ลดลง {n} สิทธิ์ใน 30 วัน',
-    access_dash_flat: 'ไม่เปลี่ยนแปลงใน 30 วัน',
+    access_dash_up: '↑ เพิ่มขึ้น {n} สิทธิ์ในช่วงนี้',
+    access_dash_down: '↓ ลดลง {n} สิทธิ์ในช่วงนี้',
+    access_dash_flat: 'ไม่เปลี่ยนแปลงในช่วงนี้',
     access_dash_distribution_title: 'สัดส่วนสิทธิ์แยกตามประเภท',
     access_dash_distribution_cap: 'สิทธิ์การเข้าถึงที่ใช้งานอยู่ทั้งหมด แบ่งตามประเภทของ Resource',
     access_dash_grants_total: 'สิทธิ์รวม',
@@ -155,8 +155,8 @@ export const access: Dict = {
     access_issue_empty_hint: 'ยังไม่มีสมาชิก',
     access_issues_clear: 'ไม่มีรายการที่ต้องตรวจสอบ',
     access_issues_clear_sub: 'ไม่มีสิทธิ์ค้าง ทุก Resource มีเจ้าของและมีสมาชิก',
-    access_dash_recent_title: 'สิทธิ์ที่เพิ่มในรอบ 30 วัน',
-    access_dash_recent_sub: 'การมอบสิทธิ์ใหม่ในช่วงที่ผ่านมา',
+    access_dash_recent_title: 'สิทธิ์ที่เพิ่มในช่วงนี้',
+    access_dash_recent_sub: 'การมอบสิทธิ์ใหม่ในช่วงที่เลือก',
     access_dash_owners_ok: 'ทุก Resource มีเจ้าของครบ',
     access_dash_owners_ok_sub: 'ทุก Email Group และ File Share มีเจ้าของที่ยังทำงานอยู่',
     access_dash_owners_missing: 'Resource ที่ต้องหาเจ้าของ',

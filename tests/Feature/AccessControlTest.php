@@ -436,6 +436,35 @@ class AccessControlTest extends TestCase
         $this->assertSame(0, $top->firstWhere('name', 'Public (Center)')['grants']);
     }
 
+    public function test_access_dashboard_churn_follows_the_period(): void
+    {
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $this->travelTo('2026-10-14 12:00:00');
+
+        $member = Employee::create(['first_name' => 'Me', 'last_name' => 'Mber']);
+        $g = EmailGroup::create(['name' => 'QA', 'email' => 'qa@x.co', 'owner_employee_id' => $member->id]);
+        // Granted 60 days ago and still held; granted 40 days ago and revoked 3 days ago; granted yesterday.
+        $old = $g->memberships()->create(['employee_id' => $member->id, 'granted_at' => now()]);
+        $old->forceFill(['created_at' => now()->subDays(60)])->save();
+        $gone = $g->memberships()->create(['employee_id' => Employee::create(['first_name' => 'Le', 'last_name' => 'Ft'])->id, 'granted_at' => now()]);
+        $gone->forceFill(['created_at' => now()->subDays(40), 'revoked_at' => now()->subDays(3)])->save();
+        $g->memberships()->create(['employee_id' => Employee::create(['first_name' => 'Ne', 'last_name' => 'W'])->id, 'granted_at' => now()])
+            ->forceFill(['created_at' => now()->subDay()])->save();
+
+        // All time: 3 issued, 1 revoked; 2 still held were added.
+        $this->getJson('/api/access/dashboard')->assertOk()
+            ->assertJsonPath('data.channels.email_groups.net_in_period', 2)
+            ->assertJsonPath('data.governance.added_in_period', 2)
+            ->assertJsonPath('data.channels.email_groups.grants', 2);
+
+        // Last 7 days: 1 issued, 1 revoked; the held total does not move.
+        $this->getJson('/api/access/dashboard?days=7')->assertOk()
+            ->assertJsonPath('data.channels.email_groups.net_in_period', 0)
+            ->assertJsonPath('data.governance.added_in_period', 1)
+            ->assertJsonPath('data.channels.email_groups.grants', 2);
+    }
+
     public function test_social_platform_logo_upload_is_stored(): void
     {
         Storage::fake('local');
