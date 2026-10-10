@@ -122,16 +122,15 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
 function TicketOverviewBodySkeleton() {
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
-                    <Card key={i} className="space-y-3 p-5">
-                        <div className="flex items-center justify-between">
+                    <Card key={i} className="p-5">
+                        <div className="flex items-start justify-between">
                             <div className="bg-muted h-4 w-20 animate-pulse rounded" />
-                            <div className="bg-muted h-4 w-14 animate-pulse rounded-full" />
+                            <div className="bg-muted h-9 w-9 animate-pulse rounded-lg" />
                         </div>
-                        <div className="bg-muted h-8 w-16 animate-pulse rounded" />
-                        <div className="bg-muted h-3 w-28 animate-pulse rounded" />
-                        <div className="bg-muted h-3 w-20 animate-pulse rounded" />
+                        <div className="bg-muted mt-3 h-8 w-14 animate-pulse rounded" />
+                        <div className="bg-muted mt-2 h-3 w-24 animate-pulse rounded" />
                     </Card>
                 ))}
             </div>
@@ -310,7 +309,6 @@ export default function TicketsPage() {
     };
 
     const { data: summary, isLoading: summaryLoading } = useTicketSummary(canOverview, range);
-    const lang = useUiStore((s) => s.lang);
     const {
         data: listData,
         isLoading,
@@ -514,9 +512,6 @@ export default function TicketsPage() {
                                 {summary && (
                                     <TicketOverviewTiles
                                         summary={summary}
-                                        when={
-                                            typeof range === 'object' ? formatRangeShort(range.from, range.to, lang) : `${range} ${t('ticket_days')}`
-                                        }
                                         canOpenReport={isIT}
                                         onOpenOverSla={() => changeTab('all', { sla: 'over_sla' })}
                                         onOpenWaiting={() => changeTab('all', { status: 'open' })}
