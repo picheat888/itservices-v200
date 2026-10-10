@@ -514,7 +514,7 @@ class RequestApprovalsReport extends TabularReport
                 ], $b['approvers']['rows']),
             ],
             [
-                'title' => 'ไม่อนุมัติและยกเลิก',
+                'title' => 'คำขอที่ไม่อนุมัติและยกเลิก',
                 'headings' => ['เลขที่คำขอ', 'ประเภทคำขอ', 'ผล', 'หยุดที่', 'ใคร', 'เหตุผล', 'วันที่'],
                 'rows' => array_map(fn (array $r) => [
                     $r['reference'], $type($r['type']), self::OUTCOME_TH[$r['outcome']], $r['stop_label'] ?? 'ทีม IT', $r['decided_by'],
@@ -522,7 +522,7 @@ class RequestApprovalsReport extends TabularReport
                 ], $b['endings']['rows']),
             ],
             [
-                'title' => 'ขั้นที่ระบบข้าม',
+                'title' => 'ขั้นอนุมัติที่ระบบข้าม',
                 'headings' => ['เหตุผลที่ข้าม', 'ขั้น', 'คำขอ', 'ไม่มีใครอนุมัติเลย', 'ขั้นที่ถูกข้าม'],
                 'rows' => array_map(fn (array $s) => [
                     self::SKIP_TH[$s['reason']], $s['steps'], $s['requests'], $s['unapproved_requests'],

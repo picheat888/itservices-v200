@@ -409,7 +409,7 @@ class RequestApprovalsReportTest extends TestCase
         $report = app(RequestApprovalsReport::class);
         $sections = $report->exportSections($this->userWith(), $report->resolveFilters([]));
 
-        $this->assertSame(['รออนุมัติตอนนี้', 'ผู้อนุมัติ', 'ไม่อนุมัติและยกเลิก', 'ขั้นที่ระบบข้าม'], array_column($sections, 'title'));
+        $this->assertSame(['รออนุมัติตอนนี้', 'ผู้อนุมัติ', 'คำขอที่ไม่อนุมัติและยกเลิก', 'ขั้นอนุมัติที่ระบบข้าม'], array_column($sections, 'title'));
         $this->assertSame('ผู้อนุมัติลาออกแล้ว', $sections[0]['rows'][0][0]);
         $withdrawnNoReason = collect($sections[2]['rows'])->firstWhere(0, $this->r['R6']->reference);
         $this->assertSame('ไม่ได้บันทึกเหตุผล', $withdrawnNoReason[5]);

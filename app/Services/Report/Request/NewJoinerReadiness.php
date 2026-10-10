@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * "พนักงานใหม่พร้อมก่อนวันเริ่มงานไหม" on the IT pending report: each joiner's onboarding requests
+ * "ความพร้อมของพนักงานใหม่" on the IT pending report: each joiner's onboarding requests
  * against their start day (employees.joined_at), within 30 days either side of today.
  */
 final class NewJoinerReadiness

@@ -122,7 +122,7 @@ export default function RequestsItPendingReportPage() {
             extras={{
                 tiles: 5,
                 innerColumns: INNER,
-                // The group-by switch shapes only the "อยู่กับใคร" card, not the list.
+                // The group-by switch shapes only the "ภาระงานที่รอส่งมอบ" card, not the list.
                 cardOnlyFilters: ['by'],
                 filterTrail: ({ filters }) => <ItPendingAsOf filters={filters} />,
                 beforeTable: ({ filters, patch }) => <ItPendingCards filters={filters} patch={patch} />,

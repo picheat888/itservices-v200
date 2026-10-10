@@ -522,12 +522,12 @@ class RequestOverviewReport extends TabularReport
                 'rows' => array_map(fn (array $m) => [self::monthTh($m['month']), $m['submitted'], $m['completed']], $b['months']),
             ],
             [
-                'title' => 'ตามประเภทและสถานะ',
+                'title' => 'คำขอตามประเภทและสถานะ',
                 'headings' => ['ประเภทคำขอ', 'คำขอ', ...$statuses, 'อัตราอนุมัติ (%)'],
                 'rows' => array_map(fn (array $t) => [$types[$t['type']], $t['total'], ...array_values($t['by_status']), $rate($t)], $b['types']),
             ],
             [
-                'title' => 'ใช้เวลากี่วันจนเสร็จสิ้น',
+                'title' => 'ระยะเวลาดำเนินการจนเสร็จสิ้น',
                 'headings' => ['ประเภทคำขอ', 'คำขอที่เสร็จสิ้น', 'ขั้นอนุมัติ (มัธยฐาน วัน)', 'ขั้น IT (มัธยฐาน วัน)', 'ยื่นจนเสร็จสิ้น (มัธยฐาน วัน)'],
                 'rows' => [
                     ...array_map(fn (array $d) => [$types[$d['type']], $d['count'], $d['approval'], $d['it'], $d['total']], $b['delivery']['types']),
