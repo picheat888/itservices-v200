@@ -31,7 +31,6 @@ export const ticket: Dict = {
     ticket_sla_unit_m: 'm',
     ticket_sort_sla: 'SLA due first',
     ticket_trend_flat: 'No change',
-    ticket_range_custom: 'Custom',
     ticket_forward: 'Forward',
     ticket_forward_hint: 'The receiving staff will be notified, and the SLA will not restart.',
     ticket_sla_filter_overdue: 'Overdue',
@@ -131,8 +130,6 @@ export const ticket: Dict = {
     ticket_notify_assignee: 'The selected staff member will be notified immediately.',
     ticket_avg_response: 'Avg. response',
     ticket_trend_tickets: 'tickets',
-    ticket_overview: 'Overview',
-    ticket_days: 'days',
     // components/ticket-overview-tiles.tsx — overview summary tiles
     ticket_tile_over_sla: 'Past SLA',
     ticket_tile_of_live: 'of {n} still open',

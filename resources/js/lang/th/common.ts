@@ -157,6 +157,10 @@ export const common: Dict = {
     date_range_pick_end: 'คลิกวันสิ้นสุด',
     apply: 'นำไปใช้',
 
+    // overview-period.tsx — หัวแท็บภาพรวม ช่วงเวลา
+    period_days: '{n} วัน',
+    period_custom: 'กำหนดเอง',
+
     // record-stamps.tsx — วันที่และผู้เพิ่ม/แก้ไขล่าสุดของ record
     record_added: 'เพิ่มเมื่อ',
     record_updated: 'แก้ไขล่าสุด',

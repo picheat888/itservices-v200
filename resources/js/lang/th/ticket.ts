@@ -31,7 +31,6 @@ export const ticket: Dict = {
     ticket_sla_unit_m: 'น.',
     ticket_sort_sla: 'ใกล้เกิน SLA ก่อน',
     ticket_trend_flat: 'คงที่',
-    ticket_range_custom: 'กำหนดเอง',
     ticket_forward: 'ส่งต่อ',
     ticket_forward_hint: 'ผู้รับ Ticket ต่อจะได้รับการแจ้งเตือน และ SLA จะไม่ถูกเริ่มนับใหม่',
     ticket_sla_filter_overdue: 'เกินกำหนด',
@@ -131,8 +130,6 @@ export const ticket: Dict = {
     ticket_notify_assignee: 'ระบบจะแจ้งเตือนเจ้าหน้าที่ ที่ได้รับมอบหมายทันที',
     ticket_avg_response: 'เวลาตอบกลับเฉลี่ย',
     ticket_trend_tickets: 'Ticket',
-    ticket_overview: 'ภาพรวม',
-    ticket_days: 'วัน',
     // components/ticket-overview-tiles.tsx — การ์ดสรุปหน้าภาพรวม
     ticket_tile_over_sla: 'เกิน SLA',
     ticket_tile_of_live: 'จาก {n} ที่ยังไม่ปิด',
