@@ -71,6 +71,7 @@ export function TabularFilterBar({
     hidden = [],
     viewOnly = [],
     leading,
+    trailing,
 }: {
     definition: TabularDefinition;
     filters: TabularFilters;
@@ -82,6 +83,8 @@ export function TabularFilterBar({
     viewOnly?: string[];
     /** Drawn first in the bar. */
     leading?: React.ReactNode;
+    /** Drawn last in the bar, after the controls (a "data as of" note). */
+    trailing?: React.ReactNode;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -174,6 +177,7 @@ export function TabularFilterBar({
                 })}
 
             <ClearFiltersBadge active={anySet} onClear={onReset} />
+            {trailing}
         </FilterRow>
     );
 }

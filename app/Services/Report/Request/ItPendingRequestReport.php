@@ -42,6 +42,9 @@ class ItPendingRequestReport extends TabularReport
     /** The age groups' chart tones: the approvals page's red / amber / gray. */
     private const AGE_BAND_TONES = ['over_7' => 'soft-red', 'days_4_7' => 'soft-amber', 'upto_3' => 'gray'];
 
+    /** The waiting tile's key: the shortest label for the last group, so three fit one line. */
+    private const TILE_BAND_KEYS = ['over_7' => 'rep_age_over_7', 'days_4_7' => 'rep_age_days_4_7', 'upto_3' => 'rep_rqi_tile_upto_3'];
+
     private const BY_KEYS = ['owner' => 'rep_rqi_by_owner', 'type' => 'rep_rqi_by_type'];
 
     public function __construct(private readonly NewJoinerReadiness $joiners) {}
@@ -59,7 +62,7 @@ class ItPendingRequestReport extends TabularReport
     public function filters(): array
     {
         return [
-            ReportFilter::select('type', Options::fromLabels(self::typeKeys()))->labelKey('rep_fl_rqi_type'),
+            ReportFilter::select('type', Options::fromLabels(self::typeKeys()))->labelKey('rep_fl_request_type'),
             ReportFilter::select('department_id', Options::departments()),
             ReportFilter::select('assignee', self::assigneeOptions()),
             ReportFilter::search(),
@@ -126,7 +129,9 @@ class ItPendingRequestReport extends TabularReport
             ReportColumn::number('waiting_days', 'รอมาแล้ว (วัน)', fn (ServiceRequest $r) => $this->waitingDays($r)),
             ReportColumn::enum('age_band', 'ช่วงเวลารอ', fn (ServiceRequest $r) => self::ageBand($this->waitingDays($r)), self::AGE_BAND_KEYS, self::AGE_BAND_TH)
                 ->labelKey('rep_c_rqi_age_band')->sheetOnly(),
-            ReportColumn::text('ticket_no', 'Ticket', fn (ServiceRequest $r) => $r->ticket?->ticket_no)->linkTo('/tickets', fn (ServiceRequest $r) => $r->ticket?->id),
+            // The status is drawn under the ticket number on the page.
+            ReportColumn::text('ticket_no', 'Ticket', fn (ServiceRequest $r) => $r->ticket?->ticket_no)->labelKey('rep_c_rqi_ticket')
+                ->linkTo('/tickets', fn (ServiceRequest $r) => $r->ticket?->id),
             ReportColumn::enum('ticket_status', 'สถานะ Ticket', fn (ServiceRequest $r) => $r->ticket?->status, self::TICKET_STATUS_KEYS, self::ticketStatusTh()),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (ServiceRequest $r) => $r->ticket?->assignee?->name),
         ];
@@ -157,16 +162,15 @@ class ItPendingRequestReport extends TabularReport
 
         return [
             ReportSummary::make('rqi_waiting', 'รอ IT ส่งมอบตอนนี้', $total)->withSplit(array_map(fn (string $band) => [
-                'key' => $band, 'label_key' => self::AGE_BAND_KEYS[$band], 'tone' => self::AGE_BAND_TONES[$band], 'value' => (int) $bands->get($band, 0),
+                'key' => $band, 'label_key' => self::TILE_BAND_KEYS[$band], 'tone' => self::AGE_BAND_TONES[$band], 'value' => (int) $bands->get($band, 0),
             ], self::AGE_BANDS)),
-            ReportSummary::make('rqi_over_3', 'รอเกิน 3 วัน', $over3, 'amber')->withShareOf($total)
-                ->withNote($total ? ['label_key' => 'rep_n_rqi_share', 'values' => ['pct' => (int) round($over3 / $total * 100)]] : null),
+            ReportSummary::make('rqi_over_3', 'รอเกิน 3 วัน', $over3, 'amber')->withShareOf($total),
             ReportSummary::make('rqi_over_7', 'รอเกิน 7 วัน', $over7, 'red')->withShareOf($total)
                 ->withNote($oldest ? ['label_key' => 'rep_n_rqi_oldest', 'values' => ['days' => $oldest['days']], 'texts' => ['reference' => $oldest['reference']]] : null),
             ReportSummary::make('rqi_no_ticket', 'ยังไม่มี Ticket', $waiting->where('owner', self::NO_TICKET)->count())
                 ->withNote(['label_key' => 'rep_n_rqi_unassigned', 'values' => ['n' => $waiting->where('owner', self::NONE)->count()]]),
             $this->joinersTile($notReady, $pastStart)
-                ->withNote($notReady ? ['label_key' => 'rep_n_rqi_past_start', 'values' => ['n' => $pastStart]] : ['label_key' => 'rep_n_rqi_window', 'texts' => ['from' => $readiness['from'], 'to' => $readiness['to']]]),
+                ->withNote($notReady ? ['label_key' => 'rep_n_rqi_past_start', 'values' => ['n' => $pastStart]] : ['label_key' => $readiness['rows'] === [] ? 'rep_n_rqi_no_joiners' : 'rep_n_rqi_all_ready']),
         ];
     }
 
@@ -357,7 +361,7 @@ class ItPendingRequestReport extends TabularReport
         $b = $this->breakdown($viewer, $filters);
         $bandHeads = array_map(fn (string $band) => self::AGE_BAND_TH[$band], self::AGE_BANDS);
         $ownerName = fn (array $line) => match ($line['key']) {
-            self::NONE => 'ยังไม่มีผู้รับ',
+            self::NONE => 'ยังไม่มีผู้รับผิดชอบ',
             self::NO_TICKET => 'ยังไม่มี Ticket',
             default => $line['name'],
         };
@@ -366,7 +370,7 @@ class ItPendingRequestReport extends TabularReport
         return [
             [
                 'title' => 'ตามระยะเวลารอ',
-                'headings' => ['ช่วงเวลารอ', 'คำขอที่รอ', 'ยังไม่มีผู้รับ', 'ยังไม่มี Ticket', 'มีผู้รับแล้ว', 'เสร็จสิ้นใน 30 วันล่าสุด'],
+                'headings' => ['ช่วงเวลารอ', 'คำขอที่รอ', 'ยังไม่มีผู้รับผิดชอบ', 'ยังไม่มี Ticket', 'มีผู้รับผิดชอบแล้ว', 'เสร็จสิ้นใน 30 วันล่าสุด'],
                 'rows' => array_map(fn (string $band) => [
                     self::AGE_BAND_TH[$band], $b['waiting']['bands'][$band]['total'], $b['waiting']['bands'][$band]['unassigned'],
                     $b['waiting']['bands'][$band]['no_ticket'], $b['waiting']['bands'][$band]['assigned'], $b['delivered']['bands'][$band],
@@ -431,7 +435,7 @@ class ItPendingRequestReport extends TabularReport
             ->whereNotNull('tickets.assignee_id')->distinct()->pluck('tickets.assignee_id');
 
         return [
-            ['value' => self::NONE, 'label_key' => 'rep_opt_unassigned'],
+            ['value' => self::NONE, 'label_key' => 'rep_rqi_unassigned'],
             ['value' => self::NO_TICKET, 'label_key' => 'rep_rqi_opt_no_ticket'],
             ...User::query()->whereIn('id', $ids)->orderBy('name')->get(['id', 'name'])
                 ->map(fn (User $u) => ['value' => $u->id, 'label' => $u->name, 'label_th' => null])->all(),

@@ -12,12 +12,15 @@ import type {
     AssetWriteoffBreakdown,
     BacklogBoardTicket,
     ExportFormat,
+    ItPendingBreakdown,
     ManualSlaBreakdown,
     PagedRows,
     ReportDefinition,
     ReportExportItem,
     ReportScheduleItem,
     ReportSnapshot,
+    RequestApprovalsBreakdown,
+    RequestOverviewBreakdown,
     RequestSlaBreakdown,
     ScheduleInput,
     SnapshotRange,
@@ -118,6 +121,12 @@ export const reportApi = {
             .get<{ data: AccessOverviewBreakdown }>('/reports/access/overview/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
 
+    /** "ภาพรวมคำขอ": months, types by status, days to delivery, items asked for and departments. */
+    requestOverviewBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: RequestOverviewBreakdown }>('/reports/requests/overview/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
     /** "ตรวจสอบสมาชิกและเจ้าของ": the resource table, segment counts and the picked resource's review sheet. */
     accessMembersBreakdown: (filters: TabularFilters) =>
         http
@@ -136,6 +145,16 @@ export const reportApi = {
         http
             .get<{ data: SoftwareLicenseBreakdown }>('/reports/access/software-licenses/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
+
+    /** "การอนุมัติคำขอ": waiting now and why, each approver's speed, ended requests, skipped steps. */
+    requestApprovalsBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: RequestApprovalsBreakdown }>('/reports/requests/approvals/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "คำขอที่รอ IT ส่งมอบ": age groups with owners, the 30-day flow, by assignee, by type, new joiners. */
+    itPendingBreakdown: (filters: TabularFilters) =>
+        http.get<{ data: ItPendingBreakdown }>('/reports/requests/it-pending/breakdown', { params: tabularParams(filters) }).then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 

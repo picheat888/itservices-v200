@@ -114,7 +114,8 @@ function toUrl(definition: TabularDefinition, filters: TabularFilters): Record<s
     return out;
 }
 
-export function useTabularFilters(definition: TabularDefinition) {
+/** `keepPage`: filters that only shape cards above the list — changing one leaves ?page where it is. */
+export function useTabularFilters(definition: TabularDefinition, { keepPage = [] }: { keepPage?: string[] } = {}) {
     const [params, setParams] = useSearchParams();
     // What a link brought, kept so those filters are not saved as the reader's own pick.
     const [linked] = useState(() => fromUrl(definition, params));
@@ -126,7 +127,9 @@ export function useTabularFilters(definition: TabularDefinition) {
     // report's own names are touched — the charts' ?view= and any stray ?from= of a report that
     // has no such filter are left to themselves / cleared.
     useEffect(() => {
-        const filtersChanged = synced.current !== filters;
+        const before = synced.current;
+        const filtersChanged =
+            before !== filters && Object.keys({ ...before, ...filters }).some((n) => !keepPage.includes(n) && before[n] !== filters[n]);
         synced.current = filters;
         const wanted = toUrl(definition, filters);
         const owned = [...new Set([...names, 'from', 'to'])];

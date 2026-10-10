@@ -147,6 +147,15 @@ export const useAssetWarrantyBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/** "ภาพรวมคำขอ" — every filter of the page shapes its cards. */
+export const useRequestOverviewBreakdown = (filters: TabularFilters) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', 'requests.overview', 'breakdown', filters],
+        queryFn: () => reportApi.requestOverviewBreakdown(filters),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+
 /** "ภาพรวมสิทธิ์การเข้าถึง" — keyed without the active / revoked segment, which narrows only the list. */
 export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
     const { state: _state, ...rest } = filters;
@@ -183,6 +192,27 @@ export const useSoftwareLicenseBreakdown = (filters: TabularFilters) => {
         retry: noRetryOn4xx,
     });
 };
+
+/** "คำขอที่รอ IT ส่งมอบ" — keyed without the "แยกตาม" switch, which only picks how a card is shown. */
+export const useItPendingBreakdown = (filters: TabularFilters) => {
+    const { by: _by, ...rest } = filters;
+    void _by;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'requests.it_pending', 'breakdown', rest],
+        queryFn: () => reportApi.itPendingBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
+/** "การอนุมัติคำขอ" — every filter shapes the cards. */
+export const useRequestApprovalsBreakdown = (filters: TabularFilters) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', 'requests.approvals', 'breakdown', filters],
+        queryFn: () => reportApi.requestApprovalsBreakdown(filters),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
 
 /** Download one resource's review sheet (PDF). */
 export const useAccessReviewSheet = () =>

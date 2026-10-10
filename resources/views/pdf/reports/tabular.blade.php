@@ -36,6 +36,7 @@
             'percent' => $item->value.'%',
             'hours' => number_format($item->value, 1).' ชม.',
             'years' => number_format($item->value, 1).' ปี',
+            'days' => number_format($item->value, 1).' วัน',
             default => $item->value,
         } }}</b></td>
     @endforeach

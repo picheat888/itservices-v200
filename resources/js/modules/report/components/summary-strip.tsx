@@ -1,16 +1,5 @@
-/**
- * Headline numbers above a tabular report's table: one KpiTile per `SummaryItem` from the
- * rows response (`rows.summary`) — mirrors App\Services\Report\Tabular\ReportSummary. Like the
- * Ticket & SLA tiles, a tile carries colour when the report gives it the means: its `share` of
- * the whole as a badge and a meter in the tile's tone, and its `split` as a stacked meter (when
- * there is no share) and as coloured dots in the footer ("● ซื้อ 62 · ● เช่า 18"). Two or three
- * tiles share the row between them on wide screens, so a short strip leaves no empty slot; five fit one row on extra-wide screens.
- * A tile with a `note` carries that line at its foot (after the split's dots when it has both) — a duration in days
- * (hours under a day, as the time-left pills) and/or a short date and time, and any plain numbers
- * it names, and any words (`texts`: plain, or a master-data name in the reader's language). A
- * 'percent' tile with a `goal` draws the Ticket & SLA meter (goal marked, amber below it) and flags
- * itself while short of the goal; 'hours' reads "58.8 ชม.", 'years' "3.9 ปี".
- */
+// Headline tiles above a tabular report (rows.summary, mirrors ReportSummary): share badge + meter, split bar + dots,
+// a note line, a goal meter, or a request trend (Delta + Sparkline). Formats: count, money, percent, hours, years, days.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
@@ -88,6 +77,35 @@ function NoteLine({ note }: { note: Note }) {
 const noteTitle = (t: (key: string) => string, lang: string, note: Note) =>
     note.trend ? `${noteText(t, lang, note)} ${trendText(t, note.trend)}` : noteText(t, lang, note);
 
+/** A request trend as the snapshot strip draws it: "▲ 3 จากช่วงก่อนหน้า" left, the line right, both in the same good / bad colour. */
+function DeltaFooter({ trend, decimals }: { trend: NonNullable<Note['trend']>; decimals: number }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const delta = trend.values?.delta;
+    const neutral = trend.direction === 'even' || trend.up_is_good === null || trend.up_is_good === undefined;
+    const good = neutral ? null : (trend.direction === 'up') === trend.up_is_good;
+    const shade = good === null ? TREND.even : good ? TREND.up : TREND.down;
+    const size = delta?.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+    return (
+        <span className="flex min-h-5 items-center justify-between gap-1.5">
+            <span className="min-w-0 truncate">
+                {delta === undefined ? (
+                    <span className="text-muted-foreground">{t(trend.label_key)}</span>
+                ) : (
+                    <>
+                        <span className={cn('font-semibold', shade.ink)}>
+                            {trend.direction === 'even' ? t('rep_snap_same') : `${trend.direction === 'up' ? '▲' : '▼'} ${size}`}
+                        </span>{' '}
+                        <span className="text-muted-foreground">{t(trend.label_key)}</span>
+                    </>
+                )}
+            </span>
+            {trend.points && <Sparkline values={trend.points} className={shade.line} />}
+        </span>
+    );
+}
+
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -102,7 +120,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         ? '—'
                         : item.format === 'money'
                           ? item.value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          : item.format === 'hours' || item.format === 'years'
+                          : item.format === 'hours' || item.format === 'years' || item.format === 'days'
                             ? item.value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
                             : item.value.toLocaleString(locale);
                 const unit =
@@ -114,19 +132,19 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                             ? t('rep_hours')
                             : item.format === 'years'
                               ? t('rep_years')
-                              : undefined;
+                              : item.format === 'days'
+                                ? t('rep_days')
+                                : undefined;
                 const goal = item.format === 'percent' && item.goal != null && item.value !== null ? item.goal : null;
                 const tone = item.tone ?? 'gray';
-                // A soft tone ("soft-red") fills in its lighter shade; the badge and the warning keep
-                // the base meaning (red = gone wrong, amber = needs watching).
+                // A soft tone fills lighter; the badge and the warning keep the base meaning.
                 const base = tone.replace(/^soft-/, '') as 'amber' | 'red' | 'green' | 'violet' | 'blue' | 'gray';
                 // An asset-status tile wears the badge colour chosen in Settings → Assets.
                 const assetColor = tone.startsWith('asset-') ? assetStatusColors[tone.slice(6).replace(/-/g, '_')] : undefined;
                 const share = item.share ?? null;
                 const split = item.split ?? [];
                 const splitTotal = split.reduce((sum, part) => sum + part.value, 0);
-                // An hours tile splits into hours ("8.2" + "ชม."); every other split is a count. The unit
-                // stays out of the monospace number, where Thai would render spaced out.
+                // An hours tile splits into hours, the unit outside the monospace number; other splits are counts.
                 const partNumber = (value: number, counts = false) =>
                     item.format === 'hours' && !counts
                         ? value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -152,9 +170,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                 <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
                             ) : undefined
                         }
-                        // A 0-valued tile has nothing to warn about — only flag it once there's actually
-                        // something behind its tone: red for a rate short of its goal or a red tile (past SLA),
-                        // amber for an amber one (due soon, nobody assigned).
+                        // Flagged only above zero: red below the goal or for a red tile, amber for an amber one.
                         alert={
                             (goal !== null && (item.value ?? 0) < goal) || ((base === 'red' || item.attention === 'red') && (item.value ?? 0) > 0)
                                 ? 'red'
@@ -195,6 +211,8 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                         </span>
                                     )}
                                 </span>
+                            ) : item.note?.trend && item.note.trend.up_is_good !== undefined ? (
+                                <DeltaFooter trend={item.note.trend} decimals={item.format === 'days' ? 1 : 0} />
                             ) : item.note ? (
                                 <span className="flex items-end justify-between gap-3">
                                     <span className="line-clamp-2 min-w-0" title={noteTitle(t, lang, item.note)}>
