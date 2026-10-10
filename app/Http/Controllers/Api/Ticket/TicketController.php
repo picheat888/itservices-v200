@@ -237,7 +237,7 @@ class TicketController extends Controller
         $windowSeconds = (int) $curStart->diffInSeconds($curEnd);
         $prevStart = $curStart->copy()->subSeconds($windowSeconds);
 
-        $tickets = Ticket::all();
+        $tickets = Ticket::with('serviceRequest:id,ticket_id,type')->get();
 
         // Inbound flow — tickets created in the current vs the previous window.
         $createdCur = $tickets->filter(fn (Ticket $t) => $t->created_at >= $curStart && $t->created_at <= $curEnd)->count();

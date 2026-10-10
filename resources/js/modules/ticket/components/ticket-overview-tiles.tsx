@@ -13,6 +13,19 @@ const fmt = (n: number) => n.toLocaleString('en-US');
 const RED = 'text-red-600 dark:text-red-400';
 const AMBER = 'text-amber-600 dark:text-amber-400';
 const GREEN = 'text-emerald-600 dark:text-emerald-400';
+// Tinted shell for a right-now tile with work waiting.
+const ALERT = {
+    red: {
+        card: 'border-red-200 bg-red-50/70 group-hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:group-hover:bg-red-950/50',
+        ink: RED,
+        icon: 'bg-red-500/10 text-red-600 dark:text-red-400',
+    },
+    amber: {
+        card: 'border-amber-200 bg-amber-50/70 group-hover:bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30 dark:group-hover:bg-amber-950/50',
+        ink: AMBER,
+        icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    },
+};
 const PRESSABLE = 'group focus-visible:ring-ring block h-full rounded-xl text-left focus-visible:ring-2 focus-visible:outline-none';
 
 /** ▲/▼ change in SLA points: up = green, down = red. */
@@ -35,6 +48,7 @@ function Tile({
     valueTone,
     hint,
     chart,
+    alert,
 }: {
     label: string;
     icon: LucideIcon;
@@ -42,12 +56,13 @@ function Tile({
     valueTone?: string;
     hint: ReactNode;
     chart?: ReactNode;
+    alert?: keyof typeof ALERT;
 }) {
     return (
-        <Card className="group-hover:border-brand/40 h-full p-5 transition-colors">
+        <Card className={cn('h-full p-5 transition-colors', alert ? ALERT[alert].card : 'group-hover:border-brand/40')}>
             <div className="flex items-start justify-between">
-                <div className="text-muted-foreground text-sm">{label}</div>
-                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
+                <div className={cn('text-sm', alert ? cn(ALERT[alert].ink, 'font-semibold') : 'text-muted-foreground')}>{label}</div>
+                <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', alert ? ALERT[alert].icon : 'bg-brand/10 text-brand')}>
                     <Icon className="h-[18px] w-[18px]" />
                 </span>
             </div>
@@ -76,8 +91,20 @@ function FlowBars({ flow }: { flow: TicketSummary['flow'] }) {
     );
 }
 
-/** SLA tone by distance to the goal: met = green, within 10 points = amber, else red. */
-const slaTone = (rate: number, goal: number) => (rate >= goal ? GREEN : rate >= goal - 10 ? AMBER : RED);
+/** SLA level by distance to the goal: met, within 10 points, or further off. */
+const slaLevel = (rate: number, goal: number) => (rate >= goal ? 'met' : rate >= goal - 10 ? 'near' : 'miss');
+const SLA_INK = { met: GREEN, near: AMBER, miss: RED };
+const SLA_FILL = { met: 'bg-emerald-500', near: 'bg-amber-500', miss: 'bg-red-500' };
+
+/** The window's SLA against its goal tick, sized to sit beside the number. */
+function SlaBar({ rate, goal }: { rate: number; goal: number }) {
+    return (
+        <span className="bg-muted relative mb-2.5 h-2 max-w-40 flex-1 rounded-full" aria-hidden="true">
+            <span className={cn('block h-full rounded-full', SLA_FILL[slaLevel(rate, goal)])} style={{ width: `${Math.min(100, rate)}%` }} />
+            <span className="bg-foreground absolute -top-1 h-4 w-0.5 rounded-sm" style={{ left: `${goal}%` }} />
+        </span>
+    );
+}
 
 export function TicketOverviewTiles({
     summary,
@@ -102,7 +129,8 @@ export function TicketOverviewTiles({
             label={t('ticket_tile_over_sla')}
             icon={AlertTriangle}
             value={fmt(summary.over_sla_now)}
-            valueTone={summary.over_sla_now > 0 ? RED : undefined}
+            valueTone={summary.over_sla_now > 0 ? RED : GREEN}
+            alert={summary.over_sla_now > 0 ? 'red' : undefined}
             hint={
                 summary.over_sla_now > 0
                     ? [
@@ -120,7 +148,8 @@ export function TicketOverviewTiles({
             label={t('ticket_tile_waiting')}
             icon={Clock}
             value={fmt(summary.backlog_open)}
-            valueTone={summary.backlog_open > 0 ? AMBER : undefined}
+            valueTone={summary.backlog_open > 0 ? AMBER : GREEN}
+            alert={summary.backlog_open > 0 ? 'amber' : undefined}
             hint={
                 summary.backlog_open > 0 ? t('ticket_tile_working').replace('{n}', fmt(summary.backlog_in_progress)) : t('ticket_dash_waiting_ok_sub')
             }
@@ -131,7 +160,8 @@ export function TicketOverviewTiles({
             label={t('ticket_tile_sla').replace('{goal}', String(sla.goal))}
             icon={Gauge}
             value={pct(sla.rate)}
-            valueTone={sla.rate == null ? undefined : slaTone(sla.rate, sla.goal)}
+            valueTone={sla.rate == null ? undefined : SLA_INK[slaLevel(sla.rate, sla.goal)]}
+            chart={sla.rate == null ? null : <SlaBar rate={sla.rate} goal={sla.goal} />}
             hint={
                 sla.rate == null ? (
                     t('ticket_tile_sla_none')
