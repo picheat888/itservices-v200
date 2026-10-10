@@ -72,7 +72,10 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
 
                 <div className="flex-1 space-y-4 overflow-y-auto border-t px-6 py-6">
                     {formError && (
-                        <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm">
+                        <div
+                            key={formError}
+                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
+                        >
                             {formError}
                         </div>
                     )}

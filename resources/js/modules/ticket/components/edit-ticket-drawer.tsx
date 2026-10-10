@@ -172,7 +172,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                     {formError && (
                         <div
                             key={formError}
-                            className="bg-destructive/10 text-destructive animate-shake space-y-1 rounded-lg px-3.5 py-2.5 text-sm sm:col-span-2"
+                            className="bg-destructive/10 dark:text-destructive animate-shake space-y-1 rounded-lg px-3.5 py-2.5 text-sm text-red-700 sm:col-span-2"
                         >
                             <p>{formError}</p>
                         </div>

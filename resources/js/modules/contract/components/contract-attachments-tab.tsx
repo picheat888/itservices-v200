@@ -58,7 +58,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                             i === selected ? 'border-brand bg-brand/5 shadow-[inset_0_0_0_1px_var(--brand)]' : 'border-border hover:bg-accent/50',
                         )}
                     >
-                        <span className="bg-destructive/10 text-destructive flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[9px] font-extrabold">
+                        <span className="bg-destructive/10 dark:text-destructive flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[9px] font-extrabold text-red-700">
                             PDF
                         </span>
                         <span className="min-w-0 flex-1">

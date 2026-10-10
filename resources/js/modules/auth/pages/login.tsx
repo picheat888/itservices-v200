@@ -322,7 +322,7 @@ export default function LoginPage() {
                             <p
                                 role="alert"
                                 className={cn(
-                                    'bg-destructive/10 text-destructive border-destructive/25 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm',
+                                    'bg-destructive/10 dark:text-destructive border-destructive/25 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm text-red-700',
                                     shake && 'animate-shake',
                                 )}
                             >

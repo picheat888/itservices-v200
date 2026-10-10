@@ -53,7 +53,14 @@ export function FocusDialogHeader({
     tileSize?: 'md' | 'lg';
 }) {
     const lang = useUiStore((s) => s.lang);
-    const tintStyle = accent ? { background: `${accent}18`, color: accent } : undefined;
+    // Icon tile: the accent kept at 3:1 on its tint in both themes
+    const tintStyle = accent
+        ? ({
+              background: `${accent}18`,
+              '--ink': readableInk(accent, LIGHT_GROUND, 0x18 / 255, 3),
+              '--ink-dark': readableInk(accent, DARK_GROUND, 0x18 / 255, 3),
+          } as CSSProperties)
+        : undefined;
     // Code chip text: the accent darkened/lightened only as far as 4.5:1 on its tint needs.
     const codeStyle = accent
         ? ({
@@ -74,7 +81,7 @@ export function FocusDialogHeader({
                         'flex shrink-0 items-center justify-center',
                         boxCls,
                         round ? 'rounded-full' : 'rounded-xl',
-                        !accent && 'bg-brand/10 text-brand',
+                        accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : 'bg-brand/10 text-brand',
                     )}
                     style={tintStyle}
                 >
