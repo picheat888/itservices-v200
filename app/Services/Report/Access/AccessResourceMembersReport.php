@@ -283,7 +283,7 @@ class AccessResourceMembersReport extends TabularReport
             ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee)),
             ReportColumn::enum('level', 'ระดับ', fn (AccessMembership $m) => AccessFacts::level($m), AccessFacts::LEVEL_KEYS, AccessFacts::LEVEL_TH)
                 ->labelKey('rep_c_ac_level'),
-            ReportColumn::text('purpose', 'วัตถุประสงค์', fn (AccessMembership $m) => $m->purpose)->labelKey('rep_c_ac_purpose'),
+            ReportColumn::text('purpose', 'วัตถุประสงค์', fn (AccessMembership $m) => $m->purpose)->labelKey('rep_c_ac_purpose')->hiddenByDefault(),
             ReportColumn::dateTime('granted_at', 'วันที่ให้', fn (AccessMembership $m) => $m->granted_at)->labelKey('rep_c_ac_granted_at'),
             ReportColumn::text('granted_by', 'ผู้ให้', fn (AccessMembership $m) => $m->grantedBy?->name)->labelKey('rep_c_ac_granted_by'),
             ReportColumn::enum('status', 'สถานะ', fn (AccessMembership $m) => $this->status($m), self::STATUS_KEYS, self::STATUS_TH),
@@ -394,7 +394,6 @@ class AccessResourceMembersReport extends TabularReport
         $members = $resource->getRelationValue('memberships')
             ->map(fn (AccessMembership $m) => AccessFacts::person($m->employee) + [
                 'level' => AccessFacts::level($m),
-                'purpose' => $m->purpose,
                 'granted_at' => $m->granted_at?->format('Y-m-d'),
                 'kind' => $this->kindOf($m, $resource, $type),
             ])

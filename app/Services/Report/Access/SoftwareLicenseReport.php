@@ -215,7 +215,7 @@ class SoftwareLicenseReport extends TabularReport
                 ->labelKey('rep_c_ac_employee')->linkTo('/employees', fn (AccessMembership $m) => $m->employee_id),
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (AccessMembership $m) => $m->employee?->code)->hiddenByDefault(),
             ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee)),
-            ReportColumn::text('purpose', 'วัตถุประสงค์', fn (AccessMembership $m) => $m->purpose)->labelKey('rep_c_ac_purpose'),
+            ReportColumn::text('purpose', 'วัตถุประสงค์', fn (AccessMembership $m) => $m->purpose)->labelKey('rep_c_ac_purpose')->hiddenByDefault(),
             ReportColumn::dateTime('granted_at', 'วันที่ให้', fn (AccessMembership $m) => $m->granted_at)->labelKey('rep_c_ac_granted_at'),
             ReportColumn::text('granted_by', 'ผู้ให้', fn (AccessMembership $m) => $m->grantedBy?->name)->labelKey('rep_c_ac_granted_by'),
             ReportColumn::enum('status', 'สถานะ', fn (AccessMembership $m) => match (true) {

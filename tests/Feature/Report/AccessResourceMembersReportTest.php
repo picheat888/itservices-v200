@@ -175,6 +175,15 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertSame(['EMP-B', 'EMP-C'], array_column($sheet['list'], 'code'));
         $this->assertSame(['in_dept', 'gone'], array_column($sheet['list'], 'kind'));
         $this->assertSame(['Write', 'Read'], array_column($sheet['list'], 'level'));
+        // Nobody enters a purpose in the app, so the sheet leaves it out.
+        $this->assertArrayNotHasKey('purpose', $sheet['list'][0]);
+    }
+
+    public function test_purpose_starts_hidden_but_stays_in_the_file(): void
+    {
+        $columns = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members')->assertOk()->json('data.columns'))->keyBy('key');
+
+        $this->assertTrue($columns['purpose']['hidden']);
     }
 
     public function test_the_review_sheet_prints_as_a_pdf(): void
