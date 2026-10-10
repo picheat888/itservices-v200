@@ -550,12 +550,12 @@ export default function AccessControlPage() {
     ];
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
             {/* Page header */}
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">{t('access_title')}</h1>
-                    <p className="text-muted-foreground mt-0.5 text-sm">{t('access_sub')}</p>
+                    <p className="text-muted-foreground text-sm">{t('access_sub')}</p>
                 </div>
             </div>
 
