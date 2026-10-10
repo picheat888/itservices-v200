@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -181,7 +182,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                         <caption className="sr-only">{t('rep_ar_space_title')}</caption>
                         <Cols widths={SPACE_COLS} />
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_ac_dept_col_name')}
                                 </th>
@@ -373,7 +374,7 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                         <table className="w-full text-sm">
                             <caption className="sr-only">{t('rep_ar_res_title')}</caption>
                             <thead>
-                                <tr className="bg-muted/40 border-border border-b">
+                                <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                     {[
                                         'rep_ar_col_resource',
                                         'rep_c_ac_type',

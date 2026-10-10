@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { ApprovalSkipReason, ServiceRequestType } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
@@ -116,7 +117,12 @@ function StuckColumn({ group, rows }: { group: StuckGroup; rows: RequestStuckSte
 
     return (
         <section className="border-border min-w-0 border-t first:border-t-0 xl:border-t-0 xl:border-l xl:first:border-l-0">
-            <h3 className="bg-muted/50 border-border text-muted-foreground flex items-baseline justify-between gap-2 border-b px-5 py-2 text-xs font-semibold">
+            <h3
+                className={cn(
+                    TABLE_HEAD,
+                    'border-border text-muted-foreground flex items-baseline justify-between gap-2 border-b px-5 py-2 text-xs font-semibold',
+                )}
+            >
                 {t(`rep_rqa_stuck_${group}`)}
                 <b className="text-foreground font-mono tabular-nums">{t('rep_rqa_n_requests').replace('{n}', count(rows.length, lang))}</b>
             </h3>
@@ -316,7 +322,7 @@ function ApproversCard({ approvers, filtered }: { approvers: RequestApprovalsBre
                             ))}
                         </colgroup>
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_rqa_appr_col_name')}
                                 </th>
@@ -582,7 +588,7 @@ function SkipsCard({ skips }: { skips: RequestSkipReasonRow[] }) {
                         ))}
                     </colgroup>
                     <thead>
-                        <tr className="bg-muted/40 border-border border-b">
+                        <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                             <th scope="col" className={cn(TH, 'text-left')}>
                                 {t('rep_rqa_skip_col_reason')}
                             </th>

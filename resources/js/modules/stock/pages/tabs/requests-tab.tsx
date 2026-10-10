@@ -4,6 +4,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -236,7 +237,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             {/* Quantity-only: spread the issue across warehouses (greedy pre-fill, editable). */}
                             {!fulfillSerialized && (
                                 <div className="border-border overflow-hidden rounded-lg border">
-                                    <div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
+                                    <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-3 py-2')}>
                                         <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                             {t('stock_issue_from')}
                                         </span>
@@ -285,7 +286,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             {/* Serialized: pick exactly the units (serials) that go out — across any warehouse. */}
                             {fulfillSerialized && (
                                 <div className="border-border overflow-hidden rounded-lg border">
-                                    <div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
+                                    <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-3 py-2')}>
                                         <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                             {t('stock_pick_serials')}
                                         </span>

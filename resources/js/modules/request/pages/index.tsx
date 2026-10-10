@@ -22,6 +22,7 @@ import {
     REQUEST_TYPES,
     requestTitle,
 } from '@/shared/lib/request-meta';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -611,7 +612,7 @@ function DashCard({
 }) {
     return (
         <Card className="overflow-hidden">
-            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                 <Icon className="text-muted-foreground h-4 w-4" />
                 <h2 className="text-sm font-semibold">{title}</h2>
                 {count != null && (

@@ -1,3 +1,4 @@
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Skeleton } from '@/shared/ui/skeleton';
 
@@ -5,7 +6,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
     return (
         <div className="border-border overflow-hidden rounded-xl border">
-            <div className="border-border bg-muted/40 border-b px-4 py-3">
+            <div className={cn('border-border border-b px-4 py-3', TABLE_HEAD)}>
                 <Skeleton className="h-3 w-48" />
             </div>
             <div className="divide-border/60 divide-y">

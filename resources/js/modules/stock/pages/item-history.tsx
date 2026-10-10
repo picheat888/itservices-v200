@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer, SlidersHorizontal } from 'lucide-react';
@@ -316,7 +317,7 @@ export default function ItemHistoryPage() {
         return (
             <div className="border-border overflow-x-auto rounded-xl border">
                 <table className="w-full text-sm">
-                    <thead className="bg-muted/40">
+                    <thead className={TABLE_HEAD}>
                         <tr className="text-muted-foreground border-border border-b text-left text-[11px] font-semibold tracking-wide uppercase">
                             {headers.map((h, i) => (
                                 <th key={i} className="px-3 py-2 whitespace-nowrap">

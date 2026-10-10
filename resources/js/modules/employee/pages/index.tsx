@@ -9,6 +9,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -913,7 +914,7 @@ function EmployeeOverviewSkeleton() {
                 ))}
             </div>
             <Card className="overflow-hidden">
-                <div className="border-border border-b px-5 py-3.5">
+                <div className={cn(CARD_HEADING, 'border-border border-b px-5 py-3.5')}>
                     <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                 </div>
                 <div className="flex h-[172px] items-end gap-2.5 p-5">
@@ -926,7 +927,7 @@ function EmployeeOverviewSkeleton() {
                 <div key={g} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, i) => (
                         <Card key={i} className="overflow-hidden">
-                            <div className="border-border border-b px-5 py-3.5">
+                            <div className={cn(CARD_HEADING, 'border-border border-b px-5 py-3.5')}>
                                 <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                             </div>
                             <div className="space-y-2.5 p-5">
@@ -995,7 +996,7 @@ function OverviewTab({
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Employee status — active vs resigned */}
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                         <span className="flex items-center gap-2 text-sm font-semibold">
                             <UserCheck className="text-muted-foreground h-4 w-4" />
                             {t('emp_status_title')}
@@ -1034,7 +1035,7 @@ function OverviewTab({
 
                 {/* Recent resignations */}
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                         <UserMinus className="text-muted-foreground h-4 w-4" />
                         <span className="text-sm font-semibold">{t('emp_recent_resignations')}</span>
                     </div>
@@ -1064,7 +1065,7 @@ function OverviewTab({
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                         <span className="flex items-center gap-2 text-sm font-semibold">
                             <Building2 className="text-muted-foreground h-4 w-4" />
                             {t('headcount_by_dept')}
@@ -1091,7 +1092,7 @@ function OverviewTab({
                     </div>
                 </Card>
                 <Card className="overflow-hidden">
-                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                    <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                         <UserPlus className="text-muted-foreground h-4 w-4" />
                         <span className="text-sm font-semibold">{t('recent_hires')}</span>
                     </div>

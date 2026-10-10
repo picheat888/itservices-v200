@@ -17,6 +17,7 @@ import { useListParams, type ListParamPatch } from '@/shared/hooks/use-list-para
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -1058,7 +1059,7 @@ function BodyEditor({
         <div className="flex h-full min-h-0 flex-col">
             <div className="border-input bg-background focus-within:border-brand flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
                 {/* Quick tools — insert HTML at the caret / around the selection */}
-                <div className="border-border bg-muted/40 flex shrink-0 flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
+                <div className={cn(CARD_HEADING, 'border-border flex shrink-0 flex-wrap items-center gap-0.5 border-b px-1.5 py-1')}>
                     <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}>
                         <Bold className="h-3.5 w-3.5" />
                     </ToolBtn>

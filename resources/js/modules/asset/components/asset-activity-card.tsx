@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { CurrentMonthLegend, MonthBarChart } from '@/shared/components/month-bar-chart';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { AssetSummary } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
@@ -28,7 +29,7 @@ export function AssetActivityCard({ activity, highlightLast }: { activity: Asset
 
     return (
         <Card className="flex h-full flex-col overflow-hidden">
-            <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-3.5">
+            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3.5')}>
                 <div className="flex items-center gap-2">
                     <ArrowLeftRight className="text-muted-foreground h-4 w-4" />
                     <span className="text-sm font-semibold">{t('asset_activity_title')}</span>

@@ -2,6 +2,7 @@
 // popovers, who holds them by owner or type (the "แยกตาม" switch), and new joiners against their start day.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -463,7 +464,7 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_rqi_jn_caption')}</caption>
-                        <thead className="bg-muted/40 border-border border-b">
+                        <thead className={cn(TABLE_HEAD, 'border-border border-b')}>
                             <tr>
                                 <th scope="col" className={head}>
                                     {t('rep_rqi_jn_col_person')}

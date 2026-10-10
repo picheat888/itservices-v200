@@ -1,5 +1,7 @@
 import { useT } from '@/lang';
 import { CurrentMonthLegend, MonthBarChart, type BarUnit, type MonthBar } from '@/shared/components/month-bar-chart';
+import { CARD_HEADING } from '@/shared/lib/surface';
+import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { TrendingUp } from 'lucide-react';
 
@@ -13,7 +15,7 @@ export function HiresTrendCard({ trend, highlightLast }: { trend: { unit: BarUni
 
     return (
         <Card className="overflow-hidden">
-            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                 <TrendingUp className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm font-semibold">{t('emp_hires_trend')}</span>
             </div>

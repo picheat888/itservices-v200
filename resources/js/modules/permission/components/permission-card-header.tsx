@@ -1,3 +1,4 @@
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import {
@@ -52,7 +53,7 @@ export function PermissionCardHeader({ module, on, total, lang }: { module: stri
     const Icon = MODULE_ICON[module];
 
     return (
-        <div className="border-border flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
+        <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between gap-2 rounded-t-[inherit] border-b px-3.5 py-2.5')}>
             <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
                 {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
                 <span className="truncate">{moduleLabel(module, lang)}</span>

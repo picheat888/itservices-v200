@@ -11,6 +11,7 @@ import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -1134,7 +1135,7 @@ function AuditTab() {
             >
                 <table className="w-full text-sm">
                     <thead className={cn(tableFitsWidth && 'bg-card sticky top-[var(--sticky-top,0px)] z-10 shadow-[0_1px_0_var(--color-border)]')}>
-                        <tr className="border-border border-b">
+                        <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                             {['Event', t('audit_user'), t('audit_target'), t('audit_time'), ''].map((h, i) => (
                                 <th
                                     key={i}

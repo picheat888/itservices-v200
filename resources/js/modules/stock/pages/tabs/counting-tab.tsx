@@ -6,6 +6,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
+import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -344,7 +345,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
                         {/* SKU picker */}
                         <div className="border-border overflow-hidden rounded-xl border">
-                            <div className="border-border bg-muted/30 flex items-center gap-3 border-b px-3 py-2">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-3 border-b px-3 py-2')}>
                                 <button
                                     type="button"
                                     onClick={toggleAllVisible}
@@ -496,7 +497,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
                             <div className="max-h-[60vh] overflow-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="bg-muted/40 sticky top-0 z-10 backdrop-blur">
+                                    <thead className={cn(TABLE_HEAD, 'sticky top-0 z-10 backdrop-blur')}>
                                         <tr className="border-border text-muted-foreground border-b text-left text-[11px] font-semibold tracking-wide uppercase">
                                             <th className="w-full px-3 py-2">{t('stock_item')}</th>
                                             <th className="w-24 px-3 py-2 text-right whitespace-nowrap">{t('stock_count_system')}</th>

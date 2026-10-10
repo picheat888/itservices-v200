@@ -1,4 +1,6 @@
 import { useT } from '@/lang';
+import { TABLE_HEAD } from '@/shared/lib/surface';
+import { cn } from '@/shared/lib/utils';
 import { AlertCircle } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ImportPreviewRow } from '../api/employeeApi';
@@ -14,7 +16,7 @@ export function ImportPreviewTable({ rows }: { rows: ImportPreviewRow[] }) {
     return (
         <div className="border-border max-h-72 overflow-auto rounded-lg border">
             <table className="w-full text-left text-xs">
-                <thead className="bg-muted/60 text-muted-foreground sticky top-0">
+                <thead className={cn(TABLE_HEAD, 'text-muted-foreground sticky top-0')}>
                     <tr>
                         <th className="px-2 py-1.5 font-semibold">{t('import_row')}</th>
                         <th className="px-2 py-1.5 font-semibold">{t('import_col_code')}</th>

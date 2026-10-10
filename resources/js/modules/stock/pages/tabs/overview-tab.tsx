@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { OverviewHeader } from '@/shared/components/overview-period';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { AlertTriangle, Archive, Check, Layers, Warehouse } from 'lucide-react';
@@ -69,7 +70,7 @@ export function OverviewTab({
                 <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
                     {Array.from({ length: canEvents ? 4 : 3 }).map((_, i) => (
                         <Card key={i} className="flex h-[22rem] flex-col overflow-hidden">
-                            <div className="border-border flex items-center gap-2 border-b px-5 py-3">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
                                 <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                                 <div className="bg-muted h-4 w-36 animate-pulse rounded" />
                             </div>
@@ -96,7 +97,7 @@ export function OverviewTab({
                     <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
                         {/* Action queue — reorder card with left severity accents */}
                         <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                            <div className="border-border flex items-center justify-between border-b px-5 py-3">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3')}>
                                 <div className="flex items-center gap-2">
                                     <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                                     <span className="text-sm font-semibold">{t('stock_action_queue')}</span>
@@ -149,7 +150,7 @@ export function OverviewTab({
                         {/* Recent movements — only shown when the user has stock.view_events */}
                         {canEvents && (
                             <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                                <div className="border-border flex items-center justify-between border-b px-5 py-3">
+                                <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3')}>
                                     <div className="flex items-center gap-2.5">
                                         <span className="relative flex h-2 w-2">
                                             <span className="sc-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -208,7 +209,7 @@ export function OverviewTab({
 
                         {/* By warehouse */}
                         <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                            <div className="border-border flex items-center gap-2 border-b px-5 py-3">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
                                 <Warehouse className="text-muted-foreground h-4 w-4" />
                                 <span className="text-sm font-semibold">{t('stock_by_warehouse')}</span>
                             </div>
@@ -246,7 +247,7 @@ export function OverviewTab({
 
                         {/* By category */}
                         <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                            <div className="border-border flex items-center gap-2 border-b px-5 py-3">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
                                 <Layers className="text-muted-foreground h-4 w-4" />
                                 <span className="text-sm font-semibold">{t('stock_by_category')}</span>
                             </div>

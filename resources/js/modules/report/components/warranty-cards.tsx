@@ -1,5 +1,6 @@
 // Warranty report cards: soon / expired segments, by month, time left, by category and by vendor (data: useAssetWarrantyBreakdown).
 import { useT } from '@/lang';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -508,7 +509,7 @@ function CategoryCard({ data, patch }: { data: AssetWarrantyBreakdown; patch: Pa
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wty_cat_title')}</caption>
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_wty_col_category')}
                                 </th>
@@ -618,7 +619,7 @@ function VendorCard({ data }: { data: AssetWarrantyBreakdown }) {
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wty_vendor_title')}</caption>
                         <thead>
-                            <tr className="bg-muted/40 border-border border-b">
+                            <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
                                     {t('rep_wty_col_vendor')}
                                 </th>
