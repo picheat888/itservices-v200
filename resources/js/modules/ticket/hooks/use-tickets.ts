@@ -1,7 +1,8 @@
+import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import type { TicketPriority, TicketWorkClass } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ticketApi, type CreateTicketPayload, type SummaryRange, type TicketListParams, type UpdateTicketPayload } from '../api/ticketApi';
+import { ticketApi, type CreateTicketPayload, type TicketListParams, type UpdateTicketPayload } from '../api/ticketApi';
 
 const SUMMARY = ['tickets-summary'] as const;
 
@@ -26,9 +27,9 @@ export const useTickets = (params: TicketListParams, enabled = true) =>
         placeholderData: (prev) => prev,
     });
 
-export const useTicketSummary = (enabled = true, range?: SummaryRange) =>
+export const useTicketSummary = (enabled: boolean, range: OverviewPeriod) =>
     useQuery({
-        queryKey: [...SUMMARY, typeof range === 'object' ? `${range.from}_${range.to}` : (range ?? 30)],
+        queryKey: [...SUMMARY, overviewPeriodKey(range)],
         queryFn: () => ticketApi.summary(range),
         enabled,
         // Keep the prior window's numbers on screen while a new range loads (no skeleton flash).

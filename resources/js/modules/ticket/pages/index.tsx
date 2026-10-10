@@ -2,25 +2,24 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { formatDateTime as fmtDateTime, formatRangeShort } from '@/shared/lib/datetime';
-import { cn, toRecordId } from '@/shared/lib/utils';
+import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
+import { toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { Input } from '@/shared/ui/input';
-import { useUiStore } from '@/stores/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpDown, ChevronRight, CircleDot, Flag, Gauge, History, LayoutGrid, Plus, Search, Tag, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ticketApi, type SummaryRange } from '../api/ticketApi';
+import { ticketApi } from '../api/ticketApi';
 import { AssignTicketModal } from '../components/assign-ticket-modal';
 import { CreateTicketDrawer } from '../components/create-ticket-drawer';
 import { EditTicketDrawer } from '../components/edit-ticket-drawer';
@@ -64,60 +63,10 @@ const isTicketTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[
 const LIST_KEYS = ['search', 'status', 'category', 'priority', 'sla', 'sort', 'page'];
 const TICKET_STATUSES = Object.keys(TICKET_STATUS_META) as TicketStatus[];
 const TICKET_PRIORITIES = Object.keys(TICKET_PRIORITY_META) as TicketPriority[];
-const DEFAULT_RANGE: SummaryRange = 'all';
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A URL value when it is one of `allowed`, else '' (all). */
 const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T | '' =>
     (allowed as readonly string[]).includes(value) ? (value as T) : '';
-
-/** The dashboard window from ?range (7 / 30 / 90, or custom with ?from & ?to); anything else is all time. */
-function readRange(range: string, from: string, to: string): SummaryRange {
-    if (range === 'custom') {
-        return ISO_DATE.test(from) && ISO_DATE.test(to) && from <= to ? { from, to } : DEFAULT_RANGE;
-    }
-    const days = Number(range);
-    return days === 7 || days === 30 || days === 90 ? days : DEFAULT_RANGE;
-}
-
-/**
- * 7 / 30 / 90-day or whole-history window selector for the dashboard, plus a custom from–to range. "กำหนดเอง"
- * opens the shared two-month range calendar (as the reports do), which applies only on
- * "นำไปใช้" — so a half-picked range never fetches — and can't pick an end before the start.
- */
-function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v: SummaryRange) => void; t: (k: string) => string }) {
-    const lang = useUiStore((s) => s.lang);
-    const custom = typeof value === 'object';
-
-    return (
-        <div className="border-border inline-flex rounded-lg border p-0.5">
-            {([7, 30, 90, 'all'] as const).map((d) => (
-                <button
-                    key={d}
-                    type="button"
-                    onClick={() => onChange(d)}
-                    className={cn(
-                        'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
-                        value === d ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground',
-                    )}
-                >
-                    {d === 'all' ? t('ticket_all') : `${d} ${t('ticket_days')}`}
-                </button>
-            ))}
-            <DateRangeInput from={custom ? value.from : ''} to={custom ? value.to : ''} align="end" onChange={(from, to) => onChange({ from, to })}>
-                <button
-                    type="button"
-                    className={cn(
-                        'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
-                        custom ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground',
-                    )}
-                >
-                    {custom ? formatRangeShort(value.from, value.to, lang) : t('ticket_range_custom')}
-                </button>
-            </DateRangeInput>
-        </div>
-    );
-}
 
 /** Loading placeholder for the dashboard body (four tiles, then category bars beside the latest list). */
 function TicketOverviewBodySkeleton() {
@@ -213,14 +162,8 @@ export default function TicketsPage() {
     // No sorting by a column this reader is not shown.
     const sortOptions = SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due'));
     const sort = pickAllowed(list.get('sort'), sortOptions) || DEFAULT_SORT;
-    // Dashboard window (?range=7|30|90|custom with ?from&to); all time, the default, stays out of the URL.
-    const range = readRange(list.get('range'), list.get('from'), list.get('to'));
-    const setRange = (next: SummaryRange) =>
-        list.setParams(
-            typeof next === 'object'
-                ? { range: 'custom', from: next.from, to: next.to }
-                : { range: next === DEFAULT_RANGE ? null : String(next), from: null, to: null },
-        );
+    // Dashboard window, in the URL (?range=7|30|90|custom with ?from&to); all time by default.
+    const [range, setRange] = useOverviewPeriod();
 
     const [takeTicket, setTakeTicket] = useState<Ticket | null>(null);
     const [forwardTicket, setForwardTicket] = useState<Ticket | null>(null);
@@ -498,13 +441,7 @@ export default function TicketsPage() {
                 {tab === 'overview' && canOverview && (
                     <div className="p-5">
                         {/* Window selector stays put while the numbers below reload. */}
-                        <div className="mb-5 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                                <Gauge className="text-muted-foreground h-4 w-4" />
-                                <span className="text-sm font-semibold">{t('ticket_overview')}</span>
-                            </div>
-                            <RangeSelect value={range} onChange={setRange} t={t} />
-                        </div>
+                        <OverviewHeader value={range} onChange={setRange} className="mb-5" />
 
                         {summaryLoading ? (
                             <TicketOverviewBodySkeleton />

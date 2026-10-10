@@ -157,6 +157,10 @@ export const common: Dict = {
     date_range_pick_end: 'Click an end date',
     apply: 'Apply',
 
+    // overview-period.tsx — Overview tab period buttons
+    period_days: '{n} days',
+    period_custom: 'Custom',
+
     // record-stamps.tsx — when and by whom a record was added / last changed
     record_added: 'Added',
     record_updated: 'Last updated',

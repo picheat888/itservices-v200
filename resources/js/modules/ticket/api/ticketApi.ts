@@ -1,3 +1,4 @@
+import { overviewPeriodParams, type OverviewPeriod } from '@/shared/components/overview-period';
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary, TicketWorkClass } from '@/shared/types';
 
@@ -56,12 +57,10 @@ async function mutate<T>(method: 'post' | 'put' | 'patch' | 'delete', url: strin
 }
 
 /** Dashboard window: a preset day count (7/30/90) or a custom inclusive date pair. */
-export type SummaryRange = number | 'all' | { from: string; to: string };
 
 export const ticketApi = {
     list: (params: TicketListParams) => http.get<TicketPageResponse>('/tickets', { params }).then((r) => r.data),
-    summary: (range?: SummaryRange) =>
-        http.get<TicketSummary>('/tickets/summary', { params: typeof range === 'object' ? range : { days: range } }).then((r) => r.data),
+    summary: (range: OverviewPeriod) => http.get<TicketSummary>('/tickets/summary', { params: overviewPeriodParams(range) }).then((r) => r.data),
     staff: (category?: string) =>
         http
             .get<{ data: { id: number; name: string; employee_id: number | null }[] }>('/tickets/staff', { params: { category } })
