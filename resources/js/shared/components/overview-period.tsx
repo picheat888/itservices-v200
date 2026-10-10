@@ -81,14 +81,14 @@ export function OverviewPeriodSelect({ value, onChange }: { value: OverviewPerio
     );
 }
 
-/** The row above an Overview tab's cards: icon + "ภาพรวม" on the left, the period buttons on the right. */
+/** The row above an Overview tab's cards: icon + "ภาพรวม" on the left, the period buttons on the right (only when given a period). */
 export function OverviewHeader({
     value,
     onChange,
     className,
 }: {
-    value: OverviewPeriod;
-    onChange: (next: OverviewPeriod) => void;
+    value?: OverviewPeriod;
+    onChange?: (next: OverviewPeriod) => void;
     className?: string;
 }) {
     const t = useT();
@@ -98,7 +98,7 @@ export function OverviewHeader({
                 <Gauge className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm font-semibold">{t('sub_overview')}</span>
             </div>
-            <OverviewPeriodSelect value={value} onChange={onChange} />
+            {value !== undefined && onChange && <OverviewPeriodSelect value={value} onChange={onChange} />}
         </div>
     );
 }
