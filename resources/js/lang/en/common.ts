@@ -160,6 +160,10 @@ export const common: Dict = {
     // overview-period.tsx — Overview tab period buttons
     period_days: '{n} days',
     period_custom: 'Custom',
+    period_unit_day: 'day',
+    period_unit_week: 'week',
+    period_unit_month: 'month',
+    period_unit_year: 'year',
 
     // record-stamps.tsx — when and by whom a record was added / last changed
     record_added: 'Added',

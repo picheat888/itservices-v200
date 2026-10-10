@@ -28,6 +28,7 @@ use App\Services\Employee\EmployeeOnboardingService;
 use App\Services\Employee\EmployeeService;
 use App\Services\Request\WorkflowResolverService;
 use App\Support\CsvReader;
+use App\Support\OverviewPeriod;
 use App\Support\RequestSchemas;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -189,75 +190,42 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Returns aggregated dashboard stats without loading all employee records.
-     * Includes total count, new-hire count, and the 5 most recent hires.
-     * Requires the employees.view_dashboard permission.
+     * Overview stats. Headcount and status are as of now; hires, resignations and the hiring
+     * chart follow the chosen period (OverviewPeriod, all time by default).
      */
-    public function summary(): JsonResponse
+    public function summary(Request $request): JsonResponse
     {
-        abort_unless((bool) request()->user()?->hasPermission('employees.view_dashboard'), 403);
-
-        $total = Employee::count();
-        $newHires = Employee::where('joined_at', '>=', '2023-01-01')->count();
-        $active = Employee::where('status', EmployeeStatus::Active->value)->count();
-        $resigned = Employee::where('status', EmployeeStatus::Resigned->value)->count();
-        $resignedThisYear = Employee::where('status', EmployeeStatus::Resigned->value)
-            ->whereYear('last_day', now()->year)->count();
+        abort_unless((bool) $request->user()?->hasPermission('employees.view_dashboard'), 403);
+        $period = OverviewPeriod::fromRequest($request)->onDates();
+        $resignedQuery = fn () => Employee::where('status', EmployeeStatus::Resigned->value);
 
         // Active staff still waiting for a login account — mirrors the ?status=no_account filter.
         $noAccount = Employee::where('status', EmployeeStatus::Active->value)
             ->whereDoesntHave('user')->count();
 
-        $recent = Employee::with(['department', 'position', 'section'])
+        $recent = $period->apply(Employee::with(['department', 'position', 'section']), 'joined_at')
             ->orderByDesc('joined_at')
             ->limit(5)
             ->get();
 
-        // Most recent departures — mirrors "recent hires", ordered by their last working day.
-        $recentResignations = Employee::with(['department', 'position', 'section'])
-            ->where('status', EmployeeStatus::Resigned->value)
+        $recentResignations = $period->apply($resignedQuery()->with(['department', 'position', 'section']), 'last_day')
             ->orderByDesc('last_day')
             ->limit(5)
             ->get();
 
+        $joined = Employee::whereNotNull('joined_at')->pluck('joined_at')->map(fn ($d) => Carbon::parse($d));
+
         return response()->json([
-            'total' => $total,
-            'new_hires' => $newHires,
-            'active' => $active,
-            'resigned' => $resigned,
-            'resigned_this_year' => $resignedThisYear,
+            'total' => Employee::count(),
+            'new_hires' => $period->apply(Employee::query(), 'joined_at')->count(),
+            'active' => Employee::where('status', EmployeeStatus::Active->value)->count(),
+            'resigned' => $resignedQuery()->count(),
+            'resigned_in_period' => $period->apply($resignedQuery(), 'last_day')->count(),
             'no_account' => $noAccount,
-            'hires_by_month' => $this->hiresByMonth(),
+            'hires_trend' => $period->countInto($joined, $joined->min()),
             'recent' => EmployeeResource::collection($recent),
             'recent_resignations' => EmployeeResource::collection($recentResignations),
         ]);
-    }
-
-    /**
-     * Hire counts for the last 12 months (fixed rolling window, zero-filled) ending at
-     * the current month — drives the hiring-trend chart on the dashboard.
-     *
-     * @return array<int, array{month: string, count: int}>
-     */
-    private function hiresByMonth(): array
-    {
-        // Bucket by year-month in PHP (portable across MariaDB / SQLite test DB).
-        $counts = [];
-        foreach (Employee::whereNotNull('joined_at')->pluck('joined_at') as $d) {
-            $ym = Carbon::parse($d)->format('Y-m');
-            $counts[$ym] = ($counts[$ym] ?? 0) + 1;
-        }
-
-        $end = now()->startOfMonth();
-        $start = $end->copy()->subMonths(11);
-
-        $out = [];
-        for ($m = $start->copy(); $m->lte($end); $m->addMonth()) {
-            $ym = $m->format('Y-m');
-            $out[] = ['month' => $ym, 'count' => (int) ($counts[$ym] ?? 0)];
-        }
-
-        return $out;
     }
 
     /**

@@ -5,7 +5,7 @@ import { useUiStore } from '@/stores/ui';
 const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const EN_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** One column of the chart. `month` is 'YYYY-MM'. */
+/** One column of the chart. `month` is the column's start: 'YYYY-MM-DD' (day, week), 'YYYY-MM' or 'YYYY'. */
 export interface MonthBar {
     month: string;
     count: number;
@@ -22,19 +22,36 @@ export interface MonthBar {
  * library would have to be taught the app's brand variable and both themes to look like
  * this. Callers own the card, the title and the legend — this draws only the bars.
  */
-export function MonthBarChart({ data, emptyLabel, className }: { data: MonthBar[]; emptyLabel: string; className?: string }) {
+export type BarUnit = 'day' | 'week' | 'month' | 'year';
+
+export function MonthBarChart({
+    data,
+    emptyLabel,
+    className,
+    unit = 'month',
+    highlightLast = true,
+}: {
+    data: MonthBar[];
+    emptyLabel: string;
+    className?: string;
+    unit?: BarUnit;
+    /** Off for a period that ended in the past: no column is the current one. */
+    highlightLast?: boolean;
+}) {
     const lang = useUiStore((s) => s.lang);
     const max = Math.max(1, ...data.map((d) => d.count));
-    const lastIndex = data.length - 1;
+    const lastIndex = highlightLast ? data.length - 1 : -1;
     // A run of zeroes is not a chart. Twelve empty bars read as something broken, so say
     // there is nothing instead — the caller supplies the wording for its own subject.
     const isEmpty = data.length === 0 || data.every((d) => d.count === 0);
 
-    const label = (ym: string) => {
-        const [y, m] = ym.split('-').map(Number);
+    // Top line + the smaller one under it: day/week = day + month, month = month + year, year = the year alone.
+    const label = (start: string) => {
+        const [y, m, d] = start.split('-').map(Number);
         const mon = (lang === 'th' ? TH_MON : EN_MON)[(m || 1) - 1];
-        const yy = String(y).slice(2);
-        return { mon, yy };
+        if (unit === 'year') return { mon: String(y), yy: '' };
+        if (unit === 'day' || unit === 'week') return { mon: String(d), yy: mon };
+        return { mon, yy: String(y).slice(2) };
     };
 
     if (isEmpty) {

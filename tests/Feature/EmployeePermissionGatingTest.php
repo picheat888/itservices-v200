@@ -120,29 +120,39 @@ class EmployeePermissionGatingTest extends TestCase
 
     public function test_summary_reports_status_hires_and_resignations(): void
     {
+        $this->travelTo('2026-10-14 12:00:00');
         $allowed = $this->userWith(['employees.module', 'employees.view_dashboard']);
 
-        Employee::create(['first_name' => 'A', 'last_name' => 'One', 'status' => 'active', 'joined_at' => now()->subMonths(2)->toDateString()]);
-        Employee::create(['first_name' => 'B', 'last_name' => 'Two', 'status' => 'active', 'joined_at' => now()->subMonth()->toDateString()]);
+        Employee::create(['first_name' => 'A', 'last_name' => 'One', 'status' => 'active', 'joined_at' => '2026-08-03']);
+        Employee::create(['first_name' => 'B', 'last_name' => 'Two', 'status' => 'active', 'joined_at' => '2026-10-01']);
         Employee::create([
             'first_name' => 'Gone', 'last_name' => 'Away', 'status' => 'resigned',
-            'joined_at' => now()->subYears(2)->toDateString(), 'last_day' => now()->startOfYear()->addMonths(3)->toDateString(),
+            'joined_at' => '2024-05-02', 'last_day' => '2026-04-30',
         ]);
 
+        // All time (no params): every hire and leaver, the chart from the first hire.
         $res = $this->actingAs($allowed)->getJson('/api/employees/summary')->assertOk();
-
         $res->assertJsonPath('total', 3)
             ->assertJsonPath('active', 2)
             ->assertJsonPath('resigned', 1)
-            ->assertJsonPath('resigned_this_year', 1)
+            ->assertJsonPath('new_hires', 3)
+            ->assertJsonPath('resigned_in_period', 1)
             ->assertJsonPath('recent_resignations.0.name', 'Gone Away')
-            ->assertJsonPath('recent_resignations.0.status', 'resigned');
+            ->assertJsonPath('recent_resignations.0.status', 'resigned')
+            ->assertJsonPath('hires_trend.unit', 'year');
+        $years = $res->json('hires_trend.data');
+        $this->assertSame(['2024', '2025', '2026'], array_column($years, 'month'));
+        $this->assertSame([1, 0, 2], array_column($years, 'count'));
 
-        // hires_by_month: a continuous, zero-filled series ending at the current month.
-        $months = $res->json('hires_by_month');
-        $this->assertNotEmpty($months);
-        $this->assertArrayHasKey('month', $months[0]);
-        $this->assertSame(now()->format('Y-m'), end($months)['month']);
+        // The last 30 days: one hire, no leaver; headcount and status stay as of now.
+        $this->getJson('/api/employees/summary?days=30')->assertOk()
+            ->assertJsonPath('total', 3)
+            ->assertJsonPath('resigned', 1)
+            ->assertJsonPath('new_hires', 1)
+            ->assertJsonPath('resigned_in_period', 0)
+            ->assertJsonCount(1, 'recent')
+            ->assertJsonCount(0, 'recent_resignations')
+            ->assertJsonPath('hires_trend.unit', 'week');
     }
 
     public function test_summary_counts_active_employees_without_a_login_account(): void
