@@ -1,4 +1,4 @@
-// Tiny charts at the right of a summary tile's footer: seats by month (line), one block per item, a count per group (columns).
+// Tiny charts at the right of a summary tile's footer: seats by month (line), a count per group (columns).
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -8,12 +8,10 @@ import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 
 type Line = Extract<SummaryChart, { kind: 'line' }>;
-type Blocks = Extract<SummaryChart, { kind: 'blocks' }>;
 type Columns = Extract<SummaryChart, { kind: 'columns' }>;
 
 export function TileChart({ chart, title, lineClass }: { chart: SummaryChart; title: string; lineClass: string }) {
     if (chart.kind === 'line') return <LineChart chart={chart} title={title} className={lineClass} />;
-    if (chart.kind === 'blocks') return <BlockChart chart={chart} title={title} />;
     return <ColumnChart chart={chart} title={title} />;
 }
 
@@ -71,42 +69,6 @@ function LineChart({ chart, title, className }: { chart: Line; title: string; cl
                 <path d={line} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" />
                 <circle cx={x(last)} cy={y(points[last])} r={2.4} fill="currentColor" />
             </svg>
-        </InfoPopover>
-    );
-}
-
-// Blocks — one per item, coloured by its state
-function BlockChart({ chart, title }: { chart: Blocks; title: string }) {
-    const t = useT();
-    const { items } = chart;
-    if (items.length === 0) return null;
-    const small = items.length > 8;
-
-    return (
-        <InfoPopover
-            label={`${title}: ${items.map((b) => `${b.name} ${b.used}/${b.seats} ${t(b.label_key)}`).join(', ')}`}
-            className="flex shrink-0 cursor-pointer items-end gap-[3px] py-0.5"
-            content={
-                <div className="min-w-52 space-y-1">
-                    <div className="font-semibold">{title}</div>
-                    {items.map((b) => (
-                        <NoteRow
-                            key={b.key}
-                            mark={<Dot className={FILL[b.tone]} />}
-                            text={
-                                <>
-                                    {b.name} <span className="text-muted-foreground">{t(b.label_key)}</span>
-                                </>
-                            }
-                            value={`${b.used}/${b.seats}`}
-                        />
-                    ))}
-                </div>
-            }
-        >
-            {items.map((b) => (
-                <span key={b.key} className={cn('block rounded-[2px]', small ? 'h-2.5 w-1.5' : 'h-2.5 w-2.5', FILL[b.tone])} />
-            ))}
         </InfoPopover>
     );
 }

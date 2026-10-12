@@ -20,8 +20,8 @@ namespace App\Services\Report\Tabular;
  * (['name' => …, 'name_th' => …], the page picks the reader's). `attention` frames the tile apart from its
  * colour once the value is above zero — 'amber' (needs watching) or 'red' (gone wrong) — for a tile
  * whose colour comes from elsewhere (an asset status in its Settings colour). `chart` draws a small chart beside
- * the value instead of the split bar: a 'line' through monthly points, 'blocks' (one per item, coloured by its
- * state) or 'columns' (a count per group). All of these are screen only.
+ * the value instead of the split bar: a 'line' through monthly points or 'columns' (a count per group). All of these
+ * are screen only.
  */
 final class ReportSummary
 {
@@ -38,7 +38,7 @@ final class ReportSummary
         public readonly ?array $note = null,
         public readonly ?int $goal = null,
         public readonly ?string $attention = null,
-        /** @var array{kind: 'line', points: list<int|float>, months: list<string>}|array{kind: 'blocks', items: list<array{key: string, name: string, tone: string, label_key: string, used: int, seats: int}>}|array{kind: 'columns', items: list<array{key: string, label_key: string, short: string, tone: string, value: int}>}|null */
+        /** @var array{kind: 'line', points: list<int|float>, months: list<string>}|array{kind: 'columns', items: list<array{key: string, label_key: string, short: string, tone: string, value: int}>}|null */
         public readonly ?array $chart = null,
     ) {}
 

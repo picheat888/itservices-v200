@@ -144,7 +144,7 @@ class SoftwareLicenseReportTest extends TestCase
         $this->assertSame(['n' => 1, 'days' => 10], $summary['sl_leavers']['note']['values']);
     }
 
-    public function test_tile_charts_draw_seats_by_month_each_limited_software_and_how_long_leavers_have_gone(): void
+    public function test_tile_charts_draw_seats_by_month_and_how_long_leavers_have_gone(): void
     {
         $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses/rows')->assertOk()->json('summary'))->keyBy('key');
 
@@ -155,12 +155,8 @@ class SoftwareLicenseReportTest extends TestCase
         $this->assertSame([8, 8, 7, 7, 7, 7], $line['points']);
         $this->assertSame(['direction' => 'down', 'label_key' => 'rep_n_ac_net_down', 'values' => ['net' => 1]], $summary['sl_used']['note']['trend']);
 
-        // One block per limited software, the worst first: Zoom waits, Adobe is over, Office has room.
-        $blocks = $summary['sl_full']['chart'];
-        $this->assertSame('blocks', $blocks['kind']);
-        $this->assertSame(['Zoom', 'Adobe', 'Office'], array_column($blocks['items'], 'name'));
-        $this->assertSame(['red', 'amber', 'soft-green'], array_column($blocks['items'], 'tone'));
-        $this->assertSame(['used' => 3, 'seats' => 2], array_intersect_key($blocks['items'][1], ['used' => 0, 'seats' => 0]));
+        // The full tile draws its split bar instead of a chart.
+        $this->assertNull($summary['sl_full']['chart']);
 
         // The leaver left ten days ago.
         $columns = $summary['sl_leavers']['chart'];
