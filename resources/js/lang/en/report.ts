@@ -673,6 +673,7 @@ export const report: Dict = {
     rep_rs_open_sub: '{n} cases, all past SLA',
     rep_rs_open_none: 'No open ticket is past its SLA',
     rep_rs_open_more: 'and {n} more',
+    rep_rs_open_more_link: 'See {n} more in the Open and overdue tickets report',
     rep_rs_open_due: '{kind}, due {at}',
     rep_rs_open_all: 'See all in the Open and overdue tickets report',
     rep_rs_rules_title: 'SLA rules used',
