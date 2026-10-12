@@ -66,9 +66,18 @@ function RailRow({
     quiet?: boolean;
 }) {
     return (
-        <div className={cn('flex items-baseline justify-between gap-3 text-xs', quiet && 'opacity-60')}>
+        <div className="flex items-baseline justify-between gap-3 text-xs">
             <span className="text-muted-foreground shrink-0">{label}</span>
-            <span className={cn('min-w-0 text-right', wrap ? 'text-balance' : 'truncate', mono && 'font-mono text-[11.5px]')}>{value || '—'}</span>
+            <span
+                className={cn(
+                    'min-w-0 text-right',
+                    wrap ? 'text-balance' : 'truncate',
+                    mono && 'font-mono text-[11.5px]',
+                    quiet && 'text-muted-foreground',
+                )}
+            >
+                {value || '—'}
+            </span>
         </div>
     );
 }
@@ -124,7 +133,7 @@ function SpineStep({
                     className={cn(
                         'relative grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[10px] font-bold',
                         tone === 'done' && 'bg-brand text-brand-foreground',
-                        tone === 'ok' && 'bg-emerald-500 text-white',
+                        tone === 'ok' && 'bg-emerald-600 text-white',
                         tone === 'canceled' && 'bg-muted-foreground text-background',
                         tone === 'current' && 'border-brand text-brand bg-background border-2',
                         tone === 'working' && 'bg-background border-2 border-violet-500 text-violet-600 dark:text-violet-400',
@@ -400,7 +409,7 @@ export function TicketDetailDrawer({
                             <span className="flex flex-wrap items-center gap-2">
                                 {t('ticket_col_no')}
                                 <span className="text-foreground text-[13.5px] font-extrabold tracking-tight">{view.ticket_no}</span>
-                                <span className="bg-accent text-muted-foreground rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-normal normal-case">
+                                <span className="bg-accent text-foreground/65 dark:text-muted-foreground rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-normal normal-case">
                                     {t(`ticket_cat_${view.category}`)}
                                 </span>
                             </span>

@@ -88,7 +88,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                             cn(
                                                 'group text-sidebar-foreground hover:bg-sidebar-accent relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                                                 iconsOnly && 'justify-center px-0',
-                                                isActive && 'bg-brand/15 text-brand hover:bg-brand/15 font-semibold',
+                                                isActive && 'bg-brand/15 text-brand-ink hover:bg-brand/15 font-semibold',
                                             )
                                         }
                                     >
@@ -101,7 +101,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                             ) : (
                                                 // Dark mode, active row (NavLink sets aria-current="page"): the tint-on-tint
                                                 // pill read at ~3.7:1 there, so it turns solid brand.
-                                                <span className="bg-brand/15 text-brand dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                                                <span className="bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold">
                                                     {badge}
                                                 </span>
                                             ))}
@@ -115,7 +115,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
 
             {!iconsOnly && settings?.company_name && (
                 <div className="px-4 pt-1 pb-2 text-center">
-                    <p className="text-muted-foreground/60 dark:text-muted-foreground truncate text-[10px]">
+                    <p className="text-muted-foreground truncate text-[10px]">
                         &copy; {new Date().getFullYear()} {settings.company_name}
                     </p>
                 </div>

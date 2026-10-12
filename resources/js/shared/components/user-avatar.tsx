@@ -42,7 +42,7 @@ export function UserAvatar({
     return (
         <Avatar key={photoUrl ?? 'no-photo'} className={cn('h-8 w-8', className)}>
             {photoUrl && <AvatarImage src={photoUrl} alt="" />}
-            <AvatarFallback className={cn('bg-brand/10 text-brand text-[11px] font-semibold', textClassName)}>
+            <AvatarFallback className={cn('bg-brand/10 text-brand-ink text-[11px] font-semibold', textClassName)}>
                 {text || fallbackIcon || '?'}
             </AvatarFallback>
         </Avatar>

@@ -1,4 +1,5 @@
 import { brandForeground, resolveBrand } from '@/shared/lib/brand-color';
+import { LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { useUiStore } from '@/stores/ui';
 import { useEffect } from 'react';
 
@@ -29,6 +30,8 @@ export function useApplyTheme() {
         const brand = resolveBrand(accent, dark);
         document.documentElement.style.setProperty('--brand', brand);
         document.documentElement.style.setProperty('--brand-foreground', brandForeground(brand));
+        // Small brand text on brand tints (sidebar counts, active row, avatar initials), 4.5:1 up to a doubled /15 tint
+        document.documentElement.style.setProperty('--brand-ink', dark ? brand : readableInk(brand, LIGHT_GROUND, 0.28));
     }, [accent, dark]);
 
     useEffect(() => {

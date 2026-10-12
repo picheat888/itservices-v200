@@ -46,7 +46,14 @@ export function DialogTabs<T extends string>({
                     {tb.icon && <tb.icon className="h-4 w-4 shrink-0" />}
                     {tb.label}
                     {tb.count != null && tb.count > 0 && (
-                        <span className="bg-accent rounded-full px-1.5 py-0.5 font-mono text-[11px]">{tb.count}</span>
+                        <span
+                            className={cn(
+                                'bg-accent rounded-full px-1.5 py-0.5 font-mono text-[11px]',
+                                active === tb.id ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
+                            )}
+                        >
+                            {tb.count}
+                        </span>
                     )}
                     {active === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
                 </button>
