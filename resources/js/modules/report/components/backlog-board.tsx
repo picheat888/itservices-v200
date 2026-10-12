@@ -21,7 +21,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useBacklogBoard } from '../hooks/use-reports';
 import type { BacklogBoardTicket, ChartSeries, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
-import { fold, FoldToggle, StackBar } from './chart-parts';
+import { fold, FoldToggle, InfoMark, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
 import { TICKET_PRIORITY_TONE } from './ticket-badges';
 import { categoryKey, priorityKey } from './ticket-labels';
@@ -93,10 +93,13 @@ const SEGMENTS: { value: SlaState | null; label: string }[] = [
     { value: 'on_track', label: 'rep_sla_on_track' },
 ];
 
-export function Heading({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode }) {
+export function Heading({ title, info, sub }: { title: React.ReactNode; info?: string; sub?: React.ReactNode }) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3')}>
-            <span className="text-sm font-semibold">{title}</span>
+            <span className="flex items-center gap-2 text-sm font-semibold">
+                {title}
+                {info && <InfoMark info={info} />}
+            </span>
             {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
         </div>
     );
@@ -200,12 +203,8 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
     return (
         <Card className="overflow-hidden">
             <Heading
-                title={
-                    <>
-                        {t('rep_bl_board_title')}
-                        <span className="text-muted-foreground ml-2 text-xs font-normal">{t('rep_bl_board_sub')}</span>
-                    </>
-                }
+                title={t('rep_bl_board_title')}
+                info={t('rep_bl_board_sub')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {legend.map(([key, dot]) => (

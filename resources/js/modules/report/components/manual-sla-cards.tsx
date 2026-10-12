@@ -65,6 +65,7 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
     return (
         <Card className="overflow-hidden">
             <Heading
+                info={t('rep_ms_groups_hint')}
                 title={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
                         <span className="text-muted-foreground text-xs font-normal">{t('rep_ms_by_label')}</span>
@@ -193,7 +194,6 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
                     </table>
                 </div>
             )}
-            <div className="text-muted-foreground border-border border-t px-5 py-2.5 text-xs">{t('rep_ms_groups_hint')}</div>
         </Card>
     );
 }

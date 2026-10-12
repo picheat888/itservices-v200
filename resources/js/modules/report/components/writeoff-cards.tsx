@@ -408,7 +408,7 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
 
     return (
         <Card className="flex flex-col overflow-hidden">
-            <CardTitle title={t('rep_wo_cat_title')} note={t('rep_wo_cat_sub')} sub={<Legend series={BANDS} />} />
+            <CardTitle title={t('rep_wo_cat_title')} info={t('rep_wo_cat_sub')} sub={<Legend series={BANDS} />} />
             {categories.length === 0 ? (
                 <Empty>{t('rep_wo_empty')}</Empty>
             ) : (
@@ -562,7 +562,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_wo_ct_title')}
-                note={t('rep_wo_ct_sub')}
+                info={t('rep_wo_ct_sub')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Swatch fill={FILL['soft-green']}>{t('rep_wo_ct_col_returned')}</Swatch>

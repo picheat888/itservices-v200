@@ -220,25 +220,30 @@ export function CardTitle({
                 <h2 id={id} className="text-sm font-semibold">
                     {title}
                 </h2>
-                {info && (
-                    <InfoPopover
-                        label={[info].flat().join(' ')}
-                        className="text-muted-foreground hover:text-foreground -m-1 p-1"
-                        content={
-                            <div className="max-w-64 space-y-1.5">
-                                {[info].flat().map((line) => (
-                                    <p key={line}>{line}</p>
-                                ))}
-                            </div>
-                        }
-                    >
-                        <Info aria-hidden className="h-3.5 w-3.5" />
-                    </InfoPopover>
-                )}
+                {info && <InfoMark info={info} />}
                 {note && <p className="text-muted-foreground text-xs">{note}</p>}
             </div>
             {sub && <div className="text-muted-foreground text-xs">{sub}</div>}
         </div>
+    );
+}
+
+/** An ⓘ beside a card's title: how the card counts, one paragraph each, opened by hover, tap or Enter. */
+export function InfoMark({ info }: { info: string | string[] }) {
+    return (
+        <InfoPopover
+            label={[info].flat().join(' ')}
+            className="text-muted-foreground hover:text-foreground -m-1 p-1"
+            content={
+                <div className="max-w-64 space-y-1.5">
+                    {[info].flat().map((line) => (
+                        <p key={line}>{line}</p>
+                    ))}
+                </div>
+            }
+        >
+            <Info aria-hidden className="h-3.5 w-3.5" />
+        </InfoPopover>
     );
 }
 

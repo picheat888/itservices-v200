@@ -132,12 +132,8 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
     return (
         <Card className="overflow-hidden">
             <Heading
-                title={
-                    <span className="flex flex-wrap items-baseline gap-x-2">
-                        {t('rep_rs_types_title')}
-                        <span className="text-muted-foreground text-xs font-normal">{t('rep_rs_types_sub')}</span>
-                    </span>
-                }
+                title={t('rep_rs_types_title')}
+                info={t('rep_rs_types_sub')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Swatch tone="bg-emerald-400">{t('rep_rs_at_goal').replace('{n}', String(goal))}</Swatch>
