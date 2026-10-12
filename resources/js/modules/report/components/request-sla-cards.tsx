@@ -296,7 +296,7 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
                             </div>
                         );
                     })}
-                    {data.open.length > shown.length && (
+                    {data.open.length > shown.length && !canOpen(BACKLOG_HREF) && (
                         <div className="text-muted-foreground px-5 py-2 text-xs">
                             {t('rep_rs_open_more').replace('{n}', String(data.open.length - shown.length))}
                         </div>
@@ -308,7 +308,9 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
                     to={BACKLOG_HREF}
                     className="text-brand hover:bg-accent border-border mt-auto border-t py-2.5 text-center text-xs font-semibold"
                 >
-                    {t('rep_rs_open_all')}
+                    {data.open.length > shown.length
+                        ? t('rep_rs_open_more_link').replace('{n}', String(data.open.length - shown.length))
+                        : t('rep_rs_open_all')}
                 </Link>
             )}
         </Card>

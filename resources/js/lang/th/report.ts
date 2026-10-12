@@ -672,6 +672,7 @@ export const report: Dict = {
     rep_rs_open_sub: '{n} เคส เกิน SLA แล้วทั้งหมด',
     rep_rs_open_none: 'ไม่มี Ticket ที่ยังเปิด และเกิน SLA',
     rep_rs_open_more: 'และอีก {n} เคส',
+    rep_rs_open_more_link: 'ดูอีก {n} เคสในรายงาน Ticket ค้าง และเกิน SLA',
     rep_rs_open_due: '{kind} กำหนด {at}',
     rep_rs_open_all: 'ดูทั้งหมดในรายงาน Ticket ค้าง และเกิน SLA',
     rep_rs_rules_title: 'เกณฑ์ SLA ที่ใช้วัด',
