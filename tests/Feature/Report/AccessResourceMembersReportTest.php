@@ -149,6 +149,14 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertSame('rep_n_ar_cross_social', $social['ar_cross']['note']['label_key']);
     }
 
+    public function test_a_type_filter_splits_the_resource_tile_by_that_type_only(): void
+    {
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members/rows?type=file_share')->assertOk()->json('summary'))->keyBy('key');
+
+        $this->assertSame(3, $summary['ar_resources']['value']);
+        $this->assertSame(['file_share' => 3], array_column($summary['ar_resources']['split'], 'value', 'key'));
+    }
+
     public function test_breakdown_lists_resources_most_to_do_first_with_the_segment_counts(): void
     {
         $data = $this->actingAs($this->userWith())->getJson('/api/reports/access/resource-members/breakdown')->assertOk()->json('data');

@@ -327,7 +327,7 @@ class AccessResourceMembersReport extends TabularReport
         return [
             ReportSummary::make('ar_resources', 'Resource', $resources->count())->withSplit(array_map(fn (string $type) => [
                 'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
-            ], self::TYPES)),
+            ], ($filters['type'] ?? null) ? [$filters['type']] : self::TYPES)),
             ReportSummary::make('ar_members', 'สมาชิกทั้งหมด', $total)->withNote([
                 'label_key' => 'rep_n_ar_members',
                 'values' => ['people' => $members->pluck('employee_id')->unique()->count()],
