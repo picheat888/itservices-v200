@@ -209,7 +209,7 @@ class AccessOverviewReport extends TabularReport
         return [
             ReportSummary::make('ac_active', 'สิทธิ์ที่ใช้งานอยู่', $active->count())->withSplit(array_map(fn (string $type) => [
                 'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
-            ], AccessFacts::TYPES)),
+            ], $this->types($filters))),
             ReportSummary::make('ac_holders', 'พนักงานที่ถือสิทธิ์', $holders)->withShareOf($staff)->withNote([
                 'label_key' => $staff > $holders ? 'rep_n_ac_holders' : 'rep_n_ac_holders_all',
                 'values' => ['staff' => $staff, 'median' => (int) round($held->countBy('employee_id')->median() ?? 0), 'none' => max(0, $staff - $holders)],
