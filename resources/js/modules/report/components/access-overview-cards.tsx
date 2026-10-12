@@ -214,11 +214,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
             .join(', ');
 
     return (
-        <Card
-            ref={cardRef}
-            className="flex flex-col overflow-hidden lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3"
-            style={heldHeight ? { minHeight: heldHeight } : undefined}
-        >
+        <Card ref={cardRef} className="flex flex-col overflow-hidden lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3" style={heldStyle(heldHeight)}>
             <CardTitle
                 title={t('rep_ac_month_title')}
                 note={
@@ -615,16 +611,18 @@ function PersonHead({ id, name, code }: { id: number; name: string; code: string
 }
 
 /** A right-hand card of grouped lists: grows with its rows (three a group, an opened group scrolls inside itself). */
-const GROUP_CARD = 'flex flex-col overflow-hidden xl:col-span-2';
-
-type LeaverGroup = 'people' | 'owned';
+const GROUP_CARD = 'flex flex-col overflow-hidden lg:sticky lg:top-4 xl:col-span-2';
 
 function LeaversCard({
     leavers,
+    cardRef,
+    heldHeight,
     open,
     onToggle,
 }: {
     leavers: AccessOverviewBreakdown['leavers'];
+    cardRef: React.Ref<HTMLDivElement>;
+    heldHeight: number | null;
     open: Record<LeaverGroup, boolean>;
     onToggle: (group: LeaverGroup) => void;
 }) {
@@ -632,7 +630,7 @@ function LeaversCard({
     const lang = useUiStore((s) => s.lang);
 
     return (
-        <Card className={GROUP_CARD}>
+        <Card ref={cardRef} className={GROUP_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_ac_leavers_title')} sub={t('rep_ac_leavers_sub')} />
             {leavers.people.length === 0 && leavers.owned.length === 0 ? (
                 <CardEmpty>
@@ -695,7 +693,19 @@ function LeaversCard({
     );
 }
 
-function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
+function CareCard({
+    care,
+    cardRef,
+    heldHeight,
+    open,
+    onToggle,
+}: {
+    care: AccessOverviewBreakdown['care'];
+    cardRef: React.Ref<HTMLDivElement>;
+    heldHeight: number | null;
+    open: Record<CareGroup, boolean>;
+    onToggle: (group: CareGroup) => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const row = (r: AccessResource, note: string | null) => (
@@ -708,7 +718,7 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
     );
 
     return (
-        <Card className={GROUP_CARD}>
+        <Card ref={cardRef} className={GROUP_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_ac_care_title')} sub={t('rep_ac_care_sub')} />
             {care.owner_gone.length + care.no_owner.length + care.empty.length === 0 ? (
                 <CardEmpty>{t('rep_ac_care_none')}</CardEmpty>
@@ -719,6 +729,8 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
                         title={t('rep_ac_care_owner_gone')}
                         total={count(care.owner_gone.length, lang)}
                         rows={care.owner_gone}
+                        open={open.gone}
+                        onToggle={() => onToggle('gone')}
                         render={(r) =>
                             row(
                                 r,
@@ -735,6 +747,8 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
                         title={t('rep_ac_care_no_owner')}
                         total={count(care.no_owner.length, lang)}
                         rows={care.no_owner}
+                        open={open.no_owner}
+                        onToggle={() => onToggle('no_owner')}
                         render={(r) => row(r, null)}
                     />
                     <Group
@@ -742,6 +756,8 @@ function CareCard({ care }: { care: AccessOverviewBreakdown['care'] }) {
                         title={t('rep_ac_care_empty')}
                         total={count(care.empty.length, lang)}
                         rows={care.empty}
+                        open={open.empty}
+                        onToggle={() => onToggle('empty')}
                         render={(r) => row(r, null)}
                     />
                 </div>
@@ -779,10 +795,21 @@ export function Cols({ widths }: { widths: string[] }) {
 /** แผนก · พนักงาน · สิทธิ์ · ตามประเภท · ผู้ลาออก */
 const DEPT_COLS = ['w-[24%]', 'w-[13%]', 'w-[9%]', 'w-[42%]', 'w-[12%]'];
 
-function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown['departments'] }) {
+function DepartmentCard({
+    departments,
+    cardRef,
+    heldHeight,
+    open,
+    onToggle,
+}: {
+    departments: AccessOverviewBreakdown['departments'];
+    cardRef: React.Ref<HTMLDivElement>;
+    heldHeight: number | null;
+    open: boolean;
+    onToggle: () => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [open, setOpen] = useState(false);
     const { folds, shown } = fold(departments, ROWS_SHOWN, open);
     const scale = Math.max(1, ...departments.map((d) => d.grants));
     const sumOf = (k: 'staff' | 'holders' | 'grants' | 'leavers') => departments.reduce((s, d) => s + d[k], 0);
@@ -801,7 +828,7 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
         );
 
     return (
-        <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
+        <Card ref={cardRef} className="flex flex-col overflow-hidden lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3" style={heldStyle(heldHeight)}>
             <CardTitle
                 title={t('rep_ac_dept_title')}
                 sub={
@@ -868,7 +895,7 @@ function DepartmentCard({ departments }: { departments: AccessOverviewBreakdown[
                     </table>
                     {folds && (
                         <div>
-                            <FoldToggle open={open} total={departments.length} onToggle={() => setOpen((v) => !v)} />
+                            <FoldToggle open={open} total={departments.length} onToggle={onToggle} />
                         </div>
                     )}
                     {/* The total stays at the card's foot however tall the card beside it makes this one. */}
@@ -927,21 +954,38 @@ function CardsSkeleton() {
     );
 }
 
+const ROW = 'grid gap-3 lg:grid-cols-3 xl:grid-cols-5';
+const LEAVER_GROUPS = ['people', 'owned'] as const;
+const CARE_GROUPS = ['gone', 'no_owner', 'empty'] as const;
+const BOTTOM_FOLDS = ['dept', ...CARE_GROUPS] as const;
+type LeaverGroup = (typeof LEAVER_GROUPS)[number];
+type CareGroup = (typeof CARE_GROUPS)[number];
+
+/** Two cards in a row: the same height while every list is folded; once one opens, both keep that height and the shorter stays in view. */
+function useFoldRow<K extends string>(keys: readonly K[]) {
+    const [open, setOpen] = useState(() => Object.fromEntries(keys.map((k) => [k, false])) as Record<K, boolean>);
+    const [held, setHeld] = useState<[number, number] | null>(null);
+    const left = useRef<HTMLDivElement>(null);
+    const right = useRef<HTMLDivElement>(null);
+    const anyOpen = keys.some((k) => open[k]);
+    const toggle = (key: K) => {
+        const next = { ...open, [key]: !open[key] };
+        const willOpen = keys.some((k) => next[k]);
+        if (willOpen && !anyOpen) setHeld([left.current?.offsetHeight ?? 0, right.current?.offsetHeight ?? 0]);
+        if (!willOpen) setHeld(null);
+        setOpen(next);
+    };
+    return { open, toggle, anyOpen, left, right, heldLeft: anyOpen ? (held?.[0] ?? null) : null, heldRight: anyOpen ? (held?.[1] ?? null) : null };
+}
+
+/** A held min-height for a card beside an opened list. */
+const heldStyle = (height: number | null) => (height ? { minHeight: height } : undefined);
+
 export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
     const { data, isLoading, isError, error } = useAccessOverviewBreakdown(filters);
-    const [leaversOpen, setLeaversOpen] = useState<Record<LeaverGroup, boolean>>({ people: false, owned: false });
-    const [heldMonth, setHeldMonth] = useState<number | null>(null);
-    const monthRef = useRef<HTMLDivElement>(null);
-    const anyOpen = leaversOpen.people || leaversOpen.owned;
-    // Opening a leavers group keeps the month card at the height it had beside the folded lists
-    const toggleLeavers = (group: LeaverGroup) => {
-        const next = { ...leaversOpen, [group]: !leaversOpen[group] };
-        const nextAny = next.people || next.owned;
-        if (nextAny && !anyOpen) setHeldMonth(monthRef.current?.offsetHeight ?? null);
-        if (!nextAny) setHeldMonth(null);
-        setLeaversOpen(next);
-    };
+    const top = useFoldRow(LEAVER_GROUPS);
+    const bottom = useFoldRow(BOTTOM_FOLDS);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
@@ -949,13 +993,19 @@ export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     return (
         <div className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
-            <div className={cn('grid gap-3 lg:grid-cols-3 xl:grid-cols-5', anyOpen && 'lg:items-start')}>
-                <MonthFlowCard months={data.months} cardRef={monthRef} heldHeight={anyOpen ? heldMonth : null} />
-                <LeaversCard leavers={data.leavers} open={leaversOpen} onToggle={toggleLeavers} />
+            <div className={cn(ROW, top.anyOpen && 'lg:items-start')}>
+                <MonthFlowCard months={data.months} cardRef={top.left} heldHeight={top.heldLeft} />
+                <LeaversCard leavers={data.leavers} cardRef={top.right} heldHeight={top.heldRight} open={top.open} onToggle={top.toggle} />
             </div>
-            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <DepartmentCard departments={data.departments} />
-                <CareCard care={data.care} />
+            <div className={cn(ROW, bottom.anyOpen && 'lg:items-start')}>
+                <DepartmentCard
+                    departments={data.departments}
+                    cardRef={bottom.left}
+                    heldHeight={bottom.heldLeft}
+                    open={bottom.open.dept}
+                    onToggle={() => bottom.toggle('dept')}
+                />
+                <CareCard care={data.care} cardRef={bottom.right} heldHeight={bottom.heldRight} open={bottom.open} onToggle={bottom.toggle} />
             </div>
         </div>
     );
