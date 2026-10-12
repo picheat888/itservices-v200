@@ -32,6 +32,7 @@ yarn-error.log
 /.mcp.json
 /boost.json
 /CLAUDE.md
+/claude.md-bk
 /docs
 
 # Generated artifacts & design scratch

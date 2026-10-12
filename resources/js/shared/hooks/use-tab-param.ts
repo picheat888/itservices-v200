@@ -24,7 +24,10 @@ export interface SetTabOptions {
     omitWhen?: string;
 }
 
-export function useTabParam<T extends string>(isTab: (value: string | null) => value is T, fallback: T): [T, (next: T, options?: SetTabOptions) => void] {
+export function useTabParam<T extends string>(
+    isTab: (value: string | null) => value is T,
+    fallback: T,
+): [T, (next: T, options?: SetTabOptions) => void] {
     const [searchParams, setSearchParams] = useSearchParams();
     const fromUrl = readTabParam(searchParams.get('tab'));
     const tab: T = isTab(fromUrl) ? fromUrl : fallback;
