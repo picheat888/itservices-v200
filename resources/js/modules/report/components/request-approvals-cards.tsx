@@ -162,9 +162,12 @@ function StuckColumn({
                                 <span className="row-span-2">
                                     <WaitPill days={r.days} band={r.age_band} />
                                 </span>
-                                <span className="text-muted-foreground flex min-w-0 flex-wrap gap-x-3 text-xs">
+                                <span className="text-muted-foreground flex min-w-0 flex-col text-xs">
                                     <span className="truncate">{t('rep_rqa_waits_on').replace('{name}', r.approver.name)}</span>
-                                    <span className="truncate">
+                                    <span
+                                        className="truncate"
+                                        title={t('rep_rqa_step_n').replace('{label}', r.label).replace('{n}', String(r.position))}
+                                    >
                                         {t('rep_rqa_step_n').replace('{label}', r.label).replace('{n}', String(r.position))}
                                     </span>
                                     <span className="truncate">{t('rep_rqa_requester').replace('{name}', r.requester)}</span>
