@@ -298,7 +298,14 @@ export interface SummaryItem {
     goal?: number | null;
     /** Frames the tile apart from its colour once the value is above zero: amber = needs watching, red = gone wrong. */
     attention?: 'amber' | 'red' | null;
+    /** A small chart beside the value, in place of the split bar. */
+    chart?: SummaryChart | null;
 }
+
+export type SummaryChart =
+    | { kind: 'line'; points: number[]; months: string[] }
+    | { kind: 'blocks'; items: { key: string; name: string; tone: ChartTone; label_key: string; used: number; seats: number }[] }
+    | { kind: 'columns'; items: { key: string; label_key: string; short: string; tone: ChartTone; value: number }[] };
 
 /** A chart colour, drawn by tabular-charts.tsx. */
 export type ChartTone =

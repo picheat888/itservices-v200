@@ -19,8 +19,9 @@ namespace App\Services\Report\Tabular;
  * same way — a plain string ("CT-2026-021, CT-2026-030") or master data in two languages
  * (['name' => …, 'name_th' => …], the page picks the reader's). `attention` frames the tile apart from its
  * colour once the value is above zero — 'amber' (needs watching) or 'red' (gone wrong) — for a tile
- * whose colour comes from elsewhere (an asset status in its Settings colour). All of these are
- * screen only.
+ * whose colour comes from elsewhere (an asset status in its Settings colour). `chart` draws a small chart beside
+ * the value instead of the split bar: a 'line' through monthly points, 'blocks' (one per item, coloured by its
+ * state) or 'columns' (a count per group). All of these are screen only.
  */
 final class ReportSummary
 {
@@ -37,6 +38,8 @@ final class ReportSummary
         public readonly ?array $note = null,
         public readonly ?int $goal = null,
         public readonly ?string $attention = null,
+        /** @var array{kind: 'line', points: list<int|float>, months: list<string>}|array{kind: 'blocks', items: list<array{key: string, name: string, tone: string, label_key: string, used: int, seats: int}>}|array{kind: 'columns', items: list<array{key: string, label_key: string, short: string, tone: string, value: int}>}|null */
+        public readonly ?array $chart = null,
     ) {}
 
     public static function make(string $key, string $heading, int|float|null $value, ?string $tone = null, string $format = 'count'): self
@@ -51,7 +54,7 @@ final class ReportSummary
      */
     public function withSplit(array $split): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $split, $this->share, $this->note, $this->goal, $this->attention);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $split, $this->share, $this->note, $this->goal, $this->attention, $this->chart);
     }
 
     /** The same tile as a share of `$whole` — a whole percent, null when the whole is empty. */
@@ -59,7 +62,7 @@ final class ReportSummary
     {
         $share = $whole > 0 && $this->value !== null ? (int) round($this->value / $whole * 100) : null;
 
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $share, $this->note, $this->goal, $this->attention);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $share, $this->note, $this->goal, $this->attention, $this->chart);
     }
 
     /**
@@ -69,30 +72,40 @@ final class ReportSummary
      */
     public function withNote(?array $note): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $note, $this->goal, $this->attention);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $note, $this->goal, $this->attention, $this->chart);
     }
 
     /** The same percent tile measured against a percent goal (see the class note). */
     public function withGoal(int $goal): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $goal, $this->attention);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $goal, $this->attention, $this->chart);
     }
 
     /** The same tile framed as needing watching ('amber') or gone wrong ('red') while above zero. */
     public function withAttention(string $attention): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $attention);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $attention, $this->chart);
     }
 
     /**
-     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int|float}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>, texts?: array<string, string|array{name: string, name_th: ?string}>}|null, goal: ?int, attention: ?string}
+     * The same tile with a small chart beside the value (see the class note).
+     *
+     * @param  array<string, mixed>  $chart
+     */
+    public function withChart(array $chart): self
+    {
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $this->attention, $chart);
+    }
+
+    /**
+     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int|float}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>, texts?: array<string, string|array{name: string, name_th: ?string}>}|null, goal: ?int, attention: ?string, chart: ?array<string, mixed>}
      */
     public function toArray(): array
     {
         return [
             'key' => $this->key, 'label_key' => "rep_k_{$this->key}", 'heading' => $this->heading, 'value' => $this->value,
             'tone' => $this->tone, 'format' => $this->format, 'split' => $this->split, 'share' => $this->share, 'note' => $this->note,
-            'goal' => $this->goal, 'attention' => $this->attention,
+            'goal' => $this->goal, 'attention' => $this->attention, 'chart' => $this->chart,
         ];
     }
 }
