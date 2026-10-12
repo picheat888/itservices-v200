@@ -49,6 +49,21 @@ class SoftwareLicenseReport extends TabularReport
     /** Requests still waiting: not yet decided, or approved and waiting for IT to install. */
     private const OPEN_REQUESTS = ['pending', 'approved'];
 
+    /** A limited software's seats: full with requests waiting, full (or over), or room for more. */
+    private const SEAT_STATES = [
+        'blocked' => ['label_key' => 'rep_sl_seat_blocked', 'tone' => 'red'],
+        'full' => ['label_key' => 'rep_sl_seat_full', 'tone' => 'amber'],
+        'room' => ['label_key' => 'rep_sl_seat_room', 'tone' => 'soft-green'],
+    ];
+
+    /** How long ago a leaver still holding a seat left; no last day counts as the oldest. */
+    private const LEAVER_AGES = [
+        'week' => ['label_key' => 'rep_sl_age_week', 'short' => '≤7', 'tone' => 'gray'],
+        'month' => ['label_key' => 'rep_sl_age_month', 'short' => '8–30', 'tone' => 'soft-amber'],
+        'quarter' => ['label_key' => 'rep_sl_age_quarter', 'short' => '31–90', 'tone' => 'amber'],
+        'older' => ['label_key' => 'rep_sl_age_older', 'short' => '>90', 'tone' => 'red'],
+    ];
+
     /** @var array<string, Collection<int, array<string, mixed>>> softwares() per filter set, within one request */
     private array $figures = [];
 
@@ -244,27 +259,88 @@ class SoftwareLicenseReport extends TabularReport
         $blocked = $full->where('blocked', true);
         $leavers = $this->activeMembers($filters)->filter(fn (AccessMembership $m) => $m->employee?->hasLeft());
         $byLicense = $softwares->countBy('license_type');
+        $gone = (int) $limited->sum('gone');
+        $longest = $leavers->map(fn (AccessMembership $m) => AccessFacts::daysOut($m->employee))->filter(fn ($d) => $d !== null)->max();
+        $months = $this->seatsByMonth($softwares);
+        $net = end($months['points']) - $months['points'][0];
+        $direction = $net > 0 ? 'up' : ($net < 0 ? 'down' : 'even');
 
         return [
             ReportSummary::make('sl_software', 'ซอฟต์แวร์', $softwares->count())->withSplit(array_map(fn (string $type) => [
                 'key' => $type, 'label_key' => self::LICENSE_KEYS[$type], 'tone' => self::LICENSE_TONES[$type], 'value' => (int) $byLicense->get($type, 0),
             ], array_keys(self::LICENSE_KEYS))),
-            ReportSummary::make('sl_bought', 'License ที่ซื้อ', $bought)->withNote([
-                'label_key' => 'rep_n_sl_bought', 'values' => ['n' => $softwares->whereNull('seats')->count()],
+            ReportSummary::make('sl_bought', 'License ที่ซื้อ', $bought)->withSplit([
+                ['key' => 'work', 'label_key' => 'rep_sl_bar_work', 'tone' => 'soft-blue', 'value' => (int) $limited->sum('used') - $gone],
+                ['key' => 'gone', 'label_key' => 'rep_sl_bar_gone', 'tone' => 'soft-red', 'value' => $gone],
+                ['key' => 'free', 'label_key' => 'rep_sl_bar_free', 'tone' => 'gray', 'value' => (int) $limited->sum(fn (array $s) => max(0, $s['left']))],
             ]),
-            ReportSummary::make('sl_used', 'ใช้ไป', (int) $softwares->sum('used'))->withNote([
-                'label_key' => 'rep_n_sl_used',
-                'values' => ['free' => (int) $limited->sum(fn (array $s) => max(0, $s['left'])), 'waiting' => (int) $softwares->sum('requests')],
+            ReportSummary::make('sl_used', 'ใช้ไป', (int) $softwares->sum('used'))->withChart(['kind' => 'line'] + $months)->withNote([
+                'label_key' => 'rep_n_sl_used_months',
+                'trend' => ['direction' => $direction, 'label_key' => 'rep_n_ac_net_'.$direction, 'values' => ['net' => abs($net)]],
             ]),
-            ReportSummary::make('sl_full', 'License เต็ม', $full->count())->withAttention($blocked->isNotEmpty() ? 'red' : 'amber')->withNote(match (true) {
-                $blocked->isNotEmpty() => ['label_key' => 'rep_n_sl_full_blocked', 'values' => ['n' => (int) $blocked->sum('requests')]],
-                $full->isNotEmpty() => ['label_key' => 'rep_n_sl_full'],
-                default => ['label_key' => 'rep_n_sl_full_none'],
-            }),
-            ReportSummary::make('sl_leavers', 'ผู้ลาออกที่ยังถือ', $leavers->count())->withAttention('red')->withNote($leavers->isEmpty()
-                ? ['label_key' => 'rep_n_sl_leavers_none']
-                : ['label_key' => 'rep_n_sl_leavers', 'values' => ['n' => $leavers->pluck('employee_id')->unique()->count()]]),
+            ReportSummary::make('sl_full', 'License เต็ม', $full->count())->withAttention($blocked->isNotEmpty() ? 'red' : 'amber')
+                ->withSplit(array_map(fn (string $state) => [
+                    'key' => $state, 'label_key' => self::SEAT_STATES[$state]['label_key'], 'tone' => self::SEAT_STATES[$state]['tone'],
+                    'value' => $limited->filter(fn (array $s) => self::seatState($s) === $state)->count(),
+                ], array_keys(self::SEAT_STATES)))
+                ->withChart(['kind' => 'blocks', 'items' => $limited
+                    ->sortBy([fn (array $a, array $b) => array_search(self::seatState($a), array_keys(self::SEAT_STATES)) <=> array_search(self::seatState($b), array_keys(self::SEAT_STATES)), ['name', 'asc']])
+                    ->map(fn (array $s) => [
+                        'key' => (string) $s['id'], 'name' => (string) $s['name'], 'tone' => self::SEAT_STATES[self::seatState($s)]['tone'],
+                        'label_key' => self::SEAT_STATES[self::seatState($s)]['label_key'], 'used' => (int) $s['used'], 'seats' => (int) $s['seats'],
+                    ])->values()->all()]),
+            ReportSummary::make('sl_leavers', 'ผู้ลาออกที่ยังถือ', $leavers->count())->withAttention('red')
+                ->withChart(['kind' => 'columns', 'items' => array_map(fn (string $age) => [
+                    'key' => $age, 'label_key' => self::LEAVER_AGES[$age]['label_key'], 'short' => self::LEAVER_AGES[$age]['short'], 'tone' => self::LEAVER_AGES[$age]['tone'],
+                    'value' => $leavers->filter(fn (AccessMembership $m) => self::leaverAge(AccessFacts::daysOut($m->employee)) === $age)->count(),
+                ], array_keys(self::LEAVER_AGES))])
+                ->withNote(match (true) {
+                    $leavers->isEmpty() => ['label_key' => 'rep_n_sl_leavers_none'],
+                    $longest === null => ['label_key' => 'rep_n_sl_leavers', 'values' => ['n' => $leavers->pluck('employee_id')->unique()->count()]],
+                    default => ['label_key' => 'rep_n_sl_leavers_days', 'values' => ['n' => $leavers->pluck('employee_id')->unique()->count(), 'days' => (int) $longest]],
+                }),
         ];
+    }
+
+    /** @param  array<string, mixed>  $software */
+    private static function seatState(array $software): string
+    {
+        return match (true) {
+            (bool) $software['blocked'] => 'blocked',
+            in_array($software['usage'], ['full', 'over'], true) => 'full',
+            default => 'room',
+        };
+    }
+
+    private static function leaverAge(?int $days): string
+    {
+        return match (true) {
+            $days === null || $days > 90 => 'older',
+            $days > 30 => 'quarter',
+            $days > 7 => 'month',
+            default => 'week',
+        };
+    }
+
+    /**
+     * Seats held at the end of each of the last six months (this month: today) for the software kept.
+     *
+     * @param  Collection<int, array<string, mixed>>  $softwares
+     * @return array{points: list<int>, months: list<string>}
+     */
+    private function seatsByMonth(Collection $softwares): array
+    {
+        $grants = AccessMembership::query()->where('resource_type', 'software')->whereIn('resource_id', $softwares->pluck('id'))->get(['granted_at', 'revoked_at']);
+        $points = [];
+        $months = [];
+        foreach (range(5, 0) as $back) {
+            $month = today()->startOfMonth()->subMonths($back);
+            $at = $back === 0 ? now() : $month->copy()->endOfMonth();
+            $months[] = $month->format('Y-m');
+            $points[] = $grants->filter(fn (AccessMembership $m) => $m->granted_at?->lte($at) && ($m->revoked_at === null || $m->revoked_at->gt($at)))->count();
+        }
+
+        return ['points' => $points, 'months' => $months];
     }
 
     /**

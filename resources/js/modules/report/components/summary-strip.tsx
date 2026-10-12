@@ -9,6 +9,7 @@ import { Sparkline } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { KpiTile } from './kpi-tile';
+import { TileChart } from './tile-chart';
 import { YearsTip } from './years-tip';
 
 /** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
@@ -180,8 +181,9 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                   : false
                         }
                         meter={goal !== null ? { value: item.value ?? 0, goal } : undefined}
+                        aside={item.chart ? <TileChart chart={item.chart} title={t(item.label_key)} /> : undefined}
                         bar={
-                            goal !== null
+                            goal !== null || item.chart
                                 ? undefined
                                 : share !== null
                                   ? [{ key: 'share', percent: share, className: FILL[tone] }]

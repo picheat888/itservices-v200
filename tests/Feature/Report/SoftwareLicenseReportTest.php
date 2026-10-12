@@ -132,15 +132,40 @@ class SoftwareLicenseReportTest extends TestCase
 
         $this->assertSame(4, $summary['sl_software']['value']);
         $this->assertSame(['perpetual' => 0, 'subscription' => 3, 'free' => 1, 'open_source' => 0], array_column($summary['sl_software']['split'], 'value', 'key'));
+        // Eight seats on the limited software: four held by people working, one by a leaver, four free (Adobe is one over).
         $this->assertSame(8, $summary['sl_bought']['value']);
-        $this->assertSame(['n' => 1], $summary['sl_bought']['note']['values']);
+        $this->assertSame(['work' => 4, 'gone' => 1, 'free' => 4], array_column($summary['sl_bought']['split'], 'value', 'key'));
         $this->assertSame(7, $summary['sl_used']['value']);
-        $this->assertSame(['free' => 4, 'waiting' => 3], $summary['sl_used']['note']['values']);
         // Zoom is full with two requests waiting; Adobe is over.
         $this->assertSame(2, $summary['sl_full']['value']);
         $this->assertSame('red', $summary['sl_full']['attention']);
-        $this->assertSame(['n' => 2], $summary['sl_full']['note']['values']);
+        $this->assertSame(['blocked' => 1, 'full' => 1, 'room' => 1], array_column($summary['sl_full']['split'], 'value', 'key'));
         $this->assertSame(1, $summary['sl_leavers']['value']);
+        $this->assertSame(['n' => 1, 'days' => 10], $summary['sl_leavers']['note']['values']);
+    }
+
+    public function test_tile_charts_draw_seats_by_month_each_limited_software_and_how_long_leavers_have_gone(): void
+    {
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses/rows')->assertOk()->json('summary'))->keyBy('key');
+
+        // Eight seats held since January; one Adobe seat handed back on 1 June.
+        $line = $summary['sl_used']['chart'];
+        $this->assertSame('line', $line['kind']);
+        $this->assertSame(['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'], $line['months']);
+        $this->assertSame([8, 8, 7, 7, 7, 7], $line['points']);
+        $this->assertSame(['direction' => 'down', 'label_key' => 'rep_n_ac_net_down', 'values' => ['net' => 1]], $summary['sl_used']['note']['trend']);
+
+        // One block per limited software, the worst first: Zoom waits, Adobe is over, Office has room.
+        $blocks = $summary['sl_full']['chart'];
+        $this->assertSame('blocks', $blocks['kind']);
+        $this->assertSame(['Zoom', 'Adobe', 'Office'], array_column($blocks['items'], 'name'));
+        $this->assertSame(['red', 'amber', 'soft-green'], array_column($blocks['items'], 'tone'));
+        $this->assertSame(['used' => 3, 'seats' => 2], array_intersect_key($blocks['items'][1], ['used' => 0, 'seats' => 0]));
+
+        // The leaver left ten days ago.
+        $columns = $summary['sl_leavers']['chart'];
+        $this->assertSame('columns', $columns['kind']);
+        $this->assertSame(['week' => 0, 'month' => 1, 'quarter' => 0, 'older' => 0], array_column($columns['items'], 'value', 'key'));
     }
 
     public function test_breakdown_ranks_software_and_lists_leavers_and_requests_waiting(): void
