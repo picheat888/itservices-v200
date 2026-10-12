@@ -2,10 +2,11 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 import type { ChartLabel, ChartSeries } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { FILL, TEXT } from './chart-tones';
+import { InfoPopover } from './info-popover';
 
 /** First `top` rows plus the rest to fold into "อื่น ๆ"; one spare row is shown instead of folding a single name. */
 export function fold<T>(rows: T[], top: number, open: boolean, spare = 1) {
@@ -199,18 +200,45 @@ export function monthLabel(month: string, lang: 'th' | 'en', withYear: boolean, 
 }
 
 /** Card heading: h2 title, optional note, legend on the right. */
-export function CardTitle({ id, title, note, sub }: { id?: string; title: React.ReactNode; note?: React.ReactNode; sub?: React.ReactNode }) {
+export function CardTitle({
+    id,
+    title,
+    note,
+    info,
+    sub,
+}: {
+    id?: string;
+    title: React.ReactNode;
+    note?: React.ReactNode;
+    /** How the card counts, behind an ⓘ beside the title (read once, not every time). */
+    info?: string;
+    sub?: React.ReactNode;
+}) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3')}>
-            <div className="flex flex-wrap items-baseline gap-x-2">
+            <div className="flex flex-wrap items-center gap-x-2">
                 <h2 id={id} className="text-sm font-semibold">
                     {title}
                 </h2>
+                {info && (
+                    <InfoPopover
+                        label={info}
+                        className="text-muted-foreground hover:text-foreground -m-1 p-1"
+                        content={<p className="max-w-64">{info}</p>}
+                    >
+                        <Info aria-hidden className="h-3.5 w-3.5" />
+                    </InfoPopover>
+                )}
                 {note && <p className="text-muted-foreground text-xs">{note}</p>}
             </div>
             {sub && <div className="text-muted-foreground text-xs">{sub}</div>}
         </div>
     );
+}
+
+/** A small line at a card's foot: what the figures above add up to. */
+export function CardFoot({ children }: { children: React.ReactNode }) {
+    return <p className="text-muted-foreground mt-auto px-5 pt-1 pb-3 text-xs">{children}</p>;
 }
 
 /** A legend entry as on the overview's cards: a dot in the mark's colour, then what it means. */

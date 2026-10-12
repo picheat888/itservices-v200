@@ -12,7 +12,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useItPendingBreakdown } from '../hooks/use-reports';
 import type { ChartSeries, ItPendingBreakdown, ItPendingGroup, ItPendingJoiner, RequestAgeBand, TabularFilters } from '../types';
 import { Segments, TH } from './access-overview-cards';
-import { CardEmpty, CardTitle, CODE_LINK, fold, FoldToggle, StackBar, Swatch } from './chart-parts';
+import { CardEmpty, CardFoot, CardTitle, CODE_LINK, fold, FoldToggle, StackBar, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -169,7 +169,7 @@ function AgeCard({ data, cardRef, heldHeight }: { data: ItPendingBreakdown; card
 
     return (
         <Card ref={cardRef} className="flex flex-col overflow-clip xl:sticky xl:top-4" style={heldHeight ? { minHeight: heldHeight } : undefined}>
-            <CardTitle title={t('rep_rqi_age_title')} note={t('rep_rqi_age_note')} sub={<BandLegend />} />
+            <CardTitle title={t('rep_rqi_age_title')} info={t('rep_rqi_age_note')} sub={<BandLegend />} />
             <div className="divide-border grid flex-1 divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:auto-rows-fr xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
                 <section aria-labelledby="rqi-age-now" className={SECTION}>
                     <h3 id="rqi-age-now" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
@@ -363,11 +363,7 @@ function HoldersCard({
         <Card className="flex flex-col overflow-clip">
             <CardTitle
                 title={t('rep_rqi_who_title')}
-                note={
-                    by === 'owner'
-                        ? t('rep_rqi_who_note_owner')
-                        : t('rep_rqi_who_note_type').replace('{n}', f.number(data.waiting.total)).replace('{types}', f.number(data.by_type.length))
-                }
+                info={by === 'owner' ? t('rep_rqi_who_note_owner') : undefined}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
                         <span className="flex items-center gap-2">
@@ -465,10 +461,6 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
         <Card className="flex flex-col overflow-clip">
             <CardTitle
                 title={t('rep_rqi_jn_title')}
-                note={t('rep_rqi_jn_note')
-                    .replace('{n}', f.number(joiners.rows.length))
-                    .replace('{from}', f.date(joiners.from))
-                    .replace('{to}', f.date(joiners.to))}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {legend.map(([key, label, n]) => (
@@ -522,6 +514,12 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
                 </div>
             )}
             {folding.folds && <FoldToggle open={open} total={joiners.rows.length} onToggle={() => setOpen((o) => !o)} />}
+            <CardFoot>
+                {t('rep_rqi_jn_note')
+                    .replace('{n}', f.number(joiners.rows.length))
+                    .replace('{from}', f.date(joiners.from))
+                    .replace('{to}', f.date(joiners.to))}
+            </CardFoot>
         </Card>
     );
 }

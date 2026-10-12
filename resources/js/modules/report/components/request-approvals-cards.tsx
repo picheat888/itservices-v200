@@ -169,7 +169,7 @@ function StuckCard({ stuck }: { stuck: RequestApprovalsBreakdown['stuck'] }) {
 
     return (
         <Card className="overflow-hidden">
-            <CardTitle title={t('rep_rqa_stuck_title')} note={t('rep_rqa_stuck_note')} />
+            <CardTitle title={t('rep_rqa_stuck_title')} info={t('rep_rqa_stuck_note')} />
             {total === 0 ? (
                 <CardEmpty>{t('rep_rqa_stuck_none')}</CardEmpty>
             ) : (
@@ -299,7 +299,7 @@ function ApproversCard({ approvers, filtered }: { approvers: RequestApprovalsBre
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqa_appr_title')}
-                note={t('rep_rqa_appr_note')}
+                info={t('rep_rqa_appr_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {OUTCOME_PIECES.map((p) => (
@@ -462,7 +462,7 @@ function EndingsCard({ endings }: { endings: RequestApprovalsBreakdown['endings'
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqa_end_title')}
-                note={t('rep_rqa_end_note')}
+                info={t('rep_rqa_end_note')}
                 sub={
                     <Segments
                         label={t('rep_rqa_end_seg')}
@@ -568,7 +568,7 @@ function SkipsCard({ skips }: { skips: RequestSkipReasonRow[] }) {
         <Card className="overflow-hidden">
             <CardTitle
                 title={t('rep_rqa_skip_title')}
-                note={t('rep_rqa_skip_note')}
+                info={t('rep_rqa_skip_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {labels.map((l) => (
