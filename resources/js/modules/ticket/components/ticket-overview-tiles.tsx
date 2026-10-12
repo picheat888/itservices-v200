@@ -10,20 +10,24 @@ import { Link } from 'react-router-dom';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
+// Big numbers keep the bright shade (large text needs 3:1); small text takes the deeper one.
 const RED = 'text-red-600 dark:text-red-400';
 const AMBER = 'text-amber-600 dark:text-amber-400';
 const GREEN = 'text-emerald-600 dark:text-emerald-400';
-// Tinted shell for a right-now tile with work waiting.
+const RED_SMALL = 'text-red-700 dark:text-red-400';
+const AMBER_SMALL = 'text-amber-700 dark:text-amber-400';
+const GREEN_SMALL = 'text-emerald-700 dark:text-emerald-400';
+// Tinted shell for a right-now tile with work waiting; a solid icon chip carries the colour.
 const ALERT = {
     red: {
         card: 'border-red-200 bg-red-50/70 group-hover:bg-red-50 dark:border-red-900/60 dark:bg-red-950/30 dark:group-hover:bg-red-950/50',
-        ink: RED,
-        icon: 'bg-red-500/10 text-red-600 dark:text-red-400',
+        ink: RED_SMALL,
+        icon: 'bg-red-500 text-white shadow-sm shadow-red-500/30',
     },
     amber: {
         card: 'border-amber-200 bg-amber-50/70 group-hover:bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30 dark:group-hover:bg-amber-950/50',
-        ink: AMBER,
-        icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        ink: AMBER_SMALL,
+        icon: 'bg-amber-400 text-amber-950 shadow-sm shadow-amber-500/30',
     },
 };
 const PRESSABLE = 'group focus-visible:ring-ring block h-full rounded-xl text-left focus-visible:ring-2 focus-visible:outline-none';
@@ -33,7 +37,12 @@ function PointsTrend({ delta }: { delta: number }) {
     const t = useT();
     const Icon = delta === 0 ? Minus : delta > 0 ? ArrowUp : ArrowDown;
     return (
-        <span className={cn('inline-flex items-center gap-0.5 font-medium', delta === 0 ? 'text-muted-foreground' : delta > 0 ? GREEN : RED)}>
+        <span
+            className={cn(
+                'inline-flex items-center gap-0.5 font-medium',
+                delta === 0 ? 'text-muted-foreground' : delta > 0 ? GREEN_SMALL : RED_SMALL,
+            )}
+        >
             <Icon className="h-3.5 w-3.5" />
             {delta === 0 ? t('ticket_trend_flat') : `${Math.abs(Math.round(delta))} ${t('ticket_pts')}`}
         </span>
