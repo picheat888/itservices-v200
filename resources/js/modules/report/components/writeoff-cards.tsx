@@ -411,7 +411,7 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
             {categories.length === 0 ? (
                 <Empty>{t('rep_wo_empty')}</Empty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wo_cat_title')}</caption>
                         <thead>
@@ -576,7 +576,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
             {contracts.length === 0 ? (
                 <Empty>{t('rep_wo_ct_empty')}</Empty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wo_ct_title')}</caption>
                         <thead>

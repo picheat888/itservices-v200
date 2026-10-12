@@ -842,7 +842,7 @@ function DepartmentCard({
             {departments.length === 0 ? (
                 <CardEmpty>{t('rep_ac_empty')}</CardEmpty>
             ) : (
-                <div className="flex flex-1 flex-col overflow-x-auto">
+                <div className="relative flex flex-1 flex-col overflow-x-auto">
                     <table className="w-full min-w-[36rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_ac_dept_title')}</caption>
                         <Cols widths={DEPT_COLS} />

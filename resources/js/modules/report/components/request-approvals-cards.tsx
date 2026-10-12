@@ -347,7 +347,7 @@ function ApproversCard({ approvers, filtered }: { approvers: RequestApprovalsBre
             {approvers.rows.length === 0 ? (
                 <CardEmpty>{t('rep_rqa_appr_empty')}</CardEmpty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full min-w-[44rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_rqa_appr_title')}</caption>
                         <colgroup>
@@ -613,7 +613,7 @@ function SkipsCard({ skips }: { skips: RequestSkipReasonRow[] }) {
                     </span>
                 }
             />
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
                 <table className="w-full min-w-[44rem] table-fixed text-sm">
                     <caption className="sr-only">{t('rep_rqa_skip_title')}</caption>
                     <colgroup>

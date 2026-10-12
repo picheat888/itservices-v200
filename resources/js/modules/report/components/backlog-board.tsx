@@ -221,7 +221,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                 }
             />
             {/* Six lanes stay side by side; a narrow screen scrolls them rather than stacking. */}
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
                 <div className="grid min-w-[52rem] grid-cols-[repeat(3,minmax(0,1fr))_0_repeat(3,minmax(0,1fr))] gap-x-2.5 px-5 pt-3 pb-5">
                     {LANES.map((lane, i) => {
                         const items = tickets.filter((ticket) => lane.test(ticket.hours_left));

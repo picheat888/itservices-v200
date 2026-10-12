@@ -144,7 +144,7 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
             {data.types.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_rs_empty')}</div>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className={TABLE_HEAD}>

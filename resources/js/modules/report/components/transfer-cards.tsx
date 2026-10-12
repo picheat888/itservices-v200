@@ -422,7 +422,7 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
                 <CardEmpty>{t('rep_th_reloc_empty')}</CardEmpty>
             ) : (
                 <>
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
                         <table className="w-full text-sm">
                             <caption className="sr-only">{t('rep_th_reloc_title')}</caption>
                             <thead>
@@ -763,7 +763,7 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
             {warehouses.length === 0 ? (
                 <CardEmpty>{t('rep_th_empty')}</CardEmpty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_th_wh_title')}</caption>
                         <thead>
