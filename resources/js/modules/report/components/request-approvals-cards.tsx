@@ -26,7 +26,7 @@ import type {
 } from '../types';
 import { NUM, Segments, TD, TH } from './access-overview-cards';
 import { count, PieceBar, TodoLines, type TodoTone } from './access-parts';
-import { CardEmpty, CardTitle, CODE_LINK, fold, FoldToggle, Swatch } from './chart-parts';
+import { CardEmpty, CardTitle, CODE_LINK, fold, FoldToggle, InfoMark, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
@@ -117,15 +117,13 @@ function StuckColumn({
     const leavers = [...new Map(rows.map((r) => [r.approver.name, r.approver_left_on])).entries()];
     const hint =
         group === 'left' && rows.length > 0
-            ? leavers
-                  .map(([name, on]) =>
-                      t('rep_rqa_stuck_left_hint')
-                          .replace('{name}', name)
-                          .replace('{date}', on ? shortDate(on, lang) : '—'),
-                  )
-                  .join(' ')
+            ? leavers.map(([name, on]) =>
+                  t('rep_rqa_stuck_left_hint')
+                      .replace('{name}', name)
+                      .replace('{date}', on ? shortDate(on, lang) : '—'),
+              )
             : group === 'no_account' && rows.length > 0
-              ? t('rep_rqa_stuck_no_account_hint')
+              ? [t('rep_rqa_stuck_no_account_hint')]
               : null;
 
     return (
@@ -139,11 +137,12 @@ function StuckColumn({
                     'border-border text-muted-foreground flex items-baseline justify-between gap-2 border-b px-5 py-2 text-xs font-semibold',
                 )}
             >
-                {t(`rep_rqa_stuck_${group}`)}
+                <span className="flex items-center gap-1.5">
+                    {t(`rep_rqa_stuck_${group}`)}
+                    {hint && <InfoMark info={hint} />}
+                </span>
                 <b className="text-foreground font-mono tabular-nums">{t('rep_rqa_n_requests').replace('{n}', count(rows.length, lang))}</b>
             </h3>
-            {/* The hint line keeps its row in every column, empty where there is none */}
-            {hint ? <p className="text-muted-foreground px-5 pt-2 text-xs">{hint}</p> : <span aria-hidden className="hidden xl:block" />}
             {rows.length === 0 ? (
                 <p className="text-muted-foreground px-5 py-3 text-sm">{t(`rep_rqa_stuck_empty_${group}`)}</p>
             ) : (
@@ -188,9 +187,9 @@ function StuckCard({ stuck }: { stuck: RequestApprovalsBreakdown['stuck'] }) {
     const t = useT();
     const total = STUCK_GROUPS.reduce((s, g) => s + stuck[g].length, 0);
     const [open, setOpen] = useState<Record<StuckGroup, boolean>>({ left: false, no_account: false, over7: false, upto7: false });
-    // Heading, hint, the longest column's rows, the fold line
+    // Heading, the longest column's rows, the fold line
     const longest = Math.max(1, ...STUCK_GROUPS.map((g) => (open[g] ? stuck[g].length : Math.min(STUCK_SHOWN, stuck[g].length))));
-    const span = longest + 3;
+    const span = longest + 2;
 
     return (
         <Card className="overflow-hidden">
