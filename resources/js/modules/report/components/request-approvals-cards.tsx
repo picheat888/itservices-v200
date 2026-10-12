@@ -95,12 +95,25 @@ type StuckGroup = 'left' | 'no_account' | 'over7' | 'upto7';
 
 const STUCK_GROUPS: StuckGroup[] = ['left', 'no_account', 'over7', 'upto7'];
 
-/** One group as a column: heading with its count, an optional hint, three rows, the rest folded. */
-function StuckColumn({ group, rows }: { group: StuckGroup; rows: RequestStuckStep[] }) {
+const STUCK_SHOWN = 3;
+
+/** One group as a column; on a wide screen the four share their rows (subgrid), so each line sits level. */
+function StuckColumn({
+    group,
+    rows,
+    open,
+    onToggle,
+    span,
+}: {
+    group: StuckGroup;
+    rows: RequestStuckStep[];
+    open: boolean;
+    onToggle: () => void;
+    span: number;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [open, setOpen] = useState(false);
-    const { folds, shown } = fold(rows, 3, open, 0);
+    const { folds, shown } = fold(rows, STUCK_SHOWN, open, 0);
     const leavers = [...new Map(rows.map((r) => [r.approver.name, r.approver_left_on])).entries()];
     const hint =
         group === 'left' && rows.length > 0
@@ -116,7 +129,10 @@ function StuckColumn({ group, rows }: { group: StuckGroup; rows: RequestStuckSte
               : null;
 
     return (
-        <section className="border-border min-w-0 border-t first:border-t-0 xl:border-t-0 xl:border-l xl:first:border-l-0">
+        <section
+            className="border-border flex min-w-0 flex-col border-t first:border-t-0 xl:grid xl:grid-rows-subgrid xl:border-t-0 xl:border-l xl:first:border-l-0"
+            style={{ gridRow: `span ${span}` }}
+        >
             <h3
                 className={cn(
                     TABLE_HEAD,
@@ -126,16 +142,17 @@ function StuckColumn({ group, rows }: { group: StuckGroup; rows: RequestStuckSte
                 {t(`rep_rqa_stuck_${group}`)}
                 <b className="text-foreground font-mono tabular-nums">{t('rep_rqa_n_requests').replace('{n}', count(rows.length, lang))}</b>
             </h3>
+            {/* The hint line keeps its row in every column, empty where there is none */}
+            {hint ? <p className="text-muted-foreground px-5 pt-2 text-xs">{hint}</p> : <span aria-hidden className="hidden xl:block" />}
             {rows.length === 0 ? (
                 <p className="text-muted-foreground px-5 py-3 text-sm">{t(`rep_rqa_stuck_empty_${group}`)}</p>
             ) : (
                 <>
-                    {hint && <p className="text-muted-foreground px-5 pt-2 text-xs">{hint}</p>}
-                    <ul>
+                    <ul className="xl:contents">
                         {shown.map((r) => (
                             <li
                                 key={r.request_id}
-                                className="border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b px-5 py-2.5 last:border-b-0"
+                                className="border-border/60 grid grid-cols-[minmax(0,1fr)_auto] content-start items-center gap-x-3 gap-y-0.5 border-b px-5 py-2.5 last:border-b-0"
                             >
                                 <span className="flex min-w-0 items-center gap-2 text-sm">
                                     <RequestLink id={r.request_id} reference={r.reference} />
@@ -156,7 +173,11 @@ function StuckColumn({ group, rows }: { group: StuckGroup; rows: RequestStuckSte
                             </li>
                         ))}
                     </ul>
-                    {folds && <FoldToggle open={open} total={rows.length} onToggle={() => setOpen((v) => !v)} />}
+                    {folds && (
+                        <div className="xl:[grid-row:-2/-1]">
+                            <FoldToggle open={open} total={rows.length} onToggle={onToggle} />
+                        </div>
+                    )}
                 </>
             )}
         </section>
@@ -166,6 +187,10 @@ function StuckColumn({ group, rows }: { group: StuckGroup; rows: RequestStuckSte
 function StuckCard({ stuck }: { stuck: RequestApprovalsBreakdown['stuck'] }) {
     const t = useT();
     const total = STUCK_GROUPS.reduce((s, g) => s + stuck[g].length, 0);
+    const [open, setOpen] = useState<Record<StuckGroup, boolean>>({ left: false, no_account: false, over7: false, upto7: false });
+    // Heading, hint, the longest column's rows, the fold line
+    const longest = Math.max(1, ...STUCK_GROUPS.map((g) => (open[g] ? stuck[g].length : Math.min(STUCK_SHOWN, stuck[g].length))));
+    const span = longest + 3;
 
     return (
         <Card className="overflow-hidden">
@@ -176,7 +201,14 @@ function StuckCard({ stuck }: { stuck: RequestApprovalsBreakdown['stuck'] }) {
                 // Four columns on a wide screen; one under another on a tablet, each still folding at three.
                 <div className="grid grid-cols-1 items-start xl:grid-cols-4 xl:items-stretch">
                     {STUCK_GROUPS.map((g) => (
-                        <StuckColumn key={g} group={g} rows={stuck[g]} />
+                        <StuckColumn
+                            key={g}
+                            group={g}
+                            rows={stuck[g]}
+                            open={open[g]}
+                            onToggle={() => setOpen((o) => ({ ...o, [g]: !o[g] }))}
+                            span={span}
+                        />
                     ))}
                 </div>
             )}
