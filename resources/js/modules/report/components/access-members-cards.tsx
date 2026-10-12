@@ -188,13 +188,11 @@ function StorageCards({ resources }: { resources: Resource[] }) {
             >
                 <CardTitle
                     title={t('rep_ar_space_title')}
+                    info={t('rep_ar_space_sub')}
                     sub={
-                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span>{t('rep_ar_space_sub')}</span>
-                            <span className="inline-flex items-center gap-1.5">
-                                <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL['access-file'])} />
-                                {t('rep_ar_space_allocated')}
-                            </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL['access-file'])} />
+                            {t('rep_ar_space_allocated')}
                         </span>
                     }
                 />
@@ -385,7 +383,7 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_ar_res_title')}
-                note={t('rep_ar_res_note')}
+                info={t('rep_ar_res_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {legend.map((m) => (

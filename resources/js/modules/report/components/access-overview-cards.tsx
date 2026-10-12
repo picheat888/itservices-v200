@@ -217,7 +217,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
         <Card ref={cardRef} className="flex flex-col overflow-hidden lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3" style={heldStyle(heldHeight)}>
             <CardTitle
                 title={t('rep_ac_month_title')}
-                note={
+                info={
                     peak
                         ? t('rep_ac_month_peak')
                               .replace('{month}', monthLabel(peak.month, lang, false, true))
