@@ -366,10 +366,7 @@ class TicketController extends Controller
         return response()->json(['count' => $badges->ticketsNeedingAttention($request->user())]);
     }
 
-    /**
-     * IT staff who can be assigned a ticket — login accounts holding the super or
-     * admin (IT) role. Used to populate the super admin's assign dropdown.
-     */
+    /** Staff who can work a case, for the Assign and Forward pickers. */
     public function staff(Request $request): JsonResponse
     {
         // Assigners need it for Assign; assignees (resolve/forward) need it for Forward.
@@ -380,19 +377,10 @@ class TicketController extends Controller
             403
         );
 
-        // Permission-first: whoever can actually work a case (tickets.resolve),
-        // narrowed to the case's category Level when one is passed (?category=).
+        // Narrowed to the case's category Level when one is passed (?category=)
         $category = $request->query('category');
-        $staff = User::all()
-            ->filter(fn (User $u) => $u->hasPermission('tickets.resolve'))
-            ->when(is_string($category) && $category !== '', fn ($c) => $c->filter(
-                fn (User $u) => $u->hasPermission("tickets.level_{$category}"),
-            ))
-            ->sortBy('name')
-            ->values()
-            // employee_id so the pickers can drop the case's own requester: assign() and
-            // forward() reject that person (anti case-pumping), and a name in the list that
-            // always answers 422 is a choice the screen should never have offered.
+        $staff = $this->service->staff(is_string($category) ? $category : null)
+            // employee_id lets the pickers drop the case's own requester (assign/forward reject them)
             ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'employee_id' => $u->employee_id]);
 
         return response()->json(['data' => $staff]);

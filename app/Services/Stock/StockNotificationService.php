@@ -88,7 +88,7 @@ class StockNotificationService
      */
     private function recipients(string $permission): Collection
     {
-        return User::all()->filter(fn (User $u) => $u->hasPermission($permission))->values();
+        return User::holdingPermission($permission)->orderBy('id')->get();
     }
 
     /**

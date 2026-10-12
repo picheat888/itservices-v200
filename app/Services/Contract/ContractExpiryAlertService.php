@@ -41,9 +41,7 @@ class ContractExpiryAlertService
      */
     public function run(bool $force = false): int
     {
-        $recipients = User::all()->filter(
-            fn (User $u) => $u->hasPermission('contracts.alerts')
-        );
+        $recipients = User::holdingPermission('contracts.alerts')->orderBy('id')->get();
 
         // Don't touch any ledger when there's nobody to notify yet — otherwise
         // enabling contracts.alerts later would skip alerts whose dedup row was

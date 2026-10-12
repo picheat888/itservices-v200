@@ -345,9 +345,10 @@ class EmployeeService
      */
     private function recipientsWithPermission(string $permission, ?User $exclude): Collection
     {
-        return User::all()->filter(
-            fn (User $u) => $u->hasPermission($permission) && $u->id !== $exclude?->id
-        );
+        return User::holdingPermission($permission)
+            ->when($exclude, fn ($q) => $q->whereKeyNot($exclude->id))
+            ->orderBy('id')
+            ->get();
     }
 
     /** Notifies every user allowed to set credentials that this person still needs one. */
@@ -435,10 +436,10 @@ class EmployeeService
         }
 
         $editKeys = ['access.email_edit', 'access.file_edit', 'access.social_edit', 'access.software_edit'];
-        $recipients = User::all()->filter(
-            fn (User $u) => $u->hasPermission('access.module')
-                && collect($editKeys)->contains(fn (string $key) => $u->hasPermission($key))
-        );
+        $recipients = User::holdingPermission('access.module')
+            ->holdingAnyPermission($editKeys)
+            ->orderBy('id')
+            ->get();
 
         if ($recipients->isEmpty()) {
             return;
