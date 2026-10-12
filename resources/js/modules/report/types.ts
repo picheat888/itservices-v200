@@ -273,7 +273,7 @@ export interface SummaryItem {
     format: 'count' | 'money' | 'percent' | 'hours' | 'years' | 'days';
     /** Optional breakdown for the tile's footer ("ซื้อ 62 · เช่า 18"). */
     /** `counts`: a count even on an hours tile (how many accepted same day, next day…). */
-    split?: { key: string; label_key: string; tone: ChartTone; value: number; counts?: boolean }[];
+    split?: { key: string; label_key: string; tone: ChartTone; value: number; counts?: boolean; short_key?: string }[];
     /** The value as a percent of the report's whole — a badge and a meter in the tile's tone. */
     share?: number | null;
     /** One line for the tile's foot when it has no split: a key with {n} (hours, shown as days / hours) and/or {at} ("Y-m-d H:i"), plus plain numbers by name (`values` — {met}, {n}). */

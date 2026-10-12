@@ -11,7 +11,7 @@ namespace App\Services\Report\Tabular;
  * "93 %"), 'hours' (one decimal, "58.8 ชม.") or 'years' (one decimal, "3.4 ปี"). `goal` (percent tiles) draws the value as a meter
  * with the goal marked, and flags the tile once the value falls short of it. `split` optionally breaks
  * the value down for the tile's footer ("ซื้อ 62 · เช่า 18"): each part a key, an i18n label key,
- * a chart tone and its count. `share` is the value as a percent of the report's whole, drawn as
+ * a chart tone and its count, and optionally a `short_key` the footer shows when the full label is long. `share` is the value as a percent of the report's whole, drawn as
  * a badge and a meter in the tile's tone. `note` is one line for the tile's foot when it has no
  * split — an i18n key plus a duration in hours ({n}) and/or a moment "Y-m-d H:i" ({at}) the
  * page formats ("เกินนานสุด 38 วัน", "ใบถัดไปครบ 2 ต.ค. 17:00"), and any plain numbers under
@@ -50,7 +50,7 @@ final class ReportSummary
     /**
      * The same tile with a breakdown for its footer.
      *
-     * @param  list<array{key: string, label_key: string, tone: string, value: int|float, counts?: bool}>  $split
+     * @param  list<array{key: string, label_key: string, tone: string, value: int|float, counts?: bool, short_key?: string}>  $split
      */
     public function withSplit(array $split): self
     {

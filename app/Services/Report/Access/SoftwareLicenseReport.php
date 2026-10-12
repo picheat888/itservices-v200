@@ -33,6 +33,12 @@ class SoftwareLicenseReport extends TabularReport
         'perpetual' => 'ซื้อขาด', 'subscription' => 'รายเดือน/รายปี', 'free' => 'ฟรี', 'open_source' => 'Open Source',
     ];
 
+    /** License types short enough for a tile's one-line footer. */
+    private const LICENSE_SHORT_KEYS = [
+        'perpetual' => 'access_lic_perpetual', 'subscription' => 'rep_sl_lic_subscription_short',
+        'free' => 'access_lic_free', 'open_source' => 'rep_sl_lic_open_source_short',
+    ];
+
     private const LICENSE_TONES = ['perpetual' => 'soft-violet', 'subscription' => 'soft-blue', 'free' => 'soft-green', 'open_source' => 'gray'];
 
     private const USAGE_KEYS = [
@@ -51,9 +57,9 @@ class SoftwareLicenseReport extends TabularReport
 
     /** A limited software's seats: full with requests waiting, full (or over), or room for more. */
     private const SEAT_STATES = [
-        'blocked' => ['label_key' => 'rep_sl_seat_blocked', 'tone' => 'red'],
-        'full' => ['label_key' => 'rep_sl_seat_full', 'tone' => 'amber'],
-        'room' => ['label_key' => 'rep_sl_seat_room', 'tone' => 'soft-green'],
+        'blocked' => ['label_key' => 'rep_sl_seat_blocked', 'short_key' => 'rep_sl_seat_blocked_short', 'tone' => 'red'],
+        'full' => ['label_key' => 'rep_sl_seat_full', 'short_key' => 'rep_sl_seat_full', 'tone' => 'amber'],
+        'room' => ['label_key' => 'rep_sl_seat_room', 'short_key' => 'rep_sl_seat_room_short', 'tone' => 'soft-green'],
     ];
 
     /** How long ago a leaver still holding a seat left; no last day counts as the oldest. */
@@ -267,11 +273,11 @@ class SoftwareLicenseReport extends TabularReport
 
         return [
             ReportSummary::make('sl_software', 'ซอฟต์แวร์', $softwares->count())->withSplit(array_map(fn (string $type) => [
-                'key' => $type, 'label_key' => self::LICENSE_KEYS[$type], 'tone' => self::LICENSE_TONES[$type], 'value' => (int) $byLicense->get($type, 0),
+                'key' => $type, 'label_key' => self::LICENSE_KEYS[$type], 'short_key' => self::LICENSE_SHORT_KEYS[$type], 'tone' => self::LICENSE_TONES[$type], 'value' => (int) $byLicense->get($type, 0),
             ], array_keys(self::LICENSE_KEYS))),
             ReportSummary::make('sl_bought', 'License ที่ซื้อ', $bought)->withSplit([
-                ['key' => 'work', 'label_key' => 'rep_sl_bar_work', 'tone' => 'soft-blue', 'value' => (int) $limited->sum('used') - $gone],
-                ['key' => 'gone', 'label_key' => 'rep_sl_bar_gone', 'tone' => 'soft-red', 'value' => $gone],
+                ['key' => 'work', 'label_key' => 'rep_sl_bar_work', 'short_key' => 'rep_sl_bar_work_short', 'tone' => 'soft-blue', 'value' => (int) $limited->sum('used') - $gone],
+                ['key' => 'gone', 'label_key' => 'rep_sl_bar_gone', 'short_key' => 'rep_sl_bar_gone_short', 'tone' => 'soft-red', 'value' => $gone],
                 ['key' => 'free', 'label_key' => 'rep_sl_bar_free', 'tone' => 'gray', 'value' => (int) $limited->sum(fn (array $s) => max(0, $s['left']))],
             ]),
             ReportSummary::make('sl_used', 'ใช้ไป', (int) $softwares->sum('used'))->withChart(['kind' => 'line'] + $months)->withNote([
@@ -280,7 +286,7 @@ class SoftwareLicenseReport extends TabularReport
             ]),
             ReportSummary::make('sl_full', 'License เต็ม', $full->count())->withAttention($blocked->isNotEmpty() ? 'red' : 'amber')
                 ->withSplit(array_map(fn (string $state) => [
-                    'key' => $state, 'label_key' => self::SEAT_STATES[$state]['label_key'], 'tone' => self::SEAT_STATES[$state]['tone'],
+                    'key' => $state, 'label_key' => self::SEAT_STATES[$state]['label_key'], 'short_key' => self::SEAT_STATES[$state]['short_key'], 'tone' => self::SEAT_STATES[$state]['tone'],
                     'value' => $limited->filter(fn (array $s) => self::seatState($s) === $state)->count(),
                 ], array_keys(self::SEAT_STATES))),
             ReportSummary::make('sl_leavers', 'ผู้ลาออกที่ยังถือ', $leavers->count())->withAttention('red')
