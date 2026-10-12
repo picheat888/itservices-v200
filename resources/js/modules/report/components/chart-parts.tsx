@@ -210,8 +210,8 @@ export function CardTitle({
     id?: string;
     title: React.ReactNode;
     note?: React.ReactNode;
-    /** How the card counts, behind an ⓘ beside the title (read once, not every time). */
-    info?: string;
+    /** How the card counts, behind an ⓘ beside the title (read once, not every time); one paragraph each. */
+    info?: string | string[];
     sub?: React.ReactNode;
 }) {
     return (
@@ -222,9 +222,15 @@ export function CardTitle({
                 </h2>
                 {info && (
                     <InfoPopover
-                        label={info}
+                        label={[info].flat().join(' ')}
                         className="text-muted-foreground hover:text-foreground -m-1 p-1"
-                        content={<p className="max-w-64">{info}</p>}
+                        content={
+                            <div className="max-w-64 space-y-1.5">
+                                {[info].flat().map((line) => (
+                                    <p key={line}>{line}</p>
+                                ))}
+                            </div>
+                        }
                     >
                         <Info aria-hidden className="h-3.5 w-3.5" />
                     </InfoPopover>
@@ -234,11 +240,6 @@ export function CardTitle({
             {sub && <div className="text-muted-foreground text-xs">{sub}</div>}
         </div>
     );
-}
-
-/** A small line at a card's foot: what the figures above add up to. */
-export function CardFoot({ children }: { children: React.ReactNode }) {
-    return <p className="text-muted-foreground mt-auto px-5 pt-1 pb-3 text-xs">{children}</p>;
 }
 
 /** A legend entry as on the overview's cards: a dot in the mark's colour, then what it means. */

@@ -12,7 +12,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useItPendingBreakdown } from '../hooks/use-reports';
 import type { ChartSeries, ItPendingBreakdown, ItPendingGroup, ItPendingJoiner, RequestAgeBand, TabularFilters } from '../types';
 import { Segments, TH } from './access-overview-cards';
-import { CardEmpty, CardFoot, CardTitle, CODE_LINK, fold, FoldToggle, StackBar, Swatch } from './chart-parts';
+import { CardEmpty, CardTitle, CODE_LINK, fold, FoldToggle, StackBar, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -461,6 +461,10 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
         <Card className="flex flex-col overflow-clip">
             <CardTitle
                 title={t('rep_rqi_jn_title')}
+                info={t('rep_rqi_jn_note')
+                    .replace('{n}', f.number(joiners.rows.length))
+                    .replace('{from}', f.date(joiners.from))
+                    .replace('{to}', f.date(joiners.to))}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {legend.map(([key, label, n]) => (
@@ -514,12 +518,6 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
                 </div>
             )}
             {folding.folds && <FoldToggle open={open} total={joiners.rows.length} onToggle={() => setOpen((o) => !o)} />}
-            <CardFoot>
-                {t('rep_rqi_jn_note')
-                    .replace('{n}', f.number(joiners.rows.length))
-                    .replace('{from}', f.date(joiners.from))
-                    .replace('{to}', f.date(joiners.to))}
-            </CardFoot>
         </Card>
     );
 }

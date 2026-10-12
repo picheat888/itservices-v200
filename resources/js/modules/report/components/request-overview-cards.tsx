@@ -21,7 +21,6 @@ import { count, deptName, PieceBar, type Lang } from './access-parts';
 import {
     barTop,
     CardEmpty,
-    CardFoot,
     CardTitle,
     currentMonth,
     fold,
@@ -551,7 +550,7 @@ function DeliveryCard({ delivery }: { delivery: Breakdown['delivery'] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqo_days_title')}
-                info={t('rep_rqo_days_note')}
+                info={[t('rep_rqo_days_note'), t('rep_rqo_days_foot')]}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Swatch fill={FILL[PART_TONE.approval]}>{t('rep_rqo_days_approval')}</Swatch>
@@ -592,7 +591,6 @@ function DeliveryCard({ delivery }: { delivery: Breakdown['delivery'] }) {
                             <tbody>{line('all', t('rep_rqo_days_all'), delivery.all, true)}</tbody>
                         </table>
                     </div>
-                    <p className="text-muted-foreground border-border border-t px-5 py-3 text-xs">{t('rep_rqo_days_foot')}</p>
                 </>
             )}
         </Card>
@@ -643,6 +641,7 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqo_items_title')}
+                info={items.picked[origin] > 0 ? t('rep_rqo_items_note').replace('{n}', count(items.picked[origin], lang)) : undefined}
                 sub={
                     <Segments
                         label={t('rep_rqo_items_seg')}
@@ -703,7 +702,6 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
                         </p>
                     )}
                     {folds && <FoldToggle open={open} total={list.length} onToggle={() => setOpen((v) => !v)} />}
-                    {items.picked[origin] > 0 && <CardFoot>{t('rep_rqo_items_note').replace('{n}', count(items.picked[origin], lang))}</CardFoot>}
                 </>
             )}
         </Card>
