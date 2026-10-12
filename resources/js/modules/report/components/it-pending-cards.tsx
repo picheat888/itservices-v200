@@ -98,23 +98,33 @@ export function ItPendingAsOf({ filters }: { filters: TabularFilters }) {
 export function ItPendingCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const { data, isLoading, isError, error } = useItPendingBreakdown(filters);
+    const [open, setOpen] = useState<Record<By, boolean>>({ owner: false, type: false });
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
+    const by: By = filters.by === 'type' ? 'type' : 'owner';
+
     return (
         <div className="space-y-4">
-            <div className={PAIR}>
+            <div className={cn(PAIR, open[by] && 'xl:items-start')}>
                 <AgeCard data={data} />
-                <HoldersCard data={data} filters={filters} patch={patch} />
+                <HoldersCard
+                    data={data}
+                    filters={filters}
+                    patch={patch}
+                    by={by}
+                    open={open}
+                    onToggle={() => setOpen((o) => ({ ...o, [by]: !o[by] }))}
+                />
             </div>
             <JoinersCard joiners={data.joiners} />
         </div>
     );
 }
 
-// Age card beside the workload card on wide screens; it keeps its own height and stays in view
-const PAIR = 'grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:items-start';
+// Age card beside the workload card on wide screens; same height while the list is folded, its own height (in view) once unfolded
+const PAIR = 'grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]';
 
 function CardsSkeleton() {
     return (
@@ -158,9 +168,9 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
     const { waiting, delivered } = data;
 
     return (
-        <Card className="overflow-clip xl:sticky xl:top-4">
+        <Card className="flex flex-col overflow-clip xl:sticky xl:top-4">
             <CardTitle title={t('rep_rqi_age_title')} note={t('rep_rqi_age_note')} sub={<BandLegend />} />
-            <div className="divide-border grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
+            <div className="divide-border grid flex-1 divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:auto-rows-fr xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
                 <section aria-labelledby="rqi-age-now" className={SECTION}>
                     <h3 id="rqi-age-now" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
                         {t('rep_rqi_age_now')}
@@ -199,7 +209,7 @@ function AgeCard({ data }: { data: ItPendingBreakdown }) {
     );
 }
 
-const SECTION = 'flex flex-col gap-2 px-5 py-3.5';
+const SECTION = 'flex flex-col justify-center gap-2 px-5 py-3.5';
 
 const BUCKET = 'relative flex w-full min-w-0 flex-col items-center gap-0.5 rounded-lg border-t-[3px] px-2 pt-2 pb-2.5 text-center';
 
@@ -313,12 +323,23 @@ function GroupRow({
     );
 }
 
-function HoldersCard({ data, filters, patch }: { data: ItPendingBreakdown; filters: TabularFilters; patch: Patch }) {
+function HoldersCard({
+    data,
+    filters,
+    patch,
+    by,
+    open,
+    onToggle: toggle,
+}: {
+    data: ItPendingBreakdown;
+    filters: TabularFilters;
+    patch: Patch;
+    by: By;
+    open: Record<By, boolean>;
+    onToggle: () => void;
+}) {
     const t = useT();
     const f = useFormat();
-    const by: By = filters.by === 'type' ? 'type' : 'owner';
-    const [open, setOpen] = useState<Record<By, boolean>>({ owner: false, type: false });
-    const toggle = () => setOpen((o) => ({ ...o, [by]: !o[by] }));
     const oldest = (days: number | null) => (days === null ? t('rep_rqi_none_waiting') : t('rep_rqi_oldest').replace('{n}', f.number(days)));
 
     const named = data.by_assignee.filter((g) => g.key !== NONE && g.key !== NO_TICKET);
