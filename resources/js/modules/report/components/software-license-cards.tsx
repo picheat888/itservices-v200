@@ -160,7 +160,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_sl_seats_title')}
-                note={t('rep_sl_seats_note')}
+                info={t('rep_sl_seats_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {[
