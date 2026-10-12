@@ -518,7 +518,6 @@ export const report: Dict = {
     rep_wo_month_col: 'Month',
     rep_wo_month_col_total: 'Total',
     rep_wo_reason_title: 'Reasons for write-off',
-    rep_wo_reason_count: '{n} reasons',
     rep_wo_reason_none: 'No reason given',
     rep_wo_cat_title: 'By category',
     rep_wo_cat_sub: 'How many years bought assets served before write-off',

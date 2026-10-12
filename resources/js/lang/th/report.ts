@@ -517,7 +517,6 @@ export const report: Dict = {
     rep_wo_month_col: 'เดือน',
     rep_wo_month_col_total: 'รวม',
     rep_wo_reason_title: 'เหตุผลที่ตัดจำหน่าย',
-    rep_wo_reason_count: '{n} เหตุผล',
     rep_wo_reason_none: 'ไม่ระบุเหตุผล',
     rep_wo_cat_title: 'แยกตามหมวดหมู่',
     rep_wo_cat_sub: 'เครื่องที่ซื้อ ใช้งานไปกี่ปีก่อนตัดจำหน่าย',
