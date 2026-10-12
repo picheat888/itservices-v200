@@ -225,7 +225,7 @@ function MonthCard({ months }: { months: Month[] }) {
         <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
                 title={t('rep_wty_month_title')}
-                note={peak ? peakText : undefined}
+                info={peak ? peakText : undefined}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Legend pieces={statusPieces(t, counts as Record<WarrantyStatus, number>, used)} counts={counts} />
@@ -501,7 +501,7 @@ function CategoryCard({ data, patch }: { data: AssetWarrantyBreakdown; patch: Pa
 
     return (
         <Card className="overflow-hidden">
-            <CardTitle title={t('rep_wty_cat_title')} note={t('rep_wty_cat_sub')} sub={<Legend pieces={periodPieces(t, within, PERIOD_ZERO)} />} />
+            <CardTitle title={t('rep_wty_cat_title')} info={t('rep_wty_cat_sub')} sub={<Legend pieces={periodPieces(t, within, PERIOD_ZERO)} />} />
             {categories.length === 0 ? (
                 <Empty>{t('rep_wty_empty')}</Empty>
             ) : (
@@ -609,7 +609,7 @@ function VendorCard({ data }: { data: AssetWarrantyBreakdown }) {
         <Card className="overflow-hidden">
             <CardTitle
                 title={t('rep_wty_vendor_title')}
-                note={t('rep_wty_vendor_sub')}
+                info={t('rep_wty_vendor_sub')}
                 sub={<Legend pieces={periodPieces(t, within, PERIOD_ZERO)} />}
             />
             {vendors.length === 0 ? (
