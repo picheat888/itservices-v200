@@ -89,6 +89,16 @@ class AssetService
     }
 
     /**
+     * Users who can receive assets back into the pool.
+     *
+     * @return Collection<int, User>
+     */
+    private function receivers(): Collection
+    {
+        return User::holdingPermission('assets.receive')->orderBy('id')->get();
+    }
+
+    /**
      * Queue one templated mail per recipient. Address-less recipients are logged as skipped
      * by EmailNotificationService rather than dropped silently.
      *
@@ -363,7 +373,7 @@ class AssetService
         ]);
 
         // Bell alert to everyone who can receive assets back into the pool (permission gates the bell).
-        $recipients = User::all()->filter(fn (User $u) => $u->hasPermission('assets.receive'));
+        $recipients = $this->receivers();
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new AssetReturnRequestedNotification($asset, $holder));
             $this->emailEach($recipients, 'asset.return_requested', $this->assetVars($asset) + [
@@ -404,9 +414,7 @@ class AssetService
         }
 
         // One bell for the whole departure, not one per device — see AssetOffboardingNotification.
-        // Resolved once for the batch as well: asking per asset would reload every user's
-        // permissions as many times as the leaver held machines.
-        $recipients = User::all()->filter(fn (User $u) => $u->hasPermission('assets.receive'));
+        $recipients = $this->receivers();
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new AssetOffboardingNotification($employee, $assets->count()));
             $this->emailEach($recipients, 'asset.offboarding', [

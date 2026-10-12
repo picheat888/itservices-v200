@@ -194,11 +194,23 @@ class User extends Authenticatable
      */
     public function scopeHoldingPermission(Builder $query, string $permission): Builder
     {
+        return $this->scopeHoldingAnyPermission($query, [$permission]);
+    }
+
+    /**
+     * Users holding at least one of $permissions, as one query.
+     *
+     * @param  Builder<User>  $query
+     * @param  list<string>  $permissions
+     * @return Builder<User>
+     */
+    public function scopeHoldingAnyPermission(Builder $query, array $permissions): Builder
+    {
         return $query->where(fn (Builder $q) => $q
             ->whereHas('role', fn (Builder $role) => $role->where('key', UserRole::SuperAdmin->value))
             ->orWhereIn('role_id', RolePermission::query()
                 ->select('role_id')
-                ->where('permission', $permission)
+                ->whereIn('permission', $permissions)
                 ->where('allowed', true)));
     }
 

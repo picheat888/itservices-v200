@@ -18,6 +18,7 @@ use App\Notifications\TicketOwnerNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 class TicketService
@@ -55,13 +56,10 @@ class TicketService
             'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
         ]);
 
-        // Bell the staff who could take this case: tickets.resolve + the matching
-        // Ticket Level — never the requester themselves (they can't take it anyway).
-        $takers = User::all()->filter(
-            fn (User $u) => $u->employee_id !== $ticket->requester_id
-                && $u->hasPermission('tickets.resolve')
-                && $u->hasPermission("tickets.level_{$ticket->category?->value}"),
-        )->values();
+        // Bell the staff who could take this case — never the requester themselves (they can't take it anyway).
+        $takers = $this->takersFor($ticket)
+            ->reject(fn (User $u) => $u->employee_id === $ticket->requester_id)
+            ->values();
         Notification::send($takers, new TicketCreatedNotification($ticket));
 
         // The same people, by mail. A bell is only seen by somebody already looking at the
@@ -365,6 +363,31 @@ class TicketService
         );
 
         return $ticket->fresh();
+    }
+
+    /**
+     * Staff who can work cases (tickets.resolve), narrowed to one category's Level when
+     * given; feeds the Assign and Forward pickers.
+     *
+     * @return Collection<int, User>
+     */
+    public function staff(?string $category = null): Collection
+    {
+        return User::holdingPermission('tickets.resolve')
+            ->when($category !== null && $category !== '', fn ($q) => $q->holdingPermission("tickets.level_{$category}"))
+            ->get()
+            ->sortBy('name')
+            ->values();
+    }
+
+    /**
+     * Staff able to take this specific case: tickets.resolve + the matching Level.
+     *
+     * @return Collection<int, User>
+     */
+    public function takersFor(Ticket $ticket): Collection
+    {
+        return $this->staff($ticket->category->value);
     }
 
     /**

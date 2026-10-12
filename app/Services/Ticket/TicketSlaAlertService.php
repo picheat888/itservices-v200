@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\Notification;
  */
 class TicketSlaAlertService
 {
+    public function __construct(private readonly TicketService $tickets) {}
+
     /**
      * @return array{near_due: int, over_sla: int}
      */
@@ -86,7 +88,7 @@ class TicketSlaAlertService
     {
         if ($clock === 'response') {
             // Nobody owns the case yet — warn everyone whose Level lets them take it.
-            return $this->takersFor($ticket);
+            return $this->tickets->takersFor($ticket);
         }
 
         $assignee = User::find($ticket->assignee_id);
@@ -94,24 +96,9 @@ class TicketSlaAlertService
 
         if ($state === 'over_sla') {
             // A blown resolution target escalates to everyone who can re-assign.
-            $recipients = $recipients->merge(
-                User::all()->filter(fn (User $u) => $u->hasPermission('tickets.assign'))->values()
-            );
+            $recipients = $recipients->merge(User::holdingPermission('tickets.assign')->orderBy('id')->get());
         }
 
         return $recipients->unique('id')->values();
-    }
-
-    /**
-     * Staff able to take this specific case: tickets.resolve + the matching Level.
-     *
-     * @return Collection<int, User>
-     */
-    private function takersFor(Ticket $ticket): Collection
-    {
-        return User::all()->filter(
-            fn (User $u) => $u->hasPermission('tickets.resolve')
-                && $u->hasPermission("tickets.level_{$ticket->category?->value}"),
-        )->values();
     }
 }
