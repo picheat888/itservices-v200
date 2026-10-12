@@ -282,13 +282,7 @@ class SoftwareLicenseReport extends TabularReport
                 ->withSplit(array_map(fn (string $state) => [
                     'key' => $state, 'label_key' => self::SEAT_STATES[$state]['label_key'], 'tone' => self::SEAT_STATES[$state]['tone'],
                     'value' => $limited->filter(fn (array $s) => self::seatState($s) === $state)->count(),
-                ], array_keys(self::SEAT_STATES)))
-                ->withChart(['kind' => 'blocks', 'items' => $limited
-                    ->sortBy([fn (array $a, array $b) => array_search(self::seatState($a), array_keys(self::SEAT_STATES)) <=> array_search(self::seatState($b), array_keys(self::SEAT_STATES)), ['name', 'asc']])
-                    ->map(fn (array $s) => [
-                        'key' => (string) $s['id'], 'name' => (string) $s['name'], 'tone' => self::SEAT_STATES[self::seatState($s)]['tone'],
-                        'label_key' => self::SEAT_STATES[self::seatState($s)]['label_key'], 'used' => (int) $s['used'], 'seats' => (int) $s['seats'],
-                    ])->values()->all()]),
+                ], array_keys(self::SEAT_STATES))),
             ReportSummary::make('sl_leavers', 'ผู้ลาออกที่ยังถือ', $leavers->count())->withAttention('red')
                 ->withChart(['kind' => 'columns', 'items' => array_map(fn (string $age) => [
                     'key' => $age, 'label_key' => self::LEAVER_AGES[$age]['label_key'], 'short' => self::LEAVER_AGES[$age]['short'], 'tone' => self::LEAVER_AGES[$age]['tone'],
