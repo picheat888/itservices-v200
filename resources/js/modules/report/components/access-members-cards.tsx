@@ -13,7 +13,21 @@ import { Download, FileText, Folder, Globe, Loader2, type LucideIcon, Package, U
 import { useEffect, useState } from 'react';
 import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-reports';
 import type { AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
-import { Cols, Group, GroupRow, NUM, registryOptions, ResourceHead, scrollToRows, Segments, TD, TH, TypeLabel } from './access-overview-cards';
+import {
+    Cols,
+    Group,
+    GroupRow,
+    heldStyle,
+    NUM,
+    registryOptions,
+    ResourceHead,
+    scrollToRows,
+    Segments,
+    TD,
+    TH,
+    TypeLabel,
+    useFoldRow,
+} from './access-overview-cards';
 import { count, deptName, type Lang, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CARD_HEADING_TINT } from './card-heading';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
@@ -119,9 +133,12 @@ export function AccessMembersListLead({ filters, patch }: { filters: TabularFilt
 
 /* ─────────────────────────── File Share space ─────────────────────────── */
 
+const SHARE_GROUPS = ['capped', 'unlimited'] as const;
+
 function StorageCards({ resources }: { resources: Resource[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const row = useFoldRow(SHARE_GROUPS);
     const shares = resources.filter((r) => r.type === 'file_share' && r.size);
     const capped = shares.filter((r) => gbOf(r) > 0).sort((a, b) => gbOf(b) - gbOf(a) || (a.code ?? '').localeCompare(b.code ?? ''));
     const unlimited = shares.filter((r) => r.size?.value === 0);
@@ -163,8 +180,12 @@ function StorageCards({ resources }: { resources: Resource[] }) {
     if (shares.length === 0) return null;
 
     return (
-        <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-            <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
+        <div className={cn('grid gap-3 lg:grid-cols-3 xl:grid-cols-5', row.anyOpen && 'lg:items-start')}>
+            <Card
+                ref={row.left}
+                className="flex flex-col overflow-hidden lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3"
+                style={heldStyle(row.heldLeft)}
+            >
                 <CardTitle
                     title={t('rep_ar_space_title')}
                     sub={
@@ -258,7 +279,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                     </table>
                 </div>
             </Card>
-            <Card className="flex flex-col overflow-hidden xl:col-span-2">
+            <Card ref={row.right} className="flex flex-col overflow-hidden lg:sticky lg:top-4 xl:col-span-2" style={heldStyle(row.heldRight)}>
                 <CardTitle title={t('rep_ar_space_list_title')} sub={t('rep_ar_space_list_sub')} />
                 <dl className="border-border grid grid-cols-3 gap-3 border-b px-5 pt-1 pb-3">
                     {[
@@ -273,13 +294,23 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                     ))}
                 </dl>
                 {/* Three rows a group, the rest folded; the card grows with them. */}
-                <Group first title={t('rep_ar_space_capped')} total={count(capped.length, lang)} rows={capped} render={shareRow} />
+                <Group
+                    first
+                    title={t('rep_ar_space_capped')}
+                    total={count(capped.length, lang)}
+                    rows={capped}
+                    render={shareRow}
+                    open={row.open.capped}
+                    onToggle={() => row.toggle('capped')}
+                />
                 <Group
                     first={capped.length === 0}
                     title={t('rep_ar_size_unlimited')}
                     total={count(unlimited.length, lang)}
                     rows={unlimited}
                     render={shareRow}
+                    open={row.open.unlimited}
+                    onToggle={() => row.toggle('unlimited')}
                 />
             </Card>
         </div>
