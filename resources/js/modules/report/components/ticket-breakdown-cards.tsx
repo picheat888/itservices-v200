@@ -148,7 +148,7 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
             ) : (
                 // The five columns need room; a phone scrolls them sideways rather than crushing the bar.
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <div className="min-w-[36rem]">
                         <div className={cn(DEPT_GRID, 'text-muted-foreground border-border border-b py-2 text-xs font-semibold')}>
                             <span>{t('rep_col_department')}</span>

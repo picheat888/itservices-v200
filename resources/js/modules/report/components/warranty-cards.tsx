@@ -505,7 +505,7 @@ function CategoryCard({ data, patch }: { data: AssetWarrantyBreakdown; patch: Pa
             {categories.length === 0 ? (
                 <Empty>{t('rep_wty_empty')}</Empty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wty_cat_title')}</caption>
                         <thead>
@@ -615,7 +615,7 @@ function VendorCard({ data }: { data: AssetWarrantyBreakdown }) {
             {vendors.length === 0 ? (
                 <Empty>{t('rep_wty_empty')}</Empty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_wty_vendor_title')}</caption>
                         <thead>

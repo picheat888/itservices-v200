@@ -478,7 +478,7 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
             {joiners.rows.length === 0 && joiners.left_early.length === 0 ? (
                 <CardEmpty>{t('rep_rqi_jn_empty')}</CardEmpty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <caption className="sr-only">{t('rep_rqi_jn_caption')}</caption>
                         <thead className={cn(TABLE_HEAD, 'border-border border-b')}>

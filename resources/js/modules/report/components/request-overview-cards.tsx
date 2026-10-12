@@ -434,7 +434,7 @@ function TypesCard({ types }: { types: Breakdown['types'] }) {
             {types.length === 0 ? (
                 <CardEmpty>{t('rep_rqo_empty')}</CardEmpty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full min-w-[36rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_rqo_types_title')}</caption>
                         <Cols widths={TYPE_COLS} />
@@ -562,7 +562,7 @@ function DeliveryCard({ delivery }: { delivery: Breakdown['delivery'] }) {
                 <CardEmpty>{t('rep_rqo_days_empty')}</CardEmpty>
             ) : (
                 <>
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
                         <table className="w-full min-w-[32rem] table-fixed text-sm">
                             <caption className="sr-only">{t('rep_rqo_days_title')}</caption>
                             <Cols widths={DAYS_COLS} />
@@ -769,7 +769,7 @@ function DepartmentCard({ departments }: { departments: Breakdown['departments']
             {departments.length === 0 ? (
                 <CardEmpty>{t('rep_rqo_empty')}</CardEmpty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full min-w-[40rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_rqo_dept_title')}</caption>
                         <Cols widths={DEPT_COLS} />

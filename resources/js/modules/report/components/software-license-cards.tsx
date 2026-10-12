@@ -183,7 +183,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                 <CardEmpty>{t('rep_sl_empty')}</CardEmpty>
             ) : (
                 <>
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
                         <table className="w-full text-sm">
                             <caption className="sr-only">{t('rep_sl_seats_title')}</caption>
                             <thead>

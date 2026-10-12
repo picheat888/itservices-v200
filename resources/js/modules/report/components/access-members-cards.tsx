@@ -196,7 +196,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                         </span>
                     }
                 />
-                <div className="flex flex-1 flex-col overflow-x-auto">
+                <div className="relative flex flex-1 flex-col overflow-x-auto">
                     <table className="w-full min-w-[36rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_ar_space_title')}</caption>
                         <Cols widths={SPACE_COLS} />
@@ -399,7 +399,7 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                 <CardEmpty>{t('rep_ar_res_empty')}</CardEmpty>
             ) : (
                 <>
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
                         <table className="w-full text-sm">
                             <caption className="sr-only">{t('rep_ar_res_title')}</caption>
                             <thead>

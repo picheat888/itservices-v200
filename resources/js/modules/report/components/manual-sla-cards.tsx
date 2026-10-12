@@ -101,7 +101,7 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
             {data.groups.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_ms_empty')}</div>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className={TABLE_HEAD}>
