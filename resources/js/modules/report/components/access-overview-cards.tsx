@@ -962,7 +962,7 @@ type LeaverGroup = (typeof LEAVER_GROUPS)[number];
 type CareGroup = (typeof CARE_GROUPS)[number];
 
 /** Two cards in a row: the same height while every list is folded; once one opens, both keep that height and the shorter stays in view. */
-function useFoldRow<K extends string>(keys: readonly K[]) {
+export function useFoldRow<K extends string>(keys: readonly K[]) {
     const [open, setOpen] = useState(() => Object.fromEntries(keys.map((k) => [k, false])) as Record<K, boolean>);
     const [held, setHeld] = useState<[number, number] | null>(null);
     const left = useRef<HTMLDivElement>(null);
@@ -979,7 +979,7 @@ function useFoldRow<K extends string>(keys: readonly K[]) {
 }
 
 /** A held min-height for a card beside an opened list. */
-const heldStyle = (height: number | null) => (height ? { minHeight: height } : undefined);
+export const heldStyle = (height: number | null) => (height ? { minHeight: height } : undefined);
 
 export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
