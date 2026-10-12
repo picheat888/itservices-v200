@@ -192,7 +192,9 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                           className: FILL[part.tone],
                                           title: `${t(part.label_key)}: ${partText(part.value, part.counts)}`,
                                       }))
-                                    : undefined
+                                    : split.length > 0
+                                      ? [] // all zero: the grey track alone
+                                      : undefined
                         }
                         footer={
                             split.length > 0 ? (
