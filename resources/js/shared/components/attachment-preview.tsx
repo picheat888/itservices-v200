@@ -130,16 +130,11 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
                     onWheelCapture={(e) => {
                         const inst = zoomRef.current?.instance;
                         if (!inst) return;
-                        // Smooth mode zooms by step × |deltaY| per event. A mouse notch sends ~100,
-                        // a touchpad tick ~1-10 — so derive step per event: touchpads keep the fast
-                        // fine-grained 0.1 feel, while the zoom per mouse notch is capped at ~0.35.
                         inst.setup.wheel.step = Math.min(0.1, 0.35 / Math.max(1, Math.abs(e.deltaY)));
                     }}
                 >
                     {pv &&
                         (isImage ? (
-                            // Zoom (wheel / double-click / +− buttons) and drag-to-pan via react-zoom-pan-pinch.
-                            // wheel.step is only the initial value — onWheelCapture above retunes it per event.
                             <TransformWrapper
                                 key={pv.id}
                                 ref={zoomRef}
