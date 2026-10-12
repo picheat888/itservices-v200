@@ -21,6 +21,7 @@ import { count, deptName, PieceBar, type Lang } from './access-parts';
 import {
     barTop,
     CardEmpty,
+    CardFoot,
     CardTitle,
     currentMonth,
     fold,
@@ -153,13 +154,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqo_month_title')}
-                note={
-                    peak
-                        ? t('rep_rqo_month_peak')
-                              .replace('{month}', monthLabel(peak.month, lang, false, true))
-                              .replace('{n}', count(peak.submitted, lang))
-                        : undefined
-                }
+                info={t('rep_rqo_month_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {(Object.keys(FLOW) as FlowKey[]).map((k) => (
@@ -349,7 +344,13 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                             </div>
                         </div>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-xs">{t('rep_rqo_month_note')}</p>
+                    {peak && (
+                        <p className="text-muted-foreground mt-2 text-xs">
+                            {t('rep_rqo_month_peak')
+                                .replace('{month}', monthLabel(peak.month, lang, false, true))
+                                .replace('{n}', count(peak.submitted, lang))}
+                        </p>
+                    )}
                 </div>
             )}
         </Card>
@@ -550,7 +551,7 @@ function DeliveryCard({ delivery }: { delivery: Breakdown['delivery'] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqo_days_title')}
-                note={t('rep_rqo_days_note')}
+                info={t('rep_rqo_days_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Swatch fill={FILL[PART_TONE.approval]}>{t('rep_rqo_days_approval')}</Swatch>
@@ -642,7 +643,6 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqo_items_title')}
-                note={items.picked[origin] > 0 ? t('rep_rqo_items_note').replace('{n}', count(items.picked[origin], lang)) : undefined}
                 sub={
                     <Segments
                         label={t('rep_rqo_items_seg')}
@@ -703,6 +703,7 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
                         </p>
                     )}
                     {folds && <FoldToggle open={open} total={list.length} onToggle={() => setOpen((v) => !v)} />}
+                    {items.picked[origin] > 0 && <CardFoot>{t('rep_rqo_items_note').replace('{n}', count(items.picked[origin], lang))}</CardFoot>}
                 </>
             )}
         </Card>
@@ -756,7 +757,7 @@ function DepartmentCard({ departments }: { departments: Breakdown['departments']
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqo_dept_title')}
-                note={t('rep_rqo_dept_note')}
+                info={t('rep_rqo_dept_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {used.map((k) => (
