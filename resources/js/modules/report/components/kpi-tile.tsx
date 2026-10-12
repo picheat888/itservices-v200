@@ -1,7 +1,7 @@
 /**
  * One headline number on a report page: label, value, optional unit, a footer line, and
  * optionally a meter against a goal (the SLA rate — bar with the goal marked, as in the design)
- * or a plain stacked `bar` (a share of the whole, or how the number splits), or a small chart (`aside`) beside the value.
+ * or a plain stacked `bar` (a share of the whole, or how the number splits).
  */
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -16,7 +16,6 @@ export function KpiTile({
     alert,
     meter,
     bar,
-    aside,
 }: {
     label: string;
     /** Shown on hover over the label — what a plain-worded figure really measures. */
@@ -32,8 +31,6 @@ export function KpiTile({
     meter?: { value: number; goal: number };
     /** Stacked pieces as percents of the track, each with its fill class. */
     bar?: { key: string; percent: number; className: string; title?: string }[];
-    /** A small chart on the value's right. */
-    aside?: React.ReactNode;
 }) {
     return (
         <Card className={cn('flex min-w-0 flex-col gap-1.5 p-4', alert === 'red' ? 'border-red-500/50' : alert && 'border-amber-500/50')}>
@@ -43,12 +40,9 @@ export function KpiTile({
                 </span>
                 {badge}
             </div>
-            <div className="flex items-end justify-between gap-3">
-                <div className="font-mono text-2xl font-bold">
-                    {value}
-                    {unit && <span className="text-muted-foreground ml-1 text-sm font-medium">{unit}</span>}
-                </div>
-                {aside}
+            <div className="font-mono text-2xl font-bold">
+                {value}
+                {unit && <span className="text-muted-foreground ml-1 text-sm font-medium">{unit}</span>}
             </div>
             {meter && (
                 <div className="bg-muted relative h-1.5 overflow-hidden rounded-full" aria-hidden="true">

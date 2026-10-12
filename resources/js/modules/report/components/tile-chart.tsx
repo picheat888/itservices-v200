@@ -1,18 +1,18 @@
-// Small charts beside a summary tile's value: seats by month (line), one block per item, a count per group (columns).
+// Tiny charts at the right of a summary tile's footer: seats by month (line), one block per item, a count per group (columns).
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryChart } from '../types';
 import { monthLabel } from './chart-parts';
-import { FILL, TEXT } from './chart-tones';
+import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 
 type Line = Extract<SummaryChart, { kind: 'line' }>;
 type Blocks = Extract<SummaryChart, { kind: 'blocks' }>;
 type Columns = Extract<SummaryChart, { kind: 'columns' }>;
 
-export function TileChart({ chart, title }: { chart: SummaryChart; title: string }) {
-    if (chart.kind === 'line') return <LineChart chart={chart} title={title} />;
+export function TileChart({ chart, title, lineClass }: { chart: SummaryChart; title: string; lineClass: string }) {
+    if (chart.kind === 'line') return <LineChart chart={chart} title={title} className={lineClass} />;
     if (chart.kind === 'blocks') return <BlockChart chart={chart} title={title} />;
     return <ColumnChart chart={chart} title={title} />;
 }
@@ -33,17 +33,17 @@ function NoteRow({ mark, text, value, muted }: { mark?: React.ReactNode; text: R
 const Dot = ({ className }: { className: string }) => <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', className)} />;
 
 // Line — the last point is this month so far
-const W = 132;
-const H = 40;
+const W = 70;
+const H = 20;
 
-function LineChart({ chart, title }: { chart: Line; title: string }) {
+function LineChart({ chart, title, className }: { chart: Line; title: string; className: string }) {
     const lang = useUiStore((s) => s.lang);
     const { points, months } = chart;
     if (points.length < 2) return null;
     const lo = Math.min(...points);
     const hi = Math.max(...points);
-    const x = (i: number) => 4 + (i * (W - 8)) / (points.length - 1);
-    const y = (v: number) => H - 6 - ((v - lo) / (hi - lo || 1)) * (H - 14);
+    const x = (i: number) => 2 + (i * (W - 4)) / (points.length - 1);
+    const y = (v: number) => H - 3 - ((v - lo) / (hi - lo || 1)) * (H - 6);
     const line = points.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
     const last = points.length - 1;
     const count = (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
@@ -66,12 +66,10 @@ function LineChart({ chart, title }: { chart: Line; title: string }) {
                 </div>
             }
         >
-            <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className={cn('block', TEXT['soft-blue'])} aria-hidden="true">
-                <path d={`${line} L${x(last).toFixed(1)} ${H} L${x(0).toFixed(1)} ${H} Z`} fill="currentColor" fillOpacity={0.14} />
-                <path d={line} fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-                {points.map((v, i) => (
-                    <circle key={i} cx={x(i)} cy={y(v)} r={i === last ? 3.2 : 1.8} fill="currentColor" />
-                ))}
+            <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className={cn('block', className)} aria-hidden="true">
+                <path d={`${line} L${x(last).toFixed(1)} ${H} L${x(0).toFixed(1)} ${H} Z`} fill="currentColor" fillOpacity={0.12} />
+                <path d={line} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" />
+                <circle cx={x(last)} cy={y(points[last])} r={2.4} fill="currentColor" />
             </svg>
         </InfoPopover>
     );
@@ -82,12 +80,12 @@ function BlockChart({ chart, title }: { chart: Blocks; title: string }) {
     const t = useT();
     const { items } = chart;
     if (items.length === 0) return null;
-    const small = items.length > 16;
+    const small = items.length > 8;
 
     return (
         <InfoPopover
             label={`${title}: ${items.map((b) => `${b.name} ${b.used}/${b.seats} ${t(b.label_key)}`).join(', ')}`}
-            className="flex max-w-36 shrink-0 cursor-pointer flex-wrap content-end justify-end gap-1 self-stretch"
+            className="flex shrink-0 cursor-pointer items-end gap-[3px] py-0.5"
             content={
                 <div className="min-w-52 space-y-1">
                     <div className="font-semibold">{title}</div>
@@ -107,7 +105,7 @@ function BlockChart({ chart, title }: { chart: Blocks; title: string }) {
             }
         >
             {items.map((b) => (
-                <span key={b.key} className={cn('block rounded-[3px]', small ? 'h-2.5 w-2.5' : 'h-4 w-4', FILL[b.tone])} />
+                <span key={b.key} className={cn('block rounded-[2px]', small ? 'h-2.5 w-1.5' : 'h-2.5 w-2.5', FILL[b.tone])} />
             ))}
         </InfoPopover>
     );
@@ -124,7 +122,7 @@ function ColumnChart({ chart, title }: { chart: Columns; title: string }) {
     return (
         <InfoPopover
             label={`${title}: ${items.map((c) => `${t(c.label_key)} ${count(c.value)}`).join(', ')}`}
-            className="flex shrink-0 cursor-pointer items-end gap-1.5"
+            className="flex h-5 shrink-0 cursor-pointer items-end gap-[3px]"
             content={
                 <div className="min-w-44 space-y-1">
                     <div className="font-semibold">{title}</div>
@@ -141,15 +139,11 @@ function ColumnChart({ chart, title }: { chart: Columns; title: string }) {
             }
         >
             {items.map((c) => (
-                <span key={c.key} className="flex w-8 flex-col items-center gap-0.5">
-                    <span className="flex h-7 w-4 items-end">
-                        <span
-                            className={cn('block w-full rounded-t-[3px]', c.value > 0 ? FILL[c.tone] : 'bg-muted h-0.5')}
-                            style={c.value > 0 ? { height: `${Math.max(12, (c.value / max) * 100)}%` } : undefined}
-                        />
-                    </span>
-                    <span className="text-muted-foreground font-mono text-[10px] leading-none whitespace-nowrap tabular-nums">{c.short}</span>
-                </span>
+                <span
+                    key={c.key}
+                    className={cn('block w-2 rounded-t-[2px]', c.value > 0 ? FILL[c.tone] : 'bg-muted-foreground/30 h-0.5')}
+                    style={c.value > 0 ? { height: `${Math.max(20, (c.value / max) * 100)}%` } : undefined}
+                />
             ))}
         </InfoPopover>
     );
