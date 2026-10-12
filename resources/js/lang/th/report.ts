@@ -1096,7 +1096,7 @@ export const report: Dict = {
     rep_sl_seat_room: 'ยังว่าง',
     rep_sl_seat_blocked_short: 'มีคำขอ',
     rep_sl_seat_room_short: 'ว่าง',
-    rep_sl_lic_subscription_short: 'รายงวด',
+    rep_sl_lic_subscription_short: 'รายเดือน',
     rep_sl_lic_open_source_short: 'Open',
     rep_sl_age_week: 'ไม่เกิน 7 วัน',
     rep_sl_age_month: '8–30 วัน',
