@@ -421,7 +421,6 @@ function TypesCard({ types }: { types: Breakdown['types'] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle
                 title={t('rep_rqo_types_title')}
-                note={t('rep_rqo_types_note')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {used.map((k) => (

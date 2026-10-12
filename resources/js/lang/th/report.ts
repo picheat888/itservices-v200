@@ -1275,7 +1275,6 @@ export const report: Dict = {
     rep_rqo_month_aria: 'กราฟแท่งรายเดือน {from} ถึง {to} ยื่นคำขอ {in} เสร็จสิ้น {out}',
     rep_rqo_month_empty: 'ไม่มีคำขอในช่วงวันที่นี้',
     rep_rqo_types_title: 'คำขอตามประเภทและสถานะ',
-    rep_rqo_types_note: 'อัตราอนุมัติ = อนุมัติครบ ÷ (อนุมัติครบ + ไม่อนุมัติ)',
     rep_rqo_types_total: 'รวม {n} ประเภท',
     rep_rqo_rate_tip: 'อนุมัติครบ {yes} จาก {n}',
     rep_rqo_col_type: 'ประเภท',

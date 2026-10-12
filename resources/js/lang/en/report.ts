@@ -1280,7 +1280,6 @@ export const report: Dict = {
     rep_rqo_month_aria: 'Bar chart by month, {from} to {to}: {in} submitted, {out} completed',
     rep_rqo_month_empty: 'No requests in this date range',
     rep_rqo_types_title: 'Requests by type and status',
-    rep_rqo_types_note: 'Approval rate = approved ÷ (approved + not approved)',
     rep_rqo_types_total: 'Total, {n} types',
     rep_rqo_rate_tip: '{yes} of {n} approved',
     rep_rqo_col_type: 'Type',
