@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useSoftwareLicenseBreakdown } from '../hooks/use-reports';
 import type { SoftwareLicenseBreakdown, SoftwareSeats, TabularFilters } from '../types';
-import { CODE_LINK, DaysOut, Group, GroupRow, scrollToRows, Segments, TD, TH } from './access-overview-cards';
+import { CODE_LINK, DaysOut, Group, GroupRow, heldStyle, scrollToRows, Segments, TD, TH, useFoldRow } from './access-overview-cards';
 import { count, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
@@ -302,13 +302,25 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
 
 /* ─────────────────────────── leavers and requests ─────────────────────────── */
 
-function LeaversCard({ leavers }: { leavers: SoftwareLicenseBreakdown['leavers'] }) {
+function LeaversCard({
+    leavers,
+    cardRef,
+    heldHeight,
+    open,
+    onToggle,
+}: {
+    leavers: SoftwareLicenseBreakdown['leavers'];
+    cardRef: React.Ref<HTMLDivElement>;
+    heldHeight: number | null;
+    open: boolean;
+    onToggle: () => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const canOpen = useCanOpen();
 
     return (
-        <Card className="flex flex-col overflow-hidden">
+        <Card ref={cardRef} className={PAIR_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_sl_leavers_title')} sub={t('rep_sl_leavers_sub')} />
             {leavers.length === 0 ? (
                 <CardEmpty>{t('rep_sl_leavers_empty')}</CardEmpty>
@@ -318,6 +330,8 @@ function LeaversCard({ leavers }: { leavers: SoftwareLicenseBreakdown['leavers']
                     title={t('rep_sl_leavers_group')}
                     total={t('rep_ac_people_n').replace('{n}', count(leavers.length, lang))}
                     rows={leavers}
+                    open={open}
+                    onToggle={onToggle}
                     render={(p) => (
                         <GroupRow
                             key={p.employee_id}
@@ -361,7 +375,19 @@ function LeaversCard({ leavers }: { leavers: SoftwareLicenseBreakdown['leavers']
     );
 }
 
-function RequestsCard({ requests }: { requests: Request[] }) {
+function RequestsCard({
+    requests,
+    cardRef,
+    heldHeight,
+    open,
+    onToggle,
+}: {
+    requests: Request[];
+    cardRef: React.Ref<HTMLDivElement>;
+    heldHeight: number | null;
+    open: Record<RequestGroup, boolean>;
+    onToggle: (group: RequestGroup) => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const canOpen = useCanOpen();
@@ -408,19 +434,29 @@ function RequestsCard({ requests }: { requests: Request[] }) {
     const pending = requests.filter((r) => r.status === 'pending');
 
     return (
-        <Card className="flex flex-col overflow-hidden">
+        <Card ref={cardRef} className={PAIR_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_sl_requests_title')} sub={t('rep_sl_requests_sub')} />
             {requests.length === 0 ? (
                 <CardEmpty>{t('rep_sl_requests_empty')}</CardEmpty>
             ) : (
                 <>
-                    <Group first title={t('rep_sl_requests_approved')} total={count(approved.length, lang)} rows={approved} render={row} />
+                    <Group
+                        first
+                        title={t('rep_sl_requests_approved')}
+                        total={count(approved.length, lang)}
+                        rows={approved}
+                        render={row}
+                        open={open.approved}
+                        onToggle={() => onToggle('approved')}
+                    />
                     <Group
                         first={approved.length === 0}
                         title={t('rep_sl_requests_pending')}
                         total={count(pending.length, lang)}
                         rows={pending}
                         render={row}
+                        open={open.pending}
+                        onToggle={() => onToggle('pending')}
                     />
                 </>
             )}
@@ -429,6 +465,10 @@ function RequestsCard({ requests }: { requests: Request[] }) {
 }
 
 /* ─────────────────────────── the page's cards ─────────────────────────── */
+
+const PAIR_CARD = 'flex flex-col overflow-hidden lg:sticky lg:top-4';
+const PAIR_FOLDS = ['leavers', 'approved', 'pending'] as const;
+type RequestGroup = 'approved' | 'pending';
 
 function CardsSkeleton() {
     return (
@@ -456,6 +496,7 @@ export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilte
     const { data, isLoading, isError, error, isPlaceholderData } = useSoftwareLicenseBreakdown(filters);
     // A pick the other filters have since left out: drop it rather than show an empty list under its chip.
     const stalePick = Boolean(data && !isPlaceholderData && filters.software_id && !data.picked);
+    const pair = useFoldRow(PAIR_FOLDS);
     useEffect(() => {
         if (stalePick) patch({ software_id: null });
     }, [stalePick, patch]);
@@ -467,9 +508,15 @@ export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilte
         <div className="space-y-4">
             <SeatTableCard softwares={data.softwares} filters={filters} patch={patch} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
-            <div className="grid gap-3 lg:grid-cols-2">
-                <LeaversCard leavers={data.leavers} />
-                <RequestsCard requests={data.requests} />
+            <div className={cn('grid gap-3 lg:grid-cols-2', pair.anyOpen && 'lg:items-start')}>
+                <LeaversCard
+                    leavers={data.leavers}
+                    cardRef={pair.left}
+                    heldHeight={pair.heldLeft}
+                    open={pair.open.leavers}
+                    onToggle={() => pair.toggle('leavers')}
+                />
+                <RequestsCard requests={data.requests} cardRef={pair.right} heldHeight={pair.heldRight} open={pair.open} onToggle={pair.toggle} />
             </div>
         </div>
     );
