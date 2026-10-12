@@ -183,7 +183,7 @@ function axisTop(value: number): number {
     return steps.find((s) => s >= value) ?? niceMax(value);
 }
 
-function MonthFlowCard({ months }: { months: Month[] }) {
+function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardRef: React.Ref<HTMLDivElement>; heldHeight: number | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const back = (m: Month) => m.revoked_work + m.revoked_leave;
@@ -214,7 +214,11 @@ function MonthFlowCard({ months }: { months: Month[] }) {
             .join(', ');
 
     return (
-        <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
+        <Card
+            ref={cardRef}
+            className="flex flex-col overflow-hidden lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3"
+            style={heldHeight ? { minHeight: heldHeight } : undefined}
+        >
             <CardTitle
                 title={t('rep_ac_month_title')}
                 note={
@@ -488,16 +492,23 @@ export function Group<T>({
     rows,
     first,
     render,
+    open: openProp,
+    onToggle,
 }: {
     title: string;
     total: string;
     rows: T[];
     first?: boolean;
     render: (row: T) => React.ReactNode;
+    /** Set both to let the page know when the group opens. */
+    open?: boolean;
+    onToggle?: () => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [open, setOpen] = useState(false);
+    const [ownOpen, setOwnOpen] = useState(false);
+    const open = openProp ?? ownOpen;
+    const toggle = onToggle ?? (() => setOwnOpen((v) => !v));
     const { folds, shown } = fold(rows, GROUP_SHOWN, open, 0);
     if (rows.length === 0) return null;
     const Icon = open ? ChevronUp : ChevronDown;
@@ -519,7 +530,7 @@ export function Group<T>({
                 <div className="border-border/60 border-t px-5 py-2 text-xs font-medium">
                     <button
                         type="button"
-                        onClick={() => setOpen((v) => !v)}
+                        onClick={toggle}
                         aria-expanded={open}
                         className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
                     >
@@ -606,7 +617,17 @@ function PersonHead({ id, name, code }: { id: number; name: string; code: string
 /** A right-hand card of grouped lists: grows with its rows (three a group, an opened group scrolls inside itself). */
 const GROUP_CARD = 'flex flex-col overflow-hidden xl:col-span-2';
 
-function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] }) {
+type LeaverGroup = 'people' | 'owned';
+
+function LeaversCard({
+    leavers,
+    open,
+    onToggle,
+}: {
+    leavers: AccessOverviewBreakdown['leavers'];
+    open: Record<LeaverGroup, boolean>;
+    onToggle: (group: LeaverGroup) => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
 
@@ -627,6 +648,8 @@ function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] 
                         title={t('rep_ac_leavers_holding')}
                         total={t('rep_ac_people_n').replace('{n}', count(leavers.people.length, lang))}
                         rows={leavers.people}
+                        open={open.people}
+                        onToggle={() => onToggle('people')}
                         render={(p) => (
                             <GroupRow
                                 key={p.employee_id}
@@ -655,6 +678,8 @@ function LeaversCard({ leavers }: { leavers: AccessOverviewBreakdown['leavers'] 
                         title={t('rep_ac_leavers_owned')}
                         total={count(leavers.owned.length, lang)}
                         rows={leavers.owned}
+                        open={open.owned}
+                        onToggle={() => onToggle('owned')}
                         render={(r) => (
                             <GroupRow
                                 key={`${r.type}-${r.id}`}
@@ -905,6 +930,18 @@ function CardsSkeleton() {
 export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
     const { data, isLoading, isError, error } = useAccessOverviewBreakdown(filters);
+    const [leaversOpen, setLeaversOpen] = useState<Record<LeaverGroup, boolean>>({ people: false, owned: false });
+    const [heldMonth, setHeldMonth] = useState<number | null>(null);
+    const monthRef = useRef<HTMLDivElement>(null);
+    const anyOpen = leaversOpen.people || leaversOpen.owned;
+    // Opening a leavers group keeps the month card at the height it had beside the folded lists
+    const toggleLeavers = (group: LeaverGroup) => {
+        const next = { ...leaversOpen, [group]: !leaversOpen[group] };
+        const nextAny = next.people || next.owned;
+        if (nextAny && !anyOpen) setHeldMonth(monthRef.current?.offsetHeight ?? null);
+        if (!nextAny) setHeldMonth(null);
+        setLeaversOpen(next);
+    };
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
@@ -912,9 +949,9 @@ export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     return (
         <div className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
-            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <MonthFlowCard months={data.months} />
-                <LeaversCard leavers={data.leavers} />
+            <div className={cn('grid gap-3 lg:grid-cols-3 xl:grid-cols-5', anyOpen && 'lg:items-start')}>
+                <MonthFlowCard months={data.months} cardRef={monthRef} heldHeight={anyOpen ? heldMonth : null} />
+                <LeaversCard leavers={data.leavers} open={leaversOpen} onToggle={toggleLeavers} />
             </div>
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <DepartmentCard departments={data.departments} />
