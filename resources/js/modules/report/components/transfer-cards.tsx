@@ -165,7 +165,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
         <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
                 title={t('rep_th_month_title')}
-                note={
+                info={
                     peak
                         ? t('rep_th_month_peak')
                               .replace('{month}', monthLabel(peak.month, lang, false, true))
@@ -415,7 +415,7 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
         <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
                 title={t('rep_th_reloc_title')}
-                note={t('rep_th_reloc_sub')}
+                info={t('rep_th_reloc_sub')}
                 sub={relocations.length > 0 ? t('rep_th_reloc_count').replace('{n}', count(relocations.length, lang)) : undefined}
             />
             {relocations.length === 0 ? (

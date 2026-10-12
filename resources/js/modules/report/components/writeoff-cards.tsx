@@ -160,7 +160,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
         <Card className="flex flex-col overflow-hidden lg:col-span-2 xl:col-span-3">
             <CardTitle
                 title={t('rep_wo_month_title')}
-                note={peak ? peakText : undefined}
+                info={peak ? peakText : undefined}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Legend series={SERIES} counts={counts} />
@@ -347,8 +347,16 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
         <Card className="flex flex-col overflow-hidden xl:col-span-2">
             <CardTitle
                 title={t('rep_wo_reason_title')}
-                note={reasons.length > 0 ? t('rep_wo_reason_count').replace('{n}', count(reasons.length, lang)) : undefined}
-                sub={<Legend series={SOURCES} />}
+                sub={
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <Legend series={SOURCES} />
+                        {reasons.length > 0 && (
+                            <b className="text-foreground font-mono font-semibold tabular-nums">
+                                {t('rep_wo_reason_count').replace('{n}', count(reasons.length, lang))}
+                            </b>
+                        )}
+                    </span>
+                }
             />
             {reasons.length === 0 ? (
                 <Empty>{t('rep_wo_empty')}</Empty>
