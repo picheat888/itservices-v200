@@ -54,7 +54,7 @@ export function KpiTile({
                 </div>
             )}
             {bar && (
-                <div className="bg-muted flex h-1.5 overflow-hidden rounded-full">
+                <div className={cn('flex h-1.5 overflow-hidden rounded-full', bar.length === 0 ? 'dark:bg-muted bg-slate-300' : 'bg-muted')}>
                     {bar.map((piece) => (
                         <span
                             key={piece.key}
