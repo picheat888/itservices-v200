@@ -6,7 +6,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useItPendingBreakdown } from '../hooks/use-reports';
@@ -99,31 +99,31 @@ export function ItPendingCards({ filters, patch }: { filters: TabularFilters; pa
     const t = useT();
     const { data, isLoading, isError, error } = useItPendingBreakdown(filters);
     const [open, setOpen] = useState<Record<By, boolean>>({ owner: false, type: false });
+    const [held, setHeld] = useState<Record<By, number | null>>({ owner: null, type: null });
+    const ageRef = useRef<HTMLDivElement>(null);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     const by: By = filters.by === 'type' ? 'type' : 'owner';
+    // Unfolding keeps the age card at the height it had beside the folded list
+    const toggle = () => {
+        setHeld((h) => ({ ...h, [by]: open[by] ? null : (ageRef.current?.offsetHeight ?? null) }));
+        setOpen((o) => ({ ...o, [by]: !o[by] }));
+    };
 
     return (
         <div className="space-y-4">
             <div className={cn(PAIR, open[by] && 'xl:items-start')}>
-                <AgeCard data={data} />
-                <HoldersCard
-                    data={data}
-                    filters={filters}
-                    patch={patch}
-                    by={by}
-                    open={open}
-                    onToggle={() => setOpen((o) => ({ ...o, [by]: !o[by] }))}
-                />
+                <AgeCard data={data} cardRef={ageRef} heldHeight={open[by] ? held[by] : null} />
+                <HoldersCard data={data} filters={filters} patch={patch} by={by} open={open} onToggle={toggle} />
             </div>
             <JoinersCard joiners={data.joiners} />
         </div>
     );
 }
 
-// Age card beside the workload card on wide screens; same height while the list is folded, its own height (in view) once unfolded
+// Age card beside the workload card on wide screens; same height while the list is folded, then held at that height and in view
 const PAIR = 'grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]';
 
 function CardsSkeleton() {
@@ -162,13 +162,13 @@ function BandLegend() {
     );
 }
 
-function AgeCard({ data }: { data: ItPendingBreakdown }) {
+function AgeCard({ data, cardRef, heldHeight }: { data: ItPendingBreakdown; cardRef: React.Ref<HTMLDivElement>; heldHeight: number | null }) {
     const t = useT();
     const f = useFormat();
     const { waiting, delivered } = data;
 
     return (
-        <Card className="flex flex-col overflow-clip xl:sticky xl:top-4">
+        <Card ref={cardRef} className="flex flex-col overflow-clip xl:sticky xl:top-4" style={heldHeight ? { minHeight: heldHeight } : undefined}>
             <CardTitle title={t('rep_rqi_age_title')} note={t('rep_rqi_age_note')} sub={<BandLegend />} />
             <div className="divide-border grid flex-1 divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:auto-rows-fr xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
                 <section aria-labelledby="rqi-age-now" className={SECTION}>
