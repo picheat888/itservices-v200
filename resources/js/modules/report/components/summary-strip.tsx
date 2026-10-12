@@ -7,6 +7,7 @@ import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
 import { Sparkline } from './chart-parts';
 import { FILL } from './chart-tones';
+import { InfoPopover } from './info-popover';
 import { KpiTile } from './kpi-tile';
 import { YearsTip } from './years-tip';
 
@@ -195,22 +196,54 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         }
                         footer={
                             split.length > 0 ? (
-                                <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                                // One line: every dot and number stays, the names cut with "…"; the whole split opens in a note on hover or tap.
+                                <InfoPopover
+                                    label={split.map((part) => `${t(part.label_key)} ${partText(part.value, part.counts)}`).join(', ')}
+                                    className="grid w-full auto-cols-[minmax(0,max-content)] grid-flow-col items-center gap-x-2.5 text-left"
+                                    content={
+                                        <div className="min-w-44 space-y-1">
+                                            <div className="font-semibold">{t(item.label_key)}</div>
+                                            {split.map((part) => (
+                                                <div key={part.key} className="flex items-center justify-between gap-4">
+                                                    <span className="inline-flex items-center gap-1.5">
+                                                        <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL[part.tone])} />
+                                                        {t(part.label_key)}
+                                                    </span>
+                                                    <b
+                                                        className={cn(
+                                                            'font-mono tabular-nums',
+                                                            part.value === 0 && 'text-muted-foreground font-normal',
+                                                        )}
+                                                    >
+                                                        {partText(part.value, part.counts)}
+                                                    </b>
+                                                </div>
+                                            ))}
+                                            {item.note && (
+                                                <div className="text-muted-foreground border-border border-t pt-1">
+                                                    <NoteLine note={item.note} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    }
+                                >
                                     {split.map((part) => (
-                                        <span key={part.key} className="inline-flex items-center gap-1">
-                                            <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL[part.tone])} />
-                                            {t(part.label_key)}
-                                            <b className="text-foreground font-mono font-semibold">{partNumber(part.value, part.counts)}</b>
-                                            {partUnit(part.counts)}
+                                        <span key={part.key} className="flex min-w-0 items-center gap-1">
+                                            <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', FILL[part.tone])} />
+                                            <span className="truncate">{t(part.label_key)}</span>
+                                            <span className="shrink-0">
+                                                <b className="text-foreground font-mono font-semibold">{partNumber(part.value, part.counts)}</b>
+                                                {partUnit(part.counts) && ` ${partUnit(part.counts)}`}
+                                            </span>
                                         </span>
                                     ))}
                                     {/* What the split is over ("จาก 7 เคสที่เสร็จสิ้น"), when the report says. */}
                                     {item.note && (
-                                        <span>
+                                        <span className="min-w-0 truncate">
                                             <NoteLine note={item.note} />
                                         </span>
                                     )}
-                                </span>
+                                </InfoPopover>
                             ) : item.note?.trend && item.note.trend.up_is_good !== undefined ? (
                                 <DeltaFooter trend={item.note.trend} decimals={item.format === 'days' ? 1 : 0} />
                             ) : item.note ? (

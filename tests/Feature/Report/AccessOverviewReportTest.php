@@ -164,6 +164,14 @@ class AccessOverviewReportTest extends TestCase
         $this->assertSame(['owner_gone' => 1, 'no_owner' => 1, 'empty' => 2], array_column($summary['ac_care']['split'], 'value', 'key'));
     }
 
+    public function test_a_type_filter_splits_the_active_tile_by_that_type_only(): void
+    {
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows?type=file_share')->assertOk()->json('summary'))->keyBy('key');
+
+        $this->assertSame(2, $summary['ac_active']['value']);
+        $this->assertSame(['file_share' => 2], array_column($summary['ac_active']['split'], 'value', 'key'));
+    }
+
     public function test_the_holders_note_says_so_when_everyone_working_holds_some(): void
     {
         // Quality: B and D both still work and both hold something.
