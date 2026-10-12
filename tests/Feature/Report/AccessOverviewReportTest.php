@@ -162,6 +162,10 @@ class AccessOverviewReportTest extends TestCase
 
         $this->assertSame(4, $summary['ac_care']['value']);
         $this->assertSame(['owner_gone' => 1, 'no_owner' => 1, 'empty' => 2], array_column($summary['ac_care']['split'], 'value', 'key'));
+
+        // Long names carry a short one for the tile's one-line footer.
+        $this->assertSame('rep_ac_type_email_group_short', array_column($summary['ac_active']['split'], 'short_key', 'key')['email_group']);
+        $this->assertSame('rep_ac_care_owner_gone_short', array_column($summary['ac_care']['split'], 'short_key', 'key')['owner_gone']);
     }
 
     public function test_a_type_filter_splits_the_active_tile_by_that_type_only(): void

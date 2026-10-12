@@ -238,7 +238,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                         {split.map((part) => (
                                             <span key={part.key} className="flex min-w-0 items-center gap-1">
                                                 <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', FILL[part.tone])} />
-                                                <span className="truncate">{t(part.label_key)}</span>
+                                                <span className="truncate">{t(part.short_key ?? part.label_key)}</span>
                                                 <span className="shrink-0">
                                                     <b className="text-foreground font-mono font-semibold">{partNumber(part.value, part.counts)}</b>
                                                     {partUnit(part.counts) && ` ${partUnit(part.counts)}`}

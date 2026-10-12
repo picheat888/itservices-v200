@@ -208,7 +208,7 @@ class AccessOverviewReport extends TabularReport
 
         return [
             ReportSummary::make('ac_active', 'สิทธิ์ที่ใช้งานอยู่', $active->count())->withSplit(array_map(fn (string $type) => [
-                'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
+                'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'short_key' => AccessFacts::TYPE_SHORT_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
             ], $this->types($filters))),
             ReportSummary::make('ac_holders', 'พนักงานที่ถือสิทธิ์', $holders)->withShareOf($staff)->withNote([
                 'label_key' => $staff > $holders ? 'rep_n_ac_holders' : 'rep_n_ac_holders_all',
@@ -223,7 +223,7 @@ class AccessOverviewReport extends TabularReport
                 ? ['label_key' => 'rep_n_ac_leavers_none']
                 : ['label_key' => $longest === null ? 'rep_n_ac_leavers_people' : 'rep_n_ac_leavers', 'values' => ['people' => $leavers->count(), 'days' => (int) $longest]]),
             ReportSummary::make('ac_care', 'Resource ที่ต้องดูแล', $careCount)->withAttention('amber')->withSplit([
-                ['key' => 'owner_gone', 'label_key' => 'rep_ac_care_owner_gone', 'tone' => 'soft-red', 'value' => count($care['owner_gone'])],
+                ['key' => 'owner_gone', 'label_key' => 'rep_ac_care_owner_gone', 'short_key' => 'rep_ac_care_owner_gone_short', 'tone' => 'soft-red', 'value' => count($care['owner_gone'])],
                 ['key' => 'no_owner', 'label_key' => 'rep_ac_care_no_owner', 'tone' => 'soft-amber', 'value' => count($care['no_owner'])],
                 ['key' => 'empty', 'label_key' => 'rep_ac_care_empty', 'tone' => 'gray', 'value' => count($care['empty'])],
             ]),

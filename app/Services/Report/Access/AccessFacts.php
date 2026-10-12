@@ -26,6 +26,12 @@ final class AccessFacts
         'social_platform' => 'rep_ac_type_social_platform', 'software' => 'rep_ac_type_software',
     ];
 
+    /** The same, short enough for a tile's one-line footer. */
+    public const TYPE_SHORT_KEYS = [
+        'email_group' => 'rep_ac_type_email_group_short', 'file_share' => 'rep_ac_type_file_share_short',
+        'social_platform' => 'rep_ac_type_social_platform_short', 'software' => 'rep_ac_type_software',
+    ];
+
     // Mirrors resources/js/lang/th/access.ts.
     public const TYPE_TH = [
         'email_group' => 'Email Groups', 'file_share' => 'File Shares',

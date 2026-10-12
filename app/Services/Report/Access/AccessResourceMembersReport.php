@@ -326,7 +326,7 @@ class AccessResourceMembersReport extends TabularReport
 
         return [
             ReportSummary::make('ar_resources', 'Resource', $resources->count())->withSplit(array_map(fn (string $type) => [
-                'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
+                'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'short_key' => AccessFacts::TYPE_SHORT_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
             ], ($filters['type'] ?? null) ? [$filters['type']] : self::TYPES)),
             ReportSummary::make('ar_members', 'สมาชิกทั้งหมด', $total)->withNote([
                 'label_key' => 'rep_n_ar_members',
@@ -343,7 +343,7 @@ class AccessResourceMembersReport extends TabularReport
             ]),
             ReportSummary::make('ar_owner', 'ต้องหาเจ้าของ', $ownable->whereNotNull('owner_issue')->count())->withAttention('amber')->withSplit([
                 ['key' => 'none', 'label_key' => 'rep_ac_care_no_owner', 'tone' => 'soft-amber', 'value' => $ownable->where('owner_issue', 'none')->count()],
-                ['key' => 'gone', 'label_key' => 'rep_ac_care_owner_gone', 'tone' => 'soft-red', 'value' => $ownable->where('owner_issue', 'gone')->count()],
+                ['key' => 'gone', 'label_key' => 'rep_ac_care_owner_gone', 'short_key' => 'rep_ac_care_owner_gone_short', 'tone' => 'soft-red', 'value' => $ownable->where('owner_issue', 'gone')->count()],
             ]),
         ];
     }
