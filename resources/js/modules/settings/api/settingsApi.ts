@@ -1,5 +1,6 @@
+import type { DateEra, DateFormat, TimeFormat } from '@/shared/lib/datetime';
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { TicketCategory, ApiEnvelope } from '@/shared/types';
+import type { ApiEnvelope, TicketCategory } from '@/shared/types';
 
 export interface SettingsData {
     brand_name: string;
@@ -15,6 +16,9 @@ export interface SettingsData {
     theme_accent: string;
     theme_density: 'compact' | 'normal' | 'cozy';
     theme_radius: number;
+    date_format: DateFormat;
+    date_era: DateEra;
+    time_format: TimeFormat;
     asset_status_colors: AssetStatusColors;
     ticket_sla: TicketSlaTargets;
     ticket_sla_request: TicketSlaRequestTarget[];
@@ -113,6 +117,9 @@ export interface DisplayPayload {
     theme_radius?: number;
 }
 
+// Date and time display — system-wide, saved via PUT /settings/datetime.
+export type DateTimePayload = Pick<SettingsData, 'date_format' | 'date_era' | 'time_format'>;
+
 // Security policy — 0 disables the respective rule.
 export interface SecuritySettings {
     session_timeout_minutes: number;
@@ -162,6 +169,12 @@ export const settingsApi = {
     updateDisplay: async (payload: DisplayPayload) => {
         await ensureCsrf();
         const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/display', payload);
+        return data.data;
+    },
+
+    updateDateTime: async (payload: DateTimePayload) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/datetime', payload);
         return data.data;
     },
 

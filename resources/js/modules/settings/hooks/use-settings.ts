@@ -9,6 +9,7 @@ import {
     type AssetColorsPayload,
     type BrandingPayload,
     type CompanyPayload,
+    type DateTimePayload,
     type DisplayPayload,
     type SettingsData,
     type TicketSlaPayload,
@@ -23,6 +24,7 @@ function applyTheme(data: SettingsData) {
     if (data.theme_density) s.setDensity(data.theme_density);
     if (typeof data.theme_radius === 'number') s.setRadius(data.theme_radius);
     if (data.asset_status_colors) s.setAssetStatusColors(data.asset_status_colors);
+    s.setDateConfig({ format: data.date_format, era: data.date_era, time: data.time_format });
 }
 
 // Falls back to the bundled default logo so the tab icon reverts (instead of
@@ -131,6 +133,13 @@ export function useUpdateDisplay() {
     const sync = useSyncStore();
     const failed = useSaveFailed();
     return useMutation({ mutationFn: (payload: DisplayPayload) => settingsApi.updateDisplay(payload), onSuccess: sync, onError: failed });
+}
+
+/** Persists the system-wide date and time format (Settings -> System). */
+export function useUpdateDateTime() {
+    const sync = useSyncStore();
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (payload: DateTimePayload) => settingsApi.updateDateTime(payload), onSuccess: sync, onError: failed });
 }
 
 /** Persists the system-wide asset status badge colors (Settings -> Assets). */
