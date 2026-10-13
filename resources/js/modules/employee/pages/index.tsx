@@ -7,6 +7,7 @@ import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -657,6 +658,7 @@ function DirectoryTab({
     onSetCredentials,
 }: DirectoryTabProps) {
     const t = useT();
+    const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     // Search, filters, page and rows-per-page live in the URL (?search, dept, status, page, per).
     const list = useListParams();
@@ -698,7 +700,7 @@ function DirectoryTab({
         { key: 'position', header: t('position'), render: (e) => e.position ?? '—' },
         { key: 'department', header: t('department'), render: (e) => (lang === 'th' ? (e.department_th ?? e.department) : e.department) ?? '—' },
         { key: 'email', header: t('emp_email'), render: (e) => <span className="font-mono text-xs">{e.email ?? '—'}</span> },
-        { key: 'joined', header: t('joined'), render: (e) => <span className="font-mono text-xs">{e.joined_at ?? '—'}</span> },
+        { key: 'joined', header: t('joined'), render: (e) => <span className="font-mono text-xs">{fmt.date(e.joined_at)}</span> },
         {
             key: 'status',
             header: t('status'),
@@ -957,6 +959,7 @@ function OverviewTab({
     onViewDepartments: () => void;
 }) {
     const t = useT();
+    const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
 
     const kpis = [
@@ -1055,7 +1058,7 @@ function OverviewTab({
                                             </span>
                                         </div>
                                     </div>
-                                    <span className="text-muted-foreground font-mono text-xs">{e.last_day}</span>
+                                    <span className="text-muted-foreground font-mono text-xs">{fmt.date(e.last_day)}</span>
                                 </div>
                             ))
                         )}
@@ -1107,7 +1110,7 @@ function OverviewTab({
                                         <span className="min-w-0 truncate">{lang === 'th' ? (e.department_th ?? e.department) : e.department}</span>
                                     </div>
                                 </div>
-                                <span className="text-muted-foreground font-mono text-xs">{e.joined_at}</span>
+                                <span className="text-muted-foreground font-mono text-xs">{fmt.date(e.joined_at)}</span>
                             </div>
                         ))}
                     </div>
