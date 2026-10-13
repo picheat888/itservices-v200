@@ -35,6 +35,7 @@ export interface DateFormatter {
     dateTime(value: DateValue): string;
     time(value: DateValue): string;
     monthYear(value: DateValue): string;
+    monthYearLong(value: DateValue): string;
     month(value: DateValue): string;
     dayMonth(value: DateValue): string;
     range(from: DateValue, to: DateValue): string;
@@ -54,6 +55,13 @@ export function normalizeDateConfig(config: LooseConfig): DateConfig {
 }
 
 export const sameDateConfig = (a: DateConfig, b: DateConfig) => a.format === b.format && a.era === b.era && a.time === b.time;
+
+/** A whole date or date-time value (as the API sends them), not merely text containing digits. */
+export function isDateString(value: unknown): value is string {
+    if (typeof value !== 'string') return false;
+    const p = parse(value);
+    return p !== null && p.d !== null;
+}
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const lastDay = (y: number, m: number) => new Date(y, m, 0).getDate();
@@ -131,6 +139,11 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
         return p ? monthYearPart(p) : EMPTY;
     };
 
+    const monthYearLong = (value: DateValue) => {
+        const p = parse(value);
+        return p ? `${months.long[p.m - 1]} ${year(p.y)}` : EMPTY;
+    };
+
     const dayMonth = (value: DateValue) => {
         const p = parse(value);
         return hasDay(p) ? dayMonthPart(p) : EMPTY;
@@ -145,7 +158,7 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
         return `${dayMonthPart(f)} ${year(f.y)} – ${dayMonthPart(t)} ${year(t.y)}`;
     };
 
-    return { date, dateTime, time, monthYear, month, dayMonth, range, year };
+    return { date, dateTime, time, monthYear, monthYearLong, month, dayMonth, range, year };
 }
 
 /** Every month on a two-digit day plus the widest clock readings: what a date column must fit, whatever the rows hold. */

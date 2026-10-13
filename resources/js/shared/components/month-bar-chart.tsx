@@ -1,9 +1,6 @@
 import { useT } from '@/lang';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
-
-const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-const EN_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** One column of the chart. `month` is the column's start: 'YYYY-MM-DD' (day, week), 'YYYY-MM' or 'YYYY'. */
 export interface MonthBar {
@@ -38,20 +35,19 @@ export function MonthBarChart({
     /** Off for a period that ended in the past: no column is the current one. */
     highlightLast?: boolean;
 }) {
-    const lang = useUiStore((s) => s.lang);
+    const fmt = useDateFormat();
     const max = Math.max(1, ...data.map((d) => d.count));
     const lastIndex = highlightLast ? data.length - 1 : -1;
     // A run of zeroes is not a chart. Twelve empty bars read as something broken, so say
     // there is nothing instead — the caller supplies the wording for its own subject.
     const isEmpty = data.length === 0 || data.every((d) => d.count === 0);
 
-    // Top line + the smaller one under it: day/week = day + month, month = month + year, year = the year alone.
+    // Top line + the smaller one under it: day/week = day + month, month = month + 2-digit year, year = the year alone.
     const label = (start: string) => {
-        const [y, m, d] = start.split('-').map(Number);
-        const mon = (lang === 'th' ? TH_MON : EN_MON)[(m || 1) - 1];
-        if (unit === 'year') return { mon: String(y), yy: '' };
-        if (unit === 'day' || unit === 'week') return { mon: String(d), yy: mon };
-        return { mon, yy: String(y).slice(2) };
+        const [y, , d] = start.split('-').map(Number);
+        if (unit === 'year') return { mon: fmt.year(y), yy: '' };
+        if (unit === 'day' || unit === 'week') return { mon: String(d), yy: fmt.month(start) };
+        return { mon: fmt.month(start), yy: fmt.year(y).slice(-2) };
     };
 
     if (isEmpty) {

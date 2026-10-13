@@ -48,3 +48,11 @@ test('dateWidthSamples lists every month on a two-digit day, and every clock edg
     assert.deepEqual(en.times, ['12:59', '10:58', '23:59']);
     assert.deepEqual(dateWidthSamples({ format: 'dmy_slash', era: 'ce', time: '24' }, 'th').dates.slice(0, 1), ['28/01/2026']);
 });
+
+test('isDateString accepts whole date values only', async () => {
+    const { isDateString } = (await import('../../resources/js/shared/lib/datetime.ts')) as Record<string, (v: unknown) => boolean>;
+    for (const yes of ['2026-10-03', '2026-10-03 14:05', '2026-10-03 14:05:00', '2026-10-03T07:05:00.000000Z'])
+        assert.equal(isDateString(yes), true, yes);
+    for (const no of ['2026-10', '2026-13-01', '2026-02-30', 'v1.2-3', 'TKT-HW-260923-003', '', null, 42, '2026-10-03 extra'])
+        assert.equal(isDateString(no), false, String(no));
+});
