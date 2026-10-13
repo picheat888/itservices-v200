@@ -229,11 +229,11 @@ export function AssetDetailDrawer({
                             <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                             <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
                                 <div>
-                                    {t('asset_registered')}: {a.registered_date ?? '—'}
+                                    {t('asset_registered')}: {fmt.date(a.registered_date)}
                                     {a.created_by_name && ` ${t('asset_by')} ${a.created_by_name}`}
                                 </div>
                                 <div>
-                                    {t('asset_last_update')}: {a.updated_at ?? '—'}
+                                    {t('asset_last_update')}: {fmt.date(a.updated_at)}
                                     {a.updated_by_name && ` ${t('asset_by')} ${a.updated_by_name}`}
                                 </div>
                             </div>
@@ -336,7 +336,7 @@ export function AssetDetailDrawer({
                                         these belong to the contract — open Contract Details to view them. */}
                                         {!rented && (
                                             <>
-                                                <KV label={t('asset_purchase_date')} value={a.purchase_date} mono />
+                                                <KV label={t('asset_purchase_date')} value={fmt.date(a.purchase_date)} mono />
                                                 <KV label={t('asset_supplier')} value={a.supplier} />
                                                 <KV label={t('asset_value')} value={a.value_display} mono />
                                                 <KV
@@ -348,7 +348,7 @@ export function AssetDetailDrawer({
                                                                 {t('asset_lifetime')}
                                                             </span>
                                                         ) : (
-                                                            a.warranty_end
+                                                            fmt.date(a.warranty_end)
                                                         )
                                                     }
                                                     mono={!lifetime}
@@ -373,7 +373,7 @@ export function AssetDetailDrawer({
                                         <KV label={t('asset_position')} value={a.owner_position} />
                                         <KV label={t('asset_dept')} value={a.department} />
                                         <KV label={t('asset_location')} value={a.location} />
-                                        <KV label={t('asset_owned_since')} value={a.owned_since} mono />
+                                        <KV label={t('asset_owned_since')} value={fmt.date(a.owned_since)} mono />
                                     </div>
                                 </div>
                             </div>

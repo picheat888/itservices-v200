@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
 import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
@@ -400,7 +401,7 @@ export default function AssetsPage() {
         {
             key: 'date',
             header: t('asset_hist_date'),
-            render: (tr) => <span className="text-muted-foreground font-mono text-[11px] whitespace-nowrap">{tr.date ?? '—'}</span>,
+            render: (tr) => <DateTimeCell value={tr.date} className="text-muted-foreground" />,
         },
         {
             key: 'asset',

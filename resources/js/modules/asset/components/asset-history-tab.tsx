@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import type { AssetTransferEntry } from '@/shared/types';
 import { History } from 'lucide-react';
 import { AssetEventBadge } from './asset-event-badge';
@@ -28,7 +29,7 @@ export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransf
         {
             key: 'date',
             header: t('asset_hist_date'),
-            render: (r) => <span className="text-muted-foreground font-mono text-[11px] whitespace-nowrap">{r.date ?? '—'}</span>,
+            render: (r) => <DateTimeCell value={r.date} className="text-muted-foreground" />,
         },
         { key: 'event', header: t('asset_hist_event'), render: (r) => <AssetEventBadge kind={r.kind} /> },
         // From and To stand in their own columns so the whole trail lines up vertically —
