@@ -84,7 +84,7 @@ export function SlaCells({ met, n, goal, label }: { met: number; n: number; goal
         <>
             <td className={cn(TD, GROUP, 'w-48 min-w-32 pr-1.5')}>
                 <span
-                    className="bg-muted block h-3 overflow-hidden rounded-[3px]"
+                    className="dark:bg-muted block h-3 overflow-hidden rounded-[3px] bg-slate-200"
                     role="img"
                     aria-label={pct === null ? `${label}: —` : `${label}: ${met}/${n} (${pct}%)`}
                 >

@@ -55,7 +55,7 @@ export function PieceBar({
     const total = shown.reduce((s, p) => s + p.value, 0);
 
     return (
-        <div className={cn('bg-muted h-5 overflow-hidden rounded-full', className)}>
+        <div className={cn('dark:bg-muted h-5 overflow-hidden rounded-full bg-slate-200', className)}>
             <div
                 role="img"
                 aria-label={label ?? shown.map((p) => `${p.label} ${count(p.value, lang)}`).join(', ')}

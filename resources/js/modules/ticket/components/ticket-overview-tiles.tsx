@@ -108,7 +108,7 @@ const SLA_FILL = { met: 'bg-emerald-500', near: 'bg-amber-500', miss: 'bg-red-50
 /** The window's SLA against its goal tick, sized to sit beside the number. */
 function SlaBar({ rate, goal }: { rate: number; goal: number }) {
     return (
-        <span className="bg-muted relative mb-2.5 h-2 max-w-40 flex-1 rounded-full" aria-hidden="true">
+        <span className="dark:bg-muted relative mb-2.5 h-2 max-w-40 flex-1 rounded-full bg-slate-200" aria-hidden="true">
             <span className={cn('block h-full rounded-full', SLA_FILL[slaLevel(rate, goal)])} style={{ width: `${Math.min(100, rate)}%` }} />
             <span className="bg-foreground absolute -top-1 h-4 w-0.5 rounded-sm" style={{ left: `${goal}%` }} />
         </span>

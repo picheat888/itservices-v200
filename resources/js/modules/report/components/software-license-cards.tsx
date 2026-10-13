@@ -173,7 +173,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                             </span>
                         ))}
                         <span className="inline-flex items-center gap-1.5">
-                            <i aria-hidden className="bg-muted inline-block h-2 w-2 rounded-full" />
+                            <i aria-hidden className="dark:bg-muted inline-block h-2 w-2 rounded-full bg-slate-200" />
                             {t('rep_sl_bar_free')}
                         </span>
                     </span>

@@ -10,7 +10,19 @@ export interface HBar {
     tone?: string;
 }
 
-export function HorizontalBars({ bars, max, unit = '', goal, emptyLabel }: { bars: HBar[]; max: number; unit?: string; goal?: number; emptyLabel: string }) {
+export function HorizontalBars({
+    bars,
+    max,
+    unit = '',
+    goal,
+    emptyLabel,
+}: {
+    bars: HBar[];
+    max: number;
+    unit?: string;
+    goal?: number;
+    emptyLabel: string;
+}) {
     if (bars.length === 0) return <div className="text-muted-foreground py-6 text-center text-sm">{emptyLabel}</div>;
     const pct = (v: number) => `${Math.min(100, (v / Math.max(max, 1)) * 100)}%`;
 
@@ -19,7 +31,7 @@ export function HorizontalBars({ bars, max, unit = '', goal, emptyLabel }: { bar
             {bars.map((b) => (
                 <div key={b.key} className="grid grid-cols-[92px_minmax(0,1fr)_52px] items-center gap-2.5 text-sm">
                     <span className="truncate">{b.label}</span>
-                    <div className="bg-muted relative h-2.5 overflow-hidden rounded-full">
+                    <div className="dark:bg-muted relative h-2.5 overflow-hidden rounded-full bg-slate-200">
                         {b.value !== null && <span className={`block h-full rounded-full ${b.tone ?? 'bg-brand'}`} style={{ width: pct(b.value) }} />}
                         {goal !== undefined && <em className="bg-foreground/50 absolute -top-0.5 -bottom-0.5 w-0.5" style={{ left: pct(goal) }} />}
                     </div>

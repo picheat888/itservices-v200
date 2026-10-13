@@ -426,7 +426,7 @@ function ShareCell({ v, total }: { v: number; total: number }) {
     return (
         <td className={TD}>
             <span className="flex items-center gap-2">
-                <span aria-hidden className="bg-muted flex h-1.5 min-w-12 flex-1 overflow-hidden rounded-full">
+                <span aria-hidden className="dark:bg-muted flex h-1.5 min-w-12 flex-1 overflow-hidden rounded-full bg-slate-200">
                     <span className={cn('bg-blue-600 dark:bg-blue-400', BASIS_PCT[pct(v, total)])} />
                 </span>
                 <small className="text-muted-foreground w-9 text-right font-mono tabular-nums">{total ? `${Math.round(share)}%` : '—'}</small>

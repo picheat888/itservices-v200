@@ -119,7 +119,7 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
                     );
                 })}
             </div>
-            <div aria-hidden className="bg-muted mt-1 flex h-3 overflow-hidden rounded-full">
+            <div aria-hidden className="dark:bg-muted mt-1 flex h-3 overflow-hidden rounded-full bg-slate-200">
                 {series.map((s) => {
                     const value = values[s.key] ?? 0;
                     if (value === 0) return null;

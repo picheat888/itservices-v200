@@ -124,7 +124,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                     <>
                         <div className="text-muted-foreground mt-0.5 text-xs">{`${t(`rep_my_exports_st_${item.status}`)}…`}</div>
                         {/* Indeterminate: the queue gives no percentage. Still under reduced motion. */}
-                        <div className="bg-muted mt-1.5 h-1 overflow-hidden rounded-full" aria-hidden="true">
+                        <div className="dark:bg-muted mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
                             <span
                                 className={cn('bg-brand block h-full w-3/5 animate-pulse rounded-full motion-reduce:animate-none', spin && 'w-4/5')}
                             />
