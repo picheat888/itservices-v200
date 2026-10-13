@@ -88,7 +88,7 @@ class StoreEmployeeRequest extends FormRequest
             // Still nullable on update: the same rules serve both, and an employee who
             // arrived through bulk import (a different path, where the column is optional)
             // must not become uneditable because of a date nobody recorded then.
-            'joined_at' => [$this->route('employee') ? 'nullable' : 'required', 'date'],
+            'joined_at' => [$this->route('employee') ? 'nullable' : 'required', 'date', ...$this->notAfterLastDay()],
             'status' => ['nullable', Rule::in(['active', 'resigned'])],
             'code' => ['nullable', 'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId)],
             'photo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
@@ -104,6 +104,18 @@ class StoreEmployeeRequest extends FormRequest
             'onboarding_note' => ['nullable', 'string', 'max:500'],
             ...$this->serviceFieldRules(),
         ];
+    }
+
+    /**
+     * A leaver's start date may not move past their last working day.
+     *
+     * @return list<string>
+     */
+    private function notAfterLastDay(): array
+    {
+        $lastDay = $this->route('employee')?->last_day;
+
+        return $lastDay ? ['before_or_equal:'.$lastDay->toDateString()] : [];
     }
 
     /**
