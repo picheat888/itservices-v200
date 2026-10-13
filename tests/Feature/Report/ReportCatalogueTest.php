@@ -70,7 +70,7 @@ class ReportCatalogueTest extends TestCase
             $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
         $this->assertSame(['requests.overview', 'requests.approvals', 'requests.it_pending'], $keysFor(['requests.view_all']));
-        $this->assertSame(['employees.joiners_leavers', 'employees.open_items'], $keysFor(['employees.view']));
+        $this->assertSame(['employees.overview', 'employees.open_items'], $keysFor(['employees.view']));
         $this->assertSame(['access.software_licenses'], $keysFor(['access.software_view']));
         // Submitting or completing requests is not reading them all.
         $this->assertSame([], $keysFor(['requests.submit', 'requests.complete']));
