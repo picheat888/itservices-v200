@@ -151,6 +151,7 @@ class EmployeeOverviewReportTest extends TestCase
         $tiles = collect($body['summary'])->keyBy('key');
         $this->assertSame(1, $tiles['eo_joined']['value'], 'the tiles ignore the kind filter');
         $this->assertSame(1, $tiles['eo_left']['value']);
+        $this->assertSame('bad', $tiles['eo_left']['chart']['tone']);
     }
 
     public function test_overview_needs_employees_view(): void

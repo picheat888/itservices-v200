@@ -165,7 +165,7 @@ class EmployeeOverviewReport extends TabularReport
             }),
             ReportSummary::make('eo_left', 'ลาออก', $f['leavers']['count'])
                 ->withNote(['label_key' => 'rep_n_eo_rate', 'texts' => ['rate' => $f['leavers']['rate'] === null ? '—' : number_format($f['leavers']['rate'], 1).'%']])
-                ->withChart(['kind' => 'line', 'points' => $f['leavers']['per_bucket'], 'months' => $f['leavers']['bucket_months']]),
+                ->withChart(['kind' => 'line', 'points' => $f['leavers']['per_bucket'], 'months' => $f['leavers']['bucket_months'], 'tone' => 'bad']),
             $preparing,
             ReportSummary::make('eo_holding', 'ผู้ลาออกที่ยังถือสิทธิ์', $holding['people'])->withAttention('red')
                 ->withSplit(array_map(fn (string $t) => [

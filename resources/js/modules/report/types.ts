@@ -305,7 +305,7 @@ export interface SummaryItem {
 }
 
 export type SummaryChart =
-    | { kind: 'line'; points: number[]; months: string[] }
+    | { kind: 'line'; points: number[]; months: string[]; tone?: 'good' | 'bad' }
     | { kind: 'columns'; items: { key: string; label_key: string; short: string; tone: ChartTone; value: number }[] };
 
 /** A chart colour, drawn by tabular-charts.tsx. */
