@@ -238,6 +238,18 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertTrue(collect($year['points'])->last()['current']);
     }
 
+    public function test_the_first_point_starts_from_the_day_before_the_range(): void
+    {
+        $this->employee('Stay', ['joined_at' => '2020-01-01']);
+        $this->employee('FirstDay', ['joined_at' => '2026-01-01']);
+
+        $first = $this->breakdown()['points'][0];
+
+        $this->assertSame(1, $first['base']);
+        $this->assertSame(1, $first['joined']);
+        $this->assertSame($first['base'] + $first['joined'] - $first['left'], $first['headcount']);
+    }
+
     public function test_a_leaver_drops_the_line_in_the_month_after_their_last_day(): void
     {
         $this->employee('Stay', ['joined_at' => '2020-01-01']);

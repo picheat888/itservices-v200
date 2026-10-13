@@ -1521,6 +1521,7 @@ export const report: Dict = {
     rep_eo_unit_quarter: 'ไตรมาส',
     rep_eo_unit_year: 'ปี',
     rep_eo_quarter: 'ไตรมาส {q} {y}',
+    rep_eo_quarter_short: 'Q{q}',
     rep_eo_year: 'ปี {y}',
     rep_eo_axis_people: 'คน',
     rep_eo_flow_title: 'อัตรากำลังและคนเข้าออก',

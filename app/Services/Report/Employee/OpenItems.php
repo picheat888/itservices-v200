@@ -13,10 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * The open items of "สรุปเรื่องค้างของพนักงาน" as of today: leaver assets, leaver access, accounts
- * and incomplete employee data. One UNION of slim selects (query()) is the single source for the
- * cards (collect()) and the file rows, so the two can never disagree. Accounts exist only for a
- * viewer who holds employees.set_credentials; for anyone else they are never selected.
+ * Open items of "สรุปเรื่องค้างของพนักงาน" as of today: one UNION (query()) feeds both the cards and the
+ * file rows. Accounts are selected only for a viewer with employees.set_credentials.
  */
 final class OpenItems
 {
@@ -367,8 +365,8 @@ final class OpenItems
         if ($days > 0) {
             $expired = $stillWorks(User::query()->leftJoin('employees', 'employees.id', '=', 'users.employee_id')
                 ->where('users.must_change_password', false)
-                ->whereNotNull('users.password_changed_at')
-                ->where('users.password_changed_at', '<', today()->subDays($days)->toDateString()));
+                // Same rule as User::isPasswordExpired(): never changed counts as expired.
+                ->where(fn ($q) => $q->whereNull('users.password_changed_at')->orWhere('users.password_changed_at', '<', now()->subDays($days))));
             $selects[] = $account($expired, 'expired', 2);
         }
 
@@ -406,9 +404,7 @@ final class OpenItems
     // ── search ──────────────────────────────────────────────────────────────────────
 
     /**
-     * Employees a search text finds: each word in a code or name, or the whole text in the code
-     * of an asset a leaver holds, or (credentials only) in an account's username. Bindings only;
-     * % _ and ! in the text are matched as themselves.
+     * Employees a search finds by code / name words, asset code or serial, or (credentials only) username; bindings, % _ ! literal.
      *
      * @return Builder<Employee>
      */
@@ -429,7 +425,7 @@ final class OpenItems
                     });
                 }
             })->orWhereIn('employees.id', Asset::query()->select('owner_employee_id')->whereNotNull('owner_employee_id')
-                ->whereRaw("asset_code like ? escape '!'", [$whole]));
+                ->where(fn ($q) => $q->whereRaw("asset_code like ? escape '!'", [$whole])->orWhereRaw("serial like ? escape '!'", [$whole])));
             if ($withUsernames) {
                 $w->orWhereIn('employees.id', User::query()->select('employee_id')->whereNotNull('employee_id')
                     ->whereRaw("username like ? escape '!'", [$whole]));

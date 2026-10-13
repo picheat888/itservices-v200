@@ -345,7 +345,7 @@ class EmployeeOverviewReport extends TabularReport
                 'start' => $b['first']->toDateString(),
                 'end' => $endDay->toDateString(),
                 'headcount' => $people->filter(fn (Employee $e) => $this->working($e, $endDay))->count(),
-                'base' => $people->filter(fn (Employee $e) => $this->working($e, $baseDay))->count(),
+                'base' => $people->filter(fn (Employee $e) => $firstIndex > 0 ? $this->working($e, $baseDay) : $this->workingBefore($e, $from))->count(),
                 'joined' => $in->where('kind', 'joined')->count(),
                 'left' => $in->where('kind', 'left')->count(),
                 'current' => $clip && $k === array_key_last($buckets),
@@ -538,9 +538,7 @@ class EmployeeOverviewReport extends TabularReport
     }
 
     /**
-     * The range as whole-day datetime strings, reversed reads right. Spelled out to the second
-     * so the last day matches however the date is stored (DATE on MariaDB, a midnight
-     * timestamp string on SQLite).
+     * The range as whole-day datetime strings (works on DATE and SQLite timestamps), reversed reads right.
      *
      * @param  array<string, mixed>  $filters
      * @return array{0: string, 1: string}

@@ -189,6 +189,28 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->assertSame('stale', $on['rows'][0]['username']);
     }
 
+    public function test_a_never_changed_password_counts_as_expired_like_the_login_check(): void
+    {
+        $creds = $this->userWith(['employees.view', 'employees.set_credentials']);
+        $creds->forceFill(['password_changed_at' => now()])->save();
+        User::factory()->create(['username' => 'never.changed', 'password_changed_at' => null, 'must_change_password' => false]);
+        AppSetting::put('password_expiry_days', '90');
+
+        $acct = $this->actingAs($creds)->getJson('/api/reports/employees/open-items/breakdown')->json('data.acct');
+
+        $this->assertSame(1, $acct['by_kind']['expired']);
+        $this->assertSame('never.changed', $acct['rows'][0]['username']);
+    }
+
+    public function test_search_finds_a_leaver_by_an_asset_serial(): void
+    {
+        $leaver = $this->employee('Gone', ['status' => 'resigned', 'last_day' => '2026-09-30']);
+        $this->employee('Other', ['status' => 'resigned', 'last_day' => '2026-09-30']);
+        Asset::factory()->create(['owner_employee_id' => $leaver->id, 'owner' => null, 'serial' => 'PF2ABC12']);
+
+        $this->assertSame([$leaver->code], array_column($this->breakdown('?search=PF2ABC12')['asset']['rows'], 'code'));
+    }
+
     public function test_department_and_search_narrow_everything_and_search_is_literal(): void
     {
         $it = Department::create(['code' => 'IT', 'name' => 'IT']);

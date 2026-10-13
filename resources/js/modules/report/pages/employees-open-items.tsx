@@ -11,6 +11,7 @@ export default function EmployeesOpenItemsReportPage() {
                 hideSummary: true,
                 // The topic picks which cards show; department and search narrow the cards and the tiles.
                 hiddenFilters: ['group'],
+                cardOnlyFilters: ['group'],
                 filterLead: ({ filters, patch }) => <OpenItemsTopicSegments filters={filters} patch={patch} />,
                 beforeTable: ({ filters }) => <EmployeeOpenItemsCards filters={filters} />,
             }}

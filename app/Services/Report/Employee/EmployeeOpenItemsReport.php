@@ -15,10 +15,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
- * "สรุปเรื่องค้างของพนักงาน" (Report Center → Employees): what is still open about people as of
- * today — leaver assets, leaver access, accounts, incomplete employee data. The page draws four
- * cards from breakdown(); the rows (one per open item) are what Excel, PDF and schedules carry.
- * Gated by employees.view; accounts only for a viewer with employees.set_credentials.
+ * "สรุปเรื่องค้างของพนักงาน" (employees.open_items): leaver assets, leaver access, accounts and incomplete data as of today.
+ * breakdown() draws the four cards; the rows (one per open item) go to Excel, PDF and schedules.
  */
 class EmployeeOpenItemsReport extends TabularReport
 {
