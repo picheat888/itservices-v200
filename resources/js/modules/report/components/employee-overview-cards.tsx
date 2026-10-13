@@ -12,9 +12,9 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useEmployeeOverviewBreakdown } from '../hooks/use-reports';
 import type { AccessType, EmployeeOverviewBreakdown, EmployeeOverviewCounts, TabularFilters } from '../types';
-import { ACCESS_TYPES, DaysOut, Group, GroupRow, NUM, Segments, TD, TH, TypeDot, TypeLabel } from './access-overview-cards';
+import { ACCESS_TYPES, DaysOut, Group, GroupRow, heldStyle, NUM, Segments, TD, TH, TypeDot, TypeLabel, useFoldRow } from './access-overview-cards';
 import { count, deptName } from './access-parts';
-import { CardEmpty, CardTitle } from './chart-parts';
+import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { InfoPopover } from './info-popover';
 import { BASIS_PCT, pct } from './percent-classes';
 import { CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -464,29 +464,50 @@ function Cells({ s, total }: { s: EmployeeOverviewCounts; total: number }) {
     );
 }
 
-function DepartmentCard({ data, singleDepartment }: { data: EmployeeOverviewBreakdown; singleDepartment: boolean }) {
+/** Department rows listed before the rest fold under "แสดงทั้งหมด". */
+const DEPT_SHOWN = 10;
+
+function DepartmentCard({
+    data,
+    singleDepartment,
+    cardRef,
+    heldHeight,
+    listOpen,
+    onListToggle,
+}: {
+    data: EmployeeOverviewBreakdown;
+    singleDepartment: boolean;
+    cardRef: React.Ref<HTMLDivElement>;
+    heldHeight: number | null;
+    listOpen: boolean;
+    onListToggle: () => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
     const [open, setOpen] = useState<Record<string, boolean>>({});
     const total = data.total.end;
+    const { folds, shown } = fold(data.departments, DEPT_SHOWN, listOpen);
+    const cols = (
+        <colgroup>
+            {COLS.map((w, i) => (
+                <col key={i} className={w} />
+            ))}
+        </colgroup>
+    );
     const info = [t('rep_eo_dept_info').replace('{from}', fmt.date(data.from)).replace('{end}', fmt.date(data.as_of))];
     if (data.leavers.still_working > 0) info.push(t('rep_eo_dept_info_notice').replace('{n}', count(data.leavers.still_working, lang)));
 
     return (
-        <Card className="flex flex-col overflow-clip lg:col-span-2 xl:col-span-3">
+        <Card ref={cardRef} className="flex flex-col overflow-clip lg:col-span-2 xl:col-span-3" style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_eo_dept_title')} info={info} />
             {data.departments.length === 0 && data.empty_departments.length === 0 ? (
                 <CardEmpty>{t('rep_eo_dept_empty')}</CardEmpty>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="flex flex-1 flex-col overflow-x-auto">
                     <table className="w-full min-w-[40rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_eo_dept_caption')}</caption>
-                        <colgroup>
-                            {COLS.map((w, i) => (
-                                <col key={i} className={w} />
-                            ))}
-                        </colgroup>
+                        {cols}
                         <thead>
                             <tr className={cn(TABLE_HEAD, 'border-border border-b')}>
                                 <th scope="col" className={cn(TH, 'text-left')}>
@@ -503,7 +524,7 @@ function DepartmentCard({ data, singleDepartment }: { data: EmployeeOverviewBrea
                             </tr>
                         </thead>
                         <tbody>
-                            {data.departments.map((d) => {
+                            {shown.map((d) => {
                                 const key = String(d.id ?? 'none');
                                 const isOpen = open[key] ?? singleDepartment;
                                 const name = nameOf(d, lang) ?? t('rep_ac_no_department');
@@ -519,8 +540,20 @@ function DepartmentCard({ data, singleDepartment }: { data: EmployeeOverviewBrea
                                     />
                                 );
                             })}
+                        </tbody>
+                    </table>
+                    {folds && (
+                        <div>
+                            <FoldToggle open={listOpen} total={data.departments.length} onToggle={onListToggle} />
+                        </div>
+                    )}
+                    {/* The total stays at the card's foot however tall the card beside it makes this one. */}
+                    <table className="border-border mt-auto w-full min-w-[40rem] table-fixed border-t text-sm">
+                        <caption className="sr-only">{t('rep_eo_dept_total').replace('{n}', count(data.departments.length, lang))}</caption>
+                        {cols}
+                        <tbody>
                             {(data.departments.length > 1 || !singleDepartment) && (
-                                <tr className="bg-muted/40 border-border border-t font-semibold">
+                                <tr className="bg-muted/40 font-semibold">
                                     <th scope="row" className={cn(TD, 'text-left')}>
                                         {t('rep_eo_dept_total').replace('{n}', count(data.departments.length, lang))}
                                     </th>
@@ -604,7 +637,19 @@ function DeptRows({
 
 /* ─────────────────────────── leavers still holding access ─────────────────────────── */
 
-function HoldingCard({ data }: { data: EmployeeOverviewBreakdown }) {
+function HoldingCard({
+    data,
+    cardRef,
+    heldHeight,
+    open,
+    onToggle,
+}: {
+    data: EmployeeOverviewBreakdown;
+    cardRef: React.Ref<HTMLDivElement>;
+    heldHeight: number | null;
+    open: boolean;
+    onToggle: () => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const canOpen = useCanOpen();
@@ -620,7 +665,7 @@ function HoldingCard({ data }: { data: EmployeeOverviewBreakdown }) {
     );
 
     return (
-        <Card className="flex flex-col overflow-clip xl:col-span-2">
+        <Card ref={cardRef} className="flex flex-col overflow-clip xl:col-span-2" style={heldStyle(heldHeight)}>
             <CardTitle
                 title={t('rep_eo_holding_title')}
                 info={t('rep_eo_holding_info')}
@@ -645,6 +690,8 @@ function HoldingCard({ data }: { data: EmployeeOverviewBreakdown }) {
                         title={t('rep_eo_holding_group')}
                         total={t('rep_eo_people_n').replace('{n}', count(holding.rows.length, lang))}
                         rows={holding.rows}
+                        open={open}
+                        onToggle={onToggle}
                         render={(r) => (
                             <GroupRow
                                 key={r.employee.id}
@@ -851,9 +898,12 @@ function CardsSkeleton() {
     );
 }
 
+const BOTTOM_FOLDS = ['dept', 'holding'] as const;
+
 export function EmployeeOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
     const { data, isLoading, isError, error } = useEmployeeOverviewBreakdown(filters);
+    const row = useFoldRow(BOTTOM_FOLDS);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
@@ -862,9 +912,23 @@ export function EmployeeOverviewCards({ filters }: { filters: TabularFilters }) 
         <div className="space-y-4">
             <HeadcountCard data={data} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
-            <div className="grid items-start gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <DepartmentCard data={data} singleDepartment={Boolean(filters.department_id)} />
-                <HoldingCard data={data} />
+            {/* Same height while both are folded; opening one keeps that height and the other stays in view. */}
+            <div className={cn('grid gap-3 lg:grid-cols-3 xl:grid-cols-5', row.anyOpen && 'lg:items-start')}>
+                <DepartmentCard
+                    data={data}
+                    singleDepartment={Boolean(filters.department_id)}
+                    cardRef={row.left}
+                    heldHeight={row.heldLeft}
+                    listOpen={row.open.dept}
+                    onListToggle={() => row.toggle('dept')}
+                />
+                <HoldingCard
+                    data={data}
+                    cardRef={row.right}
+                    heldHeight={row.heldRight}
+                    open={row.open.holding}
+                    onToggle={() => row.toggle('holding')}
+                />
             </div>
         </div>
     );
