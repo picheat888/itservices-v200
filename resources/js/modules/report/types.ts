@@ -986,9 +986,14 @@ export interface ItPendingJoiner {
     }[];
 }
 
+/** One page of a tabular report's rows (asked for with only_rows, so without the numbers). */
 export interface TabularRows {
     data: Array<Record<string, unknown> & { id: number }>;
     meta: PagedRows<unknown>['meta'];
+}
+
+/** A tabular report's headline numbers and charts for a filter set (/reports/r/{key}/summary). */
+export interface TabularHeadline {
     summary: SummaryItem[];
     charts: TabularChart[];
 }

@@ -35,6 +35,7 @@ class TabularReportRequest extends FormRequest
         return [
             ...$this->report()->rules(),
             'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
+            'only_rows' => ['nullable', 'boolean'],
         ];
     }
 
@@ -53,6 +54,6 @@ class TabularReportRequest extends FormRequest
      */
     public function filterInput(): array
     {
-        return collect($this->validated())->except(['format', 'columns', 'per_page'])->all();
+        return collect($this->validated())->except(['format', 'columns', 'per_page', 'only_rows'])->all();
     }
 }

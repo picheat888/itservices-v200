@@ -29,6 +29,7 @@ import type {
     SoftwareLicenseBreakdown,
     TabularDefinition,
     TabularFilters,
+    TabularHeadline,
     TabularRows,
     TicketOverviewSummary,
     TicketReportFilters,
@@ -173,7 +174,13 @@ export const reportApi = {
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 
     tabularRows: (key: string, filters: TabularFilters, page: number, perPage: number) =>
-        http.get<TabularRows>(`/reports/r/${key}/rows`, { params: { ...tabularParams(filters), page, per_page: perPage } }).then((r) => r.data),
+        http
+            .get<TabularRows>(`/reports/r/${key}/rows`, { params: { ...tabularParams(filters), page, per_page: perPage, only_rows: 1 } })
+            .then((r) => r.data),
+
+    /** The headline numbers and charts for a filter set — fetched once, not on every page turn. */
+    tabularSummary: (key: string, filters: TabularFilters) =>
+        http.get<{ data: TabularHeadline }>(`/reports/r/${key}/summary`, { params: tabularParams(filters) }).then((r) => r.data.data),
 
     /** Queues the file (202). `columns` = the keys the page's column picker keeps; omitted when every column shows. */
     exportTabular: (key: string, filters: TabularFilters, format: ExportFormat, columns?: string[]) =>

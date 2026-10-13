@@ -145,6 +145,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
     Route::get('reports/r/{key}/rows', [TabularReportController::class, 'rows'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.rows');
+    Route::get('reports/r/{key}/summary', [TabularReportController::class, 'summary'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.summary');
     Route::post('reports/r/{key}/export', [TabularReportController::class, 'export'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.export');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])

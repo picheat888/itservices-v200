@@ -274,6 +274,16 @@ export const useTabularRows = (key: string, filters: TabularFilters, page: numbe
         retry: noRetryOn4xx,
     });
 
+/** The tiles and charts — keyed by the filters alone, so turning a page of rows does not ask again. */
+export const useTabularSummary = (key: string, filters: TabularFilters, enabled: boolean) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', key, 'summary', filters],
+        queryFn: () => reportApi.tabularSummary(key, filters),
+        placeholderData: keepPreviousData,
+        enabled,
+        retry: noRetryOn4xx,
+    });
+
 /** Queue the file; the exports list picks it up (and polls until it is built). */
 export function useExportTabular() {
     const queryClient = useQueryClient();
