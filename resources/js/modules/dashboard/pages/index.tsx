@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useContractSummary } from '@/modules/contract';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { relativeTime } from '@/shared/lib/datetime';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -281,6 +282,7 @@ function niceCeil(value: number): number {
  */
 function VolumeChart({ it }: { it: DashboardIt }) {
     const t = useT();
+    const fmt = useDateFormat();
     const days = it.volume;
     if (days.length === 0) {
         return null;
@@ -295,7 +297,7 @@ function VolumeChart({ it }: { it: DashboardIt }) {
     // Mid-point of each day's slot, in percent — the line's vertices sit over their own bar.
     const x = (index: number) => step * index + step / 2;
     const linePoints = days.map((d, i) => `${x(i)},${y(d.backlog)}`).join(' ');
-    const label = (iso: string) => iso.slice(5).replace('-', '/');
+    const label = (iso: string) => fmt.dayMonth(iso);
     // Top, middle, baseline — the middle only when halving lands on a whole ticket. A tick
     // reading "2.5" on a count of cases is a line nobody can measure anything against.
     const ticks = [peak, ...(peak % 2 === 0 ? [peak / 2] : []), 0];
@@ -393,7 +395,8 @@ function VolumeChart({ it }: { it: DashboardIt }) {
 
                     return (
                         <span key={d.date} className={cn('flex-1 text-center', turns && 'text-foreground font-semibold')}>
-                            {turns ? `${Number(month)}/${Number(day)}` : Number(day)}
+                            {Number(day)}
+                            {turns && <span className="block">{fmt.month(d.date)}</span>}
                         </span>
                     );
                 })}
@@ -590,6 +593,7 @@ function WaitingRequestsCard({ requests }: { requests: DashboardRequests }) {
 /** Headcount, who just joined, and what IT still owes them. */
 function HrSection({ hr }: { hr: DashboardHr }) {
     const t = useT();
+    const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     const biggest = Math.max(1, ...hr.headcount_by_department.map((d) => d.count));
 
@@ -622,7 +626,7 @@ function HrSection({ hr }: { hr: DashboardHr }) {
                                     </>
                                 ) : undefined
                             }
-                            trailing={<span className="text-muted-foreground font-mono text-xs">{hire.joined_at ?? '—'}</span>}
+                            trailing={<span className="text-muted-foreground font-mono text-xs">{fmt.date(hire.joined_at)}</span>}
                         />
                     ))}
                 </ListCard>
