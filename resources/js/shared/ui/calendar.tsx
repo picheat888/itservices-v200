@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import * as React from 'react';
 import { DayPicker, getDefaultClassNames } from 'react-day-picker';
 
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 
 const MIN_YEAR = 1970;
@@ -103,6 +104,7 @@ function ViewHeader({
  */
 export function Calendar({ selected, onSelect, locale, defaultMonth, className }: CalendarProps) {
     const base = getDefaultClassNames();
+    const fmt = useDateFormat();
     const today = new Date();
 
     // The month currently shown in the day view; also the anchor for the grids.
@@ -125,6 +127,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                     onSelect={onSelect}
                     locale={locale}
                     captionLayout="label"
+                    formatters={{ formatCaption: (date) => `${format(date, 'LLLL', { locale })} ${fmt.year(date.getFullYear())}` }}
                     // Weekends in bold red, like a wall calendar (same look as the reports' date range
                     // picker). The red skips the picked day (white-on-brand) and other months' days (faded).
                     modifiers={{
@@ -193,7 +196,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
             {view === 'months' && (
                 <div>
                     <ViewHeader
-                        title={String(viewYear)}
+                        title={fmt.year(viewYear)}
                         onTitleClick={() => {
                             setYearPage(viewYear - (viewYear % YEAR_STEP));
                             setView('years');
@@ -223,7 +226,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
             {view === 'years' && (
                 <div>
                     <ViewHeader
-                        title={`${yearPage} – ${yearPage + YEARS_PER_PAGE - 1}`}
+                        title={`${fmt.year(yearPage)} – ${fmt.year(yearPage + YEARS_PER_PAGE - 1)}`}
                         onPrev={() => setYearPage((p) => p - YEAR_STEP)}
                         onNext={() => setYearPage((p) => p + YEAR_STEP)}
                         prevDisabled={yearPage <= MIN_YEAR}
@@ -233,7 +236,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                         {Array.from({ length: YEARS_PER_PAGE }, (_, i) => yearPage + i).map((y) => (
                             <GridCell
                                 key={y}
-                                label={String(y)}
+                                label={fmt.year(y)}
                                 active={selected?.getFullYear() === y}
                                 current={today.getFullYear() === y}
                                 disabled={y < MIN_YEAR || y > MAX_YEAR}

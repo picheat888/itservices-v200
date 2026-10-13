@@ -4,13 +4,13 @@
  * refetches on a half-picked or mis-clicked range. Cancel, Esc or clicking away keeps the range
  * as it was. Weekends are bold red; `maxDate` greys out (and blocks) the days after it.
  *
- * The trigger is a field reading the range short ("1 ส.ค. – 4 ต.ค. 2026", formatRangeShort) —
+ * The trigger is a field reading the range short (useDateFormat().range) —
  * or, given `children`, the caller's own button (a "กำหนดเอง" segment, say) opens the calendar.
  * Values in and out are "YYYY-MM-DD" strings ('' when unset).
  * Used by the report filter bars, the Report Center's period switch and the ticket dashboard.
  */
 import { useT } from '@/lang';
-import { formatRangeShort } from '@/shared/lib/datetime';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
@@ -54,6 +54,8 @@ export function DateRangeInput({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const locale = lang === 'th' ? th : enUS;
+    const fmt = useDateFormat();
     const base = getDefaultClassNames();
     const [open, setOpen] = React.useState(false);
     const [draft, setDraft] = React.useState<DateRange | undefined>();
@@ -111,7 +113,7 @@ export function DateRangeInput({
                             className,
                         )}
                     >
-                        <span className="truncate">{from && to ? formatRangeShort(from, to, lang) : t('pick_date')}</span>
+                        <span className="truncate">{from && to ? fmt.range(from, to) : t('pick_date')}</span>
                         <CalendarIcon className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
                     </button>
                 )}
@@ -125,7 +127,8 @@ export function DateRangeInput({
                     selected={shown}
                     onSelect={(_, day) => pick(day)}
                     disabled={maxDate ? { after: maxDate } : undefined}
-                    locale={lang === 'th' ? th : enUS}
+                    locale={locale}
+                    formatters={{ formatCaption: (date) => `${format(date, 'LLLL', { locale })} ${fmt.year(date.getFullYear())}` }}
                     // Weekends in bold red, like a wall calendar — both locales start the week on Sunday, so
                     // they are the first and last columns. The red is important so it also wins over the
                     // range's brand text; the range ends are left out by isWeekendText instead.
@@ -171,7 +174,7 @@ export function DateRangeInput({
                 />
                 <div className="mt-2 flex items-center justify-between gap-4 border-t pt-3">
                     {draft?.from && draft.to ? (
-                        <span className="text-sm font-medium">{formatRangeShort(iso(draft.from), iso(draft.to), lang)}</span>
+                        <span className="text-sm font-medium">{fmt.range(iso(draft.from), iso(draft.to))}</span>
                     ) : (
                         <span className="text-muted-foreground text-xs">{hint}</span>
                     )}
