@@ -636,11 +636,7 @@ function HoldingCard({ data }: { data: EmployeeOverviewBreakdown }) {
             />
             {holding.rows.length === 0 ? (
                 <CardEmpty>
-                    <span className="text-foreground font-medium">
-                        {holding.left_total > 0
-                            ? t('rep_eo_holding_empty_done').replace('{n}', count(holding.left_total, lang))
-                            : t('rep_eo_holding_empty_none')}
-                    </span>
+                    <span className="text-foreground font-medium">{t('rep_eo_holding_empty')}</span>
                 </CardEmpty>
             ) : (
                 <div className="flex flex-1 flex-col">
