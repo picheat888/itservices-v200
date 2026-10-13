@@ -7,6 +7,7 @@ use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\Settings\WriteoffReason;
@@ -364,6 +365,21 @@ class AssetWriteoffReportTest extends TestCase
         $this->actingAs($this->userWith(['contracts.view']))->getJson('/api/reports/assets/writeoffs/breakdown')->assertForbidden();
     }
 
+    public function test_excel_month_sheet_writes_months_in_the_date_setting(): void
+    {
+        Excel::fake();
+        $this->seedAssets();
+        AppSetting::put('date_era', 'be');
+
+        $this->actingAs($this->userWith(['assets.view']))
+            ->exportReport('/api/reports/r/assets.writeoffs/export?format=xlsx&'.self::RANGE)
+            ->assertAccepted();
+
+        $this->assertExportStored('Report_assets-writeoffs_2026-09-25.xlsx', function (TabularReportExport $export) {
+            return $export->sheets()[1]->array()[0][0] === 'ส.ค. 2569';
+        });
+    }
+
     public function test_excel_export_carries_months_reasons_categories_and_contracts_before_the_list(): void
     {
         Excel::fake();
@@ -386,7 +402,7 @@ class AssetWriteoffReportTest extends TestCase
                 && $sheets[3]->title() === 'แยกตามหมวดหมู่'
                 && $sheets[3]->array()[0] === ['แล็ปท็อป', 5, 2, 3, 38000.0, 2.3, 1, 1, 0, 0]
                 && $sheets[4]->title() === 'เครื่องเช่าตามสัญญา'
-                && $sheets[4]->array()[0] === ['CT-2026-901', 'Lease CT-2026-901', 'Lease Vendor', '2026-08-31', 3, 1, 1, 1, -25, 1, 'หมดสัญญาแล้ว ต้องตามคืน']
+                && $sheets[4]->array()[0] === ['CT-2026-901', 'Lease CT-2026-901', 'Lease Vendor', '31/08/2026', 3, 1, 1, 1, -25, 1, 'หมดสัญญาแล้ว ต้องตามคืน']
                 && in_array('สัญญา', $rows->headings(), true)
                 && in_array('ประกันตอนตัดจำหน่าย', $rows->headings(), true)
                 && in_array('Serial', $rows->headings(), true);

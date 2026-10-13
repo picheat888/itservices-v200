@@ -12,6 +12,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -33,8 +34,6 @@ class RequestOverviewReport extends TabularReport
         'hardware' => 'ฮาร์ดแวร์', 'software' => 'ซอฟต์แวร์', 'network' => 'เครือข่าย',
         'cctv' => 'กล้องวงจรปิด', 'telephone' => 'โทรศัพท์', 'other' => 'อื่น ๆ',
     ];
-
-    private const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
     /** Weeks the pending tile's line looks back over. */
     private const PENDING_WEEKS = 8;
@@ -497,9 +496,7 @@ class RequestOverviewReport extends TabularReport
     /** "2026-09" as "ก.ย. 2026" for the file. */
     private static function monthTh(string $month): string
     {
-        $at = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-
-        return self::MONTHS_TH[$at->month - 1].' '.$at->year;
+        return DateDisplay::monthYear($month);
     }
 
     /**

@@ -13,8 +13,8 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -51,8 +51,6 @@ class AssetTransferHistoryReport extends TabularReport
 
     /** A wait longer than this many days turns the "waiting now" tile red. */
     private const LONG_WAIT_DAYS = 7;
-
-    private const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
     public function key(): string
     {
@@ -446,9 +444,7 @@ class AssetTransferHistoryReport extends TabularReport
     /** "2026-09" as "ก.ย. 2026" for the file. */
     private static function monthTh(string $month): string
     {
-        $at = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-
-        return self::MONTHS_TH[$at->month - 1].' '.$at->year;
+        return DateDisplay::monthYear($month);
     }
 
     /**
@@ -501,7 +497,7 @@ class AssetTransferHistoryReport extends TabularReport
                     $w['code'], $w['brand'], $w['model'], $w['status'] === 'pending_acceptance' ? 'รอกดรับ' : 'รอรับคืน',
                     $w['holder'] ? "{$w['holder']['name']} ({$w['holder']['code']})" : $w['owner_label'],
                     isset($w['holder']['department']) ? $name($w['holder']['department']['name'], $w['holder']['department']['name_th'], '') : null,
-                    $w['since'],
+                    DateDisplay::cellDateTime($w['since']),
                     match ($w['cause']) {
                         'handover' => 'ส่งมอบ', 'request' => 'แจ้งคืน', 'resign' => 'ลาออก', default => null,
                     },
@@ -511,7 +507,7 @@ class AssetTransferHistoryReport extends TabularReport
             [
                 'title' => 'อัปเดตสถานที่',
                 'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ'],
-                'rows' => array_map(fn (array $r) => [$r['at'], $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by']], $b['relocations']),
+                'rows' => array_map(fn (array $r) => [DateDisplay::cellDateTime($r['at']), $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by']], $b['relocations']),
             ],
         ];
     }

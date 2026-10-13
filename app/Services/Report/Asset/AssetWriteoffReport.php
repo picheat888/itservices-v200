@@ -12,8 +12,8 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -64,8 +64,6 @@ class AssetWriteoffReport extends TabularReport
     private const ENDING_SOON_DAYS = 90;
 
     /** Thai month abbreviations for the file's month rows ("ก.ย. 2026"). */
-    private const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-
     private const NO_CATEGORY = ['name' => 'No category', 'name_th' => 'ไม่ระบุหมวดหมู่'];
 
     public function key(): string
@@ -486,9 +484,7 @@ class AssetWriteoffReport extends TabularReport
     /** "2026-09" as "ก.ย. 2026" for the file. */
     private static function monthTh(string $month): string
     {
-        $at = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-
-        return self::MONTHS_TH[$at->month - 1].' '.$at->year;
+        return DateDisplay::monthYear($month);
     }
 
     /**
@@ -539,7 +535,7 @@ class AssetWriteoffReport extends TabularReport
                 'headings' => ['สัญญา', 'ชื่อสัญญา', 'ผู้ให้เช่า', 'สิ้นสุดสัญญา', 'เครื่องในสัญญา', 'คืนแล้ว', 'ตัดด้วยเหตุผลอื่น', 'ยังไม่คืน', 'เหลือ (วัน)', 'คืนก่อนกำหนด', 'สถานะ'],
                 'rows' => array_map(
                     fn (array $c) => [
-                        $c['code'], $c['name'], $c['vendor'], $c['end_date'], $c['units'], $c['returned'], $c['written_off_other'],
+                        $c['code'], $c['name'], $c['vendor'], DateDisplay::cellDate($c['end_date']), $c['units'], $c['returned'], $c['written_off_other'],
                         $c['still_out'], $c['days_left'], $c['returned_early'], self::CONTRACT_FLAG_TH[$c['flag']],
                     ],
                     $breakdown['contracts'],

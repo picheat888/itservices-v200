@@ -11,8 +11,8 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -52,8 +52,6 @@ class WarrantyExpiringReport extends TabularReport
         'expired' => 'หมดแล้ว', 'd30' => 'ภายใน 30 วัน', 'd90' => '31-90 วัน', 'd180' => '91-180 วัน',
         'd365' => '181-365 วัน', 'later' => 'เกิน 1 ปี',
     ];
-
-    private const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
     private const NO_CATEGORY_TH = 'ไม่ระบุหมวดหมู่';
 
@@ -401,9 +399,7 @@ class WarrantyExpiringReport extends TabularReport
     /** "2026-10" as "ต.ค. 2026" for the file. */
     private static function monthTh(string $month): string
     {
-        $at = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-
-        return self::MONTHS_TH[$at->month - 1].' '.$at->year;
+        return DateDisplay::monthYear($month);
     }
 
     /**

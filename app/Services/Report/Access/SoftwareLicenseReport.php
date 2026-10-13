@@ -12,6 +12,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -436,7 +437,7 @@ class SoftwareLicenseReport extends TabularReport
                 'title' => 'เรียกคืนได้จากผู้ลาออก',
                 'headings' => ['รหัสพนักงาน', 'ชื่อ', 'แผนก', 'วันสุดท้าย', 'ลาออกมาแล้ว (วัน)', 'ซอฟต์แวร์ที่ยังถือ'],
                 'rows' => array_map(fn (array $p) => [
-                    $p['code'], $p['name'], $dept($p['department']), $p['last_day'], $p['days'], implode(', ', array_column($p['grants'], 'name')),
+                    $p['code'], $p['name'], $dept($p['department']), DateDisplay::cellDate($p['last_day']), $p['days'], implode(', ', array_column($p['grants'], 'name')),
                 ], $b['leavers']),
             ],
             [
@@ -444,7 +445,7 @@ class SoftwareLicenseReport extends TabularReport
                 'headings' => ['เลขที่คำขอ', 'ซอฟต์แวร์', 'ผู้ขอ', 'แผนก', 'สถานะ', 'ขอเมื่อ', 'รอมาแล้ว (วัน)', 'License ที่เหลือ'],
                 'rows' => array_map(fn (array $r) => [
                     $r['reference'], $r['software']['name'], $r['requester']['name'], $dept($r['requester']['department']),
-                    $r['status'] === 'approved' ? 'อนุมัติแล้ว รอติดตั้ง' : 'รออนุมัติ', $r['created_at'], $r['days'], $r['seats_left'],
+                    $r['status'] === 'approved' ? 'อนุมัติแล้ว รอติดตั้ง' : 'รออนุมัติ', DateDisplay::cellDateTime($r['created_at']), $r['days'], $r['seats_left'],
                 ], $b['requests']),
             ],
         ];

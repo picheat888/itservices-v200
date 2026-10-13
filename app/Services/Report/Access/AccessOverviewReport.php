@@ -10,6 +10,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -29,8 +30,6 @@ class AccessOverviewReport extends TabularReport
     ];
 
     private const STATUS_TH = ['active' => 'ใช้งาน', 'cross' => 'ใช้งาน (ข้ามแผนก)', 'left' => 'ผู้ลาออกยังถือ', 'revoked' => 'ถอนแล้ว'];
-
-    private const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
     public function key(): string
     {
@@ -412,9 +411,7 @@ class AccessOverviewReport extends TabularReport
     /** "2026-09" as "ก.ย. 2026" for the file. */
     private static function monthTh(string $month): string
     {
-        $at = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-
-        return self::MONTHS_TH[$at->month - 1].' '.$at->year;
+        return DateDisplay::monthYear($month);
     }
 
     /**
@@ -453,7 +450,7 @@ class AccessOverviewReport extends TabularReport
                 'title' => 'ผู้ลาออกที่ยังถือสิทธิ์',
                 'headings' => ['รหัสพนักงาน', 'ชื่อ', 'แผนก', 'วันสุดท้าย', 'ลาออกมาแล้ว (วัน)', 'จำนวนสิทธิ์', 'สิทธิ์ที่ยังถือ'],
                 'rows' => array_map(fn (array $p) => [
-                    $p['code'], $p['name'], $name($p['department'], '—'), $p['last_day'], $p['days'], count($p['grants']),
+                    $p['code'], $p['name'], $name($p['department'], '—'), DateDisplay::cellDate($p['last_day']), $p['days'], count($p['grants']),
                     implode(', ', array_map(fn (array $g) => "{$g['name']} ({$g['code']})", $p['grants'])),
                 ], $b['leavers']['people']),
             ],
