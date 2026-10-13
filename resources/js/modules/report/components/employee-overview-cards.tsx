@@ -197,12 +197,12 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
                 {t('rep_eo_flow_working')}
             </span>
             <span>
-                <b className="text-emerald-700 dark:text-emerald-400">+</b>
-                {t('rep_eo_flow_in')} <b className="text-foreground font-mono">{count(joinedTotal, lang)}</b>
+                <b className="text-emerald-700 dark:text-emerald-400">+</b> {t('rep_eo_flow_in')}{' '}
+                <b className="text-foreground font-mono">{count(joinedTotal, lang)}</b>
             </span>
             <span>
-                <b className="text-red-700 dark:text-red-400">−</b>
-                {t('rep_eo_flow_out')} <b className="text-foreground font-mono">{count(leftTotal, lang)}</b>
+                <b className="text-red-700 dark:text-red-400">−</b> {t('rep_eo_flow_out')}{' '}
+                <b className="text-foreground font-mono">{count(leftTotal, lang)}</b>
             </span>
         </span>
     );
