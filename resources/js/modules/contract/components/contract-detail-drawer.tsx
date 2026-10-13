@@ -3,6 +3,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -60,6 +61,7 @@ export function ContractDetailDrawer({
     canDelete: boolean;
 }) {
     const t = useT();
+    const fmt = useDateFormat();
     const confirm = useConfirm();
     const { expire, reactivate, remove } = useContractMutations();
     const [tab, setTab] = useState<TabId>('overview');
@@ -212,11 +214,11 @@ export function ContractDetailDrawer({
                                 <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
                                 <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
                                     <div>
-                                        {t('contract_created')}: {c.created_at ?? '—'}
+                                        {t('contract_created')}: {fmt.date(c.created_at)}
                                         {c.created_by_name && ` ${t('contract_by')} ${c.created_by_name}`}
                                     </div>
                                     <div>
-                                        {t('contract_updated')}: {c.updated_at ?? '—'}
+                                        {t('contract_updated')}: {fmt.date(c.updated_at)}
                                         {c.updated_by_name && ` ${t('contract_by')} ${c.updated_by_name}`}
                                     </div>
                                 </div>
@@ -259,8 +261,8 @@ export function ContractDetailDrawer({
                                 <div>
                                     <SectionLabel>{t('contract_section_term')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                        <KV label={t('contract_start')} value={c.start} mono />
-                                        <KV label={t('contract_end')} value={c.end} mono />
+                                        <KV label={t('contract_start')} value={fmt.date(c.start)} mono />
+                                        <KV label={t('contract_end')} value={fmt.date(c.end)} mono />
                                         <KV
                                             label={t('contract_duration')}
                                             value={(() => {
@@ -287,12 +289,14 @@ export function ContractDetailDrawer({
                                     <div>
                                         <SectionLabel>{t('contract_section_closure')}</SectionLabel>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                            {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />}
+                                            {cancelled && c.cancelled_at && (
+                                                <KV label={t('contract_cancelled_on')} value={fmt.date(c.cancelled_at)} mono />
+                                            )}
                                             {cancelled && c.cancelled_by_name && (
                                                 <KV label={t('contract_cancelled_by')} value={c.cancelled_by_name} />
                                             )}
                                             {c.status === 'expired' && c.expired_at && (
-                                                <KV label={t('contract_expired_on')} value={c.expired_at} mono />
+                                                <KV label={t('contract_expired_on')} value={fmt.date(c.expired_at)} mono />
                                             )}
                                             {cancelled && c.cancel_reason && (
                                                 <div className="sm:col-span-3">
