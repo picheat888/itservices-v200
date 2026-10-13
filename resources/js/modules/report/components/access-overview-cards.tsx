@@ -564,7 +564,10 @@ export function GroupRow({
         <li className="border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b px-5 py-2.5 last:border-b-0">
             <span className="min-w-0 truncate text-sm">{head}</span>
             <span className="row-span-2">{side}</span>
-            <span className="text-muted-foreground flex min-w-0 gap-x-3 text-xs" title={parts.filter((p) => typeof p === 'string').join('\n')}>
+            <span
+                className="text-muted-foreground flex min-w-0 flex-wrap gap-x-3 text-xs"
+                title={parts.filter((p) => typeof p === 'string').join('\n')}
+            >
                 {parts.map((part, i) => (
                     <span key={typeof part === 'string' ? part : i} className="truncate">
                         {part}

@@ -522,7 +522,7 @@ function WaitingRow({ w }: { w: Waiting }) {
                     {late && <span className="sr-only">{t('rep_th_wait_long')}</span>}
                 </StatusBadge>
             </span>
-            <span className="text-muted-foreground flex min-w-0 gap-x-3 text-xs" title={who.join('\n')}>
+            <span className="text-muted-foreground flex min-w-0 flex-wrap gap-x-3 text-xs" title={who.join('\n')}>
                 {who.map((part) => (
                     <span key={part} className="truncate">
                         {part}

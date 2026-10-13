@@ -41,9 +41,8 @@ export default [
         files: ['resources/js/**/*.{ts,tsx}'],
         ignores: ['resources/js/shared/lib/datetime.ts'],
         rules: {
-            // Phase 2 of the date-format work flips this to 'error'.
             'no-restricted-syntax': [
-                'warn',
+                'error',
                 {
                     selector: "NewExpression[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
                     message: 'Format dates with useDateFormat() from @/shared/hooks/use-date-format.',
