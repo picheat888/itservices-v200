@@ -123,7 +123,7 @@ final class OpenItems
         }
 
         $employees = Employee::query()
-            ->with(['department:id,name,name_th', 'position:id,title', 'manager:id,first_name,last_name,first_name_th,last_name_th,last_day'])
+            ->with(['department:id,name,name_th', 'section:id,name,name_th', 'position:id,title', 'manager:id,first_name,last_name,first_name_th,last_name_th,last_day'])
             ->whereIn('id', $rows->pluck('employee_id')->filter()->unique()->all())->get()->keyBy('id');
         $refs = fn (string $grp) => $rows->where('grp', $grp)->pluck('ref_id')->filter()->unique()->all();
         $subjects = [
@@ -141,7 +141,7 @@ final class OpenItems
     /**
      * One person as the cards list them.
      *
-     * @return array{id: int, code: string, name: string, name_th: ?string, department: array{name: string, name_th: ?string}|null, position: ?string, last_day: ?string, days_out: ?int, resigned: bool}
+     * @return array{id: int, code: string, name: string, name_th: ?string, department: array{name: string, name_th: ?string}|null, section: array{name: string, name_th: ?string}|null, position: ?string, last_day: ?string, days_out: ?int, resigned: bool}
      */
     public static function person(Employee $employee): array
     {
@@ -151,6 +151,7 @@ final class OpenItems
             'name' => $employee->name,
             'name_th' => $employee->name_th,
             'department' => AccessFacts::department($employee),
+            'section' => $employee->section ? ['name' => $employee->section->name, 'name_th' => $employee->section->name_th] : null,
             'position' => $employee->position?->title,
             'last_day' => $employee->last_day?->toDateString(),
             'days_out' => $employee->last_day ? AccessFacts::daysOut($employee) : null,

@@ -988,3 +988,74 @@ export interface TabularRows {
     summary: SummaryItem[];
     charts: TabularChart[];
 }
+
+/** One person in an open-items card (EmployeeOpenItemsReport::breakdown). */
+export interface OpenItemsPerson {
+    id: number;
+    code: string;
+    name: string;
+    name_th: string | null;
+    department: { name: string; name_th: string | null } | null;
+    section: { name: string; name_th: string | null } | null;
+    position: string | null;
+    last_day: string | null;
+    /** Days since the last day; negative while it is still to come. */
+    days_out: number | null;
+    resigned: boolean;
+}
+
+export type OpenItemsGroup = 'asset' | 'access' | 'acct' | 'data';
+export type OpenItemsAccountKind = 'left' | 'must_change' | 'expired';
+export type DataIssueKey = 'mgr_left' | 'no_mgr' | 'no_email' | 'no_dept' | 'no_sec' | 'no_pos' | 'bad_dates';
+
+/** What the "สรุปเรื่องค้างของพนักงาน" page draws; `acct` is present only for a viewer with employees.set_credentials. */
+export interface EmployeeOpenItemsBreakdown {
+    /** The groups this viewer may see, in card order. */
+    groups: OpenItemsGroup[];
+    people_total: number;
+    asset: {
+        people: number;
+        pieces: number;
+        oldest_days: number | null;
+        rows: (OpenItemsPerson & {
+            assets: {
+                id: number;
+                code: string | null;
+                category: { name: string; name_th: string | null } | null;
+                model: string | null;
+                status: string;
+            }[];
+        })[];
+    };
+    access: {
+        people: number;
+        grants: number;
+        oldest_days: number | null;
+        rows: (OpenItemsPerson & { grants: { type: AccessType; name: string }[] })[];
+    };
+    acct?: {
+        accounts: number;
+        by_kind: Record<OpenItemsAccountKind, number>;
+        expiry_days: number;
+        rows: {
+            user_id: number;
+            username: string;
+            kind: OpenItemsAccountKind;
+            role: string | null;
+            password_changed_at: string | null;
+            employee: OpenItemsPerson | null;
+        }[];
+    };
+    data: {
+        people: number;
+        by_issue: Record<DataIssueKey, number>;
+        rows: (OpenItemsPerson & {
+            issues: {
+                key: DataIssueKey;
+                manager?: { name: string | null; name_th: string | null; last_day: string | null };
+                joined_at?: string | null;
+                last_day?: string | null;
+            }[];
+        })[];
+    };
+}
