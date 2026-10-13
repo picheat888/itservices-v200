@@ -50,6 +50,12 @@ const TREND = {
 
 type Note = NonNullable<SummaryItem['note']>;
 
+/** A tile line's colour: its own tone when it says one ("bad" = red), else its trend's. */
+const lineTone = (item: SummaryItem) =>
+    item.chart?.kind === 'line' && item.chart.tone
+        ? TREND[item.chart.tone === 'bad' ? 'down' : 'up'].line
+        : TREND[item.note?.trend?.direction ?? 'even'].line;
+
 const trendText = (t: (key: string) => string, trend: NonNullable<Note['trend']>) =>
     Object.entries(trend.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), t(trend.label_key));
 
@@ -140,9 +146,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                 const share = item.share ?? null;
                 const split = item.split ?? [];
                 // A tiny chart at the footer's right, as the sparkline beside a trend note.
-                const chart = item.chart ? (
-                    <TileChart chart={item.chart} title={t(item.label_key)} lineClass={TREND[item.note?.trend?.direction ?? 'even'].line} />
-                ) : null;
+                const chart = item.chart ? <TileChart chart={item.chart} title={t(item.label_key)} lineClass={lineTone(item)} /> : null;
                 const splitTotal = split.reduce((sum, part) => sum + part.value, 0);
                 // An hours tile splits into hours, the unit outside the monospace number; other splits are counts.
                 const partNumber = (value: number, counts = false) =>

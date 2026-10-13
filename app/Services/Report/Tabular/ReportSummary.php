@@ -38,7 +38,7 @@ final class ReportSummary
         public readonly ?array $note = null,
         public readonly ?int $goal = null,
         public readonly ?string $attention = null,
-        /** @var array{kind: 'line', points: list<int|float>, months: list<string>}|array{kind: 'columns', items: list<array{key: string, label_key: string, short: string, tone: string, value: int}>}|null */
+        /** @var array{kind: 'line', points: list<int|float>, months: list<string>, tone?: 'good'|'bad'}|array{kind: 'columns', items: list<array{key: string, label_key: string, short: string, tone: string, value: int}>}|null */
         public readonly ?array $chart = null,
         public readonly ?int $progress = null,
     ) {}
