@@ -85,6 +85,33 @@ class TabularReportEngineTest extends TestCase
         $this->assertSame(1, $summary['within_30']['value']);
     }
 
+    public function test_a_page_turn_can_skip_the_numbers_which_come_once_from_summary(): void
+    {
+        $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
+        $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-12-10']);
+        $user = $this->userWith(['contracts.view']);
+
+        $full = $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?type=hardware')->assertOk()->json();
+        $rowsOnly = $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?type=hardware&only_rows=1')->assertOk()->json();
+        $summary = $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/summary?type=hardware')->assertOk()->json('data');
+
+        $this->assertSame($full['data'], $rowsOnly['data']);
+        $this->assertSame($full['meta'], $rowsOnly['meta']);
+        $this->assertArrayNotHasKey('summary', $rowsOnly);
+        $this->assertArrayNotHasKey('charts', $rowsOnly);
+        $this->assertSame($full['summary'], $summary['summary']);
+        $this->assertSame($full['charts'], $summary['charts']);
+    }
+
+    public function test_summary_follows_the_report_gate_and_its_filter_rules(): void
+    {
+        $this->actingAs($this->userWith(['assets.view']))
+            ->getJson('/api/reports/r/contracts.expiring/summary')->assertForbidden();
+        $this->actingAs($this->userWith(['contracts.view']))
+            ->getJson('/api/reports/r/contracts.expiring/summary?within=45')
+            ->assertUnprocessable()->assertJsonValidationErrors('within');
+    }
+
     public function test_filters_narrow_and_validate(): void
     {
         $user = $this->userWith(['contracts.view']);

@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
-import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows } from '../hooks/use-reports';
+import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows, useTabularSummary } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
@@ -101,6 +101,8 @@ function TabularReportRows({
     const cardOnly = extras.cardOnlyFilters ?? [];
     const rowFilters = cardOnly.length > 0 ? Object.fromEntries(Object.entries(filters).filter(([name]) => !cardOnly.includes(name))) : filters;
     const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, rowFilters, page, perPage, true);
+    // The tiles and charts come once per filter set; a page turn fetches only the rows.
+    const headline = useTabularSummary(reportKey, rowFilters, !extras.hideSummary || hasCharts);
     const canOpen = useCanOpen();
     const rowsTitle = t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic');
     const rowsHead = extras.rowsHead?.({ filters, patch: onPatch }) ?? null;
@@ -109,8 +111,8 @@ function TabularReportRows({
         if (data) onTotalChange(data.meta.total);
     }, [data, onTotalChange]);
 
-    if (isError) {
-        return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError || headline.isError) {
+        return <ErrorCard message={errorMessageFor(t, error ?? headline.error)} />;
     }
 
     const columns: Column<Record<string, unknown> & { id: number; _links?: Record<string, string> }>[] = visibleColumns.map((column) => ({
@@ -129,12 +131,12 @@ function TabularReportRows({
     return (
         <div className="space-y-4">
             {!extras.hideSummary &&
-                (data ? (
-                    <SummaryStrip items={data.summary} />
+                (headline.data ? (
+                    <SummaryStrip items={headline.data.summary} />
                 ) : (
                     <KpiRowSkeleton count={extras.tiles ?? 4} className={summaryColumns(extras.tiles ?? 4)} />
                 ))}
-            {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
+            {headline.data ? headline.data.charts.length > 0 && <TabularCharts charts={headline.data.charts} /> : hasCharts && <ChartsSkeleton />}
             {extras.beforeTable?.({ filters, patch: onPatch })}
             {showsTable && (
                 <Card id="report-rows" className="scroll-mt-4 overflow-clip">
