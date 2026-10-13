@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { StatusBadge } from '@/shared/components/status-badge';
 import type { AssetTicket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Wrench } from 'lucide-react';
@@ -81,7 +82,7 @@ export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; 
         {
             key: 'created_at',
             header: t('asset_tk_date'),
-            render: (tk) => <span className="text-muted-foreground font-mono text-xs">{tk.created_at ?? '—'}</span>,
+            render: (tk) => <DateTimeCell value={tk.created_at} className="text-muted-foreground" />,
         },
         { key: 'assignee', header: t('asset_tk_assignee'), render: (tk) => <span className="text-sm">{tk.assignee_name ?? '—'}</span> },
     ];

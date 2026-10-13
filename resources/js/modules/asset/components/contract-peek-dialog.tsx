@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 import { type ContractLinkedAsset, type ContractType } from '@/shared/types';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
@@ -63,6 +64,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  */
 export function ContractPeekDialog({ assetId, onClose }: { assetId: number | null; onClose: () => void }) {
     const t = useT();
+    const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     const [tab, setTab] = useState<TabId>('overview');
 
@@ -185,10 +187,10 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                             <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
                             <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
                                 <div>
-                                    {t('contract_created')}: {c.created_at ?? '—'}
+                                    {t('contract_created')}: {fmt.date(c.created_at)}
                                 </div>
                                 <div>
-                                    {t('contract_updated')}: {c.updated_at ?? '—'}
+                                    {t('contract_updated')}: {fmt.date(c.updated_at)}
                                 </div>
                             </div>
                         </div>
@@ -233,8 +235,8 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                             <div>
                                 <SectionLabel>{t('contract_section_term')}</SectionLabel>
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                    <KV label={t('contract_start')} value={c.start} mono />
-                                    <KV label={t('contract_end')} value={c.end} mono />
+                                    <KV label={t('contract_start')} value={fmt.date(c.start)} mono />
+                                    <KV label={t('contract_end')} value={fmt.date(c.end)} mono />
                                     <KV
                                         label={t('contract_duration')}
                                         value={(() => {
@@ -257,8 +259,12 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                 <div>
                                     <SectionLabel>{t('contract_section_closure')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                        {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />}
-                                        {c.status === 'expired' && c.expired_at && <KV label={t('contract_expired_on')} value={c.expired_at} mono />}
+                                        {cancelled && c.cancelled_at && (
+                                            <KV label={t('contract_cancelled_on')} value={fmt.date(c.cancelled_at)} mono />
+                                        )}
+                                        {c.status === 'expired' && c.expired_at && (
+                                            <KV label={t('contract_expired_on')} value={fmt.date(c.expired_at)} mono />
+                                        )}
                                         {cancelled && c.cancel_reason && (
                                             <div className="sm:col-span-3">
                                                 <KV label={t('contract_cancel_reason')} value={c.cancel_reason} />
