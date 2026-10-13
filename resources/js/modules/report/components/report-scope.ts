@@ -12,18 +12,6 @@ const VIEW_KEYS = new Set(['by']);
 
 const isSet = (value: unknown) => value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
 
-/** "YYYY-MM-DD" as a local date (no timezone shift). */
-function parse(value: string): Date | null {
-    const [y, m, d] = value.split('-').map(Number);
-    return y && m && d ? new Date(y, m - 1, d) : null;
-}
-
-function locale(lang: string): string {
-    return lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB';
-}
-
-const format = (date: Date, lang: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale(lang), options).format(date);
-
 /** The shared short range in the system date setting, kept under its report name for the report's callers. */
 export function compactRange(fromValue: string, toValue: string, lang: string): string {
     return bindDateFormat(useUiStore.getState().dateConfig, lang).range(fromValue, toValue);
@@ -34,10 +22,7 @@ export function reportScope(filters: Record<string, unknown>, columnsCount: numb
     if (typeof filters.from === 'string' && typeof filters.to === 'string') {
         parts.push(compactRange(filters.from, filters.to, lang));
     } else if (typeof filters.as_of === 'string') {
-        const asOf = parse(filters.as_of);
-        parts.push(
-            t('rep_scope_as_of').replace('{date}', asOf ? format(asOf, lang, { day: 'numeric', month: 'short', year: 'numeric' }) : filters.as_of),
-        );
+        parts.push(t('rep_scope_as_of').replace('{date}', bindDateFormat(useUiStore.getState().dateConfig, lang).date(filters.as_of)));
     }
 
     const narrowed = Object.entries(filters).filter(([key, value]) => !DATE_KEYS.has(key) && !VIEW_KEYS.has(key) && isSet(value)).length;

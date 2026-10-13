@@ -309,6 +309,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
 
 /** "จันทร์–ศุกร์" for a run of days, else each day named — ISO weekdays (1 = Monday). */
 function daysText(days: number[], lang: 'th' | 'en'): string {
+    // eslint-disable-next-line no-restricted-syntax -- weekday names, no date shown
     const name = (d: number) => new Intl.DateTimeFormat(lang === 'th' ? 'th-TH' : 'en-GB', { weekday: 'long' }).format(new Date(2024, 0, d)); // 1 Jan 2024 was a Monday
     const sorted = [...days].sort((a, b) => a - b);
     const run = sorted.length > 2 && sorted.every((d, i) => i === 0 || d === sorted[i - 1] + 1);

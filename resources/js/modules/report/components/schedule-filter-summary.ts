@@ -10,6 +10,8 @@
  *   own department / assignee options.
  * Used by pages/tickets-overview.tsx, components/tabular-report-view.tsx and scheduled-reports.tsx.
  */
+import { bindDateFormat } from '@/shared/lib/datetime';
+import { useUiStore } from '@/stores/ui';
 import type { TabularDefinition, TicketOverviewSummary } from '../types';
 import { compactRange } from './report-scope';
 import { categoryKey, priorityKey } from './ticket-labels';
@@ -32,10 +34,7 @@ function dateChips(filters: Record<string, unknown>, t: Translate, lang: string,
         return [{ label: t('rep_f_range'), value: compactRange(filters.from, filters.to, lang) }];
     }
     if (typeof filters.as_of === 'string' && asOfLabel) {
-        const [y, m, d] = filters.as_of.split('-').map(Number);
-        // One day, written as the ranges are (Gregorian years in both languages).
-        const day = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        return [{ label: asOfLabel, value: y && m && d ? day.format(new Date(y, m - 1, d)) : filters.as_of }];
+        return [{ label: asOfLabel, value: bindDateFormat(useUiStore.getState().dateConfig, lang).date(filters.as_of) }];
     }
     return [];
 }

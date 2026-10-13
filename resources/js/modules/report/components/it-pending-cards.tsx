@@ -2,6 +2,7 @@
 // popovers, who holds them by owner or type (the "แยกตาม" switch), and new joiners against their start day.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -61,25 +62,13 @@ const UNOWNED = 'font-semibold text-amber-600 dark:text-amber-400';
 
 function useFormat() {
     const lang = useUiStore((s) => s.lang);
-    const locale = lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB';
+    const fmt = useDateFormat();
     return {
         lang,
         number: (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US'),
         decimal: (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-        /** "2026-09-11" → "11 ก.ย. 26" (Gregorian years). */
-        date: (iso: string) => {
-            const [y, m, d] = iso.split('-').map(Number);
-            return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: '2-digit' }).format(new Date(y, m - 1, d));
-        },
-        moment: (at: number) =>
-            new Intl.DateTimeFormat(locale, {
-                day: 'numeric',
-                month: 'short',
-                year: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-            }).format(new Date(at)),
+        date: (iso: string) => fmt.date(iso),
+        moment: (at: number) => fmt.dateTime(new Date(at)),
     };
 }
 

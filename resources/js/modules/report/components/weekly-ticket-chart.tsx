@@ -11,6 +11,7 @@
  * Ticket & SLA page sets that height. With nothing to fill it keeps its own 640×240 shape.
  */
 import { useT } from '@/lang';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { TicketOverviewSummary } from '../types';
 
@@ -29,12 +30,6 @@ export function niceMax(value: number): number {
     const unit = step * 2;
     return Math.max(unit, Math.ceil(value / unit) * unit);
 }
-
-/** "YYYY-MM-DD" → "d/m". */
-const dayMonth = (iso: string) => {
-    const [, m, d] = iso.split('-');
-    return `${Number(d)}/${Number(m)}`;
-};
 
 /** The Sunday ending the week that starts on `iso` (a Monday), as "YYYY-MM-DD". */
 const weekEnd = (iso: string) => {
@@ -62,6 +57,7 @@ export function WeeklyTicketChart({ weeks, range }: ChartProps) {
 /** The drawing itself — only mounted with something to draw, so its box is always there to measure. */
 function WeeklyBars({ weeks, range }: ChartProps) {
     const t = useT();
+    const { dayMonth } = useDateFormat();
     const box = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
 

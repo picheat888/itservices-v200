@@ -21,6 +21,7 @@ import {
     monthDensity,
     monthLabel,
     monthLabelPlace,
+    reportDates,
     SCROLL_AFTER_MONTHS,
     SCROLL_MONTH_PX,
 } from './chart-parts';
@@ -67,12 +68,9 @@ const CODE_LINK =
 const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
 const label = (l: ChartLabel | null, lang: Lang) => (l ? (lang === 'th' && l.name_th) || l.name : null);
 
-/** "2026-09-23 09:00" → "23 ก.ย. 26" (Gregorian, as the rest of the app). */
+/** "2026-09-23 09:00" → the date in the system date setting. */
 export function shortDate(value: string, lang: Lang): string {
-    const [y, m, d] = value.slice(0, 10).split('-').map(Number);
-    return new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).format(
-        new Date(y, m - 1, d),
-    );
+    return reportDates(lang).date(value);
 }
 
 /** Hours as "29 ชม." under two days, else whole days — how long an acceptance or a wait took. */

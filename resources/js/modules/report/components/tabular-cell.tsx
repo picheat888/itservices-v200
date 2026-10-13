@@ -8,7 +8,9 @@
  * column declared with linkTo() opens its record when the reader may open that module.
  */
 import { useT } from '@/lang';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
@@ -52,6 +54,7 @@ export function TabularCell({ column, value, href }: { column: TabularColumnDef;
 
 function CellValue({ column, value }: { column: TabularColumnDef; value: unknown }) {
     const t = useT();
+    const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
 
     switch (column.type) {
@@ -73,8 +76,9 @@ function CellValue({ column, value }: { column: TabularColumnDef; value: unknown
                 <span className={cn('font-mono', Number(value) === 0 && ZERO)}>{value === null || value === undefined ? '—' : String(value)}</span>
             );
         case 'date':
+            return <span className="font-mono">{fmt.date(value as string | null)}</span>;
         case 'datetime':
-            return <span className="font-mono">{(value as string | null) ?? '—'}</span>;
+            return <DateTimeCell value={value as string | null} />;
         case 'days_left':
             return value === null || value === undefined ? <>—</> : <DaysLeftBadge value={value as number} />;
         case 'hours_left':
