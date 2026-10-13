@@ -17,6 +17,7 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\ReportCatalogue;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -64,7 +65,7 @@ class EmployeeOverviewReport extends TabularReport
 
     public function query(User $viewer, array $filters): Builder
     {
-        [$from, $to] = $this->range($filters);
+        [$from, $to] = $this->dayRange($filters);
         $event = fn (string $kind) => Employee::query()
             ->select('employees.*')
             ->selectRaw($kind === 'left' ? "'left' as movement_kind, last_day as movement_date" : "'joined' as movement_kind, joined_at as movement_date")
@@ -202,23 +203,25 @@ class EmployeeOverviewReport extends TabularReport
      */
     public function breakdown(User $viewer, array $filters): array
     {
-        return [...$this->facts($filters), 'can_open_access' => ReportCatalogue::allows($viewer, ReportCatalogue::ACCESS_OVERVIEW)];
+        return [...$this->facts($filters, true), 'can_open_access' => ReportCatalogue::allows($viewer, ReportCatalogue::ACCESS_OVERVIEW)];
     }
 
     /**
-     * Every count of the page from one load of the department's people.
+     * Every count of the page from one load of the department's people; the department table only
+     * when the cards ask ($withDepartments), since the tiles of every rows page do not need it.
      *
      * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    private function facts(array $filters): array
+    private function facts(array $filters, bool $withDepartments = false): array
     {
-        $cacheKey = json_encode([$filters['from'] ?? null, $filters['to'] ?? null, $filters['department_id'] ?? null, today()->toDateString()]);
+        $cacheKey = json_encode([$filters['from'] ?? null, $filters['to'] ?? null, $filters['department_id'] ?? null, today()->toDateString(), $withDepartments]);
         if (isset($this->facts[$cacheKey])) {
             return $this->facts[$cacheKey];
         }
 
-        [$from, $to] = array_map(fn (string $d) => Carbon::parse($d)->startOfDay(), $this->range($filters));
+        [$from, $to] = $this->dayRange($filters);
+        $to = $to->copy()->startOfDay();
         $today = today();
         // The headcount day: the range end, or today while the end is still ahead.
         $asOf = $to->gt($today) ? ($from->gt($today) ? $from->copy() : $today->copy()) : $to->copy();
@@ -254,10 +257,10 @@ class EmployeeOverviewReport extends TabularReport
                 ...$this->leaversByBucket($leavers, $from, $to),
             ],
             'prep' => $this->prep($joiners, $today),
-            'holding' => $this->holding($departmentId, $today),
+            'holding' => $this->holding($departmentId),
             'bucket' => $chart['bucket'],
             'points' => $chart['points'],
-            ...$this->departments($people, $departmentId, $from, $to, $asOf),
+            ...($withDepartments ? $this->departments($people, $departmentId, $from, $to, $asOf) : []),
         ];
     }
 
@@ -311,6 +314,37 @@ class EmployeeOverviewReport extends TabularReport
     private function workingBefore(Employee $e, Carbon $day): bool
     {
         return $e->joined_at !== null && $e->joined_at->lt($day) && ! $this->goneBy($e, $day);
+    }
+
+    /**
+     * working() / workingBefore() counted over everyone at once, each person's dates read once as
+     * 'Y-m-d' strings, so the chart can count every point without a date object per person.
+     *
+     * @param  Collection<int, Employee>  $people
+     * @return Closure(string, bool=): int
+     */
+    private function headcounter(Collection $people): Closure
+    {
+        $spans = $people->map(fn (Employee $e) => [
+            $e->joined_at?->toDateString(),
+            // Resigned: the last day, '' when none is recorded (gone on any day); else never gone.
+            $e->status === EmployeeStatus::Resigned ? ($e->last_day?->toDateString() ?? '') : null,
+        ])->all();
+
+        return function (string $day, bool $before = false) use ($spans): int {
+            $count = 0;
+            foreach ($spans as [$joined, $last]) {
+                if ($joined === null || ($before ? $joined >= $day : $joined > $day)) {
+                    continue;
+                }
+                if ($last !== null && $last < $day) {
+                    continue;
+                }
+                $count++;
+            }
+
+            return $count;
+        };
     }
 
     private function goneBy(Employee $e, Carbon $day): bool
@@ -379,6 +413,7 @@ class EmployeeOverviewReport extends TabularReport
             ->sortBy([['at', 'asc'], ['kind', 'asc'], [fn (array $a, array $b) => strcmp($a['e']->code, $b['e']->code)]])
             ->values();
 
+        $headcount = $this->headcounter($people);
         $points = [];
         foreach ($buckets as $k => $b) {
             $firstIndex = max(0, $index($b['first']));
@@ -389,8 +424,8 @@ class EmployeeOverviewReport extends TabularReport
             $points[] = [
                 'start' => $b['first']->toDateString(),
                 'end' => $endDay->toDateString(),
-                'headcount' => $people->filter(fn (Employee $e) => $this->working($e, $endDay))->count(),
-                'base' => $people->filter(fn (Employee $e) => $firstIndex > 0 ? $this->working($e, $baseDay) : $this->workingBefore($e, $from))->count(),
+                'headcount' => $headcount($endDay->toDateString()),
+                'base' => $firstIndex > 0 ? $headcount($baseDay->toDateString()) : $headcount($from->toDateString(), true),
                 'joined' => $in->where('kind', 'joined')->count(),
                 'left' => $in->where('kind', 'left')->count(),
                 'current' => $clip && $k === array_key_last($buckets),
@@ -462,7 +497,7 @@ class EmployeeOverviewReport extends TabularReport
      *
      * @return array<string, mixed>
      */
-    private function holding(?int $departmentId, Carbon $today): array
+    private function holding(?int $departmentId): array
     {
         $left = AccessFacts::whereLeft(Employee::query())
             ->with('department:id,name,name_th')
@@ -581,20 +616,5 @@ class EmployeeOverviewReport extends TabularReport
         }
 
         return ($total - (int) $employee->getAttribute('onboarding_open'))."/{$total}";
-    }
-
-    /**
-     * The range as whole-day datetime strings (works on DATE and SQLite timestamps), reversed reads right.
-     *
-     * @param  array<string, mixed>  $filters
-     * @return array{0: string, 1: string}
-     */
-    private function range(array $filters): array
-    {
-        $from = Carbon::parse($filters['from'])->toDateString();
-        $to = Carbon::parse($filters['to'])->toDateString();
-        [$first, $last] = $from <= $to ? [$from, $to] : [$to, $from];
-
-        return ["{$first} 00:00:00", "{$last} 23:59:59"];
     }
 }
