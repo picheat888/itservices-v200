@@ -23,19 +23,20 @@ test('no labels or no room still gives a usable step', () => {
 });
 
 test('a week cut by the range start counts from the range start', () => {
-    assert.deepEqual(weekDays('2026-09-14', '2026-09-17', '2026-10-21'), { start: '2026-09-17', end: '2026-09-20', days: '17–20' });
+    assert.deepEqual(weekDays('2026-09-13', '2026-09-17', '2026-10-21'), { start: '2026-09-17', end: '2026-09-19', days: '17–19' });
 });
 
-test('a whole week runs Monday to Sunday, across a month end too', () => {
-    assert.deepEqual(weekDays('2026-09-28', '2026-09-17', '2026-10-21'), { start: '2026-09-28', end: '2026-10-04', days: '28–4' });
+test('a whole week runs Sunday to Saturday, across a month end too', () => {
+    assert.deepEqual(weekDays('2026-09-27', '2026-09-17', '2026-10-21'), { start: '2026-09-27', end: '2026-10-03', days: '27–3' });
+    assert.deepEqual(weekDays('2026-10-11', '2026-10-11', '2026-10-17'), { start: '2026-10-11', end: '2026-10-17', days: '11–17' });
 });
 
 test('a week cut by the range end stops at the range end', () => {
-    assert.deepEqual(weekDays('2026-10-19', '2026-09-17', '2026-10-21'), { start: '2026-10-19', end: '2026-10-21', days: '19–21' });
+    assert.deepEqual(weekDays('2026-10-18', '2026-09-17', '2026-10-21'), { start: '2026-10-18', end: '2026-10-21', days: '18–21' });
 });
 
 test('a one-day week shows one day', () => {
-    assert.deepEqual(weekDays('2026-10-12', '2026-10-13', '2026-10-13'), { start: '2026-10-13', end: '2026-10-13', days: '13' });
+    assert.deepEqual(weekDays('2026-10-11', '2026-10-13', '2026-10-13'), { start: '2026-10-13', end: '2026-10-13', days: '13' });
 });
 
 test('labels that fit keep the full axis font', () => {

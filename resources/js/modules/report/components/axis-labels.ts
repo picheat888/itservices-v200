@@ -25,12 +25,12 @@ export function labelStep(labels: string[], slot: number, fontSize: number = AXI
 
 const isoDay = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-/** The days a weekly bar really counts — its Monday-to-Sunday week cut by the range — and their short "17–20" label. */
+/** The days a weekly bar really counts — its Sunday-to-Saturday week (as the date pickers show it) cut by the range — and their short "17–20" label. */
 export function weekDays(weekStart: string, from: string, to: string): { start: string; end: string; days: string } {
     const [y, m, d] = weekStart.split('-').map(Number);
-    const sunday = isoDay(new Date(y, m - 1, d + 6));
+    const saturday = isoDay(new Date(y, m - 1, d + 6));
     const start = weekStart < from ? from : weekStart;
-    const end = sunday > to ? to : sunday;
+    const end = saturday > to ? to : saturday;
     const day = (iso: string) => String(Number(iso.slice(8)));
     return { start, end, days: start === end ? day(start) : `${day(start)}–${day(end)}` };
 }

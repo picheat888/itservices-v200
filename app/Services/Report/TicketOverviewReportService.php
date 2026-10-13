@@ -28,7 +28,7 @@ use Illuminate\Support\Collection;
  * - Resolve hours: calendar hours opened → resolved; the mean (to one decimal) and P90 by
  *   nearest rank. (Median until 2026-10-02 — the user chose the mean.)
  * - Backlog: live tickets matching the filters, ignoring the date range.
- * - Weekly: Monday-start weeks; "closed" counts completions whose resolved_at is in range.
+ * - Weekly: Sunday-start weeks, as the date pickers show them; "closed" counts completions whose resolved_at is in range.
  * - Previous: the same-length window immediately before `from`.
  * - Staff (by_assignee): unlike the rest, counts what was closed (resolved_at) inside the
  *   range, and nothing outside it — merged in from the former "ผลงานเจ้าหน้าที่ IT".
@@ -280,7 +280,7 @@ class TicketOverviewReportService
     private function weekly(User $viewer, array $filters, Collection $population): array
     {
         $weeks = [];
-        for ($week = $filters['from']->startOfWeek(CarbonInterface::MONDAY); $week->lte($filters['to']); $week = $week->addWeek()) {
+        for ($week = $filters['from']->startOfWeek(CarbonInterface::SUNDAY); $week->lte($filters['to']); $week = $week->addWeek()) {
             $weeks[$week->toDateString()] = ['week_start' => $week->toDateString(), 'opened' => 0, 'closed' => 0, 'backlog' => 0];
         }
 
@@ -297,7 +297,7 @@ class TicketOverviewReportService
         }
 
         $now = CarbonImmutable::now();
-        $firstWeek = $filters['from']->startOfWeek(CarbonInterface::MONDAY);
+        $firstWeek = $filters['from']->startOfWeek(CarbonInterface::SUNDAY);
         $live = $this->scoped($viewer, $filters)
             ->where('created_at', '<=', $filters['to']->min($now))
             ->where(fn (Builder $q) => $q->whereNull('resolved_at')->orWhere('resolved_at', '>', $firstWeek))
@@ -308,7 +308,7 @@ class TicketOverviewReportService
 
                 continue;
             }
-            $moment = CarbonImmutable::parse($start)->endOfWeek(CarbonInterface::SUNDAY)->min($filters['to'])->min($now);
+            $moment = CarbonImmutable::parse($start)->endOfWeek(CarbonInterface::SATURDAY)->min($filters['to'])->min($now);
             $weeks[$start]['backlog'] = $live
                 ->filter(fn (Ticket $t) => $t->created_at <= $moment && ($t->resolved_at === null || $t->resolved_at > $moment))
                 ->count();
@@ -319,7 +319,7 @@ class TicketOverviewReportService
 
     private function weekOf(CarbonInterface $at): string
     {
-        return $at->toImmutable()->startOfWeek(CarbonInterface::MONDAY)->toDateString();
+        return $at->toImmutable()->startOfWeek(CarbonInterface::SUNDAY)->toDateString();
     }
 
     /**
