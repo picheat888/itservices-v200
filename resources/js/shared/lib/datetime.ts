@@ -78,9 +78,8 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
     const months = lang === 'th' ? names.th : names.en;
     const year = (y: number) => String(c.era === 'be' ? y + 543 : y);
 
-    const date = (value: DateValue) => {
-        const p = parse(value);
-        if (!p || p.d === null) return EMPTY;
+    // Formatters over already-parsed parts, so each public call parses its value once.
+    const datePart = (p: Parts & { d: number }) => {
         const d = pad(p.d);
         const m = pad(p.m);
         const y = year(p.y);
@@ -99,18 +98,26 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
                 return `${d}/${m}/${y}`;
         }
     };
+    const timePart = (h: number, i: number) =>
+        c.time === '12' ? `${h % 12 || 12}:${pad(i)} ${h < 12 ? names.am : names.pm}` : `${pad(h)}:${pad(i)}`;
+    const monthYearPart = (p: Parts) => `${months.short[p.m - 1]} ${year(p.y)}`;
+    const dayMonthPart = (p: Parts & { d: number }) => `${pad(p.d)} ${months.short[p.m - 1]}`;
+    const hasDay = (p: Parts | null): p is Parts & { d: number } => p !== null && p.d !== null;
+
+    const date = (value: DateValue) => {
+        const p = parse(value);
+        return hasDay(p) ? datePart(p) : EMPTY;
+    };
 
     const time = (value: DateValue) => {
         const p = parse(value);
-        if (!p || p.h === null || p.i === null) return EMPTY;
-        if (c.time === '12') return `${p.h % 12 || 12}:${pad(p.i)} ${p.h < 12 ? names.am : names.pm}`;
-        return `${pad(p.h)}:${pad(p.i)}`;
+        return p && p.h !== null && p.i !== null ? timePart(p.h, p.i) : EMPTY;
     };
 
     const dateTime = (value: DateValue) => {
         const p = parse(value);
-        if (!p || p.d === null) return EMPTY;
-        return p.h === null ? date(value) : `${date(value)} ${time(value)}`;
+        if (!hasDay(p)) return EMPTY;
+        return p.h === null || p.i === null ? datePart(p) : `${datePart(p)} ${timePart(p.h, p.i)}`;
     };
 
     const month = (value: DateValue) => {
@@ -120,21 +127,21 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
 
     const monthYear = (value: DateValue) => {
         const p = parse(value);
-        return p ? `${months.short[p.m - 1]} ${year(p.y)}` : EMPTY;
+        return p ? monthYearPart(p) : EMPTY;
     };
 
     const dayMonth = (value: DateValue) => {
         const p = parse(value);
-        return p && p.d !== null ? `${pad(p.d)} ${months.short[p.m - 1]}` : EMPTY;
+        return hasDay(p) ? dayMonthPart(p) : EMPTY;
     };
 
     const range = (from: DateValue, to: DateValue) => {
         const f = parse(from);
         const t = parse(to);
-        if (!f || !t || f.d === null || t.d === null) return EMPTY;
-        if (f.y === t.y && f.m === t.m && f.d === 1 && t.d === lastDay(t.y, t.m)) return monthYear(from);
-        if (f.y === t.y) return `${dayMonth(from)} – ${dayMonth(to)} ${year(t.y)}`;
-        return `${dayMonth(from)} ${year(f.y)} – ${dayMonth(to)} ${year(t.y)}`;
+        if (!hasDay(f) || !hasDay(t)) return EMPTY;
+        if (f.y === t.y && f.m === t.m && f.d === 1 && t.d === lastDay(t.y, t.m)) return monthYearPart(f);
+        if (f.y === t.y) return `${dayMonthPart(f)} – ${dayMonthPart(t)} ${year(t.y)}`;
+        return `${dayMonthPart(f)} ${year(f.y)} – ${dayMonthPart(t)} ${year(t.y)}`;
     };
 
     return { date, dateTime, time, monthYear, month, dayMonth, range, year };

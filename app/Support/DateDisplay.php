@@ -55,39 +55,16 @@ class DateDisplay
     public static function date(CarbonInterface|string|null $value, ?array $config = null, string $lang = 'th'): string
     {
         $p = self::parse($value);
-        if ($p === null || $p['d'] === null) {
-            return self::EMPTY;
-        }
-        $c = self::resolve($config);
-        $d = self::pad($p['d']);
-        $m = self::pad($p['m']);
-        $y = self::eraYear($p['y'], $c['era']);
 
-        return match ($c['format']) {
-            'dmy_dash' => "{$d}-{$m}-{$y}",
-            'ymd_slash' => "{$y}/{$m}/{$d}",
-            'ymd_dash' => "{$y}-{$m}-{$d}",
-            'd_mon_y' => "{$d} ".self::monthName($p['m'], $lang, 'short')." {$y}",
-            'd_month_y' => "{$d} ".self::monthName($p['m'], $lang, 'long')." {$y}",
-            default => "{$d}/{$m}/{$y}",
-        };
+        return $p === null || $p['d'] === null ? self::EMPTY : self::datePart($p, self::resolve($config), $lang);
     }
 
     /** @param  array<string, mixed>|null  $config */
     public static function time(CarbonInterface|string|null $value, ?array $config = null, string $lang = 'th'): string
     {
         $p = self::parse($value);
-        if ($p === null || $p['h'] === null || $p['i'] === null) {
-            return self::EMPTY;
-        }
-        if (self::resolve($config)['time'] === '12') {
-            $hour = $p['h'] % 12 ?: 12;
-            $suffix = $p['h'] < 12 ? self::names()['am'] : self::names()['pm'];
 
-            return "{$hour}:".self::pad($p['i'])." {$suffix}";
-        }
-
-        return self::pad($p['h']).':'.self::pad($p['i']);
+        return $p === null || $p['h'] === null || $p['i'] === null ? self::EMPTY : self::timePart($p['h'], $p['i'], self::resolve($config));
     }
 
     /** @param  array<string, mixed>|null  $config */
@@ -97,9 +74,10 @@ class DateDisplay
         if ($p === null || $p['d'] === null) {
             return self::EMPTY;
         }
-        $date = self::date($value, $config, $lang);
+        $c = self::resolve($config);
+        $date = self::datePart($p, $c, $lang);
 
-        return $p['h'] === null ? $date : $date.' '.self::time($value, $config, $lang);
+        return $p['h'] === null || $p['i'] === null ? $date : $date.' '.self::timePart($p['h'], $p['i'], $c);
     }
 
     /** @param  array<string, mixed>|null  $config */
@@ -114,22 +92,16 @@ class DateDisplay
     public static function monthYear(CarbonInterface|string|null $value, ?array $config = null, string $lang = 'th'): string
     {
         $p = self::parse($value);
-        if ($p === null) {
-            return self::EMPTY;
-        }
 
-        return self::monthName($p['m'], $lang, 'short').' '.self::eraYear($p['y'], self::resolve($config)['era']);
+        return $p === null ? self::EMPTY : self::monthYearPart($p, self::resolve($config), $lang);
     }
 
     /** @param  array<string, mixed>|null  $config */
     public static function dayMonth(CarbonInterface|string|null $value, ?array $config = null, string $lang = 'th'): string
     {
         $p = self::parse($value);
-        if ($p === null || $p['d'] === null) {
-            return self::EMPTY;
-        }
 
-        return self::pad($p['d']).' '.self::monthName($p['m'], $lang, 'short');
+        return $p === null || $p['d'] === null ? self::EMPTY : self::dayMonthPart($p, $lang);
     }
 
     /** @param  array<string, mixed>|null  $config */
@@ -142,19 +114,66 @@ class DateDisplay
         }
         $c = self::resolve($config);
         if ($f['y'] === $t['y'] && $f['m'] === $t['m'] && $f['d'] === 1 && $t['d'] === self::lastDay($t['y'], $t['m'])) {
-            return self::monthYear($from, $c, $lang);
+            return self::monthYearPart($f, $c, $lang);
         }
         if ($f['y'] === $t['y']) {
-            return self::dayMonth($from, $c, $lang).' – '.self::dayMonth($to, $c, $lang).' '.self::eraYear($t['y'], $c['era']);
+            return self::dayMonthPart($f, $lang).' – '.self::dayMonthPart($t, $lang).' '.self::eraYear($t['y'], $c['era']);
         }
 
-        return self::dayMonth($from, $c, $lang).' '.self::eraYear($f['y'], $c['era']).' – '.self::dayMonth($to, $c, $lang).' '.self::eraYear($t['y'], $c['era']);
+        return self::dayMonthPart($f, $lang).' '.self::eraYear($f['y'], $c['era']).' – '.self::dayMonthPart($t, $lang).' '.self::eraYear($t['y'], $c['era']);
     }
 
     /** @param  array<string, mixed>|null  $config */
     public static function year(int $year, ?array $config = null, string $lang = 'th'): string
     {
         return self::eraYear($year, self::resolve($config)['era']);
+    }
+
+    /**
+     * @param  array{y: int, m: int, d: int|null, h: int|null, i: int|null}  $p
+     * @param  array{format: string, era: string, time: string}  $c
+     */
+    private static function datePart(array $p, array $c, string $lang): string
+    {
+        $d = self::pad((int) $p['d']);
+        $m = self::pad($p['m']);
+        $y = self::eraYear($p['y'], $c['era']);
+
+        return match ($c['format']) {
+            'dmy_dash' => "{$d}-{$m}-{$y}",
+            'ymd_slash' => "{$y}/{$m}/{$d}",
+            'ymd_dash' => "{$y}-{$m}-{$d}",
+            'd_mon_y' => "{$d} ".self::monthName($p['m'], $lang, 'short')." {$y}",
+            'd_month_y' => "{$d} ".self::monthName($p['m'], $lang, 'long')." {$y}",
+            default => "{$d}/{$m}/{$y}",
+        };
+    }
+
+    /** @param  array{format: string, era: string, time: string}  $c */
+    private static function timePart(int $hour, int $minute, array $c): string
+    {
+        if ($c['time'] === '12') {
+            $suffix = $hour < 12 ? self::names()['am'] : self::names()['pm'];
+
+            return ($hour % 12 ?: 12).':'.self::pad($minute)." {$suffix}";
+        }
+
+        return self::pad($hour).':'.self::pad($minute);
+    }
+
+    /**
+     * @param  array{y: int, m: int, d: int|null, h: int|null, i: int|null}  $p
+     * @param  array{format: string, era: string, time: string}  $c
+     */
+    private static function monthYearPart(array $p, array $c, string $lang): string
+    {
+        return self::monthName($p['m'], $lang, 'short').' '.self::eraYear($p['y'], $c['era']);
+    }
+
+    /** @param  array{y: int, m: int, d: int|null, h: int|null, i: int|null}  $p */
+    private static function dayMonthPart(array $p, string $lang): string
+    {
+        return self::pad((int) $p['d']).' '.self::monthName($p['m'], $lang, 'short');
     }
 
     /**
