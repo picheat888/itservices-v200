@@ -10,6 +10,7 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Services\Report\TicketLabels;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -407,11 +408,11 @@ class ItPendingRequestReport extends TabularReport
             }
             $status = self::STATUS_TH[$request['status']] ?? $request['status'];
 
-            return $request['completed_on'] ? "{$request['reference']} {$status} {$request['completed_on']}" : "{$request['reference']} {$status}";
+            return $request['completed_on'] ? "{$request['reference']} {$status} ".DateDisplay::date($request['completed_on']) : "{$request['reference']} {$status}";
         };
         $line = fn (array $row, string $result) => [
             $row['code'], $row['name'], $row['department'] ? ($row['department']['name_th'] ?: $row['department']['name']) : null,
-            $row['joined_at'], $result, ...array_map(fn (string $t) => $cell($row, $t), $readiness['types']),
+            DateDisplay::cellDate($row['joined_at']), $result, ...array_map(fn (string $t) => $cell($row, $t), $readiness['types']),
         ];
 
         return [
@@ -419,7 +420,7 @@ class ItPendingRequestReport extends TabularReport
             'headings' => ['รหัสพนักงาน', 'ชื่อ', 'แผนก', 'วันเริ่มงาน', 'ผล', ...array_map(fn (string $t) => $typeTh[$t], $readiness['types'])],
             'rows' => [
                 ...array_map(fn (array $row) => $line($row, $verdictTh[$row['verdict']].($row['verdict'] === 'late' ? " {$row['late_days']} วัน" : '')), $readiness['rows']),
-                ...array_map(fn (array $row) => $line($row, "ลาออกแล้ว ({$row['last_day']}) คำขอค้าง {$row['open']}"), $readiness['left_early']),
+                ...array_map(fn (array $row) => $line($row, 'ลาออกแล้ว ('.DateDisplay::date($row['last_day']).") คำขอค้าง {$row['open']}"), $readiness['left_early']),
             ],
         ];
     }

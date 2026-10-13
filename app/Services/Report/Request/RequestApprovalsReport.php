@@ -14,6 +14,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -496,7 +497,7 @@ class RequestApprovalsReport extends TabularReport
         $stuck = [];
         foreach ($b['stuck'] as $group => $rows) {
             foreach ($rows as $r) {
-                $stuck[] = [$why[$group], $r['reference'], $type($r['type']), $r['label'], $r['approver']['name'], $r['approver']['code'], $r['requester'], $r['became_current_at'], $r['days'], self::AGE_BAND_TH[$r['age_band']]];
+                $stuck[] = [$why[$group], $r['reference'], $type($r['type']), $r['label'], $r['approver']['name'], $r['approver']['code'], $r['requester'], DateDisplay::cellDateTime($r['became_current_at']), $r['days'], self::AGE_BAND_TH[$r['age_band']]];
             }
         }
 
@@ -518,7 +519,7 @@ class RequestApprovalsReport extends TabularReport
                 'headings' => ['เลขที่คำขอ', 'ประเภทคำขอ', 'ผล', 'หยุดที่', 'ใคร', 'เหตุผล', 'วันที่'],
                 'rows' => array_map(fn (array $r) => [
                     $r['reference'], $type($r['type']), self::OUTCOME_TH[$r['outcome']], $r['stop_label'] ?? 'ทีม IT', $r['decided_by'],
-                    $r['reason'] ?? 'ไม่ได้บันทึกเหตุผล', $r['at'],
+                    $r['reason'] ?? 'ไม่ได้บันทึกเหตุผล', DateDisplay::cellDateTime($r['at']),
                 ], $b['endings']['rows']),
             ],
             [
