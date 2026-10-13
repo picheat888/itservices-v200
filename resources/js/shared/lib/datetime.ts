@@ -1,65 +1,144 @@
-/**
- * Formats backend timestamps for display. The whole stack runs on local wall time
- * (fixed by APP_TIMEZONE in .env — single-site deployment): the API emits either
- * naive local strings ("YYYY-MM-DD HH:mm:ss") or ISO strings carrying the app
- * offset ("…T10:00:00+07:00"). In both cases the wall-time portion is already the
- * display value, so this slices instead of converting — neither the browser's
- * timezone nor any setting plays a part. Returns "YYYY-MM-DD HH:mm" (or date only).
- */
-export function formatDateTime(value: string | null | undefined, withTime = true): string {
-    if (!value) return '—';
-    // Drop a trailing zone designator; what remains is the local wall time.
-    const wall = value.replace(/(?:[zZ]|[+-]\d\d:?\d\d)$/, '');
-    const [datePart, timePart = ''] = wall.includes('T') ? wall.split('T') : wall.split(' ');
-    if (!withTime || !timePart) return datePart;
-    return `${datePart} ${timePart.slice(0, 5)}`;
+// Display text for dates and times, from the Settings → System date format (date_format, date_era, time_format).
+// Pure and dependency-free so Node can test it; App\Support\DateDisplay mirrors it via tests/Fixtures/date-format-cases.json.
+import names from './date-names.json' with { type: 'json' };
+
+export type DateFormat = 'dmy_slash' | 'dmy_dash' | 'ymd_slash' | 'ymd_dash' | 'd_mon_y' | 'd_month_y';
+export type DateEra = 'ce' | 'be';
+export type TimeFormat = '24' | '12';
+export interface DateConfig {
+    format: DateFormat;
+    era: DateEra;
+    time: TimeFormat;
+}
+export type DateValue = string | Date | null | undefined;
+
+export const DATE_FORMATS: readonly DateFormat[] = ['dmy_slash', 'dmy_dash', 'ymd_slash', 'ymd_dash', 'd_mon_y', 'd_month_y'];
+const ERAS: readonly DateEra[] = ['ce', 'be'];
+const TIMES: readonly TimeFormat[] = ['24', '12'];
+export const DEFAULT_DATE_CONFIG: DateConfig = { format: 'dmy_slash', era: 'ce', time: '24' };
+
+const EMPTY = '—';
+// YYYY-MM, YYYY-MM-DD, then an optional " HH:mm[:ss[.ffffff]]" or "THH:mm…" and an optional zone, which is ignored.
+const WALL = /^(\d{4})-(\d{2})(?:-(\d{2})(?:[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?(?:[zZ]|[+-]\d{2}:?\d{2})?)?$/;
+
+interface Parts {
+    y: number;
+    m: number;
+    d: number | null;
+    h: number | null;
+    i: number | null;
 }
 
-/**
- * A date-only value ("2026-10-04") as people read it: "4 ต.ค. 2026" / "4 Oct 2026" — Gregorian
- * years in both languages, as the report headers write their ranges. Parsed as a LOCAL date so
- * the day never shifts; anything that is not YYYY-MM-DD comes back unchanged.
- */
-export function formatDateShort(value: string, lang: string): string {
-    const [y, m, d] = value.split('-').map(Number);
-    if (!y || !m || !d) return value;
-    return new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-        new Date(y, m - 1, d),
-    );
+export interface DateFormatter {
+    date(value: DateValue): string;
+    dateTime(value: DateValue): string;
+    time(value: DateValue): string;
+    monthYear(value: DateValue): string;
+    month(value: DateValue): string;
+    dayMonth(value: DateValue): string;
+    range(from: DateValue, to: DateValue): string;
+    year(year: number): string;
 }
 
-/**
- * A from/to pair of date-only values, written short: a whole calendar month by its name
- * ("ก.ย. 2026"), a range in one year with the year once ("1 ก.ย. – 6 ต.ค. 2026"), else both
- * years ("1 ธ.ค. 2025 – 31 ม.ค. 2026"). Gregorian years in both languages, like formatDateShort.
- */
-export function formatRangeShort(fromValue: string, toValue: string, lang: string): string {
-    const parse = (value: string) => {
-        const [y, m, d] = value.split('-').map(Number);
-        return y && m && d ? new Date(y, m - 1, d) : null;
+type LooseConfig = Partial<Record<keyof DateConfig, unknown>> | null | undefined;
+
+export function normalizeDateConfig(config: LooseConfig): DateConfig {
+    const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+        allowed.includes(String(value) as T) ? (String(value) as T) : fallback;
+    return {
+        format: pick(config?.format, DATE_FORMATS, DEFAULT_DATE_CONFIG.format),
+        era: pick(config?.era, ERAS, DEFAULT_DATE_CONFIG.era),
+        time: pick(config?.time, TIMES, DEFAULT_DATE_CONFIG.time),
     };
-    const from = parse(fromValue);
-    const to = parse(toValue);
-    if (!from || !to) return `${fromValue} – ${toValue}`;
-
-    const format = (date: Date, options: Intl.DateTimeFormatOptions) =>
-        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', options).format(date);
-    const lastOfMonth = new Date(to.getFullYear(), to.getMonth() + 1, 0).getDate();
-    const sameMonth = from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth();
-    if (sameMonth && from.getDate() === 1 && to.getDate() === lastOfMonth) {
-        return format(from, { month: 'short', year: 'numeric' });
-    }
-    const sameYear = from.getFullYear() === to.getFullYear();
-    const start = format(from, sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
-
-    return `${start} – ${format(to, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
-/**
- * "5 hours ago" for a settings list — coarse on purpose: these columns answer "is this thing
- * actually in use", not "exactly when". Shared by the Email and Notification tabs so the two
- * halves of that page phrase the same fact the same way.
- */
+const pad = (n: number) => String(n).padStart(2, '0');
+const lastDay = (y: number, m: number) => new Date(y, m, 0).getDate();
+
+function parse(value: DateValue): Parts | null {
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) return null;
+        return { y: value.getFullYear(), m: value.getMonth() + 1, d: value.getDate(), h: value.getHours(), i: value.getMinutes() };
+    }
+    if (!value) return null;
+    const match = WALL.exec(value.trim());
+    if (!match) return null;
+    const [, y, m, d, h, i] = match;
+    const parts: Parts = { y: +y, m: +m, d: d ? +d : null, h: h ? +h : null, i: i ? +i : null };
+    if (parts.m < 1 || parts.m > 12) return null;
+    if (parts.d !== null && (parts.d < 1 || parts.d > lastDay(parts.y, parts.m))) return null;
+    if (parts.h !== null && (parts.h > 23 || (parts.i ?? 0) > 59)) return null;
+    return parts;
+}
+
+export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter {
+    const c = normalizeDateConfig(config);
+    const months = lang === 'th' ? names.th : names.en;
+    const year = (y: number) => String(c.era === 'be' ? y + 543 : y);
+
+    const date = (value: DateValue) => {
+        const p = parse(value);
+        if (!p || p.d === null) return EMPTY;
+        const d = pad(p.d);
+        const m = pad(p.m);
+        const y = year(p.y);
+        switch (c.format) {
+            case 'dmy_dash':
+                return `${d}-${m}-${y}`;
+            case 'ymd_slash':
+                return `${y}/${m}/${d}`;
+            case 'ymd_dash':
+                return `${y}-${m}-${d}`;
+            case 'd_mon_y':
+                return `${d} ${months.short[p.m - 1]} ${y}`;
+            case 'd_month_y':
+                return `${d} ${months.long[p.m - 1]} ${y}`;
+            default:
+                return `${d}/${m}/${y}`;
+        }
+    };
+
+    const time = (value: DateValue) => {
+        const p = parse(value);
+        if (!p || p.h === null || p.i === null) return EMPTY;
+        if (c.time === '12') return `${p.h % 12 || 12}:${pad(p.i)} ${p.h < 12 ? names.am : names.pm}`;
+        return `${pad(p.h)}:${pad(p.i)}`;
+    };
+
+    const dateTime = (value: DateValue) => {
+        const p = parse(value);
+        if (!p || p.d === null) return EMPTY;
+        return p.h === null ? date(value) : `${date(value)} ${time(value)}`;
+    };
+
+    const month = (value: DateValue) => {
+        const p = parse(value);
+        return p ? months.short[p.m - 1] : EMPTY;
+    };
+
+    const monthYear = (value: DateValue) => {
+        const p = parse(value);
+        return p ? `${months.short[p.m - 1]} ${year(p.y)}` : EMPTY;
+    };
+
+    const dayMonth = (value: DateValue) => {
+        const p = parse(value);
+        return p && p.d !== null ? `${pad(p.d)} ${months.short[p.m - 1]}` : EMPTY;
+    };
+
+    const range = (from: DateValue, to: DateValue) => {
+        const f = parse(from);
+        const t = parse(to);
+        if (!f || !t || f.d === null || t.d === null) return EMPTY;
+        if (f.y === t.y && f.m === t.m && f.d === 1 && t.d === lastDay(t.y, t.m)) return monthYear(from);
+        if (f.y === t.y) return `${dayMonth(from)} – ${dayMonth(to)} ${year(t.y)}`;
+        return `${dayMonth(from)} ${year(f.y)} – ${dayMonth(to)} ${year(t.y)}`;
+    };
+
+    return { date, dateTime, time, monthYear, month, dayMonth, range, year };
+}
+
+/** "5 hours ago" for lists that answer "is this in use", not "exactly when". */
 export function relativeTime(iso: string | null, lang: string, neverLabel: string): string {
     if (!iso) return neverLabel;
     const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -69,4 +148,18 @@ export function relativeTime(iso: string | null, lang: string, neverLabel: strin
     if (hrs < 24) return lang === 'th' ? `${hrs} ชั่วโมงที่แล้ว` : `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
     const days = Math.round(hrs / 24);
     return lang === 'th' ? `${days} วันที่แล้ว` : `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+// Legacy helpers, removed in Task 7 once their callers move to useDateFormat().
+export function formatDateTime(value: string | null | undefined, withTime = true): string {
+    const fmt = bindDateFormat(DEFAULT_DATE_CONFIG, 'en');
+    return withTime ? fmt.dateTime(value) : fmt.date(value);
+}
+
+export function formatDateShort(value: string, lang: string): string {
+    return bindDateFormat(DEFAULT_DATE_CONFIG, lang).date(value);
+}
+
+export function formatRangeShort(fromValue: string, toValue: string, lang: string): string {
+    return bindDateFormat(DEFAULT_DATE_CONFIG, lang).range(fromValue, toValue);
 }

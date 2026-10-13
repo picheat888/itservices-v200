@@ -1,0 +1,241 @@
+{
+    "cases": [
+        {
+            "fn": "date",
+            "args": ["2026-10-03"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2026"
+        },
+        { "fn": "date", "args": ["2026-10-03"], "config": { "format": "dmy_dash", "era": "ce", "time": "24" }, "lang": "th", "expect": "03-10-2026" },
+        {
+            "fn": "date",
+            "args": ["2026-10-03"],
+            "config": { "format": "ymd_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "2026/10/03"
+        },
+        { "fn": "date", "args": ["2026-10-03"], "config": { "format": "ymd_dash", "era": "ce", "time": "24" }, "lang": "th", "expect": "2026-10-03" },
+        {
+            "fn": "date",
+            "args": ["2026-10-03"],
+            "config": { "format": "d_mon_y", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03 ต.ค. 2026"
+        },
+        { "fn": "date", "args": ["2026-10-03"], "config": { "format": "d_mon_y", "era": "ce", "time": "24" }, "lang": "en", "expect": "03 Oct 2026" },
+        {
+            "fn": "date",
+            "args": ["2026-10-03"],
+            "config": { "format": "d_month_y", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03 ตุลาคม 2026"
+        },
+        {
+            "fn": "date",
+            "args": ["2026-10-03"],
+            "config": { "format": "d_month_y", "era": "ce", "time": "24" },
+            "lang": "en",
+            "expect": "03 October 2026"
+        },
+        {
+            "fn": "date",
+            "args": ["2026-10-03"],
+            "config": { "format": "dmy_slash", "era": "be", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2569"
+        },
+        { "fn": "date", "args": ["2026-10-03"], "config": { "format": "ymd_dash", "era": "be", "time": "24" }, "lang": "th", "expect": "2569-10-03" },
+        {
+            "fn": "date",
+            "args": ["2026-01-09"],
+            "config": { "format": "ymd_slash", "era": "be", "time": "24" },
+            "lang": "en",
+            "expect": "2569/01/09"
+        },
+        { "fn": "date", "args": ["2026-01-09"], "config": { "format": "dmy_dash", "era": "ce", "time": "24" }, "lang": "en", "expect": "09-01-2026" },
+        { "fn": "date", "args": ["2026-10-03"], "config": { "format": "d_mon_y", "era": "be", "time": "24" }, "lang": "en", "expect": "03 Oct 2569" },
+        {
+            "fn": "date",
+            "args": ["2026-10-03"],
+            "config": { "format": "d_month_y", "era": "be", "time": "24" },
+            "lang": "th",
+            "expect": "03 ตุลาคม 2569"
+        },
+        {
+            "fn": "date",
+            "args": ["2026-10-03 14:05:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2026"
+        },
+        {
+            "fn": "date",
+            "args": ["2026-10-03T07:05:00.000000Z"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2026"
+        },
+        { "fn": "date", "args": [null], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        { "fn": "date", "args": [""], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        { "fn": "date", "args": ["not a date"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        { "fn": "date", "args": ["2026-13-01"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        { "fn": "date", "args": ["2026-02-30"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        { "fn": "date", "args": ["2026-10-03"], "config": { "format": "xyz", "era": "ad", "time": "7" }, "lang": "th", "expect": "03/10/2026" },
+        {
+            "fn": "dateTime",
+            "args": ["2026-10-03 14:05:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2026 14:05"
+        },
+        {
+            "fn": "dateTime",
+            "args": ["2026-10-03 14:05:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "12" },
+            "lang": "th",
+            "expect": "03/10/2026 2:05 PM"
+        },
+        {
+            "fn": "dateTime",
+            "args": ["2026-10-03T14:05:00+07:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2026 14:05"
+        },
+        {
+            "fn": "dateTime",
+            "args": ["2026-10-03T07:05:00Z"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2026 07:05"
+        },
+        {
+            "fn": "dateTime",
+            "args": ["2026-10-03"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "03/10/2026"
+        },
+        {
+            "fn": "dateTime",
+            "args": ["2026-01-09 08:30"],
+            "config": { "format": "d_month_y", "era": "be", "time": "24" },
+            "lang": "th",
+            "expect": "09 มกราคม 2569 08:30"
+        },
+        {
+            "fn": "dateTime",
+            "args": ["2026-10-03 24:00:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "—"
+        },
+        {
+            "fn": "time",
+            "args": ["2026-10-03 00:30:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "00:30"
+        },
+        {
+            "fn": "time",
+            "args": ["2026-10-03 00:30:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "12" },
+            "lang": "th",
+            "expect": "12:30 AM"
+        },
+        {
+            "fn": "time",
+            "args": ["2026-10-03 12:00:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "12" },
+            "lang": "en",
+            "expect": "12:00 PM"
+        },
+        {
+            "fn": "time",
+            "args": ["2026-10-03 23:59:00"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "12" },
+            "lang": "th",
+            "expect": "11:59 PM"
+        },
+        { "fn": "time", "args": ["2026-10-03"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        {
+            "fn": "monthYear",
+            "args": ["2026-10"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "ต.ค. 2026"
+        },
+        {
+            "fn": "monthYear",
+            "args": ["2026-10-15"],
+            "config": { "format": "ymd_dash", "era": "be", "time": "24" },
+            "lang": "en",
+            "expect": "Oct 2569"
+        },
+        {
+            "fn": "monthYear",
+            "args": ["2026-01"],
+            "config": { "format": "dmy_slash", "era": "be", "time": "24" },
+            "lang": "th",
+            "expect": "ม.ค. 2569"
+        },
+        { "fn": "month", "args": ["2026-12-01"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "ธ.ค." },
+        { "fn": "month", "args": ["2026-05"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "en", "expect": "May" },
+        {
+            "fn": "dayMonth",
+            "args": ["2026-09-01"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "01 ก.ย."
+        },
+        { "fn": "dayMonth", "args": ["2026-09-01"], "config": { "format": "ymd_dash", "era": "be", "time": "24" }, "lang": "en", "expect": "01 Sep" },
+        { "fn": "dayMonth", "args": ["2026-09"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        {
+            "fn": "range",
+            "args": ["2026-09-01", "2026-09-30"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "ก.ย. 2026"
+        },
+        {
+            "fn": "range",
+            "args": ["2026-02-01", "2026-02-28"],
+            "config": { "format": "dmy_slash", "era": "be", "time": "24" },
+            "lang": "en",
+            "expect": "Feb 2569"
+        },
+        {
+            "fn": "range",
+            "args": ["2028-02-01", "2028-02-29"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "en",
+            "expect": "Feb 2028"
+        },
+        {
+            "fn": "range",
+            "args": ["2026-09-01", "2026-10-06"],
+            "config": { "format": "dmy_slash", "era": "ce", "time": "24" },
+            "lang": "th",
+            "expect": "01 ก.ย. – 06 ต.ค. 2026"
+        },
+        {
+            "fn": "range",
+            "args": ["2026-09-05", "2026-09-20"],
+            "config": { "format": "d_month_y", "era": "ce", "time": "24" },
+            "lang": "en",
+            "expect": "05 Sep – 20 Sep 2026"
+        },
+        {
+            "fn": "range",
+            "args": ["2025-12-15", "2026-01-06"],
+            "config": { "format": "dmy_slash", "era": "be", "time": "24" },
+            "lang": "th",
+            "expect": "15 ธ.ค. 2568 – 06 ม.ค. 2569"
+        },
+        { "fn": "range", "args": ["x", "2026-10-06"], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "th", "expect": "—" },
+        { "fn": "year", "args": [2026], "config": { "format": "dmy_slash", "era": "be", "time": "24" }, "lang": "th", "expect": "2569" },
+        { "fn": "year", "args": [2026], "config": { "format": "dmy_slash", "era": "ce", "time": "24" }, "lang": "en", "expect": "2026" }
+    ]
+}
