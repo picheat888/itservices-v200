@@ -11,6 +11,7 @@ import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { isDateString, type DateFormatter } from '@/shared/lib/datetime';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
@@ -815,12 +816,14 @@ function GroupRolesTab() {
 /** Renders the diff detail panel for a single audit entry. */
 function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; lang: Lang; lookups: AuditLookups }) {
     const t = useT();
+    const fmt = useDateFormat();
     const hasPermDiff = (details.added?.length ?? 0) > 0 || (details.removed?.length ?? 0) > 0;
     const hasRoleChange = details.from !== undefined || details.to !== undefined;
     const changeEntries = Object.entries(details.changes ?? {});
 
-    // Render a diff value (null/'' shown as a muted dash).
-    const diffValue = (v: unknown) => (v === null || v === undefined || v === '' ? <span className="text-muted-foreground">—</span> : String(v));
+    // Render a diff value (null/'' shown as a muted dash; date values in the date setting).
+    const diffValue = (v: unknown) =>
+        v === null || v === undefined || v === '' ? <span className="text-muted-foreground">—</span> : isDateString(v) ? fmt.dateTime(v) : String(v);
 
     return (
         <div className="space-y-3 px-5 py-3">
@@ -992,12 +995,13 @@ function auditAgo(iso: string, lang: Lang, absolute: string): string {
 }
 
 /** One-line diff summary shown under the action in the table. */
-function auditDiffSummary(d: AuditDetails | null): string | null {
+function auditDiffSummary(d: AuditDetails | null, fmt: DateFormatter): string | null {
     if (!d) return null;
     // Clipped hard, because an audited value can be an entire email body. The row is a
     // summary; the whole value is one click away in the panel below it.
     const val = (v: unknown) => {
         if (v === null || v === undefined || v === '') return '—';
+        if (isDateString(v)) return fmt.dateTime(v);
         const s = String(v).replace(/\s+/g, ' ').trim();
         return s.length > 60 ? `${s.slice(0, 60)}…` : s;
     };
@@ -1168,7 +1172,7 @@ function AuditTab() {
                                 const showDetails = hasDetails(l.details);
                                 const am = auditMeta(l.action);
                                 const AIcon = am.icon;
-                                const summary = auditDiffSummary(l.details);
+                                const summary = auditDiffSummary(l.details, fmt);
                                 return (
                                     <>
                                         <tr
