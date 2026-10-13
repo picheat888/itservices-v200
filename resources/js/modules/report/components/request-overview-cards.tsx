@@ -680,7 +680,7 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
                                     </b>
                                     <span className="text-muted-foreground block truncate text-xs">{t(`req_${i.type}`)}</span>
                                 </span>
-                                <span aria-hidden className="bg-muted h-2.5 overflow-hidden rounded-full">
+                                <span aria-hidden className="dark:bg-muted h-2.5 overflow-hidden rounded-full bg-slate-200">
                                     <span
                                         className={cn(
                                             'block h-full rounded-full',

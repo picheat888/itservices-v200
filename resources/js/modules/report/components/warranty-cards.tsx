@@ -114,7 +114,7 @@ function CountBar({ pieces, scale }: { pieces: Piece[]; scale?: number }) {
         <InfoPopover
             label={text}
             content={<PieceDetail pieces={shown} />}
-            className={cn('block w-full min-w-0 cursor-pointer rounded-full', scale !== undefined && 'bg-muted')}
+            className={cn('block w-full min-w-0 cursor-pointer rounded-full', scale !== undefined && 'dark:bg-muted bg-slate-200')}
         >
             <span aria-hidden className="flex h-5 gap-px overflow-hidden rounded-full" style={{ width }}>
                 {shown.map((p) => (

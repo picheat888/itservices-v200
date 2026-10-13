@@ -45,7 +45,7 @@ export function KpiTile({
                 {unit && <span className="text-muted-foreground ml-1 text-sm font-medium">{unit}</span>}
             </div>
             {meter && (
-                <div className="bg-muted relative h-1.5 overflow-hidden rounded-full" aria-hidden="true">
+                <div className="dark:bg-muted relative h-1.5 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
                     <div
                         className={cn('h-full rounded-full', meter.value >= meter.goal ? 'bg-emerald-500' : 'bg-red-500')}
                         style={{ width: `${Math.min(100, Math.max(0, meter.value))}%` }}
@@ -54,7 +54,7 @@ export function KpiTile({
                 </div>
             )}
             {bar && (
-                <div className="bg-muted flex h-1.5 overflow-hidden rounded-full">
+                <div className="dark:bg-muted flex h-1.5 overflow-hidden rounded-full bg-slate-200">
                     {bar.map((piece) => (
                         <span
                             key={piece.key}

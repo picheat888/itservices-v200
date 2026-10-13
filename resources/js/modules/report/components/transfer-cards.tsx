@@ -701,7 +701,7 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                             <span className="text-sm font-medium">{t('rep_th_acc_within2')}</span>
                             <span className="text-muted-foreground text-xs">{n('rep_th_acc_within2_of', { n: a.to_people })}</span>
                         </div>
-                        <div className="bg-muted flex h-5 gap-px overflow-hidden rounded-full">
+                        <div className="dark:bg-muted flex h-5 gap-px overflow-hidden rounded-full bg-slate-200">
                             {ACCEPT_TILES.map((tile) => {
                                 const share = pct(values[tile.key], total);
                                 const words = `${t(tile.label_key)} ${t('rep_th_trips').replace('{n}', count(values[tile.key], lang))} (${share}%)`;
@@ -786,13 +786,13 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                                     <td className={cn(TD, 'w-1/2')}>
                                         {/* Back in grows left from the middle, out grows right; each track is the scale's max. */}
                                         <div aria-hidden className="grid min-w-[9rem] grid-cols-2 gap-0.5">
-                                            <span className="bg-muted flex h-2.5 justify-end overflow-hidden rounded-l-full">
+                                            <span className="dark:bg-muted flex h-2.5 justify-end overflow-hidden rounded-l-full bg-slate-200">
                                                 <span
                                                     className={cn('block h-full rounded-l-full', FILL[KIND_STYLE.return.tone])}
                                                     style={{ width: `${(w.back / max) * 100}%` }}
                                                 />
                                             </span>
-                                            <span className="bg-muted flex h-2.5 overflow-hidden rounded-r-full">
+                                            <span className="dark:bg-muted flex h-2.5 overflow-hidden rounded-r-full bg-slate-200">
                                                 <span
                                                     className={cn('block h-full rounded-r-full', FILL[KIND_STYLE.handover.tone])}
                                                     style={{ width: `${(w.out / max) * 100}%` }}
@@ -839,7 +839,7 @@ function BarList({ rows, apart }: { rows: BarRow[]; apart?: BarRow | null }) {
             <span className={cn('truncate', (r.muted || isApart) && 'text-muted-foreground')} title={r.name}>
                 {r.name}
             </span>
-            <span aria-hidden className="bg-muted block h-2.5 overflow-hidden rounded-full">
+            <span aria-hidden className="dark:bg-muted block h-2.5 overflow-hidden rounded-full bg-slate-200">
                 <span
                     className={cn('block h-full rounded-full', isApart ? FILL['asset-common'] : FILL[KIND_STYLE.handover.tone])}
                     style={{ width: `${(r.value / max) * 100}%` }}

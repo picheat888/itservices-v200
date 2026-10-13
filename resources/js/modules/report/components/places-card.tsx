@@ -83,7 +83,7 @@ function CountLine({ row, tone, max }: { row: PlaceRow; tone: string; max: numbe
             <span className={cn('truncate', row.apart && 'text-muted-foreground')} title={label(row.label)}>
                 {label(row.label)}
             </span>
-            <div className="bg-muted h-2.5 overflow-hidden rounded-full">
+            <div className="dark:bg-muted h-2.5 overflow-hidden rounded-full bg-slate-200">
                 <span className={cn('block h-full rounded-full', tone, row.apart && 'opacity-50')} style={{ width: `${(row.total / max) * 100}%` }} />
             </div>
             <span className="w-8 text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
@@ -139,7 +139,7 @@ function ShareLine({ row, series }: { row: PlaceRow; series: ChartSeries[] }) {
                         </span>
                     ))}
                 </div>
-                <div className="bg-muted mt-1 flex h-2.5 overflow-hidden rounded-full">
+                <div className="dark:bg-muted mt-1 flex h-2.5 overflow-hidden rounded-full bg-slate-200">
                     {parts.map((s) => (
                         <span key={s.key} className={FILL[s.tone]} style={{ width: width(s) }} />
                     ))}
