@@ -170,7 +170,7 @@ function TopicTable<T>({
             rowKey={rowKey}
             emptyState={empty}
             tableClassName="min-w-[44rem]"
-            hidePagination={rows.length <= PAGE}
+            hidePagination={rows.length === 0}
             paging={{
                 page,
                 pageSize: size,
