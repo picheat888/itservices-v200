@@ -5,7 +5,8 @@
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
-import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
@@ -16,7 +17,7 @@ import { TicketPriorityBadge, TicketStatusBadge } from './ticket-badges';
 import { categoryKey } from './ticket-labels';
 
 export function TicketReportTable({ filters }: { filters: TicketReportFilters }) {
-    const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     // Page and rows-per-page live in the URL (?page, ?per); a filter change drops ?page
@@ -28,9 +29,8 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
         {
             key: 'opened',
             header: t('rep_col_opened'),
-            width: '140px',
-            className: 'whitespace-nowrap',
-            render: (r) => <span className="font-mono text-xs">{fmt.dateTime(r.created_at)}</span>,
+            width: dateWidth,
+            render: (r) => <DateTimeCell value={r.created_at} />,
         },
         {
             // The one flexible column: subject, with the ticket number (the link) under it.

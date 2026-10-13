@@ -17,7 +17,8 @@ const ERAS: readonly DateEra[] = ['ce', 'be'];
 const TIMES: readonly TimeFormat[] = ['24', '12'];
 export const DEFAULT_DATE_CONFIG: DateConfig = { format: 'dmy_slash', era: 'ce', time: '24' };
 
-const EMPTY = '—';
+export const EMPTY_DATE = '—';
+const EMPTY = EMPTY_DATE;
 // YYYY-MM, YYYY-MM-DD, then an optional " HH:mm[:ss[.ffffff]]" or "THH:mm…" and an optional zone, which is ignored.
 const WALL = /^(\d{4})-(\d{2})(?:-(\d{2})(?:[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?(?:[zZ]|[+-]\d{2}:?\d{2})?)?$/;
 
@@ -145,6 +146,15 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
     };
 
     return { date, dateTime, time, monthYear, month, dayMonth, range, year };
+}
+
+/** Every month on a two-digit day plus the widest clock readings: what a date column must fit, whatever the rows hold. */
+export function dateWidthSamples(config: LooseConfig, lang: string): { dates: string[]; times: string[] } {
+    const fmt = bindDateFormat(config, lang);
+    return {
+        dates: Array.from({ length: 12 }, (_, i) => fmt.date(`2026-${pad(i + 1)}-28`)),
+        times: ['12:59', '10:58', '23:59'].map((t) => fmt.time(`2026-01-01 ${t}`)),
+    };
 }
 
 /** "5 hours ago" for lists that answer "is this in use", not "exactly when". */

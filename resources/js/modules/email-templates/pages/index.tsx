@@ -6,6 +6,7 @@ import { findHtmlIssues, htmlIssueMessage, type HtmlIssue } from '@/modules/emai
 import { NotificationSettingsPane, NotificationSettingsStats } from '@/modules/notification';
 import { useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { RecordStamps } from '@/shared/components/record-stamps';
@@ -1271,7 +1272,6 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
 }
 
 function DeliveryLogPane() {
-    const fmt = useDateFormat();
     const t = useT();
     const [viewing, setViewing] = useState<number | null>(null);
     // Status chip, search, page and rows-per-page live in the URL (?status, search, page, per).
@@ -1302,7 +1302,7 @@ function DeliveryLogPane() {
             key: 'created_at',
             header: t('email_log_time'),
             className: 'w-[15%]',
-            render: (r) => <span className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(r.created_at)}</span>,
+            render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground" />,
         },
         {
             key: 'template',

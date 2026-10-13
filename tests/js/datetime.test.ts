@@ -33,3 +33,18 @@ test('sameDateConfig compares the three values, not the object', async () => {
     assert.equal(sameDateConfig({ format: 'dmy_slash', era: 'ce', time: '24' }, { format: 'dmy_slash', era: 'ce', time: '24' }), true);
     assert.equal(sameDateConfig({ format: 'dmy_slash', era: 'ce', time: '24' }, { format: 'dmy_slash', era: 'be', time: '24' }), false);
 });
+
+test('dateWidthSamples lists every month on a two-digit day, and every clock edge', async () => {
+    const { dateWidthSamples } = (await import('../../resources/js/shared/lib/datetime.ts')) as Record<
+        string,
+        (c: unknown, l: string) => { dates: string[]; times: string[] }
+    >;
+    const th = dateWidthSamples({ format: 'd_month_y', era: 'be', time: '12' }, 'th');
+    assert.equal(th.dates.length, 12);
+    assert.ok(th.dates.includes('28 พฤศจิกายน 2569'));
+    assert.deepEqual(th.times, ['12:59 PM', '10:58 AM', '11:59 PM']);
+    const en = dateWidthSamples({ format: 'd_month_y', era: 'ce', time: '24' }, 'en');
+    assert.ok(en.dates.includes('28 September 2026'));
+    assert.deepEqual(en.times, ['12:59', '10:58', '23:59']);
+    assert.deepEqual(dateWidthSamples({ format: 'dmy_slash', era: 'ce', time: '24' }, 'th').dates.slice(0, 1), ['28/01/2026']);
+});

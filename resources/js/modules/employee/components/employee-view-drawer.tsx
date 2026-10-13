@@ -1,10 +1,10 @@
 import { useT } from '@/lang';
 import { TicketCategoryIcon, TicketStatusBadge } from '@/modules/ticket';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
-import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { isOnBehalfRequest, REQUEST_ONBOARDING_BADGE, REQUEST_STATUS_META, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
@@ -779,7 +779,6 @@ function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; la
  * Reuses the shared DataTable and the ticket module's status/priority badges via its barrel.
  */
 function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[]; loading?: boolean }) {
-    const fmt = useDateFormat();
     const t = useT();
     if (tickets.length === 0 && !loading) {
         return (
@@ -797,7 +796,7 @@ function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[];
             key: 'requested',
             header: t('ticket_request_at'),
             className: 'w-[14%]',
-            render: (tk) => <span className="text-muted-foreground text-xs font-semibold whitespace-nowrap">{fmt.dateTime(tk.created_at)}</span>,
+            render: (tk) => <DateTimeCell value={tk.created_at} className="text-muted-foreground font-semibold" />,
         },
         {
             key: 'subject',
@@ -849,7 +848,6 @@ function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[];
  * permission, which a reader of this drawer is not required to hold.
  */
 function RequestsPane({ requests, loading }: { requests: EmployeeServiceRequest[]; loading?: boolean }) {
-    const fmt = useDateFormat();
     const t = useT();
     if (requests.length === 0 && !loading) {
         return (
@@ -867,7 +865,7 @@ function RequestsPane({ requests, loading }: { requests: EmployeeServiceRequest[
             key: 'submitted',
             header: t('req_col_submitted'),
             className: 'w-[14%]',
-            render: (r) => <span className="text-muted-foreground text-xs font-semibold whitespace-nowrap">{fmt.dateTime(r.created_at)}</span>,
+            render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground font-semibold" />,
         },
         {
             key: 'title',
