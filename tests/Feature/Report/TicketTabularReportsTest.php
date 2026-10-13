@@ -262,9 +262,9 @@ class TicketTabularReportsTest extends TestCase
             $t2 = $rows[$this->set['t2']->ticket_no];
             $t5 = $rows[$this->set['t5']->ticket_no];
             $this->assertSame('เกิน SLA', $t2['สถานะ SLA']);
-            $this->assertSame('2026-09-20 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
+            $this->assertSame('20/09/2026 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
             $this->assertSame('ใกล้ครบ (ภายใน 24 ชม.)', $t5['สถานะ SLA']);
-            $this->assertSame('2026-09-26 10:00', $t5['วันที่ครบกำหนด SLA รับเคส']);
+            $this->assertSame('26/09/2026 10:00', $t5['วันที่ครบกำหนด SLA รับเคส']);
             $this->assertSame(trim($this->set['t5']->description), $t5['รายละเอียด']);
             $this->assertSame('งานปกติ', $t5['ลักษณะงาน']);
 

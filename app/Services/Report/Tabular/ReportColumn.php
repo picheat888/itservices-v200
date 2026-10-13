@@ -2,6 +2,7 @@
 
 namespace App\Services\Report\Tabular;
 
+use App\Support\DateDisplay;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
@@ -188,6 +189,8 @@ final class ReportColumn
         return match ($this->type) {
             'localized' => is_array($value) ? (($value['name_th'] ?? null) ?: ($value['name'] ?? null)) : null,
             'enum' => $value === null ? null : ($this->exportLabels[$value] ?? (string) $value),
+            'date' => DateDisplay::cellDate($value),
+            'datetime' => DateDisplay::cellDateTime($value),
             default => $value,
         };
     }
