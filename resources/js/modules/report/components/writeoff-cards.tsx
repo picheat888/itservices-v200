@@ -25,6 +25,7 @@ import {
     reportDates,
     SCROLL_AFTER_MONTHS,
     SCROLL_MONTH_PX,
+    shortYear,
     StackBar,
     Swatch,
 } from './chart-parts';
@@ -112,12 +113,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
     const today = new Date();
     const toDate = to ? new Date(`${to}T00:00:00`) : today;
     const countedTo = toDate < today ? toDate : today;
-    const partialNote = t('rep_wo_month_partial_tip').replace(
-        '{date}',
-        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-            countedTo,
-        ),
-    );
+    const partialNote = t('rep_wo_month_partial_tip').replace('{date}', reportDates(lang).date(countedTo));
     const hasPartial = months.some((m) => m.month === thisMonth);
     const total = months.reduce((sum, m) => sum + m.total, 0);
     const peak = months.reduce<Month | null>((best, m) => (m.total > (best?.total ?? 0) ? m : best), null);
@@ -293,7 +289,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                     >
                                                         {monthLabel(m.month, lang, false)}
                                                     </b>
-                                                    <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
+                                                    <span className="text-muted-foreground tabular-nums">{shortYear(m.month, lang)}</span>
                                                 </div>
                                             )}
                                         </div>

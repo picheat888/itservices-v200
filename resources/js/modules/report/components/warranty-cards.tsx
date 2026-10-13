@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWarrantyBreakdown } from '../hooks/use-reports';
 import type { AssetWarrantyBreakdown, ChartTone, TabularFilters, WarrantyGroupFigures, WarrantyStatus } from '../types';
-import { barTop, CardTitle, CODE_LINK, CardEmpty as Empty, monthLabel, Swatch } from './chart-parts';
+import { barTop, CardTitle, CODE_LINK, CardEmpty as Empty, monthLabel, shortYear, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -335,7 +335,7 @@ function MonthCard({ months }: { months: Month[] }) {
                                             <b className={cn('block font-semibold', m.month === thisMonth ? 'text-brand' : 'text-foreground')}>
                                                 {monthLabel(m.month, lang, false)}
                                             </b>
-                                            <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
+                                            <span className="text-muted-foreground tabular-nums">{shortYear(m.month, lang)}</span>
                                         </div>
                                     </div>
                                 ))}

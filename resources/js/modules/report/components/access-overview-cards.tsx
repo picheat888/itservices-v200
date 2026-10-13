@@ -12,7 +12,19 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useAccessOverviewBreakdown } from '../hooks/use-reports';
 import type { AccessOverviewBreakdown, AccessResource, AccessType, ChartTone, TabularFilters } from '../types';
 import { count, deptName, PieceBar } from './access-parts';
-import { barTop, CardEmpty, CardTitle, currentMonth, fold, FoldToggle, monthDensity, monthLabel, monthLabelPlace } from './chart-parts';
+import {
+    barTop,
+    CardEmpty,
+    CardTitle,
+    currentMonth,
+    fold,
+    FoldToggle,
+    monthDensity,
+    monthLabel,
+    monthLabelPlace,
+    reportDates,
+    shortYear,
+} from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BASIS_PCT, H_PCT, pct } from './percent-classes';
@@ -196,12 +208,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
     const split = pct(up, up + down);
     const thisMonth = currentMonth();
     const hasCurrent = months.some((m) => m.month === thisMonth);
-    const partialNote = t('rep_wo_month_partial_tip').replace(
-        '{date}',
-        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-            new Date(),
-        ),
-    );
+    const partialNote = t('rep_wo_month_partial_tip').replace('{date}', reportDates(lang).date(new Date()));
     const density = monthDensity(months);
     const bars = useRef(new Map<string, HTMLElement>());
     const monthText = (m: Month) =>
@@ -424,7 +431,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
                                                     >
                                                         {monthLabel(m.month, lang, false)}
                                                     </b>
-                                                    <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
+                                                    <span className="text-muted-foreground tabular-nums">{shortYear(m.month, lang)}</span>
                                                 </div>
                                             )}
                                         </div>

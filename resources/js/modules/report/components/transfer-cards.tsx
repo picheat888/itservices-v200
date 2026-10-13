@@ -24,6 +24,7 @@ import {
     reportDates,
     SCROLL_AFTER_MONTHS,
     SCROLL_MONTH_PX,
+    shortYear,
 } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
@@ -129,12 +130,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
     const downAt = (v: number) => ({ top: `${(v / down) * 100}%` });
     const thisMonth = currentMonth();
     const hasCurrent = months.some((m) => m.month === thisMonth);
-    const partialNote = t('rep_wo_month_partial_tip').replace(
-        '{date}',
-        new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-            new Date(),
-        ),
-    );
+    const partialNote = t('rep_wo_month_partial_tip').replace('{date}', reportDates(lang).date(new Date()));
     const density = monthDensity(months);
     const scroll = months.length > SCROLL_AFTER_MONTHS;
     const scroller = useRef<HTMLDivElement>(null);
@@ -361,7 +357,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                     >
                                                         {monthLabel(m.month, lang, false)}
                                                     </b>
-                                                    <span className="text-muted-foreground tabular-nums">{m.month.slice(2, 4)}</span>
+                                                    <span className="text-muted-foreground tabular-nums">{shortYear(m.month, lang)}</span>
                                                 </div>
                                             )}
                                         </div>
