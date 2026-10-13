@@ -7,7 +7,6 @@ import {
     useNotifications,
     useNotificationText,
 } from '@/modules/notification';
-import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -22,12 +21,11 @@ import { iconMeta, moduleOf, notificationMessage, notificationTarget, notificati
  */
 const NOTIF_TABS: { id: string; label: string }[] = [{ id: 'all', label: 'notif_all' }, ...NOTIFICATION_GROUPS];
 
-export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
+export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: () => void; onChangePassword: () => void }) {
     // Prefers the wording an administrator set on the Bell tab; falls through to the
     // bundled string for every other key, so this still serves the surrounding UI text.
     const t = useNotificationText();
     const navigate = useNavigate();
-    const [, openShellDialog] = useDialogParam(['password'] as const);
     const ref = useRef<HTMLDivElement>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
     const { data } = useNotifications();
@@ -108,7 +106,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
         if (!n.read) markRead.mutate(n.id);
         // The password warning opens the shell's Change password dialog (?dialog=password), not a page.
         if (n.data.type === 'password_expiring') {
-            openShellDialog('password');
+            onChangePassword();
         } else {
             navigate(notificationTarget(n));
         }

@@ -1,6 +1,7 @@
 // A list page's search, filters, page and rows-per-page kept in the URL query string, so a
 // reload or a shared link shows the same list. Defaults stay out of the URL.
 import { PAGE_SIZES } from '@/shared/components/data-table';
+import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -27,7 +28,8 @@ export function useListParams() {
                     }
                     return next;
                 },
-                { replace: true },
+                // Keeps an open ?dialog= stack (useDialogParam) through the replace
+                { replace: true, state: keepDialogState() },
             );
         });
     };
