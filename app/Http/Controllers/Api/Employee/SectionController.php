@@ -53,8 +53,17 @@ class SectionController extends Controller
      */
     public function update(StoreSectionRequest $request, Section $section): JsonResponse
     {
+        $data = $request->validated();
+        // Members keep their department_id, so a populated section stays where it is.
+        if ((int) $data['department_id'] !== (int) $section->department_id && $section->employees()->exists()) {
+            return response()->json([
+                'message' => 'section_has_employees_move',
+                'employees_count' => $section->employees()->count(),
+            ], 422);
+        }
+
         $before = $section->getOriginal();
-        $section->update($request->validated());
+        $section->update($data);
         AuditLog::record('Updated section', $section->name, AuditLog::changes($before, $section), subject: $section);
 
         return (new SectionResource($section->load('department')->loadCount('employees')))->additional(['message' => 'success'])->response();

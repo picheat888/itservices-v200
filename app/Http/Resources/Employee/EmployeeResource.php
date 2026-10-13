@@ -46,6 +46,8 @@ class EmployeeResource extends JsonResource
             'department_id' => $this->department_id,
             'position_id' => $this->position_id,
             'manager_id' => $this->manager_id,
+            'manager_name' => $this->whenLoaded('manager', fn () => $this->manager?->name),
+            'manager_name_th' => $this->whenLoaded('manager', fn () => $this->manager?->name_th),
             'department' => $this->whenLoaded('department', fn () => $this->department?->name),
             'department_th' => $this->whenLoaded('department', fn () => $this->department?->name_th),
             'section_id' => $this->section_id,

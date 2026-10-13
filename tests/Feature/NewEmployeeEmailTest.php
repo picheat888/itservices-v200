@@ -107,6 +107,25 @@ class NewEmployeeEmailTest extends TestCase
         $this->assertStringContainsString('01/09/2026', $html);
     }
 
+    public function test_a_name_carrying_markup_reaches_the_mail_as_text(): void
+    {
+        Bus::fake();
+        $this->credentialSetter();
+
+        $employee = Employee::create([
+            'code' => 'EMP-1043',
+            'first_name' => '<a href="https://evil.example">Set up here</a>',
+            'last_name' => 'X',
+            'joined_at' => '2026-09-01',
+        ]);
+
+        $this->notify($employee);
+        $html = $this->sentHtml();
+
+        $this->assertStringNotContainsString('<a href="https://evil.example">', $html);
+        $this->assertStringContainsString('&lt;a href=&quot;https://evil.example&quot;&gt;', $html);
+    }
+
     public function test_email_dates_follow_the_date_setting_in_english(): void
     {
         Bus::fake();

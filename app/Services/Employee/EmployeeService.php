@@ -376,20 +376,20 @@ class EmployeeService
         $employee->loadMissing(['position', 'section', 'department']);
 
         $vars = [
-            'employee.name' => (string) $employee->name,
-            'employee.code' => (string) $employee->code,
-            'employee.position' => $employee->position?->title ?: '-',
+            'employee.name' => e((string) $employee->name),
+            'employee.code' => e((string) $employee->code),
+            'employee.position' => e($employee->position?->title ?: '-'),
             // Master data is mixed-language and the English name is the one that is always
             // filled; the Thai name stands in where it is not.
-            'employee.section' => $this->masterName($employee->section),
-            'employee.department' => $this->masterName($employee->department),
+            'employee.section' => e($this->masterName($employee->section)),
+            'employee.department' => e($this->masterName($employee->department)),
             'employee.working' => DateDisplay::emailDate($employee->joined_at),
         ];
 
         $emailService = app(EmailNotificationService::class);
         foreach ($recipients as $recipient) {
             $emailService->sendTemplate('employee.account_needed', $recipient->email, [
-                'user.first_name' => explode(' ', (string) $recipient->name)[0] ?? 'there',
+                'user.first_name' => e(explode(' ', (string) $recipient->name)[0] ?: 'there'),
                 ...$vars,
             ], url("/employees?tab=directory&view={$employee->id}"), 'Open the employee', $recipient->name);
         }
@@ -456,9 +456,9 @@ class EmployeeService
 
         foreach ($recipients as $recipient) {
             $emailService->sendTemplate('access.offboarding', $recipient->email, [
-                'user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there',
-                'employee.name' => (string) $employee->name,
-                'employee.code' => (string) $employee->code,
+                'user.first_name' => e(strtok((string) $recipient->name, ' ') ?: 'there'),
+                'employee.name' => e((string) $employee->name),
+                'employee.code' => e((string) $employee->code),
                 'employee.last_working' => DateDisplay::emailDate($employee->last_day),
                 'access.count' => (string) $outstanding['total'],
                 'access.table' => $table,
@@ -523,14 +523,14 @@ class EmployeeService
 
         $emailService = app(EmailNotificationService::class);
         $vars = [
-            'employee.name' => (string) $employee->name,
-            'employee.code' => (string) $employee->code,
+            'employee.name' => e((string) $employee->name),
+            'employee.code' => e((string) $employee->code),
             'employee.last_working' => DateDisplay::emailDate($employee->last_day),
         ];
 
         foreach ($audience as $recipient) {
             $emailService->sendTemplate('employee.offboarding', $recipient->email, [
-                'user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there',
+                'user.first_name' => e(strtok((string) $recipient->name, ' ') ?: 'there'),
                 ...$vars,
             ], url('/employees'), 'Open the employee list', $recipient->name);
         }

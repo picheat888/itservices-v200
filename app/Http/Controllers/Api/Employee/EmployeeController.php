@@ -590,7 +590,7 @@ class EmployeeController extends Controller
             403,
         );
 
-        return (new EmployeeResource($employee->load(['department', 'position', 'section', 'creator', 'updater'])))->response();
+        return (new EmployeeResource($employee->load(['department', 'position', 'section', 'manager', 'creator', 'updater'])))->response();
     }
 
     /**
@@ -775,6 +775,9 @@ class EmployeeController extends Controller
         if (! $user) {
             return response()->json(['message' => 'no_account'], 422);
         }
+        if ($user->isSuper() && ! $request->user()->isSuper()) {
+            return response()->json(['message' => 'super_account'], 403);
+        }
 
         $this->normalizeUsername($request);
 
@@ -848,6 +851,12 @@ class EmployeeController extends Controller
     public function resign(Request $request, Employee $employee): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.resign'), 403);
+        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
+            return response()->json(['message' => 'super_account'], 403);
+        }
+        if ($employee->status === EmployeeStatus::Resigned) {
+            return response()->json(['message' => 'already_resigned'], 422);
+        }
 
         $data = $request->validate([
             'reason' => ['nullable', 'string', 'max:500'],
