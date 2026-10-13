@@ -191,8 +191,8 @@ class TicketOverviewReportTest extends TestCase
 
         $backlog = array_column($this->summary($user)['weekly'], 'backlog');
 
-        // Week 5 (from 09-28) is after "now" (09-25 10:00), so it reads the backlog as of now.
-        $this->assertSame([2, 1, 2, 1, 1], $backlog);
+        // Week 5 (from 09-28) has not started yet (now is 09-25 10:00), so it has no backlog.
+        $this->assertSame([2, 1, 2, 1, null], $backlog);
     }
 
     public function test_breakdowns_by_priority_category_department_and_assignee(): void
