@@ -148,6 +148,21 @@ class TabularReportEngineTest extends TestCase
         });
     }
 
+    public function test_xlsx_summary_sheet_names_the_filters_the_file_was_built_with(): void
+    {
+        Excel::fake();
+        $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
+
+        $this->actingAs($this->userWith(['contracts.view']))
+            ->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx&type=hardware')->assertAccepted();
+
+        $this->assertExportStored('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
+            $sheet = $export->sheets()[0]->array();
+
+            return array_slice($sheet, 1, 2) === [['ภายใน', '90 วัน'], ['ประเภท', 'ฮาร์ดแวร์']];
+        });
+    }
+
     public function test_pdf_export_streams_a_pdf(): void
     {
         $this->contract(['name' => 'Soon', 'end_date' => '2026-10-15']);

@@ -27,6 +27,7 @@
 <div class="head">
     <h1>{{ $report->title() }}</h1>
     <div class="muted"><span class="part">{{ $company }}</span><span class="part">พิมพ์โดย {{ $printedBy }} เมื่อ {{ $printedAt }}</span></div>
+    <div class="muted">@foreach ($scope ?? [] as [$label, $value])<span class="part">{{ $label }}: {{ $value }}</span>@endforeach</div>
 </div>
 
 <table class="kpi"><tr>
@@ -78,7 +79,11 @@
         <tr>
             @foreach ($report->exportColumns() as $column)
                 @php($cell = $column->exportValue($row))
-                <td>{{ $column->type === 'money' && $cell !== null ? number_format($cell, 2) : $cell }}</td>
+                <td>{{ match (true) {
+                    $column->type === 'money' && $cell !== null => number_format($cell, 2),
+                    $column->type === 'days_left' && $cell < 0 => 'เลยมา '.abs($cell).' วัน',
+                    default => $cell,
+                } }}</td>
             @endforeach
         </tr>
     @endforeach
