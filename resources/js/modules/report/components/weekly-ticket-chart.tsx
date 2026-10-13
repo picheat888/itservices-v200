@@ -1,31 +1,20 @@
 /**
- * Paired weekly bars — opened (brand) vs closed (green) — on one shared scale with a faint
- * grid (labelled lines at 0, half and top, dashed unlabelled guides between them), plus the "ค้างสะสม" line (red, its own scale on the right axis): tickets still open at
- * each week's end, labelled at its last point. Every bar is labelled by the first day it really
- * covers — the range start for a week that began before it, else the Monday — and thinned so
- * no two labels touch; its <title> gives the days it spans and its three numbers. Hand-rolled SVG like shared/components/month-bar-chart.tsx: a dozen bars need no
- * chart library, and colours come from theme classes so both themes work.
- *
- * The chart fills the height its parent gives it (flex-1): the drawing stays 640 units wide, so
- * text keeps its size, and the viewBox grows taller to match the box — the card beside it on the
- * Ticket & SLA page sets that height. With nothing to fill it keeps its own 640×240 shape.
+ * Weekly opened (brand) vs closed (green) bars with the "ค้างสะสม" line on its own right-hand scale.
+ * Dates sit on the bar edges, from the range start to the range end; weeks not started yet are shaded.
+ * Hand-rolled SVG, 640 units wide, growing taller to fill the height its parent gives it.
  */
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { TicketOverviewSummary } from '../types';
-import { labelStep } from './axis-labels';
+import { edgeTicks, labelStep } from './axis-labels';
 
 const W = 640;
 /** The shortest the drawing gets — its own shape when there is no extra height to fill. */
 const MIN_H = 240;
 const PAD = { l: 34, r: 40, t: 14, b: 28 };
 
-/**
- * Round the axis top up to a tidy step so every tick label is a value the chart reaches.
- * Rounds to a multiple of 2*step (not just step) so the middle tick, `max / 2`, always lands
- * on a whole step too — ticket counts are integers, so a tick like 62.5 would be wrong.
- */
+/** Axis top rounded up to a multiple of 2×step, so the middle tick is a whole number too. */
 export function niceMax(value: number): number {
     const step = value <= 10 ? 2 : value <= 50 ? 10 : value <= 200 ? 25 : 100;
     const unit = step * 2;
@@ -42,12 +31,14 @@ const weekEnd = (iso: string) => {
 
 /** At most this many axis labels; fewer when longer labels would touch (axis-labels.ts). */
 const MAX_LABELS = 16;
+/** Rough width of one character of the 10.5px axis text, in chart units. */
+const CHAR_WIDTH = 6.4;
 
 type ChartProps = { weeks: TicketOverviewSummary['weekly']; range: TicketOverviewSummary['range'] };
 
 export function WeeklyTicketChart({ weeks, range }: ChartProps) {
     const t = useT();
-    const empty = weeks.length === 0 || weeks.every((w) => w.opened === 0 && w.closed === 0 && w.backlog === 0);
+    const empty = weeks.length === 0 || weeks.every((w) => w.opened === 0 && w.closed === 0 && !w.backlog);
     if (empty) {
         return <div className="text-muted-foreground py-16 text-center text-sm">{t('rep_weekly_empty')}</div>;
     }
@@ -70,8 +61,11 @@ function WeeklyBars({ weeks, range }: ChartProps) {
         return () => observer.disconnect();
     }, []);
 
+    // Weeks not started yet carry no backlog; they come last.
+    const startedCount = weeks.filter((w) => w.backlog !== null).length;
+    const started = weeks.slice(0, startedCount);
     const peak = Math.max(0, ...weeks.flatMap((w) => [w.opened, w.closed]));
-    const backlogPeak = Math.max(0, ...weeks.map((w) => w.backlog));
+    const backlogPeak = Math.max(0, ...started.map((w) => w.backlog ?? 0));
 
     // As tall as the box allows at 640 units wide, never shorter than the chart's own shape.
     const H = size && size.width > 0 ? Math.max(MIN_H, Math.round((W * size.height) / size.width)) : MIN_H;
@@ -87,18 +81,39 @@ function WeeklyBars({ weeks, range }: ChartProps) {
     const y = (v: number) => PAD.t + ch - (v / max) * ch;
     const yBacklog = (v: number) => PAD.t + ch - (v / backlogMax) * ch;
     const xOf = (i: number) => PAD.l + gw * i + gw / 2;
-    // Thin the axis labels until the longest one fits its slots, and never past MAX_LABELS of them.
-    const axisLabels = weeks.map((w) => dayMonth(w.week_start < range.from ? range.from : w.week_start));
-    const labelEvery = Math.max(Math.ceil(weeks.length / MAX_LABELS), labelStep(axisLabels, gw));
+    const edgeX = (edge: number) => PAD.l + gw * edge;
 
-    const line = weeks.map((w, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yBacklog(w.backlog).toFixed(1)}`).join(' ');
-    const last = weeks[weeks.length - 1];
+    // Edge labels: each bar's first day, then the range end after the last bar.
+    const edgeLabels = [...weeks.map((w) => dayMonth(w.week_start < range.from ? range.from : w.week_start)), dayMonth(range.to)];
+    const labelEvery = Math.max(Math.ceil(edgeLabels.length / MAX_LABELS), labelStep(edgeLabels, gw));
+    const labelledEdges = edgeTicks(weeks.length, labelEvery);
+
+    const line = started.map((w, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yBacklog(w.backlog ?? 0).toFixed(1)}`).join(' ');
+    const lastIndex = startedCount - 1;
+    const lastBacklog = started[lastIndex]?.backlog ?? 0;
+    const futureWidth = edgeX(weeks.length) - edgeX(startedCount);
+    const futureLabel = t('rep_weekly_future');
 
     return (
-        // The box takes the height on offer (flex-1) and at least the chart's own shape; the SVG is
-        // laid over it, so its drawing never feeds back into the height it is measured from.
+        // The box takes the height on offer (flex-1); the SVG is laid over it so it never feeds back into that height.
         <div ref={box} className="relative w-full flex-1" style={{ minHeight: size ? (size.width * MIN_H) / W : undefined }}>
             <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" role="img" aria-label={t('rep_weekly_title')}>
+                {/* Weeks not started yet */}
+                {futureWidth > 0 && (
+                    <g>
+                        <rect x={edgeX(startedCount)} y={PAD.t} width={futureWidth} height={ch} className="fill-muted" />
+                        {futureWidth >= futureLabel.length * CHAR_WIDTH + 8 && (
+                            <text
+                                x={edgeX(startedCount) + futureWidth / 2}
+                                y={PAD.t + 14}
+                                textAnchor="middle"
+                                className="fill-muted-foreground text-[10.5px]"
+                            >
+                                {futureLabel}
+                            </text>
+                        )}
+                    </g>
+                )}
                 {minorTicks.map((v) => (
                     <line
                         key={`minor-${v}`}
@@ -123,13 +138,12 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                         </text>
                     </g>
                 ))}
-                {weeks.map((w, i) => {
+                {started.map((w, i) => {
                     const x = xOf(i);
                     // The days this bar really counts: the first and last weeks are cut by the range.
                     const start = w.week_start < range.from ? range.from : w.week_start;
                     const end = weekEnd(w.week_start) > range.to ? range.to : weekEnd(w.week_start);
-                    const label = dayMonth(start);
-                    const span = start === end ? label : `${label}–${dayMonth(end)}`;
+                    const span = start === end ? dayMonth(start) : `${dayMonth(start)}–${dayMonth(end)}`;
                     return (
                         <g key={w.week_start}>
                             <title>
@@ -150,31 +164,39 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                                 className="fill-chart-soft-blue"
                             />
                             <rect x={x + 1} y={y(w.closed)} width={bw} height={ch - (y(w.closed) - PAD.t)} rx={2.5} className="fill-emerald-400" />
-                            {i % labelEvery === 0 && (
-                                <text x={x} y={H - 9} textAnchor="middle" className="fill-muted-foreground font-mono text-[10.5px]">
-                                    {label}
-                                </text>
-                            )}
                         </g>
                     );
                 })}
-                <path d={line} fill="none" strokeWidth={2} strokeLinejoin="round" className="pointer-events-none stroke-red-400" />
-                <circle
-                    cx={xOf(weeks.length - 1)}
-                    cy={yBacklog(last.backlog)}
-                    r={4}
-                    strokeWidth={2}
-                    className="stroke-card pointer-events-none fill-red-400"
-                />
-                <text
-                    x={xOf(weeks.length - 1) - 8}
-                    // Under the point when it sits at the top, so the label is never clipped.
-                    y={yBacklog(last.backlog) < PAD.t + 16 ? yBacklog(last.backlog) + 18 : yBacklog(last.backlog) - 9}
-                    textAnchor="end"
-                    className="fill-foreground pointer-events-none font-mono text-[11px] font-bold"
-                >
-                    {t('rep_weekly_backlog_end').replace('{n}', String(last.backlog))}
-                </text>
+                {/* Edge dates */}
+                {labelledEdges.map((edge) => (
+                    <g key={`edge-${edge}`}>
+                        <line x1={edgeX(edge)} x2={edgeX(edge)} y1={PAD.t + ch} y2={PAD.t + ch + 4} className="stroke-border" strokeWidth={1} />
+                        <text x={edgeX(edge)} y={H - 9} textAnchor="middle" className="fill-muted-foreground font-mono text-[10.5px]">
+                            {edgeLabels[edge]}
+                        </text>
+                    </g>
+                ))}
+                {startedCount > 0 && (
+                    <>
+                        <path d={line} fill="none" strokeWidth={2} strokeLinejoin="round" className="pointer-events-none stroke-red-400" />
+                        <circle
+                            cx={xOf(lastIndex)}
+                            cy={yBacklog(lastBacklog)}
+                            r={4}
+                            strokeWidth={2}
+                            className="stroke-card pointer-events-none fill-red-400"
+                        />
+                        <text
+                            x={xOf(lastIndex) - 8}
+                            // Under the point when it sits at the top, so the label is never clipped.
+                            y={yBacklog(lastBacklog) < PAD.t + 16 ? yBacklog(lastBacklog) + 18 : yBacklog(lastBacklog) - 9}
+                            textAnchor="end"
+                            className="fill-foreground pointer-events-none font-mono text-[11px] font-bold"
+                        >
+                            {t('rep_weekly_backlog_end').replace('{n}', String(lastBacklog))}
+                        </text>
+                    </>
+                )}
             </svg>
         </div>
     );

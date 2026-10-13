@@ -273,9 +273,9 @@ class TicketOverviewReportService
     /**
      * @param  Collection<int, Ticket>  $population
      *                                               `backlog` is how many tickets were still open at the end of each week (or now, for the
-     *                                               current week) — the chart's "ค้างสะสม" line. resolved_at is stamped on complete and on
-     *                                               cancel alike, so a ticket counts until either.
-     * @return list<array{week_start: string, opened: int, closed: int, backlog: int}>
+     *                                               current week; null for a week not started yet) — the chart's "ค้างสะสม" line.
+     *                                               resolved_at is stamped on complete and on cancel alike, so a ticket counts until either.
+     * @return list<array{week_start: string, opened: int, closed: int, backlog: int|null}>
      */
     private function weekly(User $viewer, array $filters, Collection $population): array
     {
@@ -303,6 +303,11 @@ class TicketOverviewReportService
             ->where(fn (Builder $q) => $q->whereNull('resolved_at')->orWhere('resolved_at', '>', $firstWeek))
             ->get(['created_at', 'resolved_at']);
         foreach ($weeks as $start => $week) {
+            if (CarbonImmutable::parse($start)->gt($now)) {
+                $weeks[$start]['backlog'] = null;
+
+                continue;
+            }
             $moment = CarbonImmutable::parse($start)->endOfWeek(CarbonInterface::SUNDAY)->min($filters['to'])->min($now);
             $weeks[$start]['backlog'] = $live
                 ->filter(fn (Ticket $t) => $t->created_at <= $moment && ($t->resolved_at === null || $t->resolved_at > $moment))

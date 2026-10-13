@@ -92,6 +92,7 @@ export const report: Dict = {
     rep_weekly_backlog_end: '{n} ค้าง',
     rep_weekly_tip: '{week}\nเปิดใหม่ {opened}\nปิดแล้ว {closed}\nค้าง {backlog}',
     rep_weekly_empty: 'ไม่มี Ticket ในช่วงนี้',
+    rep_weekly_future: 'ยังไม่ถึง',
     rep_sla_priority_title: 'ปิดเคสทัน SLA แยกตามความสำคัญ',
     rep_sla_priority_sub: 'เป้าหมาย {n}%',
     rep_aging_title: 'Ticket ที่ค้าง',
