@@ -33,30 +33,15 @@ export function useAuth() {
     };
 }
 
-/**
- * Signing in starts from an empty cache.
- *
- * A login is an SPA transition, not a reload, so without this the new session
- * inherits whatever the previous one left behind — the incoming user is served
- * the last user's cached lists until each one refetches. It also broke the
- * notification toasts outright: the app shell seeds "already seen" from whatever
- * the notifications cache holds when it mounts, so seeding from the *previous*
- * session made the incoming user's entire unread pile look newly arrived, and
- * every one of them popped a toast.
- *
- * `removeQueries()` rather than `clear()`: clear() also empties the mutation
- * cache, which would pull this very mutation out from under its own callback.
- * Nothing but the login screen is mounted here, so no refetch storm follows.
- * ME_KEY is written straight after, so useAuth resolves without bouncing through
- * a loading state.
- */
+/** Signing in drops the previous session's cache (removeQueries, not clear: that would drop this mutation); App-level settings are kept and refetched as the signed-in user. */
 export function useLogin() {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (payload: LoginPayload) => authApi.login(payload),
         onSuccess: (user) => {
-            qc.removeQueries();
+            qc.removeQueries({ predicate: (query) => query.queryKey[0] !== 'settings' });
             qc.setQueryData(ME_KEY, user);
+            qc.invalidateQueries({ queryKey: ['settings'] });
         },
     });
 }
