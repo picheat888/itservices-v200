@@ -18,7 +18,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams, type ListParamPatch } from '@/shared/hooks/use-list-params';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { relativeTime } from '@/shared/lib/datetime';
+import { bindDateFormat, relativeTime, type DateFormatter } from '@/shared/lib/datetime';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -60,7 +60,7 @@ const SAMPLE_VARS: Record<string, string> = {
     'user.email': 'thanapon@abcd.co.th',
     count: '3',
     'report.name': 'ทะเบียนทรัพย์สิน',
-    'report.period': '2026-09-21 to 2026-09-27',
+    'report.period': '2026-09-21|2026-09-27',
     'report.rows': '1,248',
     'report.frequency': 'Every Monday at 07:00',
     'report.owner': 'Thanapon',
@@ -73,10 +73,10 @@ const SAMPLE_VARS: Record<string, string> = {
     'stock.request_no': 'REQ-2026-0001',
     'stock.request_by': 'Piches Srisuk',
     'stock.request_reason': 'Replacing the dock on the 3rd floor meeting room.',
-    'stock.request_date': '18-08-2026',
+    'stock.request_date': '2026-08-18',
     'stock.approver': 'Anong Wattana',
     'stock.fulfilled_by': 'Kankanok P',
-    'stock.fulfilled_date': '20-08-2026',
+    'stock.fulfilled_date': '2026-08-20',
     'asset.code': 'INK-IT-26-0042',
     'asset.model': 'ThinkCentre Neo 55a 24 G6',
     'asset.tag': 'PC042',
@@ -84,7 +84,7 @@ const SAMPLE_VARS: Record<string, string> = {
     'asset.from': 'Store IT',
     'asset.holder': 'Somchai Suksawat',
     'asset.count': '3',
-    'employee.last_working': '31-12-2026',
+    'employee.last_working': '2026-12-31',
     'ticket.id': 'TKT-2856',
     'ticket.subject': 'Printer not responding',
     'ticket.category': 'Hardware',
@@ -99,17 +99,17 @@ const SAMPLE_VARS: Record<string, string> = {
     'contract.code': 'CT-2026-014',
     'contract.days_remaining': '30',
     'contract.days_overdue': '5',
-    'contract.end_date': '31-12-2026',
+    'contract.end_date': '2026-12-31',
     'contract.details': 'Microsoft 365 E3 License Agreement, 320 seats',
     'reference.id': 'REF-0001',
     'request.title': 'Request: Mail group',
     'request.type': 'Email group',
-    'request.date': '18-08-2026',
-    'request.approved_date': '20-08-2026',
-    'request.rejected_date': '20-08-2026',
-    'request.cancelled_date': '22-08-2026',
+    'request.date': '2026-08-18',
+    'request.approved_date': '2026-08-20',
+    'request.rejected_date': '2026-08-20',
+    'request.cancelled_date': '2026-08-22',
     'request.ticket_no': 'TKT-2856',
-    'request.completed_date': '22-08-2026',
+    'request.completed_date': '2026-08-22',
     'request.completed_by': 'Kankanok P',
     'request.reason': 'Onboarding request with the new employee, first day 01-09-2026.',
     'request.details': 'Device type: Desktop PC',
@@ -126,7 +126,7 @@ const SAMPLE_VARS: Record<string, string> = {
     'employee.position': 'Asst. Manager',
     'employee.section': 'System analyst',
     'employee.department': 'Information Technology',
-    'employee.working': '01-09-2026',
+    'employee.working': '2026-09-01',
     'digest.count': '2',
     'digest.open_count': '2',
     // The same numbers as the API's preview sample (EmailTemplateController), so the subject line
@@ -156,6 +156,31 @@ const SAMPLE_VARS: Record<string, string> = {
 
 // Every variable an author can insert, A-Z. SAMPLE_VARS is grouped by module for whoever
 // maintains it; the menu is read by someone hunting for one name, and hunting is alphabetical.
+// Sample values that are dates; written in the date setting with English month names, as the sent mail is.
+const SAMPLE_DATE_KEYS = new Set([
+    'report.period',
+    'stock.request_date',
+    'stock.fulfilled_date',
+    'employee.last_working',
+    'contract.end_date',
+    'request.date',
+    'request.approved_date',
+    'request.rejected_date',
+    'request.cancelled_date',
+    'request.completed_date',
+    'employee.working',
+]);
+
+function samplesIn(fmt: DateFormatter): Record<string, string> {
+    return Object.fromEntries(
+        Object.entries(SAMPLE_VARS).map(([key, value]) => {
+            if (!SAMPLE_DATE_KEYS.has(key)) return [key, value];
+            const [from, to] = value.split('|');
+            return [key, to ? fmt.range(from, to) : fmt.date(from)];
+        }),
+    );
+}
+
 const VARIABLE_NAMES = Object.keys(SAMPLE_VARS).sort((a, b) => a.localeCompare(b));
 
 /**
@@ -1412,6 +1437,8 @@ function PreviewPane({
     previewHtml: string;
     rendering: boolean;
 }) {
+    const dateConfig = useUiStore((s) => s.dateConfig);
+    const mailDates = useMemo(() => bindDateFormat(dateConfig, 'en'), [dateConfig]);
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     // The signed-in account, because that is where "Send test" delivers and whose first name
@@ -1440,7 +1467,7 @@ function PreviewPane({
                     </div>
                     <div className="text-foreground w-full truncate font-semibold">
                         {/* app.name resolves to the real brand, the way the send path fills it. */}[{brand}]{' '}
-                        {render(subject, { ...SAMPLE_VARS, 'app.name': brand })}
+                        {render(subject, { ...samplesIn(mailDates), 'app.name': brand })}
                     </div>
                 </div>
                 {previewHtml ? (
