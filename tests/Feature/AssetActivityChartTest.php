@@ -168,9 +168,9 @@ class AssetActivityChartTest extends TestCase
 
         $activity = $this->getJson('/api/assets/summary')->assertOk()->json('activity');
 
-        // 16 days of history reads in weeks, from the Monday of the first move.
+        // 16 days of history reads in weeks, from the Sunday of the first move.
         $this->assertSame('week', $activity['unit']);
-        $this->assertSame('2026-09-28', $activity['data'][0]['month']);
+        $this->assertSame('2026-09-27', $activity['data'][0]['month']);
         $this->assertSame(2, collect($activity['data'])->sum('handover'));
     }
 }

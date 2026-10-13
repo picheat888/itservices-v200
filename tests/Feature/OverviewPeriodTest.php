@@ -60,6 +60,15 @@ class OverviewPeriodTest extends TestCase
         $this->assertSame(['2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'], array_column($all['columns'], 'start'));
     }
 
+    public function test_week_columns_run_sunday_to_saturday_like_the_date_pickers(): void
+    {
+        // Wednesday 2026-09-30 → the first week starts on Sunday 2026-09-27.
+        $columns = $this->period(['from' => '2026-09-30', 'to' => '2026-10-20'])->columns(null)['columns'];
+
+        $this->assertSame(['2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18'], array_column($columns, 'start'));
+        $this->assertSame('2026-10-03 23:59:59', $columns[0]['to']->toDateTimeString());
+    }
+
     public function test_count_into_drops_dates_outside_the_period(): void
     {
         $counted = $this->period(['days' => 7])->countInto([
