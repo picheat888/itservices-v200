@@ -149,6 +149,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
         ->middleware('permission:settings.system')->name('api.settings.branding');
     Route::put('settings/display', [SettingsController::class, 'updateDisplay'])
         ->middleware('permission:settings.system')->name('api.settings.display');
+    Route::put('settings/datetime', [SettingsController::class, 'updateDateTime'])
+        ->middleware('permission:settings.system')->name('api.settings.datetime');
     Route::put('settings/assets', [SettingsController::class, 'updateAssets'])
         ->middleware('permission:settings.assets')->name('api.settings.assets');
     Route::put('settings/sla', [SettingsController::class, 'updateSla'])

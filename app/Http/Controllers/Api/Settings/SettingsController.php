@@ -17,6 +17,7 @@ use App\Models\Ticket\Ticket;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Employee\EmployeeService;
 use App\Services\Settings\LogRetentionService;
+use App\Support\DateDisplay;
 use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,6 +43,10 @@ class SettingsController extends Controller
         'theme_accent' => '#2563eb',
         'theme_density' => 'normal',
         'theme_radius' => '10',
+        // Date and time display — system-wide, see App\Support\DateDisplay.
+        'date_format' => 'dmy_slash',
+        'date_era' => 'ce',
+        'time_format' => '24',
     ];
 
     /**
@@ -323,6 +328,23 @@ class SettingsController extends Controller
             AppSetting::put($key, (string) $value);
         }
         AuditLog::record('Updated display settings', implode(', ', array_keys($data)));
+
+        return $this->show();
+    }
+
+    /** Date and time display (Settings -> System). Gated by route middleware permission:settings.system. */
+    public function updateDateTime(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'date_format' => ['required', Rule::in(DateDisplay::FORMATS)],
+            'date_era' => ['required', Rule::in(DateDisplay::ERAS)],
+            'time_format' => ['required', Rule::in(DateDisplay::TIMES)],
+        ]);
+
+        foreach ($data as $key => $value) {
+            AppSetting::put($key, (string) $value);
+        }
+        AuditLog::record('Updated date and time settings', implode(', ', array_keys($data)));
 
         return $this->show();
     }
