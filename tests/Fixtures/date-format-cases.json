@@ -582,6 +582,39 @@
             },
             "lang": "",
             "expect": "Oct 2026"
+        },
+        {
+            "fn": "monthYearLong",
+            "args": ["2026-09"],
+            "config": {
+                "format": "dmy_slash",
+                "era": "ce",
+                "time": "24"
+            },
+            "lang": "th",
+            "expect": "กันยายน 2026"
+        },
+        {
+            "fn": "monthYearLong",
+            "args": ["2026-11-15"],
+            "config": {
+                "format": "dmy_slash",
+                "era": "be",
+                "time": "24"
+            },
+            "lang": "th",
+            "expect": "พฤศจิกายน 2569"
+        },
+        {
+            "fn": "monthYearLong",
+            "args": ["2026-09"],
+            "config": {
+                "format": "ymd_dash",
+                "era": "ce",
+                "time": "12"
+            },
+            "lang": "en",
+            "expect": "September 2026"
         }
     ]
 }

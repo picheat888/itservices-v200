@@ -97,6 +97,14 @@ class DateDisplay
     }
 
     /** @param  array<string, mixed>|null  $config */
+    public static function monthYearLong(CarbonInterface|string|null $value, ?array $config = null, string $lang = 'th'): string
+    {
+        $p = self::parse($value);
+
+        return $p === null ? self::EMPTY : self::monthName($p['m'], $lang, 'long').' '.self::eraYear($p['y'], self::resolve($config)['era']);
+    }
+
+    /** @param  array<string, mixed>|null  $config */
     public static function dayMonth(CarbonInterface|string|null $value, ?array $config = null, string $lang = 'th'): string
     {
         $p = self::parse($value);
