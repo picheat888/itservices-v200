@@ -4,6 +4,7 @@ import { useCurrency, useVendors } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
@@ -146,6 +147,7 @@ export function ContractFormDrawer({
     /** Called after a new contract is successfully saved — receives the created contract. */
     onCreated?: (contract: Contract) => void;
 }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { symbol } = useCurrency();
@@ -857,7 +859,7 @@ export function ContractFormDrawer({
                                     <ReviewRow k={t('contract_vendor')} v={vendorOptions.find((o) => o.value === form.vendor_id)?.label || '—'} />
                                     <ReviewRow
                                         k={t('contract_review_term')}
-                                        v={form.start_date && form.end_date ? `${form.start_date} → ${form.end_date}` : '—'}
+                                        v={form.start_date && form.end_date ? fmt.range(form.start_date, form.end_date) : '—'}
                                         mono
                                     />
                                     <ReviewRow

@@ -8,6 +8,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -19,7 +20,6 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useUiStore } from '@/stores/ui';
 import {
     AlertOctagon,
     AlertTriangle,
@@ -622,6 +622,7 @@ export default function ContractsPage() {
 /** Single contract row — shared by the normal list and the "new" pinned row. */
 function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: boolean; onSelect: (id: number) => void }) {
     const t = useT();
+    const fmt = useDateFormat();
     return (
         <tr
             onClick={() => onSelect(c.id)}
@@ -645,8 +646,8 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
             <td className="px-4 py-2.5">
                 <StatusBadge tone={TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>
             </td>
-            <td className="px-4 py-2.5 font-mono text-xs">{c.start}</td>
-            <td className="px-4 py-2.5 font-mono text-xs">{c.end}</td>
+            <td className="px-4 py-2.5 font-mono text-xs">{fmt.date(c.start)}</td>
+            <td className="px-4 py-2.5 font-mono text-xs">{fmt.date(c.end)}</td>
             <td className="px-4 py-2.5">
                 <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />
             </td>
@@ -689,7 +690,7 @@ function OverviewTab({
     onSelect: (id: number) => void;
 }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
+    const fmt = useDateFormat();
     const { symbol } = useCurrency();
 
     // Loading state mirrors the real layout with pulsing placeholders (same feel as the Stock dashboard).
@@ -735,8 +736,8 @@ function OverviewTab({
         const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
         return {
             key: `${d.getFullYear()}-${d.getMonth()}`,
-            label: d.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short' }),
-            year: d.getFullYear(),
+            label: fmt.month(d),
+            year: fmt.year(d.getFullYear()),
             isNow: offset === 0,
         };
     });
@@ -839,8 +840,8 @@ function OverviewTab({
                                     key={c.id}
                                     title={
                                         c.days <= 0
-                                            ? `${c.code}\n${c.name}\n${c.end} (${t('contract_timeline_expired_ago').replace('{n}', String(-c.days))})`
-                                            : `${c.code}\n${c.name}\n${c.end} (${t('contract_days_many').replace('{n}', String(c.days))})`
+                                            ? `${c.code}\n${c.name}\n${fmt.date(c.end)} (${t('contract_timeline_expired_ago').replace('{n}', String(-c.days))})`
+                                            : `${c.code}\n${c.name}\n${fmt.date(c.end)} (${t('contract_days_many').replace('{n}', String(c.days))})`
                                     }
                                     onClick={() => onSelect(c.id)}
                                     className={cn(
