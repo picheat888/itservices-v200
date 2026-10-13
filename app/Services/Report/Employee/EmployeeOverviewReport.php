@@ -329,8 +329,8 @@ class EmployeeOverviewReport extends TabularReport
             ...$joiners->map(fn (Employee $e) => ['kind' => 'joined', 'e' => $e, 'date' => $e->joined_at, 'at' => $index($e->joined_at)]),
             ...$leavers->map(fn (Employee $e) => ['kind' => 'left', 'e' => $e, 'date' => $e->last_day, 'at' => $index($e->last_day) + 1]),
         ])
-            ->filter(fn (array $v) => ! $clip || $v['at'] <= $lastIndex)
-            ->map(fn (array $v) => [...$v, 'at' => min($lastIndex, $v['at'])])
+            // A leaver still counted on the chart's last day drops after it, so they are left off.
+            ->filter(fn (array $v) => $v['at'] <= $lastIndex)
             ->sortBy([['at', 'asc'], ['kind', 'asc'], [fn (array $a, array $b) => strcmp($a['e']->code, $b['e']->code)]])
             ->values();
 
@@ -466,7 +466,8 @@ class EmployeeOverviewReport extends TabularReport
         $stats = fn (Collection $list) => [
             'start' => $list->filter(fn (Employee $e) => $this->workingBefore($e, $from))->count(),
             'joined' => $list->filter(fn (Employee $e) => $e->joined_at?->between($from, $asOf) ?? false)->count(),
-            'left' => $list->filter(fn (Employee $e) => $this->leftIn($e, $from, $to))->count(),
+            // Gone by the end day only, like joined: start + joined − left = end.
+            'left' => $list->filter(fn (Employee $e) => $this->leftIn($e, $from, $to) && $e->last_day->lt($asOf))->count(),
             'end' => $list->filter(fn (Employee $e) => $this->working($e, $asOf))->count(),
         ];
         $isEmpty = fn (array $s) => $s['start'] + $s['joined'] + $s['left'] + $s['end'] === 0;

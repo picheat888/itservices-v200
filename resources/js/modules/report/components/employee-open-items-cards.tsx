@@ -45,6 +45,8 @@ interface Piece {
     fill: string;
     label: string;
     short: string;
+    /** The piece's own unit when it differs from the bar's (accounts on the people bar). */
+    unit?: string;
 }
 
 const KEY_CLASS = 'inline-flex items-center gap-1 whitespace-nowrap';
@@ -72,7 +74,12 @@ function Key({ pieces }: { pieces: Piece[] }) {
 function barOf(pieces: Piece[], unit: string, lang: 'th' | 'en') {
     const shown = pieces.filter((p) => p.n > 0);
     const total = shown.reduce((s, p) => s + p.n, 0);
-    return shown.map((p) => ({ key: p.key, percent: (p.n / total) * 100, className: p.fill, title: `${p.label}: ${count(p.n, lang)} ${unit}` }));
+    return shown.map((p) => ({
+        key: p.key,
+        percent: (p.n / total) * 100,
+        className: p.fill,
+        title: `${p.label}: ${count(p.n, lang)} ${p.unit ?? unit}`,
+    }));
 }
 
 /** Read aloud: what the bar says. */
@@ -147,18 +154,23 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
     const n = (v: number) => count(v, lang);
     const people = t('rep_ef_people');
     const accountsUnit = t('rep_ef_accounts');
-    const itemsUnit = t('rep_ef_unit_items');
-
-    const dataItems = DATA_ISSUES.reduce((sum, k) => sum + data.data.by_issue[k], 0);
     const groupPieces: Piece[] = [
         { key: 'asset', n: data.asset.people, fill: GROUP_FILL.asset, label: t('rep_ef_group_asset'), short: t('rep_ef_short_asset') },
         { key: 'access', n: data.access.people, fill: GROUP_FILL.access, label: t('rep_ef_group_access'), short: t('rep_ef_short_access') },
         ...(data.acct
-            ? [{ key: 'acct', n: data.acct.accounts, fill: GROUP_FILL.acct, label: t('rep_ef_group_acct'), short: t('rep_ef_short_acct') }]
+            ? [
+                  {
+                      key: 'acct',
+                      n: data.acct.accounts,
+                      fill: GROUP_FILL.acct,
+                      label: t('rep_ef_group_acct'),
+                      short: t('rep_ef_short_acct'),
+                      unit: accountsUnit,
+                  },
+              ]
             : []),
-        { key: 'data', n: dataItems, fill: GROUP_FILL.data, label: t('rep_ef_group_data'), short: t('rep_ef_short_data') },
+        { key: 'data', n: data.data.people, fill: GROUP_FILL.data, label: t('rep_ef_group_data'), short: t('rep_ef_short_data') },
     ];
-    const itemTotal = groupPieces.reduce((sum, p) => sum + p.n, 0);
     const said = (pieces: Piece[]) =>
         pieces
             .filter((p) => p.n > 0)
@@ -209,12 +221,12 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
                 label={t('rep_ef_k_total')}
                 value={n(data.people_total)}
                 unit={people}
-                bar={data.people_total > 0 ? barOf(groupPieces, itemsUnit, lang) : undefined}
+                bar={data.people_total > 0 ? barOf(groupPieces, people, lang) : undefined}
                 footer={
                     data.people_total > 0 ? (
                         <>
                             <Key pieces={groupPieces} />
-                            <Said text={t('rep_ef_total_said').replace('{n}', n(itemTotal)).replace('{parts}', said(groupPieces))} />
+                            <Said text={t('rep_ef_total_said').replace('{parts}', said(groupPieces))} />
                         </>
                     ) : (
                         t('rep_ef_total_none')

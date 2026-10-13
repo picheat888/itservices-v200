@@ -250,6 +250,36 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertSame($first['base'] + $first['joined'] - $first['left'], $first['headcount']);
     }
 
+    public function test_a_leaver_on_the_range_end_is_not_on_the_chart(): void
+    {
+        $this->employee('Stay', ['joined_at' => '2020-01-01']);
+        $this->employee('LastOnEnd', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-09-30']);
+        $data = $this->actingAs($this->userWith(['employees.view']))
+            ->getJson('/api/reports/employees/overview/breakdown?from=2026-01-01&to=2026-09-30')->assertOk()->json('data');
+
+        $september = collect($data['points'])->last();
+
+        $this->assertSame(2, $september['headcount']);
+        $this->assertSame(0, $september['left']);
+        $this->assertSame(1, $data['leavers']['count']);
+    }
+
+    public function test_department_rows_add_up_while_a_leaver_still_works(): void
+    {
+        $it = Department::create(['code' => 'IT', 'name' => 'IT']);
+        $this->employee('Stay', ['department_id' => $it->id, 'joined_at' => '2020-01-01']);
+        $this->employee('Notice', ['department_id' => $it->id, 'joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-10-25']);
+        $this->employee('Gone', ['department_id' => $it->id, 'joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-05-31']);
+
+        $data = $this->breakdown();
+        $row = collect($data['departments'])->firstWhere('name', 'IT');
+
+        $this->assertSame(['start' => 3, 'joined' => 0, 'left' => 1, 'end' => 2], array_intersect_key($row, array_flip(['start', 'joined', 'left', 'end'])));
+        $this->assertSame($row['start'] + $row['joined'] - $row['left'], $row['end']);
+        $this->assertSame(1, $data['leavers']['still_working']);
+        $this->assertSame(2, $data['leavers']['count']);
+    }
+
     public function test_a_leaver_drops_the_line_in_the_month_after_their_last_day(): void
     {
         $this->employee('Stay', ['joined_at' => '2020-01-01']);

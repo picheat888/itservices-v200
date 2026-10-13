@@ -190,6 +190,9 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
         t('rep_eo_flow_info_leaver'),
         t('rep_eo_flow_info_tap'),
     ];
+    // Leavers whose last day is the chart's last day or later are not off the line yet.
+    const pending = data.leavers.count - leftTotal;
+    if (pending > 0) info.push(t('rep_eo_flow_info_pending').replace('{n}', count(pending, lang)));
     const legend = (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="inline-flex items-center gap-1.5">
