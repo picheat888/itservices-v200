@@ -65,7 +65,7 @@ class AssetOverviewRegisteredColumnsTest extends TestCase
             $sheet = last($export->sheets());
 
             return array_slice($sheet->headings(), -2) === ['วันที่ลงทะเบียน', 'ลงทะเบียนโดย']
-                && array_slice($sheet->map($export->rows->first()), -2) === ['2026-09-25', $viewer->name];
+                && array_slice($sheet->map($export->rows->first()), -2) === ['25/09/2026', $viewer->name];
         });
     }
 }

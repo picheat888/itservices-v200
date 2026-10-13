@@ -107,9 +107,12 @@ class TicketOverviewExportTest extends TestCase
             $staff = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'Tech One');
             // The 90th percentile reads as a ceiling ("ไม่เกิน"), never as an average of the 90%.
             $p90 = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === '90% ปิดได้ไม่เกิน (ชม.)');
+            $range = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'ช่วงวันที่');
 
             // แผนก, Ticket, ฮาร์ดแวร์ … อื่น ๆ (6 categories), ยังไม่ปิด, ทัน SLA %
             return $p90 === ['90% ปิดได้ไม่เกิน (ชม.)', 2.0]
+                // A whole calendar month reads as the month, in the date setting.
+                && $range === ['ช่วงวันที่', 'ก.ย. 2026']
                 && $department === ['ปฏิบัติการ', 2, 2, 0, 0, 0, 0, 0, 1, 100.0]
                 // ผู้รับผิดชอบ, ทั้งหมด, ปิดสำเร็จ, ยกเลิก, เวลาแก้ไขโดยเฉลี่ย, ทัน SLA % — the period only
                 && $staff === ['Tech One', 1, 1, 0, 2.0, 100.0];
@@ -213,7 +216,7 @@ class TicketOverviewExportTest extends TestCase
                 && $row['ลักษณะงาน'] === 'งานซ่อม (ช่างภายนอก)'
                 && $row['ทรัพย์สินที่เกี่ยวข้อง'] === $asset->asset_code
                 && $row['เบอร์ติดต่อกลับ'] === '0812345678'
-                && $row['รับเคสเมื่อ'] === '2026-09-05 10:00'
+                && $row['รับเคสเมื่อ'] === '05/09/2026 10:00'
                 && $row['เวลาที่ใช้รับเคส (ชม.)'] === 2.0
                 && $row['ผลการรับเคสตาม SLA'] === 'เกิน SLA' // taken an hour after its response deadline
                 && $row['ผลการแก้ไขตาม SLA'] === 'ทัน SLA'
@@ -285,12 +288,12 @@ class TicketOverviewExportTest extends TestCase
 
             // Tickets in the workbook's order (the later one first), each story oldest first.
             return $lines === [
-                "{$quiet->ticket_no} | 2026-09-04 08:00 | เปิด Ticket | {$opener} | Mouse broken",
-                "{$logged->ticket_no} | 2026-09-05 08:00 | เปิด Ticket | Somchai | VPN down",
-                "{$logged->ticket_no} | 2026-09-05 09:00 | รับเคส | Tech One | ผู้รับผิดชอบ: Tech One",
-                "{$logged->ticket_no} | 2026-09-05 10:00 | บันทึกความคืบหน้า | Tech One | Restarted the gateway",
-                "{$logged->ticket_no} | 2026-09-05 11:00 | ส่งต่องาน | Tech One | จาก Tech One ให้ Tech Two",
-                "{$logged->ticket_no} | 2026-09-05 12:00 | ปิดเคส | Tech Two | สถานะ: เสร็จสิ้น",
+                "{$quiet->ticket_no} | 04/09/2026 08:00 | เปิด Ticket | {$opener} | Mouse broken",
+                "{$logged->ticket_no} | 05/09/2026 08:00 | เปิด Ticket | Somchai | VPN down",
+                "{$logged->ticket_no} | 05/09/2026 09:00 | รับเคส | Tech One | ผู้รับผิดชอบ: Tech One",
+                "{$logged->ticket_no} | 05/09/2026 10:00 | บันทึกความคืบหน้า | Tech One | Restarted the gateway",
+                "{$logged->ticket_no} | 05/09/2026 11:00 | ส่งต่องาน | Tech One | จาก Tech One ให้ Tech Two",
+                "{$logged->ticket_no} | 05/09/2026 12:00 | ปิดเคส | Tech Two | สถานะ: เสร็จสิ้น",
             ];
         });
     }

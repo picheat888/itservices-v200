@@ -5,7 +5,7 @@ namespace App\Exports\Report;
 use App\Models\Ticket\Ticket;
 use App\Services\Report\TicketLabels;
 use App\Services\Report\TicketMetrics;
-use App\Support\SystemTime;
+use App\Support\DateDisplay;
 use Closure;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -65,20 +65,20 @@ class TicketOverviewRawSheet implements FromCollection, ShouldAutoSize, WithColu
             ['heading' => 'เบอร์ติดต่อกลับ', 'meaning' => 'เบอร์ที่ผู้แจ้งให้ไว้สำหรับติดต่อกลับ', 'value' => fn (Ticket $t) => $t->callback_phone],
             ['heading' => 'ทรัพย์สินที่เกี่ยวข้อง', 'meaning' => 'รหัสทรัพย์สิน IT ที่ผูกกับปัญหานี้ (ถ้ามี)', 'value' => fn (Ticket $t) => $t->relatedAsset?->asset_code],
             ['heading' => 'ผู้รับผิดชอบ', 'meaning' => 'เจ้าหน้าที่ IT ที่ถือเคสอยู่ล่าสุด ว่าง = ยังไม่มีคนรับ', 'value' => fn (Ticket $t) => $t->assignee?->name],
-            ['heading' => 'เปิดเมื่อ', 'meaning' => 'วันเวลาที่เปิด Ticket', 'value' => fn (Ticket $t) => SystemTime::dateTime($t->created_at)],
-            ['heading' => 'รับเคสเมื่อ', 'meaning' => 'วันเวลาที่เจ้าหน้าที่รับเคสครั้งแรก (ตอบรับ)', 'value' => fn (Ticket $t) => SystemTime::dateTime($t->responded_at)],
-            ['heading' => 'กำหนดรับเคสตาม SLA', 'meaning' => 'เวลาที่ต้องรับเคสให้ทันตามข้อตกลงระดับบริการ (SLA)', 'value' => fn (Ticket $t) => SystemTime::dateTime($t->sla_response_due_at)],
+            ['heading' => 'เปิดเมื่อ', 'meaning' => 'วันเวลาที่เปิด Ticket', 'value' => fn (Ticket $t) => DateDisplay::cellDateTime($t->created_at)],
+            ['heading' => 'รับเคสเมื่อ', 'meaning' => 'วันเวลาที่เจ้าหน้าที่รับเคสครั้งแรก (ตอบรับ)', 'value' => fn (Ticket $t) => DateDisplay::cellDateTime($t->responded_at)],
+            ['heading' => 'กำหนดรับเคสตาม SLA', 'meaning' => 'เวลาที่ต้องรับเคสให้ทันตามข้อตกลงระดับบริการ (SLA)', 'value' => fn (Ticket $t) => DateDisplay::cellDateTime($t->sla_response_due_at)],
             ['heading' => 'เวลาที่ใช้รับเคส (ชม.)', 'meaning' => 'ชั่วโมงตามปฏิทินจากเปิด Ticket ถึงรับเคส ทศนิยม 1 ตำแหน่ง', 'value' => fn (Ticket $t) => TicketMetrics::responseHours($t)],
             ['heading' => 'ผลการรับเคสตาม SLA', 'meaning' => 'ทัน SLA = รับเคสก่อนกำหนด, เกิน SLA = รับช้า หรือยังไม่มีคนรับทั้งที่เลยกำหนดแล้ว, ว่าง = ยังไม่ถึงกำหนดหรือไม่มีกำหนด', 'value' => fn (Ticket $t) => TicketLabels::sla(TicketMetrics::responseSlaState($t, $now))],
-            ['heading' => 'กำหนดแก้เสร็จตาม SLA', 'meaning' => 'เวลาที่ต้องปิดเคสให้ทันตาม SLA (งานซ่อมใช้กำหนดของงานซ่อม)', 'value' => fn (Ticket $t) => SystemTime::dateTime($t->sla_resolve_due_at)],
-            ['heading' => 'ปิดเมื่อ', 'meaning' => 'วันเวลาที่ปิดเคส (เสร็จสิ้นหรือยกเลิก)', 'value' => fn (Ticket $t) => SystemTime::dateTime($t->resolved_at)],
+            ['heading' => 'กำหนดแก้เสร็จตาม SLA', 'meaning' => 'เวลาที่ต้องปิดเคสให้ทันตาม SLA (งานซ่อมใช้กำหนดของงานซ่อม)', 'value' => fn (Ticket $t) => DateDisplay::cellDateTime($t->sla_resolve_due_at)],
+            ['heading' => 'ปิดเมื่อ', 'meaning' => 'วันเวลาที่ปิดเคส (เสร็จสิ้นหรือยกเลิก)', 'value' => fn (Ticket $t) => DateDisplay::cellDateTime($t->resolved_at)],
             ['heading' => 'เวลาแก้ไข (ชม.)', 'meaning' => 'ชั่วโมงตามปฏิทินจากเปิด Ticket ถึงปิดเคส ทศนิยม 1 ตำแหน่ง', 'value' => fn (Ticket $t) => TicketMetrics::resolveHours($t)],
             ['heading' => 'ผลการแก้ไขตาม SLA', 'meaning' => 'ทัน SLA = ปิดเสร็จก่อนกำหนด, เกิน SLA = ปิดช้า หรือยังเปิดอยู่ทั้งที่เลยกำหนดแล้ว, ว่าง = ยังไม่ถึงกำหนด ไม่มีกำหนด หรือยกเลิก', 'value' => fn (Ticket $t) => TicketLabels::sla(TicketMetrics::resolveSlaState($t, $now))],
             ['heading' => 'บันทึกตอนรับเคส', 'meaning' => 'ข้อความที่เจ้าหน้าที่เขียนตอนกดรับเคส', 'wrap' => true, 'value' => fn (Ticket $t) => $t->take_note],
             ['heading' => 'ผลการดำเนินงาน', 'meaning' => 'ข้อความที่เจ้าหน้าที่เขียนตอนปิดเคส: วิธีแก้ไข หรือเหตุผลที่ยกเลิก', 'wrap' => true, 'value' => fn (Ticket $t) => $t->resolution],
             ['heading' => 'จำนวนบันทึกความคืบหน้า', 'meaning' => 'จำนวนบันทึกความคืบหน้าและการส่งต่องาน (ดูข้อความได้ที่ชีต "ประวัติ")', 'value' => fn (Ticket $t) => (int) $t->updates_count],
             ['heading' => 'จำนวนไฟล์แนบ', 'meaning' => 'จำนวนรูปหรือไฟล์ที่แนบกับ Ticket', 'value' => fn (Ticket $t) => (int) $t->attachments_count],
-            ['heading' => 'แก้ไขล่าสุดเมื่อ', 'meaning' => 'วันเวลาล่าสุดที่ข้อมูล Ticket มีการเปลี่ยนแปลง', 'value' => fn (Ticket $t) => SystemTime::dateTime($t->updated_at)],
+            ['heading' => 'แก้ไขล่าสุดเมื่อ', 'meaning' => 'วันเวลาล่าสุดที่ข้อมูล Ticket มีการเปลี่ยนแปลง', 'value' => fn (Ticket $t) => DateDisplay::cellDateTime($t->updated_at)],
         ];
     }
 

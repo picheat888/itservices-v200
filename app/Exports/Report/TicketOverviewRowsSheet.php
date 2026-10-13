@@ -5,7 +5,7 @@ namespace App\Exports\Report;
 use App\Models\Ticket\Ticket;
 use App\Services\Report\TicketLabels;
 use App\Services\Report\TicketMetrics;
-use App\Support\SystemTime;
+use App\Support\DateDisplay;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -60,8 +60,8 @@ class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHea
             TicketLabels::status($ticket->status?->value),
             TicketLabels::source($ticket->source?->value),
             $ticket->assignee?->name,
-            SystemTime::dateTime($ticket->created_at),
-            SystemTime::dateTime($ticket->resolved_at),
+            DateDisplay::cellDateTime($ticket->created_at),
+            DateDisplay::cellDateTime($ticket->resolved_at),
             TicketMetrics::resolveHours($ticket),
             self::SLA_LABELS[TicketMetrics::slaState($ticket, now())] ?? '',
         ];

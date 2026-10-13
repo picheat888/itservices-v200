@@ -4,6 +4,7 @@ namespace App\Exports\Report;
 
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -29,7 +30,7 @@ class TabularSummarySheet implements FromArray, ShouldAutoSize, WithTitle
     {
         $rows = [
             [$this->report->title()],
-            ['สร้างเมื่อ', now()->format('Y-m-d H:i')],
+            ['สร้างเมื่อ', DateDisplay::dateTime(now())],
             [],
             ['ตัวชี้วัด', 'ค่า'],
         ];

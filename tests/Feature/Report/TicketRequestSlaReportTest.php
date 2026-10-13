@@ -332,13 +332,13 @@ class TicketRequestSlaReportTest extends TestCase
             // Taken the 6th 09:00, closed the 10th 10:00: 97 h of work; with the 23 h wait, the 120 h to close.
             $this->assertEquals(97.0, $t2['ลงมือแก้ (ชม.)']);
             $this->assertEquals(120.0, $t2['เวลาปิดเคส (ชม.)']);
-            $this->assertSame('2026-09-08 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
+            $this->assertSame('08/09/2026 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
             $this->assertSame('ไม่ทัน', $t2['ปิดทัน SLA']);
             $this->assertSame('งานปกติ', $t2['ลักษณะงาน']);
             $this->assertSame(trim($this->set['t2']->description), $t2['รายละเอียด']);
             // t4 was canceled the 4th: it has a cancel time and no close time.
             $t4 = $rows[$this->set['t4']->ticket_no];
-            $this->assertSame('2026-09-04 10:00', $t4['ยกเลิกเมื่อ']);
+            $this->assertSame('04/09/2026 10:00', $t4['ยกเลิกเมื่อ']);
             $this->assertNull($t4['ปิดเคสเมื่อ']);
 
             return true;

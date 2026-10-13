@@ -4,6 +4,7 @@ namespace App\Exports\Report;
 
 use App\Enums\Ticket\TicketCategory;
 use App\Services\Report\TicketLabels;
+use App\Support\DateDisplay;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -32,8 +33,8 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
 
         $rows = [
             ['รายงานภาพรวม Ticket & SLA'],
-            ['ช่วงวันที่', $s['range']['from'].' – '.$s['range']['to']],
-            ['สร้างเมื่อ', $s['generated_at']],
+            ['ช่วงวันที่', DateDisplay::range($s['range']['from'], $s['range']['to'])],
+            ['สร้างเมื่อ', DateDisplay::dateTime($s['generated_at'])],
             [],
             ['ตัวชี้วัด', 'ค่า'],
             ['Ticket ทั้งหมด', $k['total']],

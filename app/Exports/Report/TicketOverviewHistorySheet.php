@@ -2,7 +2,7 @@
 
 namespace App\Exports\Report;
 
-use App\Support\SystemTime;
+use App\Support\DateDisplay;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Support\Collection;
@@ -35,7 +35,7 @@ class TicketOverviewHistorySheet implements FromCollection, ShouldAutoSize, With
     {
         return [
             ['heading' => 'เลขที่ Ticket', 'meaning' => 'Ticket ที่เหตุการณ์นี้เกิดขึ้น ตรงกับคอลัมน์เดียวกันในชีต "ข้อมูลดิบ"', 'value' => fn (array $e) => $e['ticket_no']],
-            ['heading' => 'วันเวลา', 'meaning' => 'เวลาที่เกิดเหตุการณ์', 'value' => fn (array $e) => SystemTime::dateTime($e['at'])],
+            ['heading' => 'วันเวลา', 'meaning' => 'เวลาที่เกิดเหตุการณ์', 'value' => fn (array $e) => DateDisplay::cellDateTime($e['at'])],
             ['heading' => 'เหตุการณ์', 'meaning' => 'สิ่งที่เกิดขึ้น: เปิด Ticket, รับเคส, มอบหมายงาน, บันทึกความคืบหน้า, ส่งต่องาน, เปลี่ยนลักษณะงาน, แก้ไขข้อมูล, แนบ/ลบไฟล์, ปิดเคส, ยกเลิกเคส', 'value' => fn (array $e) => $e['event']],
             ['heading' => 'ผู้ทำรายการ', 'meaning' => 'ผู้ที่ทำเหตุการณ์นี้ ("ระบบ" = ระบบทำให้อัตโนมัติ)', 'value' => fn (array $e) => $e['actor']],
             ['heading' => 'รายละเอียด', 'meaning' => 'ข้อความของบันทึก ผู้รับงานใหม่ สถานะที่ปิด หรือชื่อไฟล์ แล้วแต่เหตุการณ์', 'wrap' => true, 'value' => fn (array $e) => $e['detail']],
