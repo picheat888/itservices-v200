@@ -82,8 +82,8 @@
                 <td><b>{{ $m['name'] }}</b> <span class="muted">{{ $m['code'] }}</span></td>
                 <td>{{ $dept($m['department']) }}</td>
                 @if ($isFile)<td>{{ $levels[$m['level']] ?? $m['level'] }}</td>@endif
-                <td>{{ $m['granted_at'] ?? '—' }}</td>
-                <td>{{ $m['kind'] === 'gone' ? 'ลาออก'.($m['last_day'] ? ' '.$m['last_day'] : '') : ($m['kind'] === 'cross' ? 'ข้ามแผนก' : '') }}</td>
+                <td>{{ \App\Support\DateDisplay::date($m['granted_at']) }}</td>
+                <td>{{ $m['kind'] === 'gone' ? 'ลาออก'.($m['last_day'] ? ' '.\App\Support\DateDisplay::date($m['last_day']) : '') : ($m['kind'] === 'cross' ? 'ข้ามแผนก' : '') }}</td>
                 <td class="c"><span class="box"></span></td>
                 <td class="c"><span class="box"></span></td>
             </tr>

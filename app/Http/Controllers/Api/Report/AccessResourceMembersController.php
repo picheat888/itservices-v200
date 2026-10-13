@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\TabularReportRequest;
 use App\Models\Settings\AppSetting;
 use App\Services\Report\Access\AccessResourceMembersReport;
+use App\Support\DateDisplay;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -45,7 +46,7 @@ class AccessResourceMembersController extends Controller
             'logo' => $logo,
             'company' => AppSetting::get('company_name', 'ABCD Electric Company'),
             'printedBy' => $request->user()?->name ?? '',
-            'printedAt' => now()->format('Y-m-d H:i'),
+            'printedAt' => DateDisplay::dateTime(now()),
         ])->setPaper('a4', 'portrait')->output();
         $filename = DocumentName::make('AccessReview', [(string) $sheet['code']]);
 

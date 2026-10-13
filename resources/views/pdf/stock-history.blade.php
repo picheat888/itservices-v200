@@ -1,9 +1,7 @@
 @php
     $item = $history['item'];
-    // Timestamps come from the API as naive UTC — render them in the system timezone.
-    $fmt = fn ($iso) => $iso
-        ? \App\Support\SystemTime::dateTime(\Illuminate\Support\Carbon::parse($iso, 'UTC'))
-        : '—';
+    // Movement times arrive as local wall time with an offset; DateDisplay keeps the wall time.
+    $fmt = fn ($iso) => \App\Support\DateDisplay::dateTime($iso);
     $movesOf = fn (array $types) => array_values(array_filter($history['movements'], fn ($m) => in_array($m['type'], $types, true)));
     $serialsOf = function (array $m, string $event) use ($history) {
         $out = [];

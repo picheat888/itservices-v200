@@ -5,6 +5,7 @@ namespace App\Services\Report\Tabular;
 use App\Exports\Report\TabularReportExport;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\DateDisplay;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
@@ -84,7 +85,7 @@ class TabularReportExporter
             'total' => $total,
             'company' => AppSetting::get('company_name', ''),
             'printedBy' => $viewer->name,
-            'printedAt' => now()->format('Y-m-d H:i'),
+            'printedAt' => DateDisplay::dateTime(now()),
         ])->setPaper('a4', $report->pdfOrientation());
 
         return ['name' => $name, 'rows' => $rows->count(), 'pdf' => $pdf];
