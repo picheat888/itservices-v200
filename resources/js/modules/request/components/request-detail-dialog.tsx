@@ -60,7 +60,7 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
             <Dialog open={requestId != null} onOpenChange={(o) => !o && onClose()}>
                 <DialogContent
                     className={cn(
-                        '!flex max-h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0',
+                        '!flex h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[980px] flex-col gap-0 overflow-hidden p-0',
                         isError && !request && recordMissingContentClass,
                     )}
                 >
@@ -223,7 +223,7 @@ function RequestDetailBody({
                 </div>
             )}
 
-            <div className="border-border/60 grid flex-1 gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
+            <div className="border-border/60 grid flex-1 content-start gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
                 {/* Left — summary + typed fields */}
                 <div className="min-w-0 space-y-5">
                     <div>

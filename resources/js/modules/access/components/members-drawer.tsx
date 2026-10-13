@@ -14,7 +14,7 @@ import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToastStore, type ToastIcon } from '@/stores/toast';
 import { Folder, Globe, Package, Pencil, Plus, SquarePen, Trash2, TriangleAlert, User, Users } from 'lucide-react';
@@ -329,7 +329,7 @@ export function MembersDrawer({
 
     return (
         <Dialog open={!!target} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100vh-72px)] w-full max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={focusDialogContentClass}>
                 {tgt && (
                     <>
                         {/* Header — shared focus-dialog header (same as contract View/Edit) */}
@@ -409,8 +409,8 @@ export function MembersDrawer({
                             </div>
                         )}
 
-                        {/* Members — DataTable sized to content; body scrolls past maxBodyHeight */}
-                        <div className="border-border border-t px-6 py-4">
+                        {/* Members — the one part that scrolls */}
+                        <div className="border-border min-h-0 flex-1 overflow-y-auto border-t px-6 py-4">
                             <SectionLabel>
                                 {t('access_members')} ({members.length})
                             </SectionLabel>
