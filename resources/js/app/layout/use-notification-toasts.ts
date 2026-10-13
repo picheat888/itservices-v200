@@ -1,7 +1,6 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from '@/modules/report';
-import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -41,7 +40,7 @@ function toneFor(color: string): ToastTone {
  * they share the corner, the three-at-once limit and the countdown behaviour
  * with every other toast instead of stacking a second region on top.
  */
-export function useNotificationToasts(): void {
+export function useNotificationToasts(openChangePassword: () => void): void {
     // Prefers the wording an administrator set on the Bell tab; falls through to the
     // bundled string for every other key, so this still serves the surrounding UI text.
     const t = useNotificationText();
@@ -73,9 +72,8 @@ export function useNotificationToasts(): void {
     // navigate with a stale router.
     const navigateRef = useRef(navigate);
     navigateRef.current = navigate;
-    const [, openShellDialog] = useDialogParam(['password'] as const);
-    const openShellDialogRef = useRef(openShellDialog);
-    openShellDialogRef.current = openShellDialog;
+    const openChangePasswordRef = useRef(openChangePassword);
+    openChangePasswordRef.current = openChangePassword;
     const markReadRef = useRef(markRead);
     markReadRef.current = markRead;
     const tRef = useRef(t);
@@ -127,7 +125,7 @@ export function useNotificationToasts(): void {
                     // Same exception the tray makes: the password warning asks for a
                     // dialog, not a page (see notifications-dropdown).
                     if (n.data.type === 'password_expiring') {
-                        openShellDialogRef.current('password');
+                        openChangePasswordRef.current();
                     } else {
                         navigateRef.current(target);
                     }

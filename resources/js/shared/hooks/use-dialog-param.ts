@@ -1,19 +1,6 @@
-/**
- * A dialog whose open state lives in the URL as `?dialog=<name>` — the common web convention
- * for a modal over a page, alongside the app's `?tab=`. A link or bookmark with it opens the
- * dialog; a reload keeps it open; the browser's Back button closes it rather than leaving the
- * page.
- *
- * - Opening pushes a history entry (marked in its state), so Back pops just the dialog.
- * - Closing from inside (✕, Cancel, done) steps back over that entry when this page pushed it;
- *   when the dialog came in on the URL itself (a shared link), it removes the param in place
- *   instead, so the reader is not sent off the page.
- * - Other params (filters, ?tab=) are left as they are. A value not in `names` reads as closed.
- * - `setOpen(name, { over: true })` stacks on the open dialog; the third value names the one beneath.
- *
- * Used by the report pages' Export and Schedule dialogs (modules/report) and the app shell's
- * My Profile / Change password; `useShownDialogParam` mirrors a dialog the app raises itself.
- */
+// A dialog whose open state lives in the URL as `?dialog=<name>`: links and reloads open it, Back closes it.
+// Opening pushes an entry (Back pops just the dialog); `{ over: true }` stacks on the open one; closing steps back
+// over a pushed entry, else drops the param in place. URL writes elsewhere keep the entry's state (keepDialogState).
 import { useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -24,7 +11,14 @@ interface DialogState {
     dialogUnder?: string;
 }
 
-export function useDialogParam<T extends string>(names: readonly T[]): [T | null, (name: T | null, options?: { over?: boolean }) => void, T | null] {
+/** The current history entry's state, for a replace write that must not drop an open dialog's stack. */
+export function keepDialogState(): unknown {
+    return (window.history.state as { usr?: unknown } | null)?.usr;
+}
+
+export function useDialogParam<T extends string>(
+    names: readonly T[],
+): [T | null, (name: T | null, options?: { over?: boolean; inPlace?: boolean }) => void, T | null] {
     const [params, setParams] = useSearchParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -33,10 +27,10 @@ export function useDialogParam<T extends string>(names: readonly T[]): [T | null
         value != null && (names as readonly string[]).includes(value) ? (value as T) : null;
 
     const open = known(params.get(PARAM));
-    // The dialog left open beneath this one (setOpen(name, { over: true })), kept in the history entry.
+    // The dialog left open beneath this one, kept in the history entry
     const under = open === null ? null : known(state?.dialogUnder);
 
-    const setOpen = (name: T | null, options: { over?: boolean } = {}) => {
+    const setOpen = (name: T | null, options: { over?: boolean; inPlace?: boolean } = {}) => {
         if (name !== null) {
             if (name === open) return;
             setParams(
@@ -49,7 +43,7 @@ export function useDialogParam<T extends string>(names: readonly T[]): [T | null
             return;
         }
         if (open === null) return;
-        if (state?.dialogPushed) {
+        if (state?.dialogPushed && !options.inPlace) {
             navigate(-1);
             return;
         }
@@ -78,7 +72,7 @@ export function useShownDialogParam(name: string, shown: boolean): void {
                 else next.delete(PARAM);
                 return next;
             },
-            { replace: true },
+            { replace: true, state: keepDialogState() },
         );
     }, [name, shown, inUrl, setParams]);
 }

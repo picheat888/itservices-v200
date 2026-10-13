@@ -4,7 +4,7 @@ import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-p
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { NotificationsDropdown } from './notifications-dropdown';
 import { ProfileDrawer } from './profile-drawer';
@@ -17,8 +17,6 @@ const SHELL_DIALOGS = ['profile', 'password'] as const;
 export function AppShell() {
     useDocumentTitle();
     useUserPreferences();
-    // Inside the router: tapping a toast navigates.
-    useNotificationToasts();
     const density = useUiStore((s) => s.density);
     const { user } = useAuth();
 
@@ -38,6 +36,14 @@ export function AppShell() {
     useShownDialogParam('set-password', !!user?.must_change_password);
     // An owed password change is the only thing on screen: no My Profile over the wall
     const passwordOwed = !!user?.must_change_password || !!user?.password_expired;
+    // The expiry wall replaces any open shell dialog, so it does not come back afterwards (set-password swaps the param itself)
+    const expiryWall = passwordOwed && !user?.must_change_password;
+    useEffect(() => {
+        if (expiryWall && shellDialog !== null) setShellDialog(null, { inPlace: true });
+    }, [expiryWall, shellDialog, setShellDialog]);
+    const openChangePassword = () => setShellDialog('password');
+    // Inside the router: tapping a toast navigates
+    useNotificationToasts(openChangePassword);
 
     return (
         <div className="bg-background flex h-screen overflow-hidden" data-density={density}>
@@ -46,7 +52,7 @@ export function AppShell() {
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="relative">
                     <Topbar notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((v) => !v)} />
-                    {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} />}
+                    {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} onChangePassword={openChangePassword} />}
                 </div>
 
                 <main className="bg-content relative flex-1 overflow-y-auto p-6 [--sticky-top:-1.5rem] [scrollbar-gutter:stable]">

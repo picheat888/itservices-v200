@@ -13,6 +13,7 @@
  *
  * Used by every module page with tabs (Settings, Tickets, Assets, …).
  */
+import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { readTabParam } from '@/shared/lib/tab-param';
 import { useSearchParams } from 'react-router-dom';
 
@@ -45,7 +46,8 @@ export function useTabParam<T extends string>(
                 options.extra?.(params);
                 return params;
             },
-            { replace: options.replace ?? false },
+            // A replace keeps an open ?dialog= stack (useDialogParam)
+            options.replace ? { replace: true, state: keepDialogState() } : {},
         );
     };
 
