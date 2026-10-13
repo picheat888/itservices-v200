@@ -1,10 +1,11 @@
 export type { Department, Position } from '@/shared/types';
 export { departmentApi } from './api/departmentApi';
 export { employeeApi } from './api/employeeApi';
-export type { EmployeePageMeta, EmployeePageResponse, EmployeePayload, EmployeeSummary } from './api/employeeApi';
+export type { EmployeeHeldAsset, EmployeePageMeta, EmployeePageResponse, EmployeePayload, EmployeeSummary } from './api/employeeApi';
 export { locationApi } from './api/locationApi';
 export { positionApi } from './api/positionApi';
 export { sectionApi } from './api/sectionApi';
+export { AccessPane, AssetsPane, IdChip, RAIL_HEADING, RailRow, RequestsPane, TicketsPane } from './components/employee-panes';
 export { PhotoCropDialog } from './components/photo-crop-dialog';
 export { useDepartmentMembers, useDepartmentMutations, useDepartments } from './hooks/use-departments';
 export {

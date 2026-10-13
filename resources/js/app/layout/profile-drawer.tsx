@@ -2,10 +2,21 @@ import { useT } from '@/lang';
 import { useMyAccess } from '@/modules/access';
 import { useMyAssets } from '@/modules/asset';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
-import { PhotoCropDialog, useEmployee } from '@/modules/employee';
+import {
+    AccessPane,
+    AssetsPane,
+    IdChip,
+    PhotoCropDialog,
+    RAIL_HEADING,
+    RailRow,
+    RequestsPane,
+    TicketsPane,
+    useEmployee,
+    type EmployeeHeldAsset,
+} from '@/modules/employee';
+import { useRequests } from '@/modules/request';
 import { useTickets } from '@/modules/ticket';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
-import { EmptyPane } from '@/shared/components/empty-pane';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -13,12 +24,12 @@ import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError } from '@/shared/lib/utils';
-import type { EmployeeAccessRow, User } from '@/shared/types';
+import type { Asset, User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
-import { AtSign, Box, Briefcase, Building2, Camera, Hash, IdCard, KeyRound, Phone, Shield, Ticket, UserRound } from 'lucide-react';
+import { AtSign, Box, Briefcase, Building2, Camera, Clock, Hash, IdCard, Inbox, KeyRound, Phone, Shield, Ticket, UserRound } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -53,24 +64,6 @@ const SERVER_FIELDS: Record<string, FormKey> = {
     phone: 'phone',
 };
 
-// Same rail heading as the employee viewer
-const RAIL_HEADING = 'text-muted-foreground border-border border-b pb-1.5 text-xs font-bold';
-
-/** One fact in the left rail: an icon, what it is, and what it says. */
-function RailFact({ icon: Icon, label, value, mono }: { icon: typeof Hash; label: string; value?: string | null; mono?: boolean }) {
-    return (
-        <div className="flex items-start gap-2.5">
-            <span className="bg-muted text-muted-foreground mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-md">
-                <Icon className="h-3.5 w-3.5" aria-hidden />
-            </span>
-            <div className="min-w-0">
-                <div className="text-muted-foreground text-[11px]">{label}</div>
-                <div className={cn('truncate text-sm', mono && 'font-mono text-[13px]')}>{value || '—'}</div>
-            </div>
-        </div>
-    );
-}
-
 function RailSection({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <section className="flex flex-col gap-3">
@@ -80,50 +73,23 @@ function RailSection({ title, children }: { title: string; children: React.React
     );
 }
 
-/** A chip of identity under the name — the same shape the employee drawer uses. */
-function IdChip({ icon: Icon, children }: { icon: typeof Hash; children: React.ReactNode }) {
-    return (
-        <span className="border-border bg-card text-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium">
-            <Icon className="text-muted-foreground h-3.5 w-3.5" aria-hidden />
-            {children}
-        </span>
-    );
-}
+/** Asset from /assets/mine in the row shape the shared Assets tab reads. */
+const heldAsset = (a: Asset): EmployeeHeldAsset => ({
+    id: a.id,
+    asset_code: a.asset_code,
+    tag: a.tag,
+    model: a.model,
+    type: a.type,
+    type_th: a.type_th ?? null,
+    serial: a.serial,
+    status: a.status,
+    owned_since: a.owned_since,
+});
 
-/** One line in a holdings tab; the page behind "see all" is where things get done. */
-function ItemRow({ icon: Icon, title, sub, right }: { icon: typeof Hash; title: string; sub?: string | null; right?: React.ReactNode }) {
-    return (
-        <div className="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0">
-            <span className="bg-muted text-muted-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md">
-                <Icon className="h-4 w-4" aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{title}</div>
-                {sub && <div className="text-muted-foreground truncate text-xs">{sub}</div>}
-            </div>
-            {right}
-        </div>
-    );
-}
+type TabId = 'profile' | 'assets' | 'tickets' | 'requests' | 'access';
 
-/** Placeholder rows while a holdings tab loads, shaped like ItemRow. */
-function LoadingRows() {
-    return (
-        <div aria-hidden>
-            {[0, 1, 2].map((i) => (
-                <div key={i} className="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0">
-                    <span className="bg-muted h-8 w-8 shrink-0 animate-pulse rounded-md" />
-                    <div className="flex-1 space-y-1.5">
-                        <div className="bg-muted h-3.5 w-1/2 animate-pulse rounded" />
-                        <div className="bg-muted h-3 w-1/3 animate-pulse rounded" />
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-type TabId = 'profile' | 'assets' | 'tickets' | 'access';
+/** How many of your own tickets / requests the tabs hold; "see all" opens the page for the rest. */
+const TAB_ROWS = 50;
 
 export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boolean; onClose: () => void; onChangePassword: () => void }) {
     const fmt = useDateFormat();
@@ -143,10 +109,24 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const seesAssets = can('assets.my');
     const seesAccess = can('access.my');
     const seesTickets = can('tickets.my');
+    const seesRequests = can('requests.submit');
 
     const { data: myAssets = [], isLoading: assetsLoading } = useMyAssets(open && seesAssets);
     const { data: myAccess, isLoading: accessLoading } = useMyAccess(open && seesAccess);
-    const { data: myTickets, isLoading: ticketsLoading } = useTickets({ page: 1, per_page: 8, requested: true }, open && seesTickets);
+    const { data: myTickets, isLoading: ticketsLoading } = useTickets({ page: 1, per_page: TAB_ROWS, requested: true }, open && seesTickets);
+    const { data: myRequests, isLoading: requestsLoading } = useRequests({ page: 1, per_page: TAB_ROWS, scope: 'mine' }, open && seesRequests);
+
+    // Copy buttons in the rail, announced like the Employee viewer's
+    const [copied, setCopied] = useState<string | null>(null);
+    const copy = async (text: string, key: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            return;
+        }
+        setCopied(key);
+        setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+    };
 
     const [tab, setTab] = useState<TabId>('profile');
     const [fields, setFields] = useState<Record<FormKey, string>>({ firstName: '', lastName: '', firstNameTh: '', lastNameTh: '', phone: '' });
@@ -199,18 +179,9 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const displayName = lang === 'th' ? nameTh || nameEn : nameEn;
     const department = lang === 'th' ? (emp?.department_th ?? emp?.department) : emp?.department;
 
-    const accessRow = (prefix: string) => (r: EmployeeAccessRow) => ({
-        key: `${prefix}-${r.id}`,
-        name: r.resource_name ?? r.resource_code ?? '—',
-        sub: r.access_level ?? r.resource_detail,
-    });
-    const accessRows = [
-        ...(myAccess?.software ?? []).map(accessRow('sw')),
-        ...(myAccess?.file_shares ?? []).map(accessRow('fs')),
-        ...(myAccess?.email_groups ?? []).map(accessRow('eg')),
-        ...(myAccess?.social ?? []).map(accessRow('so')),
-    ];
-    const ticketRows = myTickets?.data ?? [];
+    const accessCount = myAccess
+        ? myAccess.email_groups.length + myAccess.file_shares.length + myAccess.social.length + myAccess.software.length
+        : undefined;
 
     const showFormError = (message: string) => {
         setFormError(message);
@@ -279,14 +250,22 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const tabs: DialogTab<TabId>[] = [
         { id: 'profile', label: t('profile_tab_details'), icon: UserRound },
         ...(seesAssets
-            ? [{ id: 'assets' as const, label: t('profile_tab_assets'), icon: Box, count: assetsLoading ? undefined : myAssets.length }]
+            ? [{ id: 'assets' as const, label: t('emp_v_tab_assets'), icon: Box, count: assetsLoading ? undefined : myAssets.length }]
             : []),
         ...(seesTickets
-            ? [{ id: 'tickets' as const, label: t('profile_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : myTickets?.meta?.total }]
+            ? [{ id: 'tickets' as const, label: t('emp_v_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : myTickets?.meta?.total }]
             : []),
-        ...(seesAccess
-            ? [{ id: 'access' as const, label: t('profile_tab_access'), icon: Shield, count: accessLoading ? undefined : accessRows.length }]
+        ...(seesRequests
+            ? [
+                  {
+                      id: 'requests' as const,
+                      label: t('requests'),
+                      icon: Inbox,
+                      count: requestsLoading ? undefined : myRequests?.meta?.total,
+                  },
+              ]
             : []),
+        ...(seesAccess ? [{ id: 'access' as const, label: t('emp_v_tab_access'), icon: Shield, count: accessCount }] : []),
     ];
 
     const textField = (key: FormKey, label: string, props: React.ComponentProps<typeof Input> = {}) => (
@@ -296,7 +275,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     );
 
     const seeAll = (to: string) => (
-        <Link to={to} onClick={leaveTo(to)} className="text-brand mt-4 inline-block text-sm font-medium hover:underline">
+        <Link to={to} onClick={leaveTo(to)} className="text-brand mt-3 inline-block shrink-0 self-start text-sm font-medium hover:underline">
             {t('profile_see_all')}
         </Link>
     );
@@ -305,6 +284,9 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
                 <DialogTitle className="sr-only">{t('profile')}</DialogTitle>
+                <span role="status" aria-live="polite" className="sr-only">
+                    {copied ? t('cred_copied') : ''}
+                </span>
                 {cropSrc && (
                     <PhotoCropDialog
                         imageSrc={cropSrc}
@@ -362,7 +344,11 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            {emp?.code && <IdChip icon={Hash}>{emp.code}</IdChip>}
+                            {emp?.code && (
+                                <IdChip icon={Hash} mono>
+                                    {emp.code}
+                                </IdChip>
+                            )}
                             {emp?.position && <IdChip icon={Briefcase}>{emp.position}</IdChip>}
                             {department && <IdChip icon={Building2}>{department}</IdChip>}
                             <IdChip icon={Shield}>{user.group_name ?? user.role_label}</IdChip>
@@ -374,18 +360,42 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                     {/* Rail: facts nobody edits here */}
                     <aside className="border-border flex w-[232px] shrink-0 flex-col gap-5 overflow-y-auto border-r p-4 xl:w-[300px] xl:p-5">
                         <RailSection title={t('profile_contact')}>
-                            <RailFact icon={AtSign} label={t('login_email')} value={user.email} mono />
-                            <RailFact icon={Phone} label={t('emp_phone')} value={phone} mono />
+                            <RailRow
+                                icon={<AtSign className="h-3.5 w-3.5" />}
+                                label={t('login_email')}
+                                value={user.email}
+                                copied={copied === 'email'}
+                                onCopy={(v) => copy(v, 'email')}
+                            />
+                            <RailRow
+                                icon={<Phone className="h-3.5 w-3.5" />}
+                                label={t('emp_phone')}
+                                value={phone}
+                                mono
+                                copied={copied === 'phone'}
+                                onCopy={(v) => copy(v, 'phone')}
+                            />
                         </RailSection>
                         <RailSection title={t('profile_account')}>
-                            <RailFact icon={KeyRound} label={t('emp_username')} value={user.username} mono />
-                            <RailFact icon={Shield} label={t('permission_level')} value={user.group_name ?? user.role_label} />
+                            <RailRow
+                                icon={<KeyRound className="h-3.5 w-3.5" />}
+                                label={t('emp_username')}
+                                value={user.username}
+                                mono
+                                copied={copied === 'user'}
+                                onCopy={(v) => copy(v, 'user')}
+                            />
+                            <RailRow
+                                icon={<Shield className="h-3.5 w-3.5" />}
+                                label={t('permission_level')}
+                                value={user.group_name ?? user.role_label}
+                            />
                         </RailSection>
                         <RailSection title={t('profile_details')}>
-                            <RailFact icon={IdCard} label={t('emp_employee_id')} value={emp?.code} mono />
-                            <RailFact icon={Briefcase} label={t('position')} value={emp?.position} />
-                            <RailFact icon={Building2} label={t('department')} value={department} />
-                            <RailFact icon={Hash} label={t('joined')} value={fmt.date(emp?.joined_at)} mono />
+                            <RailRow icon={<IdCard className="h-3.5 w-3.5" />} label={t('emp_employee_id')} value={emp?.code} mono />
+                            <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp?.position} />
+                            <RailRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={department} />
+                            <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={fmt.date(emp?.joined_at)} mono />
                         </RailSection>
                     </aside>
 
@@ -396,7 +406,11 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             role="tabpanel"
                             id={panelId}
                             aria-labelledby={dialogTabId(panelId, tab)}
-                            className="min-h-0 flex-1 overflow-y-auto p-4 xl:p-5"
+                            // Table tabs size their rows to the pane (fillHeight), like the Employee viewer
+                            className={cn(
+                                'min-h-0 flex-1 p-4 xl:p-5',
+                                tab === 'assets' || tab === 'tickets' || tab === 'requests' ? 'flex flex-col' : 'overflow-y-auto',
+                            )}
                         >
                             {tab === 'profile' && (
                                 <div className="max-w-xl space-y-4">
@@ -418,59 +432,35 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 </div>
                             )}
 
-                            {tab === 'assets' &&
-                                (assetsLoading ? (
-                                    <LoadingRows />
-                                ) : myAssets.length === 0 ? (
-                                    <EmptyPane icon={Box} text={t('profile_no_assets')} />
-                                ) : (
-                                    <>
-                                        {myAssets.map((a) => (
-                                            <ItemRow
-                                                key={a.id}
-                                                icon={Box}
-                                                title={a.model ?? a.asset_code}
-                                                sub={a.serial ?? a.asset_code}
-                                                right={<span className="text-muted-foreground shrink-0 font-mono text-xs">{a.asset_code}</span>}
-                                            />
-                                        ))}
-                                        {seeAll('/my-assets-access')}
-                                    </>
-                                ))}
-
-                            {tab === 'tickets' &&
-                                (ticketsLoading ? (
-                                    <LoadingRows />
-                                ) : ticketRows.length === 0 ? (
-                                    <EmptyPane icon={Ticket} text={t('profile_no_tickets')} />
-                                ) : (
-                                    <>
-                                        {ticketRows.map((tk) => (
-                                            <ItemRow
-                                                key={tk.id}
-                                                icon={Ticket}
-                                                title={tk.subject}
-                                                sub={tk.ticket_no}
-                                                right={<span className="text-muted-foreground shrink-0 text-xs">{fmt.date(tk.created_at)}</span>}
-                                            />
-                                        ))}
-                                        {seeAll('/tickets?tab=my')}
-                                    </>
-                                ))}
-
-                            {tab === 'access' &&
-                                (accessLoading ? (
-                                    <LoadingRows />
-                                ) : accessRows.length === 0 ? (
-                                    <EmptyPane icon={Shield} text={t('profile_no_access')} />
-                                ) : (
-                                    <>
-                                        {accessRows.map((r) => (
-                                            <ItemRow key={r.key} icon={Shield} title={r.name} sub={r.sub} />
-                                        ))}
-                                        {seeAll('/my-assets-access')}
-                                    </>
-                                ))}
+                            {tab === 'assets' && (
+                                <>
+                                    <AssetsPane
+                                        assets={myAssets.map(heldAsset)}
+                                        lang={lang}
+                                        loading={assetsLoading}
+                                        emptyText={t('profile_no_assets')}
+                                    />
+                                    {myAssets.length > 0 && seeAll('/my-assets-access')}
+                                </>
+                            )}
+                            {tab === 'tickets' && (
+                                <>
+                                    <TicketsPane tickets={myTickets?.data ?? []} loading={ticketsLoading} emptyText={t('profile_no_tickets')} />
+                                    {(myTickets?.data.length ?? 0) > 0 && seeAll('/tickets?tab=my')}
+                                </>
+                            )}
+                            {tab === 'requests' && (
+                                <>
+                                    <RequestsPane requests={myRequests?.data ?? []} loading={requestsLoading} emptyText={t('profile_no_requests')} />
+                                    {(myRequests?.data.length ?? 0) > 0 && seeAll('/requests?tab=all')}
+                                </>
+                            )}
+                            {tab === 'access' && (
+                                <>
+                                    <AccessPane access={myAccess} loading={accessLoading} emptyText={t('profile_no_access')} />
+                                    {!!accessCount && seeAll('/my-assets-access')}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
