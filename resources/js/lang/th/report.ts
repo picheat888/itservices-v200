@@ -1569,7 +1569,6 @@ export const report: Dict = {
     rep_eo_holding_title: 'ผู้ลาออกที่ยังถือสิทธิ์',
     rep_eo_holding_info: 'คนที่ผ่านวันทำงานวันสุดท้ายแล้ว นับถึงวันนี้ ไม่ขึ้นกับช่วงวันที่',
     rep_eo_holding_group: 'ยังถือสิทธิ์',
-    rep_eo_holding_empty: 'ไม่มีผู้ลาออกที่ยังถือสิทธิ์',
     rep_eo_holding_empty_done: 'ผู้ลาออก {n} คน ถอนสิทธิ์ครบแล้ว',
     rep_eo_holding_empty_none: 'ยังไม่มีผู้ลาออกตามตัวกรองนี้',
     rep_eo_grants_word: 'สิทธิ์',
