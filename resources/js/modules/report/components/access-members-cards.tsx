@@ -30,7 +30,7 @@ import {
 } from './access-overview-cards';
 import { count, deptName, type Lang, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CARD_HEADING_TINT } from './card-heading';
-import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
+import { CardEmpty, CardTitle, fold, FoldToggle, reportDates } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
@@ -594,9 +594,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
     const lang = useUiStore((s) => s.lang);
     const isFile = sheet.type === 'file_share';
     const ownable = sheet.type !== 'social_platform';
-    const today = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-        new Date(),
-    );
+    const today = reportDates(lang).date(new Date());
     const cell = 'border border-slate-300 px-2 py-1 align-top';
 
     return (
@@ -649,7 +647,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                             </td>
                             <td className={cell}>{deptName(m.department, lang) ?? '—'}</td>
                             {isFile && <td className={cell}>{t(`rep_ac_level_${m.level.toLowerCase()}`)}</td>}
-                            <td className={cell}>{m.granted_at ?? '—'}</td>
+                            <td className={cell}>{reportDates(lang).dateTime(m.granted_at)}</td>
                             <td className={cell}>
                                 {m.kind === 'gone' ? t('rep_ar_sheet_gone') : m.kind === 'cross' ? t('rep_ac_status_cross_short') : ''}
                             </td>

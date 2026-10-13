@@ -11,7 +11,7 @@ import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
 import { PermissionsPage } from '@/modules/permission';
-import { reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
+import { ReportDateScope, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, StockPage } from '@/modules/stock';
@@ -195,7 +195,9 @@ function App() {
                                 path={`reports/${path}`}
                                 element={
                                     <RequirePermission anyOf={anyOf}>
-                                        <Page />
+                                        <ReportDateScope>
+                                            <Page />
+                                        </ReportDateScope>
                                     </RequirePermission>
                                 }
                             />

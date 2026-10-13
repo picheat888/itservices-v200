@@ -5,6 +5,7 @@
  * shell refreshes on a bell.
  */
 export { reportSlug } from './components/report-catalogue';
+export { ReportDateScope } from './components/report-date-scope';
 export { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from './hooks/use-reports';
 export { default as ReportsPage } from './pages';
 export { default as UnknownReportPage } from './pages/unknown-report';
