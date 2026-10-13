@@ -5,6 +5,7 @@ namespace App\Services\Report;
 use App\Exports\Report\TicketOverviewExport;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\DateDisplay;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
@@ -79,6 +80,7 @@ class TicketOverviewExporter
             'truncated' => $summary['kpi']['total'] > $rows->count(),
             'company' => AppSetting::get('company_name', ''),
             'printedBy' => $viewer->name,
+            'dateConfig' => DateDisplay::config(),
         ])->setPaper('a4', 'landscape');
 
         return ['name' => $name, 'rows' => $rows->count(), 'pdf' => $pdf];

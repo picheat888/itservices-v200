@@ -493,12 +493,6 @@ class RequestOverviewReport extends TabularReport
             ->values()->all();
     }
 
-    /** "2026-09" as "ก.ย. 2026" for the file. */
-    private static function monthTh(string $month): string
-    {
-        return DateDisplay::monthYear($month);
-    }
-
     /**
      * The cards as sheets: by month, by type and status, days to delivery, items asked for, by department.
      *
@@ -516,7 +510,7 @@ class RequestOverviewReport extends TabularReport
             [
                 'title' => 'รายเดือน',
                 'headings' => ['เดือน', 'ยื่นคำขอ', 'เสร็จสิ้น'],
-                'rows' => array_map(fn (array $m) => [self::monthTh($m['month']), $m['submitted'], $m['completed']], $b['months']),
+                'rows' => array_map(fn (array $m) => [DateDisplay::monthYear($m['month']), $m['submitted'], $m['completed']], $b['months']),
             ],
             [
                 'title' => 'คำขอตามประเภทและสถานะ',

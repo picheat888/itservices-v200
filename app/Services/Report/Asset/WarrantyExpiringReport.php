@@ -396,12 +396,6 @@ class WarrantyExpiringReport extends TabularReport
             ->all();
     }
 
-    /** "2026-10" as "ต.ค. 2026" for the file. */
-    private static function monthTh(string $month): string
-    {
-        return DateDisplay::monthYear($month);
-    }
-
     /**
      * The breakdown as sheets: by month, time left, by category, by vendor.
      *
@@ -424,7 +418,7 @@ class WarrantyExpiringReport extends TabularReport
             [
                 'title' => 'ประกันหมดรายเดือน',
                 'headings' => ['เดือน', 'ทั้งหมด', ...$statusHeadings],
-                'rows' => array_map(fn (array $m) => [self::monthTh($m['month']), $m['total'], ...array_values($m['statuses'])], $breakdown['months']),
+                'rows' => array_map(fn (array $m) => [DateDisplay::monthYear($m['month']), $m['total'], ...array_values($m['statuses'])], $breakdown['months']),
             ],
             [
                 'title' => 'ประกันเหลืออีกเท่าไร',

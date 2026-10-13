@@ -264,8 +264,9 @@ class StockItemController extends Controller
             'address' => AppSetting::get('address'),
             'taxId' => AppSetting::get('tax_id'),
             'printedBy' => $request->user()?->name ?? '',
-            // now() is already local wall time (APP_TIMEZONE) — no conversion needed.
-            'printedAt' => DateDisplay::dateTime(now()),
+            // An English document, so English month names.
+            'printedAt' => DateDisplay::dateTime(now(), null, 'en'),
+            'dateConfig' => DateDisplay::config(),
         ])->setPaper('a4', $view === 'summary' ? 'portrait' : 'landscape');
 
         // dompdf v3's own stream() returns a buffered Illuminate Response; the tests read the

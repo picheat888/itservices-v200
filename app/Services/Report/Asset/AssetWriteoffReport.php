@@ -63,7 +63,6 @@ class AssetWriteoffReport extends TabularReport
     /** A contract ending within this many days is "ending soon". */
     private const ENDING_SOON_DAYS = 90;
 
-    /** Thai month abbreviations for the file's month rows ("ก.ย. 2026"). */
     private const NO_CATEGORY = ['name' => 'No category', 'name_th' => 'ไม่ระบุหมวดหมู่'];
 
     public function key(): string
@@ -481,12 +480,6 @@ class AssetWriteoffReport extends TabularReport
             ->all();
     }
 
-    /** "2026-09" as "ก.ย. 2026" for the file. */
-    private static function monthTh(string $month): string
-    {
-        return DateDisplay::monthYear($month);
-    }
-
     /**
      * The breakdown as sheets: by month, by reason, by category, then the contracts.
      *
@@ -502,7 +495,7 @@ class AssetWriteoffReport extends TabularReport
                 'title' => 'แยกตามเดือน',
                 'headings' => ['เดือน', 'ทั้งหมด', 'ซื้อ', 'เช่าที่คืนผู้ให้เช่า', 'เช่าที่ตัดด้วยเหตุผลอื่น'],
                 'rows' => array_map(
-                    fn (array $m) => [self::monthTh($m['month']), $m['total'], $m['bought'], $m['returned'], $m['rented_other']],
+                    fn (array $m) => [DateDisplay::monthYear($m['month']), $m['total'], $m['bought'], $m['returned'], $m['rented_other']],
                     $breakdown['months'],
                 ),
             ],

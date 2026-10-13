@@ -11,10 +11,12 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Report\Access\AccessResourceMembersReport;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
@@ -264,7 +266,11 @@ class AccessResourceMembersReportTest extends TestCase
 
         $this->actingAs($this->userWith())->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertOk();
 
+        // The view formats with what the controller handed it; it never reads settings itself.
+        AppSetting::flushCache();
+        DB::enableQueryLog();
         $html = view('pdf.reports.access-review-sheet', $seen[0])->render();
+        $this->assertSame([], array_filter(DB::getQueryLog(), fn (array $q) => str_contains($q['query'], 'app_settings')));
         $this->assertStringContainsString('25/09/2026', $html);
         $this->assertDoesNotMatchRegularExpression('/\b20\d\d-\d\d-\d\d\b/', $html);
     }

@@ -408,12 +408,6 @@ class AccessOverviewReport extends TabularReport
         return ($filters['type'] ?? null) ? [$filters['type']] : AccessFacts::TYPES;
     }
 
-    /** "2026-09" as "ก.ย. 2026" for the file. */
-    private static function monthTh(string $month): string
-    {
-        return DateDisplay::monthYear($month);
-    }
-
     /**
      * The cards as sheets: by month, by department, leavers still holding, resources that need someone.
      *
@@ -435,7 +429,7 @@ class AccessOverviewReport extends TabularReport
                 'title' => 'ให้–ถอนรายเดือน',
                 'headings' => ['เดือน', 'ให้สิทธิ์', ...$types, 'ถอนระหว่างทำงาน', 'ถอนเมื่อลาออก'],
                 'rows' => array_map(fn (array $m) => [
-                    self::monthTh($m['month']), $m['granted'], ...array_values($m['by_type']), $m['revoked_work'], $m['revoked_leave'],
+                    DateDisplay::monthYear($m['month']), $m['granted'], ...array_values($m['by_type']), $m['revoked_work'], $m['revoked_leave'],
                 ], $b['months']),
             ],
             [
