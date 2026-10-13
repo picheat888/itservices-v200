@@ -11,7 +11,7 @@ import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
-import { isDateString, type DateFormatter } from '@/shared/lib/datetime';
+import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/datetime';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
@@ -823,7 +823,13 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
 
     // Render a diff value (null/'' shown as a muted dash; date values in the date setting).
     const diffValue = (v: unknown) =>
-        v === null || v === undefined || v === '' ? <span className="text-muted-foreground">—</span> : isDateString(v) ? fmt.dateTime(v) : String(v);
+        v === null || v === undefined || v === '' ? (
+            <span className="text-muted-foreground">—</span>
+        ) : isDateString(v) ? (
+            storedDateText(v, fmt)
+        ) : (
+            String(v)
+        );
 
     return (
         <div className="space-y-3 px-5 py-3">
@@ -1001,7 +1007,7 @@ function auditDiffSummary(d: AuditDetails | null, fmt: DateFormatter): string | 
     // summary; the whole value is one click away in the panel below it.
     const val = (v: unknown) => {
         if (v === null || v === undefined || v === '') return '—';
-        if (isDateString(v)) return fmt.dateTime(v);
+        if (isDateString(v)) return storedDateText(v, fmt);
         const s = String(v).replace(/\s+/g, ' ').trim();
         return s.length > 60 ? `${s.slice(0, 60)}…` : s;
     };

@@ -56,3 +56,14 @@ test('isDateString accepts whole date values only', async () => {
     for (const no of ['2026-10', '2026-13-01', '2026-02-30', 'v1.2-3', 'TKT-HW-260923-003', '', null, 42, '2026-10-03 extra'])
         assert.equal(isDateString(no), false, String(no));
 });
+
+test('storedDateText reads a zoned instant as local time and drops a midnight time', async () => {
+    process.env.TZ = 'Asia/Bangkok';
+    const m = (await import('../../resources/js/shared/lib/datetime.ts')) as Record<string, (...a: unknown[]) => unknown>;
+    const fmt = m.bindDateFormat({ format: 'dmy_slash', era: 'ce', time: '24' }, 'th');
+    assert.equal(m.storedDateText('2026-10-12T17:00:00.000000Z', fmt), '13/10/2026');
+    assert.equal(m.storedDateText('2026-10-20 00:00:00', fmt), '20/10/2026');
+    assert.equal(m.storedDateText('2026-10-20', fmt), '20/10/2026');
+    assert.equal(m.storedDateText('2026-10-13T07:05:00.000000Z', fmt), '13/10/2026 14:05');
+    assert.equal(m.storedDateText('2026-10-13 14:05:00', fmt), '13/10/2026 14:05');
+});

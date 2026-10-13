@@ -184,7 +184,9 @@ function App() {
                                         'access.software_view',
                                     ]}
                                 >
-                                    <ReportsPage />
+                                    <ReportDateScope>
+                                        <ReportsPage />
+                                    </ReportDateScope>
                                 </RequirePermission>
                             }
                         />
