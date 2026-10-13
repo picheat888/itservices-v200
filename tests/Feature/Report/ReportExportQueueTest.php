@@ -25,7 +25,7 @@ class ReportExportQueueTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const OVERVIEW = '/api/reports/r/assets.overview/export?format=pdf';
+    private const OVERVIEW = '/api/reports/tabular/assets.overview/export?format=pdf';
 
     protected function setUp(): void
     {
@@ -255,7 +255,7 @@ class ReportExportQueueTest extends TestCase
     public function test_the_old_direct_download_is_gone(): void
     {
         $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.overview/export?format=pdf')
+            ->getJson('/api/reports/tabular/assets.overview/export?format=pdf')
             ->assertMethodNotAllowed();
     }
 }

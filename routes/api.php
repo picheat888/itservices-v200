@@ -111,7 +111,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::delete('reports/schedules/{schedule}', [ReportScheduleController::class, 'destroy'])->whereNumber('schedule')->name('api.reports.schedules.destroy');
     Route::post('reports/schedules/{schedule}/send-now', [ReportScheduleController::class, 'sendNow'])->whereNumber('schedule')->name('api.reports.schedules.send-now');
     Route::post('reports/tickets/overview/schedule', [ReportScheduleController::class, 'storeTicketOverview'])->name('api.reports.tickets.overview.schedule');
-    Route::post('reports/r/{key}/schedule', [ReportScheduleController::class, 'storeTabular'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.schedule');
+    Route::post('reports/tabular/{key}/schedule', [ReportScheduleController::class, 'storeTabular'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.schedule');
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');
     // The backlog page's due board — {key} pinned so TabularReportRequest gates it as the report.
     Route::get('reports/tickets/backlog/board', TicketBacklogBoardController::class)->defaults('key', 'tickets.backlog')->name('api.reports.tickets.backlog.board');
@@ -143,10 +143,10 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/requests/it-pending/breakdown', RequestItPendingBreakdownController::class)->defaults('key', 'requests.it_pending')->name('api.reports.requests.it-pending.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
-    Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
-    Route::get('reports/r/{key}/rows', [TabularReportController::class, 'rows'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.rows');
-    Route::get('reports/r/{key}/summary', [TabularReportController::class, 'summary'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.summary');
-    Route::post('reports/r/{key}/export', [TabularReportController::class, 'export'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.export');
+    Route::get('reports/tabular/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
+    Route::get('reports/tabular/{key}/rows', [TabularReportController::class, 'rows'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.rows');
+    Route::get('reports/tabular/{key}/summary', [TabularReportController::class, 'summary'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.summary');
+    Route::post('reports/tabular/{key}/export', [TabularReportController::class, 'export'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.export');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.password.change');

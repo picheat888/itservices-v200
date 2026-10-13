@@ -87,7 +87,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->employee('Old', ['joined_at' => '2019-01-01']);
         $user = $this->userWith(['employees.view']);
 
-        $rows = $this->actingAs($user)->getJson('/api/reports/r/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data');
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data');
 
         $pairs = array_map(fn (array $r) => $r['employee_code'].':'.$r['movement_kind'], $rows);
         $this->assertEqualsCanonicalizing(
@@ -115,7 +115,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->onboarding($joiner, 'completed');
 
         $rows = collect($this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data'))
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data'))
             ->keyBy('movement_kind');
 
         $this->assertSame(1, $rows['left']['open_grants']);
@@ -131,7 +131,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->employee('OneDay', ['joined_at' => '2026-06-01', 'status' => 'resigned', 'last_day' => '2026-06-01']);
 
         $rows = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data');
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data');
         $data = $this->breakdown();
 
         $this->assertSame(['joined', 'left'], array_column($rows, 'movement_kind'));
@@ -145,7 +145,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->employee('Leaver', ['status' => 'resigned', 'last_day' => '2026-05-31']);
         $user = $this->userWith(['employees.view']);
 
-        $body = $this->actingAs($user)->getJson('/api/reports/r/employees.overview/rows?from=2026-01-01&to=2026-10-31&kind=left')->assertOk()->json();
+        $body = $this->actingAs($user)->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31&kind=left')->assertOk()->json();
 
         $this->assertSame(['left'], array_values(array_unique(array_column($body['data'], 'movement_kind'))));
         $tiles = collect($body['summary'])->keyBy('key');
@@ -156,13 +156,13 @@ class EmployeeOverviewReportTest extends TestCase
 
     public function test_overview_needs_employees_view(): void
     {
-        $this->actingAs($this->userWith(['assets.view']))->getJson('/api/reports/r/employees.overview/rows')->assertForbidden();
+        $this->actingAs($this->userWith(['assets.view']))->getJson('/api/reports/tabular/employees.overview/rows')->assertForbidden();
         $this->actingAs($this->userWith(['assets.view']))->getJson('/api/reports/employees/overview/breakdown')->assertForbidden();
     }
 
     public function test_old_key_is_gone(): void
     {
-        $this->actingAs($this->userWith(['employees.view']))->getJson('/api/reports/r/employees.joiners_leavers/rows')->assertNotFound();
+        $this->actingAs($this->userWith(['employees.view']))->getJson('/api/reports/tabular/employees.joiners_leavers/rows')->assertNotFound();
     }
 
     // ── breakdown ─────────────────────────────────────────────────────────────────
@@ -193,7 +193,7 @@ class EmployeeOverviewReportTest extends TestCase
     public function test_nobody_at_all_gives_no_rate_and_no_nan(): void
     {
         $body = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json();
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json();
         $data = $this->breakdown();
 
         $this->assertNull($data['leavers']['rate']);
@@ -211,7 +211,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->employee('LeftNow2', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-08-15']);
 
         $body = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
         $trend = collect($body['summary'])->keyBy('key')['eo_left']['note']['trend'];
 
         // Now: 2 left of (11 + 9) / 2 = 20.0%; Apr–Jun: 1 left of (12 + 11) / 2 = 8.7%.
@@ -226,7 +226,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->employee('Joiner', ['joined_at' => '2026-07-01']);
 
         $body = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
         $trend = collect($body['summary'])->keyBy('key')['eo_left']['note']['trend'];
 
         $this->assertSame('even', $trend['direction']);
@@ -347,7 +347,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertSame(0, $prep['started']);
 
         $tile = collect($this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.overview/rows?from=2026-01-01&to=2026-10-31')->json('summary'))->keyBy('key')['eo_preparing'];
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->json('summary'))->keyBy('key')['eo_preparing'];
         $this->assertSame(50, $tile['progress']);
         $this->assertNull($tile['share'], 'a bar without a badge');
         $this->assertSame('amber', $tile['attention']);

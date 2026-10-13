@@ -34,7 +34,7 @@ class ReportScheduleTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const OVERVIEW = '/api/reports/r/assets.overview/schedule';
+    private const OVERVIEW = '/api/reports/tabular/assets.overview/schedule';
 
     protected function setUp(): void
     {

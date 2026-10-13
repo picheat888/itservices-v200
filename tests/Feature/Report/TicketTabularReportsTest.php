@@ -100,7 +100,7 @@ class TicketTabularReportsTest extends TestCase
         $later = $this->ticket($this->set['t1']->requester, ['status' => 'in_progress', 'assignee_id' => $this->set['som']->id,
             'created_at' => '2026-09-02 10:00:00', 'responded_at' => '2026-09-02 11:00:00', 'sla_resolve_due_at' => '2026-10-10 10:00:00']);
 
-        $body = $this->actingAs($this->reader())->getJson('/api/reports/r/tickets.backlog/rows')->assertOk()->json();
+        $body = $this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.backlog/rows')->assertOk()->json();
 
         $this->assertSame([$this->set['t2']->id, $this->set['t5']->id, $later->id], array_column($body['data'], 'id'));
         [$t2, $t5] = $body['data'];
@@ -128,7 +128,7 @@ class TicketTabularReportsTest extends TestCase
         $this->assertEquals(['label_key' => 'rep_bl_note_longest_wait', 'hours' => 288.0], $summary['unassigned']['note']);
         $this->assertNull($summary['total']['note']);
 
-        $columns = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns'))->keyBy('key');
+        $columns = collect($this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.backlog')->assertOk()->json('data.columns'))->keyBy('key');
         $this->assertSame('hours_left', $columns['hours_left']['type']);
         $this->assertSame('datetime', $columns['opened_at']['type']);
         $this->assertSame('datetime', $columns['due_at']['type']);
@@ -144,11 +144,11 @@ class TicketTabularReportsTest extends TestCase
         $this->seedTickets();
         $user = $this->reader();
 
-        $definition = $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns');
+        $definition = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog')->assertOk()->json('data.columns');
         $this->assertSame('/tickets', collect($definition)->firstWhere('key', 'ticket_no')['link']);
         $this->assertArrayNotHasKey('link', collect($definition)->firstWhere('key', 'subject') ?? []);
 
-        foreach ($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows')->assertOk()->json('data') as $row) {
+        foreach ($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows')->assertOk()->json('data') as $row) {
             $this->assertSame(['ticket_no' => "/tickets?view={$row['id']}"], $row['_links']);
         }
     }
@@ -160,7 +160,7 @@ class TicketTabularReportsTest extends TestCase
         $far = $this->ticket($this->set['t1']->requester, ['status' => 'in_progress', 'assignee_id' => $this->set['som']->id,
             'created_at' => '2026-09-20 10:00:00', 'responded_at' => '2026-09-20 11:00:00', 'sla_resolve_due_at' => '2026-10-01 10:00:00']);
         $user = $this->reader();
-        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
+        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
 
         $this->assertSame([$this->set['t2']->id], $ids('sla=over_sla'));
         $this->assertSame([$this->set['t5']->id], $ids('sla=due_soon'));
@@ -172,13 +172,13 @@ class TicketTabularReportsTest extends TestCase
     {
         $this->seedTickets();
         $user = $this->reader();
-        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
+        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
 
         $this->assertSame([$this->set['t2']->id], $ids('assignee='.$this->set['kan']->id));
         $this->assertSame([$this->set['t5']->id], $ids('assignee=none'));
-        $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?assignee=999999')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows?assignee=999999')->assertUnprocessable();
 
-        $options = collect($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.filters'))->firstWhere('name', 'assignee')['options'];
+        $options = collect($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog')->assertOk()->json('data.filters'))->firstWhere('name', 'assignee')['options'];
         $this->assertSame('none', $options[0]['value']);
         $this->assertContains($this->set['kan']->id, array_column($options, 'value'));
     }
@@ -189,15 +189,15 @@ class TicketTabularReportsTest extends TestCase
         $this->seedTickets();
         $this->set['t5']->update(['source' => 'auto_request']);
         $user = $this->reader();
-        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
+        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows?'.$query)->assertOk()->json('data'), 'id');
 
         $this->assertSame([$this->set['t5']->id], $ids('source=auto_request'));
         $this->assertSame([$this->set['t2']->id], $ids('source=manual'));
-        $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows?source=request')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows?source=request')->assertUnprocessable();
 
-        $row = collect($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows')->json('data'))->firstWhere('id', $this->set['t5']->id);
+        $row = collect($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows')->json('data'))->firstWhere('id', $this->set['t5']->id);
         $this->assertSame('auto_request', $row['source']);
-        $columns = collect($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->json('data.columns'))->keyBy('key');
+        $columns = collect($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog')->json('data.columns'))->keyBy('key');
         $this->assertSame(['manual' => 'rep_source_manual', 'auto_request' => 'rep_source_auto_request'], $columns['source']['labels']);
         // The board follows the same filter.
         $this->assertSame([$this->set['t5']->id], array_column(
@@ -233,7 +233,7 @@ class TicketTabularReportsTest extends TestCase
         $viewer = $this->userWith(['tickets.view_all', 'tickets.level_hardware']);
 
         foreach (['tickets.backlog'] as $key) {
-            $this->actingAs($viewer)->getJson("/api/reports/r/{$key}/rows")->assertForbidden();
+            $this->actingAs($viewer)->getJson("/api/reports/tabular/{$key}/rows")->assertForbidden();
         }
     }
 
@@ -245,13 +245,13 @@ class TicketTabularReportsTest extends TestCase
         $user = $this->reader();
 
         // The page and its rows never see the sheet-only columns.
-        $screen = array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns'), 'key');
+        $screen = array_column($this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog')->assertOk()->json('data.columns'), 'key');
         $this->assertNotContains('description', $screen);
         $this->assertNotContains('response_due_at', $screen);
-        $this->assertArrayNotHasKey('description', $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows')->json('data.0'));
+        $this->assertArrayNotHasKey('description', $this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows')->json('data.0'));
 
         // A column picked down to two still exports the sheet-only ones.
-        $this->actingAs($user)->exportReport('/api/reports/r/tickets.backlog/export?format=xlsx&columns[]=ticket_no&columns[]=hours_left')->assertAccepted();
+        $this->actingAs($user)->exportReport('/api/reports/tabular/tickets.backlog/export?format=xlsx&columns[]=ticket_no&columns[]=hours_left')->assertAccepted();
         $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = last($export->sheets());
             $headings = $sheet->headings();
@@ -272,7 +272,7 @@ class TicketTabularReportsTest extends TestCase
         });
 
         // Every column: the case, who, where it stands, then its SLA.
-        $this->actingAs($user)->exportReport('/api/reports/r/tickets.backlog/export?format=xlsx')->assertAccepted();
+        $this->actingAs($user)->exportReport('/api/reports/tabular/tickets.backlog/export?format=xlsx')->assertAccepted();
         $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', fn (TabularReportExport $export) => last($export->sheets())->headings() === [
             'เลขที่ Ticket', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ลักษณะงาน', 'ความสำคัญ', 'ที่มา',
             'ผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
@@ -287,7 +287,7 @@ class TicketTabularReportsTest extends TestCase
         $user = $this->reader();
 
         foreach (['tickets.backlog'] as $key) {
-            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/tabular/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }

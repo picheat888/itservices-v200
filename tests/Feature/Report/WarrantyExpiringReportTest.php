@@ -75,7 +75,7 @@ class WarrantyExpiringReportTest extends TestCase
     /** @return list<int> */
     private function rowIds(string $query = ''): array
     {
-        $rows = $this->actingAs($this->userWith())->getJson('/api/reports/r/assets.warranty_expiring/rows'.$query)->assertOk()->json('data');
+        $rows = $this->actingAs($this->userWith())->getJson('/api/reports/tabular/assets.warranty_expiring/rows'.$query)->assertOk()->json('data');
 
         return array_column($rows, 'id');
     }
@@ -95,7 +95,7 @@ class WarrantyExpiringReportTest extends TestCase
 
     public function test_tiles_count_the_window_its_value_the_next_30_days_expired_and_dated(): void
     {
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/assets.warranty_expiring/rows')->assertOk()->json('summary'))
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/assets.warranty_expiring/rows')->assertOk()->json('summary'))
             ->keyBy('key');
 
         $within = $summary['wty_within_90d'];
@@ -119,7 +119,7 @@ class WarrantyExpiringReportTest extends TestCase
         $this->assertSame(88, $summary['wty_dated']['share']);
         $this->assertSame(['bought' => 8, 'no_date' => 1, 'no_vendor' => 1], $summary['wty_dated']['note']['values']);
 
-        $wide = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/assets.warranty_expiring/rows?within=365')->json('summary'))->keyBy('key');
+        $wide = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/assets.warranty_expiring/rows?within=365')->json('summary'))->keyBy('key');
         $this->assertSame(4, $wide['wty_within_365d']['value']);
     }
 

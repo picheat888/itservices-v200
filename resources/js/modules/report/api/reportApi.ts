@@ -171,21 +171,21 @@ export const reportApi = {
     itPendingBreakdown: (filters: TabularFilters) =>
         http.get<{ data: ItPendingBreakdown }>('/reports/requests/it-pending/breakdown', { params: tabularParams(filters) }).then((r) => r.data.data),
 
-    tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
+    tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/tabular/${key}`).then((r) => r.data.data),
 
     tabularRows: (key: string, filters: TabularFilters, page: number, perPage: number) =>
         http
-            .get<TabularRows>(`/reports/r/${key}/rows`, { params: { ...tabularParams(filters), page, per_page: perPage, only_rows: 1 } })
+            .get<TabularRows>(`/reports/tabular/${key}/rows`, { params: { ...tabularParams(filters), page, per_page: perPage, only_rows: 1 } })
             .then((r) => r.data),
 
     /** The headline numbers and charts for a filter set — fetched once, not on every page turn. */
     tabularSummary: (key: string, filters: TabularFilters) =>
-        http.get<{ data: TabularHeadline }>(`/reports/r/${key}/summary`, { params: tabularParams(filters) }).then((r) => r.data.data),
+        http.get<{ data: TabularHeadline }>(`/reports/tabular/${key}/summary`, { params: tabularParams(filters) }).then((r) => r.data.data),
 
     /** Queues the file (202). `columns` = the keys the page's column picker keeps; omitted when every column shows. */
     exportTabular: (key: string, filters: TabularFilters, format: ExportFormat, columns?: string[]) =>
         http
-            .post<{ data: ReportExportItem }>(`/reports/r/${key}/export`, null, { params: { ...tabularParams(filters), format, columns } })
+            .post<{ data: ReportExportItem }>(`/reports/tabular/${key}/export`, null, { params: { ...tabularParams(filters), format, columns } })
             .then((r) => r.data.data),
 
     myExports: () => http.get<{ data: ReportExportItem[] }>('/reports/exports').then((r) => r.data.data),
@@ -205,7 +205,7 @@ export const reportApi = {
     /** Set a schedule from a tabular report page — its filters and column picker travel with it. */
     scheduleTabular: (key: string, filters: TabularFilters, input: ScheduleInput, columns?: string[]) =>
         http
-            .post<{ data: ReportScheduleItem }>(`/reports/r/${key}/schedule`, { ...tabularParams(filters), columns, ...input })
+            .post<{ data: ReportScheduleItem }>(`/reports/tabular/${key}/schedule`, { ...tabularParams(filters), columns, ...input })
             .then((r) => r.data.data),
 
     scheduleTicketOverview: (f: TicketReportFilters, input: ScheduleInput) =>

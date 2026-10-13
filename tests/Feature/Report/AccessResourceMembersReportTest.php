@@ -97,7 +97,7 @@ class AccessResourceMembersReportTest extends TestCase
     /** @return list<int> */
     private function rowIds(string $query = ''): array
     {
-        return array_column($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members/rows'.$query)->assertOk()->json('data'), 'id');
+        return array_column($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.resource_members/rows'.$query)->assertOk()->json('data'), 'id');
     }
 
     private function pick(string $name): string
@@ -123,7 +123,7 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertSame($this->ids('m2', 'm5', 'm1', 'm4', 'm3'), $this->rowIds('?sort=employee'));
         $this->assertSame($this->ids('m5', 'm4', 'm1', 'm2', 'm3'), $this->rowIds('?sort=newest'));
 
-        $rows = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members/rows')->json('data'))->keyBy('id');
+        $rows = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.resource_members/rows')->json('data'))->keyBy('id');
         $this->assertSame('cross', $rows[$this->grants['m1']->id]['status']);
         $this->assertSame('left', $rows[$this->grants['m3']->id]['status']);
         $this->assertSame('active', $rows[$this->grants['m5']->id]['status']);
@@ -133,7 +133,7 @@ class AccessResourceMembersReportTest extends TestCase
 
     public function test_tiles_count_resources_members_across_departments_leavers_and_owners(): void
     {
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members/rows')->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.resource_members/rows')->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(5, $summary['ar_resources']['value']);
         $this->assertSame(['email_group' => 1, 'file_share' => 3, 'social_platform' => 1], array_column($summary['ar_resources']['split'], 'value', 'key'));
@@ -147,14 +147,14 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertSame(2, $summary['ar_owner']['value']);
         $this->assertSame(['none' => 1, 'gone' => 1], array_column($summary['ar_owner']['split'], 'value', 'key'));
 
-        $social = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members/rows?type=social_platform')->json('summary'))->keyBy('key');
+        $social = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.resource_members/rows?type=social_platform')->json('summary'))->keyBy('key');
         $this->assertNull($social['ar_cross']['value']);
         $this->assertSame('rep_n_ar_cross_social', $social['ar_cross']['note']['label_key']);
     }
 
     public function test_a_type_filter_splits_the_resource_tile_by_that_type_only(): void
     {
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members/rows?type=file_share')->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.resource_members/rows?type=file_share')->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(3, $summary['ar_resources']['value']);
         $this->assertSame(['file_share' => 3], array_column($summary['ar_resources']['split'], 'value', 'key'));
@@ -192,7 +192,7 @@ class AccessResourceMembersReportTest extends TestCase
 
     public function test_purpose_starts_hidden_but_stays_in_the_file(): void
     {
-        $columns = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.resource_members')->assertOk()->json('data.columns'))->keyBy('key');
+        $columns = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.resource_members')->assertOk()->json('data.columns'))->keyBy('key');
 
         $this->assertTrue($columns['purpose']['hidden']);
     }
@@ -244,7 +244,7 @@ class AccessResourceMembersReportTest extends TestCase
     public function test_the_report_needs_all_three_registries(): void
     {
         $partial = $this->userWith(['access.email_view', 'access.file_view']);
-        $this->actingAs($partial)->getJson('/api/reports/r/access.resource_members/rows')->assertForbidden();
+        $this->actingAs($partial)->getJson('/api/reports/tabular/access.resource_members/rows')->assertForbidden();
         $this->actingAs($partial)->getJson('/api/reports/access/resource-members/breakdown')->assertForbidden();
         $this->actingAs($partial)->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertForbidden();
     }

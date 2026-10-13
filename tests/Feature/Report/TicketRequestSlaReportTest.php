@@ -117,7 +117,7 @@ class TicketRequestSlaReportTest extends TestCase
     {
         $this->seedTickets();
 
-        $body = $this->actingAs($this->reader())->getJson('/api/reports/r/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
+        $body = $this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
 
         $ids = array_column($body['data'], 'id');
         $this->assertSame(array_map(fn (string $k) => $this->set[$k]->id, ['t3', 't5', 't2', 't4', 't1']), $ids);
@@ -155,7 +155,7 @@ class TicketRequestSlaReportTest extends TestCase
     {
         $this->seedTickets();
 
-        $body = $this->actingAs($this->reader())->getJson('/api/reports/r/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
+        $body = $this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
         $summary = collect($body['summary'])->keyBy('key');
 
         $this->assertSame(5, $summary['rs_total']['value']);
@@ -229,7 +229,7 @@ class TicketRequestSlaReportTest extends TestCase
             'responded_at' => '2026-09-15 10:30:00', 'sla_resolve_due_at' => '2026-09-18 10:00:00']);
         $user = $this->reader();
 
-        $body = $this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
+        $body = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.request_sla/rows?'.self::RANGE)->assertOk()->json();
         $row = collect($body['data'])->firstWhere('id', $late->id);
         $this->assertSame(['met', 'over'], [$row['take_sla'], $row['close_sla']]);
         $over = collect($body['summary'])->firstWhere('key', 'rs_over_sla');
@@ -248,14 +248,14 @@ class TicketRequestSlaReportTest extends TestCase
         $this->seedTickets();
         $user = $this->reader();
 
-        $rows = $this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla/rows?'.self::RANGE.'&request_type=email')->assertOk()->json('data');
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.request_sla/rows?'.self::RANGE.'&request_type=email')->assertOk()->json('data');
         $this->assertSame([$this->set['t5']->id, $this->set['t4']->id], array_column($rows, 'id'));
 
         $types = $this->actingAs($user)->getJson('/api/reports/tickets/request-sla/breakdown?'.self::RANGE.'&request_type=email')->assertOk()->json('data.types');
         $this->assertSame(['computer', 'email'], array_column($types, 'type'));
 
         $somsak = $this->set['t2']->assignee_id;
-        $rows = $this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla/rows?'.self::RANGE."&assignee={$somsak}")->assertOk()->json('data');
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.request_sla/rows?'.self::RANGE."&assignee={$somsak}")->assertOk()->json('data');
         $this->assertSame([$this->set['t2']->id], array_column($rows, 'id'));
     }
 
@@ -264,7 +264,7 @@ class TicketRequestSlaReportTest extends TestCase
         $this->seedTickets();
         $viewer = $this->userWith(['tickets.view_all', 'tickets.level_hardware']);
 
-        $this->actingAs($viewer)->getJson('/api/reports/r/tickets.request_sla/rows')->assertForbidden();
+        $this->actingAs($viewer)->getJson('/api/reports/tabular/tickets.request_sla/rows')->assertForbidden();
         $this->actingAs($viewer)->getJson('/api/reports/tickets/request-sla/breakdown')->assertForbidden();
 
         $keys = array_column($this->actingAs($this->reader())->getJson('/api/reports')->assertOk()->json('data'), 'key');
@@ -277,7 +277,7 @@ class TicketRequestSlaReportTest extends TestCase
         $this->seedTickets();
 
         $this->actingAs($this->reader())
-            ->exportReport('/api/reports/r/tickets.request_sla/export?format=xlsx&'.self::RANGE)->assertAccepted();
+            ->exportReport('/api/reports/tabular/tickets.request_sla/export?format=xlsx&'.self::RANGE)->assertAccepted();
 
         $this->assertExportStored('Report_tickets-request_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();
@@ -304,13 +304,13 @@ class TicketRequestSlaReportTest extends TestCase
         $user = $this->reader();
 
         // The page and its rows keep to their own columns.
-        $screen = array_column($this->actingAs($user)->getJson('/api/reports/r/tickets.request_sla')->assertOk()->json('data.columns'), 'key');
+        $screen = array_column($this->actingAs($user)->getJson('/api/reports/tabular/tickets.request_sla')->assertOk()->json('data.columns'), 'key');
         $this->assertNotContains('description', $screen);
         $this->assertNotContains('take_hours', $screen);
         // The requester shows on the page, after the request type, with code and department kept in the rows.
         $this->assertSame(['request_type', 'requester', 'requester_code', 'department'], array_slice($screen, 2, 4));
 
-        $this->actingAs($user)->exportReport('/api/reports/r/tickets.request_sla/export?format=xlsx&'.self::RANGE)->assertAccepted();
+        $this->actingAs($user)->exportReport('/api/reports/tabular/tickets.request_sla/export?format=xlsx&'.self::RANGE)->assertAccepted();
 
         $this->assertExportStored('Report_tickets-request_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = last($export->sheets());
@@ -349,7 +349,7 @@ class TicketRequestSlaReportTest extends TestCase
     {
         $this->seedTickets();
 
-        $response = $this->actingAs($this->reader())->exportReport('/api/reports/r/tickets.request_sla/export?format=pdf&'.self::RANGE);
+        $response = $this->actingAs($this->reader())->exportReport('/api/reports/tabular/tickets.request_sla/export?format=pdf&'.self::RANGE);
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

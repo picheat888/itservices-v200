@@ -17,7 +17,7 @@ use Tests\TestCase;
 /**
  * Two asset tabular reports — "ภาพรวมของทรัพย์สิน" (assets.overview — its list, the old register) and
  * "ประกันใกล้หมดอายุ" (assets.warranty_expiring) — exercised end to end through the
- * generic /reports/r/{key} endpoints, the same way TabularReportEngineTest covers
+ * generic /reports/tabular/{key} endpoints, the same way TabularReportEngineTest covers
  * contracts.expiring.
  */
 class AssetReportsTest extends TestCase
@@ -52,7 +52,7 @@ class AssetReportsTest extends TestCase
         $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json();
 
         $this->assertSame(2, $body['meta']['total']);
         $expectedOrder = collect([$deployed, $ready])->sortBy('asset_code')->pluck('id')->all();
@@ -75,11 +75,11 @@ class AssetReportsTest extends TestCase
         Asset::factory()->create(['status' => 'deployed']);
         $rented = Asset::factory()->rented()->create(['status' => 'common']);
 
-        $byStatus = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?status=ready')->assertOk()->json();
+        $byStatus = $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?status=ready')->assertOk()->json();
         $this->assertSame(1, $byStatus['meta']['total']);
         $this->assertSame([$ready->id], array_column($byStatus['data'], 'id'));
 
-        $bySource = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?source=rented')->assertOk()->json();
+        $bySource = $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?source=rented')->assertOk()->json();
         $this->assertSame(1, $bySource['meta']['total']);
         $this->assertSame([$rented->id], array_column($bySource['data'], 'id'));
         // Rented assets store no value of their own — the register must show the linked
@@ -87,7 +87,7 @@ class AssetReportsTest extends TestCase
         // assertSame): a whole-number float round-trips through JSON as an int.
         $this->assertEquals((float) $rented->contract->value, $bySource['data'][0]['value']);
 
-        $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?status=bogus')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?status=bogus')->assertUnprocessable();
     }
 
     /**
@@ -101,10 +101,10 @@ class AssetReportsTest extends TestCase
         Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
         Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
 
-        $filters = $this->actingAs($user)->getJson('/api/reports/r/assets.overview')->assertOk()->json('data.filters');
+        $filters = $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview')->assertOk()->json('data.filters');
         $this->assertNotContains('search', array_column($filters, 'name'));
 
-        $rows = $this->actingAs($user)->getJson('/api/reports/r/assets.overview/rows?search=Kanya')->assertOk()->json();
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?search=Kanya')->assertOk()->json();
         $this->assertSame(2, $rows['meta']['total']);
     }
 
@@ -118,12 +118,12 @@ class AssetReportsTest extends TestCase
         Asset::factory()->create(['status' => 'writeoff', 'warranty_end' => today()->addDays(10)->toDateString(), 'warranty_lifetime' => false]);
         Asset::factory()->rented()->create(['status' => 'ready']);
 
-        $default = $this->actingAs($user)->getJson('/api/reports/r/assets.warranty_expiring/rows')->assertOk()->json();
+        $default = $this->actingAs($user)->getJson('/api/reports/tabular/assets.warranty_expiring/rows')->assertOk()->json();
         $this->assertSame([$in10->id, $in60->id], array_column($default['data'], 'id'));
         $this->assertSame(10, $default['data'][0]['days_left']);
         $this->assertSame(60, $default['data'][1]['days_left']);
 
-        $narrow = $this->actingAs($user)->getJson('/api/reports/r/assets.warranty_expiring/rows?within=30')->assertOk()->json();
+        $narrow = $this->actingAs($user)->getJson('/api/reports/tabular/assets.warranty_expiring/rows?within=30')->assertOk()->json();
         $this->assertSame(1, $narrow['meta']['total']);
         $summary = collect($narrow['summary'])->keyBy('key');
         $this->assertSame(1, $summary['wty_within_30']['value']);
@@ -132,8 +132,8 @@ class AssetReportsTest extends TestCase
     public function test_asset_reports_need_assets_view(): void
     {
         $limited = $this->userWith(['contracts.view']);
-        $this->actingAs($limited)->getJson('/api/reports/r/assets.overview/rows')->assertForbidden();
-        $this->actingAs($limited)->getJson('/api/reports/r/assets.warranty_expiring/rows')->assertForbidden();
+        $this->actingAs($limited)->getJson('/api/reports/tabular/assets.overview/rows')->assertForbidden();
+        $this->actingAs($limited)->getJson('/api/reports/tabular/assets.warranty_expiring/rows')->assertForbidden();
 
         $viewer = $this->userWith(['assets.view']);
         $keys = collect($this->actingAs($viewer)->getJson('/api/reports')->assertOk()->json('data'))->pluck('key')->all();
@@ -146,7 +146,7 @@ class AssetReportsTest extends TestCase
         Asset::factory()->create(['status' => 'ready']);
 
         $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.overview/export?format=xlsx')->assertAccepted();
+            ->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = last($export->sheets());

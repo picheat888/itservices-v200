@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Endpoints shared by every tabular report (/api/reports/r/{key}): what to draw, the rows
+ * Endpoints shared by every tabular report (/api/reports/tabular/{key}): what to draw, the rows
  * (with their headline numbers and charts unless only_rows), the numbers and charts alone, and
  * queuing the file export.
  */

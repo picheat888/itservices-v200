@@ -224,7 +224,7 @@ class ReportHubTest extends TestCase
         $user = $this->userWith(['assets.view']);
 
         $this->actingAs($user)
-            ->exportReport('/api/reports/r/assets.overview/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
+            ->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
 
         // Picked columns in report order; hidden-by-default columns always stay in the file
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
@@ -237,7 +237,7 @@ class ReportHubTest extends TestCase
     {
         $user = $this->userWith(['assets.view']);
 
-        $this->actingAs($user)->exportReport('/api/reports/r/assets.overview/export?format=xlsx&columns[]=salary')->assertUnprocessable();
+        $this->actingAs($user)->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx&columns[]=salary')->assertUnprocessable();
     }
 
     public function test_pdf_export_with_picked_columns_streams(): void
@@ -245,7 +245,7 @@ class ReportHubTest extends TestCase
         Asset::factory()->create(['status' => 'ready']);
 
         $response = $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.overview/export?format=pdf&columns[]=asset_code');
+            ->exportReport('/api/reports/tabular/assets.overview/export?format=pdf&columns[]=asset_code');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

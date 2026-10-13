@@ -98,7 +98,7 @@ class AccessOverviewReportTest extends TestCase
     /** @return list<array<string, mixed>> */
     private function rows(string $query = ''): array
     {
-        return $this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows'.$query)->assertOk()->json('data');
+        return $this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows'.$query)->assertOk()->json('data');
     }
 
     public function test_the_register_lists_active_grants_leavers_first_and_says_what_each_is(): void
@@ -135,7 +135,7 @@ class AccessOverviewReportTest extends TestCase
 
     public function test_tiles_count_grants_holders_the_range_leavers_and_resources_to_look_after(): void
     {
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows')->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows')->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(5, $summary['ac_active']['value']);
         $this->assertSame(['email_group' => 1, 'file_share' => 2, 'social_platform' => 0, 'software' => 2], array_column($summary['ac_active']['split'], 'value', 'key'));
@@ -170,7 +170,7 @@ class AccessOverviewReportTest extends TestCase
 
     public function test_a_type_filter_splits_the_active_tile_by_that_type_only(): void
     {
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows?type=file_share')->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows?type=file_share')->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(2, $summary['ac_active']['value']);
         $this->assertSame(['file_share' => 2], array_column($summary['ac_active']['split'], 'value', 'key'));
@@ -180,7 +180,7 @@ class AccessOverviewReportTest extends TestCase
     {
         // Quality: B and D both still work and both hold something.
         $department = Department::where('tag', 'QC')->value('id');
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows?department_id='.$department)->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows?department_id='.$department)->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(2, $summary['ac_holders']['value']);
         $this->assertSame('rep_n_ac_holders_all', $summary['ac_holders']['note']['label_key']);
@@ -220,7 +220,7 @@ class AccessOverviewReportTest extends TestCase
 
     public function test_the_granted_note_says_whether_the_range_ended_with_more_fewer_or_the_same(): void
     {
-        $note = fn (string $range) => collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.overview/rows?'.$range)->assertOk()->json('summary'))
+        $note = fn (string $range) => collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows?'.$range)->assertOk()->json('summary'))
             ->firstWhere('key', 'ac_granted')['note'];
 
         // June: LINE taken back from B, nothing granted.
@@ -252,7 +252,7 @@ class AccessOverviewReportTest extends TestCase
 
     public function test_the_report_needs_the_access_overview_permission(): void
     {
-        $this->actingAs($this->userWith(['access.software_view']))->getJson('/api/reports/r/access.overview/rows')->assertForbidden();
+        $this->actingAs($this->userWith(['access.software_view']))->getJson('/api/reports/tabular/access.overview/rows')->assertForbidden();
         $this->actingAs($this->userWith(['access.software_view']))->getJson('/api/reports/access/overview/breakdown')->assertForbidden();
     }
 }

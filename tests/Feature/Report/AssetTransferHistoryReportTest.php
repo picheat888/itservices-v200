@@ -179,7 +179,7 @@ class AssetTransferHistoryReportTest extends TestCase
     private function rowsById(string $query = self::RANGE): array
     {
         return collect($this->actingAs($this->viewer())
-            ->getJson('/api/reports/r/assets.transfer_history/rows?per_page=100&'.$query)->assertOk()->json('data'))
+            ->getJson('/api/reports/tabular/assets.transfer_history/rows?per_page=100&'.$query)->assertOk()->json('data'))
             ->keyBy('id')->all();
     }
 
@@ -225,7 +225,7 @@ class AssetTransferHistoryReportTest extends TestCase
     public function test_the_tiles_count_hand_overs_returns_waiting_and_the_acceptance_median(): void
     {
         $summary = collect($this->actingAs($this->viewer())
-            ->getJson('/api/reports/r/assets.transfer_history/rows?'.self::RANGE)->assertOk()->json('summary'))->keyBy('key');
+            ->getJson('/api/reports/tabular/assets.transfer_history/rows?'.self::RANGE)->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(7, $summary['th_handovers']['value']);
         $this->assertSame([6, 1], array_column($summary['th_handovers']['split'], 'value'));
@@ -304,7 +304,7 @@ class AssetTransferHistoryReportTest extends TestCase
 
     public function test_the_range_defaults_to_this_year(): void
     {
-        $definition = $this->actingAs($this->viewer())->getJson('/api/reports/r/assets.transfer_history')->assertOk()->json('data.filters');
+        $definition = $this->actingAs($this->viewer())->getJson('/api/reports/tabular/assets.transfer_history')->assertOk()->json('data.filters');
         $from = collect($definition)->firstWhere('name', 'from');
 
         $this->assertSame('2026-01-01', $from['default']);
@@ -321,7 +321,7 @@ class AssetTransferHistoryReportTest extends TestCase
         Excel::fake();
 
         $this->actingAs($this->viewer())
-            ->exportReport('/api/reports/r/assets.transfer_history/export?format=xlsx&'.self::RANGE)->assertAccepted();
+            ->exportReport('/api/reports/tabular/assets.transfer_history/export?format=xlsx&'.self::RANGE)->assertAccepted();
 
         $brand = $this->assets['A6']->brand->name;
         $this->assertExportStored('Report_assets-transfer_history_2026-10-07.xlsx', function (TabularReportExport $export) use ($brand) {
