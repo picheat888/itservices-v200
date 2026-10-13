@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { cn } from '@/shared/lib/utils';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -19,11 +20,15 @@ type SortKey = (typeof SORT_KEYS)[number];
 const DEFAULT_SORT: SortKey = 'dept';
 const isSortKey = (v: string): v is SortKey => (SORT_KEYS as readonly string[]).includes(v);
 
+// Icon-only row action buttons
+const ICON_BTN =
+    'hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none';
+
 export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) {
     const t = useT();
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
-    const { data: sections = [] } = useSections();
+    const { data: sections = [], isLoading } = useSections();
     const { data: departments = [] } = useDepartments();
     const mut = useSectionMutations();
     const [editSection, setEditSection] = useState<Section | null>(null);
@@ -39,6 +44,8 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const [membersOf, setMembersOf] = useState<Section | null>(null);
 
     const sectionLabel = (s: Section) => (lang === 'th' ? (s.name_th ?? s.name) : s.name);
+    const deptById = useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
+    const deptLabel = (s: Section) => (lang === 'th' ? (deptById.get(s.department_id)?.name_th ?? s.department) : s.department);
 
     const deptOptions = useMemo(
         () => [
@@ -91,7 +98,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const columns: Column<Section>[] = [
         { key: 'code', header: t('section_code'), render: (s) => <span className="text-muted-foreground font-mono text-xs">{s.code}</span> },
         { key: 'name', header: t('section'), render: (s) => <span className="font-medium">{lang === 'th' ? (s.name_th ?? s.name) : s.name}</span> },
-        { key: 'department', header: t('department'), render: (s) => <span className="text-muted-foreground">{s.department ?? '—'}</span> },
+        { key: 'department', header: t('department'), render: (s) => <span className="text-muted-foreground">{deptLabel(s) ?? '—'}</span> },
         {
             key: 'members',
             header: t('section_members'),
@@ -113,21 +120,25 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         {canEdit && (
                             <button
+                                type="button"
                                 onClick={() => {
                                     setEditSection(s);
                                     setModalOpen(true);
                                 }}
-                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                aria-label={`${t('edit')} ${sectionLabel(s)}`}
+                                className={ICON_BTN}
                             >
-                                <SquarePen className="h-4 w-4" />
+                                <SquarePen aria-hidden className="h-4 w-4" />
                             </button>
                         )}
                         {canDelete && (
                             <button
+                                type="button"
                                 onClick={() => handleDelete(s)}
-                                className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                                aria-label={`${t('delete')} ${sectionLabel(s)}`}
+                                className={cn(ICON_BTN, 'text-destructive hover:bg-destructive/10')}
                             >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 aria-hidden className="h-4 w-4" />
                             </button>
                         )}
                     </div>
@@ -139,68 +150,61 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
 
     return (
         <div className="space-y-3">
-            {sections.length === 0 ? (
-                <div className="text-muted-foreground py-16 text-center text-sm">{t('section_empty')}</div>
-            ) : (
-                <DataTable
-                    columns={columns}
-                    rows={view}
-                    rowKey={(s) => s.id}
-                    onRowClick={(s) => setMembersOf(s)}
-                    searchable={(s) => `${s.code} ${s.name} ${s.name_th ?? ''} ${s.department ?? ''}`}
-                    search={list.table.search}
-                    paging={list.table.paging}
-                    filters={
-                        <>
-                            {/* Filter by department */}
-                            <div className="w-44">
-                                <SearchableSelect
-                                    value={deptFilter}
-                                    onChange={setDeptFilter}
-                                    options={deptOptions}
-                                    placeholder={t('all_departments')}
-                                />
-                            </div>
-                            {/* Order by */}
-                            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-                                <SelectTrigger className="w-52">
-                                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                                        <ArrowUpDown className="text-muted-foreground h-4 w-4 shrink-0" />
-                                        <SelectValue />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="code">
-                                        {t('order_by')}: {t('section_code')}
-                                    </SelectItem>
-                                    <SelectItem value="dept">
-                                        {t('order_by')}: {t('department')}
-                                    </SelectItem>
-                                    <SelectItem value="name">
-                                        {t('order_by')}: {t('order_name')}
-                                    </SelectItem>
-                                    <SelectItem value="members">
-                                        {t('order_by')}: {t('section_members')}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </>
-                    }
-                    actions={
-                        canAdd && (
-                            <Button
-                                onClick={() => {
-                                    setEditSection(null);
-                                    setModalOpen(true);
-                                }}
-                            >
-                                <Plus className="h-4 w-4" />
-                                {t('add_section')}
-                            </Button>
-                        )
-                    }
-                />
-            )}
+            <DataTable
+                columns={columns}
+                rows={view}
+                rowKey={(s) => s.id}
+                loading={isLoading}
+                emptyState={sections.length === 0 ? t('section_empty') : undefined}
+                onRowClick={(s) => setMembersOf(s)}
+                searchable={(s) => `${s.code} ${s.name} ${s.name_th ?? ''} ${s.department ?? ''} ${deptById.get(s.department_id)?.name_th ?? ''}`}
+                search={list.table.search}
+                paging={list.table.paging}
+                filters={
+                    <>
+                        {/* Filter by department */}
+                        <div className="w-44">
+                            <SearchableSelect value={deptFilter} onChange={setDeptFilter} options={deptOptions} placeholder={t('all_departments')} />
+                        </div>
+                        {/* Order by */}
+                        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+                            <SelectTrigger className="w-52">
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                    <ArrowUpDown className="text-muted-foreground h-4 w-4 shrink-0" />
+                                    <SelectValue />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="code">
+                                    {t('order_by')}: {t('section_code')}
+                                </SelectItem>
+                                <SelectItem value="dept">
+                                    {t('order_by')}: {t('department')}
+                                </SelectItem>
+                                <SelectItem value="name">
+                                    {t('order_by')}: {t('order_name')}
+                                </SelectItem>
+                                <SelectItem value="members">
+                                    {t('order_by')}: {t('section_members')}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </>
+                }
+                actions={
+                    canAdd && (
+                        <Button
+                            onClick={() => {
+                                setEditSection(null);
+                                setModalOpen(true);
+                            }}
+                        >
+                            <Plus className="h-4 w-4" />
+                            {t('add_section')}
+                        </Button>
+                    )
+                }
+            />
             <SectionModal open={modalOpen} onClose={() => setModalOpen(false)} section={editSection} />
             <SectionMembersDialog section={membersOf} onClose={() => setMembersOf(null)} />
         </div>

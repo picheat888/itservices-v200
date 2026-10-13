@@ -217,7 +217,11 @@ function appendField(fd: FormData, key: string, value: unknown): void {
 
 function toFormData(payload: EmployeePayload): FormData {
     const fd = new FormData();
-    Object.entries(payload).forEach(([k, v]) => appendField(fd, k, v));
+    Object.entries(payload).forEach(([k, v]) => {
+        // Cleared fields as '' (read as null)
+        if (v === null && k !== 'photo') fd.append(k, '');
+        else appendField(fd, k, v);
+    });
     return fd;
 }
 

@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { useSettings } from '@/modules/settings';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
@@ -11,10 +11,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertTriangle, Check, Copy, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
+import { PasswordInput } from './password-input';
 
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a
@@ -25,17 +26,16 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const lang = useUiStore((s) => s.lang);
     const { setCredentials } = useEmployeeMutations();
     const { data: settings } = useSettings();
-    // Null means the install has neither a default Role Group nor the seeded Staff role,
-    // so an employee who is in no group of their own has no role to be given.
+    // Null = no default Role Group and no seeded Staff role
     const noDefaultRole = !!settings && settings.default_employee_role_label === null;
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
-    // Per-field messages (red border + helper text); `formError` is the catch-all banner
-    // for failures that belong to no single field.
+    // Per-field messages; `formError` is the banner for failures that belong to no field
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [formError, setFormError] = useState('');
-    // Each field reveals on its own — one eye never unmasks the other field.
+    const [formErrorCount, setFormErrorCount] = useState(0);
+    // Each field reveals on its own
     const [showPw, setShowPw] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     // Force the employee to set their own password at the first sign-in (default on).
@@ -43,26 +43,23 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const [copied, setCopied] = useState<string | null>(null);
     // Brief success state — shows "✓ Saved" before the dialog closes.
     const [saved, setSaved] = useState(false);
-    // The pair that was just SAVED — revealed once in the stacked dialog so the admin can
-    // copy/share it; after this the password can no longer be retrieved.
+    // The saved pair, revealed once in the stacked dialog
     const [savedCreds, setSavedCreds] = useState<{ username: string; password: string } | null>(null);
+    const checklistId = useId();
 
-    // Retain the last employee so the content stays rendered while the dialog animates
-    // closed — the prop goes null the moment it closes, which would blank the fade-out.
+    // Retain the last employee so content stays rendered during the close animation
     const [shown, setShown] = useState(employee);
     useEffect(() => {
         if (employee) setShown(employee);
     }, [employee]);
 
-    // Same retention for the stacked reveal dialog — closing sets savedCreds to null,
-    // which would blank the username/password rows mid fade-out.
+    // Same retention for the stacked reveal dialog
     const [shownCreds, setShownCreds] = useState(savedCreds);
     useEffect(() => {
         if (savedCreds) setShownCreds(savedCreds);
     }, [savedCreds]);
 
-    // Reset the form whenever a different employee is opened. Skip on close (employee → null)
-    // so the "✓ Saved" state isn't reverted to "Save" mid-way through the exit animation.
+    // Reset per employee opened; skipped on close so "✓ Saved" survives the exit animation
     useEffect(() => {
         if (!employee) return;
         setUsername('');
@@ -75,30 +72,30 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         setForceChange(true);
         setSavedCreds(null);
         setSaved(false);
-        // Re-run only when a different employee opens (id), not on every employee object change.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee?.id]);
 
     const isDirty = username !== '' || password !== '' || confirm !== '' || !forceChange;
     const guardClose = useDiscardGuard(!!employee && isDirty && !saved);
 
-    // Auto-fill: username = first name + "_" + first 2 letters of last name (lowercased);
-    // password = a fresh random string — revealed in the form itself (showPw). The share/copy
-    // reveal happens once after a successful save instead.
+    const showFormError = (message: string) => {
+        setFormError(message);
+        setFormErrorCount((n) => n + 1);
+    };
+
+    // Auto-fill: first name + "_" + 2 letters of the last name, plus a random password
     const handleAuto = () => {
         if (!employee) return;
         const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
         const first = clean(employee.first_name ?? '');
         const last = clean(employee.last_name ?? '').slice(0, 2);
-        // Thai-only names clean away to nothing, and a trailing "_" would break the username
-        // rule — fall back to the employee code so the result is always usable.
+        // Thai-only names clean to nothing, so fall back to the employee code
         const fromName = first && last ? `${first}_${last}` : first;
         const u = isValidUsername(fromName) ? fromName : clean(employee.code ?? '');
         const p = randomPassword();
         setUsername(u);
         setPassword(p);
         setConfirm(p);
-        // Both are revealed here so the generated pair can be checked before saving.
         setShowPw(true);
         setShowConfirm(true);
         setErrors({});
@@ -114,10 +111,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
             return next;
         });
 
-    /**
-     * UX-side checks mirroring the server rules (Laravel stays the authority):
-     * username required, password at least 6 characters, confirmation matching.
-     */
+    /** UX-side checks mirroring the server rules (Laravel stays the authority). */
     const validate = () => {
         const e: Record<string, string> = {};
         if (!username.trim()) e.username = t('cred_err_username_required');
@@ -129,18 +123,18 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         return Object.keys(e).length === 0;
     };
 
-    const copy = (text: string, key: string) => {
+    const copy = async (text: string, key: string) => {
         try {
-            navigator.clipboard?.writeText(text);
+            await navigator.clipboard.writeText(text);
         } catch {
-            /* clipboard may be unavailable */
+            return;
         }
         setCopied(key);
         setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
     };
 
     const handleSubmit = async () => {
-        if (!employee) return;
+        if (!employee || setCredentials.isPending || saved) return;
         setFormError('');
         if (!validate()) return;
         try {
@@ -151,7 +145,6 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                 password_confirmation: confirm,
                 force_change: forceChange,
             });
-            // Reveal the saved pair once (copy/share) — closing the reveal closes the whole flow.
             setSaved(true);
             setSavedCreds({ username: username.trim(), password });
         } catch (e: unknown) {
@@ -162,12 +155,10 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                 setErrors(taken);
                 focusFirstError(taken);
             } else if (data?.errors?.role?.[0] === 'no_role_configured') {
-                // A code, not a sentence (see EmployeeService::NO_ROLE_CONFIGURED), so it
-                // reads in the viewer's language — the banner above says the same thing,
-                // but only the API knows whether THIS employee had a group of their own.
-                setFormError(t('cred_err_no_role'));
+                // A code, not a sentence (see EmployeeService::NO_ROLE_CONFIGURED)
+                showFormError(t('cred_err_no_role'));
             } else {
-                setFormError(data?.message ?? t('cred_err_generic'));
+                showFormError(data?.message ?? t('cred_err_generic'));
             }
         }
     };
@@ -195,131 +186,116 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-3">
-                        {/* Said here rather than on the Add Employee form: adding somebody needs no
-                            role at all, whereas an account cannot exist without one — this is the
-                            step an unconfigured install actually stops. Worded about the system,
-                            not this person, since an employee already in their own Role Group still
-                            saves fine; the API has the final word either way. */}
-                        {noDefaultRole && (
-                            <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                                <div className="text-muted-foreground text-xs">{t('cred_err_no_role')}</div>
-                            </div>
-                        )}
+                    <form
+                        noValidate
+                        className="contents"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            void handleSubmit();
+                        }}
+                    >
+                        <div className="space-y-3">
+                            <FormErrorBanner message={formError} shakeKey={formErrorCount} />
 
-                        {/* The shortcut rides the first field's label row: it fills this field and
-                            the two below it, and the filled values speak for themselves. */}
-                        <Field
-                            label={t('cred_username')}
-                            required
-                            name="username"
-                            error={errors.username}
-                            help={t('cred_username_hint')}
-                            action={
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleAuto}
-                                    className="text-muted-foreground hover:text-foreground -mr-2 h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5"
-                                >
-                                    <Wand2 />
-                                    {t('cred_auto')}
-                                </Button>
-                            }
-                        >
-                            <Input
-                                value={username}
-                                // Lower-cased as it's typed, matching what the API stores.
-                                onChange={(e) => {
-                                    setUsername(e.target.value.toLowerCase());
-                                    clearError('username');
-                                }}
-                                className="font-mono"
-                                placeholder="e.g. john_do"
-                                autoComplete="off"
-                            />
-                        </Field>
-                        {/* No `help` text here — the checklist below states the rules in full. */}
-                        <Field label={t('cred_password')} required name="password" error={errors.password}>
-                            <div className="relative">
+                            {/* Install has no default role: no account can be created */}
+                            {noDefaultRole && (
+                                <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <div className="text-muted-foreground text-xs">{t('cred_err_no_role')}</div>
+                                </div>
+                            )}
+
+                            <Field
+                                label={t('cred_username')}
+                                required
+                                name="username"
+                                error={errors.username}
+                                help={t('cred_username_hint')}
+                                action={
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleAuto}
+                                        className="text-muted-foreground hover:text-foreground -mr-2 h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5"
+                                    >
+                                        <Wand2 />
+                                        {t('cred_auto')}
+                                    </Button>
+                                }
+                            >
                                 <Input
-                                    type={showPw ? 'text' : 'password'}
-                                    value={password}
+                                    value={username}
+                                    // Lower-cased as typed, matching what the API stores
                                     onChange={(e) => {
-                                        setPassword(e.target.value);
-                                        clearError('password');
+                                        setUsername(e.target.value.toLowerCase());
+                                        clearError('username');
                                     }}
-                                    className="pr-9 font-mono"
-                                    placeholder="••••••"
-                                    autoComplete="new-password"
+                                    className="font-mono placeholder:font-sans"
+                                    placeholder={t('cred_username_ph')}
+                                    autoComplete="off"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
+                                    spellCheck={false}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPw((s) => !s)}
-                                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
-                                    tabIndex={-1}
-                                >
-                                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
+                            </Field>
+                            <div>
+                                <Field label={t('cred_password')} required name="password" error={errors.password}>
+                                    {(control) => (
+                                        <PasswordInput
+                                            {...control}
+                                            aria-describedby={[control['aria-describedby'], checklistId].filter(Boolean).join(' ')}
+                                            value={password}
+                                            visible={showPw}
+                                            onToggle={() => setShowPw((s) => !s)}
+                                            onChange={(v) => {
+                                                setPassword(v);
+                                                clearError('password');
+                                            }}
+                                        />
+                                    )}
+                                </Field>
+                                <PasswordChecklist id={checklistId} value={password} className="mt-2" />
                             </div>
+                            <Field label={t('cred_confirm_password')} required name="confirm" error={errors.confirm}>
+                                {(control) => (
+                                    <PasswordInput
+                                        {...control}
+                                        value={confirm}
+                                        visible={showConfirm}
+                                        onToggle={() => setShowConfirm((s) => !s)}
+                                        onChange={(v) => {
+                                            setConfirm(v);
+                                            clearError('confirm');
+                                        }}
+                                    />
+                                )}
+                            </Field>
 
-                            <PasswordChecklist value={password} className="mt-2" />
-                        </Field>
-                        <Field label={t('cred_confirm_password')} required name="confirm" error={errors.confirm}>
-                            <div className="relative">
-                                <Input
-                                    type={showConfirm ? 'text' : 'password'}
-                                    value={confirm}
-                                    onChange={(e) => {
-                                        setConfirm(e.target.value);
-                                        clearError('confirm');
-                                    }}
-                                    className="pr-9 font-mono"
-                                    placeholder="••••••"
-                                    autoComplete="new-password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirm((s) => !s)}
-                                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
-                                    tabIndex={-1}
-                                >
-                                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
+                            <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+                                <span className="text-sm">{t('emp_cred_force_change')}</span>
+                                <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
                             </div>
-                        </Field>
-
-                        <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
-                            <span className="text-sm">{t('emp_cred_force_change')}</span>
-                            <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
                         </div>
 
-                        {formError && (
-                            <div
-                                key={formError}
-                                className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3 py-2 text-sm text-red-700"
-                            >
-                                {formError}
-                            </div>
-                        )}
-                    </div>
-
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => guardClose(onClose)}>
-                            {t('cancel')}
-                        </Button>
-                        <Button onClick={handleSubmit} disabled={setCredentials.isPending || saved}>
-                            {setCredentials.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : null}
-                            {setCredentials.isPending ? t('saving') : saved ? t('saved') : t('save')}
-                        </Button>
-                    </DialogFooter>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
+                                {t('cancel')}
+                            </Button>
+                            <Button type="submit" disabled={setCredentials.isPending || saved}>
+                                {setCredentials.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : saved ? (
+                                    <Check className="h-4 w-4" />
+                                ) : null}
+                                {setCredentials.isPending ? t('saving') : saved ? t('saved') : t('save')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
 
-            {/* Stacked reveal after a successful save — the one place the saved pair can be
-                copied; closing it ends the whole flow. */}
+            {/* Stacked reveal after a successful save; closing it ends the whole flow */}
             <Dialog open={!!savedCreds} onOpenChange={(o) => !o && closeReveal()}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
@@ -342,11 +318,12 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => copy(row.value, row.key)}
-                                    title={copied === row.key ? t('cred_copied') : undefined}
+                                    onClick={() => void copy(row.value, row.key)}
+                                    title={copied === row.key ? t('cred_copied') : t('cred_copy')}
+                                    aria-label={copied === row.key ? t('cred_copied') : `${t('cred_copy')} ${row.label}`}
                                     className={cn(
-                                        'hover:bg-accent grid h-8 w-8 shrink-0 place-items-center rounded-md transition',
-                                        copied === row.key ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                                        'hover:bg-accent focus-visible:ring-ring grid h-8 w-8 shrink-0 place-items-center rounded-md transition focus-visible:ring-2 focus-visible:outline-hidden',
+                                        copied === row.key ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
                                     )}
                                 >
                                     {copied === row.key ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -355,10 +332,15 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         ))}
                     </div>
 
+                    {/* Announces a successful copy */}
+                    <span className="sr-only" aria-live="polite">
+                        {copied ? t('cred_copied') : ''}
+                    </span>
+
                     <DialogFooter>
-                        <Button onClick={() => copy(`Username: ${shownCreds?.username ?? ''}\nPassword: ${shownCreds?.password ?? ''}`, 'all')}>
+                        <Button onClick={() => void copy(`Username: ${shownCreds?.username ?? ''}\nPassword: ${shownCreds?.password ?? ''}`, 'all')}>
                             {copied === 'all' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                            {t('cred_copy')}
+                            {copied === 'all' ? t('cred_copied') : t('cred_copy')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

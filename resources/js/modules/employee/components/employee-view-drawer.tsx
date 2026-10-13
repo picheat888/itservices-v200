@@ -1,7 +1,9 @@
 import { useT } from '@/lang';
 import { TicketCategoryIcon, TicketStatusBadge } from '@/modules/ticket';
-import { type Column, DataTable } from '@/shared/components/data-table';
+import { DataTable, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
+import { InfoHint } from '@/shared/components/info-hint';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
@@ -43,8 +45,9 @@ import {
     UserCheck,
     UserMinus,
     Users,
+    type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
 import {
     useApprovalChain,
@@ -56,7 +59,11 @@ import {
     useOrgChart,
 } from '../hooks/use-employees';
 import { HELD_STATUS_META } from '../lib/held-assets';
-import { deptColor } from '../lib/org-tree';
+import { deptColor, deptFill } from '../lib/org-tree';
+
+type DrawerTab = 'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access';
+
+const RAIL_HEADING = 'text-muted-foreground border-border border-b pb-1.5 text-xs font-bold';
 
 /** Whole-year + month tenure from a YYYY-MM-DD joined date. */
 function tenureOf(joined?: string | null) {
@@ -111,10 +118,10 @@ export function EmployeeViewDrawer({
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
 
-    const [tab, setTab] = useState<'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access'>('overview');
+    const [tab, setTab] = useState<DrawerTab>('overview');
     const [copied, setCopied] = useState<string | null>(null);
-    // Retain the last employee so the content stays rendered while the dialog animates closed —
-    // Radix skips the exit (fade-out) animation if the content unmounts the moment the prop goes null.
+    const panelId = useId();
+    // Keep the last employee rendered so Radix can play the close animation
     const [shown, setShown] = useState(employee);
     useEffect(() => {
         if (employee) setShown(employee);
@@ -123,18 +130,14 @@ export function EmployeeViewDrawer({
         setTab('overview');
     }, [shown?.id]);
 
-    // Every one of these is keyed to the employee on screen, so switching people
-    // leaves them empty until their own data lands. `isLoading` is what tells the
-    // tabs apart: "nothing yet" must not render as "this person has nothing" —
-    // that reads as real information and it is wrong.
+    // Keyed to the employee on screen; `isLoading` keeps "not loaded yet" apart from "has nothing"
     const { data: approvalChain = [] } = useApprovalChain(shown?.id ?? null);
     const { data: orgNodes = [] } = useOrgChart();
     const { data: access, isLoading: accessLoading } = useEmployeeAccess(shown?.id ?? null);
     const { data: heldAssets = [], isLoading: assetsLoading } = useEmployeeAssets(shown?.id ?? null);
     const { data: requestedTickets = [], isLoading: ticketsLoading } = useEmployeeTickets(shown?.id ?? null);
     const { data: ownedRequests = [], isLoading: requestsLoading } = useEmployeeRequests(shown?.id ?? null);
-    // Live copy of the employee — refetched when mutations invalidate ['employee'], so
-    // setting credentials reflects immediately (No-account badge/strip clears without reload).
+    // Live copy so mutations (e.g. set credentials) show without a reload
     const { data: liveEmp } = useEmployee(shown?.id ?? null);
 
     const nodeById = useMemo(() => new Map(orgNodes.map((n) => [n.id, n])), [orgNodes]);
@@ -142,35 +145,31 @@ export function EmployeeViewDrawer({
 
     if (!shown) return null;
 
-    // The live copy only wins when it is the same person the drawer is showing — the id
-    // check is what stops a previous employee's freshly-fetched record from being drawn
-    // under this one's name.
+    // The id check stops a previous employee's record from drawing under this name
     const emp = liveEmp && liveEmp.id === shown.id ? liveEmp : shown;
     const name = lang === 'th' ? (emp.name_th ?? emp.name) : emp.name;
     const altName = lang === 'th' ? emp.name : emp.name_th;
     const resigned = emp.status === 'resigned';
-    // The blockers ride along on the single-employee fetch; until it lands, treat the record
-    // as un-deletable rather than briefly offering a button that would be refused.
+    // Un-deletable until the single-employee fetch brings the blockers
     const blockers = emp.delete_blockers;
     const deletable = !!blockers && blockers.length === 0;
     const deleteBlockedReason = deletable ? undefined : blockers?.map((b) => t(`emp_del_block_${b}`)).join('\n');
     const tenure = tenureOf(emp.joined_at);
     // The person this employee reports to (their manager), resolved from the org list.
     const managerNode = emp.manager_id ? nodeById.get(emp.manager_id) : null;
-    const managerName = managerNode ? (lang === 'th' ? (managerNode.name_th ?? managerNode.name) : managerNode.name) : null;
+    const manager = managerNode ?? (emp.manager_name ? { name: emp.manager_name, name_th: emp.manager_name_th ?? null } : null);
+    const managerName = manager ? (lang === 'th' ? (manager.name_th ?? manager.name) : manager.name) : null;
 
     const accentCode = nodeById.get(emp.id)?.department_code ?? null;
-    // The header/chrome is neutral. The brand colour is kept ONLY for the active tab
-    // indicator and the Edit button; department colours live ONLY in the Organization tab.
-    const accent = 'var(--brand)';
 
     const showCredentials = canSetCredentials && !emp.has_account && !resigned;
 
-    const copy = (txt: string, key: string) => {
+    // "Copied" only once the clipboard write has actually succeeded
+    const copy = async (txt: string, key: string) => {
         try {
-            navigator.clipboard?.writeText(txt);
+            await navigator.clipboard.writeText(txt);
         } catch {
-            /* clipboard may be unavailable */
+            return;
         }
         setCopied(key);
         setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
@@ -184,30 +183,28 @@ export function EmployeeViewDrawer({
         { key: 'software' as const, label: t('access_software'), icon: <Package className="h-3.5 w-3.5" /> },
     ];
 
-    // Right-side role/level pill per group (English, matching the Access Directory badges):
-    // Email groups → Owner / Member · File shares → Owner / Read-Write / Read · others → none.
+    // Role/level pill per group: email groups owner/member, file shares owner/level, others none
     const rolePill = (key: string, r: EmployeeAccessRow): { label: string; cls: string } | null => {
-        const owner = { label: 'Owner', cls: 'bg-brand/15 text-brand' };
+        const owner = { label: t('emp_v_role_owner'), cls: 'bg-brand/15 text-brand-ink' };
         const muted = 'bg-muted text-muted-foreground';
-        if (key === 'email_groups') return r.is_owner ? owner : { label: 'Member', cls: muted };
+        if (key === 'email_groups') return r.is_owner ? owner : { label: t('emp_v_role_member'), cls: muted };
         if (key === 'file_shares') {
             if (r.is_owner) return owner;
-            if (r.access_level === 'Write') return { label: 'Read/Write', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' };
+            if (r.access_level === 'Write') return { label: t('emp_v_level_read_write'), cls: 'bg-blue-500/15 text-blue-700 dark:text-blue-300' };
+            if (r.access_level === 'Read') return { label: t('emp_v_level_read'), cls: muted };
             if (r.access_level) return { label: r.access_level, cls: muted };
         }
         return null;
     };
 
-    // Leading tile per row: social/software show their uploaded logo when present, otherwise the
-    // resource's initial (tinted with its own colour when it has one); email groups / file shares
-    // show the group icon on a brand tint.
+    // Leading tile: uploaded logo, else the resource initial on its own colour or a brand tint
     const leadingTile = (key: string, r: EmployeeAccessRow) => {
         if (r.resource_logo) {
             return <img src={r.resource_logo} alt="" className="h-7 w-7 shrink-0 rounded-md object-cover" />;
         }
         const color = r.resource_color ?? null;
         const style = color ? { background: `${color}22`, color } : undefined;
-        const brandTint = color ? '' : 'bg-brand/15 text-brand';
+        const brandTint = color ? '' : 'bg-brand/15 text-brand-ink';
         const content =
             key === 'email_groups' ? (
                 <Mail className="h-4 w-4" />
@@ -223,68 +220,33 @@ export function EmployeeViewDrawer({
         );
     };
 
-    // ── Sub-components ──
-    const RailRow = ({
-        icon,
-        label,
-        value,
-        mono,
-        copyKey,
-    }: {
-        icon: React.ReactNode;
-        label: string;
-        value?: string | null;
-        mono?: boolean;
-        copyKey?: string;
-    }) => (
-        <div className="group flex items-start gap-2.5">
-            <div className="bg-muted text-muted-foreground grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg">{icon}</div>
-            <div className="min-w-0 flex-1">
-                <div className="text-muted-foreground text-[10.5px] font-medium tracking-wide uppercase">{label}</div>
-                <div className={cn('mt-0.5 text-[13px] leading-snug font-medium break-words', mono && 'font-mono text-xs')}>{value || '—'}</div>
-            </div>
-            {copyKey && value && (
-                <button
-                    type="button"
-                    onClick={() => copy(value, copyKey)}
-                    className={cn(
-                        'hover:bg-accent grid h-7 w-7 shrink-0 place-items-center rounded-md opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100',
-                        copied === copyKey && 'text-emerald-600 opacity-100 dark:text-emerald-400',
-                    )}
-                    title={t('emp_v_copy')}
-                >
-                    {copied === copyKey ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
-            )}
-        </div>
-    );
-
-    const Kpi = ({ val, lbl, warn }: { val: React.ReactNode; lbl: string; warn?: boolean }) => (
-        <div className="flex min-w-[46px] flex-col items-center px-2.5">
-            <div className={cn('text-[16px] leading-none font-extrabold tracking-tight tabular-nums', warn && 'text-amber-500 dark:text-amber-400')}>
-                {val}
-            </div>
-            <div className="text-muted-foreground mt-1 text-[9px] font-semibold tracking-wide whitespace-nowrap uppercase">{lbl}</div>
-        </div>
-    );
-
+    const tabs: DialogTab<DrawerTab>[] = [
+        { id: 'overview', label: t('nav_overview'), icon: LayoutDashboard },
+        { id: 'org', label: t('emp_v_tab_org'), icon: Users },
+        // No count until this person's own list is known
+        { id: 'assets', label: t('emp_v_tab_assets'), icon: Laptop, count: assetsLoading ? undefined : heldAssets.length },
+        { id: 'tickets', label: t('emp_v_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : requestedTickets.length },
+        { id: 'requests', label: t('requests'), icon: Inbox, count: requestsLoading ? undefined : ownedRequests.length },
+        {
+            id: 'access',
+            label: t('emp_v_tab_access'),
+            icon: Shield,
+            count: access ? access.email_groups.length + access.file_shares.length + access.social.length + access.software.length : undefined,
+        },
+    ];
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="flex h-[88vh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
                 <DialogTitle className="sr-only">{name}</DialogTitle>
+                <span role="status" aria-live="polite" className="sr-only">
+                    {copied ? t('cred_copied') : ''}
+                </span>
 
-                {/* ── COVER ── (neutral chrome — no brand tint here) */}
-                <div
-                    className="border-border flex shrink-0 items-center gap-5 border-b px-7 pt-6 pb-5"
-                    style={{ background: 'radial-gradient(120% 160% at 0% 0%, var(--accent) 0%, var(--card) 60%)' }}
-                >
-                    {/* Avatar — minimal: soft offset ring, gentle float shadow, monochrome fallback. */}
+                {/* Cover */}
+                <div className="border-border flex shrink-0 items-center gap-4 border-b bg-[radial-gradient(120%_160%_at_0%_0%,var(--accent)_0%,var(--card)_60%)] px-5 pt-6 pb-5 lg:gap-5 lg:px-7">
                     <Avatar className="ring-card h-[72px] w-[72px] shrink-0 rounded-full shadow-md ring-2">
                         {emp.photo_url && <AvatarImage src={emp.photo_url} alt="" className="rounded-full object-cover" />}
-                        <AvatarFallback
-                            className="text-muted-foreground rounded-full text-2xl font-semibold tracking-tight"
-                            style={{ background: 'linear-gradient(135deg, var(--muted), color-mix(in oklch, var(--foreground) 8%, var(--muted)))' }}
-                        >
+                        <AvatarFallback className="text-muted-foreground from-muted rounded-full bg-linear-135 to-[color-mix(in_oklch,var(--foreground)_8%,var(--muted))] text-2xl font-semibold tracking-tight">
                             {initials(emp.name || '?')}
                         </AvatarFallback>
                     </Avatar>
@@ -292,32 +254,26 @@ export function EmployeeViewDrawer({
                     <div className="min-w-0 flex-1">
                         <div className="mb-1 flex flex-wrap items-center gap-2.5">
                             <h2 className="text-xl leading-tight font-extrabold tracking-tight">{name}</h2>
-                            {resigned ? (
-                                <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-[11px] font-semibold text-red-700">
-                                    {t('resigned')}
-                                </span>
-                            ) : (
-                                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                    {t('active')}
-                                </span>
-                            )}
+                            <StatusBadge tone={resigned ? 'red' : 'green'} className="px-2 text-[11px] font-semibold">
+                                {resigned ? t('resigned') : t('active')}
+                            </StatusBadge>
                             {emp.is_super_admin && (
-                                <span className="bg-brand/10 text-brand inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                                <span className="bg-brand/10 text-brand-ink inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
                                     <Crown className="h-3 w-3" />
                                     {t('emp_super_admin')}
                                 </span>
                             )}
-                            {/* Login-account state as a badge alongside Status. */}
+                            {/* Login-account state */}
                             {emp.has_account ? (
                                 <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
                                     <ShieldCheck className="text-brand h-3 w-3" />
                                     {t('emp_v_has_account')}
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                                <StatusBadge tone="amber" dot={false} className="gap-1 px-2 text-[11px] font-semibold">
                                     <TriangleAlert className="h-3 w-3" />
                                     {t('emp_v_no_account')}
-                                </span>
+                                </StatusBadge>
                             )}
                         </div>
                         {altName && <div className="text-muted-foreground mb-2.5 text-[13px]">{altName}</div>}
@@ -355,9 +311,9 @@ export function EmployeeViewDrawer({
                     </div>
                 </div>
 
-                {/* ── RESIGN STRIP ── */}
+                {/* Resign strip */}
                 {resigned && (
-                    <div className="bg-destructive/10 dark:text-destructive border-border flex shrink-0 items-center gap-2 border-b px-7 py-2 text-[12.5px] font-medium text-red-700">
+                    <div className="bg-destructive/10 dark:text-destructive border-border flex shrink-0 items-center gap-2 border-b px-5 py-2 text-[12.5px] font-medium text-red-700 lg:px-7">
                         <TriangleAlert className="h-[15px] w-[15px] shrink-0" />
                         <span>{t('emp_v_resigned_note')}</span>
                         {emp.last_day && (
@@ -369,9 +325,9 @@ export function EmployeeViewDrawer({
                     </div>
                 )}
 
-                {/* ── NO-ACCOUNT STRIP ── shown only while the employee still has no username/password */}
+                {/* No-account strip */}
                 {showCredentials && (
-                    <div className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-7 py-2.5 dark:border-amber-800 dark:bg-amber-950/20">
+                    <div className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-5 py-2.5 lg:px-7 dark:border-amber-800 dark:bg-amber-950/20">
                         <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         <div className="min-w-0 flex-1">
                             <span className="text-[12px] font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-400">
@@ -386,30 +342,44 @@ export function EmployeeViewDrawer({
                     </div>
                 )}
 
-                {/* ── BODY ── */}
+                {/* Body */}
                 <div className="flex min-h-0 flex-1">
-                    {/* RAIL */}
-                    <aside className="border-border flex w-[300px] shrink-0 flex-col gap-5 overflow-y-auto border-r p-5">
+                    {/* Rail */}
+                    <aside className="border-border flex w-[232px] shrink-0 flex-col gap-5 overflow-y-auto border-r p-4 xl:w-[300px] xl:p-5">
                         <section className="flex flex-col gap-3">
-                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
-                                {t('emp_v_contact')}
-                            </div>
-                            <RailRow icon={<Mail className="h-3.5 w-3.5" />} label={t('emp_email')} value={emp.email} copyKey="email" />
-                            <RailRow icon={<Phone className="h-3.5 w-3.5" />} label={t('emp_phone')} value={emp.phone} copyKey="phone" mono />
+                            <div className={RAIL_HEADING}>{t('emp_v_contact')}</div>
+                            <RailRow
+                                icon={<Mail className="h-3.5 w-3.5" />}
+                                label={t('emp_email')}
+                                value={emp.email}
+                                copied={copied === 'email'}
+                                onCopy={(v) => copy(v, 'email')}
+                            />
+                            <RailRow
+                                icon={<Phone className="h-3.5 w-3.5" />}
+                                label={t('emp_phone')}
+                                value={emp.phone}
+                                copied={copied === 'phone'}
+                                onCopy={(v) => copy(v, 'phone')}
+                                mono
+                            />
                         </section>
 
-                        {/* Login credentials — the username only; passwords are never surfaced here. */}
+                        {/* Login credentials: username only, never the password */}
                         <section className="flex flex-col gap-3">
-                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
-                                {t('emp_v_credentials')}
-                            </div>
-                            <RailRow icon={<Shield className="h-3.5 w-3.5" />} label={t('emp_username')} value={emp.username} copyKey="user" mono />
+                            <div className={RAIL_HEADING}>{t('emp_v_credentials')}</div>
+                            <RailRow
+                                icon={<Shield className="h-3.5 w-3.5" />}
+                                label={t('emp_username')}
+                                value={emp.username}
+                                copied={copied === 'user'}
+                                onCopy={(v) => copy(v, 'user')}
+                                mono
+                            />
                         </section>
 
                         <section className="flex flex-col gap-3">
-                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
-                                {t('emp_v_employment')}
-                            </div>
+                            <div className={RAIL_HEADING}>{t('emp_v_employment')}</div>
                             <RailRow
                                 icon={<Users className="h-3.5 w-3.5" />}
                                 label={t('emp_section')}
@@ -426,103 +396,22 @@ export function EmployeeViewDrawer({
                         </section>
                     </aside>
 
-                    {/* MAIN */}
+                    {/* Main */}
                     <div className="flex min-w-0 flex-1 flex-col">
-                        {/* Tabs */}
-                        <div className="border-border flex shrink-0 gap-1 border-b px-4 pt-2.5">
-                            {[
-                                {
-                                    id: 'overview' as const,
-                                    label: t('nav_overview'),
-                                    icon: <LayoutDashboard className="h-[15px] w-[15px]" />,
-                                    count: undefined as number | undefined,
-                                    soon: false,
-                                },
-                                {
-                                    id: 'org' as const,
-                                    label: t('emp_v_tab_org'),
-                                    icon: <Users className="h-[15px] w-[15px]" />,
-                                    count: undefined,
-                                    soon: false,
-                                },
-                                {
-                                    id: 'assets' as const,
-                                    label: t('emp_v_tab_assets'),
-                                    icon: <Laptop className="h-[15px] w-[15px]" />,
-                                    // No number until this person's own count is known — a 0 that
-                                    // turns into 3 a moment later was never a count.
-                                    count: assetsLoading ? undefined : heldAssets.length,
-                                    soon: false,
-                                },
-                                {
-                                    id: 'tickets' as const,
-                                    label: t('emp_v_tab_tickets'),
-                                    icon: <Ticket className="h-[15px] w-[15px]" />,
-                                    count: ticketsLoading ? undefined : requestedTickets.length,
-                                    soon: false,
-                                },
-                                {
-                                    id: 'requests' as const,
-                                    label: t('requests'),
-                                    icon: <Inbox className="h-[15px] w-[15px]" />,
-                                    count: requestsLoading ? undefined : ownedRequests.length,
-                                    soon: false,
-                                },
-                                {
-                                    id: 'access' as const,
-                                    label: t('emp_v_tab_access'),
-                                    icon: <Shield className="h-[15px] w-[15px]" />,
-                                    count: access
-                                        ? access.email_groups.length + access.file_shares.length + access.social.length + access.software.length
-                                        : undefined,
-                                    soon: false,
-                                },
-                            ].map((tb) => (
-                                <button
-                                    key={tb.id}
-                                    onClick={() => setTab(tb.id)}
-                                    className={cn(
-                                        'relative inline-flex items-center gap-1.5 rounded-t-lg px-3 pt-2 pb-3 text-[12.5px] font-semibold transition-colors',
-                                        tab === tb.id ? '' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                                    )}
-                                    style={tab === tb.id ? { color: accent } : {}}
-                                >
-                                    {tb.icon}
-                                    {tb.label}
-                                    {tb.count != null && tb.count > 0 && (
-                                        <span className="bg-muted text-muted-foreground inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">
-                                            {tb.count}
-                                        </span>
-                                    )}
-                                    {tb.soon && (
-                                        <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-bold tracking-wide text-amber-600 uppercase dark:text-amber-400">
-                                            {t('emp_v_soon')}
-                                        </span>
-                                    )}
-                                    {tab === tb.id && (
-                                        <span className="absolute inset-x-2 -bottom-px h-[2.5px] rounded" style={{ background: accent }} />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
+                        <DialogTabs className="px-2 pt-1 lg:px-3" tabs={tabs} active={tab} onChange={setTab} label={name} panelId={panelId} />
 
-                        {/* Pane — the Organization tab fills the whole area (no padding/scroll
-                            here; OrgPane manages its own layout + single scroll).
-
-                            Assets / Tickets / Requests MUST get `flex flex-col`: each renders a
-                            `fillHeight` DataTable that sizes rows-per-page from its measured
-                            height. Under the plain `overflow-y-auto` branch the pane is a block
-                            child, its `flex-1` does nothing, and the height collapses to the
-                            content — so the table measures itself shrinking, drops a row, shrinks
-                            again, and spirals down to one row per page. */}
+                        {/* Pane: Org fills it; Assets/Tickets/Requests need flex-col or fillHeight tables collapse to one row */}
                         <div
+                            role="tabpanel"
+                            id={panelId}
+                            aria-labelledby={dialogTabId(panelId, tab)}
                             className={cn(
                                 'min-h-0 flex-1',
                                 tab === 'org'
                                     ? 'flex flex-col'
                                     : tab === 'assets' || tab === 'tickets' || tab === 'requests'
-                                      ? 'flex flex-col p-5'
-                                      : 'overflow-y-auto p-5',
+                                      ? 'flex flex-col p-4 xl:p-5'
+                                      : 'overflow-y-auto p-4 xl:p-5',
                             )}
                         >
                             {tab === 'overview' && (
@@ -538,9 +427,7 @@ export function EmployeeViewDrawer({
                             )}
                             {tab === 'access' && (
                                 <div className="space-y-4">
-                                    {/* Every group renders nothing while this person's access is
-                                        loading, which looked exactly like "no access at all".
-                                        Placeholder rows say which of the two it is. */}
+                                    {/* Placeholder rows while loading, so it never reads as no access */}
                                     {accessLoading && (
                                         <div className="space-y-2" aria-busy="true">
                                             {Array.from({ length: 4 }).map((_, i) => (
@@ -558,7 +445,7 @@ export function EmployeeViewDrawer({
                                         </div>
                                     )}
                                     {accessGroups.map((grp) => {
-                                        // Owners float to the top of each group; within each tier sort by name (A–Z).
+                                        // Owners first, then by name
                                         const rows = [...(access?.[grp.key] ?? [])].sort(
                                             (a, b) =>
                                                 Number(!!b.is_owner) - Number(!!a.is_owner) ||
@@ -570,7 +457,7 @@ export function EmployeeViewDrawer({
                                                 <div className="text-muted-foreground flex items-center gap-2 text-[12.5px] font-bold">
                                                     {grp.icon}
                                                     {grp.label}
-                                                    <span className="bg-muted inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">
+                                                    <span className="bg-muted inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[11px] font-bold">
                                                         {rows.length}
                                                     </span>
                                                 </div>
@@ -583,15 +470,13 @@ export function EmployeeViewDrawer({
                                                         >
                                                             {leadingTile(grp.key, r)}
                                                             {grp.key === 'software' ? (
-                                                                // Software reads as a single "Brand + Name" line (brand comes via resource_detail).
+                                                                // One line: brand (resource_detail) bold, then the name
                                                                 <div className="min-w-0 flex-1 truncate text-[13px] leading-tight">
-                                                                    {/* Brand bold, software name in regular weight. */}
                                                                     {r.resource_detail && <span className="font-bold">{r.resource_detail} </span>}
                                                                     {r.resource_name}
                                                                 </div>
                                                             ) : grp.key === 'social' ? (
-                                                                // Single line: platform name is the label; the URL reads as technical, so it's
-                                                                // set in mono (like the paths/emails elsewhere) and set apart by a gap.
+                                                                // One line: platform name, then the URL in mono
                                                                 <div className="min-w-0 flex-1 truncate text-[13px] leading-tight">
                                                                     <span className="font-semibold">{r.resource_name}</span>
                                                                     {r.resource_detail && (
@@ -628,7 +513,7 @@ export function EmployeeViewDrawer({
                                     })}
                                     {access &&
                                         access.email_groups.length + access.file_shares.length + access.social.length + access.software.length ===
-                                            0 && <div className="text-muted-foreground py-12 text-center text-sm">{t('emp_v_no_access')}</div>}
+                                            0 && <EmptyPane icon={Shield} text={t('emp_v_no_access')} />}
                                 </div>
                             )}
                             {tab === 'assets' && <AssetsPane assets={heldAssets} lang={lang} loading={assetsLoading} />}
@@ -638,29 +523,19 @@ export function EmployeeViewDrawer({
                     </div>
                 </div>
 
-                {/* ── FOOTER ── */}
+                {/* Footer */}
                 <div className="border-border bg-card flex shrink-0 items-center justify-between gap-2.5 border-t px-5 py-3">
-                    {/* Erasing a mis-entry sits alone on the left, as far from Edit as the
-                        footer allows — it took the slot Cancel used to hold, which only ever
-                        repeated what the ✕ in the header already does.
-
-                        Kept visible but disabled once the person has any history, with the
-                        reasons in the tooltip: an admin hunting for the button needs to be
-                        told why it won't work, not shown nothing. */}
+                    {/* Delete sits far left; disabled with its blockers in a hint once the person has history */}
                     {canDelete && (
-                        <Button
-                            variant="outline"
-                            className="text-destructive"
-                            disabled={!deletable}
-                            title={deleteBlockedReason}
-                            onClick={() => onDelete(emp)}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            {t('delete')}
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                            <Button variant="outline" className="text-destructive" disabled={!deletable} onClick={() => onDelete(emp)}>
+                                <Trash2 className="h-4 w-4" />
+                                {t('delete')}
+                            </Button>
+                            {deleteBlockedReason && <InfoHint text={`${t('emp_v_delete_blocked')}\n${deleteBlockedReason}`} />}
+                        </div>
                     )}
-                    {/* Account actions (moved out of the rail) sit beside Edit on the right.
-                        ml-auto holds them there even when the left slot is empty. */}
+                    {/* Account actions beside Edit; ml-auto keeps them right when Delete is absent */}
                     <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                         {(canResetPassword || canSetCredentials) && emp.has_account && (
                             <Button variant="outline" onClick={() => onResetPassword(emp)}>
@@ -675,18 +550,14 @@ export function EmployeeViewDrawer({
                             </Button>
                         )}
                         {canCancelResign && resigned && (
-                            <Button variant="outline" className="text-emerald-600 dark:text-emerald-400" onClick={() => onCancelResign(emp)}>
+                            <Button variant="outline" className="text-emerald-700 dark:text-emerald-400" onClick={() => onCancelResign(emp)}>
                                 <UserCheck className="h-4 w-4" />
                                 {t('cancel_resign')}
                             </Button>
                         )}
+                        {canEdit && !resigned && emp.is_super_admin && !isSuperViewer && <InfoHint text={t('emp_admin_protected')} />}
                         {canEdit && !resigned && (
-                            <Button
-                                onClick={() => onEdit(emp)}
-                                disabled={emp.is_super_admin && !isSuperViewer}
-                                title={emp.is_super_admin && !isSuperViewer ? t('emp_admin_protected') : undefined}
-                                style={{ background: accent, borderColor: accent }}
-                            >
+                            <Button onClick={() => onEdit(emp)} disabled={emp.is_super_admin && !isSuperViewer}>
                                 <SquarePen className="h-4 w-4" />
                                 {t('edit')}
                             </Button>
@@ -698,24 +569,14 @@ export function EmployeeViewDrawer({
     );
 }
 
-/**
- * Assets tab — a read-only table of what the employee currently holds (own-module data).
- * Reuses the shared DataTable (same Prev/Next pager as the asset History tab), 6 rows per page.
- */
+/** Assets tab: read-only table of what the employee currently holds. */
 function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; lang: string; loading?: boolean }) {
     const t = useT();
     const fmt = useDateFormat();
     // Empty only counts once this person's list has actually arrived; while it is on
     // its way the table shows its own loading rows (below).
     if (assets.length === 0 && !loading) {
-        return (
-            <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
-                <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
-                    <Laptop className="h-6 w-6" />
-                </div>
-                <div className="text-sm">{t('emp_v_no_assets')}</div>
-            </div>
-        );
+        return <EmptyPane icon={Laptop} text={t('emp_v_no_assets')} />;
     }
 
     const columns: Column<EmployeeHeldAsset>[] = [
@@ -732,8 +593,8 @@ function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; la
                         </div>
                         <div className="min-w-0">
                             <div className="truncate text-xs font-medium">{a.model ?? a.asset_code}</div>
-                            {/* Type, then the status with its colour dot in front of it. */}
-                            <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase">
+                            {/* Type, then the status with its dot */}
+                            <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[11px] font-medium">
                                 <span>{type}</span>
                                 <span className={cn('ml-1.5 h-1.5 w-1.5 rounded-full', meta?.dot ?? 'bg-muted-foreground')} />
                                 <span>{meta ? t(meta.key) : a.status}</span>
@@ -745,10 +606,10 @@ function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; la
         },
         {
             key: 'tag',
-            header: 'Tag',
+            header: t('emp_v_col_tag'),
             render: (a) =>
                 a.tag ? (
-                    <span className="bg-brand/10 text-brand inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+                    <span className="bg-brand/10 text-brand-ink inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
                         <Tag className="h-3 w-3 shrink-0 opacity-70" />
                         <span className="truncate">{a.tag}</span>
                     </span>
@@ -758,7 +619,7 @@ function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; la
         },
         {
             key: 'serial',
-            header: 'Serial',
+            header: t('emp_v_col_serial'),
             render: (a) => <span className="text-foreground font-mono text-xs">{a.serial ?? a.asset_code}</span>,
         },
         {
@@ -777,21 +638,11 @@ function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; la
     );
 }
 
-/**
- * Tickets tab — a read-only table of the tickets this employee has requested (own-module data).
- * Reuses the shared DataTable and the ticket module's status/priority badges via its barrel.
- */
+/** Tickets tab: read-only table of the tickets this employee has requested. */
 function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[]; loading?: boolean }) {
     const t = useT();
     if (tickets.length === 0 && !loading) {
-        return (
-            <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
-                <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
-                    <Ticket className="h-6 w-6" />
-                </div>
-                <div className="text-sm">{t('emp_v_no_tickets')}</div>
-            </div>
-        );
+        return <EmptyPane icon={Ticket} text={t('emp_v_no_tickets')} />;
     }
 
     const columns: Column<EmployeeRequestedTicket>[] = [
@@ -811,7 +662,7 @@ function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[];
             render: (tk) => (
                 <div className="min-w-0">
                     <div className="truncate text-xs font-medium">{tk.subject}</div>
-                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[10px]">{tk.ticket_no}</div>
+                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{tk.ticket_no}</div>
                 </div>
             ),
         },
@@ -844,23 +695,11 @@ function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[];
     );
 }
 
-/**
- * Requests tab — a read-only table of the service requests this employee owns, whether they
- * filed them or HR filed them on their behalf on day one (own-module data, gated by
- * employees.view). Rows are not clickable: opening one would need the Request module's own
- * permission, which a reader of this drawer is not required to hold.
- */
+/** Requests tab: read-only table of requests this employee owns; rows stay unclickable (Request permission not required here). */
 function RequestsPane({ requests, loading }: { requests: EmployeeServiceRequest[]; loading?: boolean }) {
     const t = useT();
     if (requests.length === 0 && !loading) {
-        return (
-            <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
-                <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
-                    <Inbox className="h-6 w-6" />
-                </div>
-                <div className="text-sm">{t('emp_v_no_requests')}</div>
-            </div>
-        );
+        return <EmptyPane icon={Inbox} text={t('emp_v_no_requests')} />;
     }
 
     const columns: Column<EmployeeServiceRequest>[] = [
@@ -887,7 +726,7 @@ function RequestsPane({ requests, loading }: { requests: EmployeeServiceRequest[
                             </StatusBadge>
                         )}
                     </div>
-                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[10px]">{r.reference}</div>
+                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{r.reference}</div>
                 </div>
             ),
         },
@@ -936,28 +775,23 @@ function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: 
         { icon: <ShieldCheck className="h-[17px] w-[17px]" />, val: emp.has_account ? '✓' : '—', lbl: t('emp_v_account') },
     ];
     return (
-        <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div className="flex min-h-full flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
                 {cards.map((c, i) => (
                     <div
                         key={i}
                         className="border-border bg-muted/40 hover:border-border flex items-center gap-3 rounded-xl border p-3.5 transition hover:shadow-sm"
                     >
-                        <div
-                            className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
-                            style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}
-                        >
-                            {c.icon}
-                        </div>
+                        <div className="bg-accent text-accent-foreground grid h-9 w-9 shrink-0 place-items-center rounded-[10px]">{c.icon}</div>
                         <div className="min-w-0">
                             <div className="text-xl leading-none font-extrabold tracking-tight tabular-nums">{c.val}</div>
-                            <div className="text-muted-foreground mt-1 text-[10.5px] font-semibold tracking-wide uppercase">{c.lbl}</div>
+                            <div className="text-muted-foreground mt-1 text-xs font-semibold">{c.lbl}</div>
                         </div>
                     </div>
                 ))}
             </div>
             <RecordStamps
-                className="text-right"
+                className="mt-auto text-right"
                 createdAt={emp.created_at}
                 createdBy={emp.created_by_name}
                 updatedAt={emp.updated_at}
@@ -967,12 +801,7 @@ function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: 
     );
 }
 
-/**
- * Organization tab — a Microsoft Teams-style org explorer. Shows the focused person's
- * manager chain (above), the person, and their direct reports. Clicking any manager or
- * report "walks" the view to that person. A Home | Back | Next control (top-left of the
- * framed area) navigates the browse history.
- */
+/** Organization tab: Teams-style explorer (managers, the person, direct reports) with Home/Back/Next history. */
 function OrgPane({
     orgNodes,
     nodeById,
@@ -987,13 +816,11 @@ function OrgPane({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
 
-    // How many managers above the focus to show before collapsing the rest into a
-    // "Show N more" pill, and how many direct reports before a "Show N more" button.
+    // Managers / reports shown before a "Show N more" control
     const VISIBLE_MANAGERS = 2;
     const VISIBLE_REPORTS = 6;
 
-    // Browse history (like a browser): history[ptr] is the person on screen.
-    // index 0 is always the employee the dialog was opened for (Home target).
+    // Browse history: history[ptr] is on screen, index 0 is the Home person
     const [history, setHistory] = useState<number[]>([rootFocus.id]);
     const [ptr, setPtr] = useState(0);
     const [managersExpanded, setManagersExpanded] = useState(false);
@@ -1090,50 +917,9 @@ function OrgPane({
 
     const nameOf = (n: { name: string; name_th?: string | null }) => (lang === 'th' ? (n.name_th ?? n.name) : n.name);
 
-    // ── Small building blocks ──
-    const NavBtn = ({
-        onClick,
-        disabled,
-        title,
-        children,
-    }: {
-        onClick: () => void;
-        disabled?: boolean;
-        title: string;
-        children: React.ReactNode;
-    }) => (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            title={title}
-            className="border-border bg-card text-foreground hover:bg-accent grid h-7 w-7 place-items-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-40"
-        >
-            {children}
-        </button>
-    );
-
-    const NodeAvatar = ({ node, size }: { node: OrgChartNode; size: number }) => {
-        const dc = deptColor(node.department_code);
-        return (
-            <div
-                className="shrink-0 overflow-hidden rounded-full"
-                style={{ width: size, height: size, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.18)' }}
-            >
-                {node.photo_url ? (
-                    <img src={node.photo_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                    <div className="grid h-full w-full place-items-center font-bold text-white" style={{ background: dc, fontSize: size * 0.36 }}>
-                        {initials(node.name || '?')}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
     const Connector = () => <div className="bg-border mx-auto h-3 w-px" />;
 
-    // Full-width card for a manager / direct report (clickable to walk the view).
+    // Manager / report card; clicking walks the view to that person
     const NodeCard = ({ node }: { node: OrgChartNode }) => {
         const total = totalReports(node.id);
         return (
@@ -1142,7 +928,7 @@ function OrgPane({
                 tabIndex={0}
                 onClick={() => navTo(node.id)}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), navTo(node.id))}
-                className="border-border bg-card focus-visible:ring-brand relative flex w-full cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg border py-1.5 pr-2.5 pl-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2"
+                className="border-border bg-card focus-visible:ring-brand relative flex w-full cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg border py-1.5 pr-2.5 pl-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
                 <NodeAvatar node={node} size={32} />
                 <div className="min-w-0 flex-1">
@@ -1165,13 +951,13 @@ function OrgPane({
         <div className="flex h-full min-h-0 flex-col">
             {/* Navigation bar (top-left controls + current person) — flush at the top of the tab */}
             <div className="border-border bg-card/40 flex shrink-0 items-center gap-1.5 border-b px-4 py-2.5">
-                <NavBtn onClick={goHome} disabled={!canHome} title={t('emp_v_home')}>
+                <NavBtn onClick={goHome} disabled={!canHome} label={t('emp_v_home')}>
                     <House className="h-3.5 w-3.5" />
                 </NavBtn>
-                <NavBtn onClick={goBack} disabled={!canBack} title={t('back')}>
+                <NavBtn onClick={goBack} disabled={!canBack} label={t('back')}>
                     <ChevronLeft className="h-4 w-4" />
                 </NavBtn>
-                <NavBtn onClick={goNext} disabled={!canNext} title={t('next')}>
+                <NavBtn onClick={goNext} disabled={!canNext} label={t('next')}>
                     <ChevronRight className="h-4 w-4" />
                 </NavBtn>
                 <div className="text-muted-foreground ml-2 min-w-0 truncate text-xs">
@@ -1278,6 +1064,106 @@ function OrgPane({
                     )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+// Rail field row with an optional copy button
+function RailRow({
+    icon,
+    label,
+    value,
+    mono,
+    copied,
+    onCopy,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value?: string | null;
+    mono?: boolean;
+    copied?: boolean;
+    onCopy?: (value: string) => void;
+}) {
+    const t = useT();
+    return (
+        <div className="group flex items-start gap-2.5">
+            <div className="bg-muted text-muted-foreground grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg">{icon}</div>
+            <div className="min-w-0 flex-1">
+                <div className="text-muted-foreground text-xs">{label}</div>
+                <div className={cn('mt-0.5 text-[13px] leading-snug font-medium break-words', mono && 'font-mono text-xs')}>{value || '—'}</div>
+            </div>
+            {onCopy && value && (
+                <button
+                    type="button"
+                    onClick={() => onCopy(value)}
+                    aria-label={`${t('emp_v_copy')} ${label}`}
+                    title={t('emp_v_copy')}
+                    className={cn(
+                        'hover:bg-accent focus-visible:ring-brand grid h-7 w-7 shrink-0 place-items-center rounded-md opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(pointer:coarse)]:opacity-100',
+                        copied && 'text-emerald-700 opacity-100 dark:text-emerald-400',
+                    )}
+                >
+                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+            )}
+        </div>
+    );
+}
+
+// Cover KPI cell
+function Kpi({ val, lbl, warn }: { val: React.ReactNode; lbl: string; warn?: boolean }) {
+    return (
+        <div className="flex min-w-[46px] flex-col items-center px-2.5">
+            <div className={cn('text-[16px] leading-none font-extrabold tracking-tight tabular-nums', warn && 'text-amber-700 dark:text-amber-400')}>
+                {val}
+            </div>
+            <div className="text-muted-foreground mt-1 text-[11px] font-semibold whitespace-nowrap">{lbl}</div>
+        </div>
+    );
+}
+
+// Icon-only Home / Back / Next button of the org explorer
+function NavBtn({ onClick, disabled, label, children }: { onClick: () => void; disabled?: boolean; label: string; children: React.ReactNode }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            title={label}
+            aria-label={label}
+            className="border-border bg-card text-foreground hover:bg-accent focus-visible:ring-brand grid h-7 w-7 place-items-center rounded-md border transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+        >
+            {children}
+        </button>
+    );
+}
+
+// Round photo or initials on the department fill
+function NodeAvatar({ node, size }: { node: OrgChartNode; size: number }) {
+    return (
+        <div className="shrink-0 overflow-hidden rounded-full shadow-[inset_0_0_0_2px_rgba(255,255,255,.18)]" style={{ width: size, height: size }}>
+            {node.photo_url ? (
+                <img src={node.photo_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+                <div
+                    className="grid h-full w-full place-items-center font-bold text-white"
+                    style={{ background: deptFill(node.department_code), fontSize: size * 0.36 }}
+                >
+                    {initials(node.name || '?')}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** Empty tab: a muted icon tile over one line of text. */
+function EmptyPane({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
+    return (
+        <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
+            <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
+                <Icon className="h-6 w-6" />
+            </div>
+            <div className="text-sm">{text}</div>
         </div>
     );
 }

@@ -129,6 +129,8 @@ export interface Employee {
     department_id: number | null;
     position_id: number | null;
     manager_id: number | null;
+    manager_name?: string | null;
+    manager_name_th?: string | null;
     department: string | null;
     department_th: string | null;
     section_id: number | null;

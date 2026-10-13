@@ -1,5 +1,5 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
@@ -9,10 +9,9 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Box, ChevronLeft, ChevronRight, Laptop, Tag, UserMinus } from 'lucide-react';
+import { AlertTriangle, Box, ChevronLeft, ChevronRight, Laptop, Loader2, Tag, UserMinus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { EmployeeHeldAsset } from '../api/employeeApi';
 import { useEmployeeAssets, useEmployeeMutations } from '../hooks/use-employees';
@@ -30,23 +29,18 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     const [reason, setReason] = useState('');
     const [lastDay, setLastDay] = useState('');
     const [errors, setErrors] = useState<{ lastDay?: string; reason?: string }>({});
-    // Catch-all for a failure that belongs to no single field (a rejected save), shown as the
-    // shake banner the credential modals use. Without it a 422 leaves the dialog looking idle.
+    // Banner for a failure that belongs to no single field
     const [formError, setFormError] = useState('');
+    const [formErrorCount, setFormErrorCount] = useState(0);
     const [page, setPage] = useState(1);
 
-    // Retain the last employee so the dialog stays drawn while Radix animates it closed —
-    // without this the name, department and whole equipment list blank out on the way out.
+    // Retain the last employee so content stays drawn during the close animation
     const [shown, setShown] = useState(employee);
     useEffect(() => {
         if (employee) setShown(employee);
     }, [employee]);
 
-    // What this person still has in hand. Same query key the detail drawer's Assets tab uses,
-    // so opening Resign from the drawer reads the cache instead of refetching. Gated by
-    // employees.view — the permission that also guards the list the Resign button sits in —
-    // but a 403 or a dropped connection still has to read as "we do not know", never as
-    // "nothing to return".
+    // Equipment still held; a failed load reads as "unknown", never as "nothing to return"
     const { data: heldAssets = [], isLoading: assetsLoading, isError: assetsFailed } = useEmployeeAssets(shown?.id ?? null);
 
     useEffect(() => {
@@ -71,17 +65,13 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
         else if (joinedAt && lastDay <= joinedAt) e.lastDay = beforeJoinText;
         if (!reason.trim()) e.reason = t('resign_err_reason');
         setErrors(e);
-        // Marking a field red is only half the job — put the caret in the first one that
-        // needs an answer, the same as every other form in the app.
         if (Object.keys(e).length) {
             focusFirstError(e as Record<string, string>);
             return;
         }
 
         if (!employee) return;
-        // Asked once more, on its own: the moment this is recorded every device they hold is
-        // recalled and IT is told. Cancelling the resignation later gives the person their
-        // status back, but not those.
+        // Recording this recalls every device and tells IT, so it is confirmed once more
         const confirmed = await confirm({
             variant: 'danger',
             icon: UserMinus,
@@ -103,6 +93,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                 return;
             }
             setFormError(refusalText(err, t, 'resign_err_'));
+            setFormErrorCount((n) => n + 1);
         }
     };
 
@@ -116,13 +107,8 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
-            {/* No overflow on DialogContent, ever. DateInput portals its calendar INTO this node
-                (the modal guard would otherwise eat its clicks), and the centering transform makes
-                this element the containing block for that fixed-position popper — so any overflow
-                other than visible turns the calendar into scrollable content instead of letting it
-                float clear. The scrolling happens one level down, on the body wrapper, which the
-                calendar is NOT inside. */}
-            <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl flex-col">
+            {/* No overflow here: DateInput portals its calendar into this node; the body scrolls instead */}
+            <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-4xl flex-col">
                 <DialogHeader>
                     <div className="flex items-start gap-4">
                         <AlertTriangle className="mt-0.5 h-11 w-11 shrink-0 stroke-[1.75] text-amber-500 dark:text-amber-400" />
@@ -133,43 +119,26 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                     </div>
                 </DialogHeader>
 
-                {/* Body — the only scroll container. On a phone the two columns stack past the
-                    viewport, and without this the footer would sit outside the dialog box with
-                    no way to reach it.
-
-                    `overflow-y-auto` makes the browser clip the x-axis too, and the fields sit
-                    flush with this box on the left, right and bottom — so their 3px focus ring,
-                    which is painted OUTSIDE the border box, was being sliced off on three sides.
-                    The negative margins widen the clip box by 8px and the matching padding puts
-                    the content back where it was, so nothing moves and the ring has room. */}
+                {/* Body: the only scroll container; -mx-2/px-2 leaves room for focus rings */}
                 <div className="-mx-2 -mb-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-2">
                     <div className="flex items-center gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-2.5 text-sm text-amber-700 dark:text-amber-400">
                         <AlertTriangle className="h-4 w-4 shrink-0" />
                         <span>{t('resign_warn')}</span>
                     </div>
 
-                    {formError && (
-                        <div
-                            key={formError}
-                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError}
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError} shakeKey={formErrorCount} />
 
-                    {/* Left: what is being recorded. Right: what leaves with them — beside the
-                        confirm button rather than below it. Grid items stretch, so the two columns
-                        always end level whichever one is taller. */}
-                    <div className="grid gap-7 md:grid-cols-2">
+                    {/* Left: what is recorded. Right: what leaves with them */}
+                    <div className="grid gap-7 lg:grid-cols-2">
                         <section className="flex flex-col">
                             <h3 className="mb-3.5 text-lg font-bold tracking-tight">{t('resign_section_details')}</h3>
 
-                            <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
+                            <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
                                 <ReadOnlyField label={t('resign_f_name')} value={name} />
                                 <ReadOnlyField label={t('resign_f_code')} value={shown?.code ?? null} mono />
                                 <ReadOnlyField label={t('position')} value={shown?.position ?? null} />
                                 <ReadOnlyField label={t('department')} value={department} />
-                            </div>
+                            </dl>
 
                             <div className="mb-3.5">
                                 <Field label={t('resign_last_day')} name="lastDay" required error={errors.lastDay}>
@@ -205,15 +174,10 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                                 <HeldAssetsCount count={heldAssets.length} loading={assetsLoading} failed={assetsFailed} />
                             </div>
 
-                            {/* One border owns the whole zone, so a person holding a single device
-                                reads as a short list inside a defined panel rather than a lone row
-                                stranded above empty space. */}
+                            {/* One border owns the whole zone */}
                             <div className="border-border flex flex-1 flex-col overflow-hidden rounded-xl border">
                                 <HeldAssetsList assets={pageRows} loading={assetsLoading} failed={assetsFailed} lang={lang} />
-                                {/* Whichever column is naturally shorter stretches: the reason box
-                                    on the left, this spacer on the right. Keeping the slack here
-                                    rather than in the row list is what stops the last row from
-                                    swallowing it and reading double-height. */}
+                                {/* Spacer takes the slack so the last row keeps its height */}
                                 <div className="flex-1" />
 
                                 {pageCount > 1 && (
@@ -226,6 +190,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                                                 type="button"
                                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                                 disabled={safePage <= 1}
+                                                aria-label={t('page_prev')}
                                                 className="border-border hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md border disabled:opacity-40"
                                             >
                                                 <ChevronLeft className="h-4 w-4" />
@@ -237,6 +202,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                                                 type="button"
                                                 onClick={() => setPage(Math.min(pageCount, safePage + 1))}
                                                 disabled={safePage >= pageCount}
+                                                aria-label={t('page_next')}
                                                 className="border-border hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md border disabled:opacity-40"
                                             >
                                                 <ChevronRight className="h-4 w-4" />
@@ -254,8 +220,8 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                         {t('cancel')}
                     </Button>
                     <Button variant="destructive" onClick={submit} disabled={resign.isPending}>
-                        <UserMinus className="h-4 w-4" />
-                        {t('resign_submit')}
+                        {resign.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
+                        {resign.isPending ? t('saving') : t('resign_submit')}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -267,8 +233,8 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 function ReadOnlyField({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
     return (
         <div className="min-w-0">
-            <Label className="text-muted-foreground">{label}</Label>
-            <div className={cn('mt-1.5 truncate text-[15px] font-semibold', mono && 'font-mono text-sm')}>{value || '—'}</div>
+            <dt className="text-muted-foreground text-sm leading-none font-medium">{label}</dt>
+            <dd className={cn('mt-1.5 truncate text-[15px] font-semibold', mono && 'font-mono text-sm')}>{value || '—'}</dd>
         </div>
     );
 }
@@ -290,8 +256,7 @@ function HeldAssetsCount({ count, loading, failed }: { count: number; loading: b
         );
     }
 
-    // Amber only when something is genuinely outstanding — a clean leaver should not be
-    // dressed up as a problem.
+    // Amber only when something is outstanding
     return (
         <span
             className={cn(
@@ -305,10 +270,7 @@ function HeldAssetsCount({ count, loading, failed }: { count: number; loading: b
     );
 }
 
-/**
- * One page of outstanding equipment, drawn inside the panel that owns the zone — so the rows
- * carry no border of their own, only hairlines between them.
- */
+/** One page of outstanding equipment, rows parted by hairlines inside the panel. */
 function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHeldAsset[]; loading: boolean; failed: boolean; lang: string }) {
     const t = useT();
 
@@ -348,10 +310,7 @@ function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHel
                         <div className="bg-accent text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
                             <Laptop className="h-4 w-4" />
                         </div>
-                        {/* Two lines, each with what identifies the device on the left and what
-                            labels the physical unit on the right: model over serial, type/status
-                            over the asset tag. Keeping both codes in one right-hand column gives
-                            the model room to breathe instead of truncating mid-name. */}
+                        {/* Model over serial, type and status over the asset tag */}
                         <div className="min-w-0 flex-1">
                             <div className="flex items-baseline gap-2">
                                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{a.model ?? a.asset_code}</span>
@@ -365,8 +324,8 @@ function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHel
                                     <span className="truncate">{meta ? t(meta.key) : a.status}</span>
                                 </span>
                                 {a.tag && (
-                                    <span className="bg-brand/10 text-brand inline-flex max-w-36 shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
-                                        <Tag className="h-3 w-3 shrink-0 opacity-70" />
+                                    <span className="bg-brand/10 text-brand-ink inline-flex max-w-36 shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                                        <Tag className="h-3 w-3 shrink-0" aria-hidden />
                                         <span className="truncate">{a.tag}</span>
                                     </span>
                                 )}
@@ -375,10 +334,7 @@ function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHel
                     </div>
                 );
             })}
-            {/* Empty slots pad a short page out to a full one, the same way the shared DataTable
-                pins filler rows. Without them the panel's leftover height pools under the last
-                row — which has no divider beneath it — and that row reads as twice the height
-                of the ones above it. */}
+            {/* Filler slots pad a short page to a full one */}
             {Array.from({ length: Math.max(0, ASSETS_PER_PAGE - assets.length) }).map((_, i) => (
                 <div key={`slot-${i}`} className="h-16" />
             ))}

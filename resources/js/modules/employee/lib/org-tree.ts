@@ -19,15 +19,12 @@ export type OrgNodeData = OrgChartNode & {
     dir: OrgDir;
     color: string;
     onToggle: (id: number) => void;
-    onFocus: (id: number) => void;
     [key: string]: unknown;
 };
 
 export type OrgFlowNode = Node<OrgNodeData, 'orgNode'>;
 
-// Per-department hue (OKLCH) — a harmonious accent set keyed by the
-// department code, mirroring the approved design. Unknown codes fall back to a
-// stable hash so any department still gets a consistent colour.
+// Per-department OKLCH hue; unknown codes fall back to a stable hash
 const DEPT_HUE: Record<string, number> = {
     OPS: 255,
     PRD: 150,
@@ -50,11 +47,7 @@ function hashHue(key: string): number {
     return h;
 }
 
-/**
- * Accent colour for a department code. Fixed lightness/chroma, hue varies — so
- * every department reads as a distinct but harmonious accent. `null`/unknown
- * keys still resolve to a deterministic colour.
- */
+/** Decorative accent colour for a department code (bars, borders, minimap). */
 export function deptColor(code: string | null, l = 0.6, c = 0.14): string {
     if (!code) {
         return `oklch(${l} 0.03 250)`;
@@ -63,11 +56,22 @@ export function deptColor(code: string | null, l = 0.6, c = 0.14): string {
     return `oklch(${l} ${c} ${hue})`;
 }
 
-/**
- * Index children by their manager id. A node whose manager_id is null, or
- * points to someone outside the active set, is filed under the `null` key —
- * those are the forest roots.
- */
+// Lightness tuned so text on/in a department colour passes 4.5:1 (ratios measured across every hue)
+const FILL_L = 0.52;
+const INK_LIGHT_L = 0.46;
+const INK_DARK_L = 0.8;
+
+/** Solid department fill that carries white text (avatar initials), ≥4.7:1. */
+export function deptFill(code: string | null): string {
+    return deptColor(code, FILL_L);
+}
+
+/** Department-coloured small text on its own tint: `light` ≥5.2:1 on white, `dark` ≥7.5:1 on the dark card. */
+export function deptInk(code: string | null): { light: string; dark: string } {
+    return { light: deptColor(code, INK_LIGHT_L), dark: deptColor(code, INK_DARK_L) };
+}
+
+/** Children by manager id; a missing or out-of-set manager files under `null` (the roots). */
 export function buildChildrenIndex(nodes: OrgChartNode[]): Map<number | null, OrgChartNode[]> {
     const ids = new Set(nodes.map((n) => n.id));
     const index = new Map<number | null, OrgChartNode[]>();
@@ -88,11 +92,7 @@ export function rootIds(nodes: OrgChartNode[]): Set<number> {
     return new Set((buildChildrenIndex(nodes).get(null) ?? []).map((n) => n.id));
 }
 
-/**
- * Walk the forest from the roots, skipping the subtrees of collapsed nodes.
- * Returns the visible ids, the parent→child edges, and the deepest level
- * reached (1-based count of tiers among the visible nodes).
- */
+/** Visible ids, parent→child edges and tier count, skipping collapsed subtrees. */
 export function visibleGraph(
     nodes: OrgChartNode[],
     collapsed: Set<number>,
@@ -103,8 +103,7 @@ export function visibleGraph(
     const seen = new Set<number>();
     let maxDepth = 0;
 
-    // `seen` guards against malformed manager_id data forming a cycle, which
-    // would otherwise recurse forever and hang the browser.
+    // `seen` stops a manager_id cycle from recursing forever
     const walk = (n: OrgChartNode, depth: number) => {
         if (seen.has(n.id)) {
             return;
@@ -137,12 +136,7 @@ export function nodesWithReports(nodes: OrgChartNode[]): Set<number> {
     return result;
 }
 
-/**
- * Compute stable dagre positions for a set of nodes, keyed by numeric id.
- * Lay out the FULL tree once (pass every id + every parent→child edge) so node
- * positions stay fixed — collapsing a branch then just hides nodes and leaves a
- * gap instead of re-packing the siblings left/right. `dir`: 'TB' or 'LR'.
- */
+/** Dagre positions by id; pass the FULL tree so collapsing never re-packs siblings. */
 export function layoutPositions(
     ids: number[],
     edges: { source: number; target: number }[],

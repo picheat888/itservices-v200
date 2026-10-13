@@ -8,6 +8,7 @@ import { useUiStore } from '@/stores/ui';
 import { Briefcase } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { usePositionMembers } from '../hooks/use-positions';
+import { CountPlaceholder } from './count-placeholder';
 
 /**
  * Focused dialog listing every employee holding a position. Uses the shared
@@ -25,6 +26,9 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
     const view = position ?? shown;
 
     const { data: members = [], isLoading } = usePositionMembers(view?.id ?? null);
+    // Member count from the clicked row
+    const expected = view?.employees_count;
+    const loadingMembers = isLoading && expected !== 0;
 
     const columns: Column<Employee>[] = [
         {
@@ -62,15 +66,15 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
 
     return (
         <Dialog open={!!position} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col">
+            <DialogContent className="flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Briefcase className="text-muted-foreground h-4 w-4" />
                         {view?.title}
                         {view?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{view.code}</span>}
                     </DialogTitle>
-                    <DialogDescription>
-                        {members.length} {t('dept_members')}
+                    <DialogDescription aria-busy={isLoading || undefined}>
+                        {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('dept_members')}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -78,7 +82,9 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                     columns={columns}
                     rows={members}
                     rowKey={(m) => m.id}
-                    loading={isLoading}
+                    loading={loadingMembers}
+                    loadingRows={expected ? Math.min(expected, 20) : undefined}
+                    loadingAvatar
                     maxBodyHeight="52vh"
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.section ?? ''}`}
                 />
