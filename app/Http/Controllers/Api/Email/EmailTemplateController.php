@@ -15,6 +15,7 @@ use App\Services\Email\EmailNotificationService;
 use App\Services\Request\RequestNotificationService;
 use App\Services\Stock\StockNotificationService;
 use App\Services\Ticket\TicketDigestService;
+use App\Support\DateDisplay;
 use App\Support\EmailTable;
 use App\Support\EmailTemplates;
 use Illuminate\Http\JsonResponse;
@@ -339,7 +340,7 @@ class EmailTemplateController extends Controller
             'count' => 3,
             // report.scheduled — a weekly schedule set by the person previewing.
             'report.name' => 'ทะเบียนทรัพย์สิน',
-            'report.period' => '2026-09-21 to 2026-09-27',
+            'report.period' => DateDisplay::range('2026-09-21', '2026-09-27', null, 'en'),
             'report.rows' => '1,248',
             'report.frequency' => 'Every Monday at 07:00',
             'report.owner' => $name,
@@ -352,10 +353,10 @@ class EmailTemplateController extends Controller
             'stock.request_no' => 'REQ-2026-0001',
             'stock.request_by' => 'Piches Srisuk',
             'stock.request_reason' => 'Replacing the dock on the 3rd floor meeting room.',
-            'stock.request_date' => '18-08-2026',
+            'stock.request_date' => DateDisplay::emailDate('2026-08-18'),
             'stock.approver' => 'Anong Wattana',
             'stock.fulfilled_by' => 'Kankanok P',
-            'stock.fulfilled_date' => '20-08-2026',
+            'stock.fulfilled_date' => DateDisplay::emailDate('2026-08-20'),
             'stock.request_summary_table' => EmailTable::render(
                 StockNotificationService::REQUEST_SUMMARY_HEADERS,
                 [['Pending Approval', '2'], ['Awaiting Completion', '1']],
@@ -365,8 +366,8 @@ class EmailTemplateController extends Controller
             'stock.requests_table' => EmailTable::render(
                 StockNotificationService::REQUEST_HEADERS,
                 [
-                    ['REQ-2026-0001', 'Piches Srisuk', '18-08-2026', 'USB-C Docking Station ×2', 'Pending Approval'],
-                    ['REQ-2026-0004', 'Manee Jaidee', '24-08-2026', 'Wireless mouse ×1', 'Awaiting Completion'],
+                    ['REQ-2026-0001', 'Piches Srisuk', DateDisplay::emailDate('2026-08-18'), 'USB-C Docking Station ×2', 'Pending Approval'],
+                    ['REQ-2026-0004', 'Manee Jaidee', DateDisplay::emailDate('2026-08-24'), 'Wireless mouse ×1', 'Awaiting Completion'],
                 ],
                 [],
                 StockNotificationService::REQUEST_WIDTHS,
@@ -396,7 +397,7 @@ class EmailTemplateController extends Controller
             'asset.from' => 'Store IT',
             'asset.holder' => 'Somchai Suksawat',
             'asset.count' => 3,
-            'employee.last_working' => '31-12-2026',
+            'employee.last_working' => DateDisplay::emailDate('2026-12-31'),
             // Built in PHP by AssetService, so the preview needs a stand-in — same reason
             // the digests below carry one.
             'asset.table' => EmailTable::render(
@@ -436,17 +437,17 @@ class EmailTemplateController extends Controller
             'contract.code' => 'CT-2026-014',
             'contract.days_remaining' => 30,
             'contract.days_overdue' => 5,
-            'contract.end_date' => '31-12-2026',
+            'contract.end_date' => DateDisplay::emailDate('2026-12-31'),
             'contract.details' => 'Microsoft 365 E3 License Agreement, 320 seats',
             'reference.id' => 'REF-0001',
             'request.title' => 'Request: Mail group',
             'request.type' => 'Email group',
-            'request.date' => '18-08-2026',
-            'request.approved_date' => '20-08-2026',
-            'request.rejected_date' => '20-08-2026',
-            'request.cancelled_date' => '22-08-2026',
+            'request.date' => DateDisplay::emailDate('2026-08-18'),
+            'request.approved_date' => DateDisplay::emailDate('2026-08-20'),
+            'request.rejected_date' => DateDisplay::emailDate('2026-08-20'),
+            'request.cancelled_date' => DateDisplay::emailDate('2026-08-22'),
             'request.ticket_no' => 'TKT-2856',
-            'request.completed_date' => '22-08-2026',
+            'request.completed_date' => DateDisplay::emailDate('2026-08-22'),
             'request.completed_by' => 'Kankanok P',
             'request.reason' => 'Onboarding request with the new employee,<br />
 first day 01-09-2026.',
@@ -455,7 +456,7 @@ first day 01-09-2026.',
                 RequestNotificationService::HISTORY_HEADERS,
                 [
                     ['Supervisor', '⏭️ Skipped - the requester has no manager', '-', '-'],
-                    ['Department Manager', '✅ Approved', 'Anong Wattana', '19-08-2026'],
+                    ['Department Manager', '✅ Approved', 'Anong Wattana', DateDisplay::emailDate('2026-08-19')],
                 ],
                 [],
                 RequestNotificationService::HISTORY_WIDTHS,
@@ -473,7 +474,7 @@ first day 01-09-2026.',
             'employee.position' => 'Asst. Manager',
             'employee.section' => 'System analyst',
             'employee.department' => 'Information Technology',
-            'employee.working' => '01-09-2026',
+            'employee.working' => DateDisplay::emailDate('2026-09-01'),
             'digest.count' => 2,
             'digest.open_count' => 2,
             'digest.working_count' => 1,
@@ -497,8 +498,8 @@ first day 01-09-2026.',
             'digest.expiring_table' => EmailTable::render(
                 ContractDigestService::HEADERS,
                 [
-                    [EmailTable::link('#', 'CT-2026-014'), 'Acme Co.', 'Annual support', '฿120,000.00', '29-09-2026', '90, 30, 7 days'],
-                    [EmailTable::link('#', 'CT-2026-021'), 'Lenovo (Thailand)', 'Notebook rental', '฿1,450,000.00', '31-10-2026', '150, 60, 30 days'],
+                    [EmailTable::link('#', 'CT-2026-014'), 'Acme Co.', 'Annual support', '฿120,000.00', DateDisplay::emailDate('2026-09-29'), '90, 30, 7 days'],
+                    [EmailTable::link('#', 'CT-2026-021'), 'Lenovo (Thailand)', 'Notebook rental', '฿1,450,000.00', DateDisplay::emailDate('2026-10-31'), '150, 60, 30 days'],
                 ],
                 ContractDigestService::NUMERIC,
                 ContractDigestService::WIDTHS,
@@ -506,7 +507,7 @@ first day 01-09-2026.',
             'digest.overdue_table' => EmailTable::render(
                 ContractDigestService::HEADERS,
                 [
-                    [EmailTable::link('#', 'CT-2025-008'), 'Microsoft', 'Microsoft 365 E3', '฿980,000.00', '25-08-2026', '30, 7 days'],
+                    [EmailTable::link('#', 'CT-2025-008'), 'Microsoft', 'Microsoft 365 E3', '฿980,000.00', DateDisplay::emailDate('2026-08-25'), '30, 7 days'],
                 ],
                 ContractDigestService::NUMERIC,
                 ContractDigestService::WIDTHS,

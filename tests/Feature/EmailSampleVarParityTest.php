@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\Email\EmailTemplateController;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -63,5 +64,20 @@ class EmailSampleVarParityTest extends TestCase
             $this->clientKeys(),
             'SAMPLE_VARS in email-templates/pages/index.tsx and EmailTemplateController::sampleVars() must list the same variables.',
         );
+    }
+
+    public function test_sample_dates_follow_the_date_setting(): void
+    {
+        AppSetting::put('date_format', 'd_mon_y');
+        $method = new ReflectionMethod(EmailTemplateController::class, 'sampleVars');
+        $method->setAccessible(true);
+        $request = Request::create('/');
+        $request->setUserResolver(fn () => new User(['name' => 'Test User', 'email' => 'test@example.com']));
+
+        $vars = $method->invoke(app(EmailTemplateController::class), $request);
+
+        $this->assertSame('18 Aug 2026', $vars['request.date']);
+        $this->assertSame('31 Dec 2026', $vars['contract.end_date']);
+        $this->assertSame('21 Sep – 27 Sep 2026', $vars['report.period']);
     }
 }
