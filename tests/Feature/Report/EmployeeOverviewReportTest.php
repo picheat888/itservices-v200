@@ -201,6 +201,38 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertSame('—', collect($body['summary'])->keyBy('key')['eo_left']['note']['texts']['rate']);
     }
 
+    public function test_the_leavers_tile_compares_turnover_with_the_period_before(): void
+    {
+        foreach (range(1, 9) as $i) {
+            $this->employee("Stay{$i}", ['joined_at' => '2020-01-01']);
+        }
+        $this->employee('LeftBefore', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-05-15']);
+        $this->employee('LeftNow1', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-07-15']);
+        $this->employee('LeftNow2', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-08-15']);
+
+        $body = $this->actingAs($this->userWith(['employees.view']))
+            ->getJson('/api/reports/r/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
+        $trend = collect($body['summary'])->keyBy('key')['eo_left']['note']['trend'];
+
+        // Now: 2 left of (11 + 9) / 2 = 20.0%; Apr–Jun: 1 left of (12 + 11) / 2 = 8.7%.
+        $this->assertSame('up', $trend['direction']);
+        $this->assertEquals(11.3, $trend['values']['delta']);
+        $this->assertFalse($trend['up_is_good']);
+        $this->assertSame('rep_req_trend_prev', $trend['label_key']);
+    }
+
+    public function test_no_turnover_before_says_there_is_nothing_to_compare(): void
+    {
+        $this->employee('Joiner', ['joined_at' => '2026-07-01']);
+
+        $body = $this->actingAs($this->userWith(['employees.view']))
+            ->getJson('/api/reports/r/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
+        $trend = collect($body['summary'])->keyBy('key')['eo_left']['note']['trend'];
+
+        $this->assertSame('even', $trend['direction']);
+        $this->assertSame('rep_req_trend_no_base', $trend['label_key']);
+    }
+
     public function test_swapped_range_and_future_end_use_today(): void
     {
         $this->employee('Stay', ['joined_at' => '2020-01-01']);

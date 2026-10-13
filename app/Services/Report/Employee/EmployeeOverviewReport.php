@@ -164,7 +164,11 @@ class EmployeeOverviewReport extends TabularReport
                 default => ['label_key' => 'rep_n_eo_no_joiners'],
             }),
             ReportSummary::make('eo_left', 'ลาออก', $f['leavers']['count'])
-                ->withNote(['label_key' => 'rep_n_eo_rate', 'texts' => ['rate' => $f['leavers']['rate'] === null ? '—' : number_format($f['leavers']['rate'], 1).'%']])
+                ->withNote([
+                    'label_key' => 'rep_n_eo_rate',
+                    'texts' => ['rate' => $f['leavers']['rate'] === null ? '—' : number_format($f['leavers']['rate'], 1).'%'],
+                    'trend' => $this->rateTrend($f['leavers']['rate'], $f['leavers']['prev_rate']),
+                ])
                 ->withChart(['kind' => 'line', 'points' => $f['leavers']['per_bucket'], 'months' => $f['leavers']['bucket_months'], 'tone' => 'bad']),
             $preparing,
             ReportSummary::make('eo_holding', 'ผู้ลาออกที่ยังถือสิทธิ์', $holding['people'])->withAttention('red')
@@ -245,6 +249,7 @@ class EmployeeOverviewReport extends TabularReport
             'leavers' => [
                 'count' => $leavers->count(),
                 'rate' => $average > 0 ? round($leavers->count() / $average * 100, 1) : null,
+                'prev_rate' => $this->previousRate($people, $from, $to),
                 'still_working' => $leavers->filter(fn (Employee $e) => $e->last_day->gte($asOf))->count(),
                 ...$this->leaversByBucket($leavers, $from, $to),
             ],
@@ -253,6 +258,46 @@ class EmployeeOverviewReport extends TabularReport
             'bucket' => $chart['bucket'],
             'points' => $chart['points'],
             ...$this->departments($people, $departmentId, $from, $to, $asOf),
+        ];
+    }
+
+    /**
+     * Turnover of the period just before, as long as this one: null when nobody worked then.
+     *
+     * @param  Collection<int, Employee>  $people
+     */
+    private function previousRate(Collection $people, Carbon $from, Carbon $to): ?float
+    {
+        $days = (int) $from->diffInDays($to) + 1;
+        $prevTo = $from->copy()->subDay();
+        $prevFrom = $prevTo->copy()->subDays($days - 1);
+        $start = $people->filter(fn (Employee $e) => $this->workingBefore($e, $prevFrom))->count();
+        $end = $people->filter(fn (Employee $e) => $this->working($e, $prevTo))->count();
+        $average = ($start + $end) / 2;
+        $left = $people->filter(fn (Employee $e) => $this->leftIn($e, $prevFrom, $prevTo))->count();
+
+        return $average > 0 ? round($left / $average * 100, 1) : null;
+    }
+
+    /**
+     * The turnover against the period before, in points: rising is bad.
+     *
+     * @return array{direction: string, label_key: string, values: array<string, float>, up_is_good: bool, decimals: int}
+     */
+    private function rateTrend(?float $rate, ?float $before): array
+    {
+        $delta = $rate === null || $before === null ? null : round($rate - $before, 1);
+
+        return [
+            'direction' => match (true) {
+                $delta === null, abs($delta) < 0.05 => 'even',
+                $delta > 0 => 'up',
+                default => 'down',
+            },
+            'label_key' => $delta === null ? 'rep_req_trend_no_base' : 'rep_req_trend_prev',
+            'values' => $delta === null ? [] : ['delta' => abs($delta)],
+            'up_is_good' => false,
+            'decimals' => 1,
         ];
     }
 
