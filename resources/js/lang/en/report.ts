@@ -403,7 +403,7 @@ export const report: Dict = {
     rep_k_stock_value: 'Total stock value',
     rep_k_monthly_total: 'Cost per month',
     rep_k_yearly_total: 'Cost per year',
-    rep_domain_requests: 'Requests (workflow)',
+    rep_domain_requests: 'Requests',
     rep_domain_employees: 'Employees',
     rep_domain_access: 'Access',
     rep_requests_overview_title: 'Requests overview',
