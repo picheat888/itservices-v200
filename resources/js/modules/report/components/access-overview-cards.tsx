@@ -497,15 +497,12 @@ export function Group<T>({
     render,
     open: openProp,
     onToggle,
-    grow = false,
 }: {
     title: string;
     total: string;
     rows: T[];
     first?: boolean;
     render: (row: T) => React.ReactNode;
-    /** The list grows with its rows instead of scrolling inside itself, and its toggle sits at the card's foot. */
-    grow?: boolean;
     /** Set both to let the page know when the group opens. */
     open?: boolean;
     onToggle?: () => void;
@@ -520,7 +517,7 @@ export function Group<T>({
     const Icon = open ? ChevronUp : ChevronDown;
 
     return (
-        <section className={cn(grow && 'flex flex-1 flex-col')}>
+        <section>
             <h3
                 className={cn(
                     TABLE_HEAD,
@@ -531,9 +528,9 @@ export function Group<T>({
                 {title}
                 <b className="text-foreground font-mono tabular-nums">{total}</b>
             </h3>
-            <ul className={cn(open && !grow && 'max-h-80 overflow-y-auto overscroll-contain')}>{shown.map(render)}</ul>
+            <ul className={cn(open && 'max-h-80 overflow-y-auto overscroll-contain')}>{shown.map(render)}</ul>
             {folds && (
-                <div className={cn('border-border/60 border-t px-5 py-2 text-xs font-medium', grow && 'mt-auto')}>
+                <div className="border-border/60 border-t px-5 py-2 text-xs font-medium">
                     <button
                         type="button"
                         onClick={toggle}
@@ -555,16 +552,23 @@ export function GroupRow({
     side,
     sub,
     chips,
+    className,
 }: {
     head: React.ReactNode;
     side?: React.ReactNode;
+    className?: string;
     /** Plain details, or an element for one that needs its own colour. */
     sub: (string | React.ReactElement | null | false)[];
     chips?: React.ReactNode;
 }) {
     const parts = sub.filter((s): s is string | React.ReactElement => Boolean(s));
     return (
-        <li className="border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b px-5 py-2.5 last:border-b-0">
+        <li
+            className={cn(
+                'border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b px-5 py-2.5 last:border-b-0',
+                className,
+            )}
+        >
             <span className="min-w-0 truncate text-sm">{head}</span>
             <span className="row-span-2">{side}</span>
             <span

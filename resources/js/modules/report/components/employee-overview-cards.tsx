@@ -7,12 +7,12 @@ import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useEmployeeOverviewBreakdown } from '../hooks/use-reports';
 import type { AccessType, EmployeeOverviewBreakdown, EmployeeOverviewCounts, TabularFilters } from '../types';
-import { ACCESS_TYPES, DaysOut, Group, GroupRow, heldStyle, NUM, Segments, TD, TH, TypeDot, TypeLabel, useFoldRow } from './access-overview-cards';
+import { ACCESS_TYPES, DaysOut, GroupRow, heldStyle, NUM, Segments, TD, TH, TypeDot, TypeLabel, useFoldRow } from './access-overview-cards';
 import { count, deptName } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { InfoPopover } from './info-popover';
@@ -637,6 +637,44 @@ function DeptRows({
 
 /* ─────────────────────────── leavers still holding access ─────────────────────────── */
 
+/** Leaver rows shown on a tablet, where the card stands alone under the departments. */
+const HOLDING_NARROW = 5;
+
+/** Side by side from lg; below it the two cards stack. */
+function useWide() {
+    const query = '(min-width: 1024px)';
+    const [wide, setWide] = useState(() => window.matchMedia(query).matches);
+    useEffect(() => {
+        const media = window.matchMedia(query);
+        const update = () => setWide(media.matches);
+        media.addEventListener('change', update);
+        return () => media.removeEventListener('change', update);
+    }, []);
+    return wide;
+}
+
+/** How many rows of a clipped list are wholly in view, recounted as the list resizes. */
+function useFitCount(ref: React.RefObject<HTMLUListElement | null>, total: number, enabled: boolean) {
+    const [fit, setFit] = useState(total);
+    useLayoutEffect(() => {
+        const list = ref.current;
+        if (!list || !enabled) return;
+        const measure = () => {
+            let n = 0;
+            for (const item of Array.from(list.children) as HTMLElement[]) {
+                if (item.offsetTop + item.offsetHeight > list.clientHeight + 1) break;
+                n++;
+            }
+            setFit(Math.max(1, n));
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(list);
+        return () => observer.disconnect();
+    }, [ref, total, enabled]);
+    return fit;
+}
+
 function HoldingCard({
     data,
     cardRef,
@@ -653,7 +691,15 @@ function HoldingCard({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const canOpen = useCanOpen();
+    const wide = useWide();
+    const listRef = useRef<HTMLUListElement>(null);
     const { holding } = data;
+    const total = holding.rows.length;
+    // Folded beside the departments, the card takes their height and lists as many leavers as fit it.
+    const fitting = wide && !open;
+    const fit = useFitCount(listRef, total, fitting);
+    const limit = wide ? fit : HOLDING_NARROW;
+    const folds = total > limit;
     const used = ACCESS_TYPES.filter((k) => holding.by_type[k] > 0);
     const link = data.can_open_access && canOpen('/reports/access-overview') && (
         <Link
@@ -665,54 +711,76 @@ function HoldingCard({
     );
 
     return (
-        <Card ref={cardRef} className="flex flex-col overflow-clip lg:sticky lg:top-4 xl:col-span-2" style={heldStyle(heldHeight)}>
-            <CardTitle
-                title={t('rep_eo_holding_title')}
-                info={t('rep_eo_holding_info')}
-                sub={
-                    used.length > 0 && (
-                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            {used.map((k) => (
-                                <TypeLabel key={k} type={k} />
-                            ))}
-                        </span>
-                    )
-                }
-            />
-            {holding.rows.length === 0 ? (
-                <CardEmpty>
-                    <span className="text-foreground font-medium">{t('rep_eo_holding_empty')}</span>
-                </CardEmpty>
-            ) : (
-                <div className="flex flex-1 flex-col">
-                    <Group
-                        first
-                        title={t('rep_eo_holding_group')}
-                        total={t('rep_eo_people_n').replace('{n}', count(holding.rows.length, lang))}
-                        rows={holding.rows}
-                        open={open}
-                        onToggle={onToggle}
-                        grow
-                        render={(r) => (
-                            <GroupRow
-                                key={r.employee.id}
-                                head={<PersonLink id={r.employee.id} name={nameOf(r.employee, lang) ?? r.employee.code} code={r.employee.code} />}
-                                side={
-                                    <span className="text-muted-foreground text-xs">
-                                        <b className="text-foreground font-mono">{count(r.grants.length, lang)}</b> {t('rep_eo_grants_word')}
-                                    </span>
-                                }
-                                sub={[deptName(r.department, lang) ?? t('rep_ac_no_department'), <DaysOut key="days" days={r.days_out} />]}
-                                chips={r.grants.map((g) => (
-                                    <GrantChip key={`${g.type}-${g.name}`} type={g.type} name={g.name} />
+        // The wrapper sits in the grid; folded, the card fills it without adding height of its own.
+        <div ref={cardRef} className="relative min-w-0 lg:sticky lg:top-4 lg:min-h-96 xl:col-span-2" style={heldStyle(heldHeight)}>
+            <Card className={cn('flex flex-col overflow-clip', fitting ? 'lg:absolute lg:inset-0' : 'h-full')}>
+                <CardTitle
+                    title={t('rep_eo_holding_title')}
+                    info={t('rep_eo_holding_info')}
+                    sub={
+                        used.length > 0 && (
+                            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                {used.map((k) => (
+                                    <TypeLabel key={k} type={k} />
                                 ))}
-                            />
+                            </span>
+                        )
+                    }
+                />
+                {total === 0 ? (
+                    <CardEmpty>
+                        <span className="text-foreground font-medium">{t('rep_eo_holding_empty')}</span>
+                    </CardEmpty>
+                ) : (
+                    <div className="flex min-h-0 flex-1 flex-col">
+                        <h3
+                            className={cn(
+                                TABLE_HEAD,
+                                'border-border text-muted-foreground flex items-baseline justify-between border-b px-5 py-2 text-xs font-semibold',
+                            )}
+                        >
+                            {t('rep_eo_holding_group')}
+                            <b className="text-foreground font-mono tabular-nums">{t('rep_eo_people_n').replace('{n}', count(total, lang))}</b>
+                        </h3>
+                        <ul ref={listRef} className={cn(fitting && 'relative min-h-0 flex-1 overflow-hidden')}>
+                            {holding.rows.map((r, i) => {
+                                // Measured but out of sight while folded; left out once open or on a tablet.
+                                const beyond = !open && i >= limit;
+                                if (beyond && !fitting) return null;
+                                return (
+                                    <GroupRow
+                                        key={r.employee.id}
+                                        className={beyond ? 'invisible' : undefined}
+                                        head={
+                                            <PersonLink
+                                                id={r.employee.id}
+                                                name={nameOf(r.employee, lang) ?? r.employee.code}
+                                                code={r.employee.code}
+                                            />
+                                        }
+                                        side={
+                                            <span className="text-muted-foreground text-xs">
+                                                <b className="text-foreground font-mono">{count(r.grants.length, lang)}</b> {t('rep_eo_grants_word')}
+                                            </span>
+                                        }
+                                        sub={[deptName(r.department, lang) ?? t('rep_ac_no_department'), <DaysOut key="days" days={r.days_out} />]}
+                                        chips={r.grants.map((g) => (
+                                            <GrantChip key={`${g.type}-${g.name}`} type={g.type} name={g.name} />
+                                        ))}
+                                    />
+                                );
+                            })}
+                        </ul>
+                        {(folds || open) && total > limit && (
+                            <div className="border-border/60 mt-auto border-t">
+                                <FoldToggle open={open} total={total} onToggle={onToggle} />
+                            </div>
                         )}
-                    />
-                </div>
-            )}
-            {link && <div className="border-border mt-auto border-t px-5 py-2 text-right">{link}</div>}
-        </Card>
+                    </div>
+                )}
+                {link && <div className="border-border mt-auto border-t px-5 py-2 text-right">{link}</div>}
+            </Card>
+        </div>
     );
 }
 
