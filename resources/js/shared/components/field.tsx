@@ -3,6 +3,32 @@ import { Label } from '@/shared/ui/label';
 import { AlertCircle } from 'lucide-react';
 import { Children, cloneElement, isValidElement, useId } from 'react';
 
+/** Props Field hands to its control: the id its label points at plus the error/help/required links. */
+export interface FieldControlProps {
+    id: string;
+    'aria-invalid'?: boolean;
+    'aria-describedby'?: string;
+    'aria-required'?: boolean;
+}
+
+/** Form-level error at the top of a form: shakes in and is announced (login page standard). */
+export function FormErrorBanner({ message, shakeKey, className }: { message: string; shakeKey?: string | number; className?: string }) {
+    if (!message) return null;
+    return (
+        <p
+            key={`${message}-${shakeKey ?? ''}`}
+            role="alert"
+            className={cn(
+                'bg-destructive/10 dark:text-destructive border-destructive/25 animate-shake flex items-start gap-2 rounded-lg border px-3 py-2 text-sm text-red-700',
+                className,
+            )}
+        >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span className="min-w-0">{message}</span>
+        </p>
+    );
+}
+
 export function Field({
     label,
     error,
@@ -11,6 +37,7 @@ export function Field({
     name,
     action,
     grow,
+    controlId,
     children,
 }: {
     label: string;
@@ -21,26 +48,42 @@ export function Field({
     name?: string;
     /** Optional control shown at the right end of the label row (e.g. a "generate for me" shortcut). */
     action?: React.ReactNode;
-    /** Stretch to fill a flex-column parent and hand the leftover height to the control inside
-     *  — for a textarea that has to end level with a neighbouring column. */
+    /** Stretch to fill a flex-column parent and hand the leftover height to the control inside. */
     grow?: boolean;
-    children: React.ReactNode;
+    /** Fixed id for the control (label htmlFor); otherwise the child's own id or a generated one. */
+    controlId?: string;
+    /** One control (gets the id/aria props cloned on), or a function that places them itself. */
+    children: React.ReactNode | ((control: FieldControlProps) => React.ReactNode);
 }) {
-    // A single child control gets an id (label htmlFor) and is linked to its error/help line.
     const autoId = useId();
-    const only = Children.count(children) === 1 ? children : null;
-    const control = isValidElement<{ id?: string }>(only) ? only : null;
-    const controlId = control?.props.id ?? autoId;
     const msgId = `${autoId}-msg`;
-    const describe = error ? { 'aria-invalid': true, 'aria-describedby': msgId } : help ? { 'aria-describedby': msgId } : {};
-    const body = control
-        ? cloneElement(control as React.ReactElement<Record<string, unknown>>, { ...(control.props.id ? {} : { id: controlId }), ...describe })
-        : children;
+    const describe = {
+        ...(error ? { 'aria-invalid': true, 'aria-describedby': msgId } : help ? { 'aria-describedby': msgId } : {}),
+        ...(required ? { 'aria-required': true } : {}),
+    };
+
+    let body: React.ReactNode;
+    let labelFor: string | undefined;
+    if (typeof children === 'function') {
+        labelFor = controlId ?? autoId;
+        body = children({ id: labelFor, ...describe });
+    } else {
+        const only = Children.count(children) === 1 ? children : null;
+        const control = isValidElement<{ id?: string }>(only) ? only : null;
+        labelFor = control ? (control.props.id ?? controlId ?? autoId) : controlId;
+        body = control
+            ? cloneElement(control as React.ReactElement<Record<string, unknown>>, { ...(control.props.id ? {} : { id: labelFor }), ...describe })
+            : children;
+    }
 
     const labelNode = (
-        <Label htmlFor={control ? controlId : undefined}>
+        <Label htmlFor={labelFor}>
             {label}
-            {required && <span className="text-destructive ml-0.5">*</span>}
+            {required && (
+                <span className="text-destructive ml-0.5" aria-hidden>
+                    *
+                </span>
+            )}
         </Label>
     );
 
@@ -54,7 +97,7 @@ export function Field({
             ) : (
                 labelNode
             )}
-            {/* On error, tint controls red; keep the hover:/focus: overrides (the controls' own states outrank them). */}
+            {/* Error tint for the controls inside */}
             <div
                 className={cn(
                     grow && 'min-h-0 flex-1 [&_textarea]:h-full',

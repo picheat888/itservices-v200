@@ -5,18 +5,17 @@ import { AlertCircle } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ImportPreviewRow } from '../api/employeeApi';
 
-/**
- * The dry-run of an employee CSV import, row by row: what each free-text column
- * resolved to in the master data, and — under the row itself — why a row cannot be
- * saved. Rows are shown in file order so a number here matches a line in Excel.
- */
+/** Dry-run of an employee CSV import in file order: what each column resolved to, and why a row cannot be saved. */
 export function ImportPreviewTable({ rows }: { rows: ImportPreviewRow[] }) {
     const t = useT();
 
     return (
         <div className="border-border max-h-72 overflow-auto rounded-lg border">
-            <table className="w-full text-left text-xs">
-                <thead className={cn(TABLE_HEAD, 'text-muted-foreground sticky top-0')}>
+            <table aria-label={t('import_preview_title')} className="w-full text-left text-xs">
+                {/* Solid sticky header so rows never show through */}
+                <thead
+                    className={cn(TABLE_HEAD, 'bg-background dark:bg-muted text-muted-foreground sticky top-0 z-[1] shadow-[0_1px_0_var(--border)]')}
+                >
                     <tr>
                         <th className="px-2 py-1.5 font-semibold">{t('import_row')}</th>
                         <th className="px-2 py-1.5 font-semibold">{t('import_col_code')}</th>

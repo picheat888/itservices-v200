@@ -1,12 +1,12 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
-import { cn } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -15,9 +15,10 @@ import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
 import { Check, CheckCircle2, Copy, EyeOff, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
+import { PasswordInput } from './password-input';
 
 /**
  * "จัดการบัญชี" dialog for an employee who already has a login account.
@@ -32,29 +33,28 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const { can } = useAuth();
     const confirm = useConfirm();
     const { updateCredentials } = useEmployeeMutations();
+    const checklistId = useId();
 
     const canUsername = can('employees.set_credentials');
     const canReset = can('employees.reset_password');
 
     const [username, setUsername] = useState('');
-    // The name as it currently stands on the account. The `employee` prop is a snapshot taken
-    // when the dialog opened and never refreshes, so saving has to advance this itself —
-    // otherwise typing the original name back looks unchanged and the button locks up.
+    // The name currently on the account; the `employee` prop never refreshes after a save
     const [savedUsername, setSavedUsername] = useState('');
     const [usernameSaved, setUsernameSaved] = useState(false);
     const [password, setPassword] = useState('');
+    const [showPw, setShowPw] = useState(false);
     const [forceChange, setForceChange] = useState(true);
     const [newPassword, setNewPassword] = useState<string | null>(null);
     // Per-field messages sit under their own input; `formError` is the catch-all banner.
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [formError, setFormError] = useState('');
+    const [formErrorCount, setFormErrorCount] = useState(0);
     const [copied, setCopied] = useState(false);
-    // Which action is in flight. Both buttons drive the same mutation, so its `isPending`
-    // alone would spin them together — this keeps the spinner on the one that was clicked.
+    // Which action is in flight, so only the clicked button spins
     const [busy, setBusy] = useState<'username' | 'password' | null>(null);
 
-    // Retain the last employee so the content stays rendered while the dialog animates
-    // closed — the prop goes null the moment it closes, which would blank the fade-out.
+    // Retain the last employee so content stays rendered during the close animation
     const [shown, setShown] = useState(employee);
     useEffect(() => {
         if (employee) setShown(employee);
@@ -67,6 +67,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         setSavedUsername(employee.username ?? '');
         setUsernameSaved(false);
         setPassword('');
+        setShowPw(false);
         setForceChange(true);
         setNewPassword(null);
         setErrors({});
@@ -76,18 +77,25 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee?.id]);
 
-    /**
-     * Renaming changes how this person signs in, so it goes through a confirm step first.
-     * The confirm dialog owns the spinner while the request runs.
-     */
+    const showFormError = (message: string) => {
+        setFormError(message);
+        setFormErrorCount((n) => n + 1);
+    };
+
+    const refusal = (data: { message?: string } | undefined) =>
+        data?.message === 'super_account' ? t('cred_err_super_account') : (data?.message ?? t('cred_err_generic'));
+
+    /** Renaming changes how this person signs in, so it is confirmed first. */
     const saveUsername = async () => {
-        if (!employee || !username.trim()) return;
+        if (!employee || !username.trim() || busy !== null) return;
         const next = username.trim();
         setErrors({});
         setFormError('');
         setUsernameSaved(false);
         if (!isValidUsername(next)) {
-            setErrors({ username: t('cred_err_username_format') });
+            const invalid = { username: t('cred_err_username_format') };
+            setErrors(invalid);
+            focusFirstError(invalid);
             return;
         }
         if (next === savedUsername) return;
@@ -109,7 +117,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     if (data?.errors?.username) {
                         setErrors({ username: t('cred_err_username_taken') });
                     } else {
-                        setFormError(data?.message ?? t('cred_err_generic'));
+                        showFormError(refusal(data));
                     }
                     throw e;
                 } finally {
@@ -119,16 +127,15 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         });
     };
 
-    /**
-     * A reset can't be undone — the old password stops working the moment it runs — so it
-     * asks first, the same way renaming does.
-     */
+    /** A reset can't be undone, so it is confirmed first like renaming. */
     const resetPassword = async () => {
-        if (!employee) return;
+        if (!employee || busy !== null) return;
         setErrors({});
         setFormError('');
         if (!isValidPassword(password.trim())) {
-            setErrors({ password: t('cred_err_password_policy') });
+            const invalid = { password: t('cred_err_password_policy') };
+            setErrors(invalid);
+            focusFirstError(invalid);
             return;
         }
 
@@ -150,7 +157,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     if (data?.errors?.password) {
                         setErrors({ password: data.errors.password[0] ?? t('cred_err_password_policy') });
                     } else {
-                        setFormError(data?.message ?? t('cred_err_generic'));
+                        showFormError(refusal(data));
                     }
                     throw e;
                 } finally {
@@ -160,12 +167,12 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         });
     };
 
-    const copyPw = () => {
+    const copyPw = async () => {
         if (!newPassword) return;
         try {
-            navigator.clipboard?.writeText(newPassword);
+            await navigator.clipboard.writeText(newPassword);
         } catch {
-            /* clipboard may be unavailable */
+            return;
         }
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
@@ -188,23 +195,16 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     srDescription={t('emp_cred_manage_title')}
                 />
 
-                {/* Once a password exists the dialog stops being a form: the only job left is
-                    getting this one string to the person before it disappears. Showing the
-                    untouched username editor alongside it would only compete for attention. */}
+                {/* After a reset the only job left is handing over the new password */}
                 {newPassword ? (
                     <div className="space-y-4 border-t px-6 py-5">
-                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="h-[18px] w-[18px] shrink-0" />
+                        <div role="status" className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="h-[18px] w-[18px] shrink-0" aria-hidden />
                             <p className="text-sm font-semibold">{t('reset_password_success')}</p>
                         </div>
 
-                        {/* One card, two zones. The warning belongs to the string above it, so it
-                            is a footer inside the same panel rather than a second floating alert —
-                            two stacked boxes of similar shape only competed with each other. */}
+                        {/* Password + copy, with the "shown once" note as the card footer */}
                         <div className="border-border overflow-hidden rounded-lg border">
-                            {/* The password is the hero — sized and spaced to be read aloud over a
-                                phone, which is how it usually reaches the employee. Copy sits with
-                                it, so the value and the way to take it are one thing. */}
                             <div className="bg-muted/40 px-4 py-3">
                                 <div className="text-muted-foreground mb-1 text-[10.5px] font-bold tracking-wider uppercase">
                                     {t('reset_password_new')}
@@ -215,12 +215,12 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                     </span>
                                     <button
                                         type="button"
-                                        onClick={copyPw}
+                                        onClick={() => void copyPw()}
                                         title={copied ? t('cred_copied') : t('cred_copy')}
                                         aria-label={copied ? t('cred_copied') : t('cred_copy')}
                                         className={cn(
-                                            'border-border hover:bg-accent grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-transparent transition-colors',
-                                            copied ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground hover:text-foreground',
+                                            'border-border hover:bg-accent focus-visible:ring-ring grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-transparent transition-colors focus-visible:ring-2 focus-visible:outline-hidden',
+                                            copied ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground hover:text-foreground',
                                         )}
                                     >
                                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -228,110 +228,128 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                 </div>
                             </div>
 
-                            {/* EyeOff rather than a generic ⓘ: the point is literally that this
-                                will not be shown again. Amber, not grey — missing it costs the
-                                admin another reset and another call to the employee. */}
                             <div className="flex items-start gap-2 border-t border-amber-300/70 bg-amber-50 px-4 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-300">
-                                <EyeOff className="mt-[3px] h-3.5 w-3.5 shrink-0" />
+                                <EyeOff className="mt-[3px] h-3.5 w-3.5 shrink-0" aria-hidden />
                                 <span>{t('emp_cred_handover_note')}</span>
                             </div>
                         </div>
+
+                        {/* Announces a successful copy */}
+                        <span className="sr-only" aria-live="polite">
+                            {copied ? t('cred_copied') : ''}
+                        </span>
                     </div>
                 ) : (
                     <div className="space-y-5 border-t px-6 py-5">
-                        {/* ── Username ── */}
+                        <FormErrorBanner message={formError} shakeKey={formErrorCount} />
+
+                        {/* Username */}
                         {canUsername && (
-                            <section>
+                            <form
+                                noValidate
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    void saveUsername();
+                                }}
+                            >
                                 <SectionLabel>{t('emp_cred_username_section')}</SectionLabel>
                                 <Field label={t('cred_username')} name="username" error={errors.username}>
-                                    <div className="flex items-center gap-2">
-                                        {/* Lower-cased as it's typed, matching what the API stores. */}
-                                        <Input
-                                            value={username}
-                                            onChange={(e) => {
-                                                setUsername(e.target.value.toLowerCase());
-                                                setErrors({});
-                                                // Editing again makes the button an action, not a receipt.
-                                                setUsernameSaved(false);
-                                            }}
-                                            className="font-mono"
-                                            autoComplete="off"
-                                        />
-                                        <Button onClick={saveUsername} disabled={busy !== null || !username.trim() || !usernameDirty}>
-                                            {busy === 'username' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : usernameSaved ? (
-                                                <Check className="h-4 w-4" />
-                                            ) : null}
-                                            {usernameSaved ? t('saved') : t('save')}
-                                        </Button>
-                                    </div>
+                                    {(control) => (
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                {...control}
+                                                value={username}
+                                                // Lower-cased as typed, matching what the API stores
+                                                onChange={(e) => {
+                                                    setUsername(e.target.value.toLowerCase());
+                                                    setErrors({});
+                                                    setUsernameSaved(false);
+                                                }}
+                                                className="font-mono"
+                                                autoComplete="off"
+                                                autoCapitalize="none"
+                                                autoCorrect="off"
+                                                spellCheck={false}
+                                            />
+                                            <Button type="submit" disabled={busy !== null || !username.trim() || !usernameDirty}>
+                                                {busy === 'username' ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : usernameSaved ? (
+                                                    <Check className="h-4 w-4" />
+                                                ) : null}
+                                                {busy === 'username' ? t('saving') : usernameSaved ? t('saved') : t('save')}
+                                            </Button>
+                                        </div>
+                                    )}
                                 </Field>
-                            </section>
+                            </form>
                         )}
 
-                        {/* ── Reset password ── */}
+                        {/* Reset password */}
                         {canReset && (
-                            <section>
+                            <form
+                                noValidate
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    void resetPassword();
+                                }}
+                            >
                                 <SectionLabel>{t('emp_cred_reset_section')}</SectionLabel>
                                 <div className="space-y-4">
-                                    <Field
-                                        label={t('reset_password_new')}
-                                        name="password"
-                                        error={errors.password}
-                                        action={
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setPassword(randomPassword())}
-                                                className="text-muted-foreground hover:text-foreground -mr-2 h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5"
-                                            >
-                                                <Wand2 />
-                                                {t('cred_auto')}
-                                            </Button>
-                                        }
-                                    >
-                                        <Input
-                                            value={password}
-                                            onChange={(e) => {
-                                                setPassword(e.target.value);
-                                                setErrors({});
-                                            }}
-                                            className="font-mono"
-                                            // Eight dots — the same mask the creation dialog uses, and the
-                                            // policy's minimum length at a glance.
-                                            placeholder="••••••••"
-                                            autoComplete="new-password"
-                                        />
-                                        {/* Sits with the field it describes, not as a separate block. */}
-                                        <PasswordChecklist value={password} className="mt-2" />
-                                    </Field>
+                                    <div>
+                                        <Field
+                                            label={t('reset_password_new')}
+                                            name="password"
+                                            error={errors.password}
+                                            action={
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setPassword(randomPassword());
+                                                        setShowPw(true);
+                                                        setErrors({});
+                                                    }}
+                                                    className="text-muted-foreground hover:text-foreground -mr-2 h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5"
+                                                >
+                                                    <Wand2 />
+                                                    {t('cred_auto')}
+                                                </Button>
+                                            }
+                                        >
+                                            {(control) => (
+                                                <PasswordInput
+                                                    {...control}
+                                                    aria-describedby={[control['aria-describedby'], checklistId].filter(Boolean).join(' ')}
+                                                    value={password}
+                                                    visible={showPw}
+                                                    onToggle={() => setShowPw((s) => !s)}
+                                                    onChange={(v) => {
+                                                        setPassword(v);
+                                                        setErrors({});
+                                                    }}
+                                                />
+                                            )}
+                                        </Field>
+                                        <PasswordChecklist id={checklistId} value={password} className="mt-2" />
+                                    </div>
                                     <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
                                         <span className="text-sm">{t('emp_cred_force_change')}</span>
                                         <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
                                     </div>
                                     {/* Nothing to reset to until a password is typed or generated. */}
                                     <Button
+                                        type="submit"
                                         className="w-full"
                                         variant="outline"
-                                        onClick={resetPassword}
                                         disabled={busy !== null || !isValidPassword(password.trim())}
                                     >
                                         {busy === 'password' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-                                        {t('emp_cred_reset_btn')}
+                                        {busy === 'password' ? t('saving') : t('emp_cred_reset_btn')}
                                     </Button>
                                 </div>
-                            </section>
-                        )}
-
-                        {formError && (
-                            <div
-                                key={formError}
-                                className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3 py-2 text-sm text-red-700"
-                            >
-                                {formError}
-                            </div>
+                            </form>
                         )}
                     </div>
                 )}

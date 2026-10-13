@@ -1,14 +1,16 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
-import { Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { FilterPopover } from '@/shared/components/filter-popover';
 import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
 import { type PageTab, PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
-import { TableSkeleton } from '@/shared/components/skeletons';
-import { StatusBadge } from '@/shared/components/status-badge';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatCard } from '@/shared/components/stat-card';
+import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
-import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -18,16 +20,14 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Switch } from '@/shared/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import {
     Briefcase,
     Building2,
-    ChevronLeft,
-    ChevronRight,
+    CircleDot,
     Eye,
     Import,
     Info,
@@ -44,7 +44,7 @@ import {
     UserPlus,
     Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AddEmployeeDrawer } from '../components/add-employee-drawer';
 import { DepartmentMembersDialog } from '../components/department-members-dialog';
@@ -72,6 +72,11 @@ const isTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).inc
 // List keys shared by the tabs; cleared when the tab changes (rows-per-page stays).
 const LIST_KEYS = ['search', 'dept', 'status', 'sort', 'page'];
 const clearListKeys = (params: URLSearchParams) => LIST_KEYS.forEach((key) => params.delete(key));
+
+// Icon-only row action buttons
+const ICON_BTN =
+    'hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none';
+const ICON_BTN_DANGER = cn(ICON_BTN, 'text-destructive hover:bg-destructive/10');
 
 /** One entry on the sub-tab bar; `count` renders as a small badge with `countTitle` as its tooltip. */
 type TabItem = PageTab<Tab>;
@@ -289,20 +294,21 @@ export default function EmployeesPage() {
             header: (
                 <span className="inline-flex items-center gap-1">
                     {t('pos_allow_special')}
-                    <TooltipProvider delayDuration={150}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="text-muted-foreground hover:text-foreground inline-flex"
-                                    aria-label={t('pos_allow_special')}
-                                >
-                                    <Info className="h-3.5 w-3.5" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs text-left font-normal normal-case">{t('pos_allow_special_info')}</TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    {/* Opens on tap or click; portalled so the table edge never clips it */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                                aria-label={t('pos_allow_special')}
+                            >
+                                <Info className="h-3.5 w-3.5" />
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="max-w-xs text-xs leading-relaxed font-normal tracking-normal normal-case">
+                            {t('pos_allow_special_info')}
+                        </PopoverContent>
+                    </Popover>
                 </span>
             ),
             align: 'center',
@@ -335,21 +341,25 @@ export default function EmployeesPage() {
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         {canPosEdit && (
                             <button
+                                type="button"
                                 onClick={() => {
                                     setEditPos(p);
                                     setPosModalOpen(true);
                                 }}
-                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                aria-label={`${t('edit')} ${p.title}`}
+                                className={ICON_BTN}
                             >
-                                <SquarePen className="h-4 w-4" />
+                                <SquarePen aria-hidden className="h-4 w-4" />
                             </button>
                         )}
                         {canPosDelete && (
                             <button
+                                type="button"
                                 onClick={() => handleDeletePos(p)}
-                                className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                                aria-label={`${t('delete')} ${p.title}`}
+                                className={ICON_BTN_DANGER}
                             >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 aria-hidden className="h-4 w-4" />
                             </button>
                         )}
                     </div>
@@ -358,6 +368,8 @@ export default function EmployeesPage() {
                 ),
         },
     ];
+
+    const deptName = (d: Department) => (lang === 'th' ? (d.name_th ?? d.name) : d.name);
 
     // A department can only be deleted when it has no employees AND no sections.
     // Otherwise show a blocking notice (sections cascade-delete, employees unassign).
@@ -371,7 +383,7 @@ export default function EmployeesPage() {
                 title: t('dept_del_blocked_title'),
                 description: t('dept_del_blocked_desc'),
                 entity: {
-                    name: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                    name: deptName(d),
                     sub: `${members} ${t('dept_members')}, ${sections} ${t('sub_sections')}`,
                 },
                 confirmText: t('got_it'),
@@ -380,7 +392,7 @@ export default function EmployeesPage() {
         }
         confirm({
             variant: 'danger',
-            entity: { name: lang === 'th' ? (d.name_th ?? d.name) : d.name },
+            entity: { name: deptName(d) },
             action: () => departmentMut.remove.mutateAsync(d.id),
         });
     };
@@ -391,7 +403,7 @@ export default function EmployeesPage() {
         {
             key: 'name',
             header: t('department'),
-            render: (d) => <span className="font-medium">{lang === 'th' ? (d.name_th ?? d.name) : d.name}</span>,
+            render: (d) => <span className="font-medium">{deptName(d)}</span>,
         },
         {
             key: 'sections',
@@ -424,21 +436,25 @@ export default function EmployeesPage() {
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         {canDeptEdit && (
                             <button
+                                type="button"
                                 onClick={() => {
                                     setEditDept(d);
                                     setDeptModalOpen(true);
                                 }}
-                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                aria-label={`${t('edit')} ${deptName(d)}`}
+                                className={ICON_BTN}
                             >
-                                <SquarePen className="h-4 w-4" />
+                                <SquarePen aria-hidden className="h-4 w-4" />
                             </button>
                         )}
                         {canDeptDelete && (
                             <button
+                                type="button"
                                 onClick={() => handleDeleteDept(d)}
-                                className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                                aria-label={`${t('delete')} ${deptName(d)}`}
+                                className={ICON_BTN_DANGER}
                             >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 aria-hidden className="h-4 w-4" />
                             </button>
                         )}
                     </div>
@@ -450,8 +466,8 @@ export default function EmployeesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-start justify-between gap-4">
-                <div>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
                     <h1 className="text-2xl font-bold">{t('employees')}</h1>
                     <p className="text-muted-foreground text-sm">{t('emp_subtitle')}</p>
                 </div>
@@ -514,10 +530,16 @@ export default function EmployeesPage() {
                     )}
 
                     {tab === 'positions' && (
-                        <div className="space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <span className="text-muted-foreground text-sm">{t('pos_all_org')}</span>
-                                {canPosAdd && (
+                        <DataTable
+                            columns={posColumns}
+                            rows={positions}
+                            rowKey={(p) => p.id}
+                            onRowClick={(p) => setViewPos(p)}
+                            searchable={(p) => `${p.code} ${p.title}`}
+                            search={list.table.search}
+                            paging={list.table.paging}
+                            actions={
+                                canPosAdd && (
                                     <Button
                                         onClick={() => {
                                             setEditPos(null);
@@ -527,16 +549,9 @@ export default function EmployeesPage() {
                                         <Plus className="h-4 w-4" />
                                         {t('add_position')}
                                     </Button>
-                                )}
-                            </div>
-                            <DataTable
-                                columns={posColumns}
-                                rows={positions}
-                                rowKey={(p) => p.id}
-                                onRowClick={(p) => setViewPos(p)}
-                                paging={list.table.paging}
-                            />
-                        </div>
+                                )
+                            }
+                        />
                     )}
 
                     {tab === 'departments' && (
@@ -668,22 +683,42 @@ function DirectoryTab({
     const deptFilter = deptKnown ? deptParam : 'all';
     const statusParam = list.get('status');
     const statusFilter = isDirStatus(statusParam) ? statusParam : 'all';
-    const { page, perPage: pageSize } = list;
-    const setPage = (update: (current: number) => number) => list.table.paging.onPageChange(update(page));
+    const { page, perPage } = list;
 
-    const { data, isLoading } = useEmployeeDirectory({ page, per_page: pageSize, search, department_id: deptFilter, status: statusFilter });
+    const { data, isLoading, isFetching } = useEmployeeDirectory({
+        page,
+        per_page: perPage,
+        search,
+        department_id: deptFilter,
+        status: statusFilter,
+    });
     const rows = data?.data ?? [];
-    const meta = data?.meta;
-    const total = meta?.total ?? 0;
-    const totalPages = meta?.last_page ?? 1;
-    usePageInRange(list, meta?.last_page);
-    const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
-    const to = Math.min(page * pageSize, total);
+    const total = data?.meta?.total ?? 0;
 
     const handleSearch = (v: string) => list.setFilter('search', v);
     const handleDept = (v: string) => list.setFilter('dept', v === 'all' ? '' : v);
     const handleStatus = (v: string) => list.setFilter('status', v === 'all' ? '' : v);
-    const handlePageSize = (v: number) => list.table.paging.onPageSizeChange(v);
+    const activeFilterCount = (deptFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
+    const clearFilters = () => list.setParams({ dept: null, status: null, page: null });
+
+    const deptFieldId = useId();
+    const statusFieldId = useId();
+    const deptOptions = [
+        { value: 'all', label: t('all_departments'), search: t('all_departments'), icon: <ToneDot tone="gray" /> },
+        ...departments.map((d) => ({
+            value: String(d.id),
+            label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+            sub: d.tag,
+            search: `${d.name} ${d.name_th ?? ''} ${d.tag}`,
+        })),
+    ];
+    const statusOptions = [
+        { value: 'all', label: t('all_status'), search: t('all_status'), icon: <ToneDot tone="gray" /> },
+        { value: 'active', label: t('active'), search: t('active'), icon: <ToneDot tone="green" /> },
+        { value: 'has_account', label: t('cred_has_account'), search: t('cred_has_account'), icon: <ToneDot tone="blue" /> },
+        { value: 'no_account', label: t('cred_no_account'), search: t('cred_no_account'), icon: <ToneDot tone="amber" /> },
+        { value: 'resigned', label: t('resigned'), search: t('resigned'), icon: <ToneDot tone="red" /> },
+    ];
 
     const columns: Column<Employee>[] = [
         {
@@ -727,8 +762,12 @@ function DirectoryTab({
                 <div onClick={(ev) => ev.stopPropagation()} className="flex justify-end">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
-                                <MoreVertical className="h-4 w-4" />
+                            <button
+                                type="button"
+                                aria-label={`${t('actions')} ${lang === 'th' ? (e.name_th ?? e.name) : e.name}`}
+                                className={ICON_BTN}
+                            >
+                                <MoreVertical aria-hidden className="h-4 w-4" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -739,9 +778,12 @@ function DirectoryTab({
                             {canEdit &&
                                 e.status !== 'resigned' &&
                                 (e.is_super_admin && !isSuperViewer ? (
-                                    <DropdownMenuItem disabled title={t('emp_admin_protected')}>
-                                        <SquarePen className="h-4 w-4" />
-                                        {t('edit')}
+                                    <DropdownMenuItem disabled className="text-muted-foreground items-start data-disabled:opacity-100">
+                                        <SquarePen className="mt-0.5 h-4 w-4" />
+                                        <span className="flex min-w-0 flex-col">
+                                            {t('edit')}
+                                            <span className="max-w-56 text-xs">{t('emp_admin_protected')}</span>
+                                        </span>
                                     </DropdownMenuItem>
                                 ) : (
                                     <DropdownMenuItem onClick={() => onEdit(e)}>
@@ -770,7 +812,7 @@ function DirectoryTab({
                             {canCancelResign && e.status === 'resigned' && (
                                 <DropdownMenuItem
                                     onClick={() => onCancelResign(e)}
-                                    className="text-emerald-600 focus:text-emerald-600 dark:text-emerald-400"
+                                    className="text-emerald-700 focus:text-emerald-700 dark:text-emerald-400 dark:focus:text-emerald-400"
                                 >
                                     <UserCheck className="h-4 w-4" />
                                     {t('cancel_resign')}
@@ -785,113 +827,60 @@ function DirectoryTab({
 
     return (
         <div className="space-y-3">
+            {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-full max-w-xs">
                     <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                    <Input value={search} onChange={(e) => handleSearch(e.target.value)} placeholder={t('search_name_id')} className="pl-9" />
+                    <Input
+                        value={search}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        placeholder={t('search_name_id')}
+                        aria-label={t('search_name_id')}
+                        className="pl-9"
+                    />
                 </div>
-                <Select value={deptFilter} onValueChange={handleDept}>
-                    <SelectTrigger className="w-56">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">{t('all_departments')}</SelectItem>
-                        {departments.map((d) => (
-                            <SelectItem key={d.id} value={String(d.id)}>
-                                {lang === 'th' ? (d.name_th ?? d.name) : d.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={handleStatus}>
-                    <SelectTrigger className="w-48">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">
-                            <span className="flex items-center gap-2">
-                                <span className="bg-muted-foreground h-2 w-2 shrink-0 rounded-full" />
-                                {t('all_status')}
-                            </span>
-                        </SelectItem>
-                        <SelectItem value="active">
-                            <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-                                {t('active')}
-                            </span>
-                        </SelectItem>
-                        <SelectItem value="has_account">
-                            <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                                {t('cred_has_account')}
-                            </span>
-                        </SelectItem>
-                        <SelectItem value="no_account">
-                            <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-                                {t('cred_no_account')}
-                            </span>
-                        </SelectItem>
-                        <SelectItem value="resigned">
-                            <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
-                                {t('resigned')}
-                            </span>
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
+                <FilterPopover count={activeFilterCount} width={460} onClear={clearFilters} resultCount={total}>
+                    {() => (
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label htmlFor={deptFieldId} className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                    <Building2 className="h-3.5 w-3.5" />
+                                    {t('department')}
+                                </label>
+                                <SearchableSelect
+                                    id={deptFieldId}
+                                    active={deptFilter !== 'all'}
+                                    value={deptFilter}
+                                    onChange={handleDept}
+                                    options={deptOptions}
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor={statusFieldId} className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                    <CircleDot className="h-3.5 w-3.5" />
+                                    {t('status')}
+                                </label>
+                                <SearchableSelect
+                                    id={statusFieldId}
+                                    active={statusFilter !== 'all'}
+                                    value={statusFilter}
+                                    onChange={handleStatus}
+                                    options={statusOptions}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </FilterPopover>
             </div>
 
-            {isLoading ? (
-                <TableSkeleton rows={pageSize > 20 ? 8 : 5} cols={7} />
-            ) : (
-                <DataTable columns={columns} rows={rows} rowKey={(e) => e.id} onRowClick={onView} hidePagination />
-            )}
-
-            {/* Pagination bar */}
-            <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
-                <div className="flex items-center gap-2">
-                    <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                    <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v))}>
-                        <SelectTrigger className="h-8 w-[72px]">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {PAGE_SIZES.map((s) => (
-                                <SelectItem key={s} value={String(s)}>
-                                    {s}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex items-center gap-3">
-                    <span>
-                        {from}–{to} {lang === 'th' ? 'จาก' : 'of'} {total}
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={page <= 1}
-                            aria-label={t('page_prev')}
-                            className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
-                        >
-                            <ChevronLeft aria-hidden className="h-4 w-4" />
-                        </button>
-                        <span className="text-foreground px-1 font-medium">
-                            {page} / {totalPages}
-                        </span>
-                        <button
-                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={page >= totalPages}
-                            aria-label={t('page_next')}
-                            className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
-                        >
-                            <ChevronRight aria-hidden className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <DataTable
+                columns={columns}
+                rows={rows}
+                rowKey={(e) => e.id}
+                onRowClick={onView}
+                loading={isLoading || isFetching}
+                server={{ ...list.table.paging, total }}
+            />
         </div>
     );
 }
@@ -912,6 +901,7 @@ function EmployeeOverviewSkeleton() {
                             <div className="bg-muted h-9 w-9 animate-pulse rounded-lg" />
                         </div>
                         <div className="bg-muted mt-3 h-8 w-14 animate-pulse rounded" />
+                        <div className="bg-muted mt-2.5 h-3 w-24 animate-pulse rounded" />
                     </Card>
                 ))}
             </div>
@@ -962,11 +952,28 @@ function OverviewTab({
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
 
+    const sectionTotal = departments.reduce((sum, d) => sum + (d.sections_count ?? 0), 0);
+    const filledPositions = positions.filter((p) => (p.employees_count ?? 0) > 0).length;
     const kpis = [
-        { label: t('total_employees'), value: summary?.total ?? '—', icon: Users, tone: 'text-brand bg-brand/10' },
-        { label: t('departments_count'), value: departments.length, icon: Building2, tone: 'text-brand bg-brand/10' },
-        { label: t('active_positions'), value: positions.length, icon: Briefcase, tone: 'text-brand bg-brand/10' },
-        { label: t('new_hires'), value: summary?.new_hires ?? '—', icon: UserPlus, tone: 'text-brand bg-brand/10' },
+        {
+            label: t('total_employees'),
+            value: String(summary?.total ?? '—'),
+            icon: Users,
+            sub: t('emp_kpi_total_sub').replace('{n}', String(summary?.active ?? 0)),
+        },
+        {
+            label: t('departments_count'),
+            value: String(departments.length),
+            icon: Building2,
+            sub: t('emp_kpi_depts_sub').replace('{n}', String(sectionTotal)),
+        },
+        {
+            label: t('active_positions'),
+            value: String(positions.length),
+            icon: Briefcase,
+            sub: t('emp_kpi_positions_sub').replace('{n}', String(filledPositions)),
+        },
+        { label: t('new_hires'), value: String(summary?.new_hires ?? '—'), icon: UserPlus, sub: t('emp_kpi_hires_sub') },
     ];
 
     // Employee-status split (active vs resigned) for the status card's bar.
@@ -979,20 +986,9 @@ function OverviewTab({
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {kpis.map((k) => {
-                    const Icon = k.icon;
-                    return (
-                        <Card key={k.label} className="p-5">
-                            <div className="flex items-start justify-between">
-                                <div className="text-muted-foreground text-sm">{k.label}</div>
-                                <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', k.tone)}>
-                                    <Icon className="h-[18px] w-[18px]" />
-                                </span>
-                            </div>
-                            <div className="mt-2 font-mono text-3xl font-bold">{k.value}</div>
-                        </Card>
-                    );
-                })}
+                {kpis.map((k) => (
+                    <StatCard key={k.label} icon={k.icon} label={k.label} value={k.value} sub={k.sub} />
+                ))}
             </div>
             <HiresTrendCard trend={summary?.hires_trend ?? { unit: 'month', data: [] }} highlightLast={highlightLast} />
 
@@ -1015,7 +1011,14 @@ function OverviewTab({
                                 {t('emp_status_caption').replace('{n}', String(summary?.total ?? 0))}
                             </span>
                         </div>
-                        <div className="bg-secondary my-4 flex h-3 w-full overflow-hidden rounded-full">
+                        <div
+                            role="img"
+                            aria-label={t('emp_status_bar_sr')
+                                .replace('{active}', String(summary?.active ?? 0))
+                                .replace('{resigned}', String(summary?.resigned ?? 0))
+                                .replace('{total}', String(total))}
+                            className="bg-secondary my-4 flex h-3 w-full overflow-hidden rounded-full"
+                        >
                             <span className="bg-brand block h-full" style={{ width: `${statusPct.active}%` }} />
                             <span className="bg-destructive block h-full" style={{ width: `${statusPct.resigned}%` }} />
                         </div>
@@ -1074,7 +1077,11 @@ function OverviewTab({
                             {t('headcount_by_dept')}
                         </span>
                         {departments.length > DASH_DEPT_LIMIT && (
-                            <button onClick={onViewDepartments} className="text-brand text-xs font-medium hover:underline">
+                            <button
+                                type="button"
+                                onClick={onViewDepartments}
+                                className="text-brand-ink focus-visible:ring-ring rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                            >
                                 {t('view_all')}
                             </button>
                         )}
@@ -1100,19 +1107,25 @@ function OverviewTab({
                         <span className="text-sm font-semibold">{t('recent_hires')}</span>
                     </div>
                     <div className="max-h-[22rem] space-y-1 overflow-y-auto p-4">
-                        {(summary?.recent ?? []).map((e) => (
-                            <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
-                                <UserAvatar name={e.name} />
-                                <div className="min-w-0 flex-1">
-                                    <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
-                                    <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
-                                        <span className="min-w-0 truncate">{e.position}</span>
-                                        <span className="min-w-0 truncate">{lang === 'th' ? (e.department_th ?? e.department) : e.department}</span>
+                        {(summary?.recent ?? []).length === 0 ? (
+                            <div className="text-muted-foreground py-10 text-center text-sm">{t('emp_no_hires')}</div>
+                        ) : (
+                            (summary?.recent ?? []).map((e) => (
+                                <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
+                                    <UserAvatar name={e.name} />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
+                                        <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
+                                            <span className="min-w-0 truncate">{e.position}</span>
+                                            <span className="min-w-0 truncate">
+                                                {lang === 'th' ? (e.department_th ?? e.department) : e.department}
+                                            </span>
+                                        </div>
                                     </div>
+                                    <span className="text-muted-foreground font-mono text-xs">{fmt.date(e.joined_at)}</span>
                                 </div>
-                                <span className="text-muted-foreground font-mono text-xs">{fmt.date(e.joined_at)}</span>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </Card>
             </div>

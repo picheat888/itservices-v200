@@ -7,7 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useDepartments } from '../hooks/use-departments';
 import { useSectionMembers } from '../hooks/use-sections';
+import { CountPlaceholder } from './count-placeholder';
 
 /**
  * Focused dialog listing every employee in a section. Uses the shared DataTable
@@ -26,8 +28,14 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
     const view = section ?? shown;
 
     const { data: members = [], isLoading } = useSectionMembers(view?.id ?? null);
+    // Member count from the clicked row
+    const expected = view?.members_count;
+    const loadingMembers = isLoading && expected !== 0;
+    const { data: departments = [] } = useDepartments();
 
     const sectionName = view ? (lang === 'th' ? (view.name_th ?? view.name) : view.name) : '';
+    const dept = departments.find((d) => d.id === view?.department_id);
+    const deptName = lang === 'th' ? (dept?.name_th ?? view?.department) : view?.department;
 
     const columns: Column<Employee>[] = [
         {
@@ -54,17 +62,17 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     return (
         <Dialog open={!!section} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col">
+            <DialogContent className="flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Users className="text-muted-foreground h-4 w-4" />
                         {sectionName}
                         {view?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{view.code}</span>}
                     </DialogTitle>
-                    <DialogDescription className="flex flex-wrap gap-x-3">
-                        {view?.department && <span>{view.department}</span>}
+                    <DialogDescription className="flex flex-wrap gap-x-3" aria-busy={isLoading || undefined}>
+                        {deptName && <span>{deptName}</span>}
                         <span>
-                            {members.length} {t('section_members')}
+                            {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('section_members')}
                         </span>
                     </DialogDescription>
                 </DialogHeader>
@@ -73,7 +81,9 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                     columns={columns}
                     rows={members}
                     rowKey={(m) => m.id}
-                    loading={isLoading}
+                    loading={loadingMembers}
+                    loadingRows={expected ? Math.min(expected, 20) : undefined}
+                    loadingAvatar
                     maxBodyHeight="52vh"
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''}`}
                 />

@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface SearchOption {
@@ -37,9 +37,11 @@ export function SearchableSelect({
     clearable = false,
     active = false,
     preferDown = false,
+    maxRows,
     id,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
+    'aria-required': ariaRequired,
 }: {
     value: string;
     onChange: (v: string) => void;
@@ -52,30 +54,46 @@ export function SearchableSelect({
     /** Measure drop direction against the viewport instead of the enclosing dialog, so a field
      *  near a small dialog's footer opens DOWN (overflowing the dialog) rather than flipping up. */
     preferDown?: boolean;
+    /** Show at most this many options before the list scrolls. */
+    maxRows?: number;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
     'aria-invalid'?: boolean;
     'aria-describedby'?: string;
+    'aria-required'?: boolean;
 }) {
     const t = useT();
+    const listId = useId();
     const [open, setOpen] = useState(false);
     const [q, setQ] = useState('');
+    // Keyboard-highlighted option; shown only after an arrow key so mouse use looks unchanged
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [keyboardNav, setKeyboardNav] = useState(false);
     // Open upward when the trigger sits too close to the bottom.
     const [dropUp, setDropUp] = useState(false);
     // Option-list max height, capped to the room available so the menu is never clipped.
     const [listMaxH, setListMaxH] = useState<number>(LIST_MAX);
-    // When the select lives inside a dialog, the menu is portaled into the dialog
-    // content (escaping the body's overflow-y-auto clip) and positioned absolutely
-    // relative to it. Outside a dialog it stays inline, exactly as before.
+    const [rowsMaxH, setRowsMaxH] = useState<number | null>(null);
+    // Inside a dialog the menu portals into the dialog content; outside it stays inline
     const [dialogEl, setDialogEl] = useState<HTMLElement | null>(null);
     const [coords, setCoords] = useState<{ left: number; width: number; top?: number; bottom?: number }>({ left: 0, width: 0 });
     const ref = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
 
-    // Clear the query whenever the menu closes, so a stale, non-matching search from a
-    // previous session doesn't persist and hide every option the next time it's opened.
+    const selected = options.find((o) => o.value === value);
+    const filtered = q ? options.filter((o) => o.search.toLowerCase().includes(q.toLowerCase())) : options;
+    // Reserve the leading icon slot on every row when at least one option supplies one,
+    // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
+    const hasIcons = options.some((o) => o.icon !== undefined);
+    const optionId = (index: number) => `${listId}-opt-${index}`;
+
+    // Clear the query whenever the menu closes so a stale search never hides every option.
     useEffect(() => {
-        if (!open) setQ('');
+        if (!open) {
+            setQ('');
+            setKeyboardNav(false);
+        }
     }, [open]);
 
     // Close when clicking outside both the trigger and the (possibly portaled) menu.
@@ -91,6 +109,53 @@ export function SearchableSelect({
         return () => window.removeEventListener('mousedown', h);
     }, []);
 
+    // Escape closes only the menu; caught at window capture, ahead of the dialog's own document listener
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') {
+                return;
+            }
+            const target = e.target as Node;
+            if (!ref.current?.contains(target) && !menuRef.current?.contains(target)) {
+                return;
+            }
+            e.stopPropagation();
+            e.preventDefault();
+            setOpen(false);
+            triggerRef.current?.focus();
+        };
+        window.addEventListener('keydown', onKey, true);
+        return () => window.removeEventListener('keydown', onKey, true);
+    }, [open]);
+
+    // maxRows: cap the list at the height of its first N options, measured as rendered
+    useLayoutEffect(() => {
+        if (!open || !maxRows) {
+            return;
+        }
+        const list = document.getElementById(listId);
+        const rows = list?.querySelectorAll<HTMLElement>('[role="option"]');
+        if (!list || !rows || rows.length <= maxRows) {
+            setRowsMaxH(null);
+            return;
+        }
+        // Row span plus the list's py-1, in layout px (unaffected by scroll or the dialog's zoom-in)
+        const last = rows[maxRows - 1];
+        setRowsMaxH(last.offsetTop + last.offsetHeight - rows[0].offsetTop + 8);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, maxRows, filtered.length]);
+
+    // Keep the keyboard-highlighted option in view
+    useEffect(() => {
+        if (open && keyboardNav) {
+            document.getElementById(optionId(activeIndex))?.scrollIntoView({ block: 'nearest' });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeIndex, keyboardNav, open]);
+
     // Measure the trigger and decide drop direction + portal target. When inside a
     // dialog we store coordinates relative to the dialog box for absolute placement.
     const place = () => {
@@ -101,17 +166,17 @@ export function SearchableSelect({
         const rect = el.getBoundingClientRect();
         const dlg = el.closest('[role="dialog"]') as HTMLElement | null;
         const c = dlg?.getBoundingClientRect();
-        // Normally we decide drop direction against the dialog's box so a field near the footer
-        // flips up instead of opening behind it. With `preferDown` we measure against the viewport
-        // instead, so the menu opens DOWN and overflows the (small) dialog — the menu is still
-        // portaled INTO the dialog content, so it stays in Radix's dismissable layer.
+        // Measure against the dialog box, or the viewport with `preferDown`
         const measureDlg = c && !preferDown ? c : null;
         const topLimit = measureDlg ? measureDlg.top : 0;
         const bottomLimit = measureDlg ? measureDlg.bottom : window.innerHeight;
         const spaceBelow = bottomLimit - rect.bottom;
         const spaceAbove = rect.top - topLimit;
+        // Room the list needs: maxRows rows (avatar rows are taller), else the default threshold
+        const rowEstimate = options.some((o) => o.avatar !== undefined) ? 52 : 37;
+        const needed = maxRows ? maxRows * rowEstimate + LIST_CHROME + 12 : FLIP_THRESHOLD;
         // Drop down by default; flip up only when the room below is too small AND there's more above.
-        const up = spaceBelow < FLIP_THRESHOLD && spaceAbove > spaceBelow;
+        const up = spaceBelow < needed && spaceAbove > spaceBelow;
         // Cap the list to the room in the chosen direction so it never spills past the dialog/footer.
         const room = (up ? spaceAbove : spaceBelow) - LIST_CHROME - 8;
         setListMaxH(Math.max(120, Math.min(LIST_MAX, room)));
@@ -131,6 +196,12 @@ export function SearchableSelect({
     const toggle = () => {
         if (!open) {
             place();
+            setActiveIndex(
+                Math.max(
+                    0,
+                    options.findIndex((o) => o.value === value),
+                ),
+            );
         }
         setOpen((o) => !o);
     };
@@ -156,11 +227,42 @@ export function SearchableSelect({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, dialogEl]);
 
-    const selected = options.find((o) => o.value === value);
-    const filtered = q ? options.filter((o) => o.search.toLowerCase().includes(q.toLowerCase())) : options;
-    // Reserve the leading icon slot on every row when at least one option supplies one,
-    // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
-    const hasIcons = options.some((o) => o.icon !== undefined);
+    const choose = (option: SearchOption) => {
+        onChange(option.value);
+        setOpen(false);
+        setQ('');
+        triggerRef.current?.focus();
+    };
+
+    const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            setKeyboardNav(true);
+            if (filtered.length === 0) {
+                return;
+            }
+            const step = e.key === 'ArrowDown' ? 1 : -1;
+            setActiveIndex((i) => (Math.min(i, filtered.length - 1) + step + filtered.length) % filtered.length);
+            return;
+        }
+        if (e.key === 'Enter') {
+            // Keep Enter inside the menu so dialogs that submit on Enter don't save mid-filter
+            e.stopPropagation();
+            e.preventDefault();
+            const option = filtered[Math.min(activeIndex, filtered.length - 1)];
+            if (option && (keyboardNav || q)) {
+                choose(option);
+            }
+            return;
+        }
+        if (e.key === 'Tab') {
+            // Hand focus back to the trigger; the browser's Tab then moves on from there
+            setOpen(false);
+            triggerRef.current?.focus();
+        }
+    };
+
+    const activeOption = keyboardNav || q ? Math.min(activeIndex, filtered.length - 1) : -1;
 
     // The menu body — shared between the inline and portaled wrappers.
     const menu = (
@@ -169,28 +271,47 @@ export function SearchableSelect({
                 <input
                     autoFocus
                     value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    // Keep Enter inside the menu — dialogs that submit on Enter would otherwise
-                    // save the whole form while the user is only filtering this list.
-                    onKeyDown={(e) => e.key === 'Enter' && e.stopPropagation()}
+                    onChange={(e) => {
+                        setQ(e.target.value);
+                        setActiveIndex(0);
+                    }}
+                    onKeyDown={onSearchKeyDown}
+                    role="combobox"
+                    aria-expanded
+                    aria-controls={listId}
+                    aria-autocomplete="list"
+                    aria-activedescendant={activeOption >= 0 ? optionId(activeOption) : undefined}
+                    aria-label={t('search_placeholder_short')}
                     placeholder={t('search_placeholder_short')}
                     className="w-full bg-transparent px-1 text-sm outline-none"
                 />
             </div>
-            <div className="overflow-y-auto py-1" style={{ maxHeight: listMaxH }}>
+            <div
+                id={listId}
+                role="listbox"
+                className="overflow-y-auto py-1"
+                style={{ maxHeight: rowsMaxH ? Math.min(listMaxH, rowsMaxH) : listMaxH }}
+            >
                 {filtered.length === 0 && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
-                {filtered.map((o) => (
+                {filtered.map((o, index) => (
                     <button
                         key={o.value}
+                        id={optionId(index)}
                         type="button"
-                        onClick={() => {
-                            onChange(o.value);
-                            setOpen(false);
-                            setQ('');
+                        role="option"
+                        aria-selected={o.value === value}
+                        tabIndex={-1}
+                        onClick={() => choose(o)}
+                        onMouseMove={() => {
+                            if (keyboardNav) {
+                                setKeyboardNav(false);
+                            }
+                            setActiveIndex(index);
                         }}
                         className={cn(
                             'hover:bg-accent flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm',
                             o.value === value && 'bg-accent/60',
+                            keyboardNav && index === activeOption && 'bg-accent',
                         )}
                     >
                         {o.avatar !== undefined && (
@@ -213,16 +334,28 @@ export function SearchableSelect({
         </>
     );
 
+    const showClear = clearable && !!selected;
+
     return (
         <div ref={ref} className="relative min-w-0">
             <button
+                ref={triggerRef}
                 id={id}
                 type="button"
+                role="combobox"
                 onClick={toggle}
+                onKeyDown={(e) => {
+                    if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+                        e.preventDefault();
+                        toggle();
+                    }
+                }}
                 aria-invalid={ariaInvalid}
                 aria-describedby={ariaDescribedBy}
+                aria-required={ariaRequired}
                 aria-haspopup="listbox"
                 aria-expanded={open}
+                aria-controls={open ? listId : undefined}
                 className={cn(
                     'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
                     active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
@@ -237,47 +370,41 @@ export function SearchableSelect({
                     )}
                     {/* Leading icon of the selected option (e.g. type icon / status dot). */}
                     {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}
-                    {/* Label truncates; the sub (e.g. on-hand qty) stays pinned so it never gets cut. */}
-                    {/* Truncated on a narrow trigger by necessity; the title puts the whole label
-                        one hover away rather than leaving a guess. */}
+                    {/* Label truncates (full text in title); the sub stays pinned */}
                     <span title={selected?.label} className={cn('min-w-0 truncate', !selected && 'text-muted-foreground')}>
                         {selected ? selected.label : (placeholder ?? t('select_placeholder'))}
                     </span>
                     {selected?.sub && <span className="text-muted-foreground shrink-0 font-mono text-xs">{selected.sub}</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
-                    {clearable && selected && (
-                        <span
-                            role="button"
-                            tabIndex={-1}
-                            aria-label={t('clear')}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onChange('');
-                            }}
-                            className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-5 w-5 items-center justify-center rounded"
-                        >
-                            <X className="h-3.5 w-3.5" />
-                        </span>
-                    )}
+                    {/* Room for the clear button, which sits over the trigger as its own control */}
+                    {showClear && <span className="w-6" aria-hidden />}
                     <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
                 </span>
             </button>
+            {showClear && (
+                <button
+                    type="button"
+                    aria-label={t('clear')}
+                    onClick={() => {
+                        onChange('');
+                        triggerRef.current?.focus();
+                    }}
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-brand/40 absolute top-1/2 right-8 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-hidden"
+                >
+                    <X className="h-3.5 w-3.5" />
+                </button>
+            )}
             {open &&
                 (dialogEl ? (
-                    // Portaled into the dialog content → escapes the dialog body's overflow clip,
-                    // yet stays inside Radix's focus scope / dismissable layer.
+                    // Portaled into the dialog content: escapes the body's overflow clip, stays in Radix's layer
                     createPortal(
                         <div
                             ref={menuRef}
                             style={{
                                 position: 'absolute',
                                 left: coords.left,
-                                // The trigger's width is a floor, not the width: inside a narrow
-                                // column (the two-up grid in FilterPopover leaves ~120px) a panel
-                                // sized to the trigger cut "ฮาร์ดแวร์ / อุปกรณ์ต่อพ่วง" down to
-                                // "ฮาร์ดแว…", which is indistinguishable from the option above it.
-                                // Panels are portalled, so growing one disturbs no layout.
+                                // Trigger width is a floor, so a narrow column doesn't cut option labels
                                 minWidth: coords.width,
                                 maxWidth: 320,
                                 width: 'max-content',

@@ -99,6 +99,10 @@ export function useEmployeeMutations() {
         qc.invalidateQueries({ queryKey: ['employee'] });
         qc.invalidateQueries({ queryKey: ['org-chart'] });
         qc.invalidateQueries({ queryKey: ['employee-access'] });
+        qc.invalidateQueries({ queryKey: ['employee-assets'] });
+        qc.invalidateQueries({ queryKey: ['employee-tickets'] });
+        qc.invalidateQueries({ queryKey: ['employee-requests'] });
+        qc.invalidateQueries({ queryKey: ['approval-chain'] });
         // The signed-in user's own record when they edit themselves — otherwise the topbar
         // and profile drawer keep showing the old name until a reload.
         qc.invalidateQueries({ queryKey: ME_KEY });

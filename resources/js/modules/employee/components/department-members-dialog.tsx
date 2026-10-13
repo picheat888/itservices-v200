@@ -9,6 +9,7 @@ import { Building2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useDepartmentMembers } from '../hooks/use-departments';
 import { useSections } from '../hooks/use-sections';
+import { CountPlaceholder } from './count-placeholder';
 
 /**
  * Focused dialog listing every employee in a department. Uses the shared
@@ -27,7 +28,10 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
     const view = department ?? shown;
 
     const { data: members = [], isLoading } = useDepartmentMembers(view?.id ?? null);
-    const { data: sections = [] } = useSections(view?.id ?? null);
+    // Member count from the clicked row
+    const expected = view?.count;
+    const loadingMembers = isLoading && expected !== 0;
+    const { data: sections = [], isLoading: sectionsLoading } = useSections(view?.id ?? null);
 
     const deptName = view ? (lang === 'th' ? (view.name_th ?? view.name) : view.name) : '';
 
@@ -61,19 +65,19 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
 
     return (
         <Dialog open={!!department} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col">
+            <DialogContent className="flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Building2 className="text-muted-foreground h-4 w-4" />
                         {deptName}
                         {view?.tag && <span className="text-muted-foreground font-mono text-xs font-normal">{view.tag}</span>}
                     </DialogTitle>
-                    <DialogDescription className="flex flex-wrap gap-x-3">
+                    <DialogDescription className="flex flex-wrap gap-x-3" aria-busy={isLoading || sectionsLoading || undefined}>
                         <span>
-                            {sections.length} {t('sub_sections')}
+                            {sectionsLoading ? <CountPlaceholder label={t('loading')} /> : sections.length} {t('sub_sections')}
                         </span>
                         <span>
-                            {members.length} {t('dept_members')}
+                            {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('dept_members')}
                         </span>
                     </DialogDescription>
                 </DialogHeader>
@@ -82,7 +86,9 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     columns={columns}
                     rows={members}
                     rowKey={(m) => m.id}
-                    loading={isLoading}
+                    loading={loadingMembers}
+                    loadingRows={expected ? Math.min(expected, 20) : undefined}
+                    loadingAvatar
                     maxBodyHeight="52vh"
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''} ${m.section ?? ''}`}
                 />

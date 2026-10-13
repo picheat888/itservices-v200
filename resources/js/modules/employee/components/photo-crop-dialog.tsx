@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
-import { ZoomIn, ZoomOut } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { AlertCircle, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Area, Point } from 'react-easy-crop';
 import Cropper from 'react-easy-crop';
@@ -21,10 +21,13 @@ async function getCroppedFile(imageSrc: string, pixelCrop: Area): Promise<File> 
             const canvas = document.createElement('canvas');
             canvas.width = SIZE;
             canvas.height = SIZE;
-            const ctx = canvas.getContext('2d')!;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error('no 2d context'));
+                return;
+            }
             ctx.drawImage(img, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, SIZE, SIZE);
-            // Encode as WebP (q≈0.9): far smaller than a canvas PNG while keeping transparency,
-            // so the stored file isn't heavier than the original the user picked.
+            // WebP (q≈0.9) keeps transparency at a fraction of a canvas PNG's size
             canvas.toBlob(
                 (blob) => {
                     if (!blob) {
@@ -52,6 +55,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
     const [zoom, setZoom] = useState(1);
     const [croppedPixels, setCroppedPixels] = useState<Area | null>(null);
     const [applying, setApplying] = useState(false);
+    const [failed, setFailed] = useState(false);
     // Keep the last image so the cropper still renders during the close (fade-out) animation.
     const [src, setSrc] = useState<string | null>(imageSrc);
 
@@ -62,6 +66,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
         setZoom(1);
         setCroppedPixels(null);
         setApplying(false);
+        setFailed(false);
     }, [imageSrc]);
 
     const onCropComplete = useCallback((_: Area, pixels: Area) => {
@@ -71,24 +76,24 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
     const apply = async () => {
         if (!croppedPixels || !src) return;
         setApplying(true);
+        setFailed(false);
         try {
             const file = await getCroppedFile(src, croppedPixels);
             onConfirm(file);
         } catch {
             setApplying(false);
+            setFailed(true);
         }
     };
 
     return (
-        // Nested Radix dialog: portals itself above the parent dialog, owns its own
-        // overlay, and becomes the active (non-inerted) layer — so its controls are clickable.
-        // Kept mounted (open toggles) so the exit animation plays instead of snapping shut.
+        // Nested Radix dialog: portals above the parent and becomes the active layer
         <Dialog open={!!imageSrc} onOpenChange={(o) => !o && onCancel()}>
             <DialogContent className="max-w-sm gap-0 overflow-hidden p-0 [&>button]:hidden">
                 {/* Header */}
-                <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                <div className="border-border border-b px-4 py-3">
                     <DialogTitle className="text-sm font-semibold">{t('photo_crop_title')}</DialogTitle>
-                    <span className="text-muted-foreground text-xs">{t('photo_crop_hint')}</span>
+                    <DialogDescription className="mt-1 text-xs">{t('photo_crop_hint')}</DialogDescription>
                 </div>
 
                 {/* Cropper — fixed square */}
@@ -103,30 +108,32 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                         onCropChange={setCrop}
                         onZoomChange={setZoom}
                         onCropComplete={onCropComplete}
-                        style={{
-                            containerStyle: { borderRadius: 0 },
-                            cropAreaStyle: {
-                                border: '2px solid white',
-                                boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
-                            },
-                        }}
+                        classes={{ cropAreaClassName: '!border-2 !border-white !text-black/55' }}
                     />
                 </div>
 
                 {/* Zoom row */}
                 <div className="border-border flex items-center gap-2 border-t px-4 py-3">
-                    <ZoomOut className="text-muted-foreground h-4 w-4 shrink-0" />
+                    <ZoomOut className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
                     <input
                         type="range"
                         min={1}
                         max={3}
-                        step={0.01}
+                        step={0.1}
                         value={zoom}
                         onChange={(e) => setZoom(Number(e.target.value))}
+                        aria-label={t('photo_crop_zoom')}
                         className="accent-brand flex-1"
                     />
-                    <ZoomIn className="text-muted-foreground h-4 w-4 shrink-0" />
+                    <ZoomIn className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
                 </div>
+
+                {failed && (
+                    <p role="alert" className="text-destructive flex items-center gap-1.5 border-t px-4 py-2 text-xs">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        {t('photo_crop_failed')}
+                    </p>
+                )}
 
                 {/* Actions */}
                 <div className="border-border flex justify-end gap-2 border-t px-4 py-3">
@@ -134,6 +141,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                         {t('cancel')}
                     </Button>
                     <Button size="sm" onClick={apply} disabled={applying || !croppedPixels}>
+                        {applying && <Loader2 className="h-4 w-4 animate-spin" />}
                         {applying ? t('photo_crop_applying') : t('photo_crop_apply')}
                     </Button>
                 </div>

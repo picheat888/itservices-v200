@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
+import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { OrgDir } from '../../lib/org-tree';
@@ -17,16 +18,11 @@ export interface OrgPerson {
     nameTh: string | null;
     code: string;
     color: string;
-    /** Lowercased haystack across both languages + code/title/dept (UI-language independent). */
+    /** Lowercased haystack across both languages, code, title and department. */
     search: string;
 }
 
-/**
- * Org chart toolbar — stats (visible / levels / managers) on the left; on the
- * right a search box that dims non-matching cards AND drops a suggestion list
- * (closest name / code / department) you can click to jump to a person, a
- * vertical/horizontal layout toggle, collapse/expand-all, and fit-to-screen.
- */
+/** Org chart toolbar: visible count, search with jump-to suggestions, layout direction, collapse/expand all and fit. */
 export function OrgChartToolbar({
     stats,
     query,
@@ -51,7 +47,8 @@ export function OrgChartToolbar({
     onFit: () => void;
 }) {
     const t = useT();
-    // Which suggestion the keyboard has highlighted (clamped to the list length on render).
+    const lang = useUiStore((s) => s.lang);
+    // Keyboard-highlighted suggestion
     const [activeIndex, setActiveIndex] = useState(0);
 
     const q = query.trim().toLowerCase();
@@ -66,7 +63,7 @@ export function OrgChartToolbar({
     const stat = (num: number, label: string) => (
         <div className="flex flex-col items-center justify-center px-4">
             <span className="text-foreground font-mono text-lg leading-none font-extrabold tracking-tight">{num}</span>
-            <span className="text-muted-foreground mt-0.5 text-[9.5px] tracking-wider uppercase">{label}</span>
+            <span className="text-muted-foreground mt-0.5 text-[11px]">{label}</span>
         </div>
     );
 
@@ -107,10 +104,17 @@ export function OrgChartToolbar({
                                 }
                             }}
                             placeholder={t('org_search_placeholder')}
+                            aria-label={t('org_search_placeholder')}
                             className="text-foreground placeholder:text-muted-foreground w-44 min-w-0 border-none bg-transparent text-[12.5px] outline-none"
                         />
                         {query && (
-                            <button type="button" onClick={() => onQueryChange('')} className="text-muted-foreground hover:text-foreground">
+                            <button
+                                type="button"
+                                onClick={() => onQueryChange('')}
+                                aria-label={t('clear')}
+                                title={t('clear')}
+                                className="text-muted-foreground hover:text-foreground focus-visible:ring-brand rounded focus-visible:ring-2 focus-visible:outline-none"
+                            >
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         )}
@@ -122,7 +126,7 @@ export function OrgChartToolbar({
                                 <li key={p.id}>
                                     <button
                                         type="button"
-                                        // onMouseDown (not onClick) so the pick fires before the input blur
+                                        // onMouseDown so the pick fires before the input blur
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             onPick(p.id);
@@ -135,10 +139,16 @@ export function OrgChartToolbar({
                                     >
                                         <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color }} />
                                         <div className="min-w-0 flex-1">
-                                            <div className="text-foreground truncate text-[12.5px] font-medium">{p.nameEn}</div>
-                                            {p.nameTh && <div className="text-muted-foreground truncate text-[11px]">{p.nameTh}</div>}
+                                            <div className="text-foreground truncate text-[12.5px] font-medium">
+                                                {lang === 'th' ? (p.nameTh ?? p.nameEn) : p.nameEn}
+                                            </div>
+                                            {p.nameTh && (
+                                                <div className="text-muted-foreground truncate text-[11px]">
+                                                    {lang === 'th' ? p.nameEn : p.nameTh}
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="text-muted-foreground shrink-0 self-center font-mono text-[10.5px]">{p.code}</span>
+                                        <span className="text-muted-foreground shrink-0 self-center font-mono text-[11px]">{p.code}</span>
                                     </button>
                                 </li>
                             ))}
@@ -153,6 +163,7 @@ export function OrgChartToolbar({
                             key={d}
                             type="button"
                             onClick={() => onDirChange(d)}
+                            aria-pressed={dir === d}
                             className={cn(
                                 'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
                                 dir === d ? 'bg-brand text-brand-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',

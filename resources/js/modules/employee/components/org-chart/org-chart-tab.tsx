@@ -1,6 +1,8 @@
 import { useT } from '@/lang';
 import type { OrgChartNode } from '@/shared/types';
-import { Background, Controls, getNodesBounds, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { useUiStore } from '@/stores/ui';
+import { Background, Controls, getNodesBounds, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge, type NodeChange } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOrgChart } from '../../hooks/use-employees';
@@ -21,42 +23,38 @@ import { OrgNode } from './org-node';
 
 const nodeTypes = { orgNode: OrgNode };
 
-// Zoom bounds for the canvas + our custom wheel zoom. minZoom is low so deep
-// trees fit; maxZoom matches the search "zoom right in" target.
+// Zoom bounds; minZoom low so deep trees fit
 const MIN_ZOOM = 0.08;
 const MAX_ZOOM = 2.5;
-// Wheel-zoom sensitivity. A touchpad pinch arrives as a `wheel` event with
-// ctrlKey=true and TINY deltas (≈1–4 per tick), so the old single 0.003 factor
-// barely moved — zoom lagged badly behind the fingers. We now split it:
-//  • PINCH_SENSITIVITY — much higher, so pinch tracks the fingers in real time.
-//  • WHEEL_SENSITIVITY — for a real mouse wheel (big notch deltas), kept gentle.
+// Trackpad pinch (ctrl+wheel, tiny deltas) vs mouse wheel (big notches)
 const PINCH_SENSITIVITY = 0.02;
 const WHEEL_SENSITIVITY = 0.003;
 
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
     const [dir, setDir] = useState<OrgDir>('TB');
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [query, setQuery] = useState('');
     const rf = useReactFlow();
     const fitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // Set true right before a "jump to person" so the auto-refit below skips that
-    // one change and lets the targeted zoom-in win instead of fighting it.
+    // Lets a "jump to person" skip the next auto-refit
     const skipFit = useRef(false);
     const paneRef = useRef<HTMLDivElement | null>(null);
 
-    // Custom wheel zoom (see ZOOM_SENSITIVITY). React Flow's built-in scroll/
-    // pinch zoom is disabled below so the two don't fight; we zoom toward the
-    // cursor and cover real range from a small touchpad gesture. A native
-    // non-passive listener is required to preventDefault the browser page zoom.
+    // Wheel zoom toward the cursor; capture phase keeps it from React Flow, touch pinch stays with React Flow
     useEffect(() => {
         const el = paneRef.current;
         if (!el) {
             return;
         }
         const onWheel = (e: WheelEvent) => {
+            if ((e.target as Element | null)?.closest('.react-flow__minimap')) {
+                return;
+            }
             e.preventDefault();
+            e.stopPropagation();
             const { x, y, zoom } = rf.getViewport();
             // Normalise line-mode deltas (Firefox) to roughly pixel scale.
             const delta = e.deltaY * (e.deltaMode === 1 ? 16 : 1);
@@ -75,16 +73,14 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             const fy = (py - y) / zoom;
             rf.setViewport({ x: px - fx * next, y: py - fy * next, zoom: next });
         };
-        el.addEventListener('wheel', onWheel, { passive: false });
-        return () => el.removeEventListener('wheel', onWheel);
+        el.addEventListener('wheel', onWheel, { passive: false, capture: true });
+        return () => el.removeEventListener('wheel', onWheel, { capture: true });
     }, [rf]);
 
     const withReports = useMemo(() => nodesWithReports(data), [data]);
     const roots = useMemo(() => rootIds(data), [data]);
 
-    // Lay out the FULL tree once per data/direction so positions are stable: a node
-    // keeps its spot no matter what's collapsed. Collapsing just hides a subtree and
-    // leaves its reserved gap — siblings never re-pack left/right.
+    // Full-tree layout per data/direction so collapsing never moves other cards
     const fullPositions = useMemo(() => {
         const ids = data.map((n) => n.id);
         const allEdges = visibleGraph(data, new Set<number>()).edges;
@@ -103,8 +99,30 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         });
     }, []);
 
-    const select = useCallback((id: number) => {
-        setSelectedId((prev) => (prev === id ? null : id));
+    // Click, Enter and Space select through React Flow
+    const onNodesChange = useCallback((changes: NodeChange<OrgFlowNode>[]) => {
+        for (const change of changes) {
+            if (change.type !== 'select') {
+                continue;
+            }
+            const id = Number(change.id);
+            setSelectedId((prev) => (change.selected ? id : prev === id ? null : prev));
+        }
+    }, []);
+
+    // Clicking the selected card again clears it
+    const onNodeClick = useCallback((_: unknown, node: OrgFlowNode) => {
+        if (node.selected) {
+            setSelectedId(null);
+        }
+    }, []);
+
+    // Escape always clears (React Flow would select an unselected focused card instead)
+    const onCanvasKeyDownCapture = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            e.stopPropagation();
+            setSelectedId(null);
+        }
     }, []);
 
     // Search dims non-matching cards (matches name / Thai name / title / section / dept / code).
@@ -133,9 +151,13 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 id: String(n.id),
                 type: 'orgNode',
                 position: fullPositions.get(n.id) ?? { x: 0, y: 0 },
-                // Explicit dims so the MiniMap can draw each node's rect (it doesn't rely on DOM measurement).
+                // Explicit dims for the MiniMap
                 width: NODE_W,
                 height: NODE_H,
+                selected: selectedId === n.id,
+                ariaLabel: lang === 'th' ? (n.name_th ?? n.name) : n.name,
+                className:
+                    'rounded-[15px] focus-visible:ring-[3px] focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 data: {
                     ...n,
                     collapsed: collapsed.has(n.id),
@@ -146,7 +168,6 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     dir,
                     color: deptColor(n.department_code),
                     onToggle: toggle,
-                    onFocus: select,
                 } satisfies OrgNodeData,
             }));
 
@@ -164,27 +185,20 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         });
 
         return { rfNodes: nodes, rfEdges: flowEdges };
-    }, [data, visibleIds, edges, fullPositions, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, select]);
+    }, [data, visibleIds, edges, fullPositions, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, lang]);
 
-    // Fit the whole tree in one smooth motion, sitting a bit higher than dead-centre.
-    // Trick: pad extra space onto the bottom of the bounds so centring that taller
-    // box lifts the real content upward — a single animation, no two-step jump.
+    // Fit the whole tree, lifted slightly above centre by padding the bottom of the bounds
     const runFit = useCallback(() => {
         const nodes = rf.getNodes();
         if (nodes.length === 0) {
             return;
         }
         const b = getNodesBounds(nodes);
-        // Lift the content slightly above dead-centre by padding the bottom of the bounds —
-        // kept small so it doesn't force the camera to zoom out and shrink the chart.
         const lifted = { x: b.x, y: b.y, width: b.width, height: b.height + Math.max(40, b.height * 0.05) };
         rf.fitBounds(lifted, { padding: 0.05, duration: 360 });
     }, [rf]);
 
-    // Refit so the camera tracks the chart's size: when the orientation flips OR the
-    // number of visible cards changes (expand / collapse / collapse-all). Debounced and
-    // animated so it glides instead of snapping. The skipFit guard lets "jump to person"
-    // expand ancestors without the refit stealing its targeted zoom-in.
+    // Debounced refit when the direction or the visible-card count changes
     useEffect(() => {
         if (skipFit.current) {
             skipFit.current = false;
@@ -203,7 +217,6 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
 
     const anyCollapsed = collapsed.size > 0;
     const toggleAll = useCallback(() => {
-        // The visible-count refit effect handles the camera once the new layout lands.
         setCollapsed((prev) => (prev.size > 0 ? new Set() : new Set(withReports)));
     }, [withReports]);
 
@@ -222,8 +235,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 if (![...ancestors].some((a) => prev.has(a))) {
                     return prev;
                 }
-                // Expanding ancestors changes the visible count; tell the refit effect to
-                // skip this one so our zoom-to-person below isn't overridden by a full fit.
+                // Skip the refit so the zoom-to-person below wins
                 skipFit.current = true;
                 const next = new Set(prev);
                 ancestors.forEach((a) => next.delete(a));
@@ -231,7 +243,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             });
             setSelectedId(id);
             setQuery('');
-            // Defer so the node is laid out (esp. after expanding), then zoom right in (x4).
+            // Defer until the node is laid out, then zoom in
             setTimeout(() => {
                 const node = rf.getNode(String(id));
                 if (!node) {
@@ -253,7 +265,6 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 nameTh: n.name_th,
                 code: n.code,
                 color: deptColor(n.department_code),
-                // Always searchable across both languages + code/title/dept, regardless of UI language.
                 search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.section ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
             })),
         [data],
@@ -278,7 +289,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     onToggleAll={toggleAll}
                     onFit={runFit}
                 />
-                <div ref={paneRef} className="bg-background min-h-0 flex-1">
+                <div ref={paneRef} onKeyDownCapture={onCanvasKeyDownCapture} className="bg-background min-h-0 flex-1">
                     <ReactFlow
                         nodes={rfNodes}
                         edges={rfEdges}
@@ -288,10 +299,17 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         minZoom={MIN_ZOOM}
                         maxZoom={MAX_ZOOM}
                         zoomOnScroll={false}
-                        zoomOnPinch={false}
+                        zoomOnPinch
                         nodesDraggable={false}
                         nodesConnectable={false}
+                        edgesFocusable={false}
+                        onNodesChange={onNodesChange}
+                        onNodeClick={onNodeClick}
                         onPaneClick={() => setSelectedId(null)}
+                        ariaLabelConfig={{
+                            'node.a11yDescription.default': t('org_node_a11y'),
+                            'node.a11yDescription.keyboardDisabled': t('org_node_a11y'),
+                        }}
                         proOptions={{ hideAttribution: true }}
                     >
                         <Background gap={22} size={1.4} color="var(--oc-dot)" />
@@ -302,9 +320,39 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                             zoomable
                             nodeColor={(n) => (n.data as OrgNodeData)?.color ?? 'var(--brand)'}
                             nodeStrokeWidth={0}
-                            style={{ width: 180, height: 130, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
+                            bgColor="var(--card)"
+                            className="border-border hidden overflow-hidden rounded-lg border lg:block"
+                            style={{ width: 180, height: 130 }}
                         />
                     </ReactFlow>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/** Loading placeholder shaped like the heading, toolbar and a few cards. */
+function OrgChartSkeleton() {
+    return (
+        <div className="space-y-3" aria-busy="true">
+            <div className="space-y-1.5">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-3 w-72 max-w-full" />
+            </div>
+            <div className="border-border flex h-[65vh] flex-col overflow-hidden rounded-lg border">
+                <div className="border-border flex items-center gap-3 border-b p-3">
+                    <Skeleton className="h-8 w-14" />
+                    <Skeleton className="ml-auto h-8 w-52" />
+                    <Skeleton className="h-8 w-40" />
+                    <Skeleton className="h-8 w-24" />
+                </div>
+                <div className="flex flex-1 flex-col items-center justify-center gap-10 p-6">
+                    <Skeleton className="h-[106px] w-[292px] max-w-full rounded-[15px]" />
+                    <div className="flex gap-6">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton key={i} className="h-[106px] w-[200px] rounded-[15px]" />
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
@@ -317,7 +365,7 @@ export function OrgChartTab() {
     const { data = [], isLoading } = useOrgChart();
 
     if (isLoading) {
-        return <div className="text-muted-foreground py-16 text-center text-sm">{t('loading')}</div>;
+        return <OrgChartSkeleton />;
     }
     if (data.length === 0) {
         return <div className="text-muted-foreground py-16 text-center text-sm">{t('org_empty')}</div>;

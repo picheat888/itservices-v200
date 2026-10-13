@@ -38,14 +38,8 @@ export interface ImportPreviewConfig<Row> {
 }
 
 /**
- * The bulk-CSV import dialog every module shares: download a template, choose a
- * file, optionally see a dry-run of it, then import — with validation all-or-nothing
- * on the server, so a file is either wholly importable or not at all.
- *
- * Employees and contracts each used to carry their own copy of this, which is how
- * one of them ended up with a preview and a drag-and-drop the other never got. What
- * genuinely differs — the wording, the endpoints, and whether there IS a dry-run —
- * is passed in; everything else lives here once.
+ * Shared bulk-CSV import dialog: download a template, choose a file, optionally dry-run it,
+ * then import (all-or-nothing on the server). Wording, endpoints and the dry-run are passed in.
  */
 export function ImportDialog<Row>({
     open,
@@ -89,11 +83,7 @@ export function ImportDialog<Row>({
     const [errors, setErrors] = useState<ImportRowError[]>([]);
     const [success, setSuccess] = useState<number | null>(null);
     const [generalError, setGeneralError] = useState('');
-    /**
-     * Which file the newest dry-run belongs to. Two quick picks race, and without
-     * this the slower answer lands last and the dialog shows file A's verdict over
-     * file B's name — then imports B on the strength of it.
-     */
+    // Which pick the newest dry-run belongs to, so a slower earlier answer is ignored
     const previewRun = useRef(0);
 
     const clearOutcome = () => {
@@ -149,8 +139,7 @@ export function ImportDialog<Row>({
             const answer = await runImport(file);
             setSuccess(answer.imported);
             setResult(null);
-            // The input keeps its value otherwise, so re-picking the very same file
-            // fires no change event and the dialog just sits there looking broken.
+            // Clear the pick so choosing the same file again still fires a change
             setFile(null);
             previewRun.current++;
         } catch (e) {
@@ -163,8 +152,7 @@ export function ImportDialog<Row>({
         }
     };
 
-    // With a dry-run the file has to come back wholly clean; without one, having
-    // chosen a file is all the dialog can know.
+    // With a dry-run the file must be wholly clean; without one a chosen file is enough
     const ready = preview ? result !== null && result.meta.invalid === 0 && result.meta.valid > 0 : file !== null;
     const truncated = result != null && result.meta.shown != null && result.meta.shown < result.meta.total;
     // A picked file not yet imported is unsaved work; a finished import clears it.
@@ -199,13 +187,11 @@ export function ImportDialog<Row>({
                         ))}
                     </div>
 
-                    {/* How to fill the file in. Above the drop zone, because it is read
-                        on the way out to Excel, not on the way back. */}
+                    {/* How to fill the file in */}
                     {guide}
 
                     <FileDropZone
-                        // Matches what readImportFile() accepts, so the picker never
-                        // hides a file the server would have taken.
+                        // Matches what readImportFile() accepts
                         accept={['csv', 'txt']}
                         hint={hint}
                         compact={file !== null}
@@ -215,21 +201,30 @@ export function ImportDialog<Row>({
                     {file && <p className="text-muted-foreground truncate text-center text-xs font-medium">{file.name}</p>}
 
                     {preview?.pending && (
-                        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                        <div role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
                             <Loader2 className="h-4 w-4 animate-spin" />
                             {t('import_checking')}
                         </div>
                     )}
 
                     {success != null && (
-                        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400">
-                            <CheckCircle2 className="h-4 w-4" />
+                        <div
+                            role="alert"
+                            className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
+                        >
+                            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
                             {successMessage(success)}
                         </div>
                     )}
 
                     {generalError && (
-                        <div className="bg-destructive/10 dark:text-destructive rounded-lg px-3 py-2 text-sm text-red-700">{generalError}</div>
+                        <div
+                            role="alert"
+                            className="bg-destructive/10 dark:text-destructive flex items-start gap-2 rounded-lg px-3 py-2 text-sm text-red-700"
+                        >
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                            {generalError}
+                        </div>
                     )}
 
                     {result && preview && (
@@ -278,8 +273,11 @@ export function ImportDialog<Row>({
                     {/* Server-side rejection of a file the preview thought was clean (data changed in between). */}
                     {errors.length > 0 && (
                         <div className="border-destructive/30 bg-destructive/5 rounded-lg border">
-                            <div className="border-destructive/20 text-destructive flex items-center gap-2 border-b px-3 py-2 text-sm font-semibold">
-                                <AlertCircle className="h-4 w-4" />
+                            <div
+                                role="alert"
+                                className="border-destructive/20 dark:text-destructive flex items-center gap-2 border-b px-3 py-2 text-sm font-semibold text-red-700"
+                            >
+                                <AlertCircle className="h-4 w-4" aria-hidden />
                                 {t('import_errors_found')} ({errors.length})
                             </div>
                             <div className="max-h-48 overflow-y-auto px-3 py-2">
@@ -301,7 +299,7 @@ export function ImportDialog<Row>({
                         {success != null ? t('import_close') : t('cancel')}
                     </Button>
                     <Button onClick={handleImport} disabled={!ready || importPending || preview?.pending}>
-                        <Upload className="h-4 w-4" />
+                        {importPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                         {importPending ? t('import_running') : t('import_run')}
                     </Button>
                 </DialogFooter>

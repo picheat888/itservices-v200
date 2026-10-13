@@ -41,6 +41,10 @@ interface DataTableProps<T> {
     filters?: React.ReactNode;
     /** Show shimmering skeleton rows instead of the empty state while data loads. */
     loading?: boolean;
+    /** Skeleton rows on a first load, when the caller already knows how many rows are coming (default 6). */
+    loadingRows?: number;
+    /** The first column's skeleton leads with an avatar circle, for tables whose rows open with a UserAvatar. */
+    loadingAvatar?: boolean;
     /** Custom content for the empty state (defaults to a plain "No data" line). */
     emptyState?: React.ReactNode;
     /** Screen-reader name of the table (a visually hidden <caption>). */
@@ -100,6 +104,8 @@ export function DataTable<T>({
     actions,
     filters,
     loading,
+    loadingRows,
+    loadingAvatar,
     emptyState,
     caption,
     tableClassName,
@@ -176,6 +182,13 @@ export function DataTable<T>({
     const stickyHeader = !fillHeight && (maxBodyHeight !== undefined || fitsWidth);
 
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
+
+    // Keys pressed on a control inside the row (a menu, a switch) stay with that control.
+    const onRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: T) => {
+        if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        onRowClick?.(row);
+    };
 
     return (
         <div className={cn(fillHeight ? 'flex h-full flex-col gap-3' : 'space-y-3')}>
@@ -257,21 +270,28 @@ export function DataTable<T>({
                     </thead>
                     <tbody>
                         {loading &&
-                            // As many skeleton rows as the page on screen (6 on a first load).
-                            Array.from({ length: pageRows.length || 6 }).map((_, r) => (
+                            // As many skeleton rows as the page on screen (loadingRows, else 6, on a first load).
+                            Array.from({ length: pageRows.length || loadingRows || 6 }).map((_, r) => (
                                 <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
-                                    {columns.map((c) => (
+                                    {columns.map((c, ci) => (
                                         <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align))}>
-                                            <div
-                                                className={cn(
-                                                    'bg-muted h-4 animate-pulse rounded',
-                                                    c.align === 'right'
-                                                        ? 'ml-auto w-12'
-                                                        : c.align === 'center'
-                                                          ? 'mx-auto w-16'
-                                                          : 'w-3/4 max-w-[160px]',
-                                                )}
-                                            />
+                                            {loadingAvatar && ci === 0 ? (
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="bg-muted h-8 w-8 shrink-0 animate-pulse rounded-full" />
+                                                    <div className="bg-muted h-4 w-3/4 max-w-[160px] animate-pulse rounded" />
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className={cn(
+                                                        'bg-muted h-4 animate-pulse rounded',
+                                                        c.align === 'right'
+                                                            ? 'ml-auto w-12'
+                                                            : c.align === 'center'
+                                                              ? 'mx-auto w-16'
+                                                              : 'w-3/4 max-w-[160px]',
+                                                    )}
+                                                />
+                                            )}
                                         </td>
                                     ))}
                                 </tr>
@@ -288,11 +308,15 @@ export function DataTable<T>({
                                 <tr
                                     key={rowKey(row)}
                                     onClick={() => onRowClick?.(row)}
+                                    // Clickable rows are reachable by Tab and open on Enter / Space.
+                                    tabIndex={onRowClick ? 0 : undefined}
+                                    onKeyDown={onRowClick ? (e) => onRowKeyDown(e, row) : undefined}
                                     className={cn(
                                         // border-b-0 on the last row, NOT border-0: the latter zeroes every
                                         // side, which silently ate the left accent a rowClassName had set.
                                         'border-border/60 border-b last:border-b-0',
-                                        onRowClick && 'hover:bg-accent/50 cursor-pointer',
+                                        onRowClick &&
+                                            'hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
                                         rowClassName?.(row),
                                     )}
                                 >
