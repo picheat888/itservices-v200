@@ -3,6 +3,7 @@
 namespace App\Services\Report\Tabular;
 
 use App\Models\User;
+use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -132,6 +133,60 @@ abstract class TabularReport
     public function summary(Builder $query, array $filters): array
     {
         return [ReportSummary::make('total', 'ทั้งหมด', (clone $query)->count())];
+    }
+
+    /**
+     * What the file covers, as [label, value] lines for its summary: the dates first, then every
+     * filter that narrows the rows, or one "ไม่ได้กรอง" line when none does.
+     *
+     * @param  array<string, mixed>  $filters  resolveFilters() output
+     * @return list<array{0: string, 1: string}>
+     */
+    public function scopeLines(array $filters): array
+    {
+        $isSet = fn (mixed $value) => $value !== null && $value !== '';
+        $label = fn (ReportFilter $f) => ThaiWords::get($f->toArray()['label_key']) ?? $f->name;
+        $dates = [];
+        $narrowing = [];
+
+        foreach ($this->filters() as $filter) {
+            $value = $filters[$filter->name] ?? null;
+            if ($filter->toArray()['view'] || ! $isSet($value)) {
+                continue;
+            }
+            if ($filter->type === 'date') {
+                if (! in_array($filter->name, ['from', 'to'], true)) {
+                    $dates[] = [$label($filter), DateDisplay::date($value)];
+                }
+
+                continue;
+            }
+            $narrowing[] = [$label($filter), $this->optionLabel($filter, $value)];
+        }
+
+        if ($isSet($filters['from'] ?? null) && $isSet($filters['to'] ?? null)) {
+            [$from, $to] = $this->dayRange($filters);
+            array_unshift($dates, ['ช่วงวันที่', DateDisplay::range($from, $to)]);
+        }
+
+        return [...$dates, ...($narrowing ?: [['ตัวกรอง', 'ไม่ได้กรอง']])];
+    }
+
+    /** A filter value as the page's dropdown names it; a search or unknown value as typed. */
+    private function optionLabel(ReportFilter $filter, mixed $value): string
+    {
+        foreach ($filter->options as $option) {
+            if ((string) $option['value'] !== (string) $value) {
+                continue;
+            }
+            if (isset($option['label_key'])) {
+                return ThaiWords::get($option['label_key']) ?? (string) $value;
+            }
+
+            return ($option['label_th'] ?? null) ?: ($option['label'] ?? (string) $value);
+        }
+
+        return (string) $value;
     }
 
     /**

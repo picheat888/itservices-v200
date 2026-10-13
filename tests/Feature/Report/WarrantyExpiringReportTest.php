@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Report;
 
+use App\Exports\Report\TabularSummarySheet;
 use App\Models\Asset\Asset;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -166,6 +167,39 @@ class WarrantyExpiringReportTest extends TestCase
         $this->assertSame(['ประกันหมดรายเดือน', 'ประกันเหลืออีกเท่าไร', 'แยกตามหมวดหมู่', 'แยกตามผู้ขาย'], array_column($sections, 'title'));
         $this->assertSame(['หมวดหมู่', 'ทั้งหมด', 'หมดแล้ว', 'ภายใน 90 วัน', '91 วัน - 1 ปี', 'เกิน 1 ปี', 'ใกล้สุด'], $sections[2]['headings']);
         $this->assertSame('ไม่ระบุผู้ขาย', $sections[3]['rows'][2][0]);
+    }
+
+    public function test_the_summary_sheet_says_which_warranties_the_file_covers(): void
+    {
+        $report = app(WarrantyExpiringReport::class);
+        $laptops = Category::where('name', 'Laptop')->value('id');
+        $filters = $report->resolveFilters(['state' => 'expired', 'category_id' => $laptops]);
+        $sheet = (new TabularSummarySheet($report, [], $report->scopeLines($filters)))->array();
+
+        $this->assertContains(['แสดง', 'หมดแล้ว'], $sheet);
+        $this->assertContains(['หมวดหมู่', 'แล็ปท็อป'], $sheet);
+        $this->assertContains(['หมายเหตุ', 'เหลือ (วัน) ติดลบ คือเลยกำหนดมาแล้ว'], $sheet);
+        $this->assertNotContains(['ตัวกรอง', 'ไม่ได้กรอง'], $sheet);
+    }
+
+    public function test_the_pdf_says_how_long_ago_a_warranty_ended(): void
+    {
+        $report = app(WarrantyExpiringReport::class);
+        $viewer = $this->userWith();
+        $filters = $report->resolveFilters(['state' => 'expired']);
+        $rows = $report->query($viewer, $filters)->get();
+        $report->hydrateRows($rows, $viewer, $filters);
+
+        $html = view('pdf.reports.tabular', [
+            'report' => $report, 'summary' => [], 'sections' => [], 'scope' => $report->scopeLines($filters),
+            'rows' => $rows, 'truncated' => false, 'total' => $rows->count(),
+            'company' => '', 'printedBy' => $viewer->name, 'printedAt' => '',
+        ])->render();
+
+        $this->assertStringContainsString('แสดง: หมดแล้ว', $html);
+        $this->assertStringContainsString('เลยมา 5 วัน', $html);
+        $this->assertStringContainsString('เลยมา 40 วัน', $html);
+        $this->assertStringNotContainsString('-5<', $html);
     }
 
     public function test_breakdown_needs_assets_view(): void

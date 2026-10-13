@@ -19,8 +19,9 @@ class TabularReportExport implements WithMultipleSheets
      * @param  list<ReportSummary>  $summary
      * @param  Collection<int, Model>  $rows
      * @param  list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>  $sections
+     * @param  list<array{0: string, 1: string}>  $scope  TabularReport::scopeLines()
      */
-    public function __construct(public TabularReport $report, public array $summary, public Collection $rows, public array $sections = []) {}
+    public function __construct(public TabularReport $report, public array $summary, public Collection $rows, public array $sections = [], public array $scope = []) {}
 
     /**
      * @return list<object>
@@ -28,7 +29,7 @@ class TabularReportExport implements WithMultipleSheets
     public function sheets(): array
     {
         return [
-            new TabularSummarySheet($this->report, $this->summary),
+            new TabularSummarySheet($this->report, $this->summary, $this->scope),
             ...array_map(fn (array $section) => new TabularSectionSheet($section), $this->sections),
             new TabularRowsSheet($this->report, $this->rows),
         ];
