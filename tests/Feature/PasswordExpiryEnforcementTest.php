@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
+use App\Models\Stock\StockItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -107,6 +109,22 @@ class PasswordExpiryEnforcementTest extends TestCase
         $user = $this->user(['password_changed_at' => now()->subDays(5)]);
 
         $this->actingAs($user)->getJson(self::GUARDED_ROUTE)->assertOk();
+    }
+
+    public function test_a_locked_account_cannot_download_files_or_pdfs(): void
+    {
+        $employee = Employee::create(['first_name' => 'Photo', 'status' => 'active']);
+        $item = StockItem::create(['sku' => 'SKU-0000001', 'name' => 'Toner', 'current_stock' => 0, 'min_stock' => 0, 'max_stock' => 10]);
+
+        foreach ([['must_change_password' => true], ['password_changed_at' => now()->subDays(40)]] as $attributes) {
+            AppSetting::put('password_expiry_days', '30');
+            $user = $this->user($attributes);
+
+            $this->actingAs($user)->getJson("/files/employees/{$employee->id}/photo")
+                ->assertStatus(403)->assertJsonPath('message', 'password_expired');
+            $this->actingAs($user)->getJson("/pdf/stock-items/{$item->id}/history")
+                ->assertStatus(403)->assertJsonPath('message', 'password_expired');
+        }
     }
 
     /** With the policy off, age is irrelevant — only an admin-forced change blocks. */

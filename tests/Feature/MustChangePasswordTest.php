@@ -37,6 +37,26 @@ class MustChangePasswordTest extends TestCase
         $this->assertFalse((bool) $user->fresh()->must_change_password);
     }
 
+    public function test_the_new_password_must_differ_from_the_current_one(): void
+    {
+        $forced = User::factory()->create(['must_change_password' => true, 'password' => Hash::make('Temp-Secret123!')]);
+        $this->actingAs($forced);
+        $this->putJson('/api/password', [
+            'password' => 'Temp-Secret123!',
+            'password_confirmation' => 'Temp-Secret123!',
+        ])->assertStatus(422)->assertJsonValidationErrors('password');
+        $this->assertTrue((bool) $forced->fresh()->must_change_password);
+
+        $expired = User::factory()->create(['password' => Hash::make('Old-Secret123!'), 'password_changed_at' => now()->subYear()]);
+        $this->actingAs($expired);
+        $this->putJson('/api/password', [
+            'current_password' => 'Old-Secret123!',
+            'password' => 'Old-Secret123!',
+            'password_confirmation' => 'Old-Secret123!',
+        ])->assertStatus(422)->assertJsonValidationErrors('password');
+        $this->assertTrue($expired->fresh()->password_changed_at->lt(now()->subMonth()));
+    }
+
     /** The UI needs the reason, not just the fact, so it can explain the right one. */
     public function test_the_reason_is_exposed_separately_from_password_expired(): void
     {

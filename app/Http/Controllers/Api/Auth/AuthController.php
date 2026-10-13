@@ -9,6 +9,7 @@ use App\Http\Resources\Auth\UserResource;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Notifications\PasswordExpiringNotification;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -166,17 +167,20 @@ class AuthController extends Controller
      */
     public function changePassword(Request $request): JsonResponse
     {
-        // Re-entering the current password guards against someone using an unattended,
-        // already-signed-in session. That guard is moot right after an admin handed the
-        // password over — the account is flagged, the person just authenticated with it,
-        // and the temporary password is the one thing they would have to type twice.
+        // A forced change waives the current password: the person just signed in with it
         $forced = (bool) $request->user()?->must_change_password;
 
         $data = $request->validate([
             'current_password' => $forced ? ['nullable'] : ['required', 'current_password'],
-            // Same complexity an admin must satisfy when setting a password for someone —
-            // otherwise a forced change could weaken the account it was meant to protect.
-            'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+            'password' => [
+                'required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols(),
+                // Reusing the current password would reset the expiry clock or keep the handed-over one
+                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+                    if (is_string($value) && Hash::check($value, $request->user()->password)) {
+                        $fail('validation.password_reused')->translate();
+                    }
+                },
+            ],
         ]);
 
         $user = $request->user();

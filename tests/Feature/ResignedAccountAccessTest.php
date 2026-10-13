@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Employee;
+use App\Models\Stock\StockItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -112,6 +113,17 @@ class ResignedAccountAccessTest extends TestCase
         // lasting until it happens to time out.
         $user->employee->update(['last_day' => now()->subDay()->toDateString()]);
         $this->actingAs($user)->getJson('/api/me')->assertUnauthorized();
+    }
+
+    public function test_files_and_pdfs_stop_answering_once_the_last_day_has_passed(): void
+    {
+        $user = $this->staff('gone.files', EmployeeStatus::Resigned, now()->subDay()->toDateString());
+        $item = StockItem::create(['sku' => 'SKU-0000001', 'name' => 'Toner', 'current_stock' => 0, 'min_stock' => 0, 'max_stock' => 10]);
+
+        $this->actingAs($user)->getJson("/files/employees/{$user->employee_id}/photo")
+            ->assertUnauthorized()->assertJsonPath('message', 'account_closed');
+        $this->actingAs($user)->getJson("/pdf/stock-items/{$item->id}/history")
+            ->assertUnauthorized()->assertJsonPath('message', 'account_closed');
     }
 
     public function test_somebody_shut_out_can_still_clear_their_own_session(): void
