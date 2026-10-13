@@ -9,8 +9,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * An employee's last working day may never fall before their start date — neither when the
- * resignation is recorded nor when the start date is edited afterwards.
+ * An employee's last working day must fall after their start date — both when the resignation
+ * is recorded and when the start date is edited afterwards.
  */
 class EmployeeResignDatesTest extends TestCase
 {
@@ -39,14 +39,23 @@ class EmployeeResignDatesTest extends TestCase
         $this->assertSame('active', $employee->fresh()->status->value);
     }
 
-    public function test_resign_accepts_a_last_day_on_the_start_date(): void
+    public function test_resign_refuses_a_last_day_on_the_start_date(): void
     {
         $employee = $this->employee();
 
         $this->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'Moving on', 'last_day' => '2026-10-03'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('last_day');
+    }
+
+    public function test_resign_accepts_a_last_day_after_the_start_date(): void
+    {
+        $employee = $this->employee();
+
+        $this->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'Moving on', 'last_day' => '2026-10-04'])
             ->assertOk();
 
-        $this->assertSame('2026-10-03', $employee->fresh()->last_day->toDateString());
+        $this->assertSame('2026-10-04', $employee->fresh()->last_day->toDateString());
     }
 
     public function test_resign_without_a_recorded_start_date_accepts_any_last_day(): void
@@ -68,14 +77,23 @@ class EmployeeResignDatesTest extends TestCase
         $this->assertSame('2026-10-03', $employee->fresh()->joined_at->toDateString());
     }
 
-    public function test_editing_a_leavers_start_date_up_to_their_last_day_is_allowed(): void
+    public function test_editing_a_leavers_start_date_onto_their_last_day_is_refused(): void
     {
         $employee = $this->employee(['status' => 'resigned', 'last_day' => '2026-10-20']);
 
         $this->putJson("/api/employees/{$employee->id}", ['first_name' => 'Date', 'last_name' => 'Check', 'joined_at' => '2026-10-20'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('joined_at');
+    }
+
+    public function test_editing_a_leavers_start_date_to_before_their_last_day_is_allowed(): void
+    {
+        $employee = $this->employee(['status' => 'resigned', 'last_day' => '2026-10-20']);
+
+        $this->putJson("/api/employees/{$employee->id}", ['first_name' => 'Date', 'last_name' => 'Check', 'joined_at' => '2026-10-19'])
             ->assertOk();
 
-        $this->assertSame('2026-10-20', $employee->fresh()->joined_at->toDateString());
+        $this->assertSame('2026-10-19', $employee->fresh()->joined_at->toDateString());
     }
 
     public function test_editing_a_working_employees_start_date_has_no_upper_bound(): void
