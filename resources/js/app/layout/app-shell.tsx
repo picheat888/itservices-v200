@@ -33,7 +33,7 @@ export function AppShell() {
     const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(idleMinutes);
     const [notifOpen, setNotifOpen] = useState(false);
     // My Profile and Change password live in the URL (?dialog=), so Back closes them.
-    const [shellDialog, setShellDialog] = useDialogParam(SHELL_DIALOGS);
+    const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS);
     // Set your password is raised by the account itself, so the URL only follows it.
     useShownDialogParam('set-password', !!user?.must_change_password);
 
@@ -53,9 +53,9 @@ export function AppShell() {
             </div>
 
             <ProfileDrawer
-                open={shellDialog === 'profile'}
+                open={shellDialog === 'profile' || shellDialogUnder === 'profile'}
                 onClose={() => setShellDialog(null)}
-                onChangePassword={() => setShellDialog('password')}
+                onChangePassword={() => setShellDialog('password', { over: true })}
             />
 
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
