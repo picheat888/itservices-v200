@@ -3,8 +3,8 @@ import { useCurrency } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
-import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
@@ -20,6 +20,7 @@ import { MV_META, MV_TONE_BG } from '../shared';
 const MOVEMENT_TYPES: StockMovementType[] = ['receive', 'issue', 'return', 'transfer'];
 
 export function MovementsTab() {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { format } = useCurrency();
@@ -48,7 +49,7 @@ export function MovementsTab() {
             header: t('stock_doc_no'),
             render: (m) => <span className="font-mono text-xs font-semibold">{m.doc_no ?? '—'}</span>,
         },
-        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="font-mono text-xs">{fmtDateTime(m.moved_at)}</span> },
+        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="font-mono text-xs">{fmt.dateTime(m.moved_at)}</span> },
         {
             key: 'type',
             header: t('stock_mv_type'),
@@ -146,7 +147,7 @@ export function MovementsTab() {
                                                         {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}
                                                     </span>
                                                     <span className="text-muted-foreground shrink-0 font-mono text-[11px] font-normal">
-                                                        {fmtDateTime(viewMove.moved_at)}
+                                                        {fmt.dateTime(viewMove.moved_at)}
                                                     </span>
                                                 </div>
                                                 <div className="text-muted-foreground mt-0.5 font-mono text-[11px] font-normal">

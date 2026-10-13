@@ -6,7 +6,7 @@
  * Past `TOP_LIST` the rest fold away behind "แสดงทั้งหมด (n)". Drawn by tabular-charts.tsx.
  */
 import { useT } from '@/lang';
-import { formatDateTime } from '@/shared/lib/datetime';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { Card } from '@/shared/ui/card';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -19,6 +19,7 @@ type List = Extract<TabularChart, { type: 'list' }>;
 const TOP_LIST = 5;
 
 function ListLine({ row }: { row: List['rows'][number] }) {
+    const fmt = useDateFormat();
     const label = useChartLabel();
     const canOpen = useCanOpen();
     const href = `/assets?view=${row.id}`;
@@ -26,7 +27,7 @@ function ListLine({ row }: { row: List['rows'][number] }) {
 
     return (
         <div className="grid gap-x-4 gap-y-0.5 px-5 py-2.5 text-sm lg:grid-cols-[9rem_10rem_minmax(0,1fr)_10rem_minmax(0,1.4fr)] lg:items-baseline">
-            <span className="text-muted-foreground font-mono text-xs">{formatDateTime(row.at)}</span>
+            <span className="text-muted-foreground font-mono text-xs">{fmt.dateTime(row.at)}</span>
             {canOpen(href) ? (
                 <Link to={href} className="text-brand font-mono font-medium hover:underline">
                     {row.code}

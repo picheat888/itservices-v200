@@ -7,8 +7,8 @@
  * (GET /api/reports/schedules).
  */
 import { useT } from '@/lang';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { refusalText } from '@/shared/lib/api-errors';
-import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -35,6 +35,7 @@ import { tabularFilterChips, ticketFilterChips } from './schedule-filter-summary
 import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
 
 function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () => void }) {
+    const fmt = useDateFormat();
     const t = useT();
     const confirm = useConfirm();
     const update = useUpdateSchedule();
@@ -76,7 +77,7 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                   .replace('{first}', item.recipients[0])
                   .replace('{n}', String(item.recipients.length - 1));
     const failed = item.last_status === 'failed';
-    const lastSent = item.last_run_at && !failed ? t('rep_schedules_last_sent').replace('{t}', formatDateTime(item.last_run_at)) : undefined;
+    const lastSent = item.last_run_at && !failed ? t('rep_schedules_last_sent').replace('{t}', fmt.dateTime(item.last_run_at)) : undefined;
     const iconButton = 'text-muted-foreground hover:text-foreground h-7 w-7';
 
     return (
@@ -149,12 +150,12 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
 
                 <div className={cn('text-foreground/75 truncate text-xs', !item.active && 'opacity-60')}>{when}</div>
                 <div className={cn('text-muted-foreground text-right text-xs whitespace-nowrap', !item.active && 'opacity-60')} title={lastSent}>
-                    {item.active ? t('rep_schedules_next').replace('{t}', formatDateTime(item.next_run_at)) : t('rep_schedules_paused')}
+                    {item.active ? t('rep_schedules_next').replace('{t}', fmt.dateTime(item.next_run_at)) : t('rep_schedules_paused')}
                 </div>
 
                 {failed && item.last_run_at && (
                     <div className="text-destructive col-span-2 text-xs">
-                        {t('rep_schedules_last_failed').replace('{t}', formatDateTime(item.last_run_at))}
+                        {t('rep_schedules_last_failed').replace('{t}', fmt.dateTime(item.last_run_at))}
                         {item.last_error && ` - ${t(`rep_schedules_err_${item.last_error}`)}`}
                     </div>
                 )}

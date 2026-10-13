@@ -20,3 +20,10 @@ for (const [i, c] of cases.entries()) {
         assert.equal(fmt[c.fn](...c.args), c.expect);
     });
 }
+
+test('the legacy helpers are gone', async () => {
+    const mod = (await import('../../resources/js/shared/lib/datetime.ts')) as Record<string, unknown>;
+    assert.equal(mod.formatDateTime, undefined);
+    assert.equal(mod.formatDateShort, undefined);
+    assert.equal(mod.formatRangeShort, undefined);
+});

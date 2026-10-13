@@ -1,8 +1,8 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
-import { formatDateShort } from '@/shared/lib/datetime';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -22,6 +22,7 @@ import { HELD_STATUS_META } from '../lib/held-assets';
 const ASSETS_PER_PAGE = 4;
 
 export function ResignModal({ employee, onClose, onDone }: { employee: Employee | null; onClose: () => void; onDone: () => void }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { resign } = useEmployeeMutations();
@@ -62,9 +63,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     const guardClose = useDiscardGuard(!!employee && isDirty);
 
     const joinedAt = shown?.joined_at ?? null;
-    const beforeJoinText = joinedAt
-        ? t('resign_err_before_join').replace('{date}', formatDateShort(joinedAt, lang))
-        : t('resign_err_before_join_plain');
+    const beforeJoinText = joinedAt ? t('resign_err_before_join').replace('{date}', fmt.date(joinedAt)) : t('resign_err_before_join_plain');
 
     const submit = async () => {
         const e: typeof errors = {};

@@ -1,8 +1,8 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { refusalReason } from '@/shared/lib/api-errors';
-import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -82,6 +82,7 @@ export function AssetDetailDrawer({
     /** assets.retire — write off, or return a rented asset to its lessor (Ready assets only). */
     canRetire?: boolean;
 }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
@@ -252,7 +253,7 @@ export function AssetDetailDrawer({
                                     <div className="border-border bg-muted/40 rounded-lg border px-4 py-3">
                                         <div className="text-xs font-semibold">{t('asset_returned_to_vendor_label')}</div>
                                         <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs">
-                                            <span>{formatDateTime(a.returned_to_vendor_at)}</span>
+                                            <span>{fmt.dateTime(a.returned_to_vendor_at)}</span>
                                             {a.returned_to_vendor_by_name && (
                                                 <span>
                                                     {t('asset_by')} {a.returned_to_vendor_by_name}

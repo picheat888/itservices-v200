@@ -4,8 +4,8 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { formatDateShort } from '@/shared/lib/datetime';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -39,6 +39,7 @@ const empty = {
 
 /** Centered "focus dialog" for editing an existing employee's profile and org assignment. */
 export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean; onClose: () => void; employee: Employee | null }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
@@ -229,7 +230,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
         if (!form.joinedAt) e.joinedAt = t('emp_err_start');
         else if (employee?.last_day && form.joinedAt >= employee.last_day)
-            e.joinedAt = t('emp_err_start_after_last_day').replace('{date}', formatDateShort(employee.last_day, lang));
+            e.joinedAt = t('emp_err_start_after_last_day').replace('{date}', fmt.date(employee.last_day));
         setErrors(e);
         if (Object.keys(e).length) focusFirstError(e);
         return Object.keys(e).length === 0;

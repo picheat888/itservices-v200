@@ -3,9 +3,9 @@ import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
-import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
@@ -21,6 +21,7 @@ import { stockRefusalText } from '../../lib/refusal';
 
 /** Stock Count / Audit: open a session, enter physical counts, commit adjustments. */
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
+    const fmt = useDateFormat();
     const t = useT();
     const confirm = useConfirm();
     // Page and rows-per-page live in the URL (?page, ?per).
@@ -228,7 +229,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             key: 'created_at',
             header: t('audit_time'),
             className: 'whitespace-nowrap',
-            render: (s) => <span className="text-muted-foreground font-mono text-xs">{fmtDate(s.created_at, false)}</span>,
+            render: (s) => <span className="text-muted-foreground font-mono text-xs">{fmt.date(s.created_at)}</span>,
         },
         {
             key: 'warehouse',

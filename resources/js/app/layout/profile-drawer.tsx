@@ -7,8 +7,8 @@ import { useTickets } from '@/modules/ticket';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { EmployeeAccessRow, User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -105,6 +105,7 @@ function EmptyTab({ text }: { text: string }) {
 type TabId = 'profile' | 'assets' | 'tickets' | 'access';
 
 export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const setPasswordDialog = useUiStore((s) => s.setPasswordDialog);
@@ -474,11 +475,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                                 icon={Ticket}
                                                 title={tk.subject}
                                                 sub={tk.ticket_no}
-                                                right={
-                                                    <span className="text-muted-foreground shrink-0 text-xs">
-                                                        {formatDateTime(tk.created_at, false)}
-                                                    </span>
-                                                }
+                                                right={<span className="text-muted-foreground shrink-0 text-xs">{fmt.date(tk.created_at)}</span>}
                                             />
                                         ))}
                                         <Link

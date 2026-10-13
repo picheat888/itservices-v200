@@ -1,6 +1,6 @@
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 import { type StockMovementType } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
@@ -34,6 +34,7 @@ const TYPE_META: Record<
 
 /** Movements tab: a fill-height table of the item's stock movements (date, doc, type, qty, route, by). */
 export function StockMovementsTab({ itemId }: { itemId: number }) {
+    const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     const { data: history, isLoading } = useStockItemHistory(itemId);
     const moves = (history?.movements ?? []) as Move[];
@@ -42,7 +43,7 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
         {
             key: 'moved_at',
             header: lang === 'th' ? 'วันที่' : 'Date',
-            render: (m) => <span className="text-muted-foreground font-mono text-xs">{fmtDateTime(m.moved_at, false)}</span>,
+            render: (m) => <span className="text-muted-foreground font-mono text-xs">{fmt.date(m.moved_at)}</span>,
         },
         {
             key: 'doc_no',

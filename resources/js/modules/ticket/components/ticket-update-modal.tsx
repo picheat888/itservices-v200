@@ -2,9 +2,9 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
-import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketWorkClass } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -46,6 +46,7 @@ export function TicketUpdateModal({
     canSetWorkClass?: boolean;
     onClose: () => void;
 }) {
+    const fmt = useDateFormat();
     const t = useT();
     const { addUpdate } = useTicketMutations();
     const [body, setBody] = useState('');
@@ -206,13 +207,15 @@ export function TicketUpdateModal({
                                     <div className="min-w-0">
                                         <div className="text-muted-foreground text-xs">{t('ticket_work_class_deadline_from')}</div>
                                         <div className="truncate font-mono text-[13px] font-medium">
-                                            {view?.sla ? fmtTz(view.sla.resolve_due_at) : '—'}
+                                            {view?.sla ? fmt.dateTime(view.sla.resolve_due_at) : '—'}
                                         </div>
                                     </div>
                                     <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
                                     <div className="min-w-0 text-right">
                                         <div className="text-muted-foreground text-xs">{t('ticket_work_class_deadline_to')}</div>
-                                        <div className="truncate font-mono text-[13px] font-semibold">{forecast ? fmtTz(forecast.due_at) : '—'}</div>
+                                        <div className="truncate font-mono text-[13px] font-semibold">
+                                            {forecast ? fmt.dateTime(forecast.due_at) : '—'}
+                                        </div>
                                         {dueUnchanged && (
                                             <div className="text-muted-foreground text-[11px] leading-snug">{t('ticket_work_class_no_rule')}</div>
                                         )}

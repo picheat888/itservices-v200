@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
-import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
@@ -49,8 +49,7 @@ export default function ItemHistoryPage() {
     const [params, setParams] = useSearchParams();
     const view = (params.get('v') as View | null) ?? null;
     const { data, isLoading } = useStockItemHistory(id ? Number(id) : null);
-    // "YYYY-MM-DD HH:mm" in the system timezone (the API emits UTC timestamps).
-    const fmt = (iso: string | null): string => (iso ? fmtTz(iso) : '—');
+    const { dateTime: fmt } = useDateFormat();
 
     if (isLoading || !data) {
         return (

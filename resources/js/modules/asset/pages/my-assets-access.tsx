@@ -1,8 +1,8 @@
 import { useT } from '@/lang';
 import { AccessBadge, useMyAccess } from '@/modules/access';
 import { useAuth } from '@/modules/auth';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
-import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, EmployeeAccessRow } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -418,6 +418,7 @@ function HoldingRow({
     onReturn: (id: number, name: string, assetId: string) => void;
     returning: { isPending: boolean; variables?: { id: number } };
 }) {
+    const fmt = useDateFormat();
     const asset = holding.asset;
     const inUse = asset?.status === 'deployed';
     const meta = KIND_META[holding.kind];
@@ -476,7 +477,7 @@ function HoldingRow({
                         <>
                             <Sep />
                             <span className="shrink-0 whitespace-nowrap">
-                                {t('mya_since')} {formatDateTime(holding.since, false)}
+                                {t('mya_since')} {fmt.date(holding.since)}
                             </span>
                         </>
                     )}
