@@ -161,26 +161,37 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame(['d1' => 1, 'd3' => 0, 'd7' => 0, 'older' => 1], $backlog['aging']);
     }
 
-    public function test_weekly_buckets_start_on_monday_and_cover_the_whole_range(): void
+    public function test_weekly_buckets_start_on_sunday_and_cover_the_whole_range(): void
     {
         $user = $this->deskMember();
-        // 2026-09-01 is a Tuesday → the first bucket is Monday 2026-08-31.
+        // 2026-09-01 is a Tuesday → the first bucket is Sunday 2026-08-30.
         $this->ticket(['status' => 'completed', 'created_at' => '2026-09-01 08:00', 'resolved_at' => '2026-09-08 08:00']);
+        // Saturday 09-12 still belongs to the week of Sunday 09-06.
+        $this->ticket(['status' => 'completed', 'created_at' => '2026-09-02 08:00', 'resolved_at' => '2026-09-12 18:00']);
 
         $weekly = $this->summary($user)['weekly'];
 
-        $this->assertSame('2026-08-31', $weekly[0]['week_start']);
-        $this->assertSame('2026-09-28', $weekly[array_key_last($weekly)]['week_start']);
+        $this->assertSame('2026-08-30', $weekly[0]['week_start']);
+        $this->assertSame('2026-09-27', $weekly[array_key_last($weekly)]['week_start']);
         $this->assertCount(5, $weekly);
-        $this->assertSame(1, $weekly[0]['opened']);
+        $this->assertSame(2, $weekly[0]['opened']);
         $this->assertSame(0, $weekly[0]['closed']);
-        $this->assertSame(1, $weekly[1]['closed']);
+        $this->assertSame(2, $weekly[1]['closed']);
+    }
+
+    public function test_a_sunday_to_saturday_range_is_a_single_week(): void
+    {
+        $user = $this->deskMember();
+
+        $weekly = $this->summary($user, ['from' => '2026-09-13', 'to' => '2026-09-19'])['weekly'];
+
+        $this->assertSame(['2026-09-13'], array_column($weekly, 'week_start'));
     }
 
     public function test_weekly_backlog_counts_tickets_still_open_at_each_week_end(): void
     {
         $user = $this->deskMember();
-        // Opened before the range, closed in week 2 (Mon 2026-09-07 .. Sun 09-13).
+        // Opened before the range, closed in week 2 (Sun 2026-09-06 .. Sat 09-12).
         $this->ticket(['status' => 'completed', 'created_at' => '2026-08-20 08:00', 'resolved_at' => '2026-09-09 08:00']);
         // Opened in week 1, still open — counts from week 1 on.
         $this->ticket(['status' => 'open', 'created_at' => '2026-09-02 08:00']);
@@ -191,7 +202,7 @@ class TicketOverviewReportTest extends TestCase
 
         $backlog = array_column($this->summary($user)['weekly'], 'backlog');
 
-        // Week 5 (from 09-28) has not started yet (now is 09-25 10:00), so it has no backlog.
+        // Week 5 (from 09-27) has not started yet (now is 09-25 10:00), so it has no backlog.
         $this->assertSame([2, 1, 2, 1, null], $backlog);
     }
 
