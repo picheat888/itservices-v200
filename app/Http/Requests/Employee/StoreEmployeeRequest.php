@@ -107,7 +107,7 @@ class StoreEmployeeRequest extends FormRequest
     }
 
     /**
-     * A leaver's start date may not move past their last working day.
+     * A leaver's start date must stay before their last working day.
      *
      * @return list<string>
      */
@@ -115,7 +115,7 @@ class StoreEmployeeRequest extends FormRequest
     {
         $lastDay = $this->route('employee')?->last_day;
 
-        return $lastDay ? ['before_or_equal:'.$lastDay->toDateString()] : [];
+        return $lastDay ? ['before:'.$lastDay->toDateString()] : [];
     }
 
     /**

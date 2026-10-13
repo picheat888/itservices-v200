@@ -228,7 +228,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         if (!form.positionId) e.positionId = t('emp_err_pos');
         if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
         if (!form.joinedAt) e.joinedAt = t('emp_err_start');
-        else if (employee?.last_day && form.joinedAt > employee.last_day)
+        else if (employee?.last_day && form.joinedAt >= employee.last_day)
             e.joinedAt = t('emp_err_start_after_last_day').replace('{date}', formatDateShort(employee.last_day, lang));
         setErrors(e);
         if (Object.keys(e).length) focusFirstError(e);

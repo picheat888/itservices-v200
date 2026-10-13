@@ -69,7 +69,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     const submit = async () => {
         const e: typeof errors = {};
         if (!lastDay) e.lastDay = t('resign_err_lastday');
-        else if (joinedAt && lastDay < joinedAt) e.lastDay = beforeJoinText;
+        else if (joinedAt && lastDay <= joinedAt) e.lastDay = beforeJoinText;
         if (!reason.trim()) e.reason = t('resign_err_reason');
         setErrors(e);
         // Marking a field red is only half the job — put the caret in the first one that
