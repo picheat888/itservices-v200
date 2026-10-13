@@ -542,13 +542,13 @@ function DepartmentCard({
                             })}
                         </tbody>
                     </table>
+                    {/* The toggle and the total stay at the card's foot however tall the card beside it makes this one. */}
                     {folds && (
-                        <div>
+                        <div className="mt-auto">
                             <FoldToggle open={listOpen} total={data.departments.length} onToggle={onListToggle} />
                         </div>
                     )}
-                    {/* The total stays at the card's foot however tall the card beside it makes this one. */}
-                    <table className="border-border mt-auto w-full min-w-[40rem] table-fixed border-t text-sm">
+                    <table className={cn('border-border w-full min-w-[40rem] table-fixed border-t text-sm', !folds && 'mt-auto')}>
                         <caption className="sr-only">{t('rep_eo_dept_total').replace('{n}', count(data.departments.length, lang))}</caption>
                         {cols}
                         <tbody>

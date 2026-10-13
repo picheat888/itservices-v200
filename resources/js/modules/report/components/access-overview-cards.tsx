@@ -504,7 +504,7 @@ export function Group<T>({
     rows: T[];
     first?: boolean;
     render: (row: T) => React.ReactNode;
-    /** Opened, the list grows with its rows instead of scrolling inside itself. */
+    /** The list grows with its rows instead of scrolling inside itself, and its toggle sits at the card's foot. */
     grow?: boolean;
     /** Set both to let the page know when the group opens. */
     open?: boolean;
@@ -520,7 +520,7 @@ export function Group<T>({
     const Icon = open ? ChevronUp : ChevronDown;
 
     return (
-        <section>
+        <section className={cn(grow && 'flex flex-1 flex-col')}>
             <h3
                 className={cn(
                     TABLE_HEAD,
@@ -533,7 +533,7 @@ export function Group<T>({
             </h3>
             <ul className={cn(open && !grow && 'max-h-80 overflow-y-auto overscroll-contain')}>{shown.map(render)}</ul>
             {folds && (
-                <div className="border-border/60 border-t px-5 py-2 text-xs font-medium">
+                <div className={cn('border-border/60 border-t px-5 py-2 text-xs font-medium', grow && 'mt-auto')}>
                     <button
                         type="button"
                         onClick={toggle}
