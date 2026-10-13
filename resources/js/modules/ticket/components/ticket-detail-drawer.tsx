@@ -6,7 +6,7 @@ import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus, TicketWorkClass } from '@/shared/types';
@@ -336,10 +336,11 @@ export function TicketDetailDrawer({
     /** Opens the progress-note dialog — offered to the assignee while the case is in flight. */
     onUpdate: (t: Ticket) => void;
 }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     // System-timezone timestamp; '' (not '—') when missing — timeline steps hide their timestamp row entirely.
-    const fmtWhen = (iso: string | null | undefined): string => (iso ? fmtTz(iso) : '');
+    const fmtWhen = (iso: string | null | undefined): string => (iso ? fmt.dateTime(iso) : '');
 
     // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
     const [shown, setShown] = useState<Ticket | null>(null);

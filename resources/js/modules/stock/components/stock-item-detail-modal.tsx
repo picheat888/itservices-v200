@@ -4,8 +4,8 @@ import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
-import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
@@ -130,6 +130,7 @@ export function StockItemDetailModal({
     onClose: () => void;
     onEdit?: (item: StockItem) => void;
 }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
@@ -369,7 +370,7 @@ export function StockItemDetailModal({
                                                                         </span>
                                                                     </td>
                                                                     <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
-                                                                        {fmtDate(l.received_at, false)}
+                                                                        {fmt.date(l.received_at)}
                                                                     </td>
                                                                     <td className="px-3 py-1.5 text-right font-mono text-xs">
                                                                         {format(l.unit_cost)}
@@ -391,7 +392,7 @@ export function StockItemDetailModal({
                                                                                 <Meta label={t('stock_supplier')}>{l.supplier || '—'}</Meta>
                                                                                 <Meta label={t('stock_by')}>{l.recorded_by || '—'}</Meta>
                                                                                 <Meta label={t('stock_serial_received')}>
-                                                                                    {fmtDate(l.received_at, false)}
+                                                                                    {fmt.date(l.received_at)}
                                                                                 </Meta>
                                                                                 <Meta label={t('stock_qty')}>
                                                                                     <span className="font-mono">
@@ -465,7 +466,7 @@ export function StockItemDetailModal({
                                                             </td>
                                                             <td className="px-3 py-1.5">{s.warehouse ?? '—'}</td>
                                                             <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
-                                                                {fmtDate(s.received_at, false)}
+                                                                {fmt.date(s.received_at)}
                                                             </td>
                                                         </tr>
                                                     ))}

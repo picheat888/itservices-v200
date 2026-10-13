@@ -6,10 +6,10 @@ import { AttachmentRow } from '@/shared/components/file-drop-zone';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useInitials } from '@/shared/hooks/use-initials';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { serverMessage } from '@/shared/lib/api-errors';
-import { formatDateTime } from '@/shared/lib/datetime';
 import {
     isOnBehalfRequest,
     REQUEST_APPROVE_BUTTON,
@@ -161,6 +161,7 @@ function RequestDetailBody({
     onCancel: () => void;
     onPreview: (attachment: RequestAttachment) => void;
 }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
@@ -212,7 +213,7 @@ function RequestDetailBody({
                                     <span>
                                         {t('req_submitted_by')} {request.submitted_by.name}
                                     </span>
-                                    <span>{formatDateTime(request.created_at)}</span>
+                                    <span>{fmt.dateTime(request.created_at)}</span>
                                 </>
                             ) : (
                                 t('req_onboarding_desc')

@@ -409,7 +409,7 @@ export interface TicketAttachment {
 export type TicketSlaState = 'on_track' | 'near_due' | 'over_sla' | 'met' | 'missed';
 
 export interface TicketSlaSnapshot {
-    /** ISO instants in local wall time (APP_TIMEZONE) — display via formatDateTime. */
+    /** ISO instants in local wall time (APP_TIMEZONE) — display via useDateFormat().dateTime. */
     response_due_at: string;
     resolve_due_at: string;
     state: TicketSlaState;
@@ -428,7 +428,7 @@ export interface TicketWorkClassForecast {
     scope: 'work_class' | 'priority' | 'request_type' | null;
     value: string | null;
     clock: 'business' | 'calendar';
-    /** ISO instant, local wall time — display via formatDateTime. */
+    /** ISO instant, local wall time — display via useDateFormat().dateTime. */
     due_at: string;
 }
 

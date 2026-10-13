@@ -5,12 +5,12 @@ import { PAGE_SIZES } from '@/shared/components/data-table';
 import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
-import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
@@ -1021,6 +1021,7 @@ function auditDiffSummary(d: AuditDetails | null): string | null {
 }
 
 function AuditTab() {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -1210,9 +1211,9 @@ function AuditTab() {
                                             <td className="text-muted-foreground px-5 py-3">{l.target ?? '—'}</td>
                                             <td
                                                 className="text-muted-foreground px-5 py-3 font-mono text-xs whitespace-nowrap"
-                                                title={fmtDateTime(l.created_at)}
+                                                title={fmt.dateTime(l.created_at)}
                                             >
-                                                {auditAgo(l.created_at, lang, fmtDateTime(l.created_at))}
+                                                {auditAgo(l.created_at, lang, fmt.dateTime(l.created_at))}
                                             </td>
                                             <td className="px-5 py-3">
                                                 {showDetails && (

@@ -7,7 +7,8 @@
  * other range as "1 ก.ค. – 25 ก.ย. 2026". Gregorian years in both languages, like the rest
  * of the app's dates.
  */
-import { formatRangeShort } from '@/shared/lib/datetime';
+import { bindDateFormat } from '@/shared/lib/datetime';
+import { useUiStore } from '@/stores/ui';
 
 type Translate = (key: string) => string;
 
@@ -30,9 +31,9 @@ function locale(lang: string): string {
 
 const format = (date: Date, lang: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale(lang), options).format(date);
 
-/** The shared short range ("1 ก.ค. – 25 ก.ย. 2026"), kept under its report name for the report's callers. */
+/** The shared short range in the system date setting, kept under its report name for the report's callers. */
 export function compactRange(fromValue: string, toValue: string, lang: string): string {
-    return formatRangeShort(fromValue, toValue, lang);
+    return bindDateFormat(useUiStore.getState().dateConfig, lang).range(fromValue, toValue);
 }
 
 export function reportScope(filters: Record<string, unknown>, columnsCount: number | null, t: Translate, lang: string): string {

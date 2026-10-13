@@ -12,11 +12,12 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { SettingToggle } from '@/shared/components/setting-toggle';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams, type ListParamPatch } from '@/shared/hooks/use-list-params';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
+import { relativeTime } from '@/shared/lib/datetime';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -1207,6 +1208,7 @@ function SentEmailFrame({ html, title, className }: { html: string; title: strin
  * and say so rather than showing an empty frame.
  */
 function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: () => void }) {
+    const fmt = useDateFormat();
     const t = useT();
     const { data } = useEmailLog(logId);
     const { record: log } = useRecordView(logId, data);
@@ -1225,7 +1227,7 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
                     srDescription={t('email_log_sub')}
                     subtitle={
                         <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
-                            <span>{formatDateTime(log.created_at)}</span>
+                            <span>{fmt.dateTime(log.created_at)}</span>
                             <span>
                                 {log.recipient_name
                                     ? `${log.recipient_name} (${log.to_email ?? t('email_log_no_address')})`
@@ -1269,6 +1271,7 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
 }
 
 function DeliveryLogPane() {
+    const fmt = useDateFormat();
     const t = useT();
     const [viewing, setViewing] = useState<number | null>(null);
     // Status chip, search, page and rows-per-page live in the URL (?status, search, page, per).
@@ -1299,7 +1302,7 @@ function DeliveryLogPane() {
             key: 'created_at',
             header: t('email_log_time'),
             className: 'w-[15%]',
-            render: (r) => <span className="text-muted-foreground text-xs whitespace-nowrap">{formatDateTime(r.created_at)}</span>,
+            render: (r) => <span className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(r.created_at)}</span>,
         },
         {
             key: 'template',

@@ -1,5 +1,5 @@
 import { useT } from '@/lang';
-import { formatDateTime } from '@/shared/lib/datetime';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { REQUEST_SKIP_REASON_LABEL } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
@@ -35,6 +35,7 @@ function candidatesTitle(row: RequestApproval): string {
 
 /** Vertical approval trail: submitted, each approval step, then the IT step or the rejection notice. */
 export function RequestTrail({ request }: { request: ServiceRequest }) {
+    const fmt = useDateFormat();
     const t = useT();
     const approvals = request.approvals ?? [];
 
@@ -43,7 +44,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             tone: 'done',
             glyph: <Check className="h-3 w-3" />,
             title: t('req_trail_submitted'),
-            meta: formatDateTime(request.created_at),
+            meta: fmt.dateTime(request.created_at),
         },
     ];
 
@@ -122,7 +123,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             // A skip reason shows in the amber note instead
             meta: isCompletion ? completionMeta(row) : row.status === 'skipped' && row.skip_reason ? '' : stepMeta(row),
             // Decided or closed steps say when; open, queued and skipped steps have no time.
-            metaTime: row.status === 'approved' || row.status === 'rejected' ? formatDateTime(row.acted_at) : null,
+            metaTime: row.status === 'approved' || row.status === 'rejected' ? fmt.dateTime(row.acted_at) : null,
             note: row.note,
             awaitingAccount: row.awaiting_account,
             skipReason: row.skip_reason,
@@ -137,7 +138,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             glyph: <Ban className="h-3 w-3" />,
             title: request.cancelled_by ?? request.requester.name,
             meta: t('req_trail_withdrawn'),
-            metaTime: formatDateTime(request.cancelled_at),
+            metaTime: fmt.dateTime(request.cancelled_at),
             note: request.cancel_reason,
         });
     }

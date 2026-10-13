@@ -1,9 +1,9 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
-import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';
@@ -33,6 +33,7 @@ const allocKey = (a: Record<string, number>) =>
     );
 
 export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
+    const fmt = useDateFormat();
     const t = useT();
     const confirm = useConfirm();
     // Page and rows-per-page live in the URL (?page, ?per).
@@ -357,7 +358,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                         <span className="text-muted-foreground text-[11px]">{s.warehouse ?? '—'}</span>
                                                         {s.received_at && (
                                                             <span className="text-muted-foreground font-mono text-[11px]">
-                                                                {fmtDate(s.received_at, false)}
+                                                                {fmt.date(s.received_at)}
                                                             </span>
                                                         )}
                                                     </button>

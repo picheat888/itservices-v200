@@ -8,8 +8,9 @@
  * Data: useMyExports (GET /api/reports/exports).
  */
 import { useT } from '@/lang';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { refusalText } from '@/shared/lib/api-errors';
-import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
+import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -44,6 +45,7 @@ function formatSize(bytes: number | null): string | null {
 }
 
 function ExportRow({ item }: { item: ReportExportItem }) {
+    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
@@ -57,7 +59,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     const size = formatSize(item.size_bytes);
     const madeAt = item.finished_at ?? item.created_at;
     // The panel heading already says how long files are kept; the exact day sits in the tooltip.
-    const keptUntil = item.expires_at ? t('rep_my_exports_kept_until').replace('{date}', formatDateTime(item.expires_at, false)) : undefined;
+    const keptUntil = item.expires_at ? t('rep_my_exports_kept_until').replace('{date}', fmt.date(item.expires_at)) : undefined;
 
     const onDownload = () =>
         download.mutate(item, {
@@ -130,7 +132,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                     </>
                 ) : (
                     <div className="text-muted-foreground mt-0.5 text-xs" title={keptUntil}>
-                        {formatDateTime(madeAt)}
+                        {fmt.dateTime(madeAt)}
                     </div>
                 )}
                 {slow && <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}

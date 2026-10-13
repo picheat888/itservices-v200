@@ -7,9 +7,9 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
@@ -118,6 +118,7 @@ function TicketOverviewBodySkeleton() {
 }
 
 export default function TicketsPage() {
+    const fmt = useDateFormat();
     const t = useT();
     // System-timezone formatter (Settings -> Company) — the API emits UTC timestamps.
     const { user, can: has } = useAuth();
@@ -317,7 +318,7 @@ export default function TicketsPage() {
             header: t('ticket_request_at'),
             className: 'text-muted-foreground font-mono text-xs whitespace-nowrap',
             width: '145px',
-            render: (tk) => fmtDateTime(tk.created_at),
+            render: (tk) => fmt.dateTime(tk.created_at),
         },
         {
             // The column that gives. `w-full max-w-0` hands it every pixel the fixed columns do
@@ -712,6 +713,7 @@ function TicketTable({
     /** Mirrors the Take Case gate — see the priority column on the main list. */
     showPriority: boolean;
 }) {
+    const fmt = useDateFormat();
     if (rows.length === 0) {
         return <div className="text-muted-foreground py-10 text-center text-sm">{t('ticket_none')}</div>;
     }
@@ -770,7 +772,7 @@ function TicketTable({
                                     <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
                                 )}
                             </td>
-                            {!compact && <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{fmtDateTime(tk.updated_at, false)}</td>}
+                            {!compact && <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{fmt.date(tk.updated_at)}</td>}
                         </tr>
                     ))}
                 </tbody>

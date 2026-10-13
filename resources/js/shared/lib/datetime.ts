@@ -149,17 +149,3 @@ export function relativeTime(iso: string | null, lang: string, neverLabel: strin
     const days = Math.round(hrs / 24);
     return lang === 'th' ? `${days} วันที่แล้ว` : `${days} day${days > 1 ? 's' : ''} ago`;
 }
-
-// Legacy helpers, removed in Task 7 once their callers move to useDateFormat().
-export function formatDateTime(value: string | null | undefined, withTime = true): string {
-    const fmt = bindDateFormat(DEFAULT_DATE_CONFIG, 'en');
-    return withTime ? fmt.dateTime(value) : fmt.date(value);
-}
-
-export function formatDateShort(value: string, lang: string): string {
-    return bindDateFormat(DEFAULT_DATE_CONFIG, lang).date(value);
-}
-
-export function formatRangeShort(fromValue: string, toValue: string, lang: string): string {
-    return bindDateFormat(DEFAULT_DATE_CONFIG, lang).range(fromValue, toValue);
-}
