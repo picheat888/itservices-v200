@@ -1,12 +1,14 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -118,7 +120,7 @@ function TicketOverviewBodySkeleton() {
 }
 
 export default function TicketsPage() {
-    const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
     const t = useT();
     // System-timezone formatter (Settings -> Company) — the API emits UTC timestamps.
     const { user, can: has } = useAuth();
@@ -316,9 +318,9 @@ export default function TicketsPage() {
         {
             key: 'created',
             header: t('ticket_request_at'),
-            className: 'text-muted-foreground font-mono text-xs whitespace-nowrap',
-            width: '145px',
-            render: (tk) => fmt.dateTime(tk.created_at),
+            className: 'text-muted-foreground',
+            width: dateWidth,
+            render: (tk) => <DateTimeCell value={tk.created_at} />,
         },
         {
             // The column that gives. `w-full max-w-0` hands it every pixel the fixed columns do
