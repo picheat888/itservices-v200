@@ -27,6 +27,7 @@ import {
     Box,
     Boxes,
     Building2,
+    CalendarClock,
     Construction,
     Inbox,
     Info,
@@ -48,6 +49,7 @@ import { Link } from 'react-router-dom';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
+import { DateTimeSection } from '../components/datetime-section';
 import { LocationModal } from '../components/location-modal';
 import { LookupSection } from '../components/lookup-section';
 import { ModelModal } from '../components/model-modal';
@@ -1655,17 +1657,25 @@ function SystemSectionHead({ icon: Icon, title, desc }: { icon: typeof Sparkles;
     );
 }
 
-/**
- * Settings → System: a single Branding section covering brand name, logo and
- * the system-wide theme color — all saved with one button. Corner radius and
- * density are fixed (no per-user controls).
- */
+/** Settings → System: Branding (name, logo, theme color) and Date and time, each saved with its own button. */
 function SystemTab({ form, set, logoUrl, onDirtyChange }: { form: SettingsForm; set: SetFn; logoUrl: string | null; onDirtyChange: OnDirtyChange }) {
     const t = useT();
+    const [brandDirty, setBrandDirty] = useState(false);
+    const [dateDirty, setDateDirty] = useState(false);
+
+    useEffect(() => {
+        onDirtyChange(brandDirty || dateDirty);
+    }, [brandDirty, dateDirty, onDirtyChange]);
+
     return (
         <div className="max-w-2xl">
             <SystemSectionHead icon={Sparkles} title={t('set_branding')} desc={t('set_branding_desc')} />
-            <BrandingTab form={form} set={set} logoUrl={logoUrl} onDirtyChange={onDirtyChange} embedded />
+            <BrandingTab form={form} set={set} logoUrl={logoUrl} onDirtyChange={setBrandDirty} embedded />
+
+            <div className="border-border mt-8 border-t pt-8">
+                <SystemSectionHead icon={CalendarClock} title={t('set_datetime')} desc={t('set_datetime_desc')} />
+                <DateTimeSection onDirtyChange={setDateDirty} />
+            </div>
         </div>
     );
 }
