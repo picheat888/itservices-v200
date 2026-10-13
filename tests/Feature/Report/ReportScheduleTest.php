@@ -92,7 +92,7 @@ class ReportScheduleTest extends TestCase
         $weekly = new ReportSchedule(['frequency' => 'weekly', 'send_hour' => 7]);
         $monthly = new ReportSchedule(['frequency' => 'monthly', 'send_hour' => 7]);
 
-        // 07:00 today has passed, so tomorrow; the next Monday; the next 1st.
+        // 07:00 today has passed, so tomorrow; the next Monday; the next 1st. A Monday run covers the Sunday-to-Saturday week before it.
         $this->assertSame('2026-10-01 07:00', $daily->nextRunAfter($now)->format('Y-m-d H:i'));
         $this->assertSame('2026-10-05 07:00', $weekly->nextRunAfter($now)->format('Y-m-d H:i'));
         $this->assertSame('2026-10-01 07:00', $monthly->nextRunAfter($now)->format('Y-m-d H:i'));
@@ -100,7 +100,7 @@ class ReportScheduleTest extends TestCase
 
         $span = fn (array $p) => $p['from']->format('Y-m-d H:i').' / '.$p['to']->format('Y-m-d H:i');
         $this->assertSame('2026-09-30 00:00 / 2026-09-30 23:59', $span($daily->periodFor(CarbonImmutable::parse('2026-10-01 07:00'))));
-        $this->assertSame('2026-09-28 00:00 / 2026-10-04 23:59', $span($weekly->periodFor(CarbonImmutable::parse('2026-10-05 07:00'))));
+        $this->assertSame('2026-09-27 00:00 / 2026-10-03 23:59', $span($weekly->periodFor(CarbonImmutable::parse('2026-10-05 07:00'))));
         $this->assertSame('2026-09-01 00:00 / 2026-09-30 23:59', $span($monthly->periodFor(CarbonImmutable::parse('2026-10-01 07:00'))));
     }
 
@@ -114,7 +114,7 @@ class ReportScheduleTest extends TestCase
 
         $filters = app(ReportScheduleService::class)->filtersFor($schedule, $schedule->periodFor(CarbonImmutable::parse('2026-10-05 07:00')));
 
-        $this->assertSame(['from' => '2026-09-28', 'to' => '2026-10-04', 'kind' => 'handover'], $filters);
+        $this->assertSame(['from' => '2026-09-27', 'to' => '2026-10-03', 'kind' => 'handover'], $filters);
     }
 
     /** The mail names what a run covers: a range, a point in time, or the state at send time. */
@@ -131,8 +131,8 @@ class ReportScheduleTest extends TestCase
 
         $subjects = collect(Mail::sent(TemplatedMail::class))->map(fn (TemplatedMail $m) => $m->subjectLine)->all();
         $this->assertCount(3, $subjects);
-        $this->assertStringContainsString('28 Sep – 04 Oct 2026', $subjects[0]);
-        $this->assertStringContainsString('As of 04/10/2026', $subjects[1]);
+        $this->assertStringContainsString('27 Sep – 03 Oct 2026', $subjects[0]);
+        $this->assertStringContainsString('As of 03/10/2026', $subjects[1]);
         $this->assertStringContainsString('As of 05/10/2026 07:00', $subjects[2]);
     }
 

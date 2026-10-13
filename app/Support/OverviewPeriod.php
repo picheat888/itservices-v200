@@ -69,7 +69,7 @@ final class OverviewPeriod
     }
 
     /**
-     * Chart columns over the period, oldest first: days up to 14 days, weeks (Monday) up to
+     * Chart columns over the period, oldest first: days up to 14 days, weeks (Sunday) up to
      * 120, months up to two years, years beyond. All time starts at `$earliest`.
      *
      * @return array{unit: 'day'|'week'|'month'|'year', columns: list<array{start: string, from: CarbonImmutable, to: CarbonImmutable}>}
@@ -80,7 +80,7 @@ final class OverviewPeriod
         $days = $from->diffInDays($this->to);
         [$unit, $start, $step, $format] = match (true) {
             $days <= 14 => ['day', $from->startOfDay(), 'addDay', 'Y-m-d'],
-            $days <= 120 => ['week', $from->startOfWeek(CarbonInterface::MONDAY), 'addWeek', 'Y-m-d'],
+            $days <= 120 => ['week', $from->startOfWeek(CarbonInterface::SUNDAY), 'addWeek', 'Y-m-d'],
             $days <= 731 => ['month', $from->startOfMonth(), 'addMonth', 'Y-m'],
             default => ['year', $from->startOfYear(), 'addYear', 'Y'],
         };

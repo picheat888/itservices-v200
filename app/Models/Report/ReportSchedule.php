@@ -9,12 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A report emailed on a schedule (Report Center Phase 6), set from a report page and sent by
- * App\Jobs\SendScheduledReport. Managed through App\Services\Report\ReportScheduleService.
- *
- * Each run covers the period that has just closed — daily: yesterday; weekly (Mondays): the
- * previous Monday to Sunday; monthly (the 1st): the previous calendar month — so the stored
- * date filters are replaced by that period and the rest of the screen's filters are kept.
+ * A report emailed on a schedule, sent by App\Jobs\SendScheduledReport.
+ * Each run covers the period just closed: yesterday, the Sunday-to-Saturday week (sent Mondays) or last month.
  */
 class ReportSchedule extends Model
 {
@@ -101,8 +97,8 @@ class ReportSchedule extends Model
     {
         return match ($this->frequency) {
             self::WEEKLY => [
-                'from' => $runAt->startOfWeek(CarbonImmutable::MONDAY)->subWeek(),
-                'to' => $runAt->startOfWeek(CarbonImmutable::MONDAY)->subDay()->endOfDay(),
+                'from' => $runAt->startOfWeek(CarbonImmutable::SUNDAY)->subWeek(),
+                'to' => $runAt->startOfWeek(CarbonImmutable::SUNDAY)->subDay()->endOfDay(),
             ],
             self::MONTHLY => [
                 'from' => $runAt->startOfMonth()->subMonthNoOverflow(),
