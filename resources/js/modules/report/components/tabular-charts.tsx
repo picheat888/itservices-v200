@@ -8,9 +8,9 @@
  * - then each 'places' card across the page (places-card.tsx: ready stock by warehouse, shared use
  *   by location — how many in each place, then each one's bought / rented share);
  * - then each 'list' (asset-list-card.tsx: the written-off assets) across the whole width.
- * A long list (departments past 10, categories past 5) shows its top rows and folds the rest into one
- * "อื่น ๆ (n)" row, with "แสดงทั้งหมด (n)" under it to open every row in place — its own switch for
- * the departments, the categories, each places card and the list. Rows marked `apart` (assets in no department) come last under a dashed rule, drawn as a
+ * Departments show ten rows and fold the rest under "แสดงทั้งหมด (n)"; categories and the other lists show
+ * their top rows and fold the rest into one "อื่น ๆ (n)" row with the same switch.
+ * The first row's two cards keep one height while folded (useFoldRow); opening either holds the other's. Rows marked `apart` (assets in no department) come last under a dashed rule, drawn as a
  * share of their own total so they never set the departments' scale.
  * The chosen view (สถานะ / ที่มา) lives in the URL (?view=), as the app keeps tabs.
  * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
@@ -22,6 +22,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { TabularChart } from '../types';
+import { heldStyle, useFoldRow } from './access-overview-cards';
 import { AssetListCard } from './asset-list-card';
 import { BucketsSection } from './bucket-rows-card';
 import { fold, FoldToggle, ChartHeading as Heading, StackBar, useChartLabel as useLabel } from './chart-parts';
@@ -29,8 +30,10 @@ import { FILL, STROKE } from './chart-tones';
 import { PlacesCard } from './places-card';
 import { BarRowsSkeleton, CardHeadingSkeleton } from './report-skeletons';
 
-/** How many rows a long list shows before folding the rest into "อื่น ๆ". */
+/** Department rows shown before the rest fold under "แสดงทั้งหมด". */
 const TOP_STACKS = 10;
+
+const TOP_FOLDS = ['dept', 'cat'] as const;
 
 type Stacks = Extract<TabularChart, { type: 'stacks' }>;
 type Donut = Extract<TabularChart, { type: 'donut' }>;
@@ -120,20 +123,9 @@ function StacksCard({ chart, expanded, onToggle }: { chart: Stacks; expanded: bo
 
     const departments = chart.rows.filter((r) => !r.apart);
     const apart = chart.rows.filter((r) => r.apart);
-    const folding = fold(departments, TOP_STACKS, expanded);
+    const folding = fold(departments, TOP_STACKS, expanded, 0);
     const rows: StackRowData[] = [...folding.shown];
-    if (folding.rest.length > 0) {
-        const values: Record<string, number> = {};
-        for (const s of series) values[s.key] = folding.rest.reduce((sum, r) => sum + (r.values[s.key] ?? 0), 0);
-        rows.push({
-            label: { name: t('rep_chart_others').replace('{n}', String(folding.rest.length)), name_th: null },
-            values,
-            total: folding.rest.reduce((sum, r) => sum + r.total, 0),
-            others: true,
-        });
-    }
-    // Widths against the largest department on show — "อื่น ๆ" included, since it can outgrow the
-    // rest; the apart rows are left out so they cannot squash every department to a sliver.
+    // Widths against the largest department on show; the apart rows are left out so they cannot squash every department to a sliver.
     const max = Math.max(1, ...rows.map((r) => r.total));
 
     // The card grows to the row beside a side card, but never shrinks below its rows — two stacked in
@@ -279,30 +271,33 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
     const places = charts.filter((c): c is Places => c.type === 'places');
     const lists = charts.filter((c): c is List => c.type === 'list');
     const side = donuts.length + buckets.length > 0;
-    // One "show all" for the departments, one for the categories, one per places card and one for the list.
-    const [expanded, setExpanded] = useState(false);
-    const [bucketsExpanded, setBucketsExpanded] = useState(false);
+    // The departments and the categories fold as a pair; one "show all" per places card and one for the list.
+    const top = useFoldRow(TOP_FOLDS);
     const [openPlaces, setOpenPlaces] = useState<Record<string, boolean>>({});
     const [listExpanded, setListExpanded] = useState(false);
-    const toggle = () => setExpanded((open) => !open);
-    const toggleBuckets = () => setBucketsExpanded((open) => !open);
     const togglePlaces = (key: string) => setOpenPlaces((open) => ({ ...open, [key]: !open[key] }));
     const toggleList = () => setListExpanded((open) => !open);
 
     return (
         <div className="space-y-3">
-            <div className={cn('grid gap-3', stacks.length > 0 && side && 'xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]')}>
+            <div
+                className={cn(
+                    'grid gap-3',
+                    stacks.length > 0 && side && 'xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]',
+                    top.anyOpen && 'xl:items-start',
+                )}
+            >
                 {stacks.length > 0 && (
-                    <div className="flex flex-col gap-3">
+                    <div ref={top.left} className="flex flex-col gap-3" style={heldStyle(top.heldLeft)}>
                         {stacks.map((c) => (
-                            <StacksCard key={c.key} chart={c} expanded={expanded} onToggle={toggle} />
+                            <StacksCard key={c.key} chart={c} expanded={top.open.dept} onToggle={() => top.toggle('dept')} />
                         ))}
                     </div>
                 )}
                 {side && (
                     // One card, as the design's: the donut, then the categories under a ruled heading. Both
                     // cards stretch to the row, so their bottoms line up however long either list runs.
-                    <Card className="flex flex-col overflow-hidden">
+                    <Card ref={top.right} className="flex flex-col overflow-hidden" style={heldStyle(top.heldRight)}>
                         {donuts.map((c) => (
                             <DonutSection key={c.key} chart={c} />
                         ))}
@@ -311,8 +306,8 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
                                 key={c.key}
                                 chart={c}
                                 className={donuts.length + i > 0 ? 'border-t' : undefined}
-                                expanded={bucketsExpanded}
-                                onToggle={toggleBuckets}
+                                expanded={top.open.cat}
+                                onToggle={() => top.toggle('cat')}
                             />
                         ))}
                     </Card>
