@@ -692,6 +692,7 @@ function HoldingCard({
                         rows={holding.rows}
                         open={open}
                         onToggle={onToggle}
+                        grow
                         render={(r) => (
                             <GroupRow
                                 key={r.employee.id}

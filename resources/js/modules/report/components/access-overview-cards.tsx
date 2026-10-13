@@ -497,12 +497,15 @@ export function Group<T>({
     render,
     open: openProp,
     onToggle,
+    grow = false,
 }: {
     title: string;
     total: string;
     rows: T[];
     first?: boolean;
     render: (row: T) => React.ReactNode;
+    /** Opened, the list grows with its rows instead of scrolling inside itself. */
+    grow?: boolean;
     /** Set both to let the page know when the group opens. */
     open?: boolean;
     onToggle?: () => void;
@@ -528,7 +531,7 @@ export function Group<T>({
                 {title}
                 <b className="text-foreground font-mono tabular-nums">{total}</b>
             </h3>
-            <ul className={cn(open && 'max-h-80 overflow-y-auto overscroll-contain')}>{shown.map(render)}</ul>
+            <ul className={cn(open && !grow && 'max-h-80 overflow-y-auto overscroll-contain')}>{shown.map(render)}</ul>
             {folds && (
                 <div className="border-border/60 border-t px-5 py-2 text-xs font-medium">
                     <button
