@@ -742,35 +742,49 @@ function HoldingCard({
                             {t('rep_eo_holding_group')}
                             <b className="text-foreground font-mono tabular-nums">{t('rep_eo_people_n').replace('{n}', count(total, lang))}</b>
                         </h3>
-                        <ul ref={listRef} className={cn(fitting && 'relative min-h-0 flex-1 overflow-hidden')}>
-                            {holding.rows.map((r, i) => {
-                                // Measured but out of sight while folded; left out once open or on a tablet.
-                                const beyond = !open && i >= limit;
-                                if (beyond && !fitting) return null;
-                                return (
-                                    <GroupRow
-                                        key={r.employee.id}
-                                        className={beyond ? 'invisible' : undefined}
-                                        head={
-                                            <PersonLink
-                                                id={r.employee.id}
-                                                name={nameOf(r.employee, lang) ?? r.employee.code}
-                                                code={r.employee.code}
-                                            />
-                                        }
-                                        side={
-                                            <span className="text-muted-foreground text-xs">
-                                                <b className="text-foreground font-mono">{count(r.grants.length, lang)}</b> {t('rep_eo_grants_word')}
-                                            </span>
-                                        }
-                                        sub={[deptName(r.department, lang) ?? t('rep_ac_no_department'), <DaysOut key="days" days={r.days_out} />]}
-                                        chips={r.grants.map((g) => (
-                                            <GrantChip key={`${g.type}-${g.name}`} type={g.type} name={g.name} />
-                                        ))}
-                                    />
-                                );
-                            })}
-                        </ul>
+                        <div className={cn(fitting && 'relative flex min-h-0 flex-1 flex-col')}>
+                            <ul ref={listRef} className={cn(fitting && 'relative min-h-0 flex-1 overflow-hidden')}>
+                                {holding.rows.map((r, i) => {
+                                    // Folded, the next leaver shows as a fading glimpse in the space left; the rest are measured out of sight.
+                                    const beyond = !open && i >= limit;
+                                    if (beyond && !fitting) return null;
+                                    const glimpse = beyond && i === limit;
+                                    return (
+                                        <GroupRow
+                                            key={r.employee.id}
+                                            className={beyond && !glimpse ? 'invisible' : undefined}
+                                            inert={beyond}
+                                            head={
+                                                <PersonLink
+                                                    id={r.employee.id}
+                                                    name={nameOf(r.employee, lang) ?? r.employee.code}
+                                                    code={r.employee.code}
+                                                />
+                                            }
+                                            side={
+                                                <span className="text-muted-foreground text-xs">
+                                                    <b className="text-foreground font-mono">{count(r.grants.length, lang)}</b>{' '}
+                                                    {t('rep_eo_grants_word')}
+                                                </span>
+                                            }
+                                            sub={[
+                                                deptName(r.department, lang) ?? t('rep_ac_no_department'),
+                                                <DaysOut key="days" days={r.days_out} />,
+                                            ]}
+                                            chips={r.grants.map((g) => (
+                                                <GrantChip key={`${g.type}-${g.name}`} type={g.type} name={g.name} />
+                                            ))}
+                                        />
+                                    );
+                                })}
+                            </ul>
+                            {fitting && folds && (
+                                <div
+                                    aria-hidden
+                                    className="from-card pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t to-transparent"
+                                />
+                            )}
+                        </div>
                         {(folds || open) && total > limit && (
                             <div className="border-border/60 mt-auto border-t">
                                 <FoldToggle open={open} total={total} onToggle={onToggle} />
