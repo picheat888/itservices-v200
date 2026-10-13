@@ -1578,7 +1578,6 @@ export const report: Dict = {
     rep_eo_holding_title: 'Leavers still holding access',
     rep_eo_holding_info: 'People past their last working day, as of today, whatever the period',
     rep_eo_holding_group: 'Still holding',
-    rep_eo_holding_empty: 'No leaver still holds access',
     rep_eo_holding_empty_done: 'All {n} leavers have had their access revoked',
     rep_eo_holding_empty_none: 'No leavers under these filters yet',
     rep_eo_grants_word: 'grants',
