@@ -80,6 +80,22 @@ class DateDisplay
         return $p['h'] === null || $p['i'] === null ? $date : $date.' '.self::timePart($p['h'], $p['i'], $c);
     }
 
+    /** An Excel cell's date: null stays an empty cell. */
+    public static function cellDate(CarbonInterface|string|null $value): ?string
+    {
+        $text = self::date($value);
+
+        return $text === self::EMPTY ? null : $text;
+    }
+
+    /** An Excel cell's date and time: null stays an empty cell. */
+    public static function cellDateTime(CarbonInterface|string|null $value): ?string
+    {
+        $text = self::dateTime($value);
+
+        return $text === self::EMPTY ? null : $text;
+    }
+
     /** @param  array<string, mixed>|null  $config */
     public static function month(CarbonInterface|string|null $value, ?array $config = null, string $lang = 'th'): string
     {

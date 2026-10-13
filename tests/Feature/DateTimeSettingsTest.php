@@ -6,7 +6,10 @@ use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Support\DateDisplay;
+use Illuminate\Contracts\Queue\Job;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DateTimeSettingsTest extends TestCase
@@ -79,5 +82,24 @@ class DateTimeSettingsTest extends TestCase
         AppSetting::put('date_format', 'bogus');
 
         $this->assertSame('03/10/2026', DateDisplay::date('2026-10-03'));
+    }
+
+    public function test_cell_helpers_follow_the_setting(): void
+    {
+        AppSetting::put('date_format', 'ymd_dash');
+
+        $this->assertSame('2026-10-03', DateDisplay::cellDate('2026-10-03'));
+        $this->assertSame('2026-10-03 14:05', DateDisplay::cellDateTime('2026-10-03 14:05:00'));
+    }
+
+    public function test_a_queued_job_reads_the_setting_fresh(): void
+    {
+        $this->assertSame('03/10/2026', DateDisplay::date('2026-10-03'));
+        DB::table('app_settings')->updateOrInsert(['key' => 'date_format'], ['value' => 'ymd_dash']);
+        $this->assertSame('03/10/2026', DateDisplay::date('2026-10-03'), 'still cached, as a long-lived worker would be');
+
+        event(new JobProcessing('database', $this->createMock(Job::class)));
+
+        $this->assertSame('2026-10-03', DateDisplay::date('2026-10-03'));
     }
 }
