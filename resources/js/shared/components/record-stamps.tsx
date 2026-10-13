@@ -1,10 +1,9 @@
 import { useT } from '@/lang';
-import { formatDateShort } from '@/shared/lib/datetime';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
 
 /**
- * Two small muted lines — "เพิ่มเมื่อ 4 ต.ค. 2026 โดย …" / "แก้ไขล่าสุด … โดย …" — for a record's
+ * Two small muted lines — "เพิ่มเมื่อ <date> โดย …" / "แก้ไขล่าสุด … โดย …" — for a record's
  * created_at/created_by and updated_at/updated_by (App\Models\Concerns\RecordsActors). A missing
  * name (rows seeded or imported before the stamps existed) just drops the "โดย" part.
  * Leave createdAt/createdBy out for records nobody adds by hand (the templates) — only the
@@ -24,10 +23,10 @@ export function RecordStamps({
     className?: string;
 }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
+    const fmt = useDateFormat();
     const line = (label: string, date?: string | null, by?: string | null) => (
         <div>
-            {label} {date ? formatDateShort(date.slice(0, 10), lang) : '—'}
+            {label} {fmt.date(date)}
             {by && ` ${t('record_by')} ${by}`}
         </div>
     );

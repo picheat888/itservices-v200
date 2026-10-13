@@ -1,11 +1,10 @@
 // Overview tab header: "ภาพรวม" plus the period buttons (7 / 30 / 90 days, all, custom range).
 // The period lives in the URL (?range=7|30|90|custom&from&to); all time, the default, stays out of it.
 import { useT } from '@/lang';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
-import { formatRangeShort } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { DateRangeInput } from '@/shared/ui/date-range-input';
-import { useUiStore } from '@/stores/ui';
 import { Gauge } from 'lucide-react';
 
 export type OverviewPeriod = number | 'all' | { from: string; to: string };
@@ -56,7 +55,7 @@ const segmentTone = (active: boolean) => (active ? 'bg-brand text-brand-foregrou
 /** Period buttons. "กำหนดเอง" opens the shared range calendar, which applies only on "นำไปใช้". */
 export function OverviewPeriodSelect({ value, onChange }: { value: OverviewPeriod; onChange: (next: OverviewPeriod) => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
+    const fmt = useDateFormat();
     const custom = typeof value === 'object';
 
     return (
@@ -74,7 +73,7 @@ export function OverviewPeriodSelect({ value, onChange }: { value: OverviewPerio
             ))}
             <DateRangeInput from={custom ? value.from : ''} to={custom ? value.to : ''} align="end" onChange={(from, to) => onChange({ from, to })}>
                 <button type="button" aria-pressed={custom} className={cn(SEGMENT, segmentTone(custom))}>
-                    {custom ? formatRangeShort(value.from, value.to, lang) : t('period_custom')}
+                    {custom ? fmt.range(value.from, value.to) : t('period_custom')}
                 </button>
             </DateRangeInput>
         </div>
