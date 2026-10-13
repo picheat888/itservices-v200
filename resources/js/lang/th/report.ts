@@ -1534,7 +1534,6 @@ export const report: Dict = {
     rep_eo_flow_info_pending: 'ลาออก {n} คนยังไม่หายจากยอดในกราฟ เพราะวันทำงานวันสุดท้ายอยู่ที่ปลายกราฟหรือหลังจากนั้น',
     rep_eo_flow_flat: 'คงที่ {n} คน ตลอดช่วง',
     rep_eo_flow_range: 'ต่ำสุด {lo} คน ({lo_when}) สูงสุด {hi} คน ({hi_when})',
-    rep_eo_flow_as_of: 'นับถึง {date}',
     rep_eo_flow_not_yet: 'ช่วงวันที่นี้ยังไม่ถึง',
     rep_eo_flow_not_yet_sub: 'กราฟนับถึงวันนี้ เลือกช่วงที่เริ่มก่อนวันนี้',
     rep_eo_flow_empty: 'ไม่มีพนักงานในช่วงวันที่นี้',

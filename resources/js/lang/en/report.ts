@@ -1542,7 +1542,6 @@ export const report: Dict = {
     rep_eo_flow_info_pending: '{n} leavers are not off the line yet: their last working day is at the end of the chart or later',
     rep_eo_flow_flat: 'Steady at {n} people throughout',
     rep_eo_flow_range: 'Lowest {lo} ({lo_when}), highest {hi} ({hi_when})',
-    rep_eo_flow_as_of: 'Up to {date}',
     rep_eo_flow_not_yet: 'This period has not started yet',
     rep_eo_flow_not_yet_sub: 'The chart counts up to today; pick a period that starts before today',
     rep_eo_flow_empty: 'No employees in this period',

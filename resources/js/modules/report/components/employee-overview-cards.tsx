@@ -174,7 +174,6 @@ function useWidth<T extends HTMLElement>() {
 function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const fmt = useDateFormat();
     const labelOf = useBucketLabels(data.bucket);
     const { ref, width } = useWidth<HTMLDivElement>();
     const dots = useRef<(SVGCircleElement | null)[]>([]);
@@ -398,9 +397,6 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
                     )}
                 </div>
                 <p className="text-muted-foreground mt-1 text-xs">{note}</p>
-                {data.as_of !== data.to && clipped && (
-                    <p className="text-muted-foreground text-xs">{t('rep_eo_flow_as_of').replace('{date}', fmt.date(data.as_of))}</p>
-                )}
             </div>
         </Card>
     );
