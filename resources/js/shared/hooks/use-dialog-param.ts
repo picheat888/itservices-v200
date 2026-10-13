@@ -9,6 +9,7 @@
  *   when the dialog came in on the URL itself (a shared link), it removes the param in place
  *   instead, so the reader is not sent off the page.
  * - Other params (filters, ?tab=) are left as they are. A value not in `names` reads as closed.
+ * - `setOpen(name, { over: true })` stacks on the open dialog; the third value names the one beneath.
  *
  * Used by the report pages' Export and Schedule dialogs (modules/report) and the app shell's
  * My Profile / Change password; `useShownDialogParam` mirrors a dialog the app raises itself.
@@ -18,15 +19,24 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 const PARAM = 'dialog';
 
-export function useDialogParam<T extends string>(names: readonly T[]): [T | null, (name: T | null) => void] {
+interface DialogState {
+    dialogPushed?: boolean;
+    dialogUnder?: string;
+}
+
+export function useDialogParam<T extends string>(names: readonly T[]): [T | null, (name: T | null, options?: { over?: boolean }) => void, T | null] {
     const [params, setParams] = useSearchParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const state = location.state as DialogState | null;
+    const known = (value: string | null | undefined): T | null =>
+        value != null && (names as readonly string[]).includes(value) ? (value as T) : null;
 
-    const value = params.get(PARAM);
-    const open = value !== null && (names as readonly string[]).includes(value) ? (value as T) : null;
+    const open = known(params.get(PARAM));
+    // The dialog left open beneath this one (setOpen(name, { over: true })), kept in the history entry.
+    const under = open === null ? null : known(state?.dialogUnder);
 
-    const setOpen = (name: T | null) => {
+    const setOpen = (name: T | null, options: { over?: boolean } = {}) => {
         if (name !== null) {
             if (name === open) return;
             setParams(
@@ -34,12 +44,12 @@ export function useDialogParam<T extends string>(names: readonly T[]): [T | null
                     next.set(PARAM, name);
                     return next;
                 },
-                { state: { dialogPushed: true } },
+                { state: { dialogPushed: true, dialogUnder: options.over ? (open ?? undefined) : undefined } satisfies DialogState },
             );
             return;
         }
         if (open === null) return;
-        if ((location.state as { dialogPushed?: boolean } | null)?.dialogPushed) {
+        if (state?.dialogPushed) {
             navigate(-1);
             return;
         }
@@ -52,7 +62,7 @@ export function useDialogParam<T extends string>(names: readonly T[]): [T | null
         );
     };
 
-    return [open, setOpen];
+    return [open, setOpen, under];
 }
 
 /** Keeps `?dialog=<name>` in step with a dialog the app shows on its own (no history entry: Back cannot close it). */

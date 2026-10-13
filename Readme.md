@@ -5378,3 +5378,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ตอน dialog ขึ้น URL ได้ `?dialog=set-password` (param อื่นคงไว้) และหายเองเมื่อตั้งรหัสสำเร็จ; ใช้ replace ไม่เพิ่ม history เพราะผู้ใช้ไม่ได้เปิดเองและปิดด้วย Back ไม่ได้; URL ตามสถานะบัญชีเท่านั้น — ลิงก์ที่มี `?dialog=set-password` ของบัญชีที่ไม่ต้องตั้งรหัส จะถูกตัด param ออกและไม่ขึ้น dialog
 - hook ใหม่ `useShownDialogParam(name, shown)` ใน `shared/hooks/use-dialog-param.ts` เรียกจาก `app-shell.tsx`
 - ตรวจในเบราว์เซอร์ (build ใหม่, สลับ flag ใน cache ของแท็บทดสอบ ไม่แตะ DB): ขึ้น dialog → URL มี param, history ไม่เพิ่ม; ล้าง flag → param หาย; เปิดลิงก์ที่มี param ด้วยบัญชีปกติ → ตัด param ไม่ขึ้น dialog; tsc และ ESLint ผ่าน
+
+### Change password ซ้อนบน My Profile — 2026-10-13
+- ผู้ใช้แจ้ง: กด Change password จาก My Profile แล้ว dialog ไม่ได้อยู่ซ้อนบนโปรไฟล์ (โปรไฟล์หายไป)
+- `ChangePasswordDialog` แบบที่ผู้ใช้เปิดเอง (มี `onClose`) เปลี่ยนเป็น Radix Dialog จึงซ้อนบน My Profile ได้ (Radix จัดลำดับชั้น focus/คลิก/Esc เอง แบบเดียวกับ dialog ครอปรูป); แบบบังคับเมื่อรหัสหมดอายุยังเป็นหน้าทับเต็มจอเหมือนเดิม
+- `useDialogParam` เพิ่ม `setOpen(name, { over: true })` จำ dialog ที่อยู่ข้างใต้ไว้ใน history entry และคืนค่าตัวที่ 3 (`under`); URL ยังเป็น `?dialog=password` — ปุ่มใน My Profile เปิดแบบ over จึงเห็นโปรไฟล์ข้างหลัง ส่วนจากการแจ้งเตือน/ลิงก์ตรงขึ้นเดี่ยว ๆ
+- ตรวจในเบราว์เซอร์ (ไทย, สว่างและมืด): ซ้อนกัน 2 ชั้น focus อยู่ช่องรหัสปัจจุบันและพิมพ์ได้; ยกเลิกตอนมีข้อความ → ถามก่อนทิ้ง (ขึ้นบนสุด) → กลับ My Profile; Esc ปิดเฉพาะ dialog รหัสผ่าน; Back/Forward สลับ 2 ชั้นถูก; reload ตอนซ้อนยังซ้อนอยู่; เปิด `?dialog=password` ตรงขึ้นเดี่ยว; tsc และ ESLint ผ่าน
