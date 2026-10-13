@@ -9,12 +9,18 @@ export function PasswordInput({
     visible,
     onToggle,
     onChange,
+    autoComplete = 'new-password',
+    autoFocus,
+    placeholder = '••••••••',
     ...control
 }: FieldControlProps & {
     value: string;
     visible: boolean;
     onToggle: () => void;
     onChange: (value: string) => void;
+    autoComplete?: 'new-password' | 'current-password';
+    autoFocus?: boolean;
+    placeholder?: string;
 }) {
     const t = useT();
 
@@ -26,8 +32,9 @@ export function PasswordInput({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 className="pr-10 font-mono"
-                placeholder="••••••••"
-                autoComplete="new-password"
+                placeholder={placeholder}
+                autoComplete={autoComplete}
+                autoFocus={autoFocus}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
@@ -38,7 +45,7 @@ export function PasswordInput({
                 aria-label={visible ? t('hide_password') : t('show_password')}
                 className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
             >
-                {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {visible ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
             </button>
         </div>
     );

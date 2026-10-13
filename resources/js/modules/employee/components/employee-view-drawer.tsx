@@ -3,6 +3,7 @@ import { TicketCategoryIcon, TicketStatusBadge } from '@/modules/ticket';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
+import { EmptyPane } from '@/shared/components/empty-pane';
 import { InfoHint } from '@/shared/components/info-hint';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -45,7 +46,6 @@ import {
     UserCheck,
     UserMinus,
     Users,
-    type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
@@ -1152,18 +1152,6 @@ function NodeAvatar({ node, size }: { node: OrgChartNode; size: number }) {
                     {initials(node.name || '?')}
                 </div>
             )}
-        </div>
-    );
-}
-
-/** Empty tab: a muted icon tile over one line of text. */
-function EmptyPane({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
-    return (
-        <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
-            <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
-                <Icon className="h-6 w-6" />
-            </div>
-            <div className="text-sm">{text}</div>
         </div>
     );
 }
