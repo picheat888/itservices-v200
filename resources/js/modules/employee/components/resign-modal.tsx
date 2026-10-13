@@ -86,7 +86,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
             variant: 'danger',
             icon: UserMinus,
             title: t('resign_confirm_title'),
-            description: t('resign_confirm_desc').replace('{date}', lastDay),
+            description: t('resign_confirm_desc').replace('{date}', fmt.date(lastDay)),
             entity: { name, sub: employee.code },
             confirmText: t('resign_submit'),
         });

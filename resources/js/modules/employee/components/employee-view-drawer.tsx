@@ -5,6 +5,7 @@ import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { isOnBehalfRequest, REQUEST_ONBOARDING_BADGE, REQUEST_STATUS_META, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
@@ -107,6 +108,7 @@ export function EmployeeViewDrawer({
     onViewProfile?: (employeeId: number) => void;
 }) {
     const t = useT();
+    const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
 
     const [tab, setTab] = useState<'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access'>('overview');
@@ -360,7 +362,7 @@ export function EmployeeViewDrawer({
                         <span>{t('emp_v_resigned_note')}</span>
                         {emp.last_day && (
                             <span className="ml-2 font-mono">
-                                {t('emp_v_last_day')} {emp.last_day}
+                                {t('emp_v_last_day')} {fmt.date(emp.last_day)}
                             </span>
                         )}
                         {emp.resign_reason && <span className="ml-2">{emp.resign_reason}</span>}
@@ -420,7 +422,7 @@ export function EmployeeViewDrawer({
                             />
                             <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp.position} />
                             <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={managerName} />
-                            <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={emp.joined_at} mono />
+                            <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={fmt.date(emp.joined_at)} mono />
                         </section>
                     </aside>
 
@@ -702,6 +704,7 @@ export function EmployeeViewDrawer({
  */
 function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; lang: string; loading?: boolean }) {
     const t = useT();
+    const fmt = useDateFormat();
     // Empty only counts once this person's list has actually arrived; while it is on
     // its way the table shows its own loading rows (below).
     if (assets.length === 0 && !loading) {
@@ -761,7 +764,7 @@ function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; la
         {
             key: 'received',
             header: t('emp_v_col_received'),
-            render: (a) => <span className="text-muted-foreground text-xs font-semibold">{a.owned_since ?? '—'}</span>,
+            render: (a) => <span className="text-muted-foreground text-xs font-semibold">{fmt.date(a.owned_since)}</span>,
         },
     ];
 

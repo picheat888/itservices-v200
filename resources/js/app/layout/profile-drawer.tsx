@@ -335,7 +335,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                             <RailFact icon={IdCard} label={t('emp_employee_id')} value={emp?.code} mono />
                             <RailFact icon={Briefcase} label={t('position')} value={emp?.position} />
                             <RailFact icon={Building2} label={t('department')} value={department} />
-                            <RailFact icon={Hash} label={t('joined')} value={emp?.joined_at} mono />
+                            <RailFact icon={Hash} label={t('joined')} value={fmt.date(emp?.joined_at)} mono />
                         </RailSection>
                     </aside>
 
