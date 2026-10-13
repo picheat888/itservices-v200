@@ -55,7 +55,7 @@ class EmployeeReportsTest extends TestCase
         $assetsOnly = $this->userWith(['assets.view']);
 
         foreach (['employees.overview', 'employees.open_items'] as $key) {
-            $this->actingAs($assetsOnly)->getJson("/api/reports/r/{$key}/rows")->assertForbidden();
+            $this->actingAs($assetsOnly)->getJson("/api/reports/tabular/{$key}/rows")->assertForbidden();
         }
     }
 
@@ -66,7 +66,7 @@ class EmployeeReportsTest extends TestCase
         $user = $this->userWith(['employees.view']);
 
         foreach (['employees.overview', 'employees.open_items'] as $key) {
-            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/tabular/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }

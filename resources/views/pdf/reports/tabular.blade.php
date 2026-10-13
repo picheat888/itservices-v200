@@ -1,4 +1,4 @@
-{{-- PDF of any tabular report (Report Center → /reports/r/{key}/export). Rendered by TabularReportExporter. No queries here: the report's query() eager-loads everything the columns read. --}}
+{{-- PDF of any tabular report (Report Center → /reports/tabular/{key}/export). Rendered by TabularReportExporter. No queries here: the report's query() eager-loads everything the columns read. --}}
 <!DOCTYPE html>
 <html>
 <head>

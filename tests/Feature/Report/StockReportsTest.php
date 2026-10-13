@@ -20,7 +20,7 @@ use Tests\TestCase;
 /**
  * The three stock tabular reports — "ความเคลื่อนไหวรับเข้า-เบิกออก" (stock.movements),
  * "อะไหล่ต่ำกว่าขั้นต่ำ" (stock.below_min) and "มูลค่าคงคลัง" (stock.valuation) — through the
- * generic /reports/r/{key} endpoints.
+ * generic /reports/tabular/{key} endpoints.
  */
 class StockReportsTest extends TestCase
 {
@@ -88,7 +88,7 @@ class StockReportsTest extends TestCase
         $adjust = $this->movement($item, 'adjust_down', 1, '2026-09-20 09:00:00');
 
         $body = $this->actingAs($this->userWith(['stock.view_events']))
-            ->getJson('/api/reports/r/stock.movements/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/stock.movements/rows')->assertOk()->json();
 
         $this->assertSame([$receive->id, $issue->id, $transfer->id, $adjust->id], array_column($body['data'], 'id'));
         $first = $body['data'][0];
@@ -115,7 +115,7 @@ class StockReportsTest extends TestCase
         $outOfBranch = $this->movement($ram, 'issue', 1, '2026-09-06 09:00:00', ['from_label' => 'Branch', 'to_label' => 'Somchai']);
         $this->movement($ram, 'receive', 4, '2026-09-07 09:00:00', ['to_label' => 'Main']);
 
-        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/stock.movements/rows?'.$query)->assertOk()->json('data'), 'id');
+        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/tabular/stock.movements/rows?'.$query)->assertOk()->json('data'), 'id');
 
         $this->assertSame([$old->id], $ids('from=2026-08-01&to=2026-08-31'));
         // A reversed range reads the right way round.
@@ -124,13 +124,13 @@ class StockReportsTest extends TestCase
         $this->assertSame([$intoBranch->id, $outOfBranch->id], $ids('warehouse_id='.$branch->id));
         $this->assertSame([$outOfBranch->id, $outOfBranch->id + 1], $ids('search=RAM'));
 
-        $this->actingAs($user)->getJson('/api/reports/r/stock.movements/rows?from=25-09-2026')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/api/reports/tabular/stock.movements/rows?from=25-09-2026')->assertUnprocessable();
     }
 
     public function test_movements_need_the_event_log_permission(): void
     {
-        $this->actingAs($this->userWith(['stock.view']))->getJson('/api/reports/r/stock.movements/rows')->assertForbidden();
-        $this->actingAs($this->userWith(['stock.view_events']))->getJson('/api/reports/r/stock.below_min/rows')->assertForbidden();
+        $this->actingAs($this->userWith(['stock.view']))->getJson('/api/reports/tabular/stock.movements/rows')->assertForbidden();
+        $this->actingAs($this->userWith(['stock.view_events']))->getJson('/api/reports/tabular/stock.below_min/rows')->assertForbidden();
     }
 
     // ── stock.below_min ─────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ class StockReportsTest extends TestCase
         $this->movement($low, 'receive', 1, '2026-09-03 09:00:00', ['unit_cost' => 50]);
 
         $body = $this->actingAs($this->userWith(['stock.view']))
-            ->getJson('/api/reports/r/stock.below_min/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/stock.below_min/rows')->assertOk()->json();
 
         $this->assertSame([$out->id, $low->id], array_column($body['data'], 'id'));
         [$outRow, $lowRow] = $body['data'];
@@ -165,7 +165,7 @@ class StockReportsTest extends TestCase
         $this->assertEqualsWithDelta(400.0, $summary['reorder_value']['value'], 0.001);
 
         $onlyOut = $this->actingAs($this->userWith(['stock.view']))
-            ->getJson('/api/reports/r/stock.below_min/rows?status=out')->assertOk()->json('data');
+            ->getJson('/api/reports/tabular/stock.below_min/rows?status=out')->assertOk()->json('data');
         $this->assertSame([$out->id], array_column($onlyOut, 'id'));
     }
 
@@ -195,7 +195,7 @@ class StockReportsTest extends TestCase
         $this->item(['name' => 'Empty', 'current_stock' => 0]);
 
         $body = $this->actingAs($this->userWith(['stock.view']))
-            ->getJson('/api/reports/r/stock.valuation/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/stock.valuation/rows')->assertOk()->json();
 
         $this->assertSame([$item->id], array_column($body['data'], 'id'));
         $row = $body['data'][0];
@@ -214,7 +214,7 @@ class StockReportsTest extends TestCase
     {
         $this->valuedItem();
         $user = $this->userWith(['stock.view']);
-        $rowAt = fn (string $day) => $this->actingAs($user)->getJson("/api/reports/r/stock.valuation/rows?as_of={$day}")->assertOk()->json('data.0');
+        $rowAt = fn (string $day) => $this->actingAs($user)->getJson("/api/reports/tabular/stock.valuation/rows?as_of={$day}")->assertOk()->json('data.0');
 
         // 15th: 6 left of the first lot.
         $mid = $rowAt('2026-09-15');
@@ -235,7 +235,7 @@ class StockReportsTest extends TestCase
         $this->item(['name' => 'Legacy', 'current_stock' => 4, 'cost' => 25]);
 
         $row = $this->actingAs($this->userWith(['stock.view']))
-            ->getJson('/api/reports/r/stock.valuation/rows?as_of=2026-09-01')->assertOk()->json('data.0');
+            ->getJson('/api/reports/tabular/stock.valuation/rows?as_of=2026-09-01')->assertOk()->json('data.0');
 
         $this->assertEquals(4, $row['qty_on_hand']);
         $this->assertEqualsWithDelta(100.0, $row['stock_value'], 0.001);
@@ -249,7 +249,7 @@ class StockReportsTest extends TestCase
         $this->movement($this->item(), 'receive', 1, '2026-09-02 09:00:00', ['unit_cost' => 10]);
 
         $this->actingAs($this->userWith(['stock.view_events']))
-            ->exportReport('/api/reports/r/stock.movements/export?format=xlsx')->assertAccepted();
+            ->exportReport('/api/reports/tabular/stock.movements/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_stock-movements_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
@@ -265,7 +265,7 @@ class StockReportsTest extends TestCase
         $user = $this->userWith(['stock.view', 'stock.view_events']);
 
         foreach (['stock.movements', 'stock.below_min', 'stock.valuation'] as $key) {
-            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/tabular/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }

@@ -20,7 +20,7 @@ use Tests\TestCase;
 
 /**
  * "ภาพรวมของทรัพย์สิน" (assets.overview) and "ประวัติโอนย้ายและรับคืน"
- * (assets.transfer_history) through /reports/r/{key}.
+ * (assets.transfer_history) through /reports/tabular/{key}.
  */
 class AssetActivityReportsTest extends TestCase
 {
@@ -72,7 +72,7 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null]);
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json();
 
         // The list is every asset; the department card only what an employee holds.
         $this->assertSame(6, $body['meta']['total']);
@@ -110,7 +110,7 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'writeoff', 'warehouse_id' => $store->id, 'owner_employee_id' => null, 'owner' => null]);
 
         $charts = collect($this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
+            ->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
 
         // How many sit in each store, in the ready colour, with each store's bought / rented share.
         $this->assertSame('places', $charts['warehouse']['type']);
@@ -146,7 +146,7 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
 
         $writeoff = collect($this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->firstWhere('key', 'writeoff');
+            ->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json('charts'))->firstWhere('key', 'writeoff');
 
         $this->assertSame('list', $writeoff['type']);
         $this->assertSame(1, $writeoff['total']);
@@ -169,7 +169,7 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'common', 'owner_employee_id' => null, 'owner' => 'Meeting room', 'category_id' => $printers->id]);
 
         $viewer = $this->userWith(['assets.view']);
-        $definition = $this->actingAs($viewer)->getJson('/api/reports/r/assets.overview')->assertOk()->json('data');
+        $definition = $this->actingAs($viewer)->getJson('/api/reports/tabular/assets.overview')->assertOk()->json('data');
         $this->assertTrue($definition['has_charts']);
         // The register's list sits under the cards.
         $this->assertTrue($definition['shows_table']);
@@ -179,7 +179,7 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame('rep_fl_status', collect($definition['filters'])->firstWhere('name', 'status')['label_key']);
 
         $charts = collect($this->actingAs($viewer)
-            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
+            ->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json('charts'))->keyBy('key');
         $this->assertSame(['department', 'status', 'category', 'warehouse', 'location', 'writeoff'], $charts->keys()->all());
 
         $segments = collect($charts['status']['segments'])->keyBy('key');
@@ -200,7 +200,7 @@ class AssetActivityReportsTest extends TestCase
 
         // The category filter narrows every card, the category card included.
         $printersOnly = collect($this->actingAs($viewer)
-            ->getJson("/api/reports/r/assets.overview/rows?category_id={$printers->id}")->json('charts'))->keyBy('key');
+            ->getJson("/api/reports/tabular/assets.overview/rows?category_id={$printers->id}")->json('charts'))->keyBy('key');
         $this->assertSame(1, $printersOnly['status']['total']);
         $this->assertCount(1, $printersOnly['category']['rows']);
     }
@@ -215,7 +215,7 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'pending_return', 'source' => 'purchased', 'owner_employee_id' => $holder->id, 'owner' => null]);
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json();
 
         // Every tile breaks its number down: bought, then rented.
         $split = collect($body['summary'])->mapWithKeys(fn (array $tile) => [$tile['key'] => array_column($tile['split'], 'value', 'key')]);
@@ -242,7 +242,7 @@ class AssetActivityReportsTest extends TestCase
 
         // The source filter narrows the tiles' split as well.
         $rentedOnly = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.overview/rows?source=rented')->json('summary.0.split');
+            ->getJson('/api/reports/tabular/assets.overview/rows?source=rented')->json('summary.0.split');
         $this->assertSame(['purchased' => 0, 'rented' => 2], array_column($rentedOnly, 'value', 'key'));
     }
 
@@ -254,7 +254,7 @@ class AssetActivityReportsTest extends TestCase
         Asset::factory()->create(['status' => 'writeoff', 'owner_employee_id' => null, 'owner' => null, 'last_reason' => 'Broken']);
 
         $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.overview/export?format=xlsx')->assertAccepted();
+            ->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
             $titles = array_map(fn ($sheet) => $sheet->title(), array_slice($export->sheets(), 1, 4));
@@ -270,11 +270,11 @@ class AssetActivityReportsTest extends TestCase
     public function test_reports_without_charts_send_an_empty_list(): void
     {
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.transfer_history/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/assets.transfer_history/rows')->assertOk()->json();
 
         $this->assertSame([], $body['charts']);
         $this->assertTrue($this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.transfer_history')->json('data.shows_table'));
+            ->getJson('/api/reports/tabular/assets.transfer_history')->json('data.shows_table'));
     }
 
     // ── assets.transfer_history ─────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ class AssetActivityReportsTest extends TestCase
         $this->transfer('handover', '2026-08-30 09:00:00');
 
         $body = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30')->assertOk()->json();
+            ->getJson('/api/reports/tabular/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30')->assertOk()->json();
 
         $this->assertSame(3, $body['meta']['total']);
         $rows = collect($body['data'])->keyBy('id');
@@ -303,7 +303,7 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame(1, $summary['th_back_in']['value']);
 
         $onlyReturns = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30&kind=return')->assertOk()->json('data');
+            ->getJson('/api/reports/tabular/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30&kind=return')->assertOk()->json('data');
         $this->assertSame([$return->id], array_column($onlyReturns, 'id'));
     }
 
@@ -312,7 +312,7 @@ class AssetActivityReportsTest extends TestCase
         $user = $this->userWith(['employees.view']);
 
         foreach (['assets.overview', 'assets.transfer_history'] as $key) {
-            $this->actingAs($user)->getJson("/api/reports/r/{$key}/rows")->assertForbidden();
+            $this->actingAs($user)->getJson("/api/reports/tabular/{$key}/rows")->assertForbidden();
         }
     }
 
@@ -323,7 +323,7 @@ class AssetActivityReportsTest extends TestCase
         $this->transfer('handover', '2026-09-10 09:00:00');
 
         $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.transfer_history/export?format=xlsx')->assertAccepted();
+            ->exportReport('/api/reports/tabular/assets.transfer_history/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_assets-transfer_history_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();
@@ -340,7 +340,7 @@ class AssetActivityReportsTest extends TestCase
         $user = $this->userWith(['assets.view']);
 
         foreach (['assets.overview', 'assets.transfer_history'] as $key) {
-            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/tabular/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }

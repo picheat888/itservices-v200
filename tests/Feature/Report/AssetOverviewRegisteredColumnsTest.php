@@ -40,7 +40,7 @@ class AssetOverviewRegisteredColumnsTest extends TestCase
         $this->actingAs(User::factory()->create(['name' => 'Anong Register']));
         $byHand = Asset::factory()->create();
 
-        $rows = collect($this->actingAs($this->viewer())->getJson('/api/reports/r/assets.overview/rows')->assertOk()->json('data'))->keyBy('id');
+        $rows = collect($this->actingAs($this->viewer())->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json('data'))->keyBy('id');
 
         $this->assertSame('2026-09-25', $rows[$byHand->id]['registered_at']);
         $this->assertSame('Anong Register', $rows[$byHand->id]['registered_by']);
@@ -51,7 +51,7 @@ class AssetOverviewRegisteredColumnsTest extends TestCase
     public function test_the_columns_start_hidden_and_are_in_the_file(): void
     {
         $viewer = $this->viewer();
-        $definition = $this->actingAs($viewer)->getJson('/api/reports/r/assets.overview')->assertOk()->json('data');
+        $definition = $this->actingAs($viewer)->getJson('/api/reports/tabular/assets.overview')->assertOk()->json('data');
         $columns = collect($definition['columns'])->keyBy('key');
 
         $this->assertTrue($columns['registered_at']['hidden']);
@@ -60,7 +60,7 @@ class AssetOverviewRegisteredColumnsTest extends TestCase
 
         Excel::fake();
         Asset::factory()->create();
-        $this->exportReport('/api/reports/r/assets.overview/export?format=xlsx')->assertAccepted();
+        $this->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx')->assertAccepted();
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) use ($viewer) {
             $sheet = last($export->sheets());
 

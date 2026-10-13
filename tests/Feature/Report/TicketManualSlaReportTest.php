@@ -106,7 +106,7 @@ class TicketManualSlaReportTest extends TestCase
     {
         $this->seedTickets();
 
-        $body = $this->actingAs($this->reader())->getJson('/api/reports/r/tickets.manual_sla/rows?'.self::RANGE)->assertOk()->json();
+        $body = $this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.manual_sla/rows?'.self::RANGE)->assertOk()->json();
 
         $this->assertSame($this->ids(['m4', 'm6', 'm5', 'm3', 'm2', 'm1']), array_column($body['data'], 'id'));
 
@@ -123,7 +123,7 @@ class TicketManualSlaReportTest extends TestCase
     {
         $this->seedTickets();
 
-        $summary = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.manual_sla/rows?'.self::RANGE)->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.manual_sla/rows?'.self::RANGE)->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(6, $summary['ms_total']['value']);
         $this->assertSame([3, 1, 2], array_column($summary['ms_total']['split'], 'value'));
@@ -191,7 +191,7 @@ class TicketManualSlaReportTest extends TestCase
         $this->seedTickets();
         $user = $this->reader();
 
-        $rows = $this->actingAs($user)->getJson('/api/reports/r/tickets.manual_sla/rows?'.self::RANGE.'&category=software')->assertOk()->json('data');
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.manual_sla/rows?'.self::RANGE.'&category=software')->assertOk()->json('data');
         $this->assertSame($this->ids(['m6', 'm5', 'm3']), array_column($rows, 'id'));
 
         $groups = $this->actingAs($user)->getJson('/api/reports/tickets/manual-sla/breakdown?'.self::RANGE.'&category=software')->assertOk()->json('data.groups');
@@ -201,16 +201,16 @@ class TicketManualSlaReportTest extends TestCase
         $groups = $this->actingAs($user)->getJson('/api/reports/tickets/manual-sla/breakdown?'.self::RANGE.'&priority=medium')->assertOk()->json('data.groups');
         $this->assertSame(['software'], array_column($groups, 'key'));
 
-        $rows = $this->actingAs($user)->getJson('/api/reports/r/tickets.manual_sla/rows?'.self::RANGE.'&priority=none')->assertOk()->json('data');
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.manual_sla/rows?'.self::RANGE.'&priority=none')->assertOk()->json('data');
         $this->assertSame($this->ids(['m4']), array_column($rows, 'id'));
-        $rows = $this->actingAs($user)->getJson('/api/reports/r/tickets.manual_sla/rows?'.self::RANGE.'&work_class=repair_vendor')->assertOk()->json('data');
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.manual_sla/rows?'.self::RANGE.'&work_class=repair_vendor')->assertOk()->json('data');
         $this->assertSame($this->ids(['m3']), array_column($rows, 'id'));
     }
 
     /** "แยกตาม" only sets how the table groups — a view setting, not a filter. */
     public function test_the_group_by_is_declared_a_view_setting_not_a_filter(): void
     {
-        $filters = collect($this->actingAs($this->reader())->getJson('/api/reports/r/tickets.manual_sla')->assertOk()->json('data.filters'))->keyBy('name');
+        $filters = collect($this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.manual_sla')->assertOk()->json('data.filters'))->keyBy('name');
 
         $this->assertTrue($filters['by']['view']);
         $this->assertSame('category', $filters['by']['default']);
@@ -222,7 +222,7 @@ class TicketManualSlaReportTest extends TestCase
         $this->seedTickets();
         $viewer = $this->userWith(['tickets.view_all', 'tickets.level_hardware']);
 
-        $this->actingAs($viewer)->getJson('/api/reports/r/tickets.manual_sla/rows')->assertForbidden();
+        $this->actingAs($viewer)->getJson('/api/reports/tabular/tickets.manual_sla/rows')->assertForbidden();
         $this->actingAs($viewer)->getJson('/api/reports/tickets/manual-sla/breakdown')->assertForbidden();
 
         $keys = array_column($this->actingAs($this->reader())->getJson('/api/reports')->assertOk()->json('data'), 'key');
@@ -235,7 +235,7 @@ class TicketManualSlaReportTest extends TestCase
         $this->seedTickets();
 
         $this->actingAs($this->reader())
-            ->exportReport('/api/reports/r/tickets.manual_sla/export?format=xlsx&by=priority&'.self::RANGE)->assertAccepted();
+            ->exportReport('/api/reports/tabular/tickets.manual_sla/export?format=xlsx&by=priority&'.self::RANGE)->assertAccepted();
 
         $this->assertExportStored('Report_tickets-manual_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();

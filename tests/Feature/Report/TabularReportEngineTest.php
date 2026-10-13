@@ -54,7 +54,7 @@ class TabularReportEngineTest extends TestCase
     public function test_definition_describes_filters_and_columns(): void
     {
         $data = $this->actingAs($this->userWith(['contracts.view']))
-            ->getJson('/api/reports/r/contracts.expiring')->assertOk()->json('data');
+            ->getJson('/api/reports/tabular/contracts.expiring')->assertOk()->json('data');
 
         $this->assertSame('contracts.expiring', $data['key']);
         $this->assertSame(['xlsx', 'pdf'], $data['formats']);
@@ -72,7 +72,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Expired', 'end_date' => '2026-09-01', 'expired_at' => '2026-09-02 10:00']);
 
         $body = $this->actingAs($this->userWith(['contracts.view']))
-            ->getJson('/api/reports/r/contracts.expiring/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/contracts.expiring/rows')->assertOk()->json();
 
         $this->assertSame([$overdue->id, $soon->id], array_column($body['data'], 'id'));
         $this->assertSame(-5, $body['data'][0]['days_left']);
@@ -91,9 +91,9 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-12-10']);
         $user = $this->userWith(['contracts.view']);
 
-        $full = $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?type=hardware')->assertOk()->json();
-        $rowsOnly = $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?type=hardware&only_rows=1')->assertOk()->json();
-        $summary = $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/summary?type=hardware')->assertOk()->json('data');
+        $full = $this->actingAs($user)->getJson('/api/reports/tabular/contracts.expiring/rows?type=hardware')->assertOk()->json();
+        $rowsOnly = $this->actingAs($user)->getJson('/api/reports/tabular/contracts.expiring/rows?type=hardware&only_rows=1')->assertOk()->json();
+        $summary = $this->actingAs($user)->getJson('/api/reports/tabular/contracts.expiring/summary?type=hardware')->assertOk()->json('data');
 
         $this->assertSame($full['data'], $rowsOnly['data']);
         $this->assertSame($full['meta'], $rowsOnly['meta']);
@@ -106,9 +106,9 @@ class TabularReportEngineTest extends TestCase
     public function test_summary_follows_the_report_gate_and_its_filter_rules(): void
     {
         $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/contracts.expiring/summary')->assertForbidden();
+            ->getJson('/api/reports/tabular/contracts.expiring/summary')->assertForbidden();
         $this->actingAs($this->userWith(['contracts.view']))
-            ->getJson('/api/reports/r/contracts.expiring/summary?within=45')
+            ->getJson('/api/reports/tabular/contracts.expiring/summary?within=45')
             ->assertUnprocessable()->assertJsonValidationErrors('within');
     }
 
@@ -118,29 +118,29 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
         $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-12-10']);
 
-        $this->assertSame(1, $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?type=hardware')->json('meta.total'));
-        $this->assertSame(1, $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?within=30')->json('meta.total'));
-        $this->assertSame(2, $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?within=90')->json('meta.total'));
-        $this->actingAs($user)->getJson('/api/reports/r/contracts.expiring/rows?within=45')
+        $this->assertSame(1, $this->actingAs($user)->getJson('/api/reports/tabular/contracts.expiring/rows?type=hardware')->json('meta.total'));
+        $this->assertSame(1, $this->actingAs($user)->getJson('/api/reports/tabular/contracts.expiring/rows?within=30')->json('meta.total'));
+        $this->assertSame(2, $this->actingAs($user)->getJson('/api/reports/tabular/contracts.expiring/rows?within=90')->json('meta.total'));
+        $this->actingAs($user)->getJson('/api/reports/tabular/contracts.expiring/rows?within=45')
             ->assertUnprocessable()->assertJsonValidationErrors('within');
     }
 
     public function test_access_and_unknown_keys(): void
     {
         $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/contracts.expiring/rows')->assertForbidden();
+            ->getJson('/api/reports/tabular/contracts.expiring/rows')->assertForbidden();
         $this->actingAs($this->userWith(['contracts.view']))
-            ->getJson('/api/reports/r/nope.nothing')->assertNotFound();
+            ->getJson('/api/reports/tabular/nope.nothing')->assertNotFound();
         $this->actingAs($this->userWith(['tickets.view_all', 'tickets.resolve']))
-            ->getJson('/api/reports/r/tickets.overview')->assertNotFound();
+            ->getJson('/api/reports/tabular/tickets.overview')->assertNotFound();
     }
 
     public function test_definition_and_export_need_contracts_view(): void
     {
         $limited = $this->userWith(['assets.view']);
 
-        $this->actingAs($limited)->getJson('/api/reports/r/contracts.expiring')->assertForbidden();
-        $this->actingAs($limited)->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx')->assertForbidden();
+        $this->actingAs($limited)->getJson('/api/reports/tabular/contracts.expiring')->assertForbidden();
+        $this->actingAs($limited)->exportReport('/api/reports/tabular/contracts.expiring/export?format=xlsx')->assertForbidden();
     }
 
     public function test_xlsx_export_honours_the_current_filters(): void
@@ -150,7 +150,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-10-10']);
 
         $this->actingAs($this->userWith(['contracts.view']))
-            ->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx&type=hardware')->assertAccepted();
+            ->exportReport('/api/reports/tabular/contracts.expiring/export?format=xlsx&type=hardware')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
             return $export->rows->count() === 1;
@@ -163,7 +163,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Soon', 'type' => 'hardware', 'end_date' => '2026-10-15']);
 
         $this->actingAs($this->userWith(['contracts.view']))
-            ->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx')->assertAccepted();
+            ->exportReport('/api/reports/tabular/contracts.expiring/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
@@ -181,7 +181,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
 
         $this->actingAs($this->userWith(['contracts.view']))
-            ->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx&type=hardware')->assertAccepted();
+            ->exportReport('/api/reports/tabular/contracts.expiring/export?format=xlsx&type=hardware')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[0]->array();
@@ -195,7 +195,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Soon', 'end_date' => '2026-10-15']);
 
         $response = $this->actingAs($this->userWith(['contracts.view']))
-            ->exportReport('/api/reports/r/contracts.expiring/export?format=pdf');
+            ->exportReport('/api/reports/tabular/contracts.expiring/export?format=pdf');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

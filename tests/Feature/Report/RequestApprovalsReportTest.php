@@ -160,7 +160,7 @@ class RequestApprovalsReportTest extends TestCase
     /** @param array<string, string> $query */
     private function rows(array $query = []): array
     {
-        return $this->actingAs($this->userWith())->getJson('/api/reports/r/requests.approvals/rows?per_page=100&'.http_build_query($query))->assertOk()->json();
+        return $this->actingAs($this->userWith())->getJson('/api/reports/tabular/requests.approvals/rows?per_page=100&'.http_build_query($query))->assertOk()->json();
     }
 
     /** @param array<string, string> $query */
@@ -419,7 +419,7 @@ class RequestApprovalsReportTest extends TestCase
     {
         $submitter = $this->userWith(['requests.submit', 'requests.complete']);
 
-        $this->actingAs($submitter)->getJson('/api/reports/r/requests.approvals/rows')->assertForbidden();
+        $this->actingAs($submitter)->getJson('/api/reports/tabular/requests.approvals/rows')->assertForbidden();
         $this->actingAs($submitter)->getJson('/api/reports/requests/approvals/breakdown')->assertForbidden();
     }
 

@@ -35,7 +35,7 @@ use App\Services\Report\Ticket\TicketRequestSlaReport;
  *
  * `kind` tells the two report styles apart: `custom` reports (Phase 1) ship their own
  * controller/routes; `tabular` reports (Phase 2+) are declared once as a TabularReport
- * class and served entirely by the generic /reports/r/{key} endpoints.
+ * class and served entirely by the generic /reports/tabular/{key} endpoints.
  */
 class ReportCatalogue
 {

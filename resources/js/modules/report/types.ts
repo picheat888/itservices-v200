@@ -992,7 +992,7 @@ export interface TabularRows {
     meta: PagedRows<unknown>['meta'];
 }
 
-/** A tabular report's headline numbers and charts for a filter set (/reports/r/{key}/summary). */
+/** A tabular report's headline numbers and charts for a filter set (/reports/tabular/{key}/summary). */
 export interface TabularHeadline {
     summary: SummaryItem[];
     charts: TabularChart[];

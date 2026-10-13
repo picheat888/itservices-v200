@@ -150,9 +150,9 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->assertNotContains('acct', $hidden->json('data.groups'));
         $this->assertStringNotContainsString('leaver.acct', $hidden->getContent());
         $this->assertStringNotContainsString('fresh.acct', $hidden->getContent());
-        $rows = $this->actingAs($plain)->getJson('/api/reports/r/employees.open_items/rows?group=acct')->assertOk();
+        $rows = $this->actingAs($plain)->getJson('/api/reports/tabular/employees.open_items/rows?group=acct')->assertOk();
         $this->assertSame([], $rows->json('data'));
-        $all = $this->actingAs($plain)->getJson('/api/reports/r/employees.open_items/rows')->assertOk();
+        $all = $this->actingAs($plain)->getJson('/api/reports/tabular/employees.open_items/rows')->assertOk();
         $this->assertNotContains('acct', array_column($all->json('data'), 'group'));
         $this->assertStringNotContainsString('leaver.acct', $all->getContent());
 
@@ -225,7 +225,7 @@ class EmployeeOpenItemsReportTest extends TestCase
             $this->assertSame(0, $this->breakdown('?search='.urlencode($q))['asset']['people'], $q);
         }
         $rows = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.open_items/rows?search='.urlencode('%'))->assertOk();
+            ->getJson('/api/reports/tabular/employees.open_items/rows?search='.urlencode('%'))->assertOk();
         $this->assertSame([], $rows->json('data'));
     }
 
@@ -236,14 +236,14 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->grant($leaver, 'All Leaver');
 
         $body = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.open_items/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/employees.open_items/rows')->assertOk()->json();
 
         $this->assertSame(['asset', 'asset', 'access'], array_slice(array_column($body['data'], 'group'), 0, 3));
         $this->assertSame(count($body['data']), count(array_unique(array_column($body['data'], 'id'))));
         $this->assertSame($leaver->code, $body['data'][0]['employee_code']);
         $this->assertSame('All Leaver', collect($body['data'])->firstWhere('group', 'access')['item']);
         $this->assertSame(['asset'], array_values(array_unique(array_column(
-            $this->actingAs($this->userWith(['employees.view']))->getJson('/api/reports/r/employees.open_items/rows?group=asset')->json('data'), 'group'))));
+            $this->actingAs($this->userWith(['employees.view']))->getJson('/api/reports/tabular/employees.open_items/rows?group=asset')->json('data'), 'group'))));
     }
 
     public function test_nothing_open_gives_empty_groups_without_errors(): void
@@ -265,7 +265,7 @@ class EmployeeOpenItemsReportTest extends TestCase
         User::factory()->create(['username' => 'fresh.acct', 'must_change_password' => true]);
         $creds = $this->userWith(['employees.view', 'employees.set_credentials']);
 
-        $rows = $this->actingAs($creds)->getJson('/api/reports/r/employees.open_items/rows?group=acct')->assertOk()->json('data');
+        $rows = $this->actingAs($creds)->getJson('/api/reports/tabular/employees.open_items/rows?group=acct')->assertOk()->json('data');
 
         $this->assertSame(['acct'], array_values(array_unique(array_column($rows, 'group'))));
         $this->assertSame('fresh.acct', $rows[0]['item']);
@@ -275,7 +275,7 @@ class EmployeeOpenItemsReportTest extends TestCase
     public function test_open_items_need_employees_view_and_old_key_is_gone(): void
     {
         $this->actingAs($this->userWith(['assets.view']))->getJson('/api/reports/employees/open-items/breakdown')->assertForbidden();
-        $this->actingAs($this->userWith(['employees.view']))->getJson('/api/reports/r/employees.leaver_assets/rows')->assertNotFound();
+        $this->actingAs($this->userWith(['employees.view']))->getJson('/api/reports/tabular/employees.leaver_assets/rows')->assertNotFound();
     }
 
     public function test_files_carry_account_rows_only_for_a_viewer_with_set_credentials(): void
@@ -288,7 +288,7 @@ class EmployeeOpenItemsReportTest extends TestCase
         $kinds = fn (TabularReportExport $export) => $export->rows->pluck('grp')->all();
         $tiles = fn (TabularReportExport $export) => array_map(fn ($s) => $s->key, $export->summary);
 
-        $this->actingAs($this->userWith(['employees.view']))->exportReport('/api/reports/r/employees.open_items/export?format=xlsx')->assertAccepted();
+        $this->actingAs($this->userWith(['employees.view']))->exportReport('/api/reports/tabular/employees.open_items/export?format=xlsx')->assertAccepted();
         $this->assertExportStored($file, function (TabularReportExport $export) use ($kinds, $tiles) {
             $this->assertSame(['asset'], $kinds($export));
             $this->assertNotContains('open_accounts', $tiles($export));
@@ -297,7 +297,7 @@ class EmployeeOpenItemsReportTest extends TestCase
         });
 
         $creds = $this->userWith(['employees.view', 'employees.set_credentials']);
-        $this->actingAs($creds)->exportReport('/api/reports/r/employees.open_items/export?format=xlsx')->assertAccepted();
+        $this->actingAs($creds)->exportReport('/api/reports/tabular/employees.open_items/export?format=xlsx')->assertAccepted();
         $this->assertExportStored($file, function (TabularReportExport $export) use ($kinds, $tiles) {
             $this->assertSame(['asset', 'acct'], $kinds($export));
             $this->assertContains('open_accounts', $tiles($export));
@@ -305,7 +305,7 @@ class EmployeeOpenItemsReportTest extends TestCase
             return true;
         });
 
-        $pdf = $this->actingAs($this->userWith(['employees.view']))->exportReport('/api/reports/r/employees.open_items/export?format=pdf');
+        $pdf = $this->actingAs($this->userWith(['employees.view']))->exportReport('/api/reports/tabular/employees.open_items/export?format=pdf');
         $pdf->assertOk();
         $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
     }

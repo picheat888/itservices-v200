@@ -79,7 +79,7 @@ class ItPendingRequestReportTest extends TestCase
     /** @return array<string, mixed> */
     private function rows(string $query = ''): array
     {
-        return $this->actingAs($this->userWith())->getJson('/api/reports/r/requests.it_pending/rows'.$query)->assertOk()->json();
+        return $this->actingAs($this->userWith())->getJson('/api/reports/tabular/requests.it_pending/rows'.$query)->assertOk()->json();
     }
 
     /** @param array<string, mixed> $extra */
@@ -312,7 +312,7 @@ class ItPendingRequestReportTest extends TestCase
     {
         $submitter = $this->userWith(['requests.submit', 'requests.complete']);
 
-        $this->actingAs($submitter)->getJson('/api/reports/r/requests.it_pending/rows')->assertForbidden();
+        $this->actingAs($submitter)->getJson('/api/reports/tabular/requests.it_pending/rows')->assertForbidden();
         $this->actingAs($submitter)->getJson('/api/reports/requests/it-pending/breakdown')->assertForbidden();
     }
 
@@ -321,7 +321,7 @@ class ItPendingRequestReportTest extends TestCase
         Excel::fake();
         $this->waiting('2026-09-10 09:00:00');
 
-        $this->actingAs($this->userWith())->exportReport('/api/reports/r/requests.it_pending/export?format=xlsx')->assertAccepted();
+        $this->actingAs($this->userWith())->exportReport('/api/reports/tabular/requests.it_pending/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_requests-it_pending_2026-09-25.xlsx', function (TabularReportExport $export) {
             $titles = array_map(fn ($sheet) => $sheet->title(), $export->sheets());

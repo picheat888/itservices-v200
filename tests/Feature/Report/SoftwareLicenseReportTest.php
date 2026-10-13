@@ -90,12 +90,12 @@ class SoftwareLicenseReportTest extends TestCase
     /** @return list<array<string, mixed>> */
     private function rows(string $query = ''): array
     {
-        return $this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses/rows'.$query)->assertOk()->json('data');
+        return $this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.software_licenses/rows'.$query)->assertOk()->json('data');
     }
 
     public function test_purpose_starts_hidden_but_stays_in_the_file(): void
     {
-        $columns = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses')->assertOk()->json('data.columns'))->keyBy('key');
+        $columns = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.software_licenses')->assertOk()->json('data.columns'))->keyBy('key');
 
         $this->assertTrue($columns['purpose']['hidden']);
     }
@@ -128,7 +128,7 @@ class SoftwareLicenseReportTest extends TestCase
 
     public function test_tiles_count_software_seats_used_full_and_leavers(): void
     {
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses/rows')->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.software_licenses/rows')->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(4, $summary['sl_software']['value']);
         $this->assertSame(['perpetual' => 0, 'subscription' => 3, 'free' => 1, 'open_source' => 0], array_column($summary['sl_software']['split'], 'value', 'key'));
@@ -146,7 +146,7 @@ class SoftwareLicenseReportTest extends TestCase
 
     public function test_tile_charts_draw_seats_by_month_and_how_long_leavers_have_gone(): void
     {
-        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/r/access.software_licenses/rows')->assertOk()->json('summary'))->keyBy('key');
+        $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.software_licenses/rows')->assertOk()->json('summary'))->keyBy('key');
 
         // Eight seats held since January; one Adobe seat handed back on 1 June.
         $line = $summary['sl_used']['chart'];
@@ -216,7 +216,7 @@ class SoftwareLicenseReportTest extends TestCase
     public function test_needs_software_view(): void
     {
         $this->actingAs($this->userWith(['access.module', 'access.email_view']))
-            ->getJson('/api/reports/r/access.software_licenses/rows')->assertForbidden();
+            ->getJson('/api/reports/tabular/access.software_licenses/rows')->assertForbidden();
         $this->actingAs($this->userWith(['access.module', 'access.email_view']))
             ->getJson('/api/reports/access/software-licenses/breakdown')->assertForbidden();
     }

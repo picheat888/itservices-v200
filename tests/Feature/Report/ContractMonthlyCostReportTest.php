@@ -14,7 +14,7 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * "ค่าใช้จ่ายสัญญารายเดือน" (contracts.monthly_cost) through the generic /reports/r/{key}
+ * "ค่าใช้จ่ายสัญญารายเดือน" (contracts.monthly_cost) through the generic /reports/tabular/{key}
  * endpoints: contracts in effect today, each fee spread to a month and a year.
  */
 class ContractMonthlyCostReportTest extends TestCase
@@ -61,7 +61,7 @@ class ContractMonthlyCostReportTest extends TestCase
         $this->contract(['name' => 'Not started', 'start_date' => '2026-10-01']);
 
         $body = $this->actingAs($this->userWith(['contracts.view']))
-            ->getJson('/api/reports/r/contracts.monthly_cost/rows')->assertOk()->json();
+            ->getJson('/api/reports/tabular/contracts.monthly_cost/rows')->assertOk()->json();
 
         $this->assertSame([$yearly->id, $monthly->id, $quarterly->id], array_column($body['data'], 'id'));
         $rows = collect($body['data'])->keyBy('id');
@@ -84,18 +84,18 @@ class ContractMonthlyCostReportTest extends TestCase
         $yearly = $this->contract(['name' => 'Yr', 'billing_cycle' => 'yearly', 'value' => 12000]);
         $globex = $this->contract(['name' => 'Gx', 'vendor_id' => $other->id]);
 
-        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/r/contracts.monthly_cost/rows?'.$query)->assertOk()->json('data'), 'id');
+        $ids = fn (string $query) => array_column($this->actingAs($user)->getJson('/api/reports/tabular/contracts.monthly_cost/rows?'.$query)->assertOk()->json('data'), 'id');
 
         $this->assertSame([$hardware->id], $ids('type=hardware'));
         $this->assertSame([$yearly->id], $ids('billing_cycle=yearly'));
         $this->assertSame([$globex->id], $ids('vendor_id='.$other->id));
-        $this->actingAs($user)->getJson('/api/reports/r/contracts.monthly_cost/rows?billing_cycle=weekly')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/api/reports/tabular/contracts.monthly_cost/rows?billing_cycle=weekly')->assertUnprocessable();
     }
 
     public function test_needs_contracts_view(): void
     {
         $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/contracts.monthly_cost/rows')->assertForbidden();
+            ->getJson('/api/reports/tabular/contracts.monthly_cost/rows')->assertForbidden();
     }
 
     public function test_xlsx_export_carries_thai_headings_and_labels(): void
@@ -104,7 +104,7 @@ class ContractMonthlyCostReportTest extends TestCase
         $this->contract(['name' => 'Yr', 'billing_cycle' => 'yearly', 'value' => 12000]);
 
         $this->actingAs($this->userWith(['contracts.view']))
-            ->exportReport('/api/reports/r/contracts.monthly_cost/export?format=xlsx')->assertAccepted();
+            ->exportReport('/api/reports/tabular/contracts.monthly_cost/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-monthly_cost_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
@@ -121,7 +121,7 @@ class ContractMonthlyCostReportTest extends TestCase
         $this->contract([]);
 
         $response = $this->actingAs($this->userWith(['contracts.view']))
-            ->exportReport('/api/reports/r/contracts.monthly_cost/export?format=pdf');
+            ->exportReport('/api/reports/tabular/contracts.monthly_cost/export?format=pdf');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

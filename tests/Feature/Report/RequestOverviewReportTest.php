@@ -108,7 +108,7 @@ class RequestOverviewReportTest extends TestCase
     /** @return array<string, mixed> */
     private function rows(string $query = ''): array
     {
-        return $this->actingAs($this->userWith())->getJson('/api/reports/r/requests.overview/rows'.$query)->assertOk()->json();
+        return $this->actingAs($this->userWith())->getJson('/api/reports/tabular/requests.overview/rows'.$query)->assertOk()->json();
     }
 
     /** @return array<string, mixed> */
@@ -346,13 +346,13 @@ class RequestOverviewReportTest extends TestCase
     {
         $submitter = $this->userWith(['requests.submit', 'requests.complete']);
 
-        $this->actingAs($submitter)->getJson('/api/reports/r/requests.overview/rows')->assertForbidden();
+        $this->actingAs($submitter)->getJson('/api/reports/tabular/requests.overview/rows')->assertForbidden();
         $this->actingAs($submitter)->getJson('/api/reports/requests/overview/breakdown')->assertForbidden();
     }
 
     public function test_pdf_export_renders(): void
     {
-        $response = $this->actingAs($this->userWith())->exportReport('/api/reports/r/requests.overview/export?format=pdf');
+        $response = $this->actingAs($this->userWith())->exportReport('/api/reports/tabular/requests.overview/export?format=pdf');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
@@ -371,7 +371,7 @@ class RequestOverviewReportTest extends TestCase
             'acted_by_name' => 'IT Desk', 'note' => 'ไม่มีอุปกรณ์ในสต็อก',
         ]);
 
-        $this->actingAs($this->userWith())->exportReport('/api/reports/r/requests.overview/export?format=xlsx')->assertAccepted();
+        $this->actingAs($this->userWith())->exportReport('/api/reports/tabular/requests.overview/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_requests-overview_2026-09-25.xlsx', function (TabularReportExport $export) use ($notDelivered) {
             $sheets = $export->sheets();

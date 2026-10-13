@@ -20,7 +20,7 @@ use Tests\TestCase;
 
 /**
  * "การตัดจำหน่ายทรัพย์สิน" (assets.writeoffs): the assets that left the register within a date range
- * (assets.written_off_at), through /reports/r/{key}, plus its breakdown endpoint (months, reasons,
+ * (assets.written_off_at), through /reports/tabular/{key}, plus its breakdown endpoint (months, reasons,
  * categories, rented assets by contract).
  */
 class AssetWriteoffReportTest extends TestCase
@@ -135,7 +135,7 @@ class AssetWriteoffReportTest extends TestCase
     private function rows(string $query = self::RANGE): array
     {
         return $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.writeoffs/rows?'.$query)->assertOk()->json();
+            ->getJson('/api/reports/tabular/assets.writeoffs/rows?'.$query)->assertOk()->json();
     }
 
     /** @return array<string, mixed> */
@@ -347,7 +347,7 @@ class AssetWriteoffReportTest extends TestCase
         $this->seedAssets();
 
         $definition = $this->actingAs($this->userWith(['assets.view']))
-            ->getJson('/api/reports/r/assets.writeoffs')->assertOk()->json('data');
+            ->getJson('/api/reports/tabular/assets.writeoffs')->assertOk()->json('data');
 
         $this->assertSame(['from', 'to', 'category_id', 'source', 'contract_id', 'writeoff_reason_id'], array_column($definition['filters'], 'name'));
         $contractFilter = collect($definition['filters'])->firstWhere('name', 'contract_id');
@@ -361,7 +361,7 @@ class AssetWriteoffReportTest extends TestCase
 
     public function test_it_needs_assets_view(): void
     {
-        $this->actingAs($this->userWith(['contracts.view']))->getJson('/api/reports/r/assets.writeoffs/rows')->assertForbidden();
+        $this->actingAs($this->userWith(['contracts.view']))->getJson('/api/reports/tabular/assets.writeoffs/rows')->assertForbidden();
         $this->actingAs($this->userWith(['contracts.view']))->getJson('/api/reports/assets/writeoffs/breakdown')->assertForbidden();
     }
 
@@ -372,7 +372,7 @@ class AssetWriteoffReportTest extends TestCase
         AppSetting::put('date_era', 'be');
 
         $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.writeoffs/export?format=xlsx&'.self::RANGE)
+            ->exportReport('/api/reports/tabular/assets.writeoffs/export?format=xlsx&'.self::RANGE)
             ->assertAccepted();
 
         $this->assertExportStored('Report_assets-writeoffs_2026-09-25.xlsx', function (TabularReportExport $export) {
@@ -387,7 +387,7 @@ class AssetWriteoffReportTest extends TestCase
 
         // The picker hid serial: the file keeps it anyway (hidden-by-default columns always go in).
         $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.writeoffs/export?format=xlsx&'.self::RANGE.'&columns[]=written_off_at&columns[]=asset_code&columns[]=contract&columns[]=warranty')
+            ->exportReport('/api/reports/tabular/assets.writeoffs/export?format=xlsx&'.self::RANGE.'&columns[]=written_off_at&columns[]=asset_code&columns[]=contract&columns[]=warranty')
             ->assertAccepted();
 
         $this->assertExportStored('Report_assets-writeoffs_2026-09-25.xlsx', function (TabularReportExport $export) {
@@ -414,7 +414,7 @@ class AssetWriteoffReportTest extends TestCase
         $this->seedAssets();
 
         $response = $this->actingAs($this->userWith(['assets.view']))
-            ->exportReport('/api/reports/r/assets.writeoffs/export?format=pdf&'.self::RANGE);
+            ->exportReport('/api/reports/tabular/assets.writeoffs/export?format=pdf&'.self::RANGE);
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
