@@ -206,6 +206,8 @@ class DemoSeederTest extends TestCase
             $this->assertTrue($requests->contains(fn (ServiceRequest $r) => $r->status === $status), "no {$status->value} request");
         }
         $this->assertTrue(ServiceRequest::where('origin', 'onboarding')->exists(), 'no onboarding request');
+        $this->assertTrue(ServiceRequest::where('status', 'cancelled')->whereNull('ticket_id')->exists(), 'no request withdrawn by its requester');
+        $this->assertSame(0, ServiceRequest::where('status', 'cancelled')->whereNull('ticket_id')->whereNull('cancel_reason')->count(), 'a withdrawn request without a reason');
         $this->assertTrue(RequestApproval::where('status', 'current')->where('became_current_at', '<=', now()->subDays(3))->exists(), 'no stalled step');
         $this->assertTrue(RequestApproval::where('status', 'current')->where('actor_type', 'department')->exists(), 'no request waiting on a department');
         $this->assertTrue(RequestAttachment::exists(), 'no request attachment');
