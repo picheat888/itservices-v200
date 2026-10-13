@@ -1,5 +1,6 @@
 import { ChangePasswordDialog, SessionTimeoutModal, SetPasswordDialog, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
 import { settingsApi } from '@/modules/settings';
+import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
@@ -31,11 +32,12 @@ export function AppShell() {
     const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
     const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(idleMinutes);
     const [notifOpen, setNotifOpen] = useState(false);
-    const [profileOpen, setProfileOpen] = useState(false);
+    // My Profile lives in the URL (?dialog=profile), so Back closes it.
+    const [shellDialog, setShellDialog] = useDialogParam(['profile'] as const);
 
     return (
         <div className="bg-background flex h-screen overflow-hidden" data-density={density}>
-            <Sidebar onProfile={() => setProfileOpen(true)} />
+            <Sidebar onProfile={() => setShellDialog('profile')} />
 
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="relative">
@@ -48,7 +50,7 @@ export function AppShell() {
                 </main>
             </div>
 
-            <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
+            <ProfileDrawer open={shellDialog === 'profile'} onClose={() => setShellDialog(null)} />
 
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
             {/* Forced password changes first; the voluntary one is dismissable */}

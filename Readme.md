@@ -5359,3 +5359,8 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 
 ### รายงาน: กลุ่ม "Requests (workflow)" เป็น "Requests" — 2026-10-13
 - ผู้ใช้ขอ: ชื่อกลุ่มรายงานคำขอภาษาอังกฤษในศูนย์รายงานเหลือ "Requests" (`rep_domain_requests` ใน `lang/en/report.ts`; ภาษาไทย "คำขอ" เดิมอยู่แล้ว)
+
+### My Profile อยู่ใน URL — 2026-10-13
+- ผู้ใช้ขอ: กด My Profile แล้ว URL ได้ `?dialog=profile` และลง history — ปุ่ม Back ปิด drawer, Forward เปิดกลับ, ลิงก์หรือ reload ที่มี `?dialog=profile` เปิด drawer ให้เลย; ปิด (✕, ปิด, Esc) ย้อน history ที่เปิดไว้ จึงไม่มี entry ซ้อนกัน; param อื่น (`?tab=`, ตัวกรอง) คงไว้
+- ใช้ `useDialogParam` ตัวเดียวกับ dialog Export/Schedule ของรายงาน (`app-shell.tsx`); ลิงก์ "ดูทั้งหมด" ใน drawer ไม่ต้องสั่งปิดเอง หน้าใหม่ไม่มี param จึงปิดเอง (เดิมสั่งปิดแล้วจะชนกับการย้อน history)
+- ตรวจในเบราว์เซอร์ (build ใหม่): เปิด/Back/Forward/ปุ่มปิด/Esc ได้ตามนี้; ยังไม่ได้ลองกดลิงก์ "ดูทั้งหมด" เพราะบัญชี Administrator ไม่มีรายการ

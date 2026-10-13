@@ -10,7 +10,7 @@
  *   instead, so the reader is not sent off the page.
  * - Other params (filters, ?tab=) are left as they are. A value not in `names` reads as closed.
  *
- * Used by the report pages' Export and Schedule dialogs (modules/report).
+ * Used by the report pages' Export and Schedule dialogs (modules/report) and My Profile (app shell).
  */
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 

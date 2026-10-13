@@ -162,17 +162,11 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
         !!user && (JSON.stringify({ firstName, lastName, firstNameTh, lastNameTh, phone }) !== JSON.stringify(profileFields(user)) || photo !== null);
     const hasUnsaved = open && isDirty && !saved;
     const guardClose = useDiscardGuard(hasUnsaved);
-    // A "see all" link with unsaved input waits for the discard answer before navigating.
+    // A "see all" link waits for the discard answer; the new page drops ?dialog= and so closes the drawer.
     const leaveTo = (to: string) => (e: React.MouseEvent) => {
-        if (!hasUnsaved) {
-            onClose();
-            return;
-        }
+        if (!hasUnsaved) return;
         e.preventDefault();
-        guardClose(() => {
-            onClose();
-            navigate(to);
-        });
+        guardClose(() => navigate(to));
     };
 
     if (!user) return null;
