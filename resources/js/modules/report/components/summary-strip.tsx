@@ -80,29 +80,54 @@ const noteTitle = (t: (key: string) => string, lang: string, note: Note) =>
     note.trend ? `${noteText(t, lang, note)} ${trendText(t, note.trend)}` : noteText(t, lang, note);
 
 /** A request trend as the snapshot strip draws it: "▲ 3 จากช่วงก่อนหน้า" left, the line right, both in the same good / bad colour. */
-function DeltaFooter({ trend, decimals }: { trend: NonNullable<Note['trend']>; decimals: number }) {
+function DeltaFooter({
+    trend,
+    decimals,
+    lead,
+    chart,
+}: {
+    trend: NonNullable<Note['trend']>;
+    decimals: number;
+    /** The note's own words, a line above the change ("อัตราลาออก 9.1%"). */
+    lead?: string;
+    /** The tile's own small chart, in place of the trend's line. */
+    chart?: React.ReactNode;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const delta = trend.values?.delta;
     const neutral = trend.direction === 'even' || trend.up_is_good === null || trend.up_is_good === undefined;
     const good = neutral ? null : (trend.direction === 'up') === trend.up_is_good;
     const shade = good === null ? TREND.even : good ? TREND.up : TREND.down;
-    const size = delta?.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    const places = trend.decimals ?? decimals;
+    const size = delta?.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: places, maximumFractionDigits: places });
+    const change =
+        delta === undefined ? (
+            <span className="text-muted-foreground">{t(trend.label_key)}</span>
+        ) : (
+            <>
+                <span className={cn('font-semibold', shade.ink)}>
+                    {trend.direction === 'even' ? t('rep_snap_same') : `${trend.direction === 'up' ? '▲' : '▼'} ${size}`}
+                </span>{' '}
+                <span className="text-muted-foreground">{t(trend.label_key)}</span>
+            </>
+        );
+
+    if (lead) {
+        return (
+            <span className="flex items-end justify-between gap-1.5">
+                <span className="min-w-0">
+                    <span className="block truncate">{lead}</span>
+                    <span className="block truncate">{change}</span>
+                </span>
+                {chart ?? (trend.points && <Sparkline values={trend.points} className={shade.line} />)}
+            </span>
+        );
+    }
 
     return (
         <span className="flex min-h-5 items-center justify-between gap-1.5">
-            <span className="min-w-0 truncate">
-                {delta === undefined ? (
-                    <span className="text-muted-foreground">{t(trend.label_key)}</span>
-                ) : (
-                    <>
-                        <span className={cn('font-semibold', shade.ink)}>
-                            {trend.direction === 'even' ? t('rep_snap_same') : `${trend.direction === 'up' ? '▲' : '▼'} ${size}`}
-                        </span>{' '}
-                        <span className="text-muted-foreground">{t(trend.label_key)}</span>
-                    </>
-                )}
-            </span>
+            <span className="min-w-0 truncate">{change}</span>
             {trend.points && <Sparkline values={trend.points} className={shade.line} />}
         </span>
     );
@@ -255,7 +280,12 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                     {chart}
                                 </span>
                             ) : item.note?.trend && item.note.trend.up_is_good !== undefined ? (
-                                <DeltaFooter trend={item.note.trend} decimals={item.format === 'days' ? 1 : 0} />
+                                <DeltaFooter
+                                    trend={item.note.trend}
+                                    decimals={item.format === 'days' ? 1 : 0}
+                                    lead={item.note.label_key !== item.note.trend.label_key ? noteText(t, lang, item.note) : undefined}
+                                    chart={chart}
+                                />
                             ) : item.note ? (
                                 <span className="flex items-end justify-between gap-3">
                                     <span className="line-clamp-2 min-w-0" title={noteTitle(t, lang, item.note)}>

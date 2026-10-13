@@ -292,6 +292,8 @@ export interface SummaryItem {
             points?: (number | null)[];
             /** The request reports' trend (RequestLabels::trend): drawn as the snapshot strip's Delta + Sparkline, coloured by whether up is good (null = neither). */
             up_is_good?: boolean | null;
+            /** Places after the point for the change (the turnover's 2.3 points). */
+            decimals?: number;
         };
     } | null;
     /** Percent tiles: the goal the value is measured against — a meter with the goal marked. */
