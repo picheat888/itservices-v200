@@ -63,6 +63,17 @@ export function isDateString(value: unknown): value is string {
     return p !== null && p.d !== null;
 }
 
+/**
+ * A stored value (audit log diffs) as text: a zoned instant ("…Z", as Laravel serialises a cast date)
+ * is read in local time, and a value at midnight is a date, so it gets no time.
+ */
+export function storedDateText(value: string, fmt: DateFormatter): string {
+    const at: DateValue = /([zZ]|[+-]\d{2}:?\d{2})$/.test(value.trim()) ? new Date(value) : value;
+    const p = parse(at);
+    if (!p) return value;
+    return (p.h ?? 0) === 0 && (p.i ?? 0) === 0 ? fmt.date(at) : fmt.dateTime(at);
+}
+
 const pad = (n: number) => String(n).padStart(2, '0');
 const lastDay = (y: number, m: number) => new Date(y, m, 0).getDate();
 

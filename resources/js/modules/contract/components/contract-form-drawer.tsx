@@ -859,7 +859,7 @@ export function ContractFormDrawer({
                                     <ReviewRow k={t('contract_vendor')} v={vendorOptions.find((o) => o.value === form.vendor_id)?.label || '—'} />
                                     <ReviewRow
                                         k={t('contract_review_term')}
-                                        v={form.start_date && form.end_date ? fmt.range(form.start_date, form.end_date) : '—'}
+                                        v={form.start_date && form.end_date ? `${fmt.date(form.start_date)} – ${fmt.date(form.end_date)}` : '—'}
                                         mono
                                     />
                                     <ReviewRow
