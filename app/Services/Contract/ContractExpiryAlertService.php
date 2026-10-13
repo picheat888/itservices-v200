@@ -8,6 +8,7 @@ use App\Models\Contract\ContractBellLog;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use App\Services\Email\EmailNotificationService;
+use App\Support\DateDisplay;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -190,7 +191,7 @@ class ContractExpiryAlertService
                 'contract.name' => $contract->name,
                 'contract.code' => $contract->code,
                 // Written the way the reader writes a date, not the way the column stores it.
-                'contract.end_date' => $contract->end_date->format('d-m-Y'),
+                'contract.end_date' => DateDisplay::emailDate($contract->end_date),
                 'contract.details' => filled($contract->details) ? $contract->details : '-',
             ], $extraVars), url("/contracts?view={$contract->id}"), 'Open the contract', $recipient->name);
         }

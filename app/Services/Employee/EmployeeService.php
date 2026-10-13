@@ -24,6 +24,7 @@ use App\Services\Access\AccessService;
 use App\Services\Asset\AssetService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Request\RequestNotificationService;
+use App\Support\DateDisplay;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -382,7 +383,7 @@ class EmployeeService
             // filled; the Thai name stands in where it is not.
             'employee.section' => $this->masterName($employee->section),
             'employee.department' => $this->masterName($employee->department),
-            'employee.working' => $employee->joined_at?->format('d-m-Y') ?? '-',
+            'employee.working' => DateDisplay::emailDate($employee->joined_at),
         ];
 
         $emailService = app(EmailNotificationService::class);
@@ -458,7 +459,7 @@ class EmployeeService
                 'user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there',
                 'employee.name' => (string) $employee->name,
                 'employee.code' => (string) $employee->code,
-                'employee.last_working' => $employee->last_day?->format('d-m-Y') ?? '-',
+                'employee.last_working' => DateDisplay::emailDate($employee->last_day),
                 'access.count' => (string) $outstanding['total'],
                 'access.table' => $table,
             ], url('/access'), 'Open the Access Directory', $recipient->name);
@@ -524,7 +525,7 @@ class EmployeeService
         $vars = [
             'employee.name' => (string) $employee->name,
             'employee.code' => (string) $employee->code,
-            'employee.last_working' => $employee->last_day?->format('d-m-Y') ?? '-',
+            'employee.last_working' => DateDisplay::emailDate($employee->last_day),
         ];
 
         foreach ($audience as $recipient) {

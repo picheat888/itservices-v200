@@ -98,7 +98,7 @@ class EmployeeDepartureEmailTest extends TestCase
 
         $this->assertStringContainsString('Somchai Suksawat has resigned', $html);
         $this->assertStringContainsString('EMP-1042', $html);
-        $this->assertStringContainsString('31-12-2026', $html);
+        $this->assertStringContainsString('31/12/2026', $html);
         $this->assertStringNotContainsString('{{', $html, 'An unfilled variable was sent as raw {{...}}.');
     }
 

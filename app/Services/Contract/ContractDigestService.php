@@ -6,6 +6,7 @@ use App\Models\Contract\Contract;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Email\EmailNotificationService;
+use App\Support\DateDisplay;
 use App\Support\EmailTable;
 use Illuminate\Support\Collection;
 
@@ -105,7 +106,7 @@ class ContractDigestService
             EmailTable::text((string) ($c->vendor?->name ?? '-'), 28),
             EmailTable::text((string) $c->name, 34),
             $c->total_value !== null ? e($symbol.number_format((float) $c->total_value, 2)) : '-',
-            $c->end_date->format('d-m-Y'),
+            DateDisplay::emailDate($c->end_date),
             $this->schedule($c),
         ])->all();
 

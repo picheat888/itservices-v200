@@ -131,9 +131,9 @@ class ReportScheduleTest extends TestCase
 
         $subjects = collect(Mail::sent(TemplatedMail::class))->map(fn (TemplatedMail $m) => $m->subjectLine)->all();
         $this->assertCount(3, $subjects);
-        $this->assertStringContainsString('2026-09-28 to 2026-10-04', $subjects[0]);
-        $this->assertStringContainsString('As of 2026-10-04', $subjects[1]);
-        $this->assertStringContainsString('As of 2026-10-05 07:00', $subjects[2]);
+        $this->assertStringContainsString('28 Sep – 04 Oct 2026', $subjects[0]);
+        $this->assertStringContainsString('As of 04/10/2026', $subjects[1]);
+        $this->assertStringContainsString('As of 05/10/2026 07:00', $subjects[2]);
     }
 
     // ── setting one up ──────────────────────────────────────────────────────────────

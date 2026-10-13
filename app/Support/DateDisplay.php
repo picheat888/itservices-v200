@@ -80,6 +80,14 @@ class DateDisplay
         return $p['h'] === null || $p['i'] === null ? $date : $date.' '.self::timePart($p['h'], $p['i'], $c);
     }
 
+    /** An email variable's date: English month names, and '-' when empty like the mail's other blanks. */
+    public static function emailDate(CarbonInterface|string|null $value): string
+    {
+        $text = self::date($value, null, 'en');
+
+        return $text === self::EMPTY ? '-' : $text;
+    }
+
     /** An Excel cell's date: null stays an empty cell. */
     public static function cellDate(CarbonInterface|string|null $value): ?string
     {

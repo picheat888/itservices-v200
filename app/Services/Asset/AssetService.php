@@ -16,6 +16,7 @@ use App\Notifications\AssetOffboardingNotification;
 use App\Notifications\AssetRecalledNotification;
 use App\Notifications\AssetReturnRequestedNotification;
 use App\Services\Email\EmailNotificationService;
+use App\Support\DateDisplay;
 use App\Support\EmailTable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -422,7 +423,7 @@ class AssetService
                 'employee.code' => (string) $employee->code,
                 // Set by resign() before this runs, so the mail can state it. Nullable:
                 // a resignation may be recorded without a last day agreed yet.
-                'employee.last_working' => $employee->last_day?->format('d-m-Y') ?? '-',
+                'employee.last_working' => DateDisplay::emailDate($employee->last_day),
                 'asset.count' => (string) $assets->count(),
                 'asset.table' => $this->assetTable($assets),
                 'reference.id' => (string) $employee->code,
