@@ -5,7 +5,6 @@ import { Field } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword } from '@/shared/lib/password-policy';
-import { cn } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
@@ -16,17 +15,7 @@ import { useState } from 'react';
 
 const ME_KEY = ['auth', 'me'] as const;
 
-/**
- * Change-password overlay, in two moods.
- *
- * Without `onClose` it is the wall: shown when the password has expired
- * (user.password_expired === true), it cannot be dismissed and the only escape hatch
- * is signing out.
- *
- * With `onClose` the same form is something the user asked for — from the profile
- * drawer, or from the expiry warning in the notification tray — so it takes a Cancel
- * instead of a sign-out, and closes itself once the password is changed.
- */
+/** Change password: the expired-password wall (sign out only), or with `onClose` the form the user asked for. */
 export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {}) {
     const t = useT();
     const qc = useQueryClient();
@@ -39,13 +28,8 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
 
     const change = useMutation({
         mutationFn: (payload: ChangePasswordPayload) => authApi.changePassword(payload),
-        onSuccess: (user) => {
-            // Refreshes auth state — password_expired is now false, unmounting this overlay.
-            qc.setQueryData<User | null>(ME_KEY, user);
-            // A voluntary change has nothing to unmount it: the flag it was opened on is
-            // the caller's, so closing is the caller's too.
-            onClose?.();
-        },
+        // password_expired turns false, which unmounts the wall
+        onSuccess: (user) => qc.setQueryData<User | null>(ME_KEY, user),
         onError: (e: unknown) => {
             const res = (e as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } })?.response;
             const firstError = res?.data?.errors ? Object.values(res.data.errors)[0]?.[0] : undefined;
@@ -53,9 +37,9 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
         },
     });
 
-    // Only the voluntary form can be cancelled, so only it asks before dropping typed passwords.
+    // Only the voluntary form can be cancelled, so only it asks before dropping typed passwords
     const guardClose = useDiscardGuard(!!onClose && (current !== '' || next !== '' || confirm !== ''));
-    // The overlay steps below the shared confirm (z-50) while it asks.
+    // Radix close requests are ignored while the discard confirm is open
     const [asking, setAsking] = useState(false);
     const cancel = async (close: () => void) => {
         setAsking(true);
@@ -74,7 +58,8 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
             setError(t('pwd_mismatch'));
             return;
         }
-        change.mutate({ current_password: current, password: next, password_confirmation: confirm });
+        // Per-call onSuccess is skipped once the dialog has unmounted, so a Cancel mid-request cannot close twice
+        change.mutate({ current_password: current, password: next, password_confirmation: confirm }, { onSuccess: () => onClose?.() });
     };
 
     const body = (
@@ -85,13 +70,11 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
                 </div>
             </div>
 
-            {/* The wall explains why the app stopped; a voluntary change has no
-                        explaining to do, so it simply names what this form is for. */}
+            {/* Title and line: why the app stopped (wall), or what the form is for */}
             <h2 className="mb-1 text-center text-base font-semibold">{onClose ? t('pwd_change_title') : t('pwd_expired_title')}</h2>
             <p className="text-muted-foreground mb-5 text-center text-sm">{onClose ? t('pwd_change_desc') : t('pwd_expired_desc')}</p>
 
-            {/* A real <form> so password managers recognise the pair and offer to fill
-                        the current password they have saved; it also gives Enter-to-submit. */}
+            {/* A real <form>: password managers fill the pair and Enter submits */}
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
@@ -163,12 +146,7 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
     }
 
     return (
-        <div
-            className={cn(
-                'fixed inset-0 flex items-center justify-center bg-[rgb(15_23_42_/_0.5)] backdrop-blur-[2px]',
-                asking ? 'z-40' : 'z-[9999]',
-            )}
-        >
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgb(15_23_42_/_0.5)] backdrop-blur-[2px]">
             <div className="bg-background border-border mx-4 w-full max-w-sm overflow-hidden rounded-[14px] border shadow-2xl">{body}</div>
         </div>
     );
