@@ -7,8 +7,8 @@ import {
     useNotifications,
     useNotificationText,
 } from '@/modules/notification';
+import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +27,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     // bundled string for every other key, so this still serves the surrounding UI text.
     const t = useNotificationText();
     const navigate = useNavigate();
+    const [, openShellDialog] = useDialogParam(['password'] as const);
     const ref = useRef<HTMLDivElement>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
     const { data } = useNotifications();
@@ -105,10 +106,9 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
 
     const handleClick = (n: AppNotification) => {
         if (!n.read) markRead.mutate(n.id);
-        // The password warning has no page to open — what it asks for is the dialog the
-        // shell owns, so it raises that instead of navigating anywhere.
+        // The password warning opens the shell's Change password dialog (?dialog=password), not a page.
         if (n.data.type === 'password_expiring') {
-            useUiStore.getState().setPasswordDialog(true);
+            openShellDialog('password');
         } else {
             navigate(notificationTarget(n));
         }

@@ -5365,3 +5365,10 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ผู้ใช้ขอ: กด My Profile แล้ว URL ได้ `?dialog=profile` และลง history — ปุ่ม Back ปิด drawer, Forward เปิดกลับ, ลิงก์หรือ reload ที่มี `?dialog=profile` เปิด drawer ให้เลย; ปิด (✕, ปิด, Esc) ย้อน history ที่เปิดไว้ จึงไม่มี entry ซ้อนกัน; param อื่น (`?tab=`, ตัวกรอง) คงไว้
 - ใช้ `useDialogParam` ตัวเดียวกับ dialog Export/Schedule ของรายงาน (`app-shell.tsx`); ลิงก์ "ดูทั้งหมด" ใน drawer ไม่ต้องสั่งปิดเอง หน้าใหม่ไม่มี param จึงปิดเอง (เดิมสั่งปิดแล้วจะชนกับการย้อน history)
 - ตรวจในเบราว์เซอร์ (build ใหม่): เปิด/Back/Forward/ปุ่มปิด/Esc ได้ตามนี้; ยังไม่ได้ลองกดลิงก์ "ดูทั้งหมด" เพราะบัญชี Administrator ไม่มีรายการ
+
+### Change password กลับมาที่ My Profile — 2026-10-13
+- ผู้ใช้แจ้ง: ปิด dialog Change password แล้ว `?dialog=profile` หายไปด้วย (ปุ่มใน drawer สั่งปิด drawer ก่อนแล้วค่อยเปิด dialog ผ่าน flag ใน store)
+- ตอนนี้ Change password เป็น `?dialog=password` ซ้อน history ต่อจาก `?dialog=profile`: ยกเลิก / Back / เปลี่ยนรหัสสำเร็จ → กลับมา My Profile; เปิด-ปิดซ้ำไม่เพิ่ม history; ลิงก์หรือ reload ที่มี `?dialog=password` เปิด dialog ให้ (ยกเลิกแล้วอยู่หน้าเดิม)
+- การแจ้งเตือนรหัสผ่านใกล้หมดอายุ (กระดิ่งและ toast) เปิดด้วย `?dialog=password` เหมือนกัน; ลบ `passwordDialogOpen` / `setPasswordDialog` ออกจาก `stores/ui.ts`
+- ไฟล์: `app-shell.tsx`, `profile-drawer.tsx` (prop `onChangePassword`), `notifications-dropdown.tsx`, `use-notification-toasts.ts`, `stores/ui.ts`
+- ตรวจในเบราว์เซอร์ (build ใหม่): profile → password → ยกเลิกกลับ profile, Back/Forward ทีละขั้น, เปิดจาก URL ตรงได้; tsc และ ESLint ผ่าน

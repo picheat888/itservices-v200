@@ -1,9 +1,9 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from '@/modules/report';
+import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { useToastStore, type ToastTone } from '@/stores/toast';
-import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -73,6 +73,9 @@ export function useNotificationToasts(): void {
     // navigate with a stale router.
     const navigateRef = useRef(navigate);
     navigateRef.current = navigate;
+    const [, openShellDialog] = useDialogParam(['password'] as const);
+    const openShellDialogRef = useRef(openShellDialog);
+    openShellDialogRef.current = openShellDialog;
     const markReadRef = useRef(markRead);
     markReadRef.current = markRead;
     const tRef = useRef(t);
@@ -124,7 +127,7 @@ export function useNotificationToasts(): void {
                     // Same exception the tray makes: the password warning asks for a
                     // dialog, not a page (see notifications-dropdown).
                     if (n.data.type === 'password_expiring') {
-                        useUiStore.getState().setPasswordDialog(true);
+                        openShellDialogRef.current('password');
                     } else {
                         navigateRef.current(target);
                     }
