@@ -128,11 +128,12 @@ function TabularReportRows({
 
     return (
         <div className="space-y-4">
-            {data ? (
-                <SummaryStrip items={data.summary} />
-            ) : (
-                <KpiRowSkeleton count={extras.tiles ?? 4} className={summaryColumns(extras.tiles ?? 4)} />
-            )}
+            {!extras.hideSummary &&
+                (data ? (
+                    <SummaryStrip items={data.summary} />
+                ) : (
+                    <KpiRowSkeleton count={extras.tiles ?? 4} className={summaryColumns(extras.tiles ?? 4)} />
+                ))}
             {data ? data.charts.length > 0 && <TabularCharts charts={data.charts} /> : hasCharts && <ChartsSkeleton />}
             {extras.beforeTable?.({ filters, patch: onPatch })}
             {showsTable && (
@@ -307,6 +308,8 @@ function TabularReportBody({
 export interface TabularReportExtras {
     /** How many summary tiles the report shows, so the loading row has the same shape. */
     tiles?: number;
+    /** The page draws its own tiles (in beforeTable) instead of the rows' summary strip. */
+    hideSummary?: boolean;
     hiddenFilters?: string[];
     /** Columns the page draws inside another column's cell (a ticket number under its subject) — kept in
      *  each row and in the files, left out of the table's own columns and the column picker. */

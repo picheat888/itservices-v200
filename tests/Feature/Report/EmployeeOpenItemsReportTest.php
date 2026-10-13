@@ -130,6 +130,8 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->assertContains('bad_dates', $issues[$dates->code]);
         $this->assertSame(3, $data['people']);
         $this->assertSame($boss->name, collect($data['rows'])->firstWhere('code', $orphan->code)['issues'][0]['manager']['name']);
+        $orphanRow = collect($data['rows'])->firstWhere('code', $orphan->code);
+        $this->assertSame(['Dept', 'Sec'], [$orphanRow['department']['name'], $orphanRow['section']['name']]);
         $this->assertSame(1, $data['by_issue']['mgr_left']);
         $this->assertSame(1, $data['by_issue']['bad_dates']);
     }

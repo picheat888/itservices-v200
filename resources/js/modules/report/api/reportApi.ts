@@ -11,6 +11,7 @@ import type {
     AssetWarrantyBreakdown,
     AssetWriteoffBreakdown,
     BacklogBoardTicket,
+    EmployeeOpenItemsBreakdown,
     ExportFormat,
     ItPendingBreakdown,
     ManualSlaBreakdown,
@@ -119,6 +120,12 @@ export const reportApi = {
     accessOverviewBreakdown: (filters: TabularFilters) =>
         http
             .get<{ data: AccessOverviewBreakdown }>('/reports/access/overview/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "สรุปเรื่องค้างของพนักงาน": leaver assets, leaver access, accounts and incomplete data as of today. */
+    employeeOpenItemsBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: EmployeeOpenItemsBreakdown }>('/reports/employees/open-items/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
 
     /** "ภาพรวมคำขอ": months, types by status, days to delivery, items asked for and departments. */

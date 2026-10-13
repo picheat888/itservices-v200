@@ -168,6 +168,18 @@ export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/** "สรุปเรื่องค้างของพนักงาน" — keyed without the topic segment, which only picks the cards. */
+export const useEmployeeOpenItemsBreakdown = (filters: TabularFilters) => {
+    const { group: _group, ...rest } = filters;
+    void _group;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'employees.open_items', 'breakdown', rest],
+        queryFn: () => reportApi.employeeOpenItemsBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 /** "ตรวจสอบสมาชิกและเจ้าของ" — keyed without the list's segment and order, which do not change the cards. */
 export const useAccessMembersBreakdown = (filters: TabularFilters) => {
     const { state: _state, sort: _sort, ...rest } = filters;
