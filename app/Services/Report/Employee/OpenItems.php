@@ -270,14 +270,9 @@ final class OpenItems
     private static function peopleOldestFirst(Collection $rows): Collection
     {
         return $rows->groupBy('employee_id')->sortBy([
-            fn (Collection $a, Collection $b) => (self::daysOut($b->first()) <=> self::daysOut($a->first())),
+            fn (Collection $a, Collection $b) => ((AccessFacts::daysSince($b->first()->last_day) ?? 0) <=> (AccessFacts::daysSince($a->first()->last_day) ?? 0)),
             fn (Collection $a, Collection $b) => strnatcasecmp((string) $a->first()->code, (string) $b->first()->code),
         ]);
-    }
-
-    private static function daysOut(OpenItemRow $row): int
-    {
-        return $row->last_day ? (int) $row->last_day->copy()->startOfDay()->diffInDays(today()) : 0;
     }
 
     /** @param Collection<int, array<string, mixed>> $people */

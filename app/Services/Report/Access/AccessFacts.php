@@ -8,6 +8,7 @@ use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -107,7 +108,13 @@ final class AccessFacts
     /** Whole days since a leaver's last day; null when none was recorded. */
     public static function daysOut(Employee $employee): ?int
     {
-        return $employee->last_day ? (int) $employee->last_day->copy()->startOfDay()->diffInDays(today()) : null;
+        return self::daysSince($employee->last_day);
+    }
+
+    /** Whole days from a last day to today; null without one. */
+    public static function daysSince(?CarbonInterface $day): ?int
+    {
+        return $day ? (int) $day->copy()->startOfDay()->diffInDays(today()) : null;
     }
 
     /**

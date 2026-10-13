@@ -9,8 +9,15 @@ export type Lang = 'th' | 'en';
 
 export const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
 
+/** A master-data or person name in the reader's language: Thai when it has one. */
+export function localName(v: { name: string; name_th: string | null }, lang: Lang): string;
+export function localName(v: { name: string | null; name_th: string | null } | null | undefined, lang: Lang): string | null;
+export function localName(v: { name: string | null; name_th: string | null } | null | undefined, lang: Lang): string | null {
+    return v ? (lang === 'th' && v.name_th) || v.name : null;
+}
+
 /** A department in the reader's language. */
-export const deptName = (d: AccessDepartment, lang: Lang) => (d ? (lang === 'th' && d.name_th) || d.name : null);
+export const deptName = (d: AccessDepartment, lang: Lang) => localName(d, lang);
 
 /** The narrowest a bar may get so each piece's number still fits, by how many pieces it has. */
 const MIN_W_BY_PIECES = ['min-w-0', 'min-w-7', 'min-w-14', 'min-w-[5.25rem]', 'min-w-28', 'min-w-[8.75rem]'];

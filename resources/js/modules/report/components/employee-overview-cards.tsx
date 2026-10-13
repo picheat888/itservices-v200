@@ -13,7 +13,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useEmployeeOverviewBreakdown } from '../hooks/use-reports';
 import type { AccessType, EmployeeOverviewBreakdown, EmployeeOverviewCounts, TabularFilters } from '../types';
 import { ACCESS_TYPES, DaysOut, GroupRow, heldStyle, NUM, Segments, TD, TH, TypeDot, TypeLabel, useFoldRow } from './access-overview-cards';
-import { count, deptName } from './access-parts';
+import { count, deptName, type Lang, localName } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { InfoPopover } from './info-popover';
 import { BASIS_PCT, pct } from './percent-classes';
@@ -23,8 +23,6 @@ import { ErrorCard, errorMessageFor } from './tabular-report-view';
 type Patch = (next: TabularFilters) => void;
 type Point = EmployeeOverviewBreakdown['points'][number];
 type Named = { name: string | null; name_th: string | null } | null;
-
-const nameOf = (v: Named | undefined, lang: string) => (v ? (lang === 'th' && v.name_th) || v.name : null);
 
 /* ─────────────────────────── รายการ segment ─────────────────────────── */
 
@@ -83,7 +81,7 @@ function Names({ events }: { events: Point['events'] }) {
             {shown.map((e, i) => (
                 <span key={`${e.kind}-${e.id}`}>
                     {i > 0 && ', '}
-                    <span translate="no">{nameOf(e, lang)}</span>{' '}
+                    <span translate="no">{localName(e, lang)}</span>{' '}
                     <small className="text-muted-foreground">
                         {t(e.kind === 'joined' ? 'rep_eo_pop_started' : 'rep_eo_pop_last_day').replace('{date}', fmt.date(e.date))}
                     </small>
@@ -523,7 +521,7 @@ function DepartmentCard({
                             {shown.map((d) => {
                                 const key = String(d.id ?? 'none');
                                 const isOpen = open[key] ?? singleDepartment;
-                                const name = nameOf(d, lang) ?? t('rep_ac_no_department');
+                                const name = localName(d, lang) ?? t('rep_ac_no_department');
                                 return (
                                     <DeptRows
                                         key={key}
@@ -562,7 +560,7 @@ function DepartmentCard({
                                         {t('rep_eo_dept_apart').replace('{n}', count(data.empty_departments.length, lang))}
                                     </th>
                                     <td colSpan={6} className={cn(TD, 'text-xs')}>
-                                        {data.empty_departments.map((d) => nameOf(d, lang)).join(', ')}
+                                        {data.empty_departments.map((d) => localName(d, lang)).join(', ')}
                                     </td>
                                 </tr>
                             )}
@@ -615,7 +613,7 @@ function DeptRows({
                 row.sections.map((s) => (
                     <tr key={s.id ?? 'none'} className="border-border/60 border-b text-[13px]">
                         <th scope="row" className={cn(TD, 'truncate pl-10 text-left font-normal', s.name === null && 'text-muted-foreground')}>
-                            {nameOf(s, lang) ?? t('rep_eo_no_section')}
+                            {localName(s, lang) ?? t('rep_eo_no_section')}
                         </th>
                         <Cells s={s} total={total} />
                     </tr>
@@ -753,7 +751,7 @@ function HoldingCard({
                                             head={
                                                 <PersonLink
                                                     id={r.employee.id}
-                                                    name={nameOf(r.employee, lang) ?? r.employee.code}
+                                                    name={localName(r.employee, lang) ?? r.employee.code}
                                                     code={r.employee.code}
                                                 />
                                             }
@@ -834,7 +832,8 @@ function PersonLink({ id, name, code }: { id: number; name: string; code: string
 type Row = Record<string, unknown> & { _links?: Record<string, string> };
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
-const named = (v: unknown, lang: string) => (typeof v === 'string' ? v : v && typeof v === 'object' && 'name' in v ? nameOf(v as Named, lang) : null);
+const named = (v: unknown, lang: Lang) =>
+    typeof v === 'string' ? v : v && typeof v === 'object' && 'name' in v ? localName(v as Named, lang) : null;
 
 function Dash() {
     return <span className="text-muted-foreground">—</span>;

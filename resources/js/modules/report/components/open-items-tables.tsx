@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import type { AccessType, DataIssueKey, EmployeeOpenItemsBreakdown, OpenItemsPerson } from '../types';
 import { TYPE_TONE } from './access-overview-cards';
-import { count, deptName, type Lang } from './access-parts';
+import { count, deptName, localName } from './access-parts';
 import { CardTitle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { shortDate } from './transfer-cards';
@@ -35,8 +35,6 @@ const ASSET_STATUS: Record<string, { key: string; tone: 'green' | 'amber' | 'gra
     writeoff: { key: 'asset_writeoff', tone: 'gray' },
 };
 
-const personName = (p: { name: string; name_th: string | null }, lang: Lang) => (lang === 'th' && p.name_th) || p.name;
-
 /** Whole days from a "Y-m-d" date to today. */
 function daysSince(date: string): number {
     const [y, m, d] = date.split('-').map(Number);
@@ -51,7 +49,7 @@ function PersonCell({ person, note }: { person: OpenItemsPerson; note?: string }
     const canOpen = useCanOpen();
     const lang = useUiStore((s) => s.lang);
     const href = `/employees?view=${person.id}`;
-    const name = personName(person, lang);
+    const name = localName(person, lang);
     return (
         <div className="min-w-0">
             {canOpen(href) ? (
@@ -235,7 +233,7 @@ export function AssetCard({ group, narrowed }: { group: EmployeeOpenItemsBreakdo
             render: (r) =>
                 lines(r, (a) => (
                     <span>
-                        {a.category ? personName(a.category, lang) : NONE}
+                        {a.category ? localName(a.category, lang) : NONE}
                         {a.model && (
                             <small translate="no" className="text-muted-foreground block text-xs">
                                 {a.model}
@@ -409,7 +407,7 @@ export function DataCard({ group, narrowed }: { group: EmployeeOpenItemsBreakdow
         if (issue.key === 'mgr_left' && issue.manager?.name) {
             return (
                 <>
-                    <span translate="no">{personName({ name: issue.manager.name, name_th: issue.manager.name_th }, lang)}</span>
+                    <span translate="no">{localName({ name: issue.manager.name, name_th: issue.manager.name_th }, lang)}</span>
                     {issue.manager.last_day && ` ${t('rep_ef_mgr_last').replace('{date}', shortDate(issue.manager.last_day, lang))}`}
                 </>
             );
