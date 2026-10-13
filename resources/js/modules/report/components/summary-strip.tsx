@@ -184,16 +184,18 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                 ? undefined
                                 : share !== null
                                   ? [{ key: 'share', percent: share, className: FILL[tone] }]
-                                  : splitTotal > 0
-                                    ? split.map((part) => ({
-                                          key: part.key,
-                                          percent: (part.value / splitTotal) * 100,
-                                          className: FILL[part.tone],
-                                          title: `${t(part.label_key)}: ${partText(part.value, part.counts)}`,
-                                      }))
-                                    : split.length > 0
-                                      ? [] // all zero: the grey track alone
-                                      : undefined
+                                  : item.progress != null
+                                    ? [{ key: 'progress', percent: item.progress, className: FILL[tone], title: `${item.progress}%` }]
+                                    : splitTotal > 0
+                                      ? split.map((part) => ({
+                                            key: part.key,
+                                            percent: (part.value / splitTotal) * 100,
+                                            className: FILL[part.tone],
+                                            title: `${t(part.label_key)}: ${partText(part.value, part.counts)}`,
+                                        }))
+                                      : split.length > 0
+                                        ? [] // all zero: the grey track alone
+                                        : undefined
                         }
                         footer={
                             split.length > 0 ? (

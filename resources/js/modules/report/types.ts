@@ -300,6 +300,8 @@ export interface SummaryItem {
     attention?: 'amber' | 'red' | null;
     /** A small chart beside the value, in place of the split bar. */
     chart?: SummaryChart | null;
+    /** A bar filled to this percent in the tile's tone, without a badge (done of total). */
+    progress?: number | null;
 }
 
 export type SummaryChart =
@@ -987,6 +989,72 @@ export interface TabularRows {
     meta: PagedRows<unknown>['meta'];
     summary: SummaryItem[];
     charts: TabularChart[];
+}
+
+/** Headcount figures of one department, section or the whole page (EmployeeOverviewReport::breakdown). */
+export interface EmployeeOverviewCounts {
+    start: number;
+    joined: number;
+    left: number;
+    end: number;
+}
+
+/** A department or section row; `name` null = no department / section recorded. */
+export interface EmployeeOverviewUnit extends EmployeeOverviewCounts {
+    id: number | null;
+    name: string | null;
+    name_th: string | null;
+}
+
+/** What the "ภาพรวมพนักงาน" page draws above its list. */
+export interface EmployeeOverviewBreakdown {
+    from: string;
+    to: string;
+    /** The headcount day: the range end, or today while the end is still ahead. */
+    as_of: string;
+    headcount: { start: number; end: number };
+    joiners: { started: number; upcoming: number };
+    leavers: { count: number; rate: number | null; still_working: number; per_bucket: number[]; bucket_months: string[] };
+    prep: { people: number; done: number; total: number; urgent: boolean; started: number; next_in_days: number | null };
+    holding: {
+        people: number;
+        grants: number;
+        by_type: Record<AccessType, number>;
+        left_total: number;
+        rows: {
+            employee: { id: number; code: string; name: string; name_th: string | null };
+            department: { name: string; name_th: string | null } | null;
+            last_day: string | null;
+            days_out: number | null;
+            grants: { type: AccessType; name: string }[];
+        }[];
+    };
+    bucket: 'month' | 'quarter' | 'year';
+    /** One point per bucket at its end, today for the current one. */
+    points: {
+        start: string;
+        end: string;
+        headcount: number;
+        /** Headcount the day before the bucket starts. */
+        base: number;
+        joined: number;
+        left: number;
+        current: boolean;
+        events: {
+            kind: 'joined' | 'left';
+            id: number;
+            code: string;
+            name: string;
+            name_th: string | null;
+            date: string;
+            /** A leaver whose last day is before their start day. */
+            before_start: boolean;
+        }[];
+    }[];
+    departments: (EmployeeOverviewUnit & { sections: EmployeeOverviewUnit[]; hidden_sections: number })[];
+    empty_departments: { id: number; name: string; name_th: string | null }[];
+    total: EmployeeOverviewCounts;
+    can_open_access: boolean;
 }
 
 /** One person in an open-items card (EmployeeOpenItemsReport::breakdown). */

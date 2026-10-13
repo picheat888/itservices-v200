@@ -168,6 +168,18 @@ export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/** "ภาพรวมพนักงาน" — keyed without the รายการ segment, which narrows only the list. */
+export const useEmployeeOverviewBreakdown = (filters: TabularFilters) => {
+    const { kind: _kind, ...rest } = filters;
+    void _kind;
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'employees.overview', 'breakdown', rest],
+        queryFn: () => reportApi.employeeOverviewBreakdown(rest),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 /** "สรุปเรื่องค้างของพนักงาน" — keyed without the topic segment, which only picks the cards. */
 export const useEmployeeOpenItemsBreakdown = (filters: TabularFilters) => {
     const { group: _group, ...rest } = filters;

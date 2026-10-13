@@ -17,8 +17,8 @@ import AssetsWarrantyExpiringReportPage from './pages/assets-warranty-expiring';
 import AssetsWriteoffsReportPage from './pages/assets-writeoffs';
 import ContractsExpiringReportPage from './pages/contracts-expiring';
 import ContractsMonthlyCostReportPage from './pages/contracts-monthly-cost';
-import EmployeesJoinersLeaversReportPage from './pages/employees-joiners-leavers';
 import EmployeesOpenItemsReportPage from './pages/employees-open-items';
+import EmployeesOverviewReportPage from './pages/employees-overview';
 import RequestsApprovalsReportPage from './pages/requests-approvals';
 import RequestsItPendingReportPage from './pages/requests-it-pending';
 import RequestsOverviewReportPage from './pages/requests-overview';
@@ -60,7 +60,7 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'requests-approvals', anyOf: ['requests.view_all'], Page: RequestsApprovalsReportPage },
     { path: 'requests-it-pending', anyOf: ['requests.view_all'], Page: RequestsItPendingReportPage },
     // Employees
-    { path: 'employees-joiners-leavers', anyOf: ['employees.view'], Page: EmployeesJoinersLeaversReportPage },
+    { path: 'employees-overview', anyOf: ['employees.view'], Page: EmployeesOverviewReportPage },
     { path: 'employees-open-items', anyOf: ['employees.view'], Page: EmployeesOpenItemsReportPage },
     // Access
     { path: 'access-overview', anyOf: ['access.overview'], Page: AccessOverviewReportPage },
