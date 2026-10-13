@@ -12,8 +12,8 @@ use App\Services\Report\Asset\AssetWriteoffReport;
 use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
 use App\Services\Report\Contract\ContractMonthlyCostReport;
+use App\Services\Report\Employee\EmployeeOpenItemsReport;
 use App\Services\Report\Employee\JoinersLeaversReport;
-use App\Services\Report\Employee\LeaverAssetsReport;
 use App\Services\Report\Request\ItPendingRequestReport;
 use App\Services\Report\Request\RequestApprovalsReport;
 use App\Services\Report\Request\RequestOverviewReport;
@@ -73,7 +73,7 @@ class ReportCatalogue
 
     public const EMPLOYEES_JOINERS_LEAVERS = 'employees.joiners_leavers';
 
-    public const EMPLOYEES_LEAVER_ASSETS = 'employees.leaver_assets';
+    public const EMPLOYEES_OPEN_ITEMS = 'employees.open_items';
 
     public const ACCESS_OVERVIEW = 'access.overview';
 
@@ -228,10 +228,10 @@ class ReportCatalogue
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
-            self::EMPLOYEES_LEAVER_ASSETS => [
+            self::EMPLOYEES_OPEN_ITEMS => [
                 'domain' => 'employees',
                 'kind' => 'tabular',
-                'class' => LeaverAssetsReport::class,
+                'class' => EmployeeOpenItemsReport::class,
                 'requires' => ['employees.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
