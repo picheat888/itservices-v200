@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\Report\AccessResourceMembersController;
 use App\Http\Controllers\Api\Report\AssetTransferBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWarrantyBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
+use App\Http\Controllers\Api\Report\EmployeeOpenItemsBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
@@ -127,6 +128,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     // "ทบทวนสมาชิกและเจ้าของ" — the resource table and space cards, and one resource's member review sheet (PDF).
     Route::get('reports/access/resource-members/breakdown', [AccessResourceMembersController::class, 'breakdown'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.breakdown');
     Route::get('reports/access/resource-members/sheet', [AccessResourceMembersController::class, 'sheet'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.sheet');
+    // "สรุปเรื่องค้างของพนักงาน" — leaver assets, leaver access, accounts and incomplete employee data, as of today.
+    Route::get('reports/employees/open-items/breakdown', EmployeeOpenItemsBreakdownController::class)->defaults('key', 'employees.open_items')->name('api.reports.employees.open-items.breakdown');
     // "การใช้ License ซอฟต์แวร์" — seats per software, leavers to take seats back from, requests waiting for one.
     Route::get('reports/access/software-licenses/breakdown', SoftwareLicenseBreakdownController::class)->defaults('key', 'access.software_licenses')->name('api.reports.access.software-licenses.breakdown');
     // "การอนุมัติคำขอ" — what waits now and why, each approver's speed, requests that ended without delivery, skipped steps.

@@ -14,8 +14,8 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * The two employee tabular reports — "พนักงานเข้าใหม่และลาออก" (employees.joiners_leavers) and
- * "ทรัพย์สินค้างคืนจากผู้ลาออก" (employees.leaver_assets) — through /reports/r/{key}.
+ * The employee tabular reports — "พนักงานเข้าใหม่และลาออก" (employees.joiners_leavers) and
+ * "สรุปเรื่องค้างของพนักงาน" (employees.open_items) — through /reports/r/{key}.
  */
 class EmployeeReportsTest extends TestCase
 {
@@ -119,41 +119,11 @@ class EmployeeReportsTest extends TestCase
         $this->assertSame([$august->id], $ids('from=2026-08-01&to=2026-08-31'));
     }
 
-    // ── employees.leaver_assets ─────────────────────────────────────────────────────
-
-    public function test_leaver_assets_lists_what_resigned_people_still_hold(): void
-    {
-        $gone = $this->employee('Gone', ['status' => 'resigned', 'last_day' => '2026-09-20']);
-        $leaving = $this->employee('Leaving', ['status' => 'resigned', 'last_day' => '2026-10-05']);
-        $staying = $this->employee('Staying');
-        $late = Asset::factory()->create(['owner_employee_id' => $leaving->id, 'owner' => null, 'status' => 'deployed']);
-        $overdue = Asset::factory()->create(['owner_employee_id' => $gone->id, 'owner' => null, 'status' => 'pending_return']);
-        Asset::factory()->create(['owner_employee_id' => $staying->id, 'owner' => null, 'status' => 'deployed']);
-
-        $body = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.leaver_assets/rows')->assertOk()->json();
-
-        $this->assertSame([$overdue->id, $late->id], array_column($body['data'], 'id'));
-        $this->assertEquals(-5, $body['data'][0]['days_left']);
-        $this->assertEquals(10, $body['data'][1]['days_left']);
-        $this->assertStringContainsString($gone->code, $body['data'][0]['holder']);
-
-        $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(2, $summary['total']['value']);
-        $this->assertSame(2, $summary['leavers']['value']);
-        $this->assertSame(1, $summary['past_last_day']['value']);
-        $this->assertSame(1, $summary['pending_return']['value']);
-
-        $search = $this->actingAs($this->userWith(['employees.view']))
-            ->getJson('/api/reports/r/employees.leaver_assets/rows?search=Leaving')->assertOk()->json('data');
-        $this->assertSame([$late->id], array_column($search, 'id'));
-    }
-
     public function test_employee_reports_need_employees_view(): void
     {
         $assetsOnly = $this->userWith(['assets.view']);
 
-        foreach (['employees.joiners_leavers', 'employees.leaver_assets'] as $key) {
+        foreach (['employees.joiners_leavers', 'employees.open_items'] as $key) {
             $this->actingAs($assetsOnly)->getJson("/api/reports/r/{$key}/rows")->assertForbidden();
         }
     }
@@ -164,7 +134,7 @@ class EmployeeReportsTest extends TestCase
         Asset::factory()->create(['owner_employee_id' => $leaver->id, 'owner' => null, 'status' => 'pending_return']);
         $user = $this->userWith(['employees.view']);
 
-        foreach (['employees.joiners_leavers', 'employees.leaver_assets'] as $key) {
+        foreach (['employees.joiners_leavers', 'employees.open_items'] as $key) {
             $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
