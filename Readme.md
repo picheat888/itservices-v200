@@ -5372,3 +5372,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - การแจ้งเตือนรหัสผ่านใกล้หมดอายุ (กระดิ่งและ toast) เปิดด้วย `?dialog=password` เหมือนกัน; ลบ `passwordDialogOpen` / `setPasswordDialog` ออกจาก `stores/ui.ts`
 - ไฟล์: `app-shell.tsx`, `profile-drawer.tsx` (prop `onChangePassword`), `notifications-dropdown.tsx`, `use-notification-toasts.ts`, `stores/ui.ts`
 - ตรวจในเบราว์เซอร์ (build ใหม่): profile → password → ยกเลิกกลับ profile, Back/Forward ทีละขั้น, เปิดจาก URL ตรงได้; tsc และ ESLint ผ่าน
+
+### Set your password อยู่ใน URL — 2026-10-13
+- ผู้ใช้ขอ: dialog "Set your password" (บัญชีที่ต้องตั้งรหัสผ่านเอง `must_change_password`) มี URL ด้วย
+- ตอน dialog ขึ้น URL ได้ `?dialog=set-password` (param อื่นคงไว้) และหายเองเมื่อตั้งรหัสสำเร็จ; ใช้ replace ไม่เพิ่ม history เพราะผู้ใช้ไม่ได้เปิดเองและปิดด้วย Back ไม่ได้; URL ตามสถานะบัญชีเท่านั้น — ลิงก์ที่มี `?dialog=set-password` ของบัญชีที่ไม่ต้องตั้งรหัส จะถูกตัด param ออกและไม่ขึ้น dialog
+- hook ใหม่ `useShownDialogParam(name, shown)` ใน `shared/hooks/use-dialog-param.ts` เรียกจาก `app-shell.tsx`
+- ตรวจในเบราว์เซอร์ (build ใหม่, สลับ flag ใน cache ของแท็บทดสอบ ไม่แตะ DB): ขึ้น dialog → URL มี param, history ไม่เพิ่ม; ล้าง flag → param หาย; เปิดลิงก์ที่มี param ด้วยบัญชีปกติ → ตัด param ไม่ขึ้น dialog; tsc และ ESLint ผ่าน

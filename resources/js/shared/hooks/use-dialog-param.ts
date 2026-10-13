@@ -10,8 +10,10 @@
  *   instead, so the reader is not sent off the page.
  * - Other params (filters, ?tab=) are left as they are. A value not in `names` reads as closed.
  *
- * Used by the report pages' Export and Schedule dialogs (modules/report) and My Profile (app shell).
+ * Used by the report pages' Export and Schedule dialogs (modules/report) and the app shell's
+ * My Profile / Change password; `useShownDialogParam` mirrors a dialog the app raises itself.
  */
+import { useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 const PARAM = 'dialog';
@@ -51,4 +53,22 @@ export function useDialogParam<T extends string>(names: readonly T[]): [T | null
     };
 
     return [open, setOpen];
+}
+
+/** Keeps `?dialog=<name>` in step with a dialog the app shows on its own (no history entry: Back cannot close it). */
+export function useShownDialogParam(name: string, shown: boolean): void {
+    const [params, setParams] = useSearchParams();
+    const inUrl = params.get(PARAM) === name;
+
+    useEffect(() => {
+        if (shown === inUrl) return;
+        setParams(
+            (next) => {
+                if (shown) next.set(PARAM, name);
+                else next.delete(PARAM);
+                return next;
+            },
+            { replace: true },
+        );
+    }, [name, shown, inUrl, setParams]);
 }
