@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Report\Access\AccessResourceMembersReport;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
@@ -244,5 +245,27 @@ class AccessResourceMembersReportTest extends TestCase
         $this->actingAs($partial)->getJson('/api/reports/r/access.resource_members/rows')->assertForbidden();
         $this->actingAs($partial)->getJson('/api/reports/access/resource-members/breakdown')->assertForbidden();
         $this->actingAs($partial)->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertForbidden();
+    }
+
+    /** The data each render of a PDF view received, so the test can render it to HTML. */
+    private function capturePdfView(string $view): \ArrayObject
+    {
+        $seen = new \ArrayObject;
+        View::composer($view, function ($v) use ($seen) {
+            $seen->append(array_diff_key($v->getData(), ['__env' => 1, 'app' => 1, 'errors' => 1]));
+        });
+
+        return $seen;
+    }
+
+    public function test_the_review_sheet_prints_dates_in_the_date_setting(): void
+    {
+        $seen = $this->capturePdfView('pdf.reports.access-review-sheet');
+
+        $this->actingAs($this->userWith())->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertOk();
+
+        $html = view('pdf.reports.access-review-sheet', $seen[0])->render();
+        $this->assertStringContainsString('25/09/2026', $html);
+        $this->assertDoesNotMatchRegularExpression('/\b20\d\d-\d\d-\d\d\b/', $html);
     }
 }

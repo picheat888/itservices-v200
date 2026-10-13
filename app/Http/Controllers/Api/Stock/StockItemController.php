@@ -13,6 +13,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
+use App\Support\DateDisplay;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -264,7 +265,7 @@ class StockItemController extends Controller
             'taxId' => AppSetting::get('tax_id'),
             'printedBy' => $request->user()?->name ?? '',
             // now() is already local wall time (APP_TIMEZONE) — no conversion needed.
-            'printedAt' => now()->format('Y-m-d H:i'),
+            'printedAt' => DateDisplay::dateTime(now()),
         ])->setPaper('a4', $view === 'summary' ? 'portrait' : 'landscape');
 
         // dompdf v3's own stream() returns a buffered Illuminate Response; the tests read the

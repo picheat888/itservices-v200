@@ -18,6 +18,7 @@ use App\Models\Ticket\Ticket;
 use App\Models\Ticket\TicketUpdate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
@@ -311,5 +312,30 @@ class TicketOverviewExportTest extends TestCase
                 $this->assertContains("{$sheet}/{$column['heading']}", $explained);
             }
         }
+    }
+
+    /** The data each render of a PDF view received, so the test can render it to HTML. */
+    private function capturePdfView(string $view): \ArrayObject
+    {
+        $seen = new \ArrayObject;
+        View::composer($view, function ($v) use ($seen) {
+            $seen->append(array_diff_key($v->getData(), ['__env' => 1, 'app' => 1, 'errors' => 1]));
+        });
+
+        return $seen;
+    }
+
+    public function test_pdf_prints_the_period_and_ticket_times_in_the_date_setting(): void
+    {
+        $user = $this->deskMember();
+        Ticket::factory()->create(['category' => 'hardware', 'created_at' => '2026-09-05 08:00']);
+        $seen = $this->capturePdfView('pdf.reports.ticket-overview');
+
+        $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=pdf')->assertOk();
+
+        $html = view('pdf.reports.ticket-overview', $seen[0])->render();
+        $this->assertStringContainsString('ก.ย. 2026', $html);
+        $this->assertStringContainsString('05/09/2026 08:00', $html);
+        $this->assertStringNotContainsString('2026-09-01', $html);
     }
 }

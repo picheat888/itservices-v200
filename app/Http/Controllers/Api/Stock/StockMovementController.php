@@ -13,10 +13,10 @@ use App\Models\Stock\Warehouse;
 use App\Services\Stock\StockBalanceService;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
+use App\Support\DateDisplay;
 use App\Support\DocNumber;
 use App\Support\DocumentName;
 use App\Support\Refusal;
-use App\Support\SystemTime;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -146,7 +146,7 @@ class StockMovementController extends Controller
             'item' => $movement->item,
             'labels' => $labels,
             'warehouse' => $movement->to_label ?: $movement->from_label,
-            'date' => SystemTime::date($movement->moved_at),
+            'date' => DateDisplay::date($movement->moved_at),
         ])->setPaper('a4', 'portrait');
 
         $bytes = $pdf->output();
