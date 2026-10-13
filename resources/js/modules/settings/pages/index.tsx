@@ -1665,6 +1665,7 @@ function SystemTab({ form, set, logoUrl, onDirtyChange }: { form: SettingsForm; 
 
     useEffect(() => {
         onDirtyChange(brandDirty || dateDirty);
+        return () => onDirtyChange(false);
     }, [brandDirty, dateDirty, onDirtyChange]);
 
     return (

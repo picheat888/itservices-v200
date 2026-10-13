@@ -24,7 +24,7 @@ function applyTheme(data: SettingsData) {
     if (data.theme_density) s.setDensity(data.theme_density);
     if (typeof data.theme_radius === 'number') s.setRadius(data.theme_radius);
     if (data.asset_status_colors) s.setAssetStatusColors(data.asset_status_colors);
-    s.setDateConfig({ format: data.date_format, era: data.date_era, time: data.time_format });
+    if (data.date_format) s.setDateConfig({ format: data.date_format, era: data.date_era, time: data.time_format });
 }
 
 // Falls back to the bundled default logo so the tab icon reverts (instead of

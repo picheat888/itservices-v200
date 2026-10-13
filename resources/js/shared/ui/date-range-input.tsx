@@ -1,14 +1,5 @@
-/**
- * Date range picker: a two-month calendar where the first click starts a range, the second
- * ends it, and nothing reaches the caller until "นำไปใช้" confirms it — so a page never
- * refetches on a half-picked or mis-clicked range. Cancel, Esc or clicking away keeps the range
- * as it was. Weekends are bold red; `maxDate` greys out (and blocks) the days after it.
- *
- * The trigger is a field reading the range short (useDateFormat().range) —
- * or, given `children`, the caller's own button (a "กำหนดเอง" segment, say) opens the calendar.
- * Values in and out are "YYYY-MM-DD" strings ('' when unset).
- * Used by the report filter bars, the Report Center's period switch and the ticket dashboard.
- */
+// Two-month range picker: nothing reaches the caller until "นำไปใช้"; the trigger reads the range in the
+// system date format, or a caller's own button opens it. Values in and out are "YYYY-MM-DD" ('' when unset).
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';

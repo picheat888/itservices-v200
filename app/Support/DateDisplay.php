@@ -198,7 +198,7 @@ class DateDisplay
 
     private static function monthName(int $month, string $lang, string $length): string
     {
-        return self::names()[$lang === 'en' ? 'en' : 'th'][$length][$month - 1];
+        return self::names()[$lang === 'th' ? 'th' : 'en'][$length][$month - 1];
     }
 
     private static function lastDay(int $year, int $month): int

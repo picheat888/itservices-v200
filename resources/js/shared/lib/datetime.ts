@@ -52,6 +52,8 @@ export function normalizeDateConfig(config: LooseConfig): DateConfig {
     };
 }
 
+export const sameDateConfig = (a: DateConfig, b: DateConfig) => a.format === b.format && a.era === b.era && a.time === b.time;
+
 const pad = (n: number) => String(n).padStart(2, '0');
 const lastDay = (y: number, m: number) => new Date(y, m, 0).getDate();
 

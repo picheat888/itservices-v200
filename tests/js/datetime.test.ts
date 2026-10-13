@@ -27,3 +27,9 @@ test('the legacy helpers are gone', async () => {
     assert.equal(mod.formatDateShort, undefined);
     assert.equal(mod.formatRangeShort, undefined);
 });
+
+test('sameDateConfig compares the three values, not the object', async () => {
+    const { sameDateConfig } = (await import('../../resources/js/shared/lib/datetime.ts')) as Record<string, (a: unknown, b: unknown) => boolean>;
+    assert.equal(sameDateConfig({ format: 'dmy_slash', era: 'ce', time: '24' }, { format: 'dmy_slash', era: 'ce', time: '24' }), true);
+    assert.equal(sameDateConfig({ format: 'dmy_slash', era: 'ce', time: '24' }, { format: 'dmy_slash', era: 'be', time: '24' }), false);
+});
