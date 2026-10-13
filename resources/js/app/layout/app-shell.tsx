@@ -1,6 +1,6 @@
 import { ChangePasswordDialog, SessionTimeoutModal, SetPasswordDialog, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
 import { settingsApi } from '@/modules/settings';
-import { useDialogParam } from '@/shared/hooks/use-dialog-param';
+import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
@@ -34,6 +34,8 @@ export function AppShell() {
     const [notifOpen, setNotifOpen] = useState(false);
     // My Profile and Change password live in the URL (?dialog=), so Back closes them.
     const [shellDialog, setShellDialog] = useDialogParam(SHELL_DIALOGS);
+    // Set your password is raised by the account itself, so the URL only follows it.
+    useShownDialogParam('set-password', !!user?.must_change_password);
 
     return (
         <div className="bg-background flex h-screen overflow-hidden" data-density={density}>
