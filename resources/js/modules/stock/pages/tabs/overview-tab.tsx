@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { OverviewHeader } from '@/shared/components/overview-period';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -34,6 +35,7 @@ export function OverviewTab({
     /** When false the movements query is skipped and the recent-movements widget is hidden (caller lacks stock.view_events). */
     canEvents: boolean;
 }) {
+    const fmt = useDateFormat();
     // Recent movements are folded into the summary payload so they arrive with every other
     // panel (no separate, lagging query). Empty for users without view_events (card hidden).
     const movements = summary?.recent_movements ?? [];
@@ -197,7 +199,7 @@ export function OverviewTab({
                                                             {inbound ? '+' : '−'}
                                                             {m.qty}
                                                         </div>
-                                                        <div className="text-muted-foreground font-mono text-[10px]">{m.moved_at?.slice(5, 16)}</div>
+                                                        <div className="text-muted-foreground font-mono text-[10px]">{fmt.dateTime(m.moved_at)}</div>
                                                     </div>
                                                 </div>
                                             );

@@ -299,7 +299,7 @@ export function StockItemDetailModal({
                                         </Meta>
                                         <Meta label={t('stock_warranty')}>{item.warranty ?? '—'}</Meta>
                                         <Meta label={lang === 'th' ? 'เคลื่อนไหวล่าสุด' : 'Last move'}>
-                                            <span className="font-mono">{item.last_move_at?.slice(0, 10) ?? '—'}</span>
+                                            <span className="font-mono">{fmt.date(item.last_move_at)}</span>
                                         </Meta>
                                     </div>
 
