@@ -553,10 +553,13 @@ export function GroupRow({
     sub,
     chips,
     className,
+    inert,
 }: {
     head: React.ReactNode;
     side?: React.ReactNode;
     className?: string;
+    /** Shown only as a glimpse: not reachable by keyboard or screen reader. */
+    inert?: boolean;
     /** Plain details, or an element for one that needs its own colour. */
     sub: (string | React.ReactElement | null | false)[];
     chips?: React.ReactNode;
@@ -564,6 +567,7 @@ export function GroupRow({
     const parts = sub.filter((s): s is string | React.ReactElement => Boolean(s));
     return (
         <li
+            inert={inert}
             className={cn(
                 'border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b px-5 py-2.5 last:border-b-0',
                 className,
