@@ -36,6 +36,8 @@ export function AppShell() {
     const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS);
     // Set your password is raised by the account itself, so the URL only follows it.
     useShownDialogParam('set-password', !!user?.must_change_password);
+    // An owed password change is the only thing on screen: no My Profile over the wall
+    const passwordOwed = !!user?.must_change_password || !!user?.password_expired;
 
     return (
         <div className="bg-background flex h-screen overflow-hidden" data-density={density}>
@@ -53,7 +55,7 @@ export function AppShell() {
             </div>
 
             <ProfileDrawer
-                open={shellDialog === 'profile' || shellDialogUnder === 'profile'}
+                open={!passwordOwed && (shellDialog === 'profile' || shellDialogUnder === 'profile')}
                 onClose={() => setShellDialog(null)}
                 onChangePassword={() => setShellDialog('password', { over: true })}
             />
