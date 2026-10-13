@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useSettings } from '@/modules/settings';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
+import { PasswordInput } from '@/shared/components/password-input';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import { cn, focusFirstError } from '@/shared/lib/utils';
@@ -15,7 +16,6 @@ import { AlertTriangle, Check, Copy, Loader2, ShieldCheck, Wand2 } from 'lucide-
 import { useEffect, useId, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
-import { PasswordInput } from './password-input';
 
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a

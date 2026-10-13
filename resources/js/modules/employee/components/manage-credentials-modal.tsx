@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
+import { PasswordInput } from '@/shared/components/password-input';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
@@ -18,7 +19,6 @@ import { Check, CheckCircle2, Copy, EyeOff, KeyRound, Loader2, ShieldCheck, Wand
 import { useEffect, useId, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
-import { PasswordInput } from './password-input';
 
 /**
  * "จัดการบัญชี" dialog for an employee who already has a login account.

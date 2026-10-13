@@ -4,25 +4,25 @@ import { useMyAssets } from '@/modules/asset';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
 import { PhotoCropDialog, useEmployee } from '@/modules/employee';
 import { useTickets } from '@/modules/ticket';
+import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
+import { EmptyPane } from '@/shared/components/empty-pane';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { cn } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { EmployeeAccessRow, User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Label } from '@/shared/ui/label';
 import { useUiStore } from '@/stores/ui';
 import { AtSign, Box, Briefcase, Building2, Camera, Hash, IdCard, KeyRound, Phone, Shield, Ticket, UserRound } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-// Names are stored as a single space-joined string ("First Last"); the first
-// word is the given name and everything after it the surname. This mirrors the
-// Add Employee form so editing here stays consistent with how it splits back.
+// Names are stored as one space-joined string: the first word is the given name, the rest the surname
 function splitName(full: string | null | undefined): [string, string] {
     const parts = (full ?? '').trim().split(' ');
     return [parts[0] ?? '', parts.slice(1).join(' ')];
@@ -42,12 +42,26 @@ function profileFields(user: User) {
     };
 }
 
+type FormKey = keyof ReturnType<typeof profileFields>;
+
+/** API field name → form field, for showing a server error under its field. */
+const SERVER_FIELDS: Record<string, FormKey> = {
+    first_name: 'firstName',
+    last_name: 'lastName',
+    first_name_th: 'firstNameTh',
+    last_name_th: 'lastNameTh',
+    phone: 'phone',
+};
+
+// Same rail heading as the employee viewer
+const RAIL_HEADING = 'text-muted-foreground border-border border-b pb-1.5 text-xs font-bold';
+
 /** One fact in the left rail: an icon, what it is, and what it says. */
 function RailFact({ icon: Icon, label, value, mono }: { icon: typeof Hash; label: string; value?: string | null; mono?: boolean }) {
     return (
         <div className="flex items-start gap-2.5">
             <span className="bg-muted text-muted-foreground mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-md">
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3.5 w-3.5" aria-hidden />
             </span>
             <div className="min-w-0">
                 <div className="text-muted-foreground text-[11px]">{label}</div>
@@ -59,10 +73,10 @@ function RailFact({ icon: Icon, label, value, mono }: { icon: typeof Hash; label
 
 function RailSection({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div className="space-y-3">
-            <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{title}</div>
+        <section className="flex flex-col gap-3">
+            <div className={RAIL_HEADING}>{title}</div>
             {children}
-        </div>
+        </section>
     );
 }
 
@@ -70,24 +84,18 @@ function RailSection({ title, children }: { title: string; children: React.React
 function IdChip({ icon: Icon, children }: { icon: typeof Hash; children: React.ReactNode }) {
     return (
         <span className="border-border bg-card text-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium">
-            <Icon className="text-muted-foreground h-3.5 w-3.5" />
+            <Icon className="text-muted-foreground h-3.5 w-3.5" aria-hidden />
             {children}
         </span>
     );
 }
 
-/**
- * One line in a holdings tab.
- *
- * The tabs summarise rather than duplicate: the pages behind them can accept a handover, request
- * a return, open a case. Rebuilding those actions in a drawer would be two places to fix every
- * time one of them changes, so each tab shows what you hold and sends you to the page that acts.
- */
+/** One line in a holdings tab; the page behind "see all" is where things get done. */
 function ItemRow({ icon: Icon, title, sub, right }: { icon: typeof Hash; title: string; sub?: string | null; right?: React.ReactNode }) {
     return (
         <div className="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0">
             <span className="bg-muted text-muted-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md">
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{title}</div>
@@ -98,8 +106,21 @@ function ItemRow({ icon: Icon, title, sub, right }: { icon: typeof Hash; title: 
     );
 }
 
-function EmptyTab({ text }: { text: string }) {
-    return <div className="text-muted-foreground py-12 text-center text-sm">{text}</div>;
+/** Placeholder rows while a holdings tab loads, shaped like ItemRow. */
+function LoadingRows() {
+    return (
+        <div aria-hidden>
+            {[0, 1, 2].map((i) => (
+                <div key={i} className="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0">
+                    <span className="bg-muted h-8 w-8 shrink-0 animate-pulse rounded-md" />
+                    <div className="flex-1 space-y-1.5">
+                        <div className="bg-muted h-3.5 w-1/2 animate-pulse rounded" />
+                        <div className="bg-muted h-3 w-1/3 animate-pulse rounded" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 type TabId = 'profile' | 'assets' | 'tickets' | 'access';
@@ -112,14 +133,13 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const update = useUpdateProfile();
     const inputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
+    const panelId = useId();
 
-    // Pull the full employee record so the drawer can show every field
-    // (department, position, joined date, ...), not just what's on the user.
+    // The full employee record: department, position, joined date…
     const { data: emp } = useEmployee(open ? (user?.employee_id ?? null) : null);
 
     const canEdit = can('employees.edit_own');
-    // Each tab answers to the permission its own page answers to, so the drawer never offers a
-    // view of something the reader would be refused on the page it links to.
+    // Each tab answers to its own page's permission, so the drawer never shows what that page would refuse
     const seesAssets = can('assets.my');
     const seesAccess = can('access.my');
     const seesTickets = can('tickets.my');
@@ -129,36 +149,38 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const { data: myTickets, isLoading: ticketsLoading } = useTickets({ page: 1, per_page: 8, requested: true }, open && seesTickets);
 
     const [tab, setTab] = useState<TabId>('profile');
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [firstNameTh, setFirstNameTh] = useState('');
-    const [lastNameTh, setLastNameTh] = useState('');
-    const [phone, setPhone] = useState('');
+    const [fields, setFields] = useState<Record<FormKey, string>>({ firstName: '', lastName: '', firstNameTh: '', lastNameTh: '', phone: '' });
+    const [errors, setErrors] = useState<Partial<Record<FormKey, string>>>({});
     const [photo, setPhoto] = useState<File | null>(null);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
-    const [error, setError] = useState('');
+    const [formError, setFormError] = useState('');
+    const [formErrorCount, setFormErrorCount] = useState(0);
     const [saved, setSaved] = useState(false);
 
-    // Prefill from the current user each time the drawer opens.
+    // Seeded once per opening, so a refreshed user (e.g. after Change password) never wipes unsaved edits
+    const seeded = useRef(false);
     useEffect(() => {
-        if (open && user) {
-            const fields = profileFields(user);
-            setFirstName(fields.firstName);
-            setLastName(fields.lastName);
-            setFirstNameTh(fields.firstNameTh);
-            setLastNameTh(fields.lastNameTh);
-            setPhone(fields.phone);
-            setPhoto(null);
-            setCropSrc(null);
-            setError('');
-            setSaved(false);
-            setTab('profile');
-            if (inputRef.current) inputRef.current.value = '';
+        if (!open) {
+            seeded.current = false;
+            return;
         }
+        if (!user || seeded.current) return;
+        seeded.current = true;
+        setFields(profileFields(user));
+        setErrors({});
+        setPhoto(null);
+        setCropSrc(null);
+        setFormError('');
+        setSaved(false);
+        setTab('profile');
+        if (inputRef.current) inputRef.current.value = '';
     }, [open, user]);
 
-    const isDirty =
-        !!user && (JSON.stringify({ firstName, lastName, firstNameTh, lastNameTh, phone }) !== JSON.stringify(profileFields(user)) || photo !== null);
+    // One object URL per picked photo, released when it changes
+    const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
+    useEffect(() => () => (photoUrl ? URL.revokeObjectURL(photoUrl) : undefined), [photoUrl]);
+
+    const isDirty = !!user && (JSON.stringify(fields) !== JSON.stringify(profileFields(user)) || photo !== null);
     const hasUnsaved = open && isDirty && !saved;
     const guardClose = useDiscardGuard(hasUnsaved);
     // A "see all" link waits for the discard answer; the new page drops ?dialog= and so closes the drawer.
@@ -170,13 +192,11 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
     if (!user) return null;
 
-    // Built from the edit state, not from the user, so the header tracks what is being
-    // typed. In Thai the Thai pair wins when it has been filled in; an account with no
-    // Thai name keeps showing the English one rather than going blank.
+    const { firstName, lastName, firstNameTh, lastNameTh, phone } = fields;
+    // The header tracks what is being typed; in Thai the Thai pair wins once it is filled in
     const nameEn = `${firstName} ${lastName}`.trim() || user.name;
     const nameTh = `${firstNameTh} ${lastNameTh}`.trim();
     const displayName = lang === 'th' ? nameTh || nameEn : nameEn;
-    const previewUrl = photo ? URL.createObjectURL(photo) : user.photo_url;
     const department = lang === 'th' ? (emp?.department_th ?? emp?.department) : emp?.department;
 
     const accessRow = (prefix: string) => (r: EmployeeAccessRow) => ({
@@ -192,16 +212,28 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     ];
     const ticketRows = myTickets?.data ?? [];
 
+    const showFormError = (message: string) => {
+        setFormError(message);
+        setFormErrorCount((n) => n + 1);
+    };
+
+    const edit = (key: FormKey) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setFields((f) => ({ ...f, [key]: value }));
+        setErrors((er) => (key in er ? { ...er, [key]: undefined } : er));
+        setSaved(false);
+    };
+
     const pickPhoto = (f?: File) => {
         setSaved(false);
-        setError('');
+        setFormError('');
         if (!f) return;
         if (!['image/png', 'image/jpeg'].includes(f.type)) {
-            setError(t('emp_photo_err_type'));
+            showFormError(t('emp_photo_err_type'));
             return;
         }
         if (f.size > 2 * 1024 * 1024) {
-            setError(t('emp_photo_err_size'));
+            showFormError(t('emp_photo_err_size'));
             return;
         }
         if (inputRef.current) inputRef.current.value = '';
@@ -209,9 +241,13 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     };
 
     const save = async () => {
-        setError('');
-        if (!firstName.trim() || !lastName.trim()) {
-            setError(t('profile_name_required'));
+        setFormError('');
+        const found: Partial<Record<FormKey, string>> = {};
+        if (!firstName.trim()) found.firstName = t('profile_name_required');
+        if (!lastName.trim()) found.lastName = t('profile_name_required');
+        if (Object.keys(found).length) {
+            setErrors(found);
+            focusFirstError(found as Record<string, string>);
             return;
         }
         const form = new FormData();
@@ -226,27 +262,48 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
             setSaved(true);
             setPhoto(null);
         } catch (e: unknown) {
-            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setError(msg ?? t('profile_save_failed'));
+            const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+            const server: Partial<Record<FormKey, string>> = {};
+            for (const [key, messages] of Object.entries(data?.errors ?? {})) {
+                if (SERVER_FIELDS[key] && messages[0]) server[SERVER_FIELDS[key]] = messages[0];
+            }
+            if (Object.keys(server).length) {
+                setErrors(server);
+                focusFirstError(server as Record<string, string>);
+            } else {
+                showFormError(data?.message ?? t('profile_save_failed'));
+            }
         }
     };
 
-    const tabs: { id: TabId; label: string; icon: typeof Hash; count?: number; show: boolean }[] = [
-        { id: 'profile', label: t('profile_tab_details'), icon: UserRound, show: true },
-        { id: 'assets', label: t('profile_tab_assets'), icon: Box, count: assetsLoading ? undefined : myAssets.length, show: seesAssets },
-        {
-            id: 'tickets',
-            label: t('profile_tab_tickets'),
-            icon: Ticket,
-            count: ticketsLoading ? undefined : myTickets?.meta?.total,
-            show: seesTickets,
-        },
-        { id: 'access', label: t('profile_tab_access'), icon: Shield, count: accessLoading ? undefined : accessRows.length, show: seesAccess },
+    const tabs: DialogTab<TabId>[] = [
+        { id: 'profile', label: t('profile_tab_details'), icon: UserRound },
+        ...(seesAssets
+            ? [{ id: 'assets' as const, label: t('profile_tab_assets'), icon: Box, count: assetsLoading ? undefined : myAssets.length }]
+            : []),
+        ...(seesTickets
+            ? [{ id: 'tickets' as const, label: t('profile_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : myTickets?.meta?.total }]
+            : []),
+        ...(seesAccess
+            ? [{ id: 'access' as const, label: t('profile_tab_access'), icon: Shield, count: accessLoading ? undefined : accessRows.length }]
+            : []),
     ];
+
+    const textField = (key: FormKey, label: string, props: React.ComponentProps<typeof Input> = {}) => (
+        <Field label={label} name={key} error={errors[key]} required={key === 'firstName' || key === 'lastName'}>
+            <Input value={fields[key]} onChange={edit(key)} disabled={!canEdit} {...props} />
+        </Field>
+    );
+
+    const seeAll = (to: string) => (
+        <Link to={to} onClick={leaveTo(to)} className="text-brand mt-4 inline-block text-sm font-medium hover:underline">
+            {t('profile_see_all')}
+        </Link>
+    );
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="flex h-[88vh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
+            <DialogContent className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
                 <DialogTitle className="sr-only">{t('profile')}</DialogTitle>
                 {cropSrc && (
                     <PhotoCropDialog
@@ -264,26 +321,24 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                     />
                 )}
 
-                {/* ── COVER ── who you are, before anything you can change about it. The old drawer
-                     opened straight into input boxes and pushed the identity to the bottom. */}
-                <div
-                    className="border-border flex shrink-0 items-center gap-5 border-b px-7 pt-6 pb-5"
-                    style={{ background: 'radial-gradient(120% 160% at 0% 0%, var(--accent) 0%, var(--card) 60%)' }}
-                >
+                {/* Cover */}
+                <div className="border-border flex shrink-0 items-center gap-4 border-b bg-[radial-gradient(120%_160%_at_0%_0%,var(--accent)_0%,var(--card)_60%)] px-5 pt-6 pb-5 lg:gap-5 lg:px-7">
                     <div className="relative shrink-0">
                         <UserAvatar
                             name={nameEn}
-                            photoUrl={previewUrl}
+                            photoUrl={photoUrl ?? user.photo_url}
                             className="ring-card h-[72px] w-[72px] shadow-md ring-2"
                             textClassName="text-2xl"
                         />
                         {canEdit && (
                             <button
+                                type="button"
                                 onClick={() => inputRef.current?.click()}
+                                aria-label={t('profile_change_photo')}
                                 title={t('profile_change_photo')}
-                                className="border-card bg-brand text-brand-foreground absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 hover:opacity-90"
+                                className="border-card bg-brand text-brand-foreground focus-visible:ring-ring absolute -right-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full border-2 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                             >
-                                <Camera className="h-3.5 w-3.5" />
+                                <Camera className="h-3.5 w-3.5" aria-hidden />
                             </button>
                         )}
                         <input
@@ -291,6 +346,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             type="file"
                             accept="image/png,image/jpeg"
                             className="hidden"
+                            tabIndex={-1}
+                            aria-hidden
                             onChange={(e) => pickPhoto(e.target.files?.[0])}
                         />
                     </div>
@@ -314,8 +371,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                 </div>
 
                 <div className="flex min-h-0 flex-1">
-                    {/* ── RAIL ── the facts nobody edits here, out of the form's way. */}
-                    <aside className="border-border flex w-[300px] shrink-0 flex-col gap-5 overflow-y-auto border-r p-5">
+                    {/* Rail: facts nobody edits here */}
+                    <aside className="border-border flex w-[232px] shrink-0 flex-col gap-5 overflow-y-auto border-r p-4 xl:w-[300px] xl:p-5">
                         <RailSection title={t('profile_contact')}>
                             <RailFact icon={AtSign} label={t('login_email')} value={user.email} mono />
                             <RailFact icon={Phone} label={t('emp_phone')} value={phone} mono />
@@ -332,108 +389,40 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                         </RailSection>
                     </aside>
 
-                    <section className="flex min-w-0 flex-1 flex-col">
-                        <div className="border-border flex shrink-0 gap-1 border-b px-5 pt-3">
-                            {tabs
-                                .filter((tb) => tb.show)
-                                .map((tb) => (
-                                    <button
-                                        key={tb.id}
-                                        type="button"
-                                        onClick={() => setTab(tb.id)}
-                                        className={cn(
-                                            'relative inline-flex items-center gap-1.5 rounded-t-lg px-3 pt-2 pb-3 text-[12.5px] font-semibold transition-colors',
-                                            tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                                        )}
-                                    >
-                                        <tb.icon className="h-[15px] w-[15px]" />
-                                        {tb.label}
-                                        {tb.count != null && tb.count > 0 && (
-                                            <span className="bg-muted text-muted-foreground inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">
-                                                {tb.count}
-                                            </span>
-                                        )}
-                                        {tab === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-[2.5px] rounded" />}
-                                    </button>
-                                ))}
-                        </div>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                        <DialogTabs className="px-2 pt-1 lg:px-3" tabs={tabs} active={tab} onChange={setTab} label={t('profile')} panelId={panelId} />
 
-                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                        <div
+                            role="tabpanel"
+                            id={panelId}
+                            aria-labelledby={dialogTabId(panelId, tab)}
+                            className="min-h-0 flex-1 overflow-y-auto p-4 xl:p-5"
+                        >
                             {tab === 'profile' && (
                                 <div className="max-w-xl space-y-4">
+                                    <FormErrorBanner message={formError} shakeKey={formErrorCount} />
                                     <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <Label>{t('emp_first_name')}</Label>
-                                            <Input
-                                                value={firstName}
-                                                onChange={(e) => {
-                                                    setFirstName(e.target.value);
-                                                    setSaved(false);
-                                                }}
-                                                disabled={!canEdit}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label>{t('emp_last_name')}</Label>
-                                            <Input
-                                                value={lastName}
-                                                onChange={(e) => {
-                                                    setLastName(e.target.value);
-                                                    setSaved(false);
-                                                }}
-                                                disabled={!canEdit}
-                                            />
-                                        </div>
+                                        {textField('firstName', t('emp_first_name'), { autoComplete: 'given-name' })}
+                                        {textField('lastName', t('emp_last_name'), { autoComplete: 'family-name' })}
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <Label>{t('emp_first_name_th')}</Label>
-                                            <Input
-                                                value={firstNameTh}
-                                                onChange={(e) => {
-                                                    setFirstNameTh(e.target.value);
-                                                    setSaved(false);
-                                                }}
-                                                disabled={!canEdit}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label>{t('emp_last_name_th')}</Label>
-                                            <Input
-                                                value={lastNameTh}
-                                                onChange={(e) => {
-                                                    setLastNameTh(e.target.value);
-                                                    setSaved(false);
-                                                }}
-                                                disabled={!canEdit}
-                                            />
-                                        </div>
+                                        {textField('firstNameTh', t('emp_first_name_th'), { autoComplete: 'off' })}
+                                        {textField('lastNameTh', t('emp_last_name_th'), { autoComplete: 'off' })}
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <Label>{t('emp_phone')}</Label>
-                                        <Input
-                                            className="font-mono"
-                                            value={phone}
-                                            onChange={(e) => {
-                                                setPhone(e.target.value);
-                                                setSaved(false);
-                                            }}
-                                            disabled={!canEdit}
-                                        />
-                                    </div>
-                                    {error && (
-                                        <div className="bg-destructive/10 dark:text-destructive rounded-lg px-3 py-2 text-sm text-red-700">
-                                            {error}
-                                        </div>
-                                    )}
+                                    {textField('phone', t('emp_phone'), {
+                                        type: 'tel',
+                                        inputMode: 'tel',
+                                        autoComplete: 'tel',
+                                        className: 'font-mono',
+                                    })}
                                 </div>
                             )}
 
                             {tab === 'assets' &&
                                 (assetsLoading ? (
-                                    <EmptyTab text="…" />
+                                    <LoadingRows />
                                 ) : myAssets.length === 0 ? (
-                                    <EmptyTab text={t('profile_no_assets')} />
+                                    <EmptyPane icon={Box} text={t('profile_no_assets')} />
                                 ) : (
                                     <>
                                         {myAssets.map((a) => (
@@ -445,21 +434,15 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                                 right={<span className="text-muted-foreground shrink-0 font-mono text-xs">{a.asset_code}</span>}
                                             />
                                         ))}
-                                        <Link
-                                            to="/my-assets-access"
-                                            onClick={leaveTo('/my-assets-access')}
-                                            className="text-brand mt-4 inline-block text-sm font-medium hover:underline"
-                                        >
-                                            {t('profile_see_all')}
-                                        </Link>
+                                        {seeAll('/my-assets-access')}
                                     </>
                                 ))}
 
                             {tab === 'tickets' &&
                                 (ticketsLoading ? (
-                                    <EmptyTab text="…" />
+                                    <LoadingRows />
                                 ) : ticketRows.length === 0 ? (
-                                    <EmptyTab text={t('profile_no_tickets')} />
+                                    <EmptyPane icon={Ticket} text={t('profile_no_tickets')} />
                                 ) : (
                                     <>
                                         {ticketRows.map((tk) => (
@@ -471,45 +454,32 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                                 right={<span className="text-muted-foreground shrink-0 text-xs">{fmt.date(tk.created_at)}</span>}
                                             />
                                         ))}
-                                        <Link
-                                            to="/tickets?tab=my"
-                                            onClick={leaveTo('/tickets?tab=my')}
-                                            className="text-brand mt-4 inline-block text-sm font-medium hover:underline"
-                                        >
-                                            {t('profile_see_all')}
-                                        </Link>
+                                        {seeAll('/tickets?tab=my')}
                                     </>
                                 ))}
 
                             {tab === 'access' &&
                                 (accessLoading ? (
-                                    <EmptyTab text="…" />
+                                    <LoadingRows />
                                 ) : accessRows.length === 0 ? (
-                                    <EmptyTab text={t('profile_no_access')} />
+                                    <EmptyPane icon={Shield} text={t('profile_no_access')} />
                                 ) : (
                                     <>
                                         {accessRows.map((r) => (
                                             <ItemRow key={r.key} icon={Shield} title={r.name} sub={r.sub} />
                                         ))}
-                                        <Link
-                                            to="/my-assets-access"
-                                            onClick={leaveTo('/my-assets-access')}
-                                            className="text-brand mt-4 inline-block text-sm font-medium hover:underline"
-                                        >
-                                            {t('profile_see_all')}
-                                        </Link>
+                                        {seeAll('/my-assets-access')}
                                     </>
                                 ))}
                         </div>
-                    </section>
+                    </div>
                 </div>
 
-                {/* Save belongs to the profile tab; the others are read-only, so the footer says
-                    so rather than offering a button that would save a form nobody is looking at. */}
-                <div className="border-border flex shrink-0 items-center justify-end gap-3 border-t px-7 py-4">
-                    {/* Change password opens over the drawer (?dialog=password); closing it returns here */}
-                    <Button variant="outline" className="mr-auto" onClick={() => guardClose(onChangePassword)}>
-                        <KeyRound className="h-4 w-4" />
+                {/* Save belongs to the details tab; the others are read-only */}
+                <div className="border-border flex shrink-0 items-center justify-end gap-3 border-t px-5 py-4 lg:px-7">
+                    {/* Opens over the drawer (?dialog=password); the drawer and its edits stay underneath */}
+                    <Button variant="outline" className="mr-auto" onClick={onChangePassword}>
+                        <KeyRound className="h-4 w-4" aria-hidden />
                         {t('pwd_change_title')}
                     </Button>
                     <Button variant="outline" onClick={() => guardClose(onClose)}>

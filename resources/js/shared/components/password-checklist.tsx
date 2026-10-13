@@ -29,6 +29,7 @@ export function PasswordChecklist({ value, className, id }: { value: string; cla
                             <span className="bg-muted-foreground/50 h-1 w-1 shrink-0 rounded-full" aria-hidden />
                         )}
                         {t(rule.labelKey)}
+                        <span className="sr-only">({met ? t('pwd_rule_met') : t('pwd_rule_unmet')})</span>
                     </li>
                 );
             })}
