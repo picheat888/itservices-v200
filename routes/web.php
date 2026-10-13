@@ -3,23 +3,23 @@
 use App\Http\Controllers\Api\Stock\StockItemController;
 use App\Http\Controllers\Api\Stock\StockMovementController;
 use App\Http\Controllers\File\FileController;
+use App\Http\Middleware\BlockResignedEmployees;
+use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
 use App\Models\Settings\AppSetting;
 use Illuminate\Support\Facades\Route;
 
-// Server-rendered documents (dompdf). These return binary PDFs and are opened
-// in a browser tab, so they ride the web/session stack rather than the JSON API.
-// Auth + per-action permission are enforced exactly as the API routes were
-// (auth:sanctum + session timeout here; the stock.view gate lives in the controller).
-Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->prefix('pdf')->group(function () {
+// Same sign-in checks as the API group: timeout, closed accounts and owed password changes
+$signedIn = ['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmployees::class, CheckPasswordExpiry::class];
+
+// Server-rendered PDFs (dompdf), opened in a browser tab; each controller checks its permission
+Route::middleware($signedIn)->prefix('pdf')->group(function () {
     Route::get('stock-items/{stockItem}/history', [StockItemController::class, 'historyPdf'])->name('pdf.stock-items.history');
     Route::get('stock-movements/{movement}/labels', [StockMovementController::class, 'labelsPdf'])->name('pdf.stock-movements.labels');
 });
 
-// Private uploads (ticket/contract attachments, employee photos, access logos).
-// Stored off the public disk; each route is gated to the record's viewers.
-// Company branding is NOT here — it stays public for the login page & emails.
-Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->prefix('files')->group(function () {
+// Private uploads, each gated to the record's viewers (company branding stays public)
+Route::middleware($signedIn)->prefix('files')->group(function () {
     Route::get('tickets/attachments/{attachment}', [FileController::class, 'ticketAttachment'])->name('files.ticket-attachment');
     Route::get('contracts/attachments/{attachment}', [FileController::class, 'contractAttachment'])->name('files.contract-attachment');
     Route::get('service-requests/attachments/{attachment}', [FileController::class, 'requestAttachment'])->name('files.request-attachment');
