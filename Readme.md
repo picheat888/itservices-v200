@@ -5203,3 +5203,11 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ข้อมูลเดิมของ EMP-79 ไม่ได้แก้ในฐานข้อมูล ผู้ใช้แก้เองผ่านหน้าจอ
 - test: `tests/Feature/EmployeeResignDatesTest.php` 6 กรณี ผ่านพร้อม `EmployeeResignAssetsTest` (12 passed)
 - ปรับต่อ: วันเดียวกันก็ไม่ได้แล้ว ลาออกใช้ `after` แก้ไขใช้ `before` ข้อความเปลี่ยนเป็น "กรุณาเลือกวันหลังวันเริ่มงาน (…)" และ "กรุณาเลือกวันก่อนวันทำงานวันสุดท้าย (…)" (อังกฤษ "Pick a date after/before …"); test เพิ่มเป็น 8 กรณี (14 passed รวม `EmployeeResignAssetsTest`); ข้อมูลจริงมีแค่ EMP-79 ที่ติดเงื่อนไขนี้
+
+### ระบบ: ตั้งค่ารูปแบบวันที่กลาง (ช่วงที่ 1) — 2026-10-13
+- ตั้งค่า → ระบบ มีส่วน "วันที่และเวลา" ใต้ Branding: รูปแบบวันที่ 6 แบบ (13/10/2026, 13-10-2026, 2026/10/13, 2026-10-13, 13 ต.ค. 2026, 13 ตุลาคม 2026), ปี ค.ศ./พ.ศ., เวลา 24/12 ชม. พร้อมบรรทัดตัวอย่าง ค่าเริ่มต้น 13/10/2026 ค.ศ. 24 ชม. บันทึกผ่าน `PUT /api/settings/datetime` (สิทธิ์ settings.system, ค่าอื่นนอกรายการตอบ 422) และส่งกลับใน `GET /api/settings` เฉพาะผู้ที่ล็อกอิน
+- กฎ: วันและเดือนเติม 0 เสมอ, พ.ศ. = ค.ศ. + 543 ใช้กับทุกรูปแบบ, ป้ายกราฟ/ช่วงวันที่ใช้ชื่อเดือนเสมอ (ปีตามที่ตั้ง), ค่าที่อ่านไม่ได้แสดง "—", ค่าใน DB/API ยังเป็น YYYY-MM-DD
+- ตัวจัดรูปแบบกลาง: `shared/lib/datetime.ts` (หน้าเว็บ ใช้ผ่าน `useDateFormat()` / `currentDateFormat()`) และ `App\Support\DateDisplay` (อีเมล/Excel/PDF ในช่วงที่ 3) อ่านชื่อเดือนจาก `shared/lib/date-names.json` ไฟล์เดียว ไม่ใช้ Intl หรือ locale ของเครื่อง; ค่าที่ตั้งถูกจำใน `useUiStore` (persist) ไม่กระพริบตอนเปิดหน้า
+- `tests/Fixtures/date-format-cases.json` 51 กรณีตรวจทั้งสองฝั่ง: `npm run test:dates` และ `php artisan test --compact tests/Unit/DateDisplayTest.php`; endpoint: `tests/Feature/DateTimeSettingsTest.php`
+- ใช้ค่าที่ตั้งแล้ว: ช่องเลือกวันที่ ปฏิทิน (ปีตาม ค.ศ./พ.ศ.) ช่วงวันที่ภาพรวม แถบเวลาสร้าง/แก้ไข และทุกจุดที่เคยใช้ `formatDateTime`/`formatDateShort`/`formatRangeShort` (ลบตัวช่วยเดิมแล้ว) เช่น Ticket, สต็อก, คำขอ, ประวัติอีเมล, สิทธิ์
+- ESLint เตือนเมื่อใช้ `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString` นอกตัวจัดรูปแบบ (เหลือ 16 จุด ส่วนใหญ่ในรายงาน) ช่วงที่ 2 ไล่แก้ทีละโมดูล (รวมค่า ISO ที่ยังพิมพ์ตรง ๆ เช่นรายชื่อพนักงาน สัญญา) แล้วเปลี่ยนเป็น error; ช่วงที่ 3 อีเมล Excel PDF

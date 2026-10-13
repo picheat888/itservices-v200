@@ -38,6 +38,28 @@ export default [
         },
     },
     {
+        files: ['resources/js/**/*.{ts,tsx}'],
+        ignores: ['resources/js/shared/lib/datetime.ts'],
+        rules: {
+            // Phase 2 of the date-format work flips this to 'error'.
+            'no-restricted-syntax': [
+                'warn',
+                {
+                    selector: "NewExpression[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
+                    message: 'Format dates with useDateFormat() from @/shared/hooks/use-date-format.',
+                },
+                {
+                    selector: "CallExpression[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
+                    message: 'Format dates with useDateFormat() from @/shared/hooks/use-date-format.',
+                },
+                {
+                    selector: 'CallExpression[callee.property.name=/^toLocale(Date|Time)String$/]',
+                    message: 'Format dates with useDateFormat() from @/shared/hooks/use-date-format.',
+                },
+            ],
+        },
+    },
+    {
         ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'tailwind.config.js'],
     },
     prettier, // Turn off all rules that might conflict with Prettier
