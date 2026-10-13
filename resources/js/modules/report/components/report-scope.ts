@@ -1,12 +1,5 @@
-/**
- * One short line saying which slice of a report a file or a schedule holds — "ก.ย. 2026,
- * กรอง 2 อย่าง, 5 คอลัมน์" — built from the filters it was made with. Used by the Report
- * Center rail (my-exports.tsx) so two files of the same report can be told apart — plus
- * `periodRange`, the dates of the hub's period switch for its report links. Dates are
- * written short, as the design does ("ส.ค. 2026"): a whole calendar month by its name, any
- * other range as "1 ก.ค. – 25 ก.ย. 2026". Gregorian years in both languages, like the rest
- * of the app's dates.
- */
+// One short line naming a report file's slice ("ก.ย. 2026, กรอง 2 อย่าง, 5 คอลัมน์") for the Report Center rail,
+// plus `periodRange` for the hub's period switch. Ranges follow the system date setting.
 import { bindDateFormat } from '@/shared/lib/datetime';
 import { useUiStore } from '@/stores/ui';
 

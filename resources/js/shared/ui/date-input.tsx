@@ -35,13 +35,7 @@ function toDate(value: string): Date | undefined {
     return new Date(y, m - 1, d);
 }
 
-/**
- * Date field: a field-styled trigger button that opens a brand calendar in a popover.
- * The stored value stays a plain "YYYY-MM-DD" string (matching the API); the button reads it
- * in the system date format (useDateFormat), and conversion is done with local getters so the day never shifts
- * across timezones. The trigger keeps the canonical field states and latches the brand
- * ring while the calendar is open (data-[state=open]).
- */
+/** Date field: a popover calendar; the value stays "YYYY-MM-DD" and the trigger reads it in the system date format. */
 export function DateInput({
     value,
     onChange,

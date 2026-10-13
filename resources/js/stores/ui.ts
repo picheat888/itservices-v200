@@ -1,5 +1,5 @@
 import type { AssetStatusColors } from '@/modules/settings';
-import { DEFAULT_DATE_CONFIG, normalizeDateConfig, type DateConfig } from '@/shared/lib/datetime';
+import { DEFAULT_DATE_CONFIG, normalizeDateConfig, sameDateConfig, type DateConfig } from '@/shared/lib/datetime';
 import type { Density, Lang, SidebarStyle } from '@/shared/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -113,7 +113,11 @@ export const useUiStore = create<UiState>()(
             setAccent: (accent) => set({ accent }),
             setLogo: (logoUrl) => set({ logoUrl }),
             setAssetStatusColors: (assetStatusColors) => set({ assetStatusColors }),
-            setDateConfig: (config) => set({ dateConfig: normalizeDateConfig(config) }),
+            setDateConfig: (config) =>
+                set((s) => {
+                    const next = normalizeDateConfig(config);
+                    return sameDateConfig(s.dateConfig, next) ? s : { dateConfig: next };
+                }),
             setPasswordDialog: (passwordDialogOpen) => set({ passwordDialogOpen }),
             setNarrowSidebarOpen: (narrowSidebarOpen) => set({ narrowSidebarOpen }),
             setCrumbTail: (crumbTail) => set({ crumbTail }),
