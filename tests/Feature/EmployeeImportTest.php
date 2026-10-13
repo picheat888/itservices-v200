@@ -141,6 +141,19 @@ class EmployeeImportTest extends TestCase
         $this->assertSame(0, Employee::where('first_name', 'Somchai')->count());
     }
 
+    public function test_values_past_the_form_limits_are_reported_instead_of_failing_the_insert(): void
+    {
+        $result = $this->service->importRows([
+            $this->row(['first_name' => str_repeat('ก', 256), 'employee_code' => str_repeat('E', 51)]),
+            $this->row(['first_name' => 'Phone', 'phone' => 'n/a']),
+        ]);
+
+        $this->assertSame(0, $result['imported']);
+        $this->assertStringContainsString('first_name ยาวเกิน 255', $result['errors'][0]['message']);
+        $this->assertStringContainsString('employee_code ยาวเกิน 50', $result['errors'][0]['message']);
+        $this->assertStringContainsString("phone 'n/a'", $result['errors'][1]['message']);
+    }
+
     public function test_unknown_position_text_is_reported(): void
     {
         $result = $this->service->importRows([

@@ -265,6 +265,19 @@ class EmployeeImportService
                 }
             }
 
+            // Same limits as the employee form (StoreEmployeeRequest).
+            $limits = ['employee_code' => 50, 'first_name' => 255, 'last_name' => 255, 'first_name_th' => 255, 'last_name_th' => 255, 'email' => 255, 'phone' => 50];
+            foreach ($limits as $column => $max) {
+                $text = $column === 'employee_code' ? $code : $this->value($row, $column);
+                if (mb_strlen($text) > $max) {
+                    $rowErrors[] = "{$column} ยาวเกิน {$max} ตัวอักษร";
+                }
+            }
+            $phone = $this->value($row, 'phone');
+            if ($phone !== '' && ! preg_match('/(\D*\d){3,}/', $phone)) {
+                $rowErrors[] = "phone '{$phone}' ต้องมีตัวเลขอย่างน้อย 3 หลัก";
+            }
+
             $preview[$line] = [
                 'row' => $line,
                 'employee_code' => $code !== '' ? $code : null,
