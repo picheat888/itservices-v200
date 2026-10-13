@@ -288,7 +288,7 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
                 )}
             >
                 {stacks.length > 0 && (
-                    <div ref={top.left} className="flex flex-col gap-3" style={heldStyle(top.heldLeft)}>
+                    <div ref={top.left} className="flex flex-col gap-3 xl:sticky xl:top-4" style={heldStyle(top.heldLeft)}>
                         {stacks.map((c) => (
                             <StacksCard key={c.key} chart={c} expanded={top.open.dept} onToggle={() => top.toggle('dept')} />
                         ))}
@@ -297,7 +297,7 @@ export function TabularCharts({ charts }: { charts: TabularChart[] }) {
                 {side && (
                     // One card, as the design's: the donut, then the categories under a ruled heading. Both
                     // cards stretch to the row, so their bottoms line up however long either list runs.
-                    <Card ref={top.right} className="flex flex-col overflow-hidden" style={heldStyle(top.heldRight)}>
+                    <Card ref={top.right} className="flex flex-col overflow-hidden xl:sticky xl:top-4" style={heldStyle(top.heldRight)}>
                         {donuts.map((c) => (
                             <DonutSection key={c.key} chart={c} />
                         ))}

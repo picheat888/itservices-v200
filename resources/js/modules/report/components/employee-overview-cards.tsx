@@ -499,7 +499,7 @@ function DepartmentCard({
     if (data.leavers.still_working > 0) info.push(t('rep_eo_dept_info_notice').replace('{n}', count(data.leavers.still_working, lang)));
 
     return (
-        <Card ref={cardRef} className="flex flex-col overflow-clip lg:col-span-2 xl:col-span-3" style={heldStyle(heldHeight)}>
+        <Card ref={cardRef} className="flex flex-col overflow-clip lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3" style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_eo_dept_title')} info={info} />
             {data.departments.length === 0 && data.empty_departments.length === 0 ? (
                 <CardEmpty>{t('rep_eo_dept_empty')}</CardEmpty>
@@ -665,7 +665,7 @@ function HoldingCard({
     );
 
     return (
-        <Card ref={cardRef} className="flex flex-col overflow-clip xl:col-span-2" style={heldStyle(heldHeight)}>
+        <Card ref={cardRef} className="flex flex-col overflow-clip lg:sticky lg:top-4 xl:col-span-2" style={heldStyle(heldHeight)}>
             <CardTitle
                 title={t('rep_eo_holding_title')}
                 info={t('rep_eo_holding_info')}
