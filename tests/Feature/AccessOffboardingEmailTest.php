@@ -166,7 +166,7 @@ class AccessOffboardingEmailTest extends TestCase
         $this->assertStringContainsString('5 access item(s)', $this->sentSubject());
         // Who left, and by when it has to be done.
         $this->assertStringContainsString('EMP-1042', $html);
-        $this->assertStringContainsString('30-09-2026', $html);
+        $this->assertStringContainsString('30/09/2026', $html);
         $this->assertStringNotContainsString('{{', $html);
     }
 

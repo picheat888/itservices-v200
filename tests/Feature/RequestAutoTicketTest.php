@@ -356,7 +356,7 @@ class RequestAutoTicketTest extends TestCase
         $html = $this->jobProp($job, 'html');
         $this->assertStringContainsString('Model discontinued', $html);
         $this->assertStringContainsString($tech->name, $html, 'the mail does not say who cancelled it');
-        $this->assertStringContainsString(now()->format('d-m-Y'), $html, 'the mail does not say when');
+        $this->assertStringContainsString(now()->format('d/m/Y'), $html, 'the mail does not say when');
         $this->assertStringContainsString($request->reference, $html);
         $this->assertStringContainsString((string) $request->ticket->ticket_no, $html);
         // It cleared every step before IT stopped it, and the table is what shows that.

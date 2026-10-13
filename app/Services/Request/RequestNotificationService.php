@@ -11,6 +11,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Notifications\RequestWorkflowNotification;
 use App\Services\Email\EmailNotificationService;
+use App\Support\DateDisplay;
 use App\Support\EmailTable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -520,7 +521,7 @@ class RequestNotificationService
                     ? (self::SKIP_REASONS[$row->skip_reason?->value] ?? 'Skipped')
                     : 'Approved', 60),
                 EmailTable::text($skipped ? '-' : (string) ($row->acted_by_name ?: $row->approver_name ?: '-'), 30),
-                $row->acted_at?->format('d-m-Y') ?? '-',
+                DateDisplay::emailDate($row->acted_at),
             ];
         })->values()->all();
 
@@ -569,17 +570,17 @@ class RequestNotificationService
             'request.type' => $request->type?->label(),
             'requester.name' => $request->requester_name,
             'reference.id' => $request->reference,
-            'request.date' => $request->created_at?->format('d-m-Y') ?? '-',
+            'request.date' => DateDisplay::emailDate($request->created_at),
             // Stamped when the LAST approval step passes, so it is empty until then.
-            'request.approved_date' => $request->approved_at?->format('d-m-Y') ?? '-',
-            'request.rejected_date' => $request->rejected_at?->format('d-m-Y') ?? '-',
+            'request.approved_date' => DateDisplay::emailDate($request->approved_at),
+            'request.rejected_date' => DateDisplay::emailDate($request->rejected_at),
             // Withdrawn by the requester, or approved and then cancelled by IT — the second
             // is the one that sends mail (request.not_delivered).
-            'request.cancelled_date' => $request->cancelled_at?->format('d-m-Y') ?? '-',
+            'request.cancelled_date' => DateDisplay::emailDate($request->cancelled_at),
             // Set by finalize() before this mail is composed, and only for workflows with
             // auto_ticket on — the others have nothing to open.
             'request.ticket_no' => (string) ($request->ticket?->ticket_no ?: '-'),
-            'request.completed_date' => $request->completed_at?->format('d-m-Y') ?? '-',
+            'request.completed_date' => DateDisplay::emailDate($request->completed_at),
             'request.completed_by' => $this->completedBy($request),
             // Free text somebody typed, landing in an HTML email.
             'request.reason' => filled($request->reason) ? nl2br(e((string) $request->reason)) : '-',

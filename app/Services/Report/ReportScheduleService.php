@@ -11,6 +11,7 @@ use App\Notifications\ReportScheduleNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\TabularReportExporter;
+use App\Support\DateDisplay;
 use App\Support\Refusal;
 use App\Support\ReportCatalogue;
 use Carbon\CarbonImmutable;
@@ -297,17 +298,16 @@ class ReportScheduleService
     {
         $names = $this->dateFilterNames($schedule->report_key);
         if ($names === []) {
-            return 'As of '.$runAt->format('Y-m-d H:i');
+            return 'As of '.DateDisplay::dateTime($runAt, null, 'en');
         }
         // A point-in-time report (stock valuation's `as_of`) stands at the period's last day.
         if (! in_array('from', $names, true) && ! in_array('to', $names, true)) {
-            return 'As of '.$period['to']->toDateString();
+            return 'As of '.DateDisplay::date($period['to'], null, 'en');
         }
 
-        $from = $period['from']->toDateString();
-        $to = $period['to']->toDateString();
-
-        return $from === $to ? $from : "{$from} to {$to}";
+        return $period['from']->isSameDay($period['to'])
+            ? DateDisplay::date($period['from'], null, 'en')
+            : DateDisplay::range($period['from'], $period['to'], null, 'en');
     }
 
     private function frequencyLabel(ReportSchedule $schedule): string

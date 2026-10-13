@@ -207,7 +207,7 @@ class StockAlertVariablesTest extends TestCase
         // Not the approver: releasing the stock is a different act by a different person.
         $this->assertStringContainsString('Fulfilled By: Kankanok P', $fulfilled);
         $this->assertStringNotContainsString('Anong Wattana', $fulfilled);
-        $this->assertStringContainsString('Fulfilled Date: '.now()->format('d-m-Y'), $fulfilled);
+        $this->assertStringContainsString('Fulfilled Date: '.now()->format('d/m/Y'), $fulfilled);
     }
 
     public function test_a_request_fulfilled_before_the_name_was_recorded_reads_as_a_dash(): void

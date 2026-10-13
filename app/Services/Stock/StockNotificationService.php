@@ -11,6 +11,7 @@ use App\Notifications\StockAlertNotification;
 use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
 use App\Services\Email\EmailNotificationService;
+use App\Support\DateDisplay;
 use App\Support\EmailTable;
 use Illuminate\Notifications\Notification as NotificationInstance;
 use Illuminate\Support\Collection;
@@ -181,14 +182,14 @@ class StockNotificationService
             // Free text the requester typed, landing in an HTML email: escaped, and its line
             // breaks turned into <br> so a reason written over two lines is not one sentence.
             'stock.request_reason' => filled($request->reason) ? nl2br(e((string) $request->reason)) : '-',
-            'stock.request_date' => $request->created_at?->format('d-m-Y') ?? '-',
+            'stock.request_date' => DateDisplay::emailDate($request->created_at),
             // One name for both outcomes: the column records whoever DECIDED, and the label
             // in each template ("Approved By" / "Rejected By") says which it was.
             'stock.approver' => (string) ($request->approver_name ?: '-'),
             // Not the same person: approving is a decision, fulfilling is handing the stock
             // over. Null on anything fulfilled before the column existed.
             'stock.fulfilled_by' => (string) ($request->fulfilled_by ?: '-'),
-            'stock.fulfilled_date' => $request->fulfilled_at?->format('d-m-Y') ?? '-',
+            'stock.fulfilled_date' => DateDisplay::emailDate($request->fulfilled_at),
         ];
     }
 
@@ -440,7 +441,7 @@ class StockNotificationService
             return [
                 EmailTable::text((string) $request->reference, 20),
                 EmailTable::text((string) ($request->requester_name ?: '-'), 26),
-                $request->created_at?->format('d-m-Y') ?? '-',
+                DateDisplay::emailDate($request->created_at),
                 // Escaped: the item name is typed by hand. The quantity rides with it because
                 // a request for one and a request for fifty are not the same decision.
                 EmailTable::text(($item?->name ?? '-').' ×'.(int) $request->qty, 44),

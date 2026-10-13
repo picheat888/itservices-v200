@@ -9,6 +9,7 @@ use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Employee\EmployeeService;
 use Database\Seeders\EmailTemplateSeeder;
@@ -103,7 +104,28 @@ class NewEmployeeEmailTest extends TestCase
         $this->assertStringContainsString('System analyst', $html);
         $this->assertStringContainsString('Information Technology', $html);
         // Written the way the reader writes a date, matching the other mails.
-        $this->assertStringContainsString('01-09-2026', $html);
+        $this->assertStringContainsString('01/09/2026', $html);
+    }
+
+    public function test_email_dates_follow_the_date_setting_in_english(): void
+    {
+        Bus::fake();
+        $this->credentialSetter();
+        AppSetting::put('date_format', 'd_mon_y');
+        AppSetting::put('date_era', 'be');
+
+        $employee = Employee::create([
+            'code' => 'EMP-1043',
+            'first_name' => 'Somchai',
+            'last_name' => 'Suksawat',
+            'department_id' => $this->department()->id,
+            'joined_at' => '2026-09-01',
+            'status' => 'active',
+        ]);
+
+        $this->notify($employee);
+
+        $this->assertStringContainsString('01 Sep 2569', $this->sentHtml());
     }
 
     public function test_a_starter_with_nothing_filled_in_yet_still_produces_a_readable_mail(): void

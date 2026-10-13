@@ -128,7 +128,7 @@ class ContractWeeklyDigestTest extends TestCase
         $this->assertStringContainsString('Acme Co.', $html);
         $this->assertStringContainsString('Annual support', $html);
         $this->assertStringContainsString('120,000.00', $html);
-        $this->assertStringContainsString(now()->addDays(20)->format('d-m-Y'), $html);
+        $this->assertStringContainsString(now()->addDays(20)->format('d/m/Y'), $html);
         // The contract's own reminder settings, in the days-before figures the form shows.
         $this->assertStringContainsString('90, 30, 7 days', $html);
     }
