@@ -31,4 +31,11 @@ class DateDisplayTest extends TestCase
 
         $this->assertSame('03/10/2569 14:05', DateDisplay::dateTime(Carbon::parse('2026-10-03 14:05:00'), $config));
     }
+
+    public function test_cell_helpers_keep_an_empty_cell_empty(): void
+    {
+        $this->assertNull(DateDisplay::cellDate(null));
+        $this->assertNull(DateDisplay::cellDateTime(''));
+        $this->assertNull(DateDisplay::cellDateTime('not a date'));
+    }
 }

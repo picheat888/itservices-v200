@@ -11,6 +11,8 @@ use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
         // without this the rows one test wrote would answer the next one's reads
         // long after RefreshDatabase had rolled them away.
         AppSetting::flushCache();
+        // A long-lived queue worker boots once; each job reads settings fresh.
+        Event::listen(JobProcessing::class, fn () => AppSetting::flushCache());
 
         $this->configureRateLimiting();
 
