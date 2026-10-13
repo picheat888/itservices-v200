@@ -13,7 +13,7 @@ use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
 use App\Services\Report\Contract\ContractMonthlyCostReport;
 use App\Services\Report\Employee\EmployeeOpenItemsReport;
-use App\Services\Report\Employee\JoinersLeaversReport;
+use App\Services\Report\Employee\EmployeeOverviewReport;
 use App\Services\Report\Request\ItPendingRequestReport;
 use App\Services\Report\Request\RequestApprovalsReport;
 use App\Services\Report\Request\RequestOverviewReport;
@@ -71,7 +71,7 @@ class ReportCatalogue
 
     public const REQUESTS_IT_PENDING = 'requests.it_pending';
 
-    public const EMPLOYEES_JOINERS_LEAVERS = 'employees.joiners_leavers';
+    public const EMPLOYEES_OVERVIEW = 'employees.overview';
 
     public const EMPLOYEES_OPEN_ITEMS = 'employees.open_items';
 
@@ -220,10 +220,10 @@ class ReportCatalogue
             ],
             // Employee reports follow the Employee detail's own-module "peek": employees.view
             // is enough to see what a person holds, without assets.view.
-            self::EMPLOYEES_JOINERS_LEAVERS => [
+            self::EMPLOYEES_OVERVIEW => [
                 'domain' => 'employees',
                 'kind' => 'tabular',
-                'class' => JoinersLeaversReport::class,
+                'class' => EmployeeOverviewReport::class,
                 'requires' => ['employees.view'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,

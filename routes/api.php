@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Report\AssetTransferBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWarrantyBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
 use App\Http\Controllers\Api\Report\EmployeeOpenItemsBreakdownController;
+use App\Http\Controllers\Api\Report\EmployeeOverviewBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
@@ -125,6 +126,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/assets/warranty-expiring/breakdown', AssetWarrantyBreakdownController::class)->defaults('key', 'assets.warranty_expiring')->name('api.reports.assets.warranty-expiring.breakdown');
     // "ภาพรวมสิทธิ์การเข้าถึง" — months, leavers still holding, departments and resources that need someone.
     Route::get('reports/access/overview/breakdown', AccessOverviewBreakdownController::class)->defaults('key', 'access.overview')->name('api.reports.access.overview.breakdown');
+    // "ภาพรวมพนักงาน" — headcount chart, departments and leavers still holding access above its rows.
+    Route::get('reports/employees/overview/breakdown', EmployeeOverviewBreakdownController::class)->defaults('key', 'employees.overview')->name('api.reports.employees.overview.breakdown');
     // "ทบทวนสมาชิกและเจ้าของ" — the resource table and space cards, and one resource's member review sheet (PDF).
     Route::get('reports/access/resource-members/breakdown', [AccessResourceMembersController::class, 'breakdown'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.breakdown');
     Route::get('reports/access/resource-members/sheet', [AccessResourceMembersController::class, 'sheet'])->defaults('key', 'access.resource_members')->name('api.reports.access.resource-members.sheet');

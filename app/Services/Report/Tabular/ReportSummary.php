@@ -40,6 +40,7 @@ final class ReportSummary
         public readonly ?string $attention = null,
         /** @var array{kind: 'line', points: list<int|float>, months: list<string>}|array{kind: 'columns', items: list<array{key: string, label_key: string, short: string, tone: string, value: int}>}|null */
         public readonly ?array $chart = null,
+        public readonly ?int $progress = null,
     ) {}
 
     public static function make(string $key, string $heading, int|float|null $value, ?string $tone = null, string $format = 'count'): self
@@ -54,7 +55,7 @@ final class ReportSummary
      */
     public function withSplit(array $split): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $split, $this->share, $this->note, $this->goal, $this->attention, $this->chart);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $split, $this->share, $this->note, $this->goal, $this->attention, $this->chart, $this->progress);
     }
 
     /** The same tile as a share of `$whole` — a whole percent, null when the whole is empty. */
@@ -62,7 +63,7 @@ final class ReportSummary
     {
         $share = $whole > 0 && $this->value !== null ? (int) round($this->value / $whole * 100) : null;
 
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $share, $this->note, $this->goal, $this->attention, $this->chart);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $share, $this->note, $this->goal, $this->attention, $this->chart, $this->progress);
     }
 
     /**
@@ -72,19 +73,19 @@ final class ReportSummary
      */
     public function withNote(?array $note): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $note, $this->goal, $this->attention, $this->chart);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $note, $this->goal, $this->attention, $this->chart, $this->progress);
     }
 
     /** The same percent tile measured against a percent goal (see the class note). */
     public function withGoal(int $goal): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $goal, $this->attention, $this->chart);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $goal, $this->attention, $this->chart, $this->progress);
     }
 
     /** The same tile framed as needing watching ('amber') or gone wrong ('red') while above zero. */
     public function withAttention(string $attention): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $attention, $this->chart);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $attention, $this->chart, $this->progress);
     }
 
     /**
@@ -94,18 +95,26 @@ final class ReportSummary
      */
     public function withChart(array $chart): self
     {
-        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $this->attention, $chart);
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $this->attention, $chart, $this->progress);
+    }
+
+    /** The same tile with a bar filled to `$done` of `$total` in its tone (no badge); none when the total is empty. */
+    public function withProgress(int $done, int $total): self
+    {
+        $progress = $total > 0 ? (int) round($done / $total * 100) : null;
+
+        return new self($this->key, $this->heading, $this->value, $this->tone, $this->format, $this->split, $this->share, $this->note, $this->goal, $this->attention, $this->chart, $progress);
     }
 
     /**
-     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int|float}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>, texts?: array<string, string|array{name: string, name_th: ?string}>}|null, goal: ?int, attention: ?string, chart: ?array<string, mixed>}
+     * @return array{key: string, label_key: string, heading: string, value: int|float|null, tone: ?string, format: string, split: list<array{key: string, label_key: string, tone: string, value: int|float}>, share: ?int, note: array{label_key: string, hours?: ?float, at?: ?string, values?: array<string, int|float>, texts?: array<string, string|array{name: string, name_th: ?string}>}|null, goal: ?int, attention: ?string, chart: ?array<string, mixed>, progress: ?int}
      */
     public function toArray(): array
     {
         return [
             'key' => $this->key, 'label_key' => "rep_k_{$this->key}", 'heading' => $this->heading, 'value' => $this->value,
             'tone' => $this->tone, 'format' => $this->format, 'split' => $this->split, 'share' => $this->share, 'note' => $this->note,
-            'goal' => $this->goal, 'attention' => $this->attention, 'chart' => $this->chart,
+            'goal' => $this->goal, 'attention' => $this->attention, 'chart' => $this->chart, 'progress' => $this->progress,
         ];
     }
 }
