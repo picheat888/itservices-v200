@@ -22,6 +22,7 @@ import {
     monthDensity,
     monthLabel,
     monthLabelPlace,
+    reportDates,
     SCROLL_AFTER_MONTHS,
     SCROLL_MONTH_PX,
     StackBar,
@@ -83,10 +84,7 @@ const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
 const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
 // Two decimals and no ฿, like the money tile and the list's value column on the same page.
 const money = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const endDate = (iso: string, lang: Lang) =>
-    new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-        new Date(`${iso}T00:00:00`),
-    );
+const endDate = (iso: string, lang: Lang) => reportDates(lang).date(iso);
 const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** A heading-right legend for a set of series, optionally with each one's count. */
@@ -345,10 +343,7 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
 
     return (
         <Card className="flex flex-col overflow-hidden xl:col-span-2">
-            <CardTitle
-                title={t('rep_wo_reason_title')}
-                sub={<Legend series={SOURCES} />}
-            />
+            <CardTitle title={t('rep_wo_reason_title')} sub={<Legend series={SOURCES} />} />
             {reasons.length === 0 ? (
                 <Empty>{t('rep_wo_empty')}</Empty>
             ) : (

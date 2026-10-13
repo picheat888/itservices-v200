@@ -5,7 +5,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
-import { Sparkline } from './chart-parts';
+import { reportDates, Sparkline } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { KpiTile } from './kpi-tile';
@@ -25,15 +25,9 @@ function duration(t: (key: string) => string, hours: number): string {
         : t('rep_days_n').replace('{n}', String(Math.round(abs / 24)));
 }
 
-/** "Y-m-d H:i" → "2 ต.ค. 17:00" (Gregorian years, as the rest of the app). */
+/** "Y-m-d H:i" → date and time in the system date setting. */
 function shortMoment(value: string, lang: string): string {
-    const [date, time = ''] = value.split(' ');
-    const [y, m, d] = date.split('-').map(Number);
-    if (!y || !m || !d) return value;
-    const day = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short' }).format(
-        new Date(y, m - 1, d),
-    );
-    return time ? `${day} ${time}` : day;
+    return reportDates(lang).dateTime(value);
 }
 
 function noteText(t: (key: string) => string, lang: string, note: NonNullable<SummaryItem['note']>): string {

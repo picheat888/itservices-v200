@@ -25,6 +25,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useRequestSlaBreakdown } from '../hooks/use-reports';
 import type { RequestSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
+import { reportDates } from './chart-parts';
 
 export type T = (key: string) => string;
 
@@ -52,15 +53,9 @@ export function spanText(t: T, hours: number): string {
         : t('rep_days_n').replace('{n}', String(Math.round(hours / 24)));
 }
 
-/** "Y-m-d H:i" → "9 ก.ย. 14:20". */
+/** "Y-m-d H:i" → date and time in the system date setting. */
 export function shortMoment(value: string | null, lang: 'th' | 'en'): string {
-    if (!value) return '—';
-    const [date, time = ''] = value.split(' ');
-    const [y, m, d] = date.split('-').map(Number);
-    const day = new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { day: 'numeric', month: 'short' }).format(
-        new Date(y, m - 1, d),
-    );
-    return `${day} ${time}`.trim();
+    return reportDates(lang).dateTime(value);
 }
 
 export const TH = 'text-muted-foreground px-3 py-2.5 text-[11.5px] font-semibold tracking-wide whitespace-nowrap';

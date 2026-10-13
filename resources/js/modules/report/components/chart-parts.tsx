@@ -1,5 +1,6 @@
 // Shared report card pieces: list folding, card headings, title with count, master-data label, stacked bar, month label, swatch.
 import { useT } from '@/lang';
+import { bindDateFormat } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ChevronDown, ChevronUp, Info } from 'lucide-react';
@@ -185,18 +186,21 @@ export const currentMonth = (): string => {
 export const CODE_LINK =
     'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
-const monthFormats = new Map<string, Intl.DateTimeFormat>();
+/** The system date setting, bound to a language, for report helpers that run outside a hook. */
+export const reportDates = (lang: string) => bindDateFormat(useUiStore.getState().dateConfig, lang);
 
-/** "2026-09" → "ก.ย." (with "26" on the first column and each January when `withYear`). */
+/** Era-aware 2-digit year of 'YYYY-MM' ("69" under BE), for the small line under a month. */
+export function shortYear(month: string, lang: string): string {
+    return reportDates(lang)
+        .year(Number(month.slice(0, 4)))
+        .slice(-2);
+}
+
+/** "2026-09" → "ก.ย." ("ก.ย. 26" with `withYear`; "กันยายน 2026" with `long`, for month headings), in the date setting's era. */
 export function monthLabel(month: string, lang: 'th' | 'en', withYear: boolean, long = false): string {
-    const [y, m] = month.split('-').map(Number);
-    const key = `${lang}-${long}`;
-    if (!monthFormats.has(key)) {
-        monthFormats.set(key, new Intl.DateTimeFormat(lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB', { month: long ? 'long' : 'short' }));
-    }
-    const name = (monthFormats.get(key) as Intl.DateTimeFormat).format(new Date(y, m - 1, 1));
-    if (long) return `${name} ${y}`;
-    return withYear ? `${name} ${String(y).slice(2)}` : name;
+    const fmt = reportDates(lang);
+    if (long) return fmt.monthYearLong(month);
+    return withYear ? `${fmt.month(month)} ${shortYear(month, lang)}` : fmt.month(month);
 }
 
 /** Card heading: h2 title, optional note, legend on the right. */
