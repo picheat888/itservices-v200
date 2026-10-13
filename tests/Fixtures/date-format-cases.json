@@ -615,6 +615,28 @@
             },
             "lang": "en",
             "expect": "September 2026"
+        },
+        {
+            "fn": "range",
+            "args": ["2026-09-05", "2026-09-05"],
+            "config": {
+                "format": "dmy_slash",
+                "era": "ce",
+                "time": "24"
+            },
+            "lang": "th",
+            "expect": "05 ก.ย. 2026"
+        },
+        {
+            "fn": "range",
+            "args": ["2026-09-05", "2026-09-05"],
+            "config": {
+                "format": "d_mon_y",
+                "era": "be",
+                "time": "24"
+            },
+            "lang": "en",
+            "expect": "05 Sep 2569"
         }
     ]
 }

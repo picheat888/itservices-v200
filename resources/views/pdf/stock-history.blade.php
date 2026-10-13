@@ -1,7 +1,7 @@
 @php
     $item = $history['item'];
-    // Movement times arrive as local wall time with an offset; DateDisplay keeps the wall time.
-    $fmt = fn ($iso) => \App\Support\DateDisplay::dateTime($iso);
+    // Wall time kept as sent; English month names, like the rest of this document.
+    $fmt = fn ($iso) => \App\Support\DateDisplay::dateTime($iso, $dateConfig, 'en');
     $movesOf = fn (array $types) => array_values(array_filter($history['movements'], fn ($m) => in_array($m['type'], $types, true)));
     $serialsOf = function (array $m, string $event) use ($history) {
         $out = [];

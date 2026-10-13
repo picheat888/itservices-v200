@@ -164,6 +164,7 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
         const f = parse(from);
         const t = parse(to);
         if (!hasDay(f) || !hasDay(t)) return EMPTY;
+        if (f.y === t.y && f.m === t.m && f.d === t.d) return `${dayMonthPart(f)} ${year(f.y)}`;
         if (f.y === t.y && f.m === t.m && f.d === 1 && t.d === lastDay(t.y, t.m)) return monthYearPart(f);
         if (f.y === t.y) return `${dayMonthPart(f)} – ${dayMonthPart(t)} ${year(t.y)}`;
         return `${dayMonthPart(f)} ${year(f.y)} – ${dayMonthPart(t)} ${year(t.y)}`;

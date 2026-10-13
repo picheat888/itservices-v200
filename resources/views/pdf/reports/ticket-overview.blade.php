@@ -32,7 +32,7 @@
 <body>
 <div class="head">
     <h1>รายงานภาพรวม Ticket &amp; SLA</h1>
-    <div class="muted"><span class="part">{{ $company }}</span><span class="part">ช่วงวันที่ {{ \App\Support\DateDisplay::range($summary['range']['from'], $summary['range']['to']) }}</span><span class="part">พิมพ์โดย {{ $printedBy }} เมื่อ {{ \App\Support\DateDisplay::dateTime($summary['generated_at']) }}</span></div>
+    <div class="muted"><span class="part">{{ $company }}</span><span class="part">ช่วงวันที่ {{ \App\Support\DateDisplay::range($summary['range']['from'], $summary['range']['to'], $dateConfig) }}</span><span class="part">พิมพ์โดย {{ $printedBy }} เมื่อ {{ \App\Support\DateDisplay::dateTime($summary['generated_at'], $dateConfig) }}</span></div>
 </div>
 
 <table class="kpi"><tr>
@@ -93,7 +93,7 @@
             <td>{{ \App\Services\Report\TicketLabels::priority($t->priority?->value) }}</td>
             <td>{{ \App\Services\Report\TicketLabels::status($t->status?->value) }}</td>
             <td>{{ $t->assignee?->name }}</td>
-            <td>{{ \App\Support\DateDisplay::dateTime($t->created_at) }}</td>
+            <td>{{ \App\Support\DateDisplay::dateTime($t->created_at, $dateConfig) }}</td>
             <td>{{ \App\Services\Report\TicketMetrics::resolveHours($t) }}</td>
             <td>{{ $slaLabel[\App\Services\Report\TicketMetrics::slaState($t, now())] ?? '' }}</td>
         </tr>

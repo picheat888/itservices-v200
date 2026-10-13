@@ -47,6 +47,7 @@ class AccessResourceMembersController extends Controller
             'company' => AppSetting::get('company_name', 'ABCD Electric Company'),
             'printedBy' => $request->user()?->name ?? '',
             'printedAt' => DateDisplay::dateTime(now()),
+            'dateConfig' => DateDisplay::config(),
         ])->setPaper('a4', 'portrait')->output();
         $filename = DocumentName::make('AccessReview', [(string) $sheet['code']]);
 

@@ -441,12 +441,6 @@ class AssetTransferHistoryReport extends TabularReport
             ->all();
     }
 
-    /** "2026-09" as "ก.ย. 2026" for the file. */
-    private static function monthTh(string $month): string
-    {
-        return DateDisplay::monthYear($month);
-    }
-
     /**
      * The breakdown as sheets: by month, acceptance, warehouses, departments, categories, waiting now.
      *
@@ -463,7 +457,7 @@ class AssetTransferHistoryReport extends TabularReport
             [
                 'title' => 'แยกตามเดือน',
                 'headings' => ['เดือน', 'ส่งมอบ', 'รับคืน', 'เรียกคืน', 'ย้ายที่ตั้ง'],
-                'rows' => array_map(fn (array $m) => [self::monthTh($m['month']), $m['handover'], $m['return'], $m['recall'], $m['relocate']], $b['months']),
+                'rows' => array_map(fn (array $m) => [DateDisplay::monthYear($m['month']), $m['handover'], $m['return'], $m['recall'], $m['relocate']], $b['months']),
             ],
             [
                 'title' => 'การกดรับมอบ',

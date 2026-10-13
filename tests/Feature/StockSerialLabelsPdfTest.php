@@ -90,7 +90,22 @@ class StockSerialLabelsPdfTest extends TestCase
 
         $this->get("/pdf/stock-movements/{$movementId}/labels")->assertOk();
 
-        $this->assertStringContainsString('03 ตุลาคม 2026', view('pdf.serial-labels', $seen[0])->render());
+        // The labels are English, so the month is too.
+        $this->assertStringContainsString('03 October 2026', view('pdf.serial-labels', $seen[0])->render());
+    }
+
+    public function test_history_writes_month_names_in_english_like_the_rest_of_the_document(): void
+    {
+        $this->travelTo('2026-10-03 14:05:00');
+        $item = $this->receivedItem();
+        AppSetting::put('date_format', 'd_mon_y');
+        $seen = $this->capturePdfView('pdf.stock-history');
+
+        $this->get("/pdf/stock-items/{$item->id}/history")->assertOk();
+
+        $html = view('pdf.stock-history', $seen[0])->render();
+        $this->assertStringContainsString('03 Oct 2026 14:05', $html);
+        $this->assertStringNotContainsString('ต.ค.', $html);
     }
 
     public function test_history_prints_movement_times_in_the_date_setting_at_their_wall_time(): void

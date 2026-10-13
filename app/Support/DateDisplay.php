@@ -145,6 +145,9 @@ class DateDisplay
             return self::EMPTY;
         }
         $c = self::resolve($config);
+        if ($f['y'] === $t['y'] && $f['m'] === $t['m'] && $f['d'] === $t['d']) {
+            return self::dayMonthPart($f, $lang).' '.self::eraYear($f['y'], $c['era']);
+        }
         if ($f['y'] === $t['y'] && $f['m'] === $t['m'] && $f['d'] === 1 && $t['d'] === self::lastDay($t['y'], $t['m'])) {
             return self::monthYearPart($f, $c, $lang);
         }

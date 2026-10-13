@@ -146,7 +146,7 @@ class StockMovementController extends Controller
             'item' => $movement->item,
             'labels' => $labels,
             'warehouse' => $movement->to_label ?: $movement->from_label,
-            'date' => DateDisplay::date($movement->moved_at),
+            'date' => DateDisplay::date($movement->moved_at, null, 'en'),
         ])->setPaper('a4', 'portrait');
 
         $bytes = $pdf->output();
