@@ -1,4 +1,5 @@
 import type { AssetStatusColors } from '@/modules/settings';
+import { DEFAULT_DATE_CONFIG, normalizeDateConfig, type DateConfig } from '@/shared/lib/datetime';
 import type { Density, Lang, SidebarStyle } from '@/shared/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -46,6 +47,7 @@ interface UiState {
     accent: string;
     logoUrl: string | null;
     assetStatusColors: AssetStatusColors;
+    dateConfig: DateConfig;
     // Transient (not persisted): which prefs the user deliberately changed on
     // the login screen. Those fields win over the account's saved preference
     // after sign-in (and are then pushed up). Tracked per-field so changing
@@ -74,6 +76,7 @@ interface UiState {
     setAccent: (accent: string) => void;
     setLogo: (logoUrl: string | null) => void;
     setAssetStatusColors: (colors: AssetStatusColors) => void;
+    setDateConfig: (config: Partial<Record<keyof DateConfig, unknown>>) => void;
     setPasswordDialog: (open: boolean) => void;
     setNarrowSidebarOpen: (open: boolean) => void;
     setCrumbTail: (label: string | null) => void;
@@ -92,6 +95,7 @@ export const useUiStore = create<UiState>()(
             accent: '#2563eb',
             logoUrl: SERVER_BRAND.logo_url ?? null,
             assetStatusColors: DEFAULT_ASSET_STATUS_COLORS,
+            dateConfig: DEFAULT_DATE_CONFIG,
             loginPrefsTouched: { dark: false, lang: false },
             passwordDialogOpen: false,
             narrowSidebarOpen: false,
@@ -109,6 +113,7 @@ export const useUiStore = create<UiState>()(
             setAccent: (accent) => set({ accent }),
             setLogo: (logoUrl) => set({ logoUrl }),
             setAssetStatusColors: (assetStatusColors) => set({ assetStatusColors }),
+            setDateConfig: (config) => set({ dateConfig: normalizeDateConfig(config) }),
             setPasswordDialog: (passwordDialogOpen) => set({ passwordDialogOpen }),
             setNarrowSidebarOpen: (narrowSidebarOpen) => set({ narrowSidebarOpen }),
             setCrumbTail: (crumbTail) => set({ crumbTail }),
@@ -126,6 +131,7 @@ export const useUiStore = create<UiState>()(
                 sidebar: s.sidebar,
                 accent: s.accent,
                 assetStatusColors: s.assetStatusColors,
+                dateConfig: s.dateConfig,
             }),
         },
     ),
