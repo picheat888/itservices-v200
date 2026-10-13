@@ -1529,6 +1529,7 @@ export const report: Dict = {
     rep_eo_unit_quarter: 'quarter',
     rep_eo_unit_year: 'year',
     rep_eo_quarter: 'Q{q} {y}',
+    rep_eo_quarter_short: 'Q{q}',
     rep_eo_year: '{y}',
     rep_eo_axis_people: 'people',
     rep_eo_flow_title: 'Headcount, joiners and leavers',

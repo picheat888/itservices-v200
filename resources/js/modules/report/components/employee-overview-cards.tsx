@@ -62,7 +62,11 @@ function useBucketLabels(bucket: EmployeeOverviewBreakdown['bucket']) {
         const year = fmt.year(Number(p.start.slice(0, 4)));
         const quarter = Math.floor((Number(p.start.slice(5, 7)) - 1) / 3) + 1;
         if (bucket === 'quarter')
-            return { short: `Q${quarter}`, year: year.slice(-2), long: t('rep_eo_quarter').replace('{q}', String(quarter)).replace('{y}', year) };
+            return {
+                short: t('rep_eo_quarter_short').replace('{q}', String(quarter)),
+                year: year.slice(-2),
+                long: t('rep_eo_quarter').replace('{q}', String(quarter)).replace('{y}', year),
+            };
         if (bucket === 'year') return { short: year, year: '', long: t('rep_eo_year').replace('{y}', year) };
         return { short: fmt.month(month), year: year.slice(-2), long: fmt.monthYearLong(month) };
     };
