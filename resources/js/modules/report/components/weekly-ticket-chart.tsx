@@ -2,8 +2,8 @@
  * Paired weekly bars — opened (brand) vs closed (green) — on one shared scale with a faint
  * grid (labelled lines at 0, half and top, dashed unlabelled guides between them), plus the "ค้างสะสม" line (red, its own scale on the right axis): tickets still open at
  * each week's end, labelled at its last point. Every bar is labelled by the first day it really
- * covers — the range start for a week that began before it, else the Monday — and thinned only
- * past 16 weeks; its <title> gives the days it spans and its three numbers. Hand-rolled SVG like shared/components/month-bar-chart.tsx: a dozen bars need no
+ * covers — the range start for a week that began before it, else the Monday — and thinned so
+ * no two labels touch; its <title> gives the days it spans and its three numbers. Hand-rolled SVG like shared/components/month-bar-chart.tsx: a dozen bars need no
  * chart library, and colours come from theme classes so both themes work.
  *
  * The chart fills the height its parent gives it (flex-1): the drawing stays 640 units wide, so
@@ -14,6 +14,7 @@ import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { TicketOverviewSummary } from '../types';
+import { labelStep } from './axis-labels';
 
 const W = 640;
 /** The shortest the drawing gets — its own shape when there is no extra height to fill. */
@@ -39,7 +40,7 @@ const weekEnd = (iso: string) => {
     return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
 };
 
-/** Every bar keeps its label up to this many weeks; past it they thin out evenly. */
+/** At most this many axis labels; fewer when longer labels would touch (axis-labels.ts). */
 const MAX_LABELS = 16;
 
 type ChartProps = { weeks: TicketOverviewSummary['weekly']; range: TicketOverviewSummary['range'] };
@@ -86,7 +87,9 @@ function WeeklyBars({ weeks, range }: ChartProps) {
     const y = (v: number) => PAD.t + ch - (v / max) * ch;
     const yBacklog = (v: number) => PAD.t + ch - (v / backlogMax) * ch;
     const xOf = (i: number) => PAD.l + gw * i + gw / 2;
-    const labelEvery = Math.ceil(weeks.length / MAX_LABELS);
+    // Thin the axis labels until the longest one fits its slots, and never past MAX_LABELS of them.
+    const axisLabels = weeks.map((w) => dayMonth(w.week_start < range.from ? range.from : w.week_start));
+    const labelEvery = Math.max(Math.ceil(weeks.length / MAX_LABELS), labelStep(axisLabels, gw));
 
     const line = weeks.map((w, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yBacklog(w.backlog).toFixed(1)}`).join(' ');
     const last = weeks[weeks.length - 1];
