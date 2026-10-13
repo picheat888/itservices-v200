@@ -1,7 +1,8 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { refusalText } from '@/shared/lib/api-errors';
+import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
+import { formatDateShort } from '@/shared/lib/datetime';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -60,9 +61,15 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     const isDirty = reason !== '' || lastDay !== '';
     const guardClose = useDiscardGuard(!!employee && isDirty);
 
+    const joinedAt = shown?.joined_at ?? null;
+    const beforeJoinText = joinedAt
+        ? t('resign_err_before_join').replace('{date}', formatDateShort(joinedAt, lang))
+        : t('resign_err_before_join_plain');
+
     const submit = async () => {
         const e: typeof errors = {};
         if (!lastDay) e.lastDay = t('resign_err_lastday');
+        else if (joinedAt && lastDay < joinedAt) e.lastDay = beforeJoinText;
         if (!reason.trim()) e.reason = t('resign_err_reason');
         setErrors(e);
         // Marking a field red is only half the job — put the caret in the first one that
@@ -91,6 +98,11 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
             await resign.mutateAsync({ id: employee.id, reason, lastDay });
             onDone();
         } catch (err: unknown) {
+            if (hasFieldError(err, 'last_day')) {
+                setErrors({ lastDay: beforeJoinText });
+                focusFirstError({ lastDay: beforeJoinText });
+                return;
+            }
             setFormError(refusalText(err, t, 'resign_err_'));
         }
     };

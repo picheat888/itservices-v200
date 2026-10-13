@@ -851,7 +851,7 @@ class EmployeeController extends Controller
 
         $data = $request->validate([
             'reason' => ['nullable', 'string', 'max:500'],
-            'last_day' => ['nullable', 'date'],
+            'last_day' => ['nullable', 'date', ...($employee->joined_at ? ['after_or_equal:'.$employee->joined_at->toDateString()] : [])],
         ]);
 
         $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null);
