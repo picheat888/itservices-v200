@@ -36,7 +36,7 @@ final class DemoRequests implements DemoStep
 
     /**
      * [type, requester user key, days ago, outcome, reason]
-     * outcome: wait:N (N signatures, then stop) | approved | in_progress | completed | manual | not_delivered | rejected:N | cancelled
+     * outcome: wait:N (N signatures, then stop) | approved | in_progress | completed | manual | not_delivered | rejected:N | cancelled:<why>
      */
     private const PLAN = [
         ['computer', 'staff', 150, 'completed', 'My laptop is six years old and too slow for the new ERP.'],
@@ -55,7 +55,7 @@ final class DemoRequests implements DemoStep
         ['fileshare', 'staff', 4, 'wait:0', 'Read access to the production share for the new report.'],
         ['software', 'staff', 110, 'completed', 'AutoCAD LT to review machine layouts.'],
         ['software', 'staff', 3, 'wait:1', 'Adobe Acrobat Pro to sign supplier documents.'],
-        ['software', 'staff', 30, 'cancelled', 'Visio for process diagrams - no longer needed.'],
+        ['software', 'staff', 30, 'cancelled:No longer needed - the team draws in PowerPoint now.', 'Visio for process diagrams.'],
         ['recovery', 'staff', 60, 'completed', 'Recover a deleted production plan from last Friday.'],
         ['recovery', 'staff', 1, 'wait:0', 'Recover files from a failed USB drive.'],
         ['mailgroup', 'staff', 65, 'completed', 'Join the QC Team mail group for release notices.'],
@@ -75,7 +75,7 @@ final class DemoRequests implements DemoStep
         ['software', 'qc', 4, 'wait:0', 'A Minitab licence for SPC analysis.'],
         ['computer', 'sup', 11, 'approved', 'A desktop for the new shift leader.'],
         ['mobile', 'sup', 25, 'rejected:1', 'A second phone for personal use.'],
-        ['hardware', 'staff', 15, 'cancelled', 'A webcam - I borrowed one instead.'],
+        ['hardware', 'staff', 15, 'cancelled:Borrowed a webcam from the meeting room instead.', 'A webcam for video calls.'],
     ];
 
     public function __construct(
@@ -128,7 +128,7 @@ final class DemoRequests implements DemoStep
 
         if ($kind === 'cancelled') {
             $clock->at($clock->after($submitted, $daysAgo, 15));
-            $this->requests->cancel($request->fresh(), $requester);
+            $this->requests->cancel($request->fresh(), $requester, (string) $steps);
             $ctx->audit('Cancelled service request', $request->reference);
 
             return;
