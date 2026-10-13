@@ -12,14 +12,14 @@ import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { useNotificationToasts } from './use-notification-toasts';
 
+const SHELL_DIALOGS = ['profile', 'password'] as const;
+
 export function AppShell() {
     useDocumentTitle();
     useUserPreferences();
     // Inside the router: tapping a toast navigates.
     useNotificationToasts();
     const density = useUiStore((s) => s.density);
-    const passwordDialogOpen = useUiStore((s) => s.passwordDialogOpen);
-    const setPasswordDialog = useUiStore((s) => s.setPasswordDialog);
     const { user } = useAuth();
 
     // Same query key as SecurityTab.
@@ -32,8 +32,8 @@ export function AppShell() {
     const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
     const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(idleMinutes);
     const [notifOpen, setNotifOpen] = useState(false);
-    // My Profile lives in the URL (?dialog=profile), so Back closes it.
-    const [shellDialog, setShellDialog] = useDialogParam(['profile'] as const);
+    // My Profile and Change password live in the URL (?dialog=), so Back closes them.
+    const [shellDialog, setShellDialog] = useDialogParam(SHELL_DIALOGS);
 
     return (
         <div className="bg-background flex h-screen overflow-hidden" data-density={density}>
@@ -50,7 +50,11 @@ export function AppShell() {
                 </main>
             </div>
 
-            <ProfileDrawer open={shellDialog === 'profile'} onClose={() => setShellDialog(null)} />
+            <ProfileDrawer
+                open={shellDialog === 'profile'}
+                onClose={() => setShellDialog(null)}
+                onChangePassword={() => setShellDialog('password')}
+            />
 
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
             {/* Forced password changes first; the voluntary one is dismissable */}
@@ -58,8 +62,8 @@ export function AppShell() {
                 <SetPasswordDialog />
             ) : user?.password_expired ? (
                 <ChangePasswordDialog />
-            ) : passwordDialogOpen ? (
-                <ChangePasswordDialog onClose={() => setPasswordDialog(false)} />
+            ) : shellDialog === 'password' ? (
+                <ChangePasswordDialog onClose={() => setShellDialog(null)} />
             ) : null}
         </div>
     );

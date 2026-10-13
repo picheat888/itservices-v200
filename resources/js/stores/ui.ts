@@ -53,10 +53,6 @@ interface UiState {
     // after sign-in (and are then pushed up). Tracked per-field so changing
     // language doesn't clobber the saved theme, and vice-versa.
     loginPrefsTouched: { dark: boolean; lang: boolean };
-    // Transient (not persisted): the user asked to change their password, from the
-    // profile drawer or from the expiry warning in the tray. Lives here rather than in
-    // the shell's own state because the two places that raise it are nowhere near it.
-    passwordDialogOpen: boolean;
     // Transient (not persisted): on a narrow screen the sidebar shows icons whatever the
     // saved style; this is the reader asking to see the labels for now.
     narrowSidebarOpen: boolean;
@@ -77,7 +73,6 @@ interface UiState {
     setLogo: (logoUrl: string | null) => void;
     setAssetStatusColors: (colors: AssetStatusColors) => void;
     setDateConfig: (config: Partial<Record<keyof DateConfig, unknown>>) => void;
-    setPasswordDialog: (open: boolean) => void;
     setNarrowSidebarOpen: (open: boolean) => void;
     setCrumbTail: (label: string | null) => void;
 }
@@ -97,7 +92,6 @@ export const useUiStore = create<UiState>()(
             assetStatusColors: DEFAULT_ASSET_STATUS_COLORS,
             dateConfig: DEFAULT_DATE_CONFIG,
             loginPrefsTouched: { dark: false, lang: false },
-            passwordDialogOpen: false,
             narrowSidebarOpen: false,
             crumbTail: null,
             setDark: (dark) => set({ dark }),
@@ -118,7 +112,6 @@ export const useUiStore = create<UiState>()(
                     const next = normalizeDateConfig(config);
                     return sameDateConfig(s.dateConfig, next) ? s : { dateConfig: next };
                 }),
-            setPasswordDialog: (passwordDialogOpen) => set({ passwordDialogOpen }),
             setNarrowSidebarOpen: (narrowSidebarOpen) => set({ narrowSidebarOpen }),
             setCrumbTail: (crumbTail) => set({ crumbTail }),
         }),

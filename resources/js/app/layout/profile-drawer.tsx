@@ -104,11 +104,10 @@ function EmptyTab({ text }: { text: string }) {
 
 type TabId = 'profile' | 'assets' | 'tickets' | 'access';
 
-export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boolean; onClose: () => void; onChangePassword: () => void }) {
     const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const setPasswordDialog = useUiStore((s) => s.setPasswordDialog);
     const { user, can } = useAuth();
     const update = useUpdateProfile();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -508,20 +507,8 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                 {/* Save belongs to the profile tab; the others are read-only, so the footer says
                     so rather than offering a button that would save a form nobody is looking at. */}
                 <div className="border-border flex shrink-0 items-center justify-end gap-3 border-t px-7 py-4">
-                    {/* The only way in the app to change a password on purpose. Without it the
-                        expiry warning has nothing to send the reader to, and a password could
-                        only ever be changed by being locked out first. Left of Close because it
-                        is an action on the account, not a way out of the drawer. */}
-                    <Button
-                        variant="outline"
-                        className="mr-auto"
-                        onClick={() =>
-                            guardClose(() => {
-                                onClose();
-                                setPasswordDialog(true);
-                            })
-                        }
-                    >
+                    {/* Change password opens over the drawer (?dialog=password); closing it returns here */}
+                    <Button variant="outline" className="mr-auto" onClick={() => guardClose(onChangePassword)}>
                         <KeyRound className="h-4 w-4" />
                         {t('pwd_change_title')}
                     </Button>
