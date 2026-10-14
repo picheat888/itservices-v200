@@ -29,7 +29,24 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
-import { AtSign, Box, Briefcase, Building2, Camera, Clock, Hash, IdCard, Inbox, KeyRound, Phone, Shield, Ticket, UserRound } from 'lucide-react';
+import {
+    AtSign,
+    Box,
+    Briefcase,
+    Building2,
+    Camera,
+    Clock,
+    Hash,
+    IdCard,
+    Inbox,
+    KeyRound,
+    Phone,
+    Shield,
+    Ticket,
+    UserCheck,
+    UserRound,
+    Users,
+} from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -178,6 +195,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const nameTh = `${firstNameTh} ${lastNameTh}`.trim();
     const displayName = lang === 'th' ? nameTh || nameEn : nameEn;
     const department = lang === 'th' ? (emp?.department_th ?? emp?.department) : emp?.department;
+    const section = lang === 'th' ? (emp?.section_th ?? emp?.section) : emp?.section;
+    const manager = lang === 'th' ? (emp?.manager_name_th ?? emp?.manager_name) : emp?.manager_name;
 
     const accessCount = myAccess
         ? myAccess.email_groups.length + myAccess.file_shares.length + myAccess.social.length + myAccess.software.length
@@ -393,8 +412,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                         </RailSection>
                         <RailSection title={t('profile_details')}>
                             <RailRow icon={<IdCard className="h-3.5 w-3.5" />} label={t('emp_employee_id')} value={emp?.code} mono />
-                            <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp?.position} />
+                            <RailRow icon={<Users className="h-3.5 w-3.5" />} label={t('emp_section')} value={section} />
                             <RailRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={department} />
+                            <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp?.position} />
+                            <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={manager} />
                             <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={fmt.date(emp?.joined_at)} mono />
                         </RailSection>
                     </aside>
