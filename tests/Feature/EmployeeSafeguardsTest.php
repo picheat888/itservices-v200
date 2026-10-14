@@ -136,4 +136,21 @@ class EmployeeSafeguardsTest extends TestCase
             ->assertJsonPath('data.manager_name', 'Old Boss')
             ->assertJsonPath('data.manager_name_th', 'หัวหน้า เก่า');
     }
+
+    public function test_my_profile_record_names_my_section_and_manager_without_employees_view(): void
+    {
+        $self = $this->userWith([]);
+        $department = Department::create(['name' => 'IT']);
+        $section = Section::create(['name' => 'Support', 'name_th' => 'ซัพพอร์ต', 'department_id' => $department->id]);
+        $manager = Employee::create(['first_name' => 'Team', 'last_name' => 'Lead', 'status' => 'active']);
+        $employee = $this->employeeWithAccount($self);
+        $employee->update(['manager_id' => $manager->id, 'section_id' => $section->id, 'department_id' => $department->id]);
+
+        $this->actingAs($self)
+            ->getJson("/api/employees/{$employee->id}")
+            ->assertOk()
+            ->assertJsonPath('data.section', 'Support')
+            ->assertJsonPath('data.section_th', 'ซัพพอร์ต')
+            ->assertJsonPath('data.manager_name', 'Team Lead');
+    }
 }
