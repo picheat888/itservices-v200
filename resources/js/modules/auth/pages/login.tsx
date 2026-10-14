@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import type { Lang } from '@/lang/types';
 import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
+import type { SignedOutReason } from '@/shared/lib/login-redirect';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -16,8 +17,6 @@ const LANGUAGES: { code: Lang; label: string }[] = [
     { code: 'en', label: 'EN' },
     { code: 'th', label: 'ไทย' },
 ];
-
-type SignedOutReason = 'session_expired' | 'signed_out';
 
 const noticeReason = (reason: string | null): SignedOutReason | null => (reason === 'session_expired' || reason === 'signed_out' ? reason : null);
 
