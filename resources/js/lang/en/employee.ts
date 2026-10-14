@@ -262,7 +262,7 @@ export const employee: Dict = {
         "We couldn't check whether this employee's approval chain can take their onboarding requests, so you can't save yet.",
     emp_onboarding_check_retry: 'Check again',
     pwd_set_title: 'Set your password',
-    pwd_set_desc: 'You signed in with a temporary password. Set a password only you know to continue.',
+    pwd_set_desc: 'Replace your temporary password to continue.',
     pwd_set_submit: 'Set password',
     pwd_err_current_required: 'Please enter your current password',
     pwd_saved_toast: 'Your new password is saved',
