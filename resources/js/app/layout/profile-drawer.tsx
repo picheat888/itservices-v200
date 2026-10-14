@@ -29,24 +29,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
-import {
-    AtSign,
-    Box,
-    Briefcase,
-    Building2,
-    Camera,
-    Clock,
-    Hash,
-    IdCard,
-    Inbox,
-    KeyRound,
-    Phone,
-    Shield,
-    Ticket,
-    UserCheck,
-    UserRound,
-    Users,
-} from 'lucide-react';
+import { AtSign, Box, Briefcase, Building2, Camera, Hash, Inbox, KeyRound, Phone, Shield, Ticket, UserCheck, UserRound, Users } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -293,6 +276,13 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         </Field>
     );
 
+    // Set by HR, so shown but never editable here
+    const readField = (label: string, value: string | null | undefined) => (
+        <Field label={label}>
+            <Input value={value || '—'} readOnly className="bg-muted/50 font-mono" />
+        </Field>
+    );
+
     const seeAll = (to: string) => (
         <Link to={to} onClick={leaveTo(to)} className="text-brand mt-3 inline-block shrink-0 self-start text-sm font-medium hover:underline">
             {t('profile_see_all')}
@@ -411,12 +401,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             />
                         </RailSection>
                         <RailSection title={t('profile_details')}>
-                            <RailRow icon={<IdCard className="h-3.5 w-3.5" />} label={t('emp_employee_id')} value={emp?.code} mono />
                             <RailRow icon={<Users className="h-3.5 w-3.5" />} label={t('emp_section')} value={section} />
                             <RailRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={department} />
                             <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp?.position} />
                             <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={manager} />
-                            <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={fmt.date(emp?.joined_at)} mono />
                         </RailSection>
                     </aside>
 
@@ -436,6 +424,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             {tab === 'profile' && (
                                 <div className="max-w-xl space-y-4">
                                     <FormErrorBanner message={formError} shakeKey={formErrorCount} />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {readField(t('emp_employee_id'), emp?.code)}
+                                        {readField(t('joined'), emp?.joined_at ? fmt.date(emp.joined_at) : null)}
+                                    </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         {textField('firstName', t('emp_first_name'), { autoComplete: 'given-name' })}
                                         {textField('lastName', t('emp_last_name'), { autoComplete: 'family-name' })}
