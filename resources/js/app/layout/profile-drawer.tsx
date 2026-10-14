@@ -215,7 +215,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         setFormError('');
         const found: Partial<Record<FormKey, string>> = {};
         if (!firstName.trim()) found.firstName = t('profile_name_required');
-        if (!lastName.trim()) found.lastName = t('profile_name_required');
+        if (!lastName.trim()) found.lastName = t('profile_last_name_required');
         if (Object.keys(found).length) {
             setErrors(found);
             focusFirstError(found as Record<string, string>);
@@ -438,7 +438,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                         assets={myAssets.map(heldAsset)}
                                         lang={lang}
                                         loading={assetsLoading}
-                                        emptyText={t('profile_no_assets')}
+                                        emptyText={t('my_assets_empty')}
                                     />
                                     {myAssets.length > 0 && seeAll('/my-assets-access')}
                                 </>

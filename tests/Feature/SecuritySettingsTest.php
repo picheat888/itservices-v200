@@ -85,6 +85,17 @@ class SecuritySettingsTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_wrong_current_password_message_names_the_current_password(): void
+    {
+        $this->actingAs($this->super());
+        $payload = ['current_password' => 'wrong-password', 'password' => 'New-Secret123!', 'password_confirmation' => 'New-Secret123!'];
+
+        $this->withHeader('X-Locale', 'th')->putJson('/api/password', $payload)
+            ->assertJsonPath('errors.current_password.0', 'รหัสผ่านปัจจุบันไม่ถูกต้อง');
+        $this->withHeader('X-Locale', 'en')->putJson('/api/password', $payload)
+            ->assertJsonPath('errors.current_password.0', 'Your current password is incorrect.');
+    }
+
     public function test_change_password_updates_hash_and_timestamp(): void
     {
         $user = $this->super();
