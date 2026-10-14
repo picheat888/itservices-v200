@@ -8,7 +8,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
+import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, LogOut, Moon, Sun, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
@@ -16,6 +16,10 @@ const LANGUAGES: { code: Lang; label: string }[] = [
     { code: 'en', label: 'EN' },
     { code: 'th', label: 'ไทย' },
 ];
+
+type SignedOutReason = 'session_expired' | 'signed_out';
+
+const noticeReason = (reason: string | null): SignedOutReason | null => (reason === 'session_expired' || reason === 'signed_out' ? reason : null);
 
 export default function LoginPage() {
     const t = useT();
@@ -59,12 +63,13 @@ export default function LoginPage() {
     const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
     const target = from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/';
 
-    // Signed out by the idle timer: say so once, then drop ?reason= so a reload does not repeat it
+    // Signed out by the idle timer or from elsewhere: say so once, then drop ?reason= so a reload does not repeat it
     const [searchParams, setSearchParams] = useSearchParams();
-    const [sessionExpired, setSessionExpired] = useState(() => searchParams.get('reason') === 'session_expired');
+    const [signedOutReason, setSignedOutReason] = useState(() => noticeReason(searchParams.get('reason')));
     useEffect(() => {
         if (!searchParams.has('reason')) return;
-        if (searchParams.get('reason') === 'session_expired') setSessionExpired(true);
+        const reason = noticeReason(searchParams.get('reason'));
+        if (reason) setSignedOutReason(reason);
         setSearchParams(
             (p) => {
                 p.delete('reason');
@@ -133,7 +138,7 @@ export default function LoginPage() {
             errs.password = t('login_err_password');
         }
         setFieldErrors(errs);
-        setSessionExpired(false);
+        setSignedOutReason(null);
         login.reset(); // clear any previous "invalid credentials" banner
         if (Object.keys(errs).length > 0) {
             // Land the caret on the first field that needs fixing — a keyboard or
@@ -334,13 +339,17 @@ export default function LoginPage() {
                             </Label>
                         </div>
 
-                        {sessionExpired && !login.isError && (
+                        {signedOutReason && !login.isError && (
                             <p
                                 role="status"
                                 className="bg-brand/10 border-brand/25 text-brand-ink flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
                             >
-                                <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                                {t('login_session_expired')}
+                                {signedOutReason === 'session_expired' ? (
+                                    <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                                ) : (
+                                    <LogOut className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                                )}
+                                {t(signedOutReason === 'session_expired' ? 'login_session_expired' : 'login_signed_out')}
                             </p>
                         )}
 
