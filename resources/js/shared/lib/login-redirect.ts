@@ -1,20 +1,35 @@
-// Sends the reader to the login page with why they were signed out; when several requests fail at once, the first reason wins.
+// Sends the reader to the login page with why they were signed out; when several requests or tabs fail at once,
+// the first reason wins, and an idle timeout is announced so the other tabs show it too.
 
 export type SignedOutReason = 'session_expired' | 'signed_out';
 
-export function createLoginRedirect(target: { href: string }): (reason: SignedOutReason) => void {
+/** Channel every tab of the app listens on for session news (see useSessionTimeout). */
+export const SESSION_CHANNEL = 'itsd-session';
+
+export function createLoginRedirect(
+    target: { href: string },
+    announce?: () => void,
+): (reason: SignedOutReason, options?: { announce?: boolean }) => void {
     let leaving = false;
-    return (reason) => {
+    return (reason, options) => {
         if (leaving) return;
         leaving = true;
+        if (reason === 'session_expired' && options?.announce !== false) announce?.();
         target.href = `/login?reason=${reason}`;
     };
 }
 
-let shared: ((reason: SignedOutReason) => void) | null = null;
+function announceLogout(): void {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(SESSION_CHANNEL);
+    channel.postMessage({ type: 'logout' });
+    channel.close();
+}
+
+let shared: ReturnType<typeof createLoginRedirect> | null = null;
 
 /** The app's one redirect, shared by the http client and the idle timer. */
-export function redirectToLogin(reason: SignedOutReason): void {
-    shared ??= createLoginRedirect(window.location);
-    shared(reason);
+export function redirectToLogin(reason: SignedOutReason, options?: { announce?: boolean }): void {
+    shared ??= createLoginRedirect(window.location, announceLogout);
+    shared(reason, options);
 }

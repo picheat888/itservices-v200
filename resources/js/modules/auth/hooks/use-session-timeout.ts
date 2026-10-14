@@ -10,7 +10,7 @@ import {
     shouldShareActivity,
     warnSecondsFor,
 } from '@/modules/auth/lib/session-warning';
-import { redirectToLogin } from '@/shared/lib/login-redirect';
+import { redirectToLogin, SESSION_CHANNEL } from '@/shared/lib/login-redirect';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -24,7 +24,6 @@ const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchst
 const SHARED_ACTIVITY_KEY = 'itsd:last-activity';
 /** Last heartbeat any tab sent, so one browser pings once per heartbeat. */
 const SHARED_PING_KEY = 'itsd:last-ping';
-const CHANNEL_NAME = 'itsd-session';
 
 function readShared(key: string): string | null {
     try {
@@ -146,13 +145,17 @@ export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolea
         if (shared > lastActivityRef.current) noteActivity(shared);
     }, [noteActivity]);
 
-    const leaveForLogin = useCallback(() => {
-        if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
-        clearCountdown();
-        clearHeartbeat();
-        qc.clear();
-        redirectToLogin('session_expired');
-    }, [qc]);
+    // announce: false when the news came from another tab, which has already told everyone
+    const leaveForLogin = useCallback(
+        (announce: boolean) => {
+            if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
+            clearCountdown();
+            clearHeartbeat();
+            qc.clear();
+            redirectToLogin('session_expired', { announce });
+        },
+        [qc],
+    );
 
     const doLogout = useCallback(async () => {
         if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
@@ -163,9 +166,8 @@ export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolea
         } catch {
             // Still redirect
         }
-        // After the server logout, or the other tabs' login pages still find the session alive
-        channelRef.current?.postMessage({ type: 'logout' });
-        leaveForLogin();
+        // Announced only now: earlier, the other tabs' login pages still find the session alive
+        leaveForLogin(true);
     }, [leaveForLogin]);
 
     const startCountdown = useCallback(
@@ -213,12 +215,12 @@ export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolea
     // One channel per tab: activity closes other tabs' warnings, a sign-out takes every tab to the login page
     useEffect(() => {
         if (typeof BroadcastChannel === 'undefined') return;
-        const channel = new BroadcastChannel(CHANNEL_NAME);
+        const channel = new BroadcastChannel(SESSION_CHANNEL);
         channelRef.current = channel;
         channel.onmessage = (event: MessageEvent) => {
             const message = parseSessionMessage(event.data);
             if (message?.type === 'activity') noteActivity(message.at);
-            if (message?.type === 'logout') leaveForLogin();
+            if (message?.type === 'logout') leaveForLogin(false);
         };
         return () => {
             channel.close();
