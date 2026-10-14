@@ -70,3 +70,15 @@ export function parseSessionMessage(data: unknown): SessionMessage | null {
     }
     return null;
 }
+
+// Heartbeat: the server only sees requests, so real activity is pinged to it
+
+/** A third of the timeout, at most a minute: a one-minute timeout is pinged every 20 s. */
+export function heartbeatMsFor(timeoutMinutes: number): number {
+    return Math.min(60_000, (timeoutMinutes * 60_000) / 3);
+}
+
+/** 0 to ping now, else how long until the last ping is a heartbeat old. */
+export function pingDelay(now: number, lastPing: number, heartbeatMs: number): number {
+    return Math.max(0, lastPing + heartbeatMs - now);
+}

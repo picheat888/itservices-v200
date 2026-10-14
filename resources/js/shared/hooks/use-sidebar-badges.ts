@@ -75,7 +75,7 @@ export function usePrefetchSidebarBadges(): boolean {
 }
 
 function fetchSidebarBadges(quietUnauthenticated = false): Promise<SidebarBadges> {
-    return http.get<{ data: SidebarBadges }>('/sidebar-badges', { quietUnauthenticated }).then((r) => r.data.data);
+    return http.get<{ data: SidebarBadges }>('/sidebar-badges', { quietUnauthenticated, backgroundPoll: true }).then((r) => r.data.data);
 }
 
 function sidebarBadgesQuery(enabled: boolean) {

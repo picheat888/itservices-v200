@@ -15,6 +15,8 @@ declare module 'axios' {
          * whether anyone is signed in (the start-up prefetch in ProtectedRoute).
          */
         quietUnauthenticated?: boolean;
+        /** Made by the page on its own (polling): served, but not counted as activity by the idle timeout. */
+        backgroundPoll?: boolean;
     }
 }
 
@@ -33,6 +35,7 @@ export const http = axios.create({
 // takes effect on the very next call.
 http.interceptors.request.use((cfg) => {
     cfg.headers.set('X-Locale', useUiStore.getState().lang);
+    if (cfg.backgroundPoll) cfg.headers.set('X-Background-Poll', '1');
     return cfg;
 });
 

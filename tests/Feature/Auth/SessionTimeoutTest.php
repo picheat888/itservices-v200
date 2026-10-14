@@ -56,4 +56,66 @@ class SessionTimeoutTest extends TestCase
             ->getJson('/api/me')
             ->assertOk();
     }
+
+    /** A request the page makes by itself (polling) is served but is not activity. */
+    public function test_background_poll_does_not_count_as_activity(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        $user = User::factory()->create();
+        $idleSince = time() - 20 * 60;
+
+        $this->actingAs($user)
+            ->withHeader('Origin', 'http://localhost:8000')
+            ->withHeader('X-Background-Poll', '1')
+            ->withSession(['_sec_last_activity' => $idleSince])
+            ->getJson('/api/me')
+            ->assertOk();
+
+        $this->assertSame($idleSince, session('_sec_last_activity'));
+    }
+
+    /** Polling cannot keep an idle session alive past the window. */
+    public function test_background_poll_past_the_window_is_expired(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withHeader('Origin', 'http://localhost:8000')
+            ->withHeader('X-Background-Poll', '1')
+            ->withSession(['_sec_last_activity' => time() - 31 * 60])
+            ->getJson('/api/me')
+            ->assertStatus(401)
+            ->assertJsonPath('message', 'session_expired');
+    }
+
+    /** A request the person made still refreshes the clock. */
+    public function test_a_request_from_the_person_refreshes_the_clock(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withHeader('Origin', 'http://localhost:8000')
+            ->withSession(['_sec_last_activity' => time() - 20 * 60])
+            ->getJson('/api/me')
+            ->assertOk();
+
+        $this->assertGreaterThanOrEqual(time() - 5, session('_sec_last_activity'));
+    }
+
+    /** A first request that is a poll still starts the clock, so the window applies from sign-in. */
+    public function test_background_poll_starts_a_clock_that_has_not_started(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withHeader('Origin', 'http://localhost:8000')
+            ->withHeader('X-Background-Poll', '1')
+            ->getJson('/api/me')
+            ->assertOk();
+
+        $this->assertGreaterThanOrEqual(time() - 5, session('_sec_last_activity'));
+    }
 }
