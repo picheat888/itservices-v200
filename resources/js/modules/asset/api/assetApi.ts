@@ -84,7 +84,7 @@ export const assetApi = {
     // Employees who cannot confirm receipt themselves — warns the hand-over dialog. Gated by assets.transfer.
     recipientReadiness: () => http.get<ApiEnvelope<RecipientReadiness>>('/assets/recipient-readiness').then((r) => r.data.data),
     // Assets assigned to the current user (employee self-service; no assets.view needed).
-    mine: () => http.get<ApiEnvelope<Asset[]>>('/assets/mine').then((r) => r.data.data),
+    mine: () => http.get<ApiEnvelope<Asset[]>>('/assets/mine', { backgroundPoll: true }).then((r) => r.data.data),
     create: (payload: AssetPayload) => mutate<Asset>('post', '/assets', payload),
     update: (id: number, payload: AssetPayload) => mutate<Asset>('put', `/assets/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/assets/${id}`),

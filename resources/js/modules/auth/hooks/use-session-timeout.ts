@@ -1,7 +1,15 @@
 // Idle sign-out: polls the inactivity clock, opens the warning before sign-out, and keeps the countdown on wall-clock time.
 // Every tab of the browser shares one session cookie, so they share one activity time and sign out together.
 import { authApi } from '@/modules/auth/api/authApi';
-import { dismissesWarning, newerActivity, parseSessionMessage, shouldShareActivity, warnSecondsFor } from '@/modules/auth/lib/session-warning';
+import {
+    dismissesWarning,
+    heartbeatMsFor,
+    newerActivity,
+    parseSessionMessage,
+    pingDelay,
+    shouldShareActivity,
+    warnSecondsFor,
+} from '@/modules/auth/lib/session-warning';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -13,21 +21,23 @@ const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchst
 
 /** Latest activity in any tab, so a tab that missed a message still catches up on its next poll. */
 const SHARED_ACTIVITY_KEY = 'itsd:last-activity';
+/** Last heartbeat any tab sent, so one browser pings once per heartbeat. */
+const SHARED_PING_KEY = 'itsd:last-ping';
 const CHANNEL_NAME = 'itsd-session';
 
 const EXPIRED_URL = '/login?reason=session_expired';
 
-function readSharedActivity(): string | null {
+function readShared(key: string): string | null {
     try {
-        return localStorage.getItem(SHARED_ACTIVITY_KEY);
+        return localStorage.getItem(key);
     } catch {
         return null;
     }
 }
 
-function writeSharedActivity(at: number): void {
+function writeShared(key: string, at: number): void {
     try {
-        localStorage.setItem(SHARED_ACTIVITY_KEY, String(at));
+        localStorage.setItem(key, String(at));
     } catch {
         // Private mode or blocked storage: the channel message still reaches open tabs
     }
@@ -49,6 +59,8 @@ export function useSessionTimeout(timeoutMinutes: number) {
     const mainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const channelRef = useRef<BroadcastChannel | null>(null);
+    const heartbeatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingActivityRef = useRef(0);
     // Wall-clock expiry, so background-tab throttling cannot stretch the countdown
     const expiresAtRef = useRef<number>(0);
 
@@ -58,6 +70,42 @@ export function useSessionTimeout(timeoutMinutes: number) {
             countdownRef.current = null;
         }
     };
+
+    const clearHeartbeat = () => {
+        if (heartbeatTimerRef.current) {
+            clearTimeout(heartbeatTimerRef.current);
+            heartbeatTimerRef.current = null;
+        }
+    };
+
+    // The ping refreshes the server's idle clock; a 401 here is handled by the http interceptor
+    const sendPing = useCallback(() => {
+        writeShared(SHARED_PING_KEY, Date.now());
+        authApi.ping().catch(() => {});
+    }, []);
+
+    // Ping on real activity and once after a throttled burst, so the server's clock never lags this tab's
+    const heartbeat = useCallback(
+        (activityAt: number) => {
+            const ms = timeoutMsRef.current;
+            if (ms <= 0) return;
+            pendingActivityRef.current = activityAt;
+            if (heartbeatTimerRef.current) return;
+
+            const delay = pingDelay(activityAt, newerActivity(0, readShared(SHARED_PING_KEY)), heartbeatMsFor(ms / 60_000));
+            if (delay === 0) {
+                sendPing();
+                return;
+            }
+            heartbeatTimerRef.current = setTimeout(() => {
+                heartbeatTimerRef.current = null;
+                // Another tab may already have pinged since this activity
+                if (newerActivity(0, readShared(SHARED_PING_KEY)) >= pendingActivityRef.current) return;
+                sendPing();
+            }, delay);
+        },
+        [sendPing],
+    );
 
     const closeWarning = useCallback(() => {
         warningActiveRef.current = false;
@@ -69,7 +117,7 @@ export function useSessionTimeout(timeoutMinutes: number) {
     const shareActivity = useCallback((at: number, force = false) => {
         if (!force && !shouldShareActivity(at, lastSharedRef.current)) return;
         lastSharedRef.current = at;
-        writeSharedActivity(at);
+        writeShared(SHARED_ACTIVITY_KEY, at);
         channelRef.current?.postMessage({ type: 'activity', at });
     }, []);
 
@@ -83,13 +131,14 @@ export function useSessionTimeout(timeoutMinutes: number) {
     );
 
     const catchUpWithOtherTabs = useCallback(() => {
-        const shared = newerActivity(0, readSharedActivity());
+        const shared = newerActivity(0, readShared(SHARED_ACTIVITY_KEY));
         if (shared > lastActivityRef.current) noteActivity(shared);
     }, [noteActivity]);
 
     const leaveForLogin = useCallback(() => {
         if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
         clearCountdown();
+        clearHeartbeat();
         qc.clear();
         window.location.href = EXPIRED_URL;
     }, [qc]);
@@ -97,6 +146,7 @@ export function useSessionTimeout(timeoutMinutes: number) {
     const doLogout = useCallback(async () => {
         if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
         clearCountdown();
+        clearHeartbeat();
         channelRef.current?.postMessage({ type: 'logout' });
         try {
             await authApi.logout();
@@ -141,13 +191,12 @@ export function useSessionTimeout(timeoutMinutes: number) {
     );
 
     const extendSession = useCallback(() => {
-        // The ping refreshes the server's idle clock too; a 401 here is handled by the http interceptor
-        authApi.ping().catch(() => {});
+        sendPing();
         const now = Date.now();
         lastActivityRef.current = now;
         closeWarning();
         shareActivity(now, true);
-    }, [closeWarning, shareActivity]);
+    }, [closeWarning, shareActivity, sendPing]);
 
     // One channel per tab: activity closes other tabs' warnings, a sign-out takes every tab to the login page
     useEffect(() => {
@@ -180,10 +229,11 @@ export function useSessionTimeout(timeoutMinutes: number) {
             const now = Date.now();
             lastActivityRef.current = now;
             shareActivity(now);
+            heartbeat(now);
         };
         ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, handle, { passive: true }));
         return () => ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, handle));
-    }, [shareActivity]);
+    }, [shareActivity, heartbeat]);
 
     // Back on a throttled background tab: recompute from wall-clock time
     useEffect(() => {
@@ -226,6 +276,7 @@ export function useSessionTimeout(timeoutMinutes: number) {
         return () => {
             if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
             clearCountdown();
+            clearHeartbeat();
         };
     }, [catchUpWithOtherTabs, doLogout, openWarning]);
 

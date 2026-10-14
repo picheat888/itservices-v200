@@ -5,8 +5,10 @@ import {
     clock,
     crossedAnnouncement,
     dismissesWarning,
+    heartbeatMsFor,
     newerActivity,
     parseSessionMessage,
+    pingDelay,
     shouldShareActivity,
     spokenTime,
     toneFor,
@@ -97,4 +99,16 @@ test('messages between tabs are checked before they are trusted', () => {
     assert.equal(parseSessionMessage({ type: 'other', at: 1 }), null);
     assert.equal(parseSessionMessage('logout'), null);
     assert.equal(parseSessionMessage(null), null);
+});
+
+test('the server hears about activity often enough for the shortest timeout', () => {
+    assert.equal(heartbeatMsFor(1), 20_000);
+    assert.equal(heartbeatMsFor(5), 60_000);
+    assert.equal(heartbeatMsFor(120), 60_000);
+});
+
+test('a ping goes out now, or once the last one is a heartbeat old', () => {
+    assert.equal(pingDelay(100_000, 0, 60_000), 0);
+    assert.equal(pingDelay(100_000, 40_000, 60_000), 0);
+    assert.equal(pingDelay(100_000, 70_000, 60_000), 30_000);
 });
