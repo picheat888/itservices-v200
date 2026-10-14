@@ -90,7 +90,8 @@ export function PasswordForm({
         const found: Partial<Record<FieldKey, string>> = {};
         if (needsCurrent && !values.current) found.current = t('pwd_err_current_required');
         if (!isValidPassword(values.next)) found.next = t('cred_err_password_policy');
-        if (!values.confirm || values.next !== values.confirm) found.confirm = t('pwd_mismatch');
+        if (!values.confirm) found.confirm = t('pwd_err_confirm_required');
+        else if (values.next !== values.confirm) found.confirm = t('pwd_mismatch');
         if (Object.keys(found).length) {
             showErrors(found);
             return;

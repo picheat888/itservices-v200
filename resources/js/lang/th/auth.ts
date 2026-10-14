@@ -1,7 +1,6 @@
 import type { Dict } from '@/lang/types';
 
 export const auth: Dict = {
-    profile_sub: 'จัดการบัญชีของคุณ',
     profile_signout: 'ออกจากระบบ',
     login_title: 'เข้าสู่ระบบ',
     login_sub: 'ยินดีต้อนรับสู่ระบบ IT Service Desk',
@@ -32,18 +31,15 @@ export const auth: Dict = {
     session_logout_now: 'ออกจากระบบเดี๋ยวนี้',
     profile_name: 'ชื่อ',
     profile_change_photo: 'เปลี่ยนรูป',
-    profile_photo_bad: 'กรุณาเลือกไฟล์รูปภาพ',
-    profile_photo_big: 'รูปต้องไม่เกิน 2MB',
     profile_name_required: 'กรุณากรอกชื่อ',
-    profile_save_failed: 'บันทึกโปรไฟล์ไม่สำเร็จ',
-    profile_edit_via: 'แก้ที่โปรไฟล์ของคุณ',
+    profile_last_name_required: 'กรุณากรอกนามสกุล',
+    profile_save_failed: 'บันทึกโปรไฟล์ไม่สำเร็จ กรุณาลองใหม่',
     profile_details: 'ข้อมูลพนักงาน',
-    profile_account: 'บัญชีและสิทธิ์',
+    profile_account: 'บัญชีเข้าใช้งาน',
     profile_contact: 'ข้อมูลติดต่อ',
     profile_tab_details: 'ข้อมูลส่วนตัว',
     profile_see_all: 'เปิดหน้าเต็ม',
-    profile_no_assets: 'ยังไม่มีอุปกรณ์ที่เบิกไว้',
-    profile_no_tickets: 'คุณยังไม่เคยแจ้งปัญหา',
-    profile_no_access: 'ยังไม่ได้รับสิทธิ์เข้าถึงระบบใด',
+    profile_no_tickets: 'คุณยังไม่เคยแจ้ง Ticket',
+    profile_no_access: 'คุณยังไม่มีสิทธิ์เข้าถึง',
     profile_no_requests: 'คุณยังไม่เคยยื่นคำขอ',
 };

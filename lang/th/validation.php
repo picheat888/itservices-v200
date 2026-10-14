@@ -31,7 +31,7 @@ return [
     'can' => ':attribute มีค่าที่ไม่ได้รับอนุญาต',
     'confirmed' => 'การยืนยัน :attribute ไม่ตรงกัน',
     'contains' => ':attribute ขาดค่าที่จำเป็น',
-    'current_password' => 'รหัสผ่านไม่ถูกต้อง',
+    'current_password' => 'รหัสผ่านปัจจุบันไม่ถูกต้อง',
     'password_reused' => 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน',
     'date' => ':attribute ต้องเป็นวันที่ที่ถูกต้อง',
     'date_equals' => ':attribute ต้องเป็นวันที่ :date',
