@@ -1,4 +1,4 @@
-// Idle-warning maths: when it opens, the ring colour, the clock text and the screen-reader milestones.
+// Idle-warning maths: when it opens, the ring colour, the clock text, the screen-reader milestones and the clock tabs share.
 
 /** The warning never opens more than this many seconds before sign-out. */
 export const WARN_CAP_SEC = 120;
@@ -37,4 +37,36 @@ export function spokenTime(seconds: number, words: { minutes: (n: number) => str
 export function crossedAnnouncement(previous: number, current: number): number | null {
     const passed = ANNOUNCE_AT.filter((m) => previous > m && current <= m);
     return passed.length ? Math.min(...passed) : null;
+}
+
+// Shared idle clock: every tab of one browser shares one session cookie, so they keep one activity time
+
+/** A tab writes its activity for the others at most this often. */
+export const ACTIVITY_SHARE_MS = 5_000;
+
+export type SessionMessage = { type: 'activity'; at: number } | { type: 'logout' };
+
+/** The later of this tab's activity and one read from another tab (localStorage text or a message). */
+export function newerActivity(current: number, incoming: unknown): number {
+    const at = typeof incoming === 'string' ? Number(incoming) : incoming;
+    return typeof at === 'number' && Number.isFinite(at) && at > current ? at : current;
+}
+
+export function shouldShareActivity(now: number, lastShared: number): boolean {
+    return now - lastShared >= ACTIVITY_SHARE_MS;
+}
+
+/** Activity anywhere after the warning opened means the person is still here. */
+export function dismissesWarning(warningOpenedAt: number, activityAt: number): boolean {
+    return activityAt > warningOpenedAt;
+}
+
+export function parseSessionMessage(data: unknown): SessionMessage | null {
+    if (typeof data !== 'object' || data === null) return null;
+    const message = data as { type?: unknown; at?: unknown };
+    if (message.type === 'logout') return { type: 'logout' };
+    if (message.type === 'activity' && typeof message.at === 'number' && Number.isFinite(message.at)) {
+        return { type: 'activity', at: message.at };
+    }
+    return null;
 }
