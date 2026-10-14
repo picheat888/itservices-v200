@@ -86,7 +86,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
         ->withoutMiddleware([CheckPasswordExpiry::class, BlockResignedEmployees::class])->name('api.logout');
     Route::get('me', [AuthController::class, 'me'])
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.me');
-    // Lightweight heartbeat used by the session-timeout modal to refresh _sec_last_activity on the server.
+    // Activity heartbeat from the browser: the one GET the idle timeout counts as activity
     Route::get('session/ping', fn () => response()->json(['ok' => true]))
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.session.ping');
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');

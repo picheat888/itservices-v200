@@ -4,19 +4,11 @@ import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import axios from 'axios';
 
-// Same-origin SPA: Laravel serves the app and the API, so cookies flow
-// automatically. withCredentials + withXSRFToken let Sanctum's cookie-based
-// SPA auth work (XSRF-TOKEN cookie -> X-XSRF-TOKEN header).
+// Axios for the same-origin API: Sanctum cookie auth (XSRF-TOKEN cookie -> X-XSRF-TOKEN header) plus app-wide error handling.
 declare module 'axios' {
     interface AxiosRequestConfig {
-        /**
-         * A 401 on this request is an answer, not a lost session: leave it to the caller
-         * instead of sending the reader to the login page. For calls made before we know
-         * whether anyone is signed in (the start-up prefetch in ProtectedRoute).
-         */
+        /** A 401 here is an answer, not a lost session (start-up prefetch before sign-in is known). */
         quietUnauthenticated?: boolean;
-        /** Made by the page on its own (polling): served, but not counted as activity by the idle timeout. */
-        backgroundPoll?: boolean;
     }
 }
 
@@ -30,19 +22,12 @@ export const http = axios.create({
     },
 });
 
-// Tell the server which language the reader has the app in, so validation and sign-in
-// messages come back in it (SetRequestLocale). Read per request: switching language
-// takes effect on the very next call.
+// The reader's language, read per request, so server messages come back in it (SetRequestLocale)
 http.interceptors.request.use((cfg) => {
     cfg.headers.set('X-Locale', useUiStore.getState().lang);
-    if (cfg.backgroundPoll) cfg.headers.set('X-Background-Poll', '1');
     return cfg;
 });
 
-// Server-side inactivity timeout (CheckSessionTimeout middleware) returns
-// 401 with message "session_expired". Redirect to login so the user isn't
-// left staring at a silently-failing screen. Other 401s (e.g. the initial
-// unauthenticated /me probe) are left for callers to handle.
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 http.interceptors.response.use(
@@ -50,16 +35,13 @@ http.interceptors.response.use(
     (error) => {
         const status = error?.response?.status as number | undefined;
 
+        // Idle timeout (CheckSessionTimeout)
         if (status === 401 && error.response.data?.message === 'session_expired' && !window.location.pathname.startsWith('/login')) {
             window.location.href = '/login?reason=session_expired';
             return Promise.reject(error);
         }
 
-        // Any other 401 on a screen that was working means the session is simply gone —
-        // an admin reset the password (which signs the account out everywhere), or it was
-        // revoked elsewhere. Without this the page just fails silently until the user
-        // happens to reload. `/me` is exempt: it answers 401 whenever nobody is signed in,
-        // and the route guard already sends those visitors to the login page.
+        // Any other 401 on a working screen: signed out elsewhere (/me is left to the route guard)
         if (
             status === 401 &&
             !error.config?.url?.endsWith('/me') &&
@@ -70,10 +52,7 @@ http.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // 419 = stale CSRF token — e.g. cookies clobbered by late responses racing a
-        // logout (single-worker dev server), or a login page left open past the session
-        // lifetime. Refresh the cookie and replay the request once — the standard
-        // Sanctum SPA recovery.
+        // 419 = stale CSRF token: refresh the cookie and replay once
         if (status === 419) {
             const cfg = error.config as (typeof error.config & { _csrfRetried?: boolean }) | undefined;
             if (cfg && !cfg._csrfRetried) {
@@ -87,29 +66,22 @@ http.interceptors.response.use(
             }
         }
 
-        // Surface the otherwise-silent system/transient failures as a full-screen
-        // error. 422 (validation) and 401/403 are left for callers/route guards.
+        // Full-screen error for outages; 401/403/422 are left to callers
         const showError = useAppErrorStore.getState().show;
         if (!error.response) {
-            // A request the app itself aborted (React Query cancels on unmount) is
-            // not an outage — never surface it.
+            // Aborted by the app (React Query on unmount): not an outage
             if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
                 return Promise.reject(error);
             }
 
-            // No response = the request died in transit. Chrome aborts in-flight
-            // requests with ERR_NETWORK_CHANGED whenever the OS network route flips
-            // (VPN connect/disconnect, Wi-Fi↔LAN, adapter wake) — the network is
-            // usually fine again milliseconds later. Retry GETs once, silently.
+            // Died in transit (e.g. ERR_NETWORK_CHANGED on a VPN or Wi-Fi switch): retry a GET once
             const cfg = error.config as (typeof error.config & { _netRetried?: boolean }) | undefined;
             if (cfg && (cfg.method ?? 'get').toLowerCase() === 'get' && !cfg._netRetried) {
                 cfg._netRetried = true;
                 return sleep(600).then(() => http.request(cfg));
             }
 
-            // Still failing (or a non-retryable mutation): decide the banner in the
-            // background with a fresh probe — one aborted request is not an outage,
-            // so only take over the screen when the probe fails too.
+            // Show the outage screen only if a fresh probe fails too
             void (async () => {
                 try {
                     await sleep(400);
@@ -119,16 +91,12 @@ http.interceptors.response.use(
                 }
             })();
         } else if (status === 429 && error.config?.url?.endsWith('/login')) {
-            // A throttled sign-in is the login page's own business — it shows the remaining
-            // wait inline, right where the user is typing. Taking over the screen here would
-            // hide the form they are trying to use.
+            // The login page shows its own throttle wait inline
             return Promise.reject(error);
         } else if (status === 429) {
             const retry = Number(error.response.headers?.['retry-after']);
             const retryAfter = Number.isFinite(retry) && retry > 0 ? retry : null;
-            // For a logged-in user mid-session a full-screen takeover is jarring —
-            // surface the throttle as a dismissable toast instead. Guests (or the
-            // login screen) still get the full-screen notice.
+            // Signed in: a toast, not a full-screen takeover
             const loggedIn = !!queryClient.getQueryData(ME_KEY);
             if (loggedIn) {
                 const detail = retryAfter ? ` Try again in about ${retryAfter} second${retryAfter > 1 ? 's' : ''}.` : '';

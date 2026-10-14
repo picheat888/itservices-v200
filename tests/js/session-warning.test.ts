@@ -105,6 +105,8 @@ test('the server hears about activity often enough for the shortest timeout', ()
     assert.equal(heartbeatMsFor(1), 20_000);
     assert.equal(heartbeatMsFor(5), 60_000);
     assert.equal(heartbeatMsFor(120), 60_000);
+    // Timeout unknown or off here (stale settings): still ping, at the server's grace
+    assert.equal(heartbeatMsFor(0), 60_000);
 });
 
 test('a ping goes out now, or once the last one is a heartbeat old', () => {

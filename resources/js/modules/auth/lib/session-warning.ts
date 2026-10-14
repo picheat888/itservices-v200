@@ -73,9 +73,13 @@ export function parseSessionMessage(data: unknown): SessionMessage | null {
 
 // Heartbeat: the server only sees requests, so real activity is pinged to it
 
-/** A third of the timeout, at most a minute: a one-minute timeout is pinged every 20 s. */
+/** The longest gap between pings; the server allows this much grace past the timeout. */
+export const MAX_HEARTBEAT_MS = 60_000;
+
+/** A third of the timeout, at most a minute (a one-minute timeout pings every 20 s); a minute when unknown or off here. */
 export function heartbeatMsFor(timeoutMinutes: number): number {
-    return Math.min(60_000, (timeoutMinutes * 60_000) / 3);
+    if (timeoutMinutes <= 0) return MAX_HEARTBEAT_MS;
+    return Math.min(MAX_HEARTBEAT_MS, (timeoutMinutes * 60_000) / 3);
 }
 
 /** 0 to ping now, else how long until the last ping is a heartbeat old. */

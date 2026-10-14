@@ -28,7 +28,7 @@ export function AppShell() {
     });
     // Remembered sign-ins skip the idle timer, as the server does.
     const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
-    const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes);
+    const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !user?.remembered);
     const [notifOpen, setNotifOpen] = useState(false);
     // My Profile and Change password live in the URL (?dialog=), so Back closes them.
     const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS);
