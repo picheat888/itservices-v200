@@ -8,9 +8,9 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, Eye, EyeOff, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
-import { useRef, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
 const LANGUAGES: { code: Lang; label: string }[] = [
     { code: 'en', label: 'EN' },
@@ -58,6 +58,21 @@ export default function LoginPage() {
     const location = useLocation();
     const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
     const target = from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/';
+
+    // Signed out by the idle timer: say so once, then drop ?reason= so a reload does not repeat it
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [sessionExpired, setSessionExpired] = useState(() => searchParams.get('reason') === 'session_expired');
+    useEffect(() => {
+        if (!searchParams.has('reason')) return;
+        if (searchParams.get('reason') === 'session_expired') setSessionExpired(true);
+        setSearchParams(
+            (p) => {
+                p.delete('reason');
+                return p;
+            },
+            { replace: true, state: location.state },
+        );
+    }, [searchParams, setSearchParams, location.state]);
 
     if (!isLoading && isAuthenticated) return <Navigate to={target} replace />;
 
@@ -118,6 +133,7 @@ export default function LoginPage() {
             errs.password = t('login_err_password');
         }
         setFieldErrors(errs);
+        setSessionExpired(false);
         login.reset(); // clear any previous "invalid credentials" banner
         if (Object.keys(errs).length > 0) {
             // Land the caret on the first field that needs fixing — a keyboard or
@@ -317,6 +333,16 @@ export default function LoginPage() {
                                 {t('login_remember')}
                             </Label>
                         </div>
+
+                        {sessionExpired && !login.isError && (
+                            <p
+                                role="status"
+                                className="bg-brand/10 border-brand/25 text-brand-ink flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
+                            >
+                                <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                                {t('login_session_expired')}
+                            </p>
+                        )}
 
                         {login.isError && (
                             <p
