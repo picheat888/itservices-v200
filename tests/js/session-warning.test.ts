@@ -1,7 +1,17 @@
-// When the idle warning opens, how its ring is coloured, and what a screen reader hears.
+// When the idle warning opens, how its ring is coloured, what a screen reader hears, and how tabs share one idle clock.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clock, crossedAnnouncement, spokenTime, toneFor, warnSecondsFor } from '../../resources/js/modules/auth/lib/session-warning.ts';
+import {
+    clock,
+    crossedAnnouncement,
+    dismissesWarning,
+    newerActivity,
+    parseSessionMessage,
+    shouldShareActivity,
+    spokenTime,
+    toneFor,
+    warnSecondsFor,
+} from '../../resources/js/modules/auth/lib/session-warning.ts';
 
 test('warning opens at half the timeout, never more than two minutes before', () => {
     const cases: [number, number][] = [
@@ -57,4 +67,34 @@ test('a milestone is announced once, when the countdown reaches it', () => {
     assert.equal(crossedAnnouncement(45, 44), null);
     // A throttled background tab can skip seconds; the lowest milestone passed is announced
     assert.equal(crossedAnnouncement(65, 25), 30);
+});
+
+test('activity from another tab only ever moves the clock forward', () => {
+    assert.equal(newerActivity(1000, '2000'), 2000);
+    assert.equal(newerActivity(3000, '2000'), 3000);
+    assert.equal(newerActivity(3000, null), 3000);
+    assert.equal(newerActivity(3000, 'garbage'), 3000);
+    assert.equal(newerActivity(3000, 2500), 3000);
+    assert.equal(newerActivity(3000, 4000), 4000);
+});
+
+test('a tab shares its activity at most every few seconds', () => {
+    assert.equal(shouldShareActivity(10_000, 0), true);
+    assert.equal(shouldShareActivity(10_000, 6_000), false);
+    assert.equal(shouldShareActivity(10_000, 5_000), true);
+});
+
+test('only activity after the warning opened closes it', () => {
+    assert.equal(dismissesWarning(5_000, 6_000), true);
+    assert.equal(dismissesWarning(5_000, 5_000), false);
+    assert.equal(dismissesWarning(5_000, 4_000), false);
+});
+
+test('messages between tabs are checked before they are trusted', () => {
+    assert.deepEqual(parseSessionMessage({ type: 'activity', at: 123 }), { type: 'activity', at: 123 });
+    assert.deepEqual(parseSessionMessage({ type: 'logout' }), { type: 'logout' });
+    assert.equal(parseSessionMessage({ type: 'activity' }), null);
+    assert.equal(parseSessionMessage({ type: 'other', at: 1 }), null);
+    assert.equal(parseSessionMessage('logout'), null);
+    assert.equal(parseSessionMessage(null), null);
 });
