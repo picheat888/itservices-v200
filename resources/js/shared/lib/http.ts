@@ -1,3 +1,4 @@
+import { redirectToLogin } from '@/shared/lib/login-redirect';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useToastStore } from '@/stores/toast';
@@ -37,7 +38,7 @@ http.interceptors.response.use(
 
         // Idle timeout (CheckSessionTimeout)
         if (status === 401 && error.response.data?.message === 'session_expired' && !window.location.pathname.startsWith('/login')) {
-            window.location.href = '/login?reason=session_expired';
+            redirectToLogin('session_expired');
             return Promise.reject(error);
         }
 
@@ -48,7 +49,7 @@ http.interceptors.response.use(
             !error.config?.quietUnauthenticated &&
             !window.location.pathname.startsWith('/login')
         ) {
-            window.location.href = '/login?reason=signed_out';
+            redirectToLogin('signed_out');
             return Promise.reject(error);
         }
 

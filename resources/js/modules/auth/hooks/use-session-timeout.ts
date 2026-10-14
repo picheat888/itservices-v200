@@ -10,6 +10,7 @@ import {
     shouldShareActivity,
     warnSecondsFor,
 } from '@/modules/auth/lib/session-warning';
+import { redirectToLogin } from '@/shared/lib/login-redirect';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -24,8 +25,6 @@ const SHARED_ACTIVITY_KEY = 'itsd:last-activity';
 /** Last heartbeat any tab sent, so one browser pings once per heartbeat. */
 const SHARED_PING_KEY = 'itsd:last-ping';
 const CHANNEL_NAME = 'itsd-session';
-
-const EXPIRED_URL = '/login?reason=session_expired';
 
 function readShared(key: string): string | null {
     try {
@@ -152,7 +151,7 @@ export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolea
         clearCountdown();
         clearHeartbeat();
         qc.clear();
-        window.location.href = EXPIRED_URL;
+        redirectToLogin('session_expired');
     }, [qc]);
 
     const doLogout = useCallback(async () => {
