@@ -107,7 +107,7 @@ export interface NotificationsResponse {
 }
 
 export const notificationApi = {
-    list: (): Promise<NotificationsResponse> => http.get<NotificationsResponse>('/notifications', { backgroundPoll: true }).then((r) => r.data),
+    list: (): Promise<NotificationsResponse> => http.get<NotificationsResponse>('/notifications').then((r) => r.data),
 
     markRead: (id: string): Promise<void> => http.put(`/notifications/${id}/read`).then(() => undefined),
 

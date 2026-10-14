@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Http\Middleware\CheckSessionTimeout;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -58,10 +60,11 @@ class RememberMeTest extends TestCase
     {
         AppSetting::put('session_timeout_minutes', '30');
         $user = User::factory()->create();
+        Cache::put(CheckSessionTimeout::clockKey('test-clock'), time() - 32 * 60, 3600);
 
         $this->actingAs($user)
             ->withHeader('Origin', self::ORIGIN)
-            ->withSession(['_sec_last_activity' => time() - 31 * 60, '_sec_remembered' => true])
+            ->withSession([CheckSessionTimeout::IDLE_CLOCK => 'test-clock', '_sec_remembered' => true])
             ->getJson('/api/me')
             ->assertOk()
             ->assertJsonPath('data.remembered', true);
@@ -84,10 +87,11 @@ class RememberMeTest extends TestCase
     public function test_an_idle_sign_in_without_remember_still_expires(): void
     {
         AppSetting::put('session_timeout_minutes', '30');
+        Cache::put(CheckSessionTimeout::clockKey('test-clock'), time() - 32 * 60, 3600);
 
         $this->actingAs(User::factory()->create())
             ->withHeader('Origin', self::ORIGIN)
-            ->withSession(['_sec_last_activity' => time() - 31 * 60, '_sec_remembered' => false])
+            ->withSession([CheckSessionTimeout::IDLE_CLOCK => 'test-clock', '_sec_remembered' => false])
             ->getJson('/api/me')
             ->assertStatus(401)
             ->assertJsonPath('message', 'session_expired');

@@ -43,7 +43,8 @@ function writeShared(key: string, at: number): void {
     }
 }
 
-export function useSessionTimeout(timeoutMinutes: number) {
+/** @param sendsHeartbeat false for a remembered sign-in, which the server never times out */
+export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolean) {
     const qc = useQueryClient();
     const warnSeconds = warnSecondsFor(timeoutMinutes);
 
@@ -61,6 +62,9 @@ export function useSessionTimeout(timeoutMinutes: number) {
     const channelRef = useRef<BroadcastChannel | null>(null);
     const heartbeatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingActivityRef = useRef(0);
+    const sendsHeartbeatRef = useRef(sendsHeartbeat);
+    // This tab's last ping; other tabs only learn of a ping once it succeeds
+    const lastPingRef = useRef(0);
     // Wall-clock expiry, so background-tab throttling cannot stretch the countdown
     const expiresAtRef = useRef<number>(0);
 
@@ -78,21 +82,29 @@ export function useSessionTimeout(timeoutMinutes: number) {
         }
     };
 
-    // The ping refreshes the server's idle clock; a 401 here is handled by the http interceptor
+    const lastPing = useCallback(() => newerActivity(lastPingRef.current, readShared(SHARED_PING_KEY)), []);
+
+    // The ping refreshes the server's idle clock; a failed one is forgotten so the next activity retries
     const sendPing = useCallback(() => {
-        writeShared(SHARED_PING_KEY, Date.now());
-        authApi.ping().catch(() => {});
+        const previous = lastPingRef.current;
+        const at = Date.now();
+        lastPingRef.current = at;
+        authApi
+            .ping()
+            .then(() => writeShared(SHARED_PING_KEY, at))
+            .catch(() => {
+                if (lastPingRef.current === at) lastPingRef.current = previous;
+            });
     }, []);
 
     // Ping on real activity and once after a throttled burst, so the server's clock never lags this tab's
     const heartbeat = useCallback(
         (activityAt: number) => {
-            const ms = timeoutMsRef.current;
-            if (ms <= 0) return;
+            if (!sendsHeartbeatRef.current) return;
             pendingActivityRef.current = activityAt;
             if (heartbeatTimerRef.current) return;
 
-            const delay = pingDelay(activityAt, newerActivity(0, readShared(SHARED_PING_KEY)), heartbeatMsFor(ms / 60_000));
+            const delay = pingDelay(activityAt, lastPing(), heartbeatMsFor(timeoutMsRef.current / 60_000));
             if (delay === 0) {
                 sendPing();
                 return;
@@ -100,11 +112,11 @@ export function useSessionTimeout(timeoutMinutes: number) {
             heartbeatTimerRef.current = setTimeout(() => {
                 heartbeatTimerRef.current = null;
                 // Another tab may already have pinged since this activity
-                if (newerActivity(0, readShared(SHARED_PING_KEY)) >= pendingActivityRef.current) return;
+                if (lastPing() >= pendingActivityRef.current) return;
                 sendPing();
             }, delay);
         },
-        [sendPing],
+        [lastPing, sendPing],
     );
 
     const closeWarning = useCallback(() => {
@@ -147,12 +159,13 @@ export function useSessionTimeout(timeoutMinutes: number) {
         if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
         clearCountdown();
         clearHeartbeat();
-        channelRef.current?.postMessage({ type: 'logout' });
         try {
             await authApi.logout();
         } catch {
             // Still redirect
         }
+        // After the server logout, or the other tabs' login pages still find the session alive
+        channelRef.current?.postMessage({ type: 'logout' });
         leaveForLogin();
     }, [leaveForLogin]);
 
@@ -213,6 +226,10 @@ export function useSessionTimeout(timeoutMinutes: number) {
             channelRef.current = null;
         };
     }, [noteActivity, leaveForLogin]);
+
+    useEffect(() => {
+        sendsHeartbeatRef.current = sendsHeartbeat;
+    }, [sendsHeartbeat]);
 
     // A new timeout setting restarts the clock and drops a warning raised under the old one
     useEffect(() => {

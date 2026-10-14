@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -148,7 +149,8 @@ class SecuritySettingsTest extends TestCase
         $request = Request::create('/api/me', 'GET');
         $session = new Store('test', new ArraySessionHandler(120));
         if ($lastActivity !== null) {
-            $session->put('_sec_last_activity', $lastActivity);
+            $session->put(CheckSessionTimeout::IDLE_CLOCK, 'test-clock');
+            Cache::put(CheckSessionTimeout::clockKey('test-clock'), $lastActivity, 3600);
         }
         $request->setLaravelSession($session);
         $request->setUserResolver(fn () => $user);
@@ -159,7 +161,7 @@ class SecuritySettingsTest extends TestCase
     public function test_idle_session_times_out_with_401_not_500(): void
     {
         AppSetting::put('session_timeout_minutes', '30');
-        $request = $this->sessionRequest(User::factory()->create(), time() - 31 * 60);
+        $request = $this->sessionRequest(User::factory()->create(), time() - 32 * 60);
 
         $response = (new CheckSessionTimeout)
             ->handle($request, fn () => response('next'));
