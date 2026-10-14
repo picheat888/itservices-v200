@@ -28,7 +28,7 @@ export function AppShell() {
     });
     // Remembered sign-ins skip the idle timer, as the server does.
     const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
-    const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(idleMinutes);
+    const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes);
     const [notifOpen, setNotifOpen] = useState(false);
     // My Profile and Change password live in the URL (?dialog=), so Back closes them.
     const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS);
@@ -66,7 +66,7 @@ export function AppShell() {
                 onChangePassword={() => setShellDialog('password', { over: true })}
             />
 
-            {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
+            {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} warnSeconds={warnSeconds} onStay={extendSession} onLogout={doLogout} />}
             {/* Forced password changes first; the voluntary one is dismissable */}
             {user?.must_change_password ? (
                 <SetPasswordDialog />

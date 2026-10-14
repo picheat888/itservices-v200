@@ -3,12 +3,18 @@
 import { cn } from '@/shared/lib/utils';
 import { Dialog, DialogOverlay, DialogPortal } from '@/shared/ui/dialog';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 const hold = (e: Event) => e.preventDefault();
 
 export function BlockingDialog({ layer = 'wall', className, children }: { layer?: 'wall' | 'top'; className?: string; children: ReactNode }) {
     const z = layer === 'top' ? 'z-[10000]' : 'z-[9999]';
+    // No Trigger to hand focus back to, so return it to whatever had it before the dialog opened
+    const [returnFocusTo] = useState(() => document.activeElement as HTMLElement | null);
+    const restoreFocus = (e: Event) => {
+        e.preventDefault();
+        if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
 
     return (
         <Dialog open>
@@ -17,6 +23,7 @@ export function BlockingDialog({ layer = 'wall', className, children }: { layer?
                 <DialogPrimitive.Content
                     onEscapeKeyDown={hold}
                     onInteractOutside={hold}
+                    onCloseAutoFocus={restoreFocus}
                     className={cn(
                         z,
                         'border-border bg-background fixed top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[14px] border shadow-2xl focus:outline-hidden',

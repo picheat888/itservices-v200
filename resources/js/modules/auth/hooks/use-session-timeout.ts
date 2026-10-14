@@ -1,9 +1,8 @@
+// Idle sign-out: polls the inactivity clock, opens the warning before sign-out, and keeps the countdown on wall-clock time.
 import { authApi } from '@/modules/auth/api/authApi';
+import { warnSecondsFor } from '@/modules/auth/lib/session-warning';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-/** Show warning this many seconds before forced logout. */
-const WARN_BEFORE_SEC = 120;
 
 /** Poll the idle clock every N seconds. */
 const POLL_INTERVAL_MS = 5_000;
@@ -11,32 +10,20 @@ const POLL_INTERVAL_MS = 5_000;
 /** User-activity events that reset the inactivity clock. */
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'] as const;
 
-/**
- * Industry-standard inactivity-based session timeout.
- *
- * - Accepts timeoutMinutes from the caller (via React Query cache) so that
- *   admin changes to the setting take effect immediately without a page reload.
- * - Polls every 5 s; shows a warning modal before forced logout.
- * - Activity events (mouse / keyboard / scroll) keep resetting the clock
- *   as long as the warning modal is not yet open.
- * - extendSession() pings the server to refresh _sec_last_activity, then resets the clock.
- * - doLogout()     logs the user out immediately.
- * - visibilitychange recalculates from wall-clock time when the tab regains focus,
- *   which corrects the countdown after background-tab timer throttling.
- */
 export function useSessionTimeout(timeoutMinutes: number) {
     const qc = useQueryClient();
+    const warnSeconds = warnSecondsFor(timeoutMinutes);
 
     const [showWarning, setShowWarning] = useState(false);
-    const [secondsLeft, setSecondsLeft] = useState(WARN_BEFORE_SEC);
+    const [secondsLeft, setSecondsLeft] = useState(warnSeconds);
 
     const timeoutMsRef = useRef(0); // 0 = disabled
+    const warnMsRef = useRef(0);
     const lastActivityRef = useRef(Date.now());
     const warningActiveRef = useRef(false);
     const mainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    // Absolute wall-clock time at which the session will expire (set when warning first shown).
-    // Used so the countdown is immune to background-tab setInterval throttling.
+    // Wall-clock expiry, so background-tab throttling cannot stretch the countdown
     const expiresAtRef = useRef<number>(0);
 
     const clearCountdown = () => {
@@ -52,17 +39,12 @@ export function useSessionTimeout(timeoutMinutes: number) {
         try {
             await authApi.logout();
         } catch {
-            // Ignore logout errors — still redirect.
+            // Still redirect
         }
         qc.clear();
         window.location.href = '/login?reason=session_expired';
     }, [qc]);
 
-    /**
-     * Starts (or restarts) the visual countdown using wall-clock time rather than
-     * decrement-per-tick. This makes the display accurate even when the browser
-     * throttles setInterval in background tabs.
-     */
     const startCountdown = useCallback(
         (expiresAt: number) => {
             clearCountdown();
@@ -79,38 +61,44 @@ export function useSessionTimeout(timeoutMinutes: number) {
         [doLogout],
     );
 
+    const openWarning = useCallback(
+        (remaining: number) => {
+            const expiresAt = Date.now() + remaining;
+            expiresAtRef.current = expiresAt;
+            setSecondsLeft(Math.max(1, Math.ceil(remaining / 1_000)));
+            if (!warningActiveRef.current) {
+                warningActiveRef.current = true;
+                setShowWarning(true);
+            }
+            startCountdown(expiresAt);
+        },
+        [startCountdown],
+    );
+
     const extendSession = useCallback(() => {
-        // Ping the server first so CheckSessionTimeout updates _sec_last_activity.
-        // Without this call only the frontend timer resets; the server session
-        // stays stale and the next real API call triggers a 401 redirect.
-        authApi.ping().catch(() => {
-            // 401 means the session already expired while the modal was open.
-            // The http interceptor will redirect to /login — nothing more to do here.
-        });
+        // The ping refreshes the server's idle clock too; a 401 here is handled by the http interceptor
+        authApi.ping().catch(() => {});
         lastActivityRef.current = Date.now();
         warningActiveRef.current = false;
         expiresAtRef.current = 0;
         setShowWarning(false);
-        setSecondsLeft(WARN_BEFORE_SEC);
         clearCountdown();
     }, []);
 
-    // Sync timeoutMsRef whenever the setting changes (e.g. admin saves new value).
-    // Reset the activity clock so the timer always starts fresh on change.
+    // A new timeout setting restarts the clock and drops a warning raised under the old one
     useEffect(() => {
         timeoutMsRef.current = timeoutMinutes > 0 ? timeoutMinutes * 60_000 : 0;
+        warnMsRef.current = warnSecondsFor(timeoutMinutes) * 1_000;
         lastActivityRef.current = Date.now();
-        // If a warning was showing for the old timeout, dismiss it.
         if (warningActiveRef.current) {
             warningActiveRef.current = false;
             expiresAtRef.current = 0;
             setShowWarning(false);
-            setSecondsLeft(WARN_BEFORE_SEC);
             clearCountdown();
         }
     }, [timeoutMinutes]);
 
-    // Activity listener: only resets the clock while warning is not showing.
+    // Activity only counts while the warning is closed
     useEffect(() => {
         const handle = () => {
             if (!warningActiveRef.current) {
@@ -121,12 +109,7 @@ export function useSessionTimeout(timeoutMinutes: number) {
         return () => ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, handle));
     }, []);
 
-    /**
-     * Recalculates session state from wall-clock time whenever the tab regains
-     * focus. This corrects the countdown after background-tab timer throttling —
-     * the scenario where the user returns to a tab and the display shows e.g.
-     * "33 s" even though the session has already expired on the server.
-     */
+    // Back on a throttled background tab: recompute from wall-clock time
     useEffect(() => {
         const handleVisibility = () => {
             if (document.visibilityState !== 'visible') return;
@@ -134,67 +117,37 @@ export function useSessionTimeout(timeoutMinutes: number) {
             const ms = timeoutMsRef.current;
             if (ms <= 0) return;
 
-            const idle = Date.now() - lastActivityRef.current;
-            const remaining = ms - idle;
-            const warnAt = Math.min(WARN_BEFORE_SEC * 1_000, ms * 0.25);
-
+            const remaining = ms - (Date.now() - lastActivityRef.current);
             if (remaining <= 0) {
-                // Session truly expired while tab was in background — logout immediately.
                 doLogout();
                 return;
             }
-
-            if (remaining <= warnAt) {
-                // (Re-)calculate expiry from wall clock and restart countdown with accurate value.
-                const expiresAt = Date.now() + remaining;
-                expiresAtRef.current = expiresAt;
-                const secs = Math.max(1, Math.ceil(remaining / 1_000));
-                setSecondsLeft(secs);
-                if (!warningActiveRef.current) {
-                    warningActiveRef.current = true;
-                    setShowWarning(true);
-                }
-                startCountdown(expiresAt);
-            }
+            if (remaining <= warnMsRef.current) openWarning(remaining);
         };
 
         document.addEventListener('visibilitychange', handleVisibility);
         return () => document.removeEventListener('visibilitychange', handleVisibility);
-    }, [doLogout, startCountdown]);
+    }, [doLogout, openWarning]);
 
-    // Main polling loop.
+    // Main polling loop
     useEffect(() => {
         mainIntervalRef.current = setInterval(() => {
             const ms = timeoutMsRef.current;
             if (ms <= 0 || warningActiveRef.current) return;
 
-            const idle = Date.now() - lastActivityRef.current;
-            const remaining = ms - idle;
-
-            // Warn at 2 min (or 25% of the total timeout, whichever is smaller).
-            const warnAt = Math.min(WARN_BEFORE_SEC * 1_000, ms * 0.25);
-
+            const remaining = ms - (Date.now() - lastActivityRef.current);
             if (remaining <= 0) {
                 doLogout();
                 return;
             }
-
-            if (remaining <= warnAt) {
-                warningActiveRef.current = true;
-                const expiresAt = Date.now() + remaining;
-                expiresAtRef.current = expiresAt;
-                const secs = Math.max(1, Math.ceil(remaining / 1_000));
-                setSecondsLeft(secs);
-                setShowWarning(true);
-                startCountdown(expiresAt);
-            }
+            if (remaining <= warnMsRef.current) openWarning(remaining);
         }, POLL_INTERVAL_MS);
 
         return () => {
             if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
             clearCountdown();
         };
-    }, [doLogout, startCountdown]);
+    }, [doLogout, openWarning]);
 
-    return { showWarning, secondsLeft, extendSession, doLogout };
+    return { showWarning, secondsLeft, warnSeconds, extendSession, doLogout };
 }

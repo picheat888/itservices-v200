@@ -1,72 +1,78 @@
 import { useT } from '@/lang';
+import { clock, crossedAnnouncement, spokenTime, toneFor, type WarnTone } from '@/modules/auth/lib/session-warning';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Clock } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { BlockingDialog } from './blocking-dialog';
 
 interface Props {
     secondsLeft: number;
+    /** How long the warning runs in total; the ring fills over this. */
+    warnSeconds: number;
     onStay: () => void;
     onLogout: () => void;
 }
 
+const TONE_CLASS: Record<WarnTone, string> = {
+    ok: 'text-emerald-600 dark:text-emerald-400',
+    warn: 'text-amber-600 dark:text-amber-400',
+    danger: 'text-red-600 dark:text-red-400',
+};
+
+const RADIUS = 36;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+/** Time left in words for a screen reader, e.g. "เหลือเวลาอีก 1 นาที 15 วินาที". */
+function spokenLeft(t: ReturnType<typeof useT>, seconds: number): string {
+    const words = {
+        minutes: (n: number) => (n === 1 ? t('session_one_minute') : t('login_time_minutes').replace('{n}', String(n))),
+        seconds: (n: number) => (n === 1 ? t('session_one_second') : t('login_time_seconds').replace('{n}', String(n))),
+    };
+    return t('session_time_left').replace('{time}', spokenTime(seconds, words));
+}
+
 // Idle warning with a countdown: stay signed in or sign out now. Its own top layer, so it works over any open dialog.
-export function SessionTimeoutModal({ secondsLeft, onStay, onLogout }: Props) {
+export function SessionTimeoutModal({ secondsLeft, warnSeconds, onStay, onLogout }: Props) {
     const t = useT();
 
-    const mins = Math.floor(secondsLeft / 60);
-    const secs = secondsLeft % 60;
-    const timeDisplay = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : String(secs);
+    // Read with the description when the dialog opens; later milestones go to the live region
+    const [openingTime] = useState(() => spokenLeft(t, secondsLeft));
+    const [announcement, setAnnouncement] = useState('');
+    const previous = useRef(secondsLeft);
+    useEffect(() => {
+        const milestone = crossedAnnouncement(previous.current, secondsLeft);
+        previous.current = secondsLeft;
+        if (milestone !== null) setAnnouncement(spokenLeft(t, secondsLeft));
+    }, [secondsLeft, t]);
 
-    // Progress arc: 0 → full as countdown goes 120 → 0
-    const MAX = 120;
-    const progress = Math.max(0, Math.min(1, (MAX - secondsLeft) / MAX));
-    const radius = 36;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference * (1 - progress);
-
-    // Color transitions follow the design tokens: ok → warn → danger.
-    const arcColor = secondsLeft > 60 ? '#059669' : secondsLeft > 30 ? '#d97706' : '#dc2626';
+    const progress = warnSeconds > 0 ? Math.max(0, Math.min(1, (warnSeconds - secondsLeft) / warnSeconds)) : 1;
+    const tone = TONE_CLASS[toneFor(secondsLeft, warnSeconds)];
 
     return (
         <BlockingDialog layer="top">
-            {/* Progress bar at top */}
-            <div className="bg-muted h-1 w-full">
-                <div
-                    className="h-full transition-all duration-1000"
-                    style={{
-                        width: `${progress * 100}%`,
-                        backgroundColor: arcColor,
-                    }}
-                />
-            </div>
-
             <div className="p-6">
-                {/* SVG countdown ring */}
-                <div className="mb-4 flex justify-center">
+                <div className="mb-4 flex justify-center" aria-hidden>
                     <div className="relative flex h-24 w-24 items-center justify-center">
                         <svg className="absolute inset-0 -rotate-90" viewBox="0 0 88 88">
-                            {/* Track */}
-                            <circle cx="44" cy="44" r={radius} fill="none" stroke="currentColor" strokeWidth="5" className="text-muted" />
-                            {/* Arc */}
+                            <circle cx="44" cy="44" r={RADIUS} fill="none" stroke="currentColor" strokeWidth="5" className="text-muted" />
                             <circle
                                 cx="44"
                                 cy="44"
-                                r={radius}
+                                r={RADIUS}
                                 fill="none"
-                                stroke={arcColor}
+                                stroke="currentColor"
                                 strokeWidth="5"
                                 strokeLinecap="round"
-                                strokeDasharray={circumference}
-                                strokeDashoffset={strokeDashoffset}
-                                style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s' }}
+                                strokeDasharray={CIRCUMFERENCE}
+                                strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
+                                className={cn(tone, 'transition-[stroke-dashoffset,color] duration-1000 ease-linear motion-reduce:transition-none')}
                             />
                         </svg>
                         <div className="z-10 flex flex-col items-center">
                             <Clock className="text-muted-foreground mb-0.5 h-4 w-4" />
-                            <span className="text-2xl leading-none font-bold tabular-nums" style={{ color: arcColor }}>
-                                {timeDisplay}
-                            </span>
+                            <span className={cn('text-2xl leading-none font-bold tabular-nums', tone)}>{clock(secondsLeft)}</span>
                         </div>
                     </div>
                 </div>
@@ -74,20 +80,20 @@ export function SessionTimeoutModal({ secondsLeft, onStay, onLogout }: Props) {
                 <DialogTitle className="mb-1 text-center text-base leading-normal font-semibold tracking-normal">
                     {t('session_expiring_title')}
                 </DialogTitle>
-                <DialogDescription className="text-muted-foreground mb-5 text-center text-sm">
-                    {t('session_expiring_desc')}{' '}
-                    <span className="font-medium" style={{ color: arcColor }}>
-                        {timeDisplay}
-                    </span>{' '}
-                    {t('session_expiring_seconds')}
+                <DialogDescription className="text-muted-foreground mb-5 text-center text-sm whitespace-pre-line">
+                    {t('session_expiring_desc')}
+                    <span className="sr-only"> {openingTime}</span>
                 </DialogDescription>
+                <span role="status" aria-live="polite" className="sr-only">
+                    {announcement}
+                </span>
 
                 <div className="flex flex-col gap-2">
                     <Button className="w-full" onClick={onStay}>
                         {t('session_stay')}
                     </Button>
                     <Button variant="ghost" className="text-muted-foreground w-full" onClick={onLogout}>
-                        {t('session_logout_now')}
+                        {t('profile_signout')}
                     </Button>
                 </div>
             </div>
