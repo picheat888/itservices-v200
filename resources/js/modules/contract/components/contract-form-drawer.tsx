@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { assetApi } from '@/modules/asset';
 import { useCurrency, useVendors } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -17,7 +17,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Paperclip, Search, Wifi, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
 
 const MAX_FILES = 5;
@@ -177,6 +177,13 @@ export function ContractFormDrawer({
     const [removedIds, setRemovedIds] = useState<number[]>([]);
     const [pending, setPending] = useState<File[]>([]);
     const [fileErr, setFileErr] = useState('');
+    // A server error with no field of its own
+    const [formError, setFormError] = useState('');
+    const [formErrorCount, setFormErrorCount] = useState(0);
+    // A new contract saved by an earlier attempt whose files then failed: the retry updates it
+    const [savedId, setSavedId] = useState<number | null>(null);
+    // Attachment removals already applied, so a retry does not delete them twice
+    const removedDone = useRef(new Set<number>());
 
     const vendorOptions = useMemo(() => {
         // Value is the vendor id (FK); only the label follows the active language so
@@ -230,6 +237,9 @@ export function ContractFormDrawer({
         setRemovedIds([]);
         setPending([]);
         setFileErr('');
+        setFormError('');
+        setSavedId(null);
+        removedDone.current = new Set();
         setForm(seedForm);
     }, [open, editing, seedForm]);
 
@@ -372,16 +382,24 @@ export function ContractFormDrawer({
             asset_ids: isHardware ? form.asset_ids : [],
         };
 
+        setFormError('');
+        let savingFiles = false;
         try {
             // Persist the contract first so a new one has an id to attach files to.
-            const saved = editing ? await update.mutateAsync({ id: editing.id, payload }) : await create.mutateAsync(payload);
-            const id = editing ? editing.id : saved.id;
+            const targetId = editing?.id ?? savedId;
+            const saved = targetId ? await update.mutateAsync({ id: targetId, payload }) : await create.mutateAsync(payload);
+            const id = targetId ?? saved.id;
+            if (!editing) setSavedId(id);
+            savingFiles = true;
 
             for (const attachmentId of removedIds) {
+                if (removedDone.current.has(attachmentId)) continue;
                 await deleteAttachment.mutateAsync({ id, attachmentId });
+                removedDone.current.add(attachmentId);
             }
             if (pending.length) {
                 await uploadAttachments.mutateAsync({ id, files: pending });
+                setPending([]);
             }
 
             setSaveState('done');
@@ -391,10 +409,28 @@ export function ContractFormDrawer({
                 onClose();
             }, 700);
         } catch (e) {
-            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setFileErr(msg || t('attachment_upload_failed'));
-            // Surface upload errors on the contract-info step where attachments live.
-            setStep(1);
+            const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+            // Field errors go under their field, on the step that owns it
+            const fieldErrors: Record<string, string> = {};
+            let fileError = '';
+            for (const [key, messages] of Object.entries(data?.errors ?? {})) {
+                const field = key.startsWith('notify_') ? 'notify' : key;
+                if (key.startsWith('files')) fileError ||= messages[0];
+                else if (field in FIELD_STEP) fieldErrors[field] ??= messages[0];
+            }
+            if (Object.keys(fieldErrors).length) {
+                setErr(fieldErrors);
+                setStep(Math.min(...Object.keys(fieldErrors).map((field) => FIELD_STEP[field])));
+                return;
+            }
+            if (fileError || savingFiles) {
+                // Attachments live on the contract-info step
+                setFileErr(fileError || data?.message || t('attachment_upload_failed'));
+                setStep(1);
+                return;
+            }
+            setFormError(data?.message || t('contract_save_failed'));
+            setFormErrorCount((n) => n + 1);
         }
     };
 
@@ -477,6 +513,7 @@ export function ContractFormDrawer({
 
                 {/* Body — only this scrolls */}
                 <div className="flex-1 overflow-y-auto px-6 py-7">
+                    <FormErrorBanner message={formError} shakeKey={formErrorCount} className="mx-auto mb-4 w-full max-w-[820px]" />
                     <div key={step} className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
                         {/* ── Step 1 · Type ───────────────────────────── */}
                         {step === 0 && (

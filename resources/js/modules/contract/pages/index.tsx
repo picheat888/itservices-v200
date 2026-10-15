@@ -9,6 +9,7 @@ import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -37,7 +38,7 @@ import {
     TrendingUp,
     X,
 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
@@ -127,14 +128,28 @@ export default function ContractsPage() {
     const statusFilter: StatusFilter = STATUS_FILTERS.includes(statusParam as StatusFilter) ? (statusParam as StatusFilter) : '';
     const sortParam = list.get('sort');
     const sort = SORT_VALUES.includes(sortParam) ? sortParam : DEFAULT_SORT;
-    const setSearch = (value: string) => list.setFilter('search', value);
+    // The box updates as typed; ?search follows 350ms after the last key, and takes outside changes (Clear filters)
+    const [searchText, setSearchText] = useState(search);
+    const writtenSearch = useRef(search);
+    useEffect(() => {
+        if (search === writtenSearch.current) return;
+        writtenSearch.current = search;
+        setSearchText(search);
+    }, [search]);
+    useEffect(() => {
+        if (searchText === search) return;
+        const id = window.setTimeout(() => {
+            writtenSearch.current = searchText;
+            list.setFilter('search', searchText);
+        }, 350);
+        return () => window.clearTimeout(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchText, search]);
     const setTypeFilter = (value: ContractType | '') => list.setFilter('type', value);
     const setStatusFilter = (value: StatusFilter) => list.setFilter('status', value);
     const setSort = (value: string) => list.setFilter('sort', value === DEFAULT_SORT ? '' : value);
     const setPage = (next: number) => list.setParams({ page: next > 1 ? String(next) : null });
     const setPerPage = (value: number) => list.setParams({ per: value === PAGE_SIZES[0] ? null : String(value), page: null });
-    const [formOpen, setFormOpen] = useState(false);
-    const [editing, setEditing] = useState<Contract | null>(null);
     // Newly created contract — pinned at the top with a "New" badge for 8 seconds.
     const [newlyCreated, setNewlyCreated] = useState<Contract | null>(null);
     const newlyCreatedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -147,34 +162,47 @@ export default function ContractsPage() {
         data: listData,
         isLoading,
         isFetching,
-    } = useContracts({
-        page,
-        per_page: perPage,
-        search,
-        tab: listEnabledTab,
-        type: typeFilter || undefined,
-        sort,
-    });
-    // The detail dialog is URL-driven (?view=<id>): the URL is the single source of truth, so a
-    // reload / shared link reopens it and closing just drops the param. setSelectedId(null) closes.
+    } = useContracts(
+        {
+            page,
+            per_page: perPage,
+            search,
+            tab: listEnabledTab,
+            type: typeFilter || undefined,
+            sort,
+        },
+        tab === 'all',
+    );
+    // The dialogs live in the URL (?view=<id>, ?edit=1 over it, ?add=1): reloads and shared links reopen them
     const [searchParams, setSearchParams] = useSearchParams();
-    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
-    // `!= null` guard and used to fetch /contracts/NaN.
-    const selectedId = toRecordId(searchParams.get('view'));
-    const setSelectedId = (id: number | null) =>
+    const writeDialogs = (change: (p: URLSearchParams) => void) =>
         setSearchParams(
             (sp) => {
                 const p = new URLSearchParams(sp);
-                if (id == null) {
-                    p.delete('view');
-                } else {
-                    p.set('view', String(id));
-                }
+                change(p);
                 return p;
             },
-            { replace: true },
+            { replace: true, state: keepDialogState() },
         );
+    // Only a real record id opens the drawer (Number('abc') is NaN)
+    const selectedId = toRecordId(searchParams.get('view'));
+    const setSelectedId = (id: number | null) =>
+        writeDialogs((p) => {
+            if (id == null) {
+                p.delete('view');
+                p.delete('edit');
+            } else {
+                p.set('view', String(id));
+            }
+        });
     const { data: selected, isError: selectedMissing } = useContract(selectedId);
+    // Edit opens over the view of the same contract, from a copy taken on open so a refetch cannot reset the form
+    const editParam = searchParams.get('edit') != null;
+    const [editing, setEditing] = useState<Contract | null>(null);
+    useEffect(() => {
+        if (!editParam) setEditing(null);
+        else if (selected && editing?.id !== selected.id) setEditing(selected);
+    }, [editParam, selected, editing?.id]);
 
     const rows = listData?.data ?? [];
     // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
@@ -212,35 +240,19 @@ export default function ContractsPage() {
             },
         });
 
-    // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;
-    const openCreate = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('add', '1');
-                return p;
-            },
-            { replace: true },
-        );
-    const closeForm = () => {
-        setEditing(null);
-        setFormOpen(false);
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('add');
-                return p;
-            },
-            { replace: true },
-        );
-    };
-    // Open the Edit wizard over the current View. selectedId is kept so that
-    // closing the form returns the user to the (now refreshed) detail dialog.
-    const openEdit = (c: Contract) => {
-        setEditing(c);
-        setFormOpen(true);
-    };
+    const openCreate = () => writeDialogs((p) => p.set('add', '1'));
+    const closeForm = () =>
+        writeDialogs((p) => {
+            p.delete('add');
+            p.delete('edit');
+        });
+    // ?view stays, so closing the form returns to the refreshed detail dialog
+    const openEdit = (c: Contract) =>
+        writeDialogs((p) => {
+            p.set('view', String(c.id));
+            p.set('edit', '1');
+        });
 
     /** Called by ContractFormDrawer after a new contract is saved. */
     const handleCreated = (contract: Contract) => {
@@ -360,8 +372,8 @@ export default function ContractsPage() {
                             <div className="relative w-full max-w-xs">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
+                                    value={searchText}
+                                    onChange={(e) => setSearchText(e.target.value)}
                                     placeholder={`${t('contract_vendor')} / ${t('contract_details')}`}
                                     className="pl-9"
                                 />
@@ -614,7 +626,7 @@ export default function ContractsPage() {
                 canReactivate={canReactivate}
                 canDelete={canDelete}
             />
-            <ContractFormDrawer open={adding || formOpen} editing={adding ? null : editing} onClose={closeForm} onCreated={handleCreated} />
+            <ContractFormDrawer open={adding || editing != null} editing={adding ? null : editing} onClose={closeForm} onCreated={handleCreated} />
         </div>
     );
 }

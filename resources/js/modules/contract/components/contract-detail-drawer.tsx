@@ -67,21 +67,19 @@ export function ContractDetailDrawer({
     const [tab, setTab] = useState<TabId>('overview');
     const [cancelling, setCancelling] = useState(false);
 
-    // Retain the last contract so the dialog can keep rendering its content while it
-    // animates closed (open → false). Without this, the component would unmount the
-    // instant `contract` becomes null and Radix could never play the exit animation.
+    // The last contract, so the content stays put while the dialog animates closed
     const [shown, setShown] = useState<Contract | null>(contract);
     useEffect(() => {
         if (contract) setShown(contract);
     }, [contract]);
 
-    // Reset to Overview whenever a (different) contract opens.
+    // Overview for each contract that opens; closing (id → undefined) keeps the tab during the fade
     useEffect(() => {
+        if (contract?.id == null) return;
         setTab('overview');
     }, [contract?.id]);
 
-    // Drive `open` off the live prop (so closing animates), but render from the retained
-    // `c` so content stays present during the fade-out.
+    // `open` follows the live prop; the body renders the retained copy
     const c = contract ?? shown;
     if (!c) return null;
 
