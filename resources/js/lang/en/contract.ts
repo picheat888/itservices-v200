@@ -16,13 +16,13 @@ export const contract: Dict = {
     contracts_title: 'Contracts',
     contracts_sub: 'Vendor and service contracts, with expiration alerts.',
     contract_code: 'Contract no.',
-    contract_code_hint: 'Required - must be unique',
+    contract_code_hint: 'Required. Must be unique.',
     contract_vendor: 'Vendor',
     contract_details: 'Details',
     contract_section_info: 'Contract information',
-    contract_section_term: 'Term & value',
+    contract_section_term: 'Term and value',
     contract_section_notify: 'Notifications',
-    contract_section_closure: 'Cancellation & closure',
+    contract_section_closure: 'Cancellation and closure',
     contract_value_per_cycle: 'Value / cycle',
     contract_total_value: 'Total value',
     contract_notes: 'Notes',
@@ -33,15 +33,13 @@ export const contract: Dict = {
     contract_days_remaining: 'Days remaining',
     contract_duration: 'Contract term',
     contract_reminder_threshold: 'Reminder starts',
-    contract_created: 'Created',
+    contract_created: 'Added',
     contract_updated: 'Last updated',
     contract_cancelled_on: 'Cancelled on',
     contract_cancelled_by: 'Cancelled by',
     contract_expired_on: 'Expired on',
     expiring_soon: 'Expiring soon',
     expired_contracts: 'Overdue',
-    expiring_soon_hint: 'All contracts will expire soon.',
-    expired_contracts_hint: 'Contracts past their end date, still needing action.',
     contract_overdue: 'Overdue',
     contract_expired: 'Expired',
     contract_expire: 'Mark as expired',
@@ -60,11 +58,10 @@ export const contract: Dict = {
     contract_billing_monthly: 'Monthly',
     contract_billing_quarterly: 'Quarterly',
     contract_billing_yearly: 'Yearly',
-    contract_notify: 'Notify at',
+    contract_notify: 'Remind before',
     contract_attachments: 'Attachments',
     contract_link_assets: 'Linked assets',
-    contract_link_assets_sub: 'Tie leased equipment to this contract',
-    contract_renew: 'Renew',
+    contract_link_assets_sub: 'Link leased equipment to this contract',
     contract_cancel: 'Cancel contract',
     contract_reactivate: 'Reactivate',
     contract_cancelled: 'Cancelled',
@@ -94,19 +91,19 @@ export const contract: Dict = {
     contract_back: 'Back',
     contract_next: 'Next',
     contract_saving: 'Saving…',
-    contract_saved: 'Saved!',
+    contract_saved: 'Saved',
     contract_save_changes: 'Save changes',
 
     // contract-form-drawer.tsx — step headings
     contract_step_n: 'Step {n}',
     contract_step_type_sub: 'Pick a category so the form shows only what matters.',
     contract_step_details_title: 'Contract details',
-    contract_step_details_sub: 'Reference code, details, vendor, contract name, and attach the contract file.',
-    contract_step_term_title: 'Term & value',
+    contract_step_details_sub: 'Contract no., details, vendor, contract name, and the contract file.',
+    contract_step_term_title: 'Term and value',
     contract_step_term_sub: 'Set the start/end dates, value, and billing cycle.',
     contract_step_reminders_title: 'Expiry reminders',
-    contract_step_reminders_sub: "Pick at least one window. We'll email and notify you in-app.",
-    contract_step_link_assets_sub: 'Choose the assets covered by this contract (Hardware contracts only).',
+    contract_step_reminders_sub: 'Pick at least one. The system sends an email and an in-app notification.',
+    contract_step_link_assets_sub: 'Choose the assets covered by this contract (hardware contracts only).',
     contract_step_review_title: 'Review before saving',
     contract_step_review_sub: 'Double-check the details - jump to any step from the bar above.',
 
@@ -122,21 +119,21 @@ export const contract: Dict = {
     contract_vendor_ph: 'Select vendor',
     contract_name_ph: 'e.g. Microsoft 365 - 320 seats',
     contract_notes_ph: 'Additional notes (optional)',
-    contract_estimate: 'Est.',
-    contract_estimate_use: 'use this',
+    contract_estimate: 'Estimate',
+    contract_estimate_use: 'Use this',
 
     // contract-form-drawer.tsx — linked assets picker
-    contract_link_assets_hardware_only: 'Only Hardware contracts can link assets - change the type in step 1 to enable this.',
-    contract_link_assets_search_ph: 'Search tag / name',
+    contract_link_assets_hardware_only: 'Only hardware contracts can link assets. Change the type in step 1 to turn this on.',
+    contract_link_assets_search_ph: 'Search asset code or name',
     contract_link_assets_loading: 'Loading…',
     contract_link_assets_none: 'No assets available',
     contract_link_assets_selected: '{n} selected',
-    contract_link_asset_locked: 'Written off or returned to the lessor: stays linked to this contract',
+    contract_link_asset_locked: "Can't remove: already written off or returned to the lessor",
     contract_type_locked: 'This contract holds assets already returned or written off, so it stays hardware.',
     contract_asset_returned_to_vendor: 'Returned to lessor',
 
     // contract-form-drawer.tsx — review card
-    contract_review_code: 'Contract No',
+    contract_review_code: 'Contract no.',
     contract_review_name: 'Contract name',
     contract_review_term: 'Term',
     contract_review_assets_linked: '{n} linked',
@@ -145,14 +142,14 @@ export const contract: Dict = {
 
     // contract-form-drawer.tsx — validation messages
     contract_err_required: 'Required',
-    contract_err_end_before_start: 'Must be after start',
+    contract_err_end_before_start: "Can't be before the start date",
     contract_err_notify_required: 'Select at least one',
 
     // pages/index.tsx — alert banners
-    contract_banner_expiring_one: 'Expiring Soon : {n} Contract',
-    contract_banner_expiring_many: 'Expiring Soon : {n} Contracts',
-    contract_banner_overdue_one: 'Overdue : {n} Contract',
-    contract_banner_overdue_many: 'Overdue : {n} Contracts',
+    contract_banner_expiring_one: '{n} contract expiring soon',
+    contract_banner_expiring_many: '{n} contracts expiring soon',
+    contract_banner_overdue_one: '{n} contract overdue',
+    contract_banner_overdue_many: '{n} contracts overdue',
 
     // pages/index.tsx — filters and sort
     contract_filter_all_types: 'All types',
@@ -168,20 +165,18 @@ export const contract: Dict = {
     // pages/index.tsx — contract table and pagination
     contract_days_overdue_short: '{n}d overdue',
     contract_badge_new: 'New',
-    contract_rows_per_page: 'Rows per page',
-    contract_page_of: 'of',
 
     // pages/index.tsx — Overview tab
-    contract_hint_in_reminder: 'within reminder window',
-    contract_hint_excl_cancelled: 'excluding cancelled',
+    contract_hint_in_reminder: 'In the reminder window',
+    contract_hint_excl_cancelled: 'Excludes cancelled',
     contract_timeline_upcoming: 'Upcoming',
     contract_timeline_in_reminder: 'In reminder window',
     contract_timeline_overdue: 'Overdue',
     contract_timeline_empty: 'No expirations in this 12-month window.',
     contract_timeline_ends: 'Ends {date}',
     contract_timeline_open: 'Open contract',
-    contract_timeline_expired_ago: 'expired {n}d ago',
-    contract_timeline_now: 'NOW',
+    contract_timeline_expired_ago: '{n} days overdue',
+    contract_timeline_now: 'Now',
 
     // contract-detail-drawer.tsx — header, tabs and days badge
     contract_eyebrow: 'Contract',
@@ -193,7 +188,7 @@ export const contract: Dict = {
 
     // contract-detail-drawer.tsx — close and reactivate confirmations
     contract_cannot_close_title: 'Cannot close yet',
-    contract_cannot_close_desc: 'Every linked asset must be written off first. {n} asset(s) still need write-off.',
+    contract_cannot_close_desc: 'Write off every linked asset first. {n} linked assets still need to be written off.',
     contract_got_it: 'Got it',
     contract_reactivate_confirm_title: 'Reactivate this contract?',
 
@@ -207,9 +202,9 @@ export const contract: Dict = {
 
     // contract-assets-tab.tsx — linked assets table
     contract_assets_empty: 'No assets linked to this contract',
-    contract_asset_col_id: 'Asset ID',
+    contract_asset_col_id: 'Asset code',
     contract_asset_col_name: 'Name',
-    contract_asset_col_serial: 'Serial',
+    contract_asset_col_serial: 'Serial number',
     contract_asset_col_owner: 'Owner',
 
     // contract-attachments-tab.tsx — preview toolbar
