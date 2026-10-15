@@ -1,9 +1,9 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
-import { InfoPopover } from '@/modules/report';
 import { useCurrency } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { OverviewHeader } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
