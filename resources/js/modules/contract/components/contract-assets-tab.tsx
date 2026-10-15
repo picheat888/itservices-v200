@@ -1,20 +1,12 @@
 import { useT } from '@/lang';
-import { AssetDetailDrawer, assetApi } from '@/modules/asset';
+import { AssetDetailDrawer, AssetStatusBadge, assetApi } from '@/modules/asset';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { EmptyPane } from '@/shared/components/empty-pane';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { type Asset, type ContractLinkedAsset } from '@/shared/types';
+import { type Asset, type AssetStatus, type ContractLinkedAsset } from '@/shared/types';
 import { useQuery } from '@tanstack/react-query';
 import { Package } from 'lucide-react';
 import { useState } from 'react';
-
-/** Asset status → StatusBadge tone for the linked-assets table. */
-const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
-    deployed: 'blue',
-    ready: 'green',
-    pending_acceptance: 'amber',
-    pending_return: 'amber',
-    writeoff: 'red',
-};
 
 /** Assets tab: a fill-height data table of the contract's linked assets; a row opens the asset detail (read-only). */
 export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] }) {
@@ -29,12 +21,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
     });
 
     if (assets.length === 0) {
-        return (
-            <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-sm">
-                <Package className="text-muted-foreground/50 h-8 w-8" />
-                {t('contract_assets_empty')}
-            </div>
-        );
+        return <EmptyPane icon={Package} text={t('contract_assets_empty')} />;
     }
 
     const columns: Column<ContractLinkedAsset>[] = [
@@ -51,7 +38,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
                 a.returned_to_vendor ? (
                     <StatusBadge tone="gray">{t('contract_asset_returned_to_vendor')}</StatusBadge>
                 ) : a.status ? (
-                    <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge>
+                    <AssetStatusBadge status={a.status as AssetStatus} t={t} />
                 ) : (
                     '—'
                 ),

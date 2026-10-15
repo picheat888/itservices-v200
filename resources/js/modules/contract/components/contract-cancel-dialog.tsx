@@ -1,5 +1,5 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { Contract } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -15,12 +15,15 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
     const { cancel } = useContractMutations();
     const [reason, setReason] = useState('');
     const [error, setError] = useState<string | undefined>();
+    const [serverError, setServerError] = useState('');
+    const [serverErrorCount, setServerErrorCount] = useState(0);
 
     // Reset the field each time a (different) contract opens the dialog.
     useEffect(() => {
         if (contract) {
             setReason('');
             setError(undefined);
+            setServerError('');
         }
     }, [contract]);
 
@@ -32,17 +35,19 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
             return;
         }
         if (!contract) return;
+        setServerError('');
         try {
             await cancel.mutateAsync({ id: contract.id, reason: reason.trim() });
             onDone();
         } catch {
-            setError(t('contract_cancel_failed'));
+            setServerError(t('contract_cancel_failed'));
+            setServerErrorCount((n) => n + 1);
         }
     };
 
     return (
         <Dialog open={!!contract} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
+            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Ban className="text-destructive h-5 w-5" />
@@ -55,6 +60,8 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                         </DialogDescription>
                     )}
                 </DialogHeader>
+
+                <FormErrorBanner message={serverError} shakeKey={serverErrorCount} />
 
                 <Field label={t('contract_cancel_reason')} required error={error}>
                     <Textarea

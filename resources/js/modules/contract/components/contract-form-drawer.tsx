@@ -1,33 +1,28 @@
 import { useT } from '@/lang';
-import { assetApi } from '@/modules/asset';
+import { AssetStatusBadge, assetApi } from '@/modules/asset';
 import { useCurrency, useVendors } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
+import { FileDropZone, formatFileSize } from '@/shared/components/file-drop-zone';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError } from '@/shared/lib/utils';
-import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
+import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Paperclip, Search, Wifi, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 25 * 1024 * 1024; // 25MB
-
-/** Human-readable file size, e.g. "1.4 MB" / "820 KB". */
-function formatSize(bytes: number): string {
-    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
 
 const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string; subKey: string }[] = [
     { value: 'software', icon: FileText, labelKey: 'contract_type_software', subKey: 'contract_type_software_sub' },
@@ -150,7 +145,7 @@ export function ContractFormDrawer({
     const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { symbol } = useCurrency();
+    const { symbol, format } = useCurrency();
     const { create, update, uploadAttachments, deleteAttachment } = useContractMutations();
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
@@ -278,7 +273,7 @@ export function ContractFormDrawer({
     const atMax = visibleExisting.length + pending.length >= MAX_FILES;
 
     // Validate picked files client-side (PDF only, ≤25MB, within the count cap).
-    const onPickFiles = (list: FileList | null) => {
+    const onPickFiles = (list: FileList | File[] | null) => {
         if (!list) return;
         setFileErr('');
         let slots = MAX_FILES - visibleExisting.length - pending.length;
@@ -463,7 +458,7 @@ export function ContractFormDrawer({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={focusDialogContentClass}>
                 {/* Header */}
                 <FocusDialogHeader
                     icon={TypeIcon}
@@ -497,7 +492,7 @@ export function ContractFormDrawer({
                                     className={cn(
                                         'bg-background z-[1] flex h-[26px] w-[26px] items-center justify-center rounded-full border-[1.5px] text-xs font-bold transition-colors',
                                         active && 'border-brand bg-brand text-brand-foreground',
-                                        done && 'border-brand/40 bg-brand/10 text-brand',
+                                        done && 'border-brand/40 bg-brand/10 text-brand-ink',
                                         !active && !done && 'border-input text-muted-foreground',
                                     )}
                                 >
@@ -552,7 +547,7 @@ export function ContractFormDrawer({
                                                 }}
                                                 className={cn(
                                                     'flex flex-col items-center gap-2.5 rounded-xl p-5 text-center disabled:cursor-not-allowed disabled:opacity-50',
-                                                    sel && 'text-brand',
+                                                    sel && 'text-brand-ink',
                                                 )}
                                             >
                                                 <Icon className="h-6 w-6" />
@@ -622,10 +617,6 @@ export function ContractFormDrawer({
                                     {/* Right — attachments */}
                                     <Field label={t('contract_attachments')}>
                                         <div className="space-y-2">
-                                            {visibleExisting.length === 0 && pending.length === 0 && (
-                                                <p className="text-muted-foreground text-xs">{t('attachment_none')}</p>
-                                            )}
-
                                             {visibleExisting.map((a) => (
                                                 <div
                                                     key={`e-${a.id}`}
@@ -640,7 +631,7 @@ export function ContractFormDrawer({
                                                     >
                                                         {a.name}
                                                     </a>
-                                                    <span className="text-muted-foreground shrink-0 text-xs">{formatSize(a.size)}</span>
+                                                    <span className="text-muted-foreground shrink-0 text-xs">{formatFileSize(a.size)}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => setRemovedIds((r) => [...r, a.id])}
@@ -662,7 +653,7 @@ export function ContractFormDrawer({
                                                     <span className="bg-brand/10 text-brand-ink shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                                                         {t('attachment_new')}
                                                     </span>
-                                                    <span className="text-muted-foreground shrink-0 text-xs">{formatSize(f.size)}</span>
+                                                    <span className="text-muted-foreground shrink-0 text-xs">{formatFileSize(f.size)}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPending((p) => p.filter((_, j) => j !== i))}
@@ -675,28 +666,18 @@ export function ContractFormDrawer({
                                             ))}
 
                                             {!atMax && (
-                                                <label className="border-input text-muted-foreground hover:text-brand hover:bg-accent/40 focus-within:ring-ring flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed px-3 py-4 text-center text-sm focus-within:ring-2">
-                                                    <Paperclip className="h-4 w-4" />
-                                                    <span>{t('attachment_pick')}</span>
-                                                    <input
-                                                        type="file"
-                                                        accept="application/pdf"
-                                                        multiple
-                                                        className="sr-only"
-                                                        onChange={(e) => {
-                                                            onPickFiles(e.target.files);
-                                                            e.target.value = '';
-                                                        }}
-                                                    />
-                                                </label>
+                                                <FileDropZone
+                                                    accept={['pdf']}
+                                                    hint={t('attachment_hint')}
+                                                    compact={visibleExisting.length + pending.length > 0}
+                                                    onPick={onPickFiles}
+                                                />
                                             )}
 
-                                            {fileErr ? (
+                                            {fileErr && (
                                                 <p role="alert" className="text-destructive text-xs">
                                                     {fileErr}
                                                 </p>
-                                            ) : (
-                                                <p className="text-muted-foreground text-xs">{t('attachment_hint')}</p>
                                             )}
                                         </div>
                                     </Field>
@@ -769,10 +750,7 @@ export function ContractFormDrawer({
                                                     className="text-muted-foreground hover:text-brand mt-1 text-xs transition-colors"
                                                 >
                                                     {t('contract_estimate')} ≈{' '}
-                                                    <span className="text-foreground font-mono font-semibold">
-                                                        {symbol}
-                                                        {totalValueEstimate.toLocaleString()}
-                                                    </span>
+                                                    <span className="text-foreground font-mono font-semibold">{format(totalValueEstimate)}</span>
                                                     <span className="ml-3 underline-offset-2 hover:underline">{t('contract_estimate_use')}</span>
                                                 </button>
                                             )}
@@ -873,7 +851,7 @@ export function ContractFormDrawer({
                                                                 <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
                                                                 <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
                                                                     {locked && <Lock className="h-3 w-3" aria-hidden="true" />}
-                                                                    {a.status.replace(/_/g, ' ')}
+                                                                    <AssetStatusBadge status={a.status as AssetStatus} t={t} />
                                                                 </span>
                                                             </button>
                                                         );
@@ -918,12 +896,10 @@ export function ContractFormDrawer({
                                     />
                                     <ReviewRow
                                         k={t('contract_value_per_cycle')}
-                                        v={`${symbol}${form.value ? Number(form.value).toLocaleString() : '0'} (${t(`contract_billing_${form.billing_cycle}`)})`}
+                                        v={`${format(Number(form.value) || 0)} (${t(`contract_billing_${form.billing_cycle}`)})`}
                                         mono
                                     />
-                                    {form.total_value && (
-                                        <ReviewRow k={t('contract_total_value')} v={`${symbol}${Number(form.total_value).toLocaleString()}`} mono />
-                                    )}
+                                    {form.total_value && <ReviewRow k={t('contract_total_value')} v={format(Number(form.total_value) || 0)} mono />}
                                     <ReviewRow
                                         k={t('contract_notify')}
                                         v={selectedNotify.length ? t('contract_days_many').replace('{n}', selectedNotify.join(', ')) : '—'}
