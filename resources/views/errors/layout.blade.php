@@ -15,7 +15,7 @@
     <link rel="icon" href="/logo.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -58,7 +58,7 @@
                 radial-gradient(60rem 60rem at 50% -20%, var(--bg-glow), transparent 60%),
                 var(--bg);
             color: var(--fg);
-            font-family: 'Noto Sans Thai', 'Manrope', system-ui, -apple-system, sans-serif;
+            font-family: 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -81,7 +81,7 @@
         }
 
         .code {
-            font-family: 'Manrope', sans-serif;
+            font-family: 'Noto Sans Thai', sans-serif;
             font-size: 88px;
             font-weight: 800;
             line-height: 1;
@@ -96,7 +96,7 @@
         /* บรรทัด 1: หัวเรื่องภาษาอังกฤษ */
         .heading-en {
             margin-top: 16px;
-            font-family: 'Manrope', sans-serif;
+            font-family: 'Noto Sans Thai', sans-serif;
             font-size: 22px;
             font-weight: 700;
             letter-spacing: -0.01em;
@@ -138,7 +138,7 @@
             margin-top: 28px;
             font-size: 12px;
             color: var(--muted);
-            font-family: 'Manrope', monospace;
+            font-family: 'Noto Sans Thai', sans-serif;
         }
     </style>
 </head>
