@@ -2,6 +2,7 @@ import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employee';
 import { PAGE_SIZES } from '@/shared/components/data-table';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
@@ -714,24 +715,32 @@ function GroupRolesTab() {
                                     </div>
                                 </div>
                                 <div className="flex gap-0.5">
-                                    <button
-                                        onClick={() => setModal({ open: true, group: g })}
-                                        disabled={adminLocked}
-                                        title={adminLocked ? t('gr_admin_protected') : undefined}
-                                        className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                                    >
-                                        <Pencil className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            await confirm({ variant: 'danger', entity: { name: g.name }, action: () => remove.mutateAsync(g.id) });
-                                        }}
-                                        disabled={adminLocked}
-                                        title={adminLocked ? t('gr_admin_protected') : undefined}
-                                        className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
+                                    <DisabledReason reason={adminLocked ? t('gr_admin_protected') : null} label={t('edit')}>
+                                        <button
+                                            onClick={() => setModal({ open: true, group: g })}
+                                            disabled={adminLocked}
+                                            aria-label={t('edit')}
+                                            className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                    </DisabledReason>
+                                    <DisabledReason reason={adminLocked ? t('gr_admin_protected') : null} label={t('delete')}>
+                                        <button
+                                            onClick={async () => {
+                                                await confirm({
+                                                    variant: 'danger',
+                                                    entity: { name: g.name },
+                                                    action: () => remove.mutateAsync(g.id),
+                                                });
+                                            }}
+                                            disabled={adminLocked}
+                                            aria-label={t('delete')}
+                                            className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                    </DisabledReason>
                                 </div>
                             </div>
                             {g.role_label && (

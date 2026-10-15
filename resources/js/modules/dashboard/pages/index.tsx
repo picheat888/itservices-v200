@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useContractSummary } from '@/modules/contract';
+import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { relativeTime } from '@/shared/lib/datetime';
@@ -345,20 +346,22 @@ function VolumeChart({ it }: { it: DashboardIt }) {
                         />
                     ))}
 
-                    {/* Bars in their own flex row so each keeps a real, hoverable width; the line
-                        is one overlaid SVG stretched across the same box. */}
+                    {/* Bars in their own flex row (each opens its day's note); the line is one SVG over the same box */}
                     <div className="absolute inset-0 flex items-end gap-[3px]">
                         {days.map((d) => (
-                            <div
+                            <InfoPopover
                                 key={d.date}
-                                title={`${label(d.date)}\n${t('dash_volume_opened')} ${d.opened}\n${t('dash_volume_backlog')} ${d.backlog}`}
-                                className="group flex h-full flex-1 items-end"
+                                tabbable={false}
+                                label={`${label(d.date)}: ${t('dash_volume_opened')} ${d.opened}, ${t('dash_volume_backlog')} ${d.backlog}`}
+                                content={<VolumeNote date={label(d.date)} opened={d.opened} backlog={d.backlog} />}
+                                contentClassName="min-w-[10rem]"
+                                className="group flex h-full flex-1 cursor-default items-end rounded-none"
                             >
-                                <div
-                                    className="bg-brand/70 group-hover:bg-brand w-full rounded-t-[2px] transition-colors"
+                                <span
+                                    className="bg-brand/70 group-hover:bg-brand group-data-[state=open]:bg-brand block w-full rounded-t-[2px] transition-colors"
                                     style={{ height: Math.max(d.opened === 0 ? 0 : CHART.minBar, (d.opened / peak) * CHART.height) }}
                                 />
-                            </div>
+                            </InfoPopover>
                         ))}
                     </div>
 
@@ -402,6 +405,26 @@ function VolumeChart({ it }: { it: DashboardIt }) {
                 })}
             </div>
         </>
+    );
+}
+
+/** Hover / tap note on one day of the volume chart: the date, new tickets and the backlog line. */
+function VolumeNote({ date, opened, backlog }: { date: string; opened: number; backlog: number }) {
+    const t = useT();
+    return (
+        <div className="space-y-1">
+            <div className="font-semibold">{date}</div>
+            <NoteRow
+                mark={<i className="bg-brand/70 inline-block h-2.5 w-2.5 shrink-0 rounded-[2px]" aria-hidden />}
+                text={t('dash_volume_opened')}
+                value={opened}
+            />
+            <NoteRow
+                mark={<i className="inline-block h-0.5 w-2.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden />}
+                text={t('dash_volume_backlog')}
+                value={backlog}
+            />
+        </div>
     );
 }
 

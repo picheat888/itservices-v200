@@ -38,6 +38,7 @@ export const access: Dict = {
     access_size: 'ขนาด',
     access_size_unlimited: 'ไม่จำกัด',
     access_size_unlimited_hint: 'ใส่ 0 ถ้าไม่จำกัด',
+    access_size_wheel_hint: 'ชี้เมาส์ค้างไว้แล้วหมุนล้อเพื่อปรับทีละ 1',
     access_description: 'คำอธิบาย',
     access_name: 'ชื่อ',
     access_sub: 'จัดการ Email Group, File Share, Social / Internet และ License ของ Software',

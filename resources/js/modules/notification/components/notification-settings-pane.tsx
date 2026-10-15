@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { Field } from '@/shared/components/field';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SettingToggle } from '@/shared/components/setting-toggle';
@@ -242,15 +243,12 @@ function NotificationEditDialog({ bell, onClose }: { bell: NotificationTemplate 
                         {test.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         {t('notification_test')}
                     </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() => reset.mutateAsync(bell.key).then(onClose)}
-                        disabled={busy || bell.is_standard}
-                        title={bell.is_standard ? t('notification_already_standard') : undefined}
-                    >
-                        <RotateCcw className="h-4 w-4" />
-                        {t('notification_reset')}
-                    </Button>
+                    <DisabledReason reason={bell.is_standard ? t('notification_already_standard') : null} label={t('notification_reset')}>
+                        <Button variant="outline" onClick={() => reset.mutateAsync(bell.key).then(onClose)} disabled={busy || bell.is_standard}>
+                            <RotateCcw className="h-4 w-4" />
+                            {t('notification_reset')}
+                        </Button>
+                    </DisabledReason>
                     <div className="flex-1" />
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={busy}>
                         {t('cancel')}

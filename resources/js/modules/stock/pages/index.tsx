@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useCurrency, useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -477,17 +478,20 @@ export default function StockPage() {
                             </button>
                         )}
                         {can('delete') && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (deletable) confirmDelete(i);
-                                }}
-                                disabled={!deletable}
-                                title={deletable ? t('stock_delete_item') : t('stock_delete_blocked')}
-                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md disabled:pointer-events-none disabled:opacity-30"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
+                            <DisabledReason reason={deletable ? null : t('stock_delete_blocked')} label={t('stock_delete_item')}>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (deletable) confirmDelete(i);
+                                    }}
+                                    disabled={!deletable}
+                                    title={deletable ? t('stock_delete_item') : undefined}
+                                    aria-label={t('stock_delete_item')}
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-30"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </DisabledReason>
                         )}
                     </div>
                 );
