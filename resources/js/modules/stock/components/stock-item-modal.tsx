@@ -4,6 +4,7 @@ import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SerialToggle } from '@/shared/components/serial-toggle';
+import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem } from '@/shared/types';
@@ -17,8 +18,6 @@ import { useEffect, useState } from 'react';
 import type { StockItemPayload } from '../api/stockApi';
 import { useStockItemMutations } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
-
-const CLOSE_DELAY_MS = 1100;
 
 const empty: StockItemPayload = {
     sku: '',
@@ -70,6 +69,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     const [autoName, setAutoName] = useState(false);
     const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
+    const closeAfterSave = useCloseAfterSave(open, onClose);
 
     useEffect(() => {
         if (!open) return;
@@ -111,7 +111,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     const submit = async () => {
         // SKU is auto-generated on create, so only the name is required (matches `isValid`).
-        if (!form.name.trim() || (item && !form.sku.trim())) return;
+        if (saving || saved || !form.name.trim() || (item && !form.sku.trim())) return;
         // Editing an existing item asks for confirmation before saving changes.
         if (item) {
             if (!(await confirm({ variant: 'edit', title: t('stock_edit_item'), description: t('stock_edit_confirm') }))) {
@@ -125,7 +125,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                 await create.mutateAsync(form);
             }
             setSaved(true);
-            setTimeout(onClose, CLOSE_DELAY_MS);
+            closeAfterSave();
         } catch (e) {
             useToastStore.getState().push(stockRefusalText(e, t), 'error');
         }
@@ -248,7 +248,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton loading={saving} onClick={submit} disabled={!isValid || !isDirty} />
+                    <SaveButton loading={saving} success={saved} onClick={submit} disabled={!saved && (!isValid || !isDirty)} />
                 </DialogFooter>
             </DialogContent>
         </Dialog>

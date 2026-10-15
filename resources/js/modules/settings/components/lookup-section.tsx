@@ -2,19 +2,17 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { hasFieldError, toastDeleteError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-
-/** How long the success checkmark stays visible before the dialog closes. */
-const CLOSE_DELAY_MS = 1100;
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 /** A simple {id, name, description} master-data row. */
 export interface LookupItem {
@@ -37,6 +35,8 @@ interface LookupMutations {
 
 interface LookupSectionProps {
     rows: LookupItem[];
+    /** True while the rows are first loading (shows skeleton rows instead of "no data"). */
+    loading?: boolean;
     mutations: LookupMutations;
     /** Dialog/title labels. */
     addLabel: string;
@@ -47,7 +47,7 @@ interface LookupSectionProps {
 }
 
 /** LookupSection — CRUD list for a {name, description} lookup; search and page live in the URL (?search, page, per). */
-export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel, addButtonLabel }: LookupSectionProps) {
+export function LookupSection({ rows, loading, mutations, addLabel, editLabel, nameLabel, addButtonLabel }: LookupSectionProps) {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
@@ -68,12 +68,12 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
             align: 'right',
             render: (r) => (
                 <div className="flex justify-end gap-1">
-                    {/* Icon-only, so each says what it does and to which row. */}
+                    {/* Icon-only row actions, labelled per row */}
                     <button
                         type="button"
                         onClick={() => setEditItem(r)}
                         aria-label={`${t('edit')} ${r.name}`}
-                        className="hover:bg-accent focus-visible:ring-ring/50 flex h-8 w-8 items-center justify-center rounded-md outline-none focus-visible:ring-2"
+                        className="hover:bg-accent focus-visible:ring-ring/50 flex h-8 w-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
                     >
                         <Pencil className="h-4 w-4" aria-hidden="true" />
                     </button>
@@ -88,7 +88,7 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
                                 toastDeleteError(e, t);
                             }
                         }}
-                        className="text-destructive hover:bg-destructive/10 focus-visible:ring-destructive/40 flex h-8 w-8 items-center justify-center rounded-md outline-none focus-visible:ring-2"
+                        className="text-destructive hover:bg-destructive/10 focus-visible:ring-destructive/40 flex h-8 w-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
                     >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
@@ -102,6 +102,7 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
             <DataTable
                 columns={columns}
                 rows={rows}
+                loading={loading}
                 rowKey={(r) => r.id}
                 search={list.table.search}
                 paging={list.table.paging}
@@ -155,6 +156,8 @@ function LookupModal({
     const [description, setDescription] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
+    const nameRef = useRef<HTMLInputElement>(null);
+    const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -171,9 +174,16 @@ function LookupModal({
     const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {
-        if (!name.trim()) return;
+        if (saving || saved) {
+            return;
+        }
+        if (!name.trim()) {
+            setNameError(t('set_err_required'));
+            nameRef.current?.focus();
+            return;
+        }
         setNameError(undefined);
-        const payload = { name: name.trim(), description: description.trim() || undefined };
+        const payload = { name: name.trim(), description: description.trim() || null };
         try {
             if (item) {
                 await update.mutateAsync({ id: item.id, ...payload } as never);
@@ -181,15 +191,20 @@ function LookupModal({
                 await create.mutateAsync(payload as never);
             }
             setSaved(true);
-            setTimeout(onClose, CLOSE_DELAY_MS);
+            closeAfterSave();
         } catch (err) {
-            useToastStore
-                .getState()
-                .push(
-                    hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'),
-                    'error',
-                    hasFieldError(err, 'name') ? undefined : t('cd_error_title'),
-                );
+            if (hasFieldError(err, 'name')) {
+                setNameError(t('md_name_taken'));
+                nameRef.current?.focus();
+            } else {
+                useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
+            }
+        }
+    };
+
+    const onEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            submit();
         }
     };
 
@@ -198,34 +213,31 @@ function LookupModal({
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{item ? editLabel : addLabel}</DialogTitle>
+                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
                     <Field label={nameLabel} required error={nameError}>
                         <Input
+                            ref={nameRef}
                             value={name}
                             onChange={(e) => {
                                 setName(e.target.value);
                                 setNameError(undefined);
                             }}
                             autoFocus
-                            placeholder={nameLabel}
-                            onKeyDown={(e) => e.key === 'Enter' && submit()}
+                            maxLength={120}
+                            onKeyDown={onEnter}
                         />
                     </Field>
                     <Field label={t('md_description')}>
-                        <Input
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder={t('md_description')}
-                            onKeyDown={(e) => e.key === 'Enter' && submit()}
-                        />
+                        <Input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={255} onKeyDown={onEnter} />
                     </Field>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton loading={saving} onClick={submit} disabled={!name.trim()} />
+                    <SaveButton loading={saving} success={saved} onClick={submit} />
                 </DialogFooter>
             </DialogContent>
         </Dialog>

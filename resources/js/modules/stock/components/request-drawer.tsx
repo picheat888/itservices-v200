@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -9,11 +10,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { AlertTriangle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStockItems, useStockRequestActions } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
-
-const CLOSE_DELAY_MS = 1100;
 
 /** RequestDrawer — submit a new stock request (Requester → approver → fulfilled). */
 export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -50,14 +49,19 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const isDirty = sku !== initialSku || qtyInput !== '1' || reason !== '';
     const guardClose = useDiscardGuard(open && isDirty && !saved);
 
+    const closeAfterSave = useCloseAfterSave(open, onClose);
+    const sending = useRef(false);
     const send = async () => {
-        if (!canSubmit) return;
+        if (sending.current || saved || !canSubmit) return;
+        sending.current = true;
         try {
             await submit.mutateAsync({ stock_item_id: Number(sku), qty, reason: reason.trim() });
             setSaved(true);
-            setTimeout(onClose, CLOSE_DELAY_MS);
+            closeAfterSave();
         } catch (e) {
             useToastStore.getState().push(stockRefusalText(e, t), 'error');
+        } finally {
+            sending.current = false;
         }
     };
 
@@ -114,7 +118,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={submit.isPending}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton loading={submit.isPending} onClick={send} disabled={!canSubmit}>
+                    <SaveButton loading={submit.isPending} success={saved} onClick={send} disabled={!saved && !canSubmit}>
                         {t('stock_submit')}
                     </SaveButton>
                 </DialogFooter>

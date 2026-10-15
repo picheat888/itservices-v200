@@ -3,6 +3,7 @@ import { NoAccess, useAuth } from '@/modules/auth';
 import { useLocationMutations, useLocations } from '@/modules/employee';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -20,6 +21,8 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,10 +30,9 @@ import {
     Box,
     Boxes,
     Building2,
-    CalendarClock,
-    Construction,
     Inbox,
     Info,
+    Loader2,
     Mail,
     MapPin,
     Pencil,
@@ -38,22 +40,22 @@ import {
     Send,
     Shield,
     SlidersHorizontal,
-    Sparkles,
     Ticket,
     Trash2,
     Upload,
-    X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
 import { DateTimeSection } from '../components/datetime-section';
+import { FIELD_ROW, FORM_STACK, FORM_WIDTH } from '../components/form-layout';
 import { LocationModal } from '../components/location-modal';
 import { LookupSection } from '../components/lookup-section';
 import { ModelModal } from '../components/model-modal';
 import { RequestDataSection } from '../components/request-data-section';
+import { SEGMENT_LEGEND } from '../components/segmented-radio';
 import { TicketsSlaTab } from '../components/tickets-sla-tab';
 import { VendorModal } from '../components/vendor-modal';
 import { WarehouseModal } from '../components/warehouse-modal';
@@ -85,6 +87,7 @@ import {
     useUpdateDisplay,
     useUploadLogo,
 } from '../hooks/use-settings';
+import { IDLE_SECTION, type SavedSectionProps, type SectionSaver, type SectionStatus } from '../types';
 
 /** A section tells the page whether it holds unsaved local edits. */
 type OnDirtyChange = (dirty: boolean) => void;
@@ -92,7 +95,15 @@ type OnDirtyChange = (dirty: boolean) => void;
 type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'request-data' | 'assets' | 'security';
 
 // Theme accent options — kept to Blue / Purple / Black per branding guidelines.
-const ACCENTS = ['#2563eb', '#7c3aed', '#0f172a'];
+// Theme colours that read at 4.5:1 as text on white and on their own buttons, stay apart in dark mode, and stay clear of the status reds, greens and ambers.
+const THEME_ACCENTS: { hex: string; nameKey: string }[] = [
+    { hex: '#2563eb', nameKey: 'set_accent_blue' },
+    { hex: '#1e40af', nameKey: 'set_accent_navy' },
+    { hex: '#4f46e5', nameKey: 'set_accent_indigo' },
+    { hex: '#7c3aed', nameKey: 'set_accent_violet' },
+    { hex: '#0369a1', nameKey: 'set_accent_ocean' },
+    { hex: '#0f172a', nameKey: 'set_accent_ink' },
+];
 
 // Bundled default web logo (public/logo.svg) — shown when no custom logo is set.
 const DEFAULT_LOGO = '/logo.svg';
@@ -112,6 +123,17 @@ const emptyForm: SettingsForm = {
     currency: 'THB',
 };
 
+const COMPANY_KEYS = ['company_name', 'legal_name', 'tax_id', 'industry', 'address', 'country', 'currency'] as const;
+const BRANDING_KEYS = ['brand_name', 'brand_sub'] as const;
+
+/** The given fields of a form or loaded settings, e.g. the company payload. */
+function fieldsOf<K extends keyof SettingsForm>(source: Pick<SettingsForm, K>, keys: readonly K[]): Pick<SettingsForm, K> {
+    return Object.fromEntries(keys.map((key) => [key, source[key]])) as Pick<SettingsForm, K>;
+}
+
+/** True when any of the given fields differs from the loaded values. */
+const differs = (form: SettingsForm, loaded: SettingsForm, keys: readonly (keyof SettingsForm)[]) => keys.some((key) => form[key] !== loaded[key]);
+
 const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'request-data', 'assets', 'security'];
 
 /** A ?tab= value this page has — checked, never cast, so ?tab=garbage falls back instead of opening nothing. */
@@ -121,6 +143,31 @@ const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v 
 const clearListParams = (params: URLSearchParams) => {
     for (const key of ['search', 'page', 'list']) params.delete(key);
 };
+
+/** Focuses the control of the first invalid Field (by its `name`) inside a form. */
+const focusFirstError = (form: HTMLElement | null, errors: Record<string, string | undefined>) => {
+    const first = Object.keys(errors).find((key) => errors[key]);
+    if (!first) return;
+    form?.querySelector<HTMLElement>(`[data-field="${first}"] input, [data-field="${first}"] button`)?.focus();
+};
+
+/** Shimmer stand-in for a settings form while its saved values load. */
+function FormSkeleton({ rows = 3 }: { rows?: number }) {
+    return (
+        <div className={FORM_STACK} aria-hidden="true">
+            {Array.from({ length: rows }).map((_, i) => (
+                <div key={i} className={FIELD_ROW}>
+                    {[0, 1].map((j) => (
+                        <div key={j} className="space-y-2">
+                            <Skeleton className="h-3.5 w-28" />
+                            <Skeleton className="h-9 w-full" />
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+}
 
 export default function SettingsPage() {
     const t = useT();
@@ -135,50 +182,36 @@ export default function SettingsPage() {
         if (next === section) return;
         guardSwitch(() => changeSection(next, { extra: clearListParams }));
     };
-    const { data } = useSettings();
+    const { data, isLoading } = useSettings();
     const update = useUpdateCompany();
     const [form, setForm] = useState<SettingsForm>(emptyForm);
+    const loaded = useRef<SettingsForm | null>(null);
 
+    // Every Settings save refreshes `data`; a group with unsaved edits keeps them.
     useEffect(() => {
-        if (data) {
-            setForm({
-                brand_name: data.brand_name,
-                brand_sub: data.brand_sub,
-                company_name: data.company_name,
-                legal_name: data.legal_name,
-                tax_id: data.tax_id,
-                industry: data.industry,
-                address: data.address,
-                country: data.country,
-                currency: data.currency,
-            });
-        }
+        if (!data) return;
+        const before = loaded.current;
+        loaded.current = { ...fieldsOf(data, COMPANY_KEYS), ...fieldsOf(data, BRANDING_KEYS) };
+        setForm((f) => {
+            const next = { ...f };
+            for (const keys of [COMPANY_KEYS, BRANDING_KEYS]) {
+                if (!before || !differs(f, before, keys)) Object.assign(next, fieldsOf(data, keys));
+            }
+            return next;
+        });
     }, [data]);
 
     const set = <K extends keyof SettingsForm>(k: K, v: SettingsForm[K]) => setForm((f) => ({ ...f, [k]: v }));
+    const takeSaved = (saved: SettingsForm, keys: readonly (keyof SettingsForm)[]) => setForm((f) => ({ ...f, ...fieldsOf(saved, keys) }));
 
-    /** Extracts only the company fields for the PUT /settings/company endpoint. */
-    const companyPayload = (): CompanyPayload => ({
-        company_name: form.company_name,
-        legal_name: form.legal_name,
-        tax_id: form.tax_id,
-        industry: form.industry,
-        address: form.address,
-        country: form.country,
-        currency: form.currency,
-    });
+    const saveCompany = () => {
+        const payload: CompanyPayload = fieldsOf(form, COMPANY_KEYS);
+        update.mutate(payload, { onSuccess: (saved) => takeSaved(saved, COMPANY_KEYS) });
+    };
 
-    // Save is enabled only once a company field actually differs from what was loaded.
-    const companyDirty =
-        !!data &&
-        (form.company_name !== data.company_name ||
-            form.legal_name !== data.legal_name ||
-            form.tax_id !== data.tax_id ||
-            form.industry !== data.industry ||
-            form.address !== data.address ||
-            form.country !== data.country ||
-            form.currency !== data.currency);
-    const brandingFormDirty = !!data && (form.brand_name !== data.brand_name || form.brand_sub !== data.brand_sub);
+    // Save is enabled only once a field actually differs from what was loaded.
+    const companyDirty = !!data && differs(form, data, COMPANY_KEYS);
+    const brandingFormDirty = !!data && differs(form, data, BRANDING_KEYS);
     // Company/System edits survive section switches, but reload/close still warns.
     useDiscardGuard(companyDirty || brandingFormDirty);
 
@@ -194,6 +227,12 @@ export default function SettingsPage() {
     ];
     const nav = allNav.filter((n) => can(n.perm));
 
+    // Below lg the nav scrolls sideways; keep the active section in view.
+    const navRef = useRef<HTMLElement>(null);
+    useEffect(() => {
+        navRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }, [section]);
+
     if (nav.length === 0) return <NoAccess />;
 
     // If ?tab= points at a section the user can't see, fall back to the first visible one.
@@ -206,20 +245,27 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground text-sm">{t('settings_sub')}</p>
             </div>
 
-            <Card className="grid grid-cols-1 overflow-hidden p-0 lg:grid-cols-[220px_1fr]">
-                <nav className="border-border flex gap-1 overflow-x-auto border-b p-3 lg:flex-col lg:border-r lg:border-b-0">
+            <Card className="grid grid-cols-1 overflow-clip p-0 lg:grid-cols-[220px_1fr]">
+                <nav
+                    ref={navRef}
+                    aria-label={t('settings_sections')}
+                    className="border-border flex gap-1 overflow-x-auto border-b p-3 lg:flex-col lg:border-r lg:border-b-0"
+                >
                     {nav.map((n) => {
                         const Icon = n.icon;
+                        const active = activeSection === n.id;
                         return (
                             <button
                                 key={n.id}
+                                type="button"
                                 onClick={() => openSection(n.id)}
+                                aria-current={active ? 'page' : undefined}
                                 className={cn(
-                                    'flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
-                                    activeSection === n.id ? 'bg-brand/10 text-brand font-semibold' : 'text-muted-foreground hover:bg-accent/50',
+                                    'flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                                    active ? 'bg-brand/10 text-brand-ink font-semibold' : 'text-muted-foreground hover:bg-accent/50',
                                 )}
                             >
-                                <Icon className="h-4 w-4" />
+                                <Icon className="h-4 w-4" aria-hidden="true" />
                                 {n.label}
                             </button>
                         );
@@ -228,16 +274,17 @@ export default function SettingsPage() {
 
                 <div className="p-6">
                     {activeSection === 'system' && (
-                        <SystemTab form={form} set={set} logoUrl={data?.logo_url ?? null} onDirtyChange={setSectionDirty} />
+                        <SystemTab form={form} set={set} logoUrl={data?.logo_url ?? null} loading={isLoading} onDirtyChange={setSectionDirty} />
                     )}
                     {activeSection === 'company' && (
                         <CompanyTab
                             form={form}
                             set={set}
-                            onSave={() => update.mutate(companyPayload())}
+                            onSave={saveCompany}
                             saving={update.isPending}
                             saved={update.isSuccess}
                             dirty={companyDirty}
+                            loading={isLoading}
                         />
                     )}
                     {activeSection === 'master-data' && <MasterDataTab />}
@@ -246,7 +293,6 @@ export default function SettingsPage() {
                     {activeSection === 'tickets' && <TicketsSlaTab onDirtyChange={setSectionDirty} />}
                     {activeSection === 'request-data' && <RequestDataTab />}
                     {activeSection === 'security' && <SecurityTab onDirtyChange={setSectionDirty} />}
-                    {!VALID_SECTIONS.includes(activeSection) && <ComingSoon />}
                 </div>
             </Card>
         </div>
@@ -309,20 +355,7 @@ function MasterDataTab() {
                 <p className="text-muted-foreground text-sm">{t('set_master_data_desc')}</p>
             </div>
 
-            <div className="mb-5 flex flex-wrap gap-1 border-b pb-3">
-                {tabs.map((tb) => (
-                    <button
-                        key={tb.id}
-                        onClick={() => setTab(tb.id)}
-                        className={cn(
-                            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                            tab === tb.id ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent/50',
-                        )}
-                    >
-                        {tb.label}
-                    </button>
-                ))}
-            </div>
+            <PageTabs tabs={tabs} active={tab} onChange={setTab} className="mb-5" />
 
             {tab === 'brands' && <BrandsList />}
             {tab === 'models' && <ModelsList />}
@@ -336,60 +369,37 @@ function MasterDataTab() {
     );
 }
 
-/**
- * RowActions — shared edit/save/cancel/delete control cluster for the master
- * data tables. Shows Save + Cancel while a row is in edit mode, otherwise the
- * Edit + Delete buttons.
- */
-function RowActions({
-    editing,
-    onSave,
-    onCancel,
-    onEdit,
-    onDelete,
-    saving,
-}: {
-    editing?: boolean;
-    onSave?: () => void;
-    onCancel?: () => void;
-    onEdit: () => void;
-    onDelete: () => void;
-    saving?: boolean;
-}) {
+/** Icon-only Edit + Delete buttons for a master data row, named after the row. */
+function RowActions({ name, onEdit, onDelete }: { name: string; onEdit: () => void; onDelete: () => void }) {
     const t = useT();
-    if (editing) {
-        return (
-            <div className="flex justify-end gap-1">
-                <Button size="sm" onClick={onSave} disabled={saving}>
-                    {t('save')}
-                </Button>
-                <button onClick={onCancel} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
-                    <X className="h-4 w-4" />
-                </button>
-            </div>
-        );
-    }
     return (
         <div className="flex justify-end gap-1">
-            <button onClick={onEdit} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
-                <Pencil className="h-4 w-4" />
+            <button
+                type="button"
+                onClick={onEdit}
+                aria-label={`${t('edit')} ${name}`}
+                className="hover:bg-accent focus-visible:ring-ring/50 flex h-8 w-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
+            >
+                <Pencil className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button onClick={onDelete} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md">
-                <Trash2 className="h-4 w-4" />
+            <button
+                type="button"
+                onClick={onDelete}
+                aria-label={`${t('delete')} ${name}`}
+                className="text-destructive hover:bg-destructive/10 focus-visible:ring-destructive/40 flex h-8 w-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
+            >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
             </button>
         </div>
     );
 }
 
-/**
- * BrandsList — CRUD list for asset/stock brands.
- * Uses useBrands + useBrandMutations hooks.
- */
+/** BrandsList — CRUD list for asset/stock brands. */
 function BrandsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: brands = [] } = useBrands();
+    const { data: brands = [], isLoading } = useBrands();
     const { remove } = useBrandMutations();
     const [addOpen, setAddOpen] = useState(false);
     const [editBrand, setEditBrand] = useState<Brand | null>(null);
@@ -402,7 +412,7 @@ function BrandsList() {
         },
         {
             key: 'description',
-            header: t('md_description'),
+            header: t('md_description_col'),
             render: (b) => <span className="text-muted-foreground text-sm">{b.description || '—'}</span>,
         },
         {
@@ -411,6 +421,7 @@ function BrandsList() {
             align: 'right',
             render: (b) => (
                 <RowActions
+                    name={b.name}
                     onEdit={() => setEditBrand(b)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: b.name } }))) return;
@@ -430,6 +441,7 @@ function BrandsList() {
             <DataTable
                 columns={columns}
                 rows={brands}
+                loading={isLoading}
                 rowKey={(b) => b.id}
                 search={list.table.search}
                 paging={list.table.paging}
@@ -453,21 +465,17 @@ function BrandsList() {
     );
 }
 
-/**
- * ModelsList — CRUD list for asset models, with optional brand association.
- * Uses useAssetModels + useAssetModelMutations hooks.
- */
+/** ModelsList — CRUD list for asset models, with optional brand association. */
 function ModelsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: models = [] } = useAssetModels();
+    const { data: models = [], isLoading } = useAssetModels();
     const { remove } = useAssetModelMutations();
     const [addOpen, setAddOpen] = useState(false);
     const [editModel, setEditModel] = useState<AssetModel | null>(null);
 
-    // Legacy model names are stored as "Brand Model" (e.g. "Dell Latitude 5540").
-    // The brand has its own column, so strip a leading brand prefix for display.
+    // Brand has its own column, so a leading "Brand " prefix is dropped
     const displayName = (m: AssetModel) => {
         const brand = m.brand?.name;
         return brand && m.name.startsWith(`${brand} `) ? m.name.slice(brand.length + 1) : m.name;
@@ -484,7 +492,7 @@ function ModelsList() {
             header: t('md_brand'),
             render: (m) =>
                 m.brand ? (
-                    <span className="bg-accent text-muted-foreground rounded px-1.5 py-0.5 text-xs">{m.brand.name}</span>
+                    <span className="bg-accent text-foreground/80 rounded px-1.5 py-0.5 text-xs">{m.brand.name}</span>
                 ) : (
                     <span className="text-muted-foreground text-sm">—</span>
                 ),
@@ -495,9 +503,10 @@ function ModelsList() {
             align: 'right',
             render: (m) => (
                 <RowActions
+                    name={displayName(m)}
                     onEdit={() => setEditModel(m)}
                     onDelete={async () => {
-                        if (!(await confirm({ variant: 'danger', entity: { name: m.name } }))) return;
+                        if (!(await confirm({ variant: 'danger', entity: { name: displayName(m) } }))) return;
                         try {
                             await remove.mutateAsync(m.id);
                         } catch (e) {
@@ -514,6 +523,7 @@ function ModelsList() {
             <DataTable
                 columns={columns}
                 rows={models}
+                loading={isLoading}
                 rowKey={(m) => m.id}
                 search={list.table.search}
                 paging={list.table.paging}
@@ -537,16 +547,13 @@ function ModelsList() {
     );
 }
 
-/**
- * CategoriesList — CRUD list for categories.
- * Uses useCategories + useCategoryMutations hooks.
- */
+/** CategoriesList — CRUD list for categories. */
 function CategoriesList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
     const lang = useUiStore((s) => s.lang);
-    const { data: categories = [] } = useCategories();
+    const { data: categories = [], isLoading } = useCategories();
     const { remove } = useCategoryMutations();
     const [addOpen, setAddOpen] = useState(false);
     const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -570,7 +577,7 @@ function CategoriesList() {
         },
         {
             key: 'description',
-            header: t('md_description'),
+            header: t('md_description_col'),
             render: (c) => <span className="text-muted-foreground text-sm">{c.description || '—'}</span>,
         },
         {
@@ -579,9 +586,10 @@ function CategoriesList() {
             align: 'right',
             render: (c) => (
                 <RowActions
+                    name={displayName(c)}
                     onEdit={() => setEditCategory(c)}
                     onDelete={async () => {
-                        if (!(await confirm({ variant: 'danger', entity: { name: c.name } }))) return;
+                        if (!(await confirm({ variant: 'danger', entity: { name: displayName(c) } }))) return;
                         try {
                             await remove.mutateAsync(c.id);
                         } catch (e) {
@@ -598,6 +606,7 @@ function CategoriesList() {
             <DataTable
                 columns={columns}
                 rows={categories}
+                loading={isLoading}
                 rowKey={(c) => c.id}
                 search={list.table.search}
                 paging={list.table.paging}
@@ -621,16 +630,13 @@ function CategoriesList() {
     );
 }
 
-/**
- * VendorsList — CRUD list for suppliers/vendors with contact details.
- * Uses useVendors + useVendorMutations hooks.
- */
+/** VendorsList — CRUD list for suppliers/vendors with contact details. */
 function VendorsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
     const lang = useUiStore((s) => s.lang);
-    const { data: vendors = [] } = useVendors();
+    const { data: vendors = [], isLoading } = useVendors();
     const { remove } = useVendorMutations();
     const [addOpen, setAddOpen] = useState(false);
     const [editVendor, setEditVendor] = useState<Vendor | null>(null);
@@ -652,12 +658,12 @@ function VendorsList() {
         {
             key: 'phone',
             header: t('md_phone'),
-            render: (v) => <span className="text-muted-foreground text-sm">{v.phone || '—'}</span>,
+            render: (v) => <span className="text-muted-foreground text-sm tabular-nums">{v.phone || '—'}</span>,
         },
         {
             key: 'email',
             header: t('md_email'),
-            render: (v) => <span className="text-muted-foreground font-mono text-xs">{v.email || '—'}</span>,
+            render: (v) => <span className="text-muted-foreground text-sm">{v.email || '—'}</span>,
         },
         {
             key: 'address',
@@ -669,24 +675,18 @@ function VendorsList() {
             header: t('actions'),
             align: 'right',
             render: (v) => (
-                <div className="flex justify-end gap-1">
-                    <button onClick={() => setEditVendor(v)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
-                        <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                        onClick={async () => {
-                            if (!(await confirm({ variant: 'danger', entity: { name: v.name } }))) return;
-                            try {
-                                await remove.mutateAsync(v.id);
-                            } catch (e) {
-                                toastDeleteError(e, t);
-                            }
-                        }}
-                        className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </button>
-                </div>
+                <RowActions
+                    name={displayName(v)}
+                    onEdit={() => setEditVendor(v)}
+                    onDelete={async () => {
+                        if (!(await confirm({ variant: 'danger', entity: { name: displayName(v) } }))) return;
+                        try {
+                            await remove.mutateAsync(v.id);
+                        } catch (e) {
+                            toastDeleteError(e, t);
+                        }
+                    }}
+                />
             ),
         },
     ];
@@ -696,6 +696,7 @@ function VendorsList() {
             <DataTable
                 columns={columns}
                 rows={vendors}
+                loading={isLoading}
                 rowKey={(v) => v.id}
                 search={list.table.search}
                 paging={list.table.paging}
@@ -719,15 +720,12 @@ function VendorsList() {
     );
 }
 
-/**
- * WarehousesList — CRUD list for stock warehouses.
- * Uses useWarehouses + useWarehouseMutations hooks.
- */
+/** WarehousesList — CRUD list for stock warehouses. */
 function WarehousesList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: warehouses = [] } = useWarehouses();
+    const { data: warehouses = [], isLoading } = useWarehouses();
     const { remove } = useWarehouseMutations();
     const [addOpen, setAddOpen] = useState(false);
     const [editWarehouse, setEditWarehouse] = useState<Warehouse | null>(null);
@@ -740,7 +738,7 @@ function WarehousesList() {
         },
         {
             key: 'description',
-            header: t('md_description'),
+            header: t('md_description_col'),
             render: (w) => <span className="text-muted-foreground text-sm">{w.description || '—'}</span>,
         },
         {
@@ -749,6 +747,7 @@ function WarehousesList() {
             align: 'right',
             render: (w) => (
                 <RowActions
+                    name={w.name}
                     onEdit={() => setEditWarehouse(w)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: w.name } }))) return;
@@ -768,6 +767,7 @@ function WarehousesList() {
             <DataTable
                 columns={columns}
                 rows={warehouses}
+                loading={isLoading}
                 rowKey={(w) => w.id}
                 search={list.table.search}
                 paging={list.table.paging}
@@ -797,7 +797,7 @@ function LocationsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: locations = [] } = useLocations();
+    const { data: locations = [], isLoading } = useLocations();
     const { remove } = useLocationMutations();
     const [addOpen, setAddOpen] = useState(false);
     const [editLocation, setEditLocation] = useState<LocationItem | null>(null);
@@ -805,7 +805,7 @@ function LocationsList() {
     const columns: Column<LocationItem>[] = [
         {
             key: 'name',
-            header: t('set_locations'),
+            header: t('loc_name'),
             render: (loc) => (
                 <span className="flex items-center gap-2 text-sm">
                     <MapPin className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -819,6 +819,7 @@ function LocationsList() {
             align: 'right',
             render: (loc) => (
                 <RowActions
+                    name={loc.name}
                     onEdit={() => setEditLocation(loc)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: loc.name } }))) return;
@@ -838,6 +839,7 @@ function LocationsList() {
             <DataTable
                 columns={columns}
                 rows={locations}
+                loading={isLoading}
                 rowKey={(loc) => loc.id}
                 search={list.table.search}
                 paging={list.table.paging}
@@ -864,11 +866,12 @@ function LocationsList() {
 /** Units lookup (Stock module master data). */
 function UnitsList() {
     const t = useT();
-    const { data: units = [] } = useUnits();
+    const { data: units = [], isLoading } = useUnits();
     const mutations = useUnitMutations();
     return (
         <LookupSection
             rows={units}
+            loading={isLoading}
             mutations={mutations}
             addLabel={t('md_add_unit')}
             editLabel={t('md_edit_unit')}
@@ -881,11 +884,12 @@ function UnitsList() {
 /** Warranty types lookup (Stock module master data). */
 function WarrantyTypesList() {
     const t = useT();
-    const { data: warranties = [] } = useWarrantyTypes();
+    const { data: warranties = [], isLoading } = useWarrantyTypes();
     const mutations = useWarrantyTypeMutations();
     return (
         <LookupSection
             rows={warranties}
+            loading={isLoading}
             mutations={mutations}
             addLabel={t('md_add_warranty_type')}
             editLabel={t('md_edit_warranty_type')}
@@ -895,23 +899,15 @@ function WarrantyTypesList() {
     );
 }
 
-function ComingSoon() {
-    const t = useT();
-    return (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Construction className="text-muted-foreground h-10 w-10" />
-            <p className="text-muted-foreground mt-3 max-w-sm text-sm">{t('settings_coming_soon')}</p>
-        </div>
-    );
-}
-
 const MAIL_KEY = ['mail-settings'] as const;
 
 /** SMTP server settings (mail_settings) — host/port/credentials/from + test send. */
 function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
     const qc = useQueryClient();
-    const { data } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail });
+    const { data, isLoading } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail });
+    const formRef = useRef<HTMLDivElement>(null);
+    const testHintId = useId();
 
     const [form, setForm] = useState<MailSettingsPayload>({
         host: '',
@@ -974,8 +970,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         if (errors[k as MailErrorKey]) setErrors((e) => ({ ...e, [k]: undefined }));
     };
 
-    // All SMTP fields are required + format-checked. Password is required only on
-    // first setup; once one is stored, a blank field keeps the existing password.
+    // Password is required only until one is stored; blank then keeps it
     const handleSave = () => {
         const next: Partial<Record<MailErrorKey, string>> = {};
         if (!form.host?.trim()) next.host = t('set_err_required');
@@ -994,14 +989,14 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         if (!form.from_name?.trim()) next.from_name = t('set_err_required');
 
         setErrors(next);
-        if (Object.keys(next).length > 0) return;
+        if (Object.keys(next).length > 0) {
+            focusFirstError(formRef.current, next);
+            return;
+        }
         update.mutate(form);
     };
 
-    const errorClass = (k: MailErrorKey) => (errors[k] ? 'border-destructive focus-visible:ring-destructive' : '');
-
-    // Save is enabled only after a field changes. A blank password means "keep
-    // the current one" (not a change); typing any password counts as dirty.
+    // A blank password keeps the stored one, so only a typed one counts as an edit
     const dirty =
         !!data &&
         (form.host !== (data.host ?? '') ||
@@ -1018,107 +1013,130 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     }, [dirty, onDirtyChange]);
 
     return (
-        <div className="max-w-xl">
+        <div className={FORM_WIDTH}>
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_email')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_email_desc')}</p>
             </div>
 
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
-                    <Field label={t('set_email_host')} required error={errors.host}>
-                        <Input
-                            value={form.host ?? ''}
-                            onChange={(e) => set('host', e.target.value)}
-                            placeholder="smtp.example.com"
-                            aria-invalid={!!errors.host}
-                            className={cn('font-mono', errorClass('host'))}
-                        />
-                    </Field>
-                    <Field label={t('set_email_port')} required error={errors.port}>
-                        <Input
-                            type="number"
-                            value={form.port ?? ''}
-                            onChange={(e) => set('port', e.target.value ? Number(e.target.value) : null)}
-                            placeholder="587"
-                            aria-invalid={!!errors.port}
-                            className={cn('font-mono', errorClass('port'))}
-                        />
-                    </Field>
+            {isLoading ? (
+                <FormSkeleton rows={3} />
+            ) : (
+                <div ref={formRef} className={FORM_STACK}>
+                    <div className={FIELD_ROW}>
+                        <Field label={t('set_email_host')} name="host" required error={errors.host}>
+                            <Input
+                                value={form.host ?? ''}
+                                onChange={(e) => set('host', e.target.value)}
+                                placeholder="smtp.example.com"
+                                autoComplete="off"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                            />
+                        </Field>
+                        {/* Port and encryption share the right column */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label={t('set_email_port')} name="port" required error={errors.port}>
+                                <Input
+                                    type="number"
+                                    value={form.port ?? ''}
+                                    onChange={(e) => set('port', e.target.value ? Number(e.target.value) : null)}
+                                    placeholder="587"
+                                    className="tabular-nums"
+                                />
+                            </Field>
+                            <Field label={t('set_email_encryption')}>
+                                {(control) => (
+                                    <Select
+                                        value={form.encryption ?? 'auto'}
+                                        onValueChange={(v) => set('encryption', v === 'auto' ? null : (v as 'tls' | 'ssl'))}
+                                    >
+                                        <SelectTrigger {...control}>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="auto">{t('set_email_enc_auto')}</SelectItem>
+                                            <SelectItem value="tls">TLS</SelectItem>
+                                            <SelectItem value="ssl">SSL</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            </Field>
+                        </div>
+                    </div>
+
+                    <div className={FIELD_ROW}>
+                        <Field label={t('set_email_username')} name="username" required error={errors.username}>
+                            <Input
+                                value={form.username ?? ''}
+                                onChange={(e) => set('username', e.target.value)}
+                                autoComplete="off"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                placeholder="user@example.com"
+                            />
+                        </Field>
+                        <Field
+                            label={t('set_email_password')}
+                            name="password"
+                            required={!hasPassword}
+                            error={errors.password}
+                            help={hasPassword ? t('set_email_password_hint') : undefined}
+                        >
+                            <Input
+                                type="password"
+                                value={form.password ?? ''}
+                                onChange={(e) => set('password', e.target.value)}
+                                placeholder={hasPassword ? '••••••••' : t('set_email_password_ph')}
+                                autoComplete="new-password"
+                            />
+                        </Field>
+                    </div>
+
+                    <div className={FIELD_ROW}>
+                        <Field label={t('set_email_from_address')} name="from_address" required error={errors.from_address}>
+                            <Input
+                                type="email"
+                                value={form.from_address ?? ''}
+                                onChange={(e) => set('from_address', e.target.value)}
+                                placeholder="noreply@example.com"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                            />
+                        </Field>
+                        <Field label={t('set_email_from_name')} name="from_name" required error={errors.from_name}>
+                            <Input value={form.from_name ?? ''} onChange={(e) => set('from_name', e.target.value)} placeholder="IT Service Desk" />
+                        </Field>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+                        {dirty && (
+                            <span id={testHintId} className="text-muted-foreground text-xs">
+                                {t('set_email_test_save_first')}
+                            </span>
+                        )}
+                        <Button
+                            variant="outline"
+                            onClick={() => test.mutate()}
+                            disabled={test.isPending || dirty}
+                            aria-describedby={dirty ? testHintId : undefined}
+                        >
+                            {test.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : (
+                                <Send className="h-4 w-4" aria-hidden="true" />
+                            )}
+                            {test.isPending ? t('set_email_test_sending') : t('email_test')}
+                        </Button>
+                        <SaveButton onClick={handleSave} loading={update.isPending} success={saved} disabled={!dirty}>
+                            {t('save')}
+                        </SaveButton>
+                    </div>
                 </div>
-
-                <Field label={t('set_email_username')} required error={errors.username}>
-                    <Input
-                        value={form.username ?? ''}
-                        onChange={(e) => set('username', e.target.value)}
-                        className={cn('font-mono', errorClass('username'))}
-                        autoComplete="off"
-                        placeholder="user@example.com"
-                        aria-invalid={!!errors.username}
-                    />
-                </Field>
-
-                <Field
-                    label={t('set_email_password')}
-                    required={!hasPassword}
-                    error={errors.password}
-                    help={hasPassword ? t('set_email_password_hint') : undefined}
-                >
-                    <Input
-                        type="password"
-                        value={form.password ?? ''}
-                        onChange={(e) => set('password', e.target.value)}
-                        placeholder={hasPassword ? '••••••••' : t('set_email_password_ph')}
-                        autoComplete="new-password"
-                        aria-invalid={!!errors.password}
-                        className={cn(errorClass('password'))}
-                    />
-                </Field>
-
-                <Field label={t('set_email_encryption')}>
-                    <Select value={form.encryption ?? 'auto'} onValueChange={(v) => set('encryption', v === 'auto' ? null : (v as 'tls' | 'ssl'))}>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="auto">Auto</SelectItem>
-                            <SelectItem value="tls">TLS</SelectItem>
-                            <SelectItem value="ssl">SSL</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </Field>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label={t('set_email_from_address')} required error={errors.from_address}>
-                        <Input
-                            value={form.from_address ?? ''}
-                            onChange={(e) => set('from_address', e.target.value)}
-                            placeholder="noreply@example.com"
-                            aria-invalid={!!errors.from_address}
-                            className={cn('font-mono', errorClass('from_address'))}
-                        />
-                    </Field>
-                    <Field label={t('set_email_from_name')} required error={errors.from_name}>
-                        <Input
-                            value={form.from_name ?? ''}
-                            onChange={(e) => set('from_name', e.target.value)}
-                            placeholder="IT Service Desk"
-                            aria-invalid={!!errors.from_name}
-                            className={cn(errorClass('from_name'))}
-                        />
-                    </Field>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                    <SaveButton onClick={handleSave} loading={update.isPending} success={saved} disabled={!dirty}>
-                        {t('save')}
-                    </SaveButton>
-                    <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending}>
-                        <Send className="h-4 w-4" />
-                        {t('email_test')}
-                    </Button>
-                </div>
-            </div>
+            )}
         </div>
     );
 }
@@ -1129,7 +1147,7 @@ const SECURITY_KEY = ['security-settings'] as const;
 function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
     const qc = useQueryClient();
-    const { data } = useQuery({ queryKey: SECURITY_KEY, queryFn: settingsApi.getSecurity });
+    const { data, isLoading } = useQuery({ queryKey: SECURITY_KEY, queryFn: settingsApi.getSecurity });
 
     const [form, setForm] = useState<SecuritySettings>({
         session_timeout_minutes: 0,
@@ -1160,8 +1178,7 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         setSaved(false);
     };
 
-    // Save is enabled only once a policy value differs from what was loaded. Comparing every
-    // key rather than naming two of them, so a window added later cannot be left out of this.
+    // Every loaded key is compared, so a policy added later is covered too
     const dirty = !!data && (Object.keys(data) as (keyof SecuritySettings)[]).some((k) => form[k] !== data[k]);
     // Report unsaved edits up so the page asks before switching section.
     useEffect(() => {
@@ -1170,31 +1187,37 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     }, [dirty, onDirtyChange]);
 
     return (
-        <div className="max-w-xl">
+        <div className={FORM_WIDTH}>
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_security')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_security_desc')}</p>
             </div>
 
             <div className="border-border border-t">
-                <SecurityPolicyRow
-                    label={t('set_session_timeout')}
-                    sub={t('set_session_timeout_help')}
-                    value={form.session_timeout_minutes}
-                    presets={[1, 5, 10, 15, 30, 60, 120]}
-                    defaultValue={30}
-                    unit={t('unit_minutes')}
-                    onChange={(v) => setVal('session_timeout_minutes', v)}
-                />
-                <SecurityPolicyRow
-                    label={t('set_password_expiry')}
-                    sub={t('set_password_expiry_help')}
-                    value={form.password_expiry_days}
-                    presets={[30, 60, 90, 180, 365]}
-                    defaultValue={90}
-                    unit={t('unit_days')}
-                    onChange={(v) => setVal('password_expiry_days', v)}
-                />
+                {isLoading ? (
+                    <PolicyRowsSkeleton rows={2} />
+                ) : (
+                    <>
+                        <SecurityPolicyRow
+                            label={t('set_session_timeout')}
+                            sub={t('set_session_timeout_help')}
+                            value={form.session_timeout_minutes}
+                            presets={[1, 5, 10, 15, 30, 60, 120]}
+                            defaultValue={30}
+                            unit={t('unit_minutes')}
+                            onChange={(v) => setVal('session_timeout_minutes', v)}
+                        />
+                        <SecurityPolicyRow
+                            label={t('set_password_expiry')}
+                            sub={t('set_password_expiry_help')}
+                            value={form.password_expiry_days}
+                            presets={[30, 60, 90, 180, 365]}
+                            defaultValue={90}
+                            unit={t('unit_days')}
+                            onChange={(v) => setVal('password_expiry_days', v)}
+                        />
+                    </>
+                )}
             </div>
 
             <div className="mt-8 mb-5">
@@ -1203,46 +1226,52 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
             </div>
 
             <div className="border-border border-t">
-                <SecurityPolicyRow
-                    label={t('set_email_body_days')}
-                    sub={t('set_email_body_days_help')}
-                    value={form.email_log_body_days}
-                    presets={[30, 60, 90, 180, 365]}
-                    defaultValue={90}
-                    unit={t('unit_days')}
-                    offLabel={t('policy_keep_forever')}
-                    onChange={(v) => setVal('email_log_body_days', v)}
-                />
-                <SecurityPolicyRow
-                    label={t('set_email_log_days')}
-                    sub={t('set_email_log_days_help')}
-                    value={form.email_log_days}
-                    presets={[90, 180, 365, 730, 1095]}
-                    defaultValue={730}
-                    unit={t('unit_days')}
-                    offLabel={t('policy_keep_forever')}
-                    onChange={(v) => setVal('email_log_days', v)}
-                />
-                <SecurityPolicyRow
-                    label={t('set_audit_log_days')}
-                    sub={t('set_audit_log_days_help')}
-                    value={form.audit_log_days}
-                    presets={[365, 730, 1095, 1825, 2555]}
-                    defaultValue={1825}
-                    unit={t('unit_days')}
-                    offLabel={t('policy_keep_forever')}
-                    onChange={(v) => setVal('audit_log_days', v)}
-                />
-                <SecurityPolicyRow
-                    label={t('set_notification_days')}
-                    sub={t('set_notification_days_help')}
-                    value={form.notification_days}
-                    presets={[30, 60, 90, 180, 365]}
-                    defaultValue={90}
-                    unit={t('unit_days')}
-                    offLabel={t('policy_keep_forever')}
-                    onChange={(v) => setVal('notification_days', v)}
-                />
+                {isLoading ? (
+                    <PolicyRowsSkeleton rows={4} />
+                ) : (
+                    <>
+                        <SecurityPolicyRow
+                            label={t('set_email_body_days')}
+                            sub={t('set_email_body_days_help')}
+                            value={form.email_log_body_days}
+                            presets={[30, 60, 90, 180, 365]}
+                            defaultValue={90}
+                            unit={t('unit_days')}
+                            offLabel={t('policy_keep_forever')}
+                            onChange={(v) => setVal('email_log_body_days', v)}
+                        />
+                        <SecurityPolicyRow
+                            label={t('set_email_log_days')}
+                            sub={t('set_email_log_days_help')}
+                            value={form.email_log_days}
+                            presets={[90, 180, 365, 730, 1095]}
+                            defaultValue={730}
+                            unit={t('unit_days')}
+                            offLabel={t('policy_keep_forever')}
+                            onChange={(v) => setVal('email_log_days', v)}
+                        />
+                        <SecurityPolicyRow
+                            label={t('set_audit_log_days')}
+                            sub={t('set_audit_log_days_help')}
+                            value={form.audit_log_days}
+                            presets={[365, 730, 1095, 1825, 2555]}
+                            defaultValue={1825}
+                            unit={t('unit_days')}
+                            offLabel={t('policy_keep_forever')}
+                            onChange={(v) => setVal('audit_log_days', v)}
+                        />
+                        <SecurityPolicyRow
+                            label={t('set_notification_days')}
+                            sub={t('set_notification_days_help')}
+                            value={form.notification_days}
+                            presets={[30, 60, 90, 180, 365]}
+                            defaultValue={90}
+                            unit={t('unit_days')}
+                            offLabel={t('policy_keep_forever')}
+                            onChange={(v) => setVal('notification_days', v)}
+                        />
+                    </>
+                )}
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-5">
@@ -1254,33 +1283,27 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     );
 }
 
-/** Pill on/off switch matching the design's Toggle (36×20, accent when on). */
-function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+/** Shimmer stand-in for policy rows while their saved values load. */
+function PolicyRowsSkeleton({ rows }: { rows: number }) {
     return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            onClick={() => onChange(!checked)}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', checked ? 'bg-brand' : 'bg-input')}
-        >
-            <span
-                className={cn('absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform', checked && 'translate-x-4')}
-            />
-        </button>
+        <div aria-hidden="true">
+            {Array.from({ length: rows }).map((_, i) => (
+                <div key={i} className="border-border flex items-center justify-between gap-4 border-b py-3.5">
+                    <div className="min-w-0 flex-1 space-y-2">
+                        <Skeleton className="h-3.5 w-40" />
+                        <Skeleton className="h-3 w-full max-w-sm" />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                        <Skeleton className="h-9 w-32" />
+                        <Skeleton className="h-5 w-9 rounded-full" />
+                    </div>
+                </div>
+            ))}
+        </div>
     );
 }
 
-/**
- * Single policy row in the Security tab — label + description on the left,
- * an on/off switch plus a preset-value dropdown on the right (only shown when
- * the policy is enabled). A value of 0 means the rule is off; toggling on
- * restores `defaultValue`.
- *
- * `offLabel` is what 0 reads as. It defaults to "Off", which is right for a rule that
- * stops being enforced — but a retention window switched off means the rows are kept
- * forever, and "Off" next to a log that grows without bound says the opposite.
- */
+/** Security policy row: label + help, preset Select and on/off Switch (0 = off, shown as `offLabel`). */
 function SecurityPolicyRow({
     label,
     sub,
@@ -1301,6 +1324,7 @@ function SecurityPolicyRow({
     onChange: (v: number) => void;
 }) {
     const t = useT();
+    const labelId = useId();
     const on = value > 0;
     // Keep an out-of-list custom value selectable so existing data isn't lost.
     const options = on && !presets.includes(value) ? [...presets, value].sort((a, b) => a - b) : presets;
@@ -1308,18 +1332,20 @@ function SecurityPolicyRow({
     return (
         <div className="border-border flex items-center justify-between gap-4 border-b py-3.5">
             <div className="min-w-0">
-                <div className="text-sm font-semibold">{label}</div>
+                <div id={labelId} className="text-sm font-semibold">
+                    {label}
+                </div>
                 <div className="text-muted-foreground mt-0.5 text-xs">{sub}</div>
             </div>
             <div className="flex shrink-0 items-center gap-3">
                 {on ? (
                     <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
-                        <SelectTrigger className="h-9 w-32">
+                        <SelectTrigger className="w-32 tabular-nums" aria-labelledby={labelId}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             {options.map((n) => (
-                                <SelectItem key={n} value={String(n)}>
+                                <SelectItem key={n} value={String(n)} className="tabular-nums">
                                     {n} {unit}
                                 </SelectItem>
                             ))}
@@ -1328,7 +1354,7 @@ function SecurityPolicyRow({
                 ) : (
                     <span className="text-muted-foreground text-xs">{offLabel ?? t('policy_off')}</span>
                 )}
-                <Switch checked={on} onChange={(next) => onChange(next ? defaultValue : 0)} />
+                <Switch checked={on} onChange={(next) => onChange(next ? defaultValue : 0)} aria-label={label} />
             </div>
         </div>
     );
@@ -1369,11 +1395,7 @@ const ASSET_STATUS_ROWS: { key: string; labelKey: string }[] = [
     { key: 'writeoff', labelKey: 'asset_writeoff' },
 ];
 
-/**
- * AssetsTab — system-wide asset status badge color editor. Picks a color per
- * status from a fixed palette; on Save the colors persist to app_settings and
- * sync into the UI store so every asset badge updates across the system.
- */
+/** AssetsTab — asset status badge colours (system-wide) and write-off reasons. */
 function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyChange; onOpenSection: (next: Section) => void }) {
     const t = useT();
     const storeColors = useUiStore((s) => s.assetStatusColors);
@@ -1398,7 +1420,7 @@ function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyCha
     };
 
     return (
-        <div className="max-w-3xl">
+        <div className={FORM_WIDTH}>
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_assets_title')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_assets_desc')}</p>
@@ -1407,23 +1429,31 @@ function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyCha
             <div className="bg-muted/50 text-muted-foreground mb-5 flex items-center gap-2 rounded-md px-3.5 py-2.5 text-xs">
                 <Boxes className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>
-                    {t('set_assets_masterdata_note')}{' '}
-                    <Link
-                        to="/settings?tab=master-data"
-                        onClick={(e) => {
-                            // Plain clicks switch through the page's guard; modified clicks still open a new tab.
-                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                            e.preventDefault();
-                            onOpenSection('master-data');
-                        }}
-                        className="text-foreground font-semibold underline-offset-2 hover:underline"
-                    >
-                        {t('set_master_data')}
-                    </Link>
+                    {t('set_assets_masterdata_note')
+                        .split('{link}')
+                        .map((part, i) => (
+                            <Fragment key={i}>
+                                {i > 0 && (
+                                    <Link
+                                        to="/settings?tab=master-data"
+                                        onClick={(e) => {
+                                            // Plain clicks switch through the page's guard; modified clicks still open a new tab.
+                                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                                            e.preventDefault();
+                                            onOpenSection('master-data');
+                                        }}
+                                        className="text-foreground font-semibold underline-offset-2 hover:underline"
+                                    >
+                                        {t('set_master_data')}
+                                    </Link>
+                                )}
+                                {part}
+                            </Fragment>
+                        ))}
                 </span>
             </div>
 
-            {/* Badge colours — the same section shape as Ticket & SLA: a small heading, its help, then the rows. */}
+            {/* Badge colours */}
             <h3 className="text-sm font-semibold">{t('set_assets_colors_title')}</h3>
             <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_assets_colors_note')}</p>
             <div className="space-y-3">
@@ -1432,35 +1462,45 @@ function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyCha
                     const label = t(r.labelKey);
                     return (
                         <div key={r.key} className="border-border grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border px-3.5 py-3">
-                            {/* The badge at its own width, as everywhere else it shows — not stretched into a bar. */}
+                            {/* Badge at its own width */}
                             <div>
                                 <StatusBadge color={cur}>{label}</StatusBadge>
                             </div>
-                            <div role="group" aria-label={label} className="flex gap-1.5">
-                                {ASSET_STATUS_PALETTE.map((c) => {
-                                    const selected = cur?.toLowerCase() === c.hex.toLowerCase();
-                                    return (
-                                        <button
-                                            key={c.hex}
-                                            type="button"
-                                            onClick={() => setColor(r.key, c.hex)}
-                                            aria-label={t(c.nameKey)}
-                                            aria-pressed={selected}
-                                            className={cn(
-                                                'ring-offset-background focus-visible:outline-brand h-7 w-7 rounded-full ring-2 ring-offset-2 transition-shadow focus-visible:outline-2 focus-visible:outline-offset-4',
-                                                selected ? 'ring-foreground' : 'hover:ring-border ring-transparent',
-                                            )}
-                                            style={{ background: c.hex }}
-                                        />
-                                    );
-                                })}
-                            </div>
+                            <fieldset className="m-0 min-w-0 border-0 p-0">
+                                <legend className="sr-only">{label}</legend>
+                                <div className="flex gap-1.5">
+                                    {ASSET_STATUS_PALETTE.map((c) => {
+                                        const selected = cur?.toLowerCase() === c.hex.toLowerCase();
+                                        return (
+                                            <label key={c.hex} className="relative" title={t(c.nameKey)}>
+                                                <input
+                                                    type="radio"
+                                                    name={`asset-status-color-${r.key}`}
+                                                    value={c.hex}
+                                                    checked={selected}
+                                                    onChange={() => setColor(r.key, c.hex)}
+                                                    aria-label={t(c.nameKey)}
+                                                    className="peer sr-only"
+                                                />
+                                                <span
+                                                    aria-hidden
+                                                    className={cn(
+                                                        'ring-offset-background peer-focus-visible:outline-brand block h-7 w-7 cursor-pointer rounded-full ring-2 ring-offset-2 transition-shadow peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4',
+                                                        selected ? 'ring-foreground' : 'hover:ring-border ring-transparent',
+                                                    )}
+                                                    style={{ background: c.hex }}
+                                                />
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </fieldset>
                         </div>
                     );
                 })}
             </div>
 
-            <div className="mt-5 flex items-center gap-2 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-600 dark:text-blue-400">
+            <div className="bg-muted/50 text-muted-foreground mt-5 flex items-center gap-2 rounded-md px-3.5 py-2.5 text-xs">
                 <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{t('set_assets_apply_note')}</span>
             </div>
@@ -1484,7 +1524,7 @@ function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyCha
 /** Write-off reasons — the list the write-off dialog picks from, counted by the write-off report. */
 function WriteoffReasonsSection() {
     const t = useT();
-    const { data: reasons = [] } = useWriteoffReasons();
+    const { data: reasons = [], isLoading } = useWriteoffReasons();
     const mutations = useWriteoffReasonMutations();
     return (
         <div className="border-border mt-6 border-t pt-5">
@@ -1492,6 +1532,7 @@ function WriteoffReasonsSection() {
             <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_wo_reasons_desc')}</p>
             <LookupSection
                 rows={reasons}
+                loading={isLoading}
                 mutations={mutations}
                 addLabel={t('set_wo_reason_add')}
                 editLabel={t('set_wo_reason_edit')}
@@ -1509,6 +1550,7 @@ function CompanyTab({
     saving,
     saved,
     dirty,
+    loading,
 }: {
     form: SettingsForm;
     set: SetFn;
@@ -1516,11 +1558,12 @@ function CompanyTab({
     saving: boolean;
     saved: boolean;
     dirty: boolean;
+    loading: boolean;
 }) {
     const t = useT();
+    const formRef = useRef<HTMLDivElement>(null);
 
-    // Client-side validation (UX only — Laravel re-validates on PUT /settings/company).
-    // The 5 core company fields are required; Tax ID must be exactly 13 digits.
+    // UX only (Laravel re-validates): the 5 core fields are required, Tax ID is 13 digits
     type CompanyErrorKey = 'company_name' | 'legal_name' | 'tax_id' | 'industry' | 'address';
     const [errors, setErrors] = useState<Partial<Record<CompanyErrorKey, string>>>({});
 
@@ -1541,159 +1584,191 @@ function CompanyTab({
         if (!form.address.trim()) next.address = t('set_err_required');
 
         setErrors(next);
-        if (Object.keys(next).length > 0) return;
+        if (Object.keys(next).length > 0) {
+            focusFirstError(formRef.current, next);
+            return;
+        }
         onSave();
     };
 
-    const errorClass = (k: CompanyErrorKey) => (errors[k] ? 'border-destructive focus-visible:ring-destructive' : '');
-
     return (
-        <div className="max-w-3xl">
+        <div className={FORM_WIDTH}>
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_company_title')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_company_desc')}</p>
             </div>
-            <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label={t('set_company_name')} required error={errors.company_name}>
+            {loading ? (
+                <FormSkeleton rows={4} />
+            ) : (
+                <div ref={formRef} className={FORM_STACK}>
+                    <div className={FIELD_ROW}>
+                        <Field label={t('set_company_name')} name="company_name" required error={errors.company_name}>
+                            <Input
+                                value={form.company_name}
+                                onChange={(e) => {
+                                    set('company_name', e.target.value);
+                                    clearErr('company_name');
+                                }}
+                                placeholder={t('set_company_name_ph')}
+                            />
+                        </Field>
+                        <Field label={t('set_legal_name')} name="legal_name" required error={errors.legal_name}>
+                            <Input
+                                value={form.legal_name}
+                                onChange={(e) => {
+                                    set('legal_name', e.target.value);
+                                    clearErr('legal_name');
+                                }}
+                                placeholder={t('set_legal_name_ph')}
+                            />
+                        </Field>
+                    </div>
+                    <div className={FIELD_ROW}>
+                        <Field label={t('set_tax_id')} name="tax_id" required error={errors.tax_id}>
+                            <Input
+                                className="tabular-nums"
+                                value={form.tax_id}
+                                inputMode="numeric"
+                                maxLength={13}
+                                onChange={(e) => {
+                                    set('tax_id', e.target.value);
+                                    clearErr('tax_id');
+                                }}
+                                placeholder="0000000000000"
+                            />
+                        </Field>
+                        <Field label={t('set_industry')} name="industry" required error={errors.industry}>
+                            <Input
+                                value={form.industry}
+                                onChange={(e) => {
+                                    set('industry', e.target.value);
+                                    clearErr('industry');
+                                }}
+                                placeholder={t('set_industry_ph')}
+                            />
+                        </Field>
+                    </div>
+                    <Field label={t('set_address')} name="address" required error={errors.address}>
                         <Input
-                            value={form.company_name}
-                            aria-invalid={!!errors.company_name}
-                            className={cn(errorClass('company_name'))}
+                            value={form.address}
                             onChange={(e) => {
-                                set('company_name', e.target.value);
-                                clearErr('company_name');
+                                set('address', e.target.value);
+                                clearErr('address');
                             }}
-                            placeholder={t('set_company_name_ph')}
+                            placeholder={t('set_address_ph')}
                         />
                     </Field>
-                    <Field label={t('set_legal_name')} required error={errors.legal_name}>
-                        <Input
-                            value={form.legal_name}
-                            aria-invalid={!!errors.legal_name}
-                            className={cn(errorClass('legal_name'))}
-                            onChange={(e) => {
-                                set('legal_name', e.target.value);
-                                clearErr('legal_name');
-                            }}
-                            placeholder={t('set_legal_name_ph')}
-                        />
-                    </Field>
+                    <div className={FIELD_ROW}>
+                        <Field label={t('set_country')}>
+                            <SearchSelect
+                                value={form.country}
+                                onChange={(v) => set('country', v)}
+                                options={countryOptions}
+                                placeholder={t('set_country_ph')}
+                            />
+                        </Field>
+                        <Field label={t('set_currency')}>
+                            <SearchSelect
+                                value={form.currency}
+                                onChange={(v) => set('currency', v)}
+                                options={currencyOptions}
+                                placeholder={t('set_currency_ph')}
+                            />
+                        </Field>
+                    </div>
+                    <SaveRow onSave={handleSave} saving={saving} saved={saved} disabled={!dirty} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label={t('set_tax_id')} required error={errors.tax_id}>
-                        <Input
-                            className={cn('font-mono', errorClass('tax_id'))}
-                            value={form.tax_id}
-                            aria-invalid={!!errors.tax_id}
-                            inputMode="numeric"
-                            maxLength={13}
-                            onChange={(e) => {
-                                set('tax_id', e.target.value);
-                                clearErr('tax_id');
-                            }}
-                            placeholder="0000000000000"
-                        />
-                    </Field>
-                    <Field label={t('set_industry')} required error={errors.industry}>
-                        <Input
-                            value={form.industry}
-                            aria-invalid={!!errors.industry}
-                            className={cn(errorClass('industry'))}
-                            onChange={(e) => {
-                                set('industry', e.target.value);
-                                clearErr('industry');
-                            }}
-                            placeholder="Manufacturing"
-                        />
-                    </Field>
-                </div>
-                <Field label={t('set_address')} required error={errors.address}>
-                    <Input
-                        value={form.address}
-                        aria-invalid={!!errors.address}
-                        className={cn(errorClass('address'))}
-                        onChange={(e) => {
-                            set('address', e.target.value);
-                            clearErr('address');
-                        }}
-                        placeholder={t('set_address_ph')}
-                    />
-                </Field>
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label={t('set_country')}>
-                        <SearchSelect
-                            value={form.country}
-                            onChange={(v) => set('country', v)}
-                            options={countryOptions}
-                            placeholder="Select country…"
-                        />
-                    </Field>
-                    <Field label={t('set_currency')}>
-                        <SearchSelect
-                            value={form.currency}
-                            onChange={(v) => set('currency', v)}
-                            options={currencyOptions}
-                            placeholder="Select currency…"
-                        />
-                    </Field>
-                </div>
-                <SaveRow onSave={handleSave} saving={saving} saved={saved} disabled={!dirty} />
-            </div>
+            )}
         </div>
     );
 }
 
-/** Section header used inside System: a bare brand-tinted icon (no chip) beside the title + description. */
-function SystemSectionHead({ icon: Icon, title, desc }: { icon: typeof Sparkles; title: string; desc: string }) {
+/** Section header used inside System: title + description, like the other sections. */
+function SystemSectionHead({ title, desc }: { title: string; desc: string }) {
     return (
-        <div className="mb-5 flex items-start gap-2.5">
-            <Icon className="text-brand mt-0.5 h-5 w-5 shrink-0" strokeWidth={1.75} />
-            <div>
-                <h2 className="text-lg font-semibold">{title}</h2>
-                <p className="text-muted-foreground text-sm">{desc}</p>
-            </div>
+        <div className="mb-5">
+            <h2 className="text-lg font-semibold">{title}</h2>
+            <p className="text-muted-foreground text-sm">{desc}</p>
         </div>
     );
 }
 
-/** Settings → System: Branding (name, logo, theme color) and Date and time, each saved with its own button. */
-function SystemTab({ form, set, logoUrl, onDirtyChange }: { form: SettingsForm; set: SetFn; logoUrl: string | null; onDirtyChange: OnDirtyChange }) {
-    const t = useT();
-    const [brandDirty, setBrandDirty] = useState(false);
-    const [dateDirty, setDateDirty] = useState(false);
-
-    useEffect(() => {
-        onDirtyChange(brandDirty || dateDirty);
-        return () => onDirtyChange(false);
-    }, [brandDirty, dateDirty, onDirtyChange]);
-
-    return (
-        <div className="max-w-2xl">
-            <SystemSectionHead icon={Sparkles} title={t('set_branding')} desc={t('set_branding_desc')} />
-            <BrandingTab form={form} set={set} logoUrl={logoUrl} onDirtyChange={setBrandDirty} embedded />
-
-            <div className="border-border mt-8 border-t pt-8">
-                <SystemSectionHead icon={CalendarClock} title={t('set_datetime')} desc={t('set_datetime_desc')} />
-                <DateTimeSection onDirtyChange={setDateDirty} />
-            </div>
-        </div>
-    );
-}
-
-function BrandingTab({
+/** Settings → System: Branding (name, logo, theme color) and Date and time under one Save button. */
+function SystemTab({
     form,
     set,
     logoUrl,
+    loading,
     onDirtyChange,
-    embedded = false,
 }: {
     form: SettingsForm;
     set: SetFn;
     logoUrl: string | null;
+    loading: boolean;
     onDirtyChange: OnDirtyChange;
-    embedded?: boolean;
 }) {
+    const t = useT();
+    const [brandStatus, setBrandStatus] = useState<SectionStatus>(IDLE_SECTION);
+    const [dateStatus, setDateStatus] = useState<SectionStatus>(IDLE_SECTION);
+    const brandSaver = useRef<SectionSaver>(null);
+    const dateSaver = useRef<SectionSaver>(null);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const dirty = brandStatus.dirty || dateStatus.dirty;
+
+    useEffect(() => {
+        onDirtyChange(brandStatus.guard || dateStatus.guard);
+        return () => onDirtyChange(false);
+    }, [brandStatus.guard, dateStatus.guard, onDirtyChange]);
+
+    useEffect(() => {
+        if (dirty) setSaved(false);
+    }, [dirty]);
+
+    // Saves only the sections with edits; the tick shows when every one went through.
+    const save = async () => {
+        setSaving(true);
+        setSaved(false);
+        const results: boolean[] = [];
+        if (brandStatus.dirty && brandSaver.current) results.push(await brandSaver.current.save());
+        if (dateStatus.dirty && dateSaver.current) results.push(await dateSaver.current.save());
+        setSaving(false);
+        setSaved(results.length > 0 && results.every(Boolean));
+    };
+
+    return (
+        <div className={FORM_WIDTH}>
+            <SystemSectionHead title={t('set_branding')} desc={t('set_branding_desc')} />
+            {loading ? (
+                <FormSkeleton rows={2} />
+            ) : (
+                <BrandingSection form={form} set={set} logoUrl={logoUrl} onStatusChange={setBrandStatus} saverRef={brandSaver} />
+            )}
+
+            <div className="border-border mt-8 border-t pt-8">
+                <SystemSectionHead title={t('set_datetime')} desc={t('set_datetime_desc')} />
+                <DateTimeSection onStatusChange={setDateStatus} saverRef={dateSaver} />
+            </div>
+
+            <div className="mt-5">
+                <SaveRow onSave={save} saving={saving} saved={saved} disabled={!dirty || (brandStatus.dirty && brandStatus.blocked)} />
+            </div>
+        </div>
+    );
+}
+
+/** System → Branding: brand name and subtitle (held by the page), logo and theme color. */
+function BrandingSection({
+    form,
+    set,
+    logoUrl,
+    onStatusChange,
+    saverRef,
+}: {
+    form: SettingsForm;
+    set: SetFn;
+    logoUrl: string | null;
+} & SavedSectionProps) {
     const t = useT();
     const { data } = useSettings();
     const update = useUpdateBranding();
@@ -1706,7 +1781,6 @@ function BrandingTab({
     const [file, setFile] = useState<File | null>(null);
     const [pendingReset, setPendingReset] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [saved, setSaved] = useState(false);
     // Local theme-color draft — committed system-wide only when Save is pressed.
     const [accent, setAccent] = useState(storeAccent);
 
@@ -1715,28 +1789,30 @@ function BrandingTab({
         setAccent(storeAccent);
     }, [storeAccent]);
 
-    // Save is enabled once a branding field, the theme color, the logo file, or a
-    // pending reset differs from what was loaded — an untouched form stays disabled.
+    // Something to save once a branding field, the theme color, the logo file, or a pending reset differs from what was loaded.
     const dirty =
         !!data && (form.brand_name !== data.brand_name || form.brand_sub !== data.brand_sub || accent !== storeAccent || !!file || pendingReset);
     // Only the logo/colour drafts live here; brand name/sub are held by the page and survive a switch.
     const localDirty = accent !== storeAccent || !!file || pendingReset;
-    // Report unsaved edits up so the page asks before switching section.
+    const blocked = !form.brand_name.trim();
     useEffect(() => {
-        onDirtyChange(localDirty);
-        return () => onDirtyChange(false);
-    }, [localDirty, onDirtyChange]);
+        onStatusChange({ dirty, guard: localDirty, blocked });
+    }, [dirty, localDirty, blocked, onStatusChange]);
 
-    // When pendingReset is true, show no logo (as if already cleared).
-    // When a new file is picked after reset, cancel the pending reset.
+    // One object URL per picked file, revoked when the file changes or the section unmounts
+    const [fileUrl, setFileUrl] = useState<string | null>(null);
+    useEffect(() => {
+        if (!file) {
+            setFileUrl(null);
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        setFileUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
     // Reset previews the default logo; otherwise the picked file, the custom logo, or the default.
-    const previewUrl = pendingReset ? DEFAULT_LOGO : file ? URL.createObjectURL(file) : logoUrl || DEFAULT_LOGO;
-    useEffect(
-        () => () => {
-            if (file) URL.revokeObjectURL(URL.createObjectURL(file));
-        },
-        [file],
-    );
+    const previewUrl = pendingReset ? DEFAULT_LOGO : (fileUrl ?? (logoUrl || DEFAULT_LOGO));
+    const logoHelpId = useId();
 
     // Reset pending state whenever the server logo changes (e.g. after save).
     useEffect(() => {
@@ -1745,7 +1821,6 @@ function BrandingTab({
 
     const pick = (f?: File) => {
         setError(null);
-        setSaved(false);
         setPendingReset(false);
         if (!f) return;
         if (f.type !== 'image/png') {
@@ -1760,31 +1835,44 @@ function BrandingTab({
     };
 
     const save = async () => {
-        setSaved(false);
-        // Handle logo: reset takes priority, then upload, otherwise leave unchanged.
-        if (pendingReset) {
-            await resetLogo.mutateAsync();
-            setPendingReset(false);
-        } else if (file) {
-            await uploadLogo.mutateAsync(file);
+        try {
+            // Logo: reset takes priority, then upload, otherwise leave unchanged.
+            if (pendingReset) {
+                await resetLogo.mutateAsync();
+                setPendingReset(false);
+            } else if (file) {
+                await uploadLogo.mutateAsync(file);
+                setFile(null);
+            }
+            const savedBrand = await update.mutateAsync({ brand_name: form.brand_name, brand_sub: form.brand_sub });
+            set('brand_name', savedBrand.brand_name);
+            set('brand_sub', savedBrand.brand_sub);
+            // Persist the theme color only when it changed (density/radius stay fixed).
+            if (accent !== storeAccent) {
+                await updateDisplay.mutateAsync({ theme_accent: accent });
+            }
+            return true;
+        } catch {
+            // useSaveFailed already toasted the refusal.
+            return false;
         }
-        await update.mutateAsync({ brand_name: form.brand_name, brand_sub: form.brand_sub });
-        // Persist the theme color only when it changed (density/radius stay fixed).
-        if (accent !== storeAccent) {
-            await updateDisplay.mutateAsync({ theme_accent: accent });
-        }
-        setFile(null);
-        setSaved(true);
     };
+    useImperativeHandle(saverRef, () => ({ save }));
 
-    const busy = update.isPending || uploadLogo.isPending || resetLogo.isPending || updateDisplay.isPending;
+    // A saved colour outside the palette stays selectable, so nothing changes until someone picks.
+    const currentAccent = accent.toLowerCase();
+    const swatches = THEME_ACCENTS.some((a) => a.hex === currentAccent)
+        ? THEME_ACCENTS
+        : [...THEME_ACCENTS, { hex: currentAccent, nameKey: 'set_accent_current' }];
+    const picked = swatches.find((a) => a.hex === currentAccent);
+
     // Show reset button only when there is something to reset (logo exists or file selected) and reset not already pending.
     const showReset = (logoUrl || file) && !pendingReset;
 
-    const body = (
-        <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-                <Field label={t('set_brand_name')}>
+    return (
+        <div className={FORM_STACK}>
+            <div className={FIELD_ROW}>
+                <Field label={t('set_brand_name')} required error={blocked ? t('set_err_brand_name') : undefined}>
                     <Input value={form.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder={t('set_brand_name_ph')} />
                 </Field>
                 <Field label={t('set_brand_sub')}>
@@ -1792,79 +1880,78 @@ function BrandingTab({
                 </Field>
             </div>
 
-            <Field label={t('set_logo')} error={error ?? undefined}>
-                <div className="flex items-center gap-4">
-                    <div className="border-border bg-muted/30 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
-                        <img src={previewUrl} alt="logo" className="h-full w-full object-contain" />
-                    </div>
-                    <div>
-                        <input ref={inputRef} type="file" accept="image/png" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" onClick={() => inputRef.current?.click()}>
-                                <Upload className="h-4 w-4" />
-                                {t('set_logo_upload')}
-                            </Button>
-                            {showReset && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-muted-foreground hover:text-destructive text-xs"
-                                    onClick={() => {
-                                        setFile(null);
-                                        setPendingReset(true);
-                                        setSaved(false);
-                                        if (inputRef.current) inputRef.current.value = '';
-                                    }}
-                                >
-                                    {t('reset_default')}
-                                </Button>
-                            )}
+            <div className={FIELD_ROW}>
+                <Field label={t('set_logo')} error={error ?? undefined}>
+                    {(control) => (
+                        <div className="flex items-center gap-4">
+                            <div className="border-border bg-muted/30 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+                                <img src={previewUrl} alt="" className="h-full w-full object-contain" />
+                            </div>
+                            <div>
+                                <input ref={inputRef} type="file" accept="image/png" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        id={control.id}
+                                        variant="outline"
+                                        onClick={() => inputRef.current?.click()}
+                                        aria-label={`${t('set_logo_upload')} ${t('set_logo')}`}
+                                        aria-invalid={control['aria-invalid']}
+                                        aria-describedby={[control['aria-describedby'], logoHelpId].filter(Boolean).join(' ')}
+                                    >
+                                        <Upload className="h-4 w-4" aria-hidden="true" />
+                                        {t('set_logo_upload')}
+                                    </Button>
+                                    {showReset && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-muted-foreground hover:text-destructive text-xs"
+                                            onClick={() => {
+                                                setFile(null);
+                                                setPendingReset(true);
+                                                if (inputRef.current) inputRef.current.value = '';
+                                            }}
+                                        >
+                                            {t('reset_default')}
+                                        </Button>
+                                    )}
+                                </div>
+                                <p id={logoHelpId} className="text-muted-foreground mt-2 text-xs">
+                                    <span className="block">{t('set_logo_help')}</span>
+                                    <span className="block">{t('set_logo_usage')}</span>
+                                </p>
+                            </div>
                         </div>
-                        <p className="text-muted-foreground mt-2 text-xs">{t('set_logo_help')}</p>
+                    )}
+                </Field>
+                <fieldset className="m-0 min-w-0 border-0 p-0">
+                    <legend className={SEGMENT_LEGEND}>{t('set_theme_color')}</legend>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {swatches.map((a) => (
+                            <label key={a.hex} className="relative" title={t(a.nameKey)}>
+                                <input
+                                    type="radio"
+                                    name="theme-accent"
+                                    value={a.hex}
+                                    checked={a.hex === currentAccent}
+                                    onChange={() => setAccent(a.hex)}
+                                    aria-label={t(a.nameKey)}
+                                    className="peer sr-only"
+                                />
+                                <span
+                                    aria-hidden
+                                    className={cn(
+                                        'ring-offset-background peer-focus-visible:outline-brand block h-8 w-8 cursor-pointer rounded-full ring-2 ring-offset-2 transition-shadow peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4',
+                                        a.hex === currentAccent ? 'ring-foreground' : 'hover:ring-border ring-transparent',
+                                    )}
+                                    style={{ background: resolveBrand(a.hex, dark) }}
+                                />
+                            </label>
+                        ))}
                     </div>
-                </div>
-            </Field>
-
-            <Field label={t('set_theme_color')}>
-                <div className="flex gap-2">
-                    {ACCENTS.map((c) => (
-                        <button
-                            key={c}
-                            type="button"
-                            onClick={() => {
-                                setAccent(c);
-                                setSaved(false);
-                            }}
-                            className={cn(
-                                'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
-                                accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
-                            )}
-                            style={{ background: resolveBrand(c, dark) }}
-                            aria-label={c}
-                        />
-                    ))}
-                </div>
-            </Field>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-                <SaveButton onClick={save} loading={busy} success={saved} disabled={!form.brand_name.trim() || !dirty}>
-                    {t('save')}
-                </SaveButton>
+                    {picked && <p className="text-muted-foreground mt-1.5 text-xs">{t(picked.nameKey)}</p>}
+                </fieldset>
             </div>
-        </div>
-    );
-
-    if (embedded) {
-        return body;
-    }
-
-    return (
-        <div className="max-w-2xl">
-            <div className="mb-5">
-                <h2 className="text-lg font-semibold">{t('set_branding')}</h2>
-                <p className="text-muted-foreground text-sm">{t('set_branding_desc')}</p>
-            </div>
-            {body}
         </div>
     );
 }

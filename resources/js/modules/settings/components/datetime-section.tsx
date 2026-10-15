@@ -1,50 +1,20 @@
-// Settings → System: the system-wide date format, year (CE/BE) and clock, with a live example.
+// Settings → System: the system-wide date format, year (CE/BE) and clock; a one-line example on top, the three choices in one row.
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
-import { SaveButton } from '@/shared/components/save-button';
 import { bindDateFormat, DATE_FORMATS, type DateConfig, type DateEra, type DateFormat, type TimeFormat } from '@/shared/lib/datetime';
-import { cn } from '@/shared/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { useUpdateDateTime } from '../hooks/use-settings';
+import type { SavedSectionProps } from '../types';
+import { SegmentedRadio } from './segmented-radio';
 
-const SEGMENT = 'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2';
-const segmentTone = (active: boolean) => (active ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground');
-
-function Segmented<T extends string>({
-    value,
-    options,
-    onChange,
-}: {
-    value: T;
-    options: { value: T; label: string }[];
-    onChange: (next: T) => void;
-}) {
-    return (
-        <div className="border-border inline-flex rounded-lg border p-0.5">
-            {options.map((o) => (
-                <button
-                    key={o.value}
-                    type="button"
-                    aria-pressed={value === o.value}
-                    onClick={() => onChange(o.value)}
-                    className={cn(SEGMENT, segmentTone(value === o.value))}
-                >
-                    {o.label}
-                </button>
-            ))}
-        </div>
-    );
-}
-
-export function DateTimeSection({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
+export function DateTimeSection({ onStatusChange, saverRef }: SavedSectionProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const saved = useUiStore((s) => s.dateConfig);
     const update = useUpdateDateTime();
     const [draft, setDraft] = useState<DateConfig>(saved);
-    const [done, setDone] = useState(false);
 
     useEffect(() => {
         setDraft(saved);
@@ -52,57 +22,66 @@ export function DateTimeSection({ onDirtyChange }: { onDirtyChange: (dirty: bool
 
     const dirty = draft.format !== saved.format || draft.era !== saved.era || draft.time !== saved.time;
     useEffect(() => {
-        onDirtyChange(dirty);
-        return () => onDirtyChange(false);
-    }, [dirty, onDirtyChange]);
+        onStatusChange({ dirty, guard: dirty });
+    }, [dirty, onStatusChange]);
 
     const now = useMemo(() => new Date(), []);
-    const example = bindDateFormat(draft, lang).dateTime(now);
-    const change = (next: Partial<DateConfig>) => {
-        setDone(false);
-        setDraft((d) => ({ ...d, ...next }));
-    };
+    const change = (next: Partial<DateConfig>) => setDraft((d) => ({ ...d, ...next }));
 
     const save = async () => {
-        setDone(false);
         try {
             await update.mutateAsync({ date_format: draft.format, date_era: draft.era, time_format: draft.time });
-            setDone(true);
+            return true;
         } catch {
             // useSaveFailed already toasted the refusal.
+            return false;
         }
     };
+    useImperativeHandle(saverRef, () => ({ save }));
 
     return (
-        <div className="space-y-5">
-            <Field label={t('set_date_format')}>
-                <Select value={draft.format} onValueChange={(v) => change({ format: v as DateFormat })}>
-                    <SelectTrigger>
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {DATE_FORMATS.map((f) => (
-                            <SelectItem key={f} value={f}>
-                                {bindDateFormat({ ...draft, format: f }, lang).date(now)}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </Field>
+        <div className="flex flex-col gap-5">
+            {/* Example */}
+            <p className="bg-muted/40 border-border flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-lg border px-4 py-2.5">
+                <span className="text-muted-foreground text-sm">{t('set_datetime_preview')}</span>
+                <span className="text-base font-semibold tabular-nums" aria-live="polite">
+                    {bindDateFormat(draft, lang).dateTime(now)}
+                </span>
+            </p>
 
-            <Field label={t('set_date_era')}>
-                <Segmented<DateEra>
+            {/* Format, year, clock */}
+            <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+                <div className="w-full sm:w-56">
+                    <Field label={t('set_date_format')} controlId="date-format">
+                        <Select value={draft.format} onValueChange={(v) => change({ format: v as DateFormat })}>
+                            <SelectTrigger id="date-format">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {DATE_FORMATS.map((f) => (
+                                    <SelectItem key={f} value={f}>
+                                        {bindDateFormat({ ...draft, format: f }, lang).date(now)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </div>
+                <SegmentedRadio<DateEra>
+                    name="date-era"
+                    legend={t('set_date_era')}
+                    showLegend
                     value={draft.era}
                     onChange={(era) => change({ era })}
                     options={[
-                        { value: 'ce', label: t('set_era_ce') },
                         { value: 'be', label: t('set_era_be') },
+                        { value: 'ce', label: t('set_era_ce') },
                     ]}
                 />
-            </Field>
-
-            <Field label={t('set_time_format')}>
-                <Segmented<TimeFormat>
+                <SegmentedRadio<TimeFormat>
+                    name="time-format"
+                    legend={t('set_time_format')}
+                    showLegend
                     value={draft.time}
                     onChange={(time) => change({ time })}
                     options={[
@@ -110,17 +89,6 @@ export function DateTimeSection({ onDirtyChange }: { onDirtyChange: (dirty: bool
                         { value: '12', label: t('set_time_12') },
                     ]}
                 />
-            </Field>
-
-            <p className="text-sm">
-                <span className="text-muted-foreground mr-2">{t('set_datetime_example')}</span>
-                <span className="font-medium tabular-nums">{example}</span>
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-                <SaveButton onClick={save} loading={update.isPending} success={done} disabled={!dirty}>
-                    {t('save')}
-                </SaveButton>
             </div>
         </div>
     );

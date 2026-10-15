@@ -9,15 +9,17 @@ import { useMemo, useState } from 'react';
  * Stores the icon's name string (e.g. "Laptop"); pass it back as `value`.
  */
 export function IconPicker({
+    id,
     value,
     onChange,
-    // No literal default: a hook cannot run in a parameter, and the Thai string that
-    // used to sit here was invisible to whoever added the next caller.
     placeholder,
+    'aria-describedby': describedBy,
 }: {
+    id?: string;
     value?: string | null;
     onChange: (name: string | null) => void;
     placeholder?: string;
+    'aria-describedby'?: string;
 }) {
     const t = useT();
     const [open, setOpen] = useState(false);
@@ -32,7 +34,9 @@ export function IconPicker({
     return (
         <div className="relative">
             <button
+                id={id}
                 type="button"
+                aria-describedby={describedBy}
                 onClick={() => setOpen((o) => !o)}
                 className="border-input focus:border-brand bg-background flex h-10 w-full items-center gap-2 rounded-md border px-3 text-sm outline-none"
             >
@@ -49,7 +53,7 @@ export function IconPicker({
                         <span
                             role="button"
                             tabIndex={0}
-                            aria-label="clear"
+                            aria-label={t('clear')}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onChange(null);
@@ -94,7 +98,9 @@ export function IconPicker({
                                     <Icon className="h-4 w-4" />
                                 </button>
                             ))}
-                            {filtered.length === 0 && <div className="text-muted-foreground col-span-8 py-4 text-center text-xs">ไม่พบไอคอน</div>}
+                            {filtered.length === 0 && (
+                                <div className="text-muted-foreground col-span-8 py-4 text-center text-xs">{t('icon_none_found')}</div>
+                            )}
                         </div>
                     </div>
                 </>

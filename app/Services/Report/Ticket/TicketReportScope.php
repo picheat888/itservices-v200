@@ -68,7 +68,7 @@ trait TicketReportScope
      */
     private static function workClassTh(): array
     {
-        return ['standard' => 'งานปกติ', 'repair_internal' => 'งานซ่อม (ช่างภายในองค์กร)', 'repair_vendor' => 'งานซ่อม (ช่างภายนอก)'];
+        return ['standard' => 'งานปกติ', 'repair_internal' => 'งานซ่อม (ช่างในบริษัท)', 'repair_vendor' => 'งานซ่อม (ช่างภายนอก)'];
     }
 
     /** @return array<string, string> */
