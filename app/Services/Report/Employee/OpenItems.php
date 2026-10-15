@@ -26,11 +26,11 @@ final class OpenItems
 
     public const ACCOUNT_KINDS = ['left', 'must_change', 'expired'];
 
-    public const GROUP_TH = ['asset' => 'ทรัพย์สินค้างคืน', 'access' => 'สิทธิ์ค้างถอน', 'acct' => 'บัญชีผู้ใช้งาน', 'data' => 'ข้อมูลพนักงานไม่ครบ'];
+    public const GROUP_TH = ['asset' => 'ทรัพย์สินค้างคืน', 'access' => 'สิทธิ์ค้างถอน', 'acct' => 'บัญชีเข้าใช้งาน', 'data' => 'ข้อมูลพนักงานไม่ครบ'];
 
     public const ISSUE_TH = [
         'mgr_left' => 'หัวหน้าลาออกแล้ว', 'no_mgr' => 'ไม่มีหัวหน้า', 'no_email' => 'ไม่มีอีเมล', 'no_dept' => 'ไม่มีแผนก',
-        'no_sec' => 'ไม่มีส่วนงาน', 'no_pos' => 'ไม่มีตำแหน่ง', 'bad_dates' => 'วันที่ไม่สอดคล้อง',
+        'no_sec' => 'ไม่มีหน่วยงาน', 'no_pos' => 'ไม่มีตำแหน่ง', 'bad_dates' => 'วันที่ไม่สอดคล้อง',
     ];
 
     public const ACCOUNT_KIND_TH = ['left' => 'เจ้าของบัญชีลาออกแล้ว', 'must_change' => 'ยังไม่ได้เปลี่ยนรหัสผ่านครั้งแรก', 'expired' => 'รหัสผ่านหมดอายุ'];
@@ -109,6 +109,20 @@ final class OpenItems
     }
 
     /**
+     * The access group alone, for any viewer (it shows to everyone): what the employee overview's
+     * "leavers still holding access" card lists.
+     *
+     * @return array<string, mixed>
+     */
+    public static function access(?int $departmentId): array
+    {
+        $rows = OpenItemRow::query()->fromSub(self::accessSelect($departmentId, null), 'open_items')->get();
+        self::hydrate($rows);
+
+        return self::accessGroup($rows);
+    }
+
+    /**
      * Load what the rows point at: the employee (department, position, manager) and the asset,
      * grant or account behind each one.
      *
@@ -152,7 +166,7 @@ final class OpenItems
             'section' => $employee->section ? ['name' => $employee->section->name, 'name_th' => $employee->section->name_th] : null,
             'position' => $employee->position?->title,
             'last_day' => $employee->last_day?->toDateString(),
-            'days_out' => $employee->last_day ? AccessFacts::daysOut($employee) : null,
+            'days_out' => AccessFacts::daysSince($employee->last_day),
             'resigned' => $employee->status === EmployeeStatus::Resigned,
         ];
     }
@@ -262,17 +276,21 @@ final class OpenItems
     }
 
     /**
-     * Rows of one group gathered per employee, the longest gone first (then by code).
+     * Rows of one group gathered per employee, the longest gone first, no last day after them, then by code.
      *
      * @param  Collection<int, OpenItemRow>  $rows
      * @return Collection<int, Collection<int, OpenItemRow>>
      */
     private static function peopleOldestFirst(Collection $rows): Collection
     {
-        return $rows->groupBy('employee_id')->sortBy([
-            fn (Collection $a, Collection $b) => ((AccessFacts::daysSince($b->first()->last_day) ?? 0) <=> (AccessFacts::daysSince($a->first()->last_day) ?? 0)),
-            fn (Collection $a, Collection $b) => strnatcasecmp((string) $a->first()->code, (string) $b->first()->code),
-        ]);
+        $rank = function (Collection $items): array {
+            $days = AccessFacts::daysSince($items->first()->last_day);
+
+            return [$days === null ? 1 : 0, -($days ?? 0)];
+        };
+
+        return $rows->groupBy('employee_id')->sort(fn (Collection $a, Collection $b) => ($rank($a) <=> $rank($b))
+            ?: strnatcasecmp((string) $a->first()->code, (string) $b->first()->code));
     }
 
     /** @param Collection<int, array<string, mixed>> $people */

@@ -19,6 +19,6 @@ class EmployeeOpenItemsBreakdownController extends Controller
         /** @var EmployeeOpenItemsReport $report */
         $report = $request->report();
 
-        return response()->json(['data' => $report->breakdown($request->user(), $request->filters())]);
+        return response()->json(['data' => $report->breakdown($request->user(), $request->filters()), 'message' => 'success']);
     }
 }

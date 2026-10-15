@@ -113,22 +113,29 @@ function DeltaFooter({
             </>
         );
 
+    // Chart hides on a narrow tile
+    const side = (node: React.ReactNode) => node && <span className="hidden shrink-0 @[11.5rem]:inline-flex">{node}</span>;
+
     if (lead) {
         return (
-            <span className="flex items-end justify-between gap-1.5">
-                <span className="min-w-0">
-                    <span className="block truncate">{lead}</span>
-                    <span className="block truncate">{change}</span>
+            <span className="@container block">
+                <span className="flex items-end justify-between gap-1.5">
+                    <span className="min-w-0">
+                        <span className="block truncate">{lead}</span>
+                        <span className="block truncate">{change}</span>
+                    </span>
+                    {side(chart ?? (trend.points && <Sparkline values={trend.points} className={shade.line} />))}
                 </span>
-                {chart ?? (trend.points && <Sparkline values={trend.points} className={shade.line} />)}
             </span>
         );
     }
 
     return (
-        <span className="flex min-h-5 items-center justify-between gap-1.5">
-            <span className="min-w-0 truncate">{change}</span>
-            {trend.points && <Sparkline values={trend.points} className={shade.line} />}
+        <span className="@container block">
+            <span className="flex min-h-5 items-center justify-between gap-1.5">
+                <span className="min-w-0 truncate">{change}</span>
+                {side(trend.points && <Sparkline values={trend.points} className={shade.line} />)}
+            </span>
         </span>
     );
 }

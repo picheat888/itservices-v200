@@ -92,6 +92,22 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->assertCount(2, $asset['rows'][0]['assets']);
     }
 
+    public function test_a_leaver_without_a_last_day_comes_last_and_codes_sort_naturally(): void
+    {
+        $noLastDay = $this->employee('NoLastDay', ['code' => 'EMP-1', 'status' => 'resigned']);
+        $ten = $this->employee('Ten', ['code' => 'EMP-10', 'status' => 'resigned', 'last_day' => '2026-09-01']);
+        $nine = $this->employee('Nine', ['code' => 'EMP-9', 'status' => 'resigned', 'last_day' => '2026-09-01']);
+        foreach ([$noLastDay, $ten, $nine] as $e) {
+            Asset::factory()->create(['owner_employee_id' => $e->id, 'owner' => null, 'status' => 'pending_return']);
+        }
+
+        $asset = $this->breakdown()['asset'];
+
+        $this->assertSame([$nine->code, $ten->code, $noLastDay->code], array_column($asset['rows'], 'code'));
+        $this->assertSame([42, 42, null], array_column($asset['rows'], 'days_out'));
+        $this->assertSame(42, $asset['oldest_days']);
+    }
+
     public function test_access_group_counts_people_who_left_with_open_grants_only(): void
     {
         $gone = $this->employee('Gone', ['status' => 'resigned', 'last_day' => '2026-09-30']);

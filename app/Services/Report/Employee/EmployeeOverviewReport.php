@@ -3,6 +3,7 @@
 namespace App\Services\Report\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
+use App\Enums\Request\RequestStatus;
 use App\Models\Access\AccessMembership;
 use App\Models\Asset\Asset;
 use App\Models\Employee\Department;
@@ -40,9 +41,6 @@ class EmployeeOverviewReport extends TabularReport
     /** Days ahead of a start date that still make an unfinished preparation urgent. */
     private const URGENT_DAYS = 7;
 
-    /** @var array<string, array<string, mixed>> facts by filter set, so summary() and breakdown() count once */
-    private array $facts = [];
-
     public function key(): string
     {
         return 'employees.overview';
@@ -68,11 +66,13 @@ class EmployeeOverviewReport extends TabularReport
         [$from, $to] = $this->dayRange($filters);
         $event = fn (string $kind) => Employee::query()
             ->select('employees.*')
-            ->selectRaw($kind === 'left' ? "'left' as movement_kind, last_day as movement_date" : "'joined' as movement_kind, joined_at as movement_date")
+            ->selectRaw($kind === 'left'
+                ? "'left' as movement_kind, CASE WHEN COALESCE(last_day, ?) < joined_at THEN joined_at ELSE COALESCE(last_day, ?) END as movement_date"
+                : "'joined' as movement_kind, joined_at as movement_date", $kind === 'left' ? array_fill(0, 2, today()->subDay()->toDateString()) : [])
             ->selectRaw($kind === 'left' ? 'id * 2 + 1 as row_id' : 'id * 2 as row_id')
             ->when($filters['department_id'] ?? null, fn (Builder $q, $id) => $q->where('department_id', (int) $id));
         $joined = $event('joined')->whereBetween('joined_at', [$from, $to]);
-        $left = $event('left')->where('status', EmployeeStatus::Resigned->value)->whereBetween('last_day', [$from, $to]);
+        $left = $this->whereLeftIn($event('left'), $from, $to);
         $events = match ($filters['kind'] ?? null) {
             'joined' => $joined,
             'left' => $left,
@@ -82,7 +82,8 @@ class EmployeeOverviewReport extends TabularReport
             ->selectRaw('COUNT(*)')
             ->whereColumn('service_requests.employee_id', 'employees.id')
             ->where('origin', 'onboarding')
-            ->when($open, fn ($q) => $q->whereIn('status', ['pending', 'approved']));
+            ->where('status', '!=', RequestStatus::Cancelled->value)
+            ->when($open, fn ($q) => $q->whereIn('status', self::openRequestStatuses()));
 
         return Employee::query()
             ->fromSub($events, 'employees')
@@ -115,7 +116,7 @@ class EmployeeOverviewReport extends TabularReport
                 ->labelKey('rep_c_eo_employee')->linkTo('/employees', fn (Employee $e) => $e->id),
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (Employee $e) => $e->code),
             ReportColumn::localized('department', 'แผนก', fn (Employee $e) => $e->department ? ['name' => $e->department->name, 'name_th' => $e->department->name_th] : null),
-            ReportColumn::localized('section', 'ส่วนงาน', fn (Employee $e) => $e->section ? ['name' => $e->section->name, 'name_th' => $e->section->name_th] : null)
+            ReportColumn::localized('section', 'หน่วยงาน', fn (Employee $e) => $e->section ? ['name' => $e->section->name, 'name_th' => $e->section->name_th] : null)
                 ->labelKey('rep_c_eo_section'),
             ReportColumn::text('position', 'ตำแหน่ง', fn (Employee $e) => $e->position?->title),
             ReportColumn::enum('prep_status', 'เตรียมเครื่อง', fn (Employee $e) => $this->prepStatus($e), self::PREP_KEYS, self::PREP_TH),
@@ -215,11 +216,6 @@ class EmployeeOverviewReport extends TabularReport
      */
     private function facts(array $filters, bool $withDepartments = false): array
     {
-        $cacheKey = json_encode([$filters['from'] ?? null, $filters['to'] ?? null, $filters['department_id'] ?? null, today()->toDateString(), $withDepartments]);
-        if (isset($this->facts[$cacheKey])) {
-            return $this->facts[$cacheKey];
-        }
-
         [$from, $to] = $this->dayRange($filters);
         $to = $to->copy()->startOfDay();
         $today = today();
@@ -240,7 +236,7 @@ class EmployeeOverviewReport extends TabularReport
         $average = ($start + $end) / 2;
         $chart = $this->chart($joiners, $leavers, $people, $from, $to, $today);
 
-        return $this->facts[$cacheKey] = [
+        return [
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'as_of' => $asOf->toDateString(),
@@ -253,7 +249,7 @@ class EmployeeOverviewReport extends TabularReport
                 'count' => $leavers->count(),
                 'rate' => $average > 0 ? round($leavers->count() / $average * 100, 1) : null,
                 'prev_rate' => $this->previousRate($people, $from, $to),
-                'still_working' => $leavers->filter(fn (Employee $e) => $e->last_day->gte($asOf))->count(),
+                'still_working' => $leavers->filter(fn (Employee $e) => $this->lastDay($e)->gte($asOf))->count(),
                 ...$this->leaversByBucket($leavers, $from, $to),
             ],
             'prep' => $this->prep($joiners, $today),
@@ -304,7 +300,7 @@ class EmployeeOverviewReport extends TabularReport
         ];
     }
 
-    /** Working on day X: started by X, and not resigned with the last day (or none recorded) before X. */
+    /** Working on day X: started by X, and lastDay() not before X. */
     private function working(Employee $e, Carbon $day): bool
     {
         return $e->joined_at !== null && $e->joined_at->lte($day) && ! $this->goneBy($e, $day);
@@ -327,8 +323,7 @@ class EmployeeOverviewReport extends TabularReport
     {
         $spans = $people->map(fn (Employee $e) => [
             $e->joined_at?->toDateString(),
-            // Resigned: the last day, '' when none is recorded (gone on any day); else never gone.
-            $e->status === EmployeeStatus::Resigned ? ($e->last_day?->toDateString() ?? '') : null,
+            $this->lastDay($e)?->toDateString(),
         ])->all();
 
         return function (string $day, bool $before = false) use ($spans): int {
@@ -347,14 +342,41 @@ class EmployeeOverviewReport extends TabularReport
         };
     }
 
+    /**
+     * The last working day every count uses: none recorded = yesterday (gone today, like Employee::hasLeft()),
+     * never before the start day; null while not resigned or without a start day (never counted as working).
+     */
+    private function lastDay(Employee $e): ?Carbon
+    {
+        if ($e->status !== EmployeeStatus::Resigned || $e->joined_at === null) {
+            return null;
+        }
+        $last = $e->last_day ?? today()->subDay();
+
+        return $last->lt($e->joined_at) ? $e->joined_at : $last;
+    }
+
     private function goneBy(Employee $e, Carbon $day): bool
     {
-        return $e->status === EmployeeStatus::Resigned && ($e->last_day === null || $e->last_day->lt($day));
+        return $this->lastDay($e)?->lt($day) ?? false;
     }
 
     private function leftIn(Employee $e, Carbon $from, Carbon $to): bool
     {
-        return $e->status === EmployeeStatus::Resigned && $e->last_day !== null && $e->last_day->between($from, $to);
+        return $this->lastDay($e)?->between($from, $to) ?? false;
+    }
+
+    /** leftIn() in SQL, for the list's leaver rows. */
+    private function whereLeftIn(Builder $query, Carbon $from, Carbon $to): Builder
+    {
+        $yesterday = today()->subDay();
+
+        return $query->where('status', EmployeeStatus::Resigned->value)->whereNotNull('joined_at')->where(fn (Builder $w) => $w
+            ->where(fn (Builder $q) => $q->whereColumn('last_day', '>=', 'joined_at')->whereBetween('last_day', [$from, $to]))
+            ->orWhere(fn (Builder $q) => $q->whereColumn('last_day', '<', 'joined_at')->whereBetween('joined_at', [$from, $to]))
+            ->orWhere(fn (Builder $q) => $q->whereNull('last_day')->where('joined_at', '>', $yesterday)->whereBetween('joined_at', [$from, $to]))
+            ->when($yesterday->between($from, $to), fn (Builder $any) => $any
+                ->orWhere(fn (Builder $q) => $q->whereNull('last_day')->where('joined_at', '<=', $yesterday))));
     }
 
     /**
@@ -406,7 +428,7 @@ class EmployeeOverviewReport extends TabularReport
         $lastIndex = $index($last);
         $events = collect([
             ...$joiners->map(fn (Employee $e) => ['kind' => 'joined', 'e' => $e, 'date' => $e->joined_at, 'at' => $index($e->joined_at)]),
-            ...$leavers->map(fn (Employee $e) => ['kind' => 'left', 'e' => $e, 'date' => $e->last_day, 'at' => $index($e->last_day) + 1]),
+            ...$leavers->map(fn (Employee $e) => ['kind' => 'left', 'e' => $e, 'date' => $e->last_day ?? $this->lastDay($e), 'at' => $index($this->lastDay($e)) + 1]),
         ])
             // A leaver still counted on the chart's last day drops after it, so they are left off.
             ->filter(fn (array $v) => $v['at'] <= $lastIndex)
@@ -436,7 +458,7 @@ class EmployeeOverviewReport extends TabularReport
                     'name' => $v['e']->name,
                     'name_th' => $v['e']->name_th,
                     'date' => $v['date']->toDateString(),
-                    'before_start' => $v['kind'] === 'left' && $v['e']->joined_at !== null && $v['e']->last_day->lt($v['e']->joined_at),
+                    'before_start' => $v['kind'] === 'left' && $v['e']->last_day !== null && $v['e']->last_day->lt($v['e']->joined_at),
                 ])->values()->all(),
             ];
         }
@@ -455,7 +477,7 @@ class EmployeeOverviewReport extends TabularReport
         [, $buckets] = $this->buckets($from, $to);
 
         return [
-            'per_bucket' => array_map(fn (array $b) => $leavers->filter(fn (Employee $e) => $e->last_day->gte($b['first']) && $e->last_day->lt($b['next']))->count(), $buckets),
+            'per_bucket' => array_map(fn (array $b) => $leavers->filter(fn (Employee $e) => $this->lastDay($e)->gte($b['first']) && $this->lastDay($e)->lt($b['next']))->count(), $buckets),
             'bucket_months' => array_map(fn (array $b) => $b['first']->format('Y-m'), $buckets),
         ];
     }
@@ -468,10 +490,12 @@ class EmployeeOverviewReport extends TabularReport
      */
     private function prep(Collection $joiners, Carbon $today): array
     {
+        $openStatuses = self::openRequestStatuses();
         $requests = ServiceRequest::query()
             ->where('origin', 'onboarding')
+            ->where('status', '!=', RequestStatus::Cancelled->value)
             ->whereIn('employee_id', $joiners->pluck('id'))
-            ->selectRaw("employee_id, COUNT(*) as total, SUM(CASE WHEN status IN ('pending', 'approved') THEN 1 ELSE 0 END) as open")
+            ->selectRaw('employee_id, COUNT(*) as total, SUM(CASE WHEN status IN ('.implode(', ', array_fill(0, count($openStatuses), '?')).') THEN 1 ELSE 0 END) as open', $openStatuses)
             ->groupBy('employee_id')
             ->get()
             ->keyBy('employee_id');
@@ -492,46 +516,28 @@ class EmployeeOverviewReport extends TabularReport
     }
 
     /**
-     * People who have left (Employee::hasLeft) and still hold access, as of today whatever the range;
-     * longest gone first, no last day after them.
+     * People who have left (Employee::hasLeft) and still hold access, as of today whatever the range:
+     * the open-items report's access group, same people in the same order.
      *
      * @return array<string, mixed>
      */
     private function holding(?int $departmentId): array
     {
-        $left = AccessFacts::whereLeft(Employee::query())
-            ->with('department:id,name,name_th')
-            ->when($departmentId, fn (Builder $q, int $id) => $q->where('department_id', $id))
-            ->get();
-        $grants = AccessFacts::withResource(AccessMembership::query())
-            ->whereNull('revoked_at')
-            ->whereIn('employee_id', $left->pluck('id'))
-            ->get()
-            ->groupBy('employee_id')
-            ->toBase();
-        $order = array_flip(AccessFacts::TYPES);
-        $rows = $left->filter(fn (Employee $e) => $grants->has($e->id))
-            ->map(fn (Employee $e) => [
-                'employee' => ['id' => (int) $e->id, 'code' => (string) $e->code, 'name' => $e->name, 'name_th' => $e->name_th],
-                'department' => AccessFacts::department($e),
-                'last_day' => $e->last_day?->toDateString(),
-                'days_out' => AccessFacts::daysOut($e),
-                'grants' => $grants->get($e->id)
-                    ->map(fn (AccessMembership $m) => ['type' => $m->resource_type, 'name' => (string) $m->resource?->getAttribute('name')])
-                    ->sort(fn (array $a, array $b) => [$order[$a['type']] ?? 9, $a['name']] <=> [$order[$b['type']] ?? 9, $b['name']])
-                    ->values()->all(),
-            ])
-            ->sort(fn (array $a, array $b) => [$a['days_out'] === null ? 1 : 0, -($a['days_out'] ?? 0), $a['employee']['code']]
-                <=> [$b['days_out'] === null ? 1 : 0, -($b['days_out'] ?? 0), $b['employee']['code']])
-            ->values();
-        $held = $grants->only($rows->pluck('employee.id')->all())->flatten(1);
+        $access = OpenItems::access($departmentId);
+        $rows = array_map(fn (array $p) => [
+            'employee' => ['id' => $p['id'], 'code' => $p['code'], 'name' => $p['name'], 'name_th' => $p['name_th']],
+            'department' => $p['department'],
+            'last_day' => $p['last_day'],
+            'days_out' => $p['days_out'],
+            'grants' => $p['grants'],
+        ], $access['rows']);
+        $types = array_count_values(array_merge(...array_map(fn (array $r) => array_column($r['grants'], 'type'), $rows)));
 
         return [
-            'people' => $rows->count(),
-            'grants' => $held->count(),
-            'by_type' => collect(AccessFacts::TYPES)->mapWithKeys(fn (string $t) => [$t => $held->where('resource_type', $t)->count()])->all(),
-            'left_total' => $left->count(),
-            'rows' => $rows->all(),
+            'people' => $access['people'],
+            'grants' => $access['grants'],
+            'by_type' => collect(AccessFacts::TYPES)->mapWithKeys(fn (string $t) => [$t => $types[$t] ?? 0])->all(),
+            'rows' => $rows,
         ];
     }
 
@@ -547,7 +553,7 @@ class EmployeeOverviewReport extends TabularReport
             'start' => $list->filter(fn (Employee $e) => $this->workingBefore($e, $from))->count(),
             'joined' => $list->filter(fn (Employee $e) => $e->joined_at?->between($from, $asOf) ?? false)->count(),
             // Gone by the end day only, like joined: start + joined − left = end.
-            'left' => $list->filter(fn (Employee $e) => $this->leftIn($e, $from, $to) && $e->last_day->lt($asOf))->count(),
+            'left' => $list->filter(fn (Employee $e) => $this->leftIn($e, $from, $to) && $this->lastDay($e)->lt($asOf))->count(),
             'end' => $list->filter(fn (Employee $e) => $this->working($e, $asOf))->count(),
         ];
         $isEmpty = fn (array $s) => $s['start'] + $s['joined'] + $s['left'] + $s['end'] === 0;
@@ -594,6 +600,16 @@ class EmployeeOverviewReport extends TabularReport
         return ['departments' => $shown, 'empty_departments' => $apart, 'total' => $stats($people)];
     }
 
+    /**
+     * Onboarding requests still open for a joiner: done = completed, cancelled is left out entirely.
+     *
+     * @return list<string>
+     */
+    private static function openRequestStatuses(): array
+    {
+        return [RequestStatus::Pending->value, RequestStatus::Approved->value, RequestStatus::Rejected->value];
+    }
+
     /** Joiners only: preparing / ready / none from their onboarding requests. */
     private function prepStatus(Employee $employee): ?string
     {
@@ -607,7 +623,7 @@ class EmployeeOverviewReport extends TabularReport
         return (int) $employee->getAttribute('onboarding_open') > 0 ? 'preparing' : 'ready';
     }
 
-    /** "done/total" for joiners with onboarding requests, where done = no longer open. */
+    /** "done/total" for joiners with onboarding requests, where done = completed. */
     private function onboardingProgress(Employee $employee): ?string
     {
         $total = (int) $employee->getAttribute('onboarding_total');
