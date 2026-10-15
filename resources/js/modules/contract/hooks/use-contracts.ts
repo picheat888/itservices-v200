@@ -6,7 +6,7 @@ const CONTRACTS = ['contracts'] as const;
 const SUMMARY = ['contracts-summary'] as const;
 
 /** Paginated contract list; the "expiring" tab is server-filtered. */
-export const useContracts = (params: { page: number; per_page: number; search: string; tab: string; type?: string; sort?: string }) =>
+export const useContracts = (params: { page: number; per_page: number; search: string; tab: string; type?: string; sort?: string }, enabled = true) =>
     useQuery({
         queryKey: ['contracts-list', params],
         queryFn: () =>
@@ -19,6 +19,7 @@ export const useContracts = (params: { page: number; per_page: number; search: s
                 sort: params.sort || undefined,
             }),
         placeholderData: (prev) => prev,
+        enabled,
     });
 
 export const useContractSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: contractApi.summary, enabled });
@@ -42,6 +43,10 @@ export function useContractMutations() {
         qc.invalidateQueries({ queryKey: ['contract'] });
         qc.invalidateQueries({ queryKey: SUMMARY });
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
+        // Saving links or unlinks assets, and an asset shows its contract and status
+        for (const key of ['assets-list', 'asset', 'asset-contract', 'asset-contract-options', 'assets-linkable']) {
+            qc.invalidateQueries({ queryKey: [key] });
+        }
     };
     return {
         create: useMutation({ mutationFn: (p: ContractPayload) => contractApi.create(p), onSuccess: invalidate }),
