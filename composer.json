@@ -58,6 +58,11 @@
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently --restart-tries -1 --restart-after 3000 -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=660\" \"npm run dev\" \"php artisan schedule:work\" --names='server,queue,vite,schedule'"
+        ],
+        "demo": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php -r \"file_exists('public/hot') && unlink('public/hot');\"",
+            "npx concurrently --restart-tries -1 --restart-after 3000 -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=660\" \"npx vite build --watch\" \"php artisan schedule:work\" --names='server,queue,build,schedule'"
         ]
     },
     "extra": {
