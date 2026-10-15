@@ -26,7 +26,7 @@ import {
     SCROLL_MONTH_PX,
     shortYear,
 } from './chart-parts';
-import { FILL } from './chart-tones';
+import { FILL, PIECE_INK } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
@@ -713,7 +713,8 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                                         contentClassName="whitespace-nowrap"
                                         // Grows by its share but never narrower than its label
                                         className={cn(
-                                            'flex h-full min-w-[1.375rem] basis-0 cursor-pointer items-center justify-center rounded-none font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)] focus-visible:ring-inset',
+                                            'flex h-full min-w-[1.375rem] basis-0 cursor-pointer items-center justify-center rounded-none font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap tabular-nums focus-visible:ring-inset',
+                                            PIECE_INK,
                                             tile.fill,
                                         )}
                                         style={{ flexGrow: values[tile.key] }}

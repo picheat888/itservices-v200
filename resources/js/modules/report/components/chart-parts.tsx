@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ChartLabel, ChartSeries, ChartTone } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
-import { FILL, TEXT } from './chart-tones';
+import { FILL, PIECE_INK, TEXT } from './chart-tones';
 import { InfoPopover } from './info-popover';
 
 /** First `top` rows plus the rest to fold into "อื่น ๆ"; one spare row is shown instead of folding a single name. */
@@ -318,8 +318,9 @@ export function CountBar({ pieces, scale }: { pieces: BarPiece[]; scale?: number
                     <span
                         key={p.key}
                         className={cn(
-                            'flex min-w-[26px] items-center justify-center overflow-hidden font-mono text-[11px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
+                            'flex min-w-[26px] items-center justify-center overflow-hidden font-mono text-[11px] leading-none font-semibold whitespace-nowrap tabular-nums',
                             FILL[p.tone],
+                            PIECE_INK,
                         )}
                         style={{ flex: `${p.value} 1 0` }}
                     >
