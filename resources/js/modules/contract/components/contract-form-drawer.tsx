@@ -4,6 +4,7 @@ import { useCurrency, useVendors } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { FileDropZone, formatFileSize } from '@/shared/components/file-drop-zone';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -829,31 +830,42 @@ export function ContractFormDrawer({
                                                         // refuses to unlink it): it is the contract's record of what came back.
                                                         const locked = checked && a.status === 'writeoff';
                                                         return (
-                                                            <button
+                                                            <div
                                                                 key={a.id}
-                                                                type="button"
-                                                                onClick={() => toggleAsset(a.id)}
-                                                                role="checkbox"
-                                                                aria-checked={checked}
-                                                                disabled={locked}
-                                                                title={locked ? t('contract_link_asset_locked') : undefined}
-                                                                className="border-border/60 hover:bg-accent/40 flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+                                                                className="border-border/60 hover:bg-accent/40 flex items-center border-b last:border-0 has-[:disabled]:hover:bg-transparent"
                                                             >
-                                                                <span
-                                                                    className={cn(
-                                                                        'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                                                                        checked ? 'border-brand bg-brand text-brand-foreground' : 'border-input',
-                                                                    )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleAsset(a.id)}
+                                                                    role="checkbox"
+                                                                    aria-checked={checked}
+                                                                    disabled={locked}
+                                                                    className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-60"
                                                                 >
-                                                                    {checked && <Check className="h-3 w-3" />}
-                                                                </span>
-                                                                <span className="font-mono text-xs">{a.asset_code}</span>
-                                                                <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
-                                                                <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
-                                                                    {locked && <Lock className="h-3 w-3" aria-hidden="true" />}
+                                                                    <span
+                                                                        className={cn(
+                                                                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                                                                            checked ? 'border-brand bg-brand text-brand-foreground' : 'border-input',
+                                                                        )}
+                                                                    >
+                                                                        {checked && <Check className="h-3 w-3" />}
+                                                                    </span>
+                                                                    <span className="font-mono text-xs">{a.asset_code}</span>
+                                                                    <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
                                                                     <AssetStatusBadge status={a.status as AssetStatus} t={t} />
-                                                                </span>
-                                                            </button>
+                                                                </button>
+                                                                {/* Beside the row, not around it, so the checkbox keeps its own name and state */}
+                                                                {locked && (
+                                                                    <InfoPopover
+                                                                        openOnFocus
+                                                                        label={t('contract_link_asset_locked')}
+                                                                        content={t('contract_link_asset_locked')}
+                                                                        className="text-muted-foreground relative mr-3 inline-flex rounded-full before:absolute before:-inset-1.5 before:content-['']"
+                                                                    >
+                                                                        <Lock className="h-3.5 w-3.5" aria-hidden />
+                                                                    </InfoPopover>
+                                                                )}
+                                                            </div>
                                                         );
                                                     })
                                                 )}

@@ -505,7 +505,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                         placeholder={t('access_ph_size')}
                                         aria-label={t('access_size')}
                                         aria-invalid={!!errors.size_value}
-                                        title={lang === 'th' ? 'เลื่อนเมาส์ค้างแล้ว scroll เพื่อปรับทีละ 1' : 'Hover + scroll to nudge by 1'}
+                                        title={t('access_size_wheel_hint')}
                                         className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-3 py-2 text-right text-sm outline-hidden"
                                     />
                                     {/* When 0 (unlimited) the unit is meaningless — show the label instead of the picker. */}

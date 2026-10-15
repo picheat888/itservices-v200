@@ -32,6 +32,7 @@ export const access: Dict = {
     access_size: 'Size',
     access_size_unlimited: 'Unlimited',
     access_size_unlimited_hint: 'Enter 0 for unlimited',
+    access_size_wheel_hint: 'Hover and scroll to nudge by 1',
     access_description: 'Description',
     access_name: 'Name',
     access_sub: 'Manage email groups, file shares, social access and software licenses',

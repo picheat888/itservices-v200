@@ -4,6 +4,7 @@ import { useCategories, useWarehouses } from '@/modules/settings';
 import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -688,12 +689,35 @@ export default function AssetsPage() {
                                                 )}
                                                 <span className="truncate">{typeLabel(b)}</span>
                                             </div>
-                                            {/* A full-width bar per type, split by its own total — as the reports' IT staff
-                                                card draws a person's split — with each bucket's count over its piece. Measured
-                                                against the biggest type, a single write-off beside hundreds in use came out
-                                                narrower than a pixel. An empty bucket draws nothing. */}
-                                            <div role="img" aria-label={typeBarTitle(b)} title={typeBarTitle(b)}>
-                                                <div className="flex h-4 items-end">
+                                            {/* Full-width bar per type, split by its own total; hover or tap opens the counts */}
+                                            <InfoPopover
+                                                label={typeBarTitle(b)}
+                                                content={
+                                                    <div className="space-y-1">
+                                                        <div className="font-semibold">{typeLabel(b)}</div>
+                                                        {TYPE_BUCKETS.map((s) => (
+                                                            <NoteRow
+                                                                key={s.key}
+                                                                mark={
+                                                                    <i
+                                                                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                                                                        style={{ backgroundColor: statusColors[s.status] }}
+                                                                        aria-hidden
+                                                                    />
+                                                                }
+                                                                text={t(s.labelKey)}
+                                                                value={b[s.key]}
+                                                            />
+                                                        ))}
+                                                        <div className="border-border border-t pt-1">
+                                                            <NoteRow text={t('asset_types_total')} value={b.count} />
+                                                        </div>
+                                                    </div>
+                                                }
+                                                contentClassName="min-w-[11rem]"
+                                                className="block w-full cursor-default text-left data-[state=open]:opacity-80"
+                                            >
+                                                <span className="flex h-4 items-end">
                                                     {TYPE_BUCKETS.filter((s) => b[s.key] > 0).map((s) => (
                                                         <span
                                                             key={s.key}
@@ -706,10 +730,10 @@ export default function AssetsPage() {
                                                             {b[s.key]}
                                                         </span>
                                                     ))}
-                                                </div>
-                                                <div className="bg-secondary mt-1 flex h-2 overflow-hidden rounded-full">
+                                                </span>
+                                                <span className="bg-secondary mt-1 flex h-2 overflow-hidden rounded-full">
                                                     {TYPE_BUCKETS.filter((s) => b[s.key] > 0).map((s) => (
-                                                        <div
+                                                        <span
                                                             key={s.key}
                                                             // Never thinner than 3px, so 3 written off among a thousand still shows.
                                                             className="min-w-[3px]"
@@ -719,8 +743,8 @@ export default function AssetsPage() {
                                                             }}
                                                         />
                                                     ))}
-                                                </div>
-                                            </div>
+                                                </span>
+                                            </InfoPopover>
                                             <span className="text-right font-mono text-sm leading-none font-semibold">{b.count}</span>
                                         </div>
                                     ))}
@@ -1159,7 +1183,6 @@ export default function AssetsPage() {
                                                             'px-2 py-2.5',
                                                             rowSelectable(a) ? 'cursor-pointer' : rowActionable(a) ? 'cursor-not-allowed' : '',
                                                         )}
-                                                        title={rowLockedOut(a) ? t('asset_locked_hint') : undefined}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             if (rowSelectable(a)) toggleRow(a, !selectedIds.includes(a.id));
@@ -1167,13 +1190,14 @@ export default function AssetsPage() {
                                                     >
                                                         <div className="flex items-center justify-center px-2 py-1.5">
                                                             {rowLockedOut(a) ? (
-                                                                // Locked out by the active status group — a lock reads far clearer than a faint
-                                                                // checkbox; it carries the reason for screen readers too (the title is mouse-only).
-                                                                <Lock
-                                                                    className="text-muted-foreground size-4"
-                                                                    role="img"
-                                                                    aria-label={t('asset_locked_hint')}
-                                                                />
+                                                                // Locked out by the active status group: the lock opens the reason
+                                                                <InfoPopover
+                                                                    label={t('asset_locked_hint')}
+                                                                    content={t('asset_locked_hint')}
+                                                                    className="text-muted-foreground inline-flex"
+                                                                >
+                                                                    <Lock className="size-4" aria-hidden />
+                                                                </InfoPopover>
                                                             ) : rowActionable(a) ? (
                                                                 <Checkbox
                                                                     aria-label={`${t('asset_select_row')} ${a.asset_code}`}

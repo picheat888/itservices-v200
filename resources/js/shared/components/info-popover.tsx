@@ -19,6 +19,12 @@ export function InfoPopover({
     side = 'top',
     anchor,
     onActivate,
+    as = 'button',
+    tabbable = true,
+    isolate = false,
+    openOnFocus = false,
+    inactive = false,
+    disabled = false,
 }: {
     /** What a screen reader hears for the trigger. */
     label: string;
@@ -34,13 +40,26 @@ export function InfoPopover({
     anchor?: () => DOMRect | null;
     /** A mouse click or Enter runs this instead of pinning the note; a tap still opens the note. */
     onActivate?: () => void;
+    /** 'span' wraps another control (a disabled button) instead of being the button itself. */
+    as?: 'button' | 'span';
+    /** False keeps a chart's many bars out of the Tab order (the chart carries its own summary). */
+    tabbable?: boolean;
+    /** Keep clicks and Enter/Space on the trigger or the note from reaching a clickable row around it. */
+    isolate?: boolean;
+    /** Keyboard focus opens the note and leaving closes it, like a tooltip. */
+    openOnFocus?: boolean;
+    /** Span mode only: render the plain wrapper with no note, so its child is not rebuilt when a note comes and goes. */
+    inactive?: boolean;
+    /** Span mode only: tell assistive tech the wrapped control is unavailable. */
+    disabled?: boolean;
 }) {
-    const [open, setOpen] = useState(false);
+    const [openState, setOpen] = useState(false);
+    const open = openState && !inactive;
     const [place, setPlace] = useState<Side>(side);
     const closing = useRef<number | null>(null);
     const openedByHover = useRef(false);
     const pressedBy = useRef<string | null>(null);
-    const trigger = useRef<HTMLButtonElement>(null);
+    const trigger = useRef<HTMLElement>(null);
     const [note, setNote] = useState<HTMLDivElement | null>(null);
     // The page's scrolling area starts under the top bar; a bar top scrolled out of it is held at its edge
     const viewTop = useCallback(() => (trigger.current?.closest('main')?.getBoundingClientRect().top ?? 0) + VIEW_GAP, []);
@@ -72,35 +91,77 @@ export function InfoPopover({
         } else closing.current = window.setTimeout(() => setOpen(false), 80);
     };
 
+    const triggerProps = {
+        onPointerEnter: hover(true),
+        onPointerLeave: hover(false),
+        onPointerDown: (event: React.PointerEvent) => (pressedBy.current = event.pointerType),
+        onFocus: (event: React.FocusEvent<HTMLElement>) => openOnFocus && event.currentTarget.matches(':focus-visible') && setOpen(true),
+        onBlur: () => openOnFocus && setOpen(false),
+        onClick: (event: React.MouseEvent) => {
+            if (isolate) event.stopPropagation();
+            const by = pressedBy.current;
+            pressedBy.current = null;
+            if (onActivate && by !== 'touch') {
+                event.preventDefault();
+                openedByHover.current = false;
+                setOpen(false);
+                onActivate();
+                return;
+            }
+            if (openedByHover.current) {
+                event.preventDefault();
+                openedByHover.current = false;
+            }
+        },
+        className: cn('focus-visible:ring-ring cursor-help rounded-sm focus-visible:ring-2 focus-visible:outline-none', className),
+        style,
+    };
+
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={(next) => !inactive && setOpen(next)}>
             {anchor && <PopoverAnchor virtualRef={virtualRef} />}
-            <PopoverTrigger
-                ref={trigger}
-                type="button"
-                aria-label={label}
-                onPointerEnter={hover(true)}
-                onPointerLeave={hover(false)}
-                onPointerDown={(event) => (pressedBy.current = event.pointerType)}
-                onClick={(event) => {
-                    const by = pressedBy.current;
-                    pressedBy.current = null;
-                    if (onActivate && by !== 'touch') {
-                        event.preventDefault();
-                        openedByHover.current = false;
-                        setOpen(false);
-                        onActivate();
-                        return;
-                    }
-                    if (openedByHover.current) {
-                        event.preventDefault();
-                        openedByHover.current = false;
-                    }
-                }}
-                className={cn('focus-visible:ring-ring cursor-help rounded-sm focus-visible:ring-2 focus-visible:outline-none', className)}
-                style={style}
-            >
-                {children}
+            <PopoverTrigger asChild>
+                {as === 'span' && inactive ? (
+                    // Same element as the live wrapper, minus every trigger attribute
+                    <span
+                        ref={trigger}
+                        className={className}
+                        style={style}
+                        aria-haspopup={undefined}
+                        aria-expanded={undefined}
+                        aria-controls={undefined}
+                        data-state={undefined}
+                    >
+                        {children}
+                    </span>
+                ) : as === 'span' ? (
+                    <span
+                        ref={trigger}
+                        role="button"
+                        tabIndex={tabbable ? 0 : -1}
+                        aria-label={label}
+                        aria-disabled={disabled || undefined}
+                        onKeyDown={(event) => {
+                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                            if (isolate) event.stopPropagation();
+                            event.preventDefault();
+                            setOpen((now) => !now);
+                        }}
+                        {...triggerProps}
+                    >
+                        {children}
+                    </span>
+                ) : (
+                    <button
+                        ref={trigger as React.RefObject<HTMLButtonElement>}
+                        type="button"
+                        tabIndex={tabbable ? undefined : -1}
+                        aria-label={label}
+                        {...triggerProps}
+                    >
+                        {children}
+                    </button>
+                )}
             </PopoverTrigger>
             <PopoverContent
                 ref={setNote}
@@ -110,10 +171,25 @@ export function InfoPopover({
                 onCloseAutoFocus={(event) => event.preventDefault()}
                 onPointerEnter={hover(true)}
                 onPointerLeave={hover(false)}
+                // The note is portalled, but React still bubbles its clicks to the row around the trigger
+                onClick={isolate ? (event) => event.stopPropagation() : undefined}
                 className={cn('w-auto max-w-xs px-3 py-2 text-left font-sans text-xs font-normal whitespace-normal', contentClassName)}
             >
                 {typeof content === 'function' ? content(() => setOpen(false)) : content}
             </PopoverContent>
         </Popover>
+    );
+}
+
+/** One row of a chart's note: a mark, the words, the number on the right (same shape as the report's). */
+export function NoteRow({ mark, text, value, muted }: { mark?: React.ReactNode; text: React.ReactNode; value: React.ReactNode; muted?: boolean }) {
+    return (
+        <div className={cn('flex items-center justify-between gap-4', muted && 'text-muted-foreground')}>
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+                {mark}
+                <span className="truncate">{text}</span>
+            </span>
+            <b className={cn('font-mono tabular-nums', muted && 'font-normal')}>{value}</b>
+        </div>
     );
 }

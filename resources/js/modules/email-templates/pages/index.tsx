@@ -8,6 +8,7 @@ import { useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { Field } from '@/shared/components/field';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
@@ -1087,24 +1088,24 @@ function BodyEditor({
             <div className="border-input bg-background focus-within:border-brand flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
                 {/* Quick tools — insert HTML at the caret / around the selection */}
                 <div className={cn(CARD_HEADING, 'border-border flex shrink-0 flex-wrap items-center gap-0.5 border-b px-1.5 py-1')}>
-                    <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}>
+                    <ToolBtn title={t('email_tool_bold')} onClick={() => wrap('<strong>', '</strong>')}>
                         <Bold className="h-3.5 w-3.5" />
                     </ToolBtn>
-                    <ToolBtn title="Italic" onClick={() => wrap('<em>', '</em>')}>
+                    <ToolBtn title={t('email_tool_italic')} onClick={() => wrap('<em>', '</em>')}>
                         <Italic className="h-3.5 w-3.5" />
                     </ToolBtn>
                     <span className="bg-border mx-1 h-4 w-px" />
-                    <ToolBtn title="Line break (<br>)" onClick={() => insert('<br>\n')}>
+                    <ToolBtn title={t('email_tool_br')} onClick={() => insert('<br>\n')}>
                         <CornerDownLeft className="h-3.5 w-3.5" />
                     </ToolBtn>
-                    <ToolBtn title="Paragraph (<p>)" onClick={() => wrap('<p>', '</p>')}>
+                    <ToolBtn title={t('email_tool_p')} onClick={() => wrap('<p>', '</p>')}>
                         <Pilcrow className="h-3.5 w-3.5" />
                     </ToolBtn>
-                    <ToolBtn title="Bullet list" onClick={insertList}>
+                    <ToolBtn title={t('email_tool_list')} onClick={insertList}>
                         <List className="h-3.5 w-3.5" />
                     </ToolBtn>
                     <span className="bg-border mx-1 h-4 w-px" />
-                    <ToolBtn title="Link" onClick={insertLink}>
+                    <ToolBtn title={t('email_tool_link')} onClick={insertLink}>
                         <Link2 className="h-3.5 w-3.5" />
                     </ToolBtn>
                     <select
@@ -1780,21 +1781,19 @@ function EditorDialog({
                                     {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
                                     {sentOk ? t('email_sent') : t('email_test')}
                                 </Button>
-                                {/* Quieter than its neighbour on purpose: this one discards wording
-                                    somebody wrote, and it sits next to the button people press all
-                                    day. Disabled until the template actually differs from its
-                                    standard content — and then it says so, because a dead button
-                                    whose tooltip describes what it would do explains nothing. */}
+                                {/* Quieter on purpose (it discards wording); off until the template differs, and the note says why */}
                                 {template.is_standard && (
-                                    <Button
-                                        variant="ghost"
-                                        onClick={handleReset}
-                                        disabled={resetting || !template.is_modified}
-                                        title={template.is_modified ? t('email_reset_hint') : t('email_reset_unchanged')}
-                                    >
-                                        {resetting ? <Loader2 className="animate-spin" /> : resetOk ? <Check /> : <RotateCcw />}
-                                        {resetOk ? t('email_reset_done') : t('email_reset')}
-                                    </Button>
+                                    <DisabledReason reason={template.is_modified ? null : t('email_reset_unchanged')} label={t('email_reset')}>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={handleReset}
+                                            disabled={resetting || !template.is_modified}
+                                            title={template.is_modified ? t('email_reset_hint') : undefined}
+                                        >
+                                            {resetting ? <Loader2 className="animate-spin" /> : resetOk ? <Check /> : <RotateCcw />}
+                                            {resetOk ? t('email_reset_done') : t('email_reset')}
+                                        </Button>
+                                    </DisabledReason>
                                 )}
                             </div>
                             <div className="flex gap-2">
