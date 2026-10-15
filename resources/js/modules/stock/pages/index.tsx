@@ -487,7 +487,7 @@ export default function StockPage() {
                                     disabled={!deletable}
                                     title={deletable ? t('stock_delete_item') : undefined}
                                     aria-label={t('stock_delete_item')}
-                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-30"
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-50"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>

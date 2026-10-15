@@ -191,12 +191,12 @@ function App() {
                             }
                         />
                         {/* One route per report page, each with its own gate — modules/report/routes.tsx. */}
-                        {reportPageRoutes.map(({ path, anyOf, Page }) => (
+                        {reportPageRoutes.map(({ path, allOf, Page }) => (
                             <Route
                                 key={path}
                                 path={`reports/${path}`}
                                 element={
-                                    <RequirePermission anyOf={anyOf}>
+                                    <RequirePermission allOf={allOf}>
                                         <ReportDateScope>
                                             <Page />
                                         </ReportDateScope>

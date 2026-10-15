@@ -3,8 +3,8 @@
  * draws it — one line per report, mounted by App.tsx. The address is the report's key with "."
  * and "_" made "-" (report-catalogue.tsx reportSlug), and the file in pages/ has the same name.
  *
- * `anyOf` mirrors the report's own permission in ReportCatalogue (the server still checks every
- * key it requires — e.g. the ticket reports also need tickets.resolve — and answers 403 if not).
+ * `allOf` is every permission the report's ReportCatalogue entry requires, so the page opens exactly
+ * when its data does.
  * An address not listed here opens UnknownReportPage.
  */
 import type { ComponentType } from 'react';
@@ -34,38 +34,42 @@ import TicketsRequestSlaReportPage from './pages/tickets-request-sla';
 export interface ReportPageRoute {
     /** Under /reports — "tickets-overview" opens /reports/tickets-overview. */
     path: string;
-    anyOf: string[];
+    allOf: string[];
     Page: ComponentType;
 }
 
 export const reportPageRoutes: ReportPageRoute[] = [
     // Tickets
-    { path: 'tickets-overview', anyOf: ['tickets.view_all'], Page: TicketsOverviewReportPage },
-    { path: 'tickets-backlog', anyOf: ['tickets.view_all'], Page: TicketsBacklogReportPage },
-    { path: 'tickets-request-sla', anyOf: ['tickets.view_all'], Page: TicketsRequestSlaReportPage },
-    { path: 'tickets-manual-sla', anyOf: ['tickets.view_all'], Page: TicketsManualSlaReportPage },
+    { path: 'tickets-overview', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsOverviewReportPage },
+    { path: 'tickets-backlog', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsBacklogReportPage },
+    { path: 'tickets-request-sla', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsRequestSlaReportPage },
+    { path: 'tickets-manual-sla', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsManualSlaReportPage },
     // Assets
-    { path: 'assets-warranty-expiring', anyOf: ['assets.view'], Page: AssetsWarrantyExpiringReportPage },
-    { path: 'assets-overview', anyOf: ['assets.view'], Page: AssetsOverviewReportPage },
-    { path: 'assets-transfer-history', anyOf: ['assets.view'], Page: AssetsTransferHistoryReportPage },
-    { path: 'assets-writeoffs', anyOf: ['assets.view'], Page: AssetsWriteoffsReportPage },
+    { path: 'assets-warranty-expiring', allOf: ['assets.view'], Page: AssetsWarrantyExpiringReportPage },
+    { path: 'assets-overview', allOf: ['assets.view'], Page: AssetsOverviewReportPage },
+    { path: 'assets-transfer-history', allOf: ['assets.view'], Page: AssetsTransferHistoryReportPage },
+    { path: 'assets-writeoffs', allOf: ['assets.view'], Page: AssetsWriteoffsReportPage },
     // Contracts
-    { path: 'contracts-overview', anyOf: ['contracts.view'], Page: ContractsOverviewReportPage },
-    { path: 'contracts-renewals', anyOf: ['contracts.view'], Page: ContractsRenewalsReportPage },
-    { path: 'contracts-rentals', anyOf: ['contracts.view'], Page: ContractsRentalsReportPage },
+    { path: 'contracts-overview', allOf: ['contracts.view'], Page: ContractsOverviewReportPage },
+    { path: 'contracts-renewals', allOf: ['contracts.view'], Page: ContractsRenewalsReportPage },
+    { path: 'contracts-rentals', allOf: ['contracts.view', 'assets.view'], Page: ContractsRentalsReportPage },
     // Stock
-    { path: 'stock-movements', anyOf: ['stock.view_events'], Page: StockMovementsReportPage },
-    { path: 'stock-below-min', anyOf: ['stock.view'], Page: StockBelowMinReportPage },
-    { path: 'stock-valuation', anyOf: ['stock.view'], Page: StockValuationReportPage },
+    { path: 'stock-movements', allOf: ['stock.view_events'], Page: StockMovementsReportPage },
+    { path: 'stock-below-min', allOf: ['stock.view'], Page: StockBelowMinReportPage },
+    { path: 'stock-valuation', allOf: ['stock.view'], Page: StockValuationReportPage },
     // Requests
-    { path: 'requests-overview', anyOf: ['requests.view_all'], Page: RequestsOverviewReportPage },
-    { path: 'requests-approvals', anyOf: ['requests.view_all'], Page: RequestsApprovalsReportPage },
-    { path: 'requests-it-pending', anyOf: ['requests.view_all'], Page: RequestsItPendingReportPage },
+    { path: 'requests-overview', allOf: ['requests.view_all'], Page: RequestsOverviewReportPage },
+    { path: 'requests-approvals', allOf: ['requests.view_all'], Page: RequestsApprovalsReportPage },
+    { path: 'requests-it-pending', allOf: ['requests.view_all'], Page: RequestsItPendingReportPage },
     // Employees
-    { path: 'employees-overview', anyOf: ['employees.view'], Page: EmployeesOverviewReportPage },
-    { path: 'employees-open-items', anyOf: ['employees.view'], Page: EmployeesOpenItemsReportPage },
+    { path: 'employees-overview', allOf: ['employees.view'], Page: EmployeesOverviewReportPage },
+    { path: 'employees-open-items', allOf: ['employees.view'], Page: EmployeesOpenItemsReportPage },
     // Access
-    { path: 'access-overview', anyOf: ['access.overview'], Page: AccessOverviewReportPage },
-    { path: 'access-resource-members', anyOf: ['access.email_view', 'access.file_view', 'access.social_view'], Page: AccessResourceMembersReportPage },
-    { path: 'access-software-licenses', anyOf: ['access.software_view'], Page: AccessSoftwareLicensesReportPage },
+    { path: 'access-overview', allOf: ['access.overview'], Page: AccessOverviewReportPage },
+    {
+        path: 'access-resource-members',
+        allOf: ['access.email_view', 'access.file_view', 'access.social_view'],
+        Page: AccessResourceMembersReportPage,
+    },
+    { path: 'access-software-licenses', allOf: ['access.software_view'], Page: AccessSoftwareLicensesReportPage },
 ];
