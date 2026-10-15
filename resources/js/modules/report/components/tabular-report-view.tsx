@@ -176,6 +176,7 @@ function TabularReportRows({
                     </div>
                 </Card>
             )}
+            {extras.afterTable?.({ filters, patch: onPatch })}
         </div>
     );
 }
@@ -266,7 +267,9 @@ function TabularReportBody({
                 onPatch={patch}
                 extras={extras}
                 columnPicker={<ColumnPicker definition={pickable} hidden={hidden} onToggle={toggle} onReset={resetColumns} />}
-                emptyState={<TabularEmptyState definition={definition} filters={filters} onPatch={patch} />}
+                emptyState={
+                    extras.emptyState?.({ filters, patch }) ?? <TabularEmptyState definition={definition} filters={filters} onPatch={patch} />
+                }
             />
             <ExportReportDialog
                 open={exportOpen}
@@ -327,6 +330,10 @@ export interface TabularReportExtras {
     /** A band at the top of the rows card, above its heading (what the list is narrowed to); null draws nothing. */
     rowsHead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     beforeTable?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
+    /** Cards under the rows card. */
+    afterTable?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
+    /** What the table says when it has no rows, in place of the shared TabularEmptyState. */
+    emptyState?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     rowClassName?: (row: Record<string, unknown>) => string | undefined;
     /** i18n key of the rows card's heading when the generic "รายการ" says too little for this page —
      *  or a function of the filters, so the heading names what the table holds now. */

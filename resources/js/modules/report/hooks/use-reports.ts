@@ -147,6 +147,33 @@ export const useAssetWarrantyBreakdown = (filters: TabularFilters) => {
     });
 };
 
+/** "ภาพรวมและค่าใช้จ่ายสัญญา" — every filter of the page shapes its cards. */
+export const useContractOverviewBreakdown = (filters: TabularFilters) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', 'contracts.overview', 'breakdown', filters],
+        queryFn: () => reportApi.contractOverviewBreakdown(filters),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+
+/** "ต่ออายุและสิ้นสุดสัญญา" — every filter of the page shapes its cards. */
+export const useContractRenewalsBreakdown = (filters: TabularFilters) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', 'contracts.renewals', 'breakdown', filters],
+        queryFn: () => reportApi.contractRenewalsBreakdown(filters),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+
+/** "สัญญาเช่าและทรัพย์สิน" — every filter of the page shapes its cards. */
+export const useContractRentalsBreakdown = (filters: TabularFilters) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', 'contracts.rentals', 'breakdown', filters],
+        queryFn: () => reportApi.contractRentalsBreakdown(filters),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+
 /** "ภาพรวมคำขอ" — every filter of the page shapes its cards. */
 export const useRequestOverviewBreakdown = (filters: TabularFilters) =>
     useQuery({

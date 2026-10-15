@@ -52,7 +52,8 @@ class ReportCatalogueTest extends TestCase
 
         $keys = array_column($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
-        $this->assertSame(['contracts.expiring', 'contracts.monthly_cost'], $keys);
+        // Rentals name who holds each unit, so they also need assets.view
+        $this->assertSame(['contracts.overview', 'contracts.renewals'], $keys);
     }
 
     public function test_stock_reports_split_between_view_and_the_event_log(): void
@@ -110,7 +111,7 @@ class ReportCatalogueTest extends TestCase
             ['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history', 'assets.writeoffs'],
             $keysFor(['assets.view']),
         );
-        $this->assertCount(19, $keysFor([
+        $this->assertCount(20, $keysFor([
             'tickets.view_all', 'tickets.resolve', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events',
             'requests.view_all', 'employees.view', 'access.software_view',
         ]));

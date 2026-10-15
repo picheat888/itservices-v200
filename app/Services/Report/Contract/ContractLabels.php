@@ -4,7 +4,7 @@ namespace App\Services\Report\Contract;
 
 /**
  * Contract type / billing-cycle labels shared by the contract tabular reports
- * (ContractExpiringReport, ContractMonthlyCostReport): the i18n key the page shows and the
+ * (ContractOverviewReport, ContractRenewalsReport, ContractRentalsReport): the i18n key the page shows and the
  * Thai label the Excel/PDF prints, so the two reports never word a contract differently.
  * Thai labels mirror resources/js/lang/th/contract.ts.
  */

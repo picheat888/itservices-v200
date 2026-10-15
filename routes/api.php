@@ -28,6 +28,9 @@ use App\Http\Controllers\Api\Report\AccessResourceMembersController;
 use App\Http\Controllers\Api\Report\AssetTransferBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWarrantyBreakdownController;
 use App\Http\Controllers\Api\Report\AssetWriteoffBreakdownController;
+use App\Http\Controllers\Api\Report\ContractOverviewBreakdownController;
+use App\Http\Controllers\Api\Report\ContractRenewalsBreakdownController;
+use App\Http\Controllers\Api\Report\ContractRentalsBreakdownController;
 use App\Http\Controllers\Api\Report\EmployeeOpenItemsBreakdownController;
 use App\Http\Controllers\Api\Report\EmployeeOverviewBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
@@ -124,6 +127,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/assets/transfer-history/breakdown', AssetTransferBreakdownController::class)->defaults('key', 'assets.transfer_history')->name('api.reports.assets.transfer-history.breakdown');
     // "ประกันใกล้หมดอายุ" — the next 12 months, time left, categories and vendors above its rows.
     Route::get('reports/assets/warranty-expiring/breakdown', AssetWarrantyBreakdownController::class)->defaults('key', 'assets.warranty_expiring')->name('api.reports.assets.warranty-expiring.breakdown');
+    // "ภาพรวมและค่าใช้จ่ายสัญญา" — tiles, bills over the next 12 months, yearly cost by type and cycle, and vendors.
+    Route::get('reports/contracts/overview/breakdown', ContractOverviewBreakdownController::class)->defaults('key', 'contracts.overview')->name('api.reports.contracts.overview.breakdown');
+    // "ต่ออายุและสิ้นสุดสัญญา" — tiles, contracts ending each month, time left and closed contracts.
+    Route::get('reports/contracts/renewals/breakdown', ContractRenewalsBreakdownController::class)->defaults('key', 'contracts.renewals')->name('api.reports.contracts.renewals.breakdown');
+    // "สัญญาเช่าและทรัพย์สิน" — tiles, asset status per contract and rent against buy per model.
+    Route::get('reports/contracts/rentals/breakdown', ContractRentalsBreakdownController::class)->defaults('key', 'contracts.rentals')->name('api.reports.contracts.rentals.breakdown');
     // "ภาพรวมสิทธิ์การเข้าถึง" — months, leavers still holding, departments and resources that need someone.
     Route::get('reports/access/overview/breakdown', AccessOverviewBreakdownController::class)->defaults('key', 'access.overview')->name('api.reports.access.overview.breakdown');
     // "ภาพรวมพนักงาน" — headcount chart, departments and leavers still holding access above its rows.

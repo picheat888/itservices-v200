@@ -15,8 +15,9 @@ import AssetsOverviewReportPage from './pages/assets-overview';
 import AssetsTransferHistoryReportPage from './pages/assets-transfer-history';
 import AssetsWarrantyExpiringReportPage from './pages/assets-warranty-expiring';
 import AssetsWriteoffsReportPage from './pages/assets-writeoffs';
-import ContractsExpiringReportPage from './pages/contracts-expiring';
-import ContractsMonthlyCostReportPage from './pages/contracts-monthly-cost';
+import ContractsOverviewReportPage from './pages/contracts-overview';
+import ContractsRenewalsReportPage from './pages/contracts-renewals';
+import ContractsRentalsReportPage from './pages/contracts-rentals';
 import EmployeesOpenItemsReportPage from './pages/employees-open-items';
 import EmployeesOverviewReportPage from './pages/employees-overview';
 import RequestsApprovalsReportPage from './pages/requests-approvals';
@@ -49,8 +50,9 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'assets-transfer-history', anyOf: ['assets.view'], Page: AssetsTransferHistoryReportPage },
     { path: 'assets-writeoffs', anyOf: ['assets.view'], Page: AssetsWriteoffsReportPage },
     // Contracts
-    { path: 'contracts-expiring', anyOf: ['contracts.view'], Page: ContractsExpiringReportPage },
-    { path: 'contracts-monthly-cost', anyOf: ['contracts.view'], Page: ContractsMonthlyCostReportPage },
+    { path: 'contracts-overview', anyOf: ['contracts.view'], Page: ContractsOverviewReportPage },
+    { path: 'contracts-renewals', anyOf: ['contracts.view'], Page: ContractsRenewalsReportPage },
+    { path: 'contracts-rentals', anyOf: ['contracts.view'], Page: ContractsRentalsReportPage },
     // Stock
     { path: 'stock-movements', anyOf: ['stock.view_events'], Page: StockMovementsReportPage },
     { path: 'stock-below-min', anyOf: ['stock.view'], Page: StockBelowMinReportPage },
