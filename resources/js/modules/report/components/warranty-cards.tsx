@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWarrantyBreakdown } from '../hooks/use-reports';
 import type { AssetWarrantyBreakdown, ChartTone, TabularFilters, WarrantyGroupFigures, WarrantyStatus } from '../types';
-import { barTop, CardTitle, CODE_LINK, CardEmpty as Empty, monthLabel, shortYear, Swatch } from './chart-parts';
+import { type BarPiece, barTop, CardTitle, CODE_LINK, CountBar, CardEmpty as Empty, monthLabel, shortYear, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -25,14 +25,6 @@ type Month = AssetWarrantyBreakdown['months'][number];
 type Category = AssetWarrantyBreakdown['categories'][number];
 type Vendor = AssetWarrantyBreakdown['vendors'][number];
 type Period = keyof WarrantyGroupFigures['periods'];
-
-/** One piece of a bar: what it is, its colour and its count. */
-interface Piece {
-    key: string;
-    label: string;
-    tone: ChartTone;
-    value: number;
-}
 
 /** Where the asset is now, in the order and colours of Settings → Assets. */
 const STATUSES: { key: WarrantyStatus; label_key: string; tone: ChartTone }[] = [
@@ -49,9 +41,6 @@ const PERIOD_TONES: Record<Period, ChartTone> = { expired: 'soft-red', within: '
 /** A month bar's piece gets its own count once it is at least this share of the tallest bar. */
 const SEGMENT_LABEL_SHARE = 0.12;
 
-/** Each piece of a counted bar keeps room for its number. */
-const PIECE_MIN_PX = 27;
-
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
 const NUM = 'text-right font-mono tabular-nums';
@@ -62,7 +51,7 @@ const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH
 const windowText = (t: T, within: number) => t(`rep_opt_${within}d`);
 
 /** The period set both tables share; the middle one drops out for a year-long window. */
-function periodPieces(t: T, within: number, periods: WarrantyGroupFigures['periods']): Piece[] {
+function periodPieces(t: T, within: number, periods: WarrantyGroupFigures['periods']): BarPiece[] {
     const keys: Period[] = within < 365 ? ['expired', 'within', 'mid', 'later'] : ['expired', 'within', 'later'];
     return keys.map((key) => ({
         key,
@@ -74,7 +63,7 @@ function periodPieces(t: T, within: number, periods: WarrantyGroupFigures['perio
     }));
 }
 
-function statusPieces(t: T, statuses: Record<WarrantyStatus, number>, shown = STATUSES): Piece[] {
+function statusPieces(t: T, statuses: Record<WarrantyStatus, number>, shown = STATUSES): BarPiece[] {
     return shown.map((s) => ({ key: s.key, label: t(s.label_key), tone: s.tone, value: statuses[s.key] }));
 }
 
@@ -84,7 +73,7 @@ function usedStatuses(sets: Record<WarrantyStatus, number>[]) {
 }
 
 /** A heading-right legend: a dot per piece, optionally with its count. */
-function Legend({ pieces, counts }: { pieces: Omit<Piece, 'value'>[]; counts?: Record<string, number> }) {
+function Legend({ pieces, counts }: { pieces: Omit<BarPiece, 'value'>[]; counts?: Record<string, number> }) {
     const lang = useUiStore((s) => s.lang);
     return (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -95,57 +84,6 @@ function Legend({ pieces, counts }: { pieces: Omit<Piece, 'value'>[]; counts?: R
                 </Swatch>
             ))}
         </span>
-    );
-}
-
-/**
- * A stacked bar with each count inside its piece (as the month chart's pieces). Every piece keeps
- * room for its number; with `scale`, the bar's length is its total against that scale.
- */
-function CountBar({ pieces, scale }: { pieces: Piece[]; scale?: number }) {
-    const lang = useUiStore((s) => s.lang);
-    const shown = pieces.filter((p) => p.value > 0);
-    const total = shown.reduce((sum, p) => sum + p.value, 0);
-    if (total === 0) return <span className="text-muted-foreground">—</span>;
-    const width = scale === undefined ? '100%' : `max(${Math.min(100, (total / Math.max(1, scale)) * 100)}%, ${shown.length * PIECE_MIN_PX}px)`;
-    const text = shown.map((p) => `${p.label} ${count(p.value, lang)}`).join(', ');
-
-    return (
-        <InfoPopover
-            label={text}
-            content={<PieceDetail pieces={shown} />}
-            className={cn('block w-full min-w-0 cursor-pointer rounded-full', scale !== undefined && 'dark:bg-muted bg-slate-200')}
-        >
-            <span aria-hidden className="flex h-5 gap-px overflow-hidden rounded-full" style={{ width }}>
-                {shown.map((p) => (
-                    <span
-                        key={p.key}
-                        className={cn(
-                            'flex min-w-[26px] items-center justify-center overflow-hidden font-mono text-[11px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                            FILL[p.tone],
-                        )}
-                        style={{ flex: `${p.value} 1 0` }}
-                    >
-                        {count(p.value, lang)}
-                    </span>
-                ))}
-            </span>
-        </InfoPopover>
-    );
-}
-
-/** A bar's popover: each piece with its mark and count. */
-function PieceDetail({ pieces }: { pieces: Piece[] }) {
-    const lang = useUiStore((s) => s.lang);
-    return (
-        <div className="space-y-1">
-            {pieces.map((p) => (
-                <div key={p.key} className="flex items-center justify-between gap-4">
-                    <Swatch fill={FILL[p.tone]}>{p.label}</Swatch>
-                    <b className="font-mono tabular-nums">{count(p.value, lang)}</b>
-                </div>
-            ))}
-        </div>
     );
 }
 
@@ -187,7 +125,7 @@ export function WarrantyStateSegments({ filters, patch }: { filters: TabularFilt
                     )}
                 >
                     {t(s.label)}
-                    {data && <span className="font-mono opacity-80">{count(data.category_totals?.periods[s.period] ?? 0, lang)}</span>}
+                    {data && <span className="font-mono">{count(data.category_totals?.periods[s.period] ?? 0, lang)}</span>}
                 </button>
             ))}
         </div>
