@@ -183,7 +183,7 @@ class ReportHubTest extends TestCase
         $this->assertSame(1, $tilesFor('period=90d')['requests_pending']['secondary']['value']);
         $this->assertSame(2, $tilesFor('period=custom&from=2026-01-01&to=2026-09-25')['requests_pending']['secondary']['value']);
         $this->assertSame(0, $tilesFor('period=custom&from=2026-03-01&to=2026-09-24')['requests_pending']['secondary']['value']);
-        // Same rule as "สัญญาใกล้หมดอายุ" at 30 days.
+        // Same rule as the "ต่ออายุและสิ้นสุดสัญญา" list at 30 days.
         $this->assertSame(1, $last30['contracts_expiring']['value']);
 
         $this->actingAs($user)->getJson('/api/reports/snapshot?period=decade')->assertUnprocessable();

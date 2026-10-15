@@ -711,6 +711,198 @@ export interface WarrantyGroupFigures {
 
 export type WarrantyStatus = 'ready' | 'deployed' | 'common' | 'pending_acceptance' | 'pending_return';
 
+/** GET /reports/contracts/overview/breakdown — ContractOverviewReport::breakdown(). */
+export interface ContractOverviewBreakdown {
+    tiles: {
+        active: number;
+        in_reminder: number;
+        monthly: number;
+        yearly: number;
+        /** Bills due from the 1st of this month to the end of the 12th month, every open contract. */
+        next_12: number;
+        next_12_bills: number;
+        /** Scheduled bills left until each open contract's end date. */
+        remaining: number;
+        /** End date (YYYY-MM-DD) of the open contract with bills left that runs longest. */
+        longest_end: string | null;
+        top_vendor: { vendor_id: number | null; name: string | null; name_th: string | null; yearly: number; share: number } | null;
+    };
+    /** This month and the next 11, each with its bills (ContractMonthCard). */
+    months: {
+        month: string;
+        items: {
+            id: number;
+            code: string;
+            name: string;
+            type: import('./components/contract-tones').ContractTypeKey;
+            amount: number;
+            date: string;
+            yearly: number;
+        }[];
+    }[];
+    biggest_bill: { id: number; code: string; name: string; amount: number; date: string } | null;
+    /** Every type, biggest yearly cost first (live contracts). */
+    types: { type: import('./components/contract-tones').ContractTypeKey; contracts: number; yearly: number }[];
+    cycles: { cycle: 'monthly' | 'quarterly' | 'yearly'; contracts: number; yearly: number }[];
+    yearly_total: number;
+    /** Live contracts by vendor, biggest yearly cost first; no vendor last. */
+    vendors: {
+        vendor_id: number | null;
+        name: string | null;
+        name_th: string | null;
+        contracts: number;
+        monthly: number;
+        yearly: number;
+        remaining: number;
+        /** Live contracts ending within 90 days. */
+        ending_soon: number;
+    }[];
+}
+
+/** GET /reports/contracts/renewals/breakdown — ContractRenewalsReport::breakdown(). */
+export interface ContractRenewalsBreakdown {
+    /** The "หมดภายใน" window in days. */
+    within: number;
+    tiles: {
+        within: { count: number; yearly: number };
+        soon: { count: number; nearest: { id: number; code: string; days: number } | null };
+        /** `days` is how long past its end the oldest one is. */
+        overdue: { count: number; oldest: { id: number; code: string; days: number } | null };
+        files: { missing: number; open: number };
+        closed_year: { count: number; cancelled: number; expired: number };
+    };
+    /** This month and the next 11: open contracts by the month they end (ContractMonthCard). */
+    months: {
+        month: string;
+        items: {
+            id: number;
+            code: string;
+            name: string;
+            type: 'software' | 'hardware' | 'service' | 'connectivity' | 'other';
+            amount: number;
+            date: string;
+            yearly: number;
+        }[];
+    }[];
+    open_total: number;
+    bands: {
+        key: ContractRenewalBand;
+        total: number;
+        yearly: number;
+        types: Record<'software' | 'hardware' | 'service' | 'connectivity' | 'other', number>;
+    }[];
+    /** The list's reminder and to-do cells, one per contract inside the window. */
+    list: ContractRenewalListItem[];
+    closed: {
+        range: ContractClosedRange;
+        cancelled: number;
+        expired: number;
+        unpaid: number;
+        rows: ContractClosedRow[];
+    };
+}
+
+export type ContractRenewalBand = 'overdue' | 'd30' | 'd90' | 'd180' | 'd365' | 'later';
+
+export type ContractClosedRange = 'year' | '12m' | 'all';
+
+export interface ContractRenewalListItem {
+    id: number;
+    in_reminder: boolean;
+    alert: {
+        /** Thresholds switched on, largest first. */
+        days: number[];
+        /** Thresholds already mailed (0 = the "ended" mail), largest first. */
+        sent: number[];
+        sent_at: string | null;
+        state: 'off' | 'sent' | 'missed' | 'waiting';
+        starts_in: number | null;
+    };
+    todo: {
+        main: 'overdue' | 'today' | 'return_rent' | 'decide_ma' | 'contact' | 'not_yet';
+        rented: number;
+        bought: number;
+        held: number;
+    };
+}
+
+export interface ContractClosedRow {
+    id: number;
+    code: string;
+    name: string;
+    vendor: { name: string; name_th: string | null } | null;
+    type: string;
+    kind: 'cancelled' | 'expired';
+    closed_at: string;
+    end_date: string;
+    /** Days from the end date to the day it closed: negative = closed before its end. */
+    gap: number;
+    /** Bills after the cancel date up to the end date × value; 0 for an ended contract. */
+    unpaid: number;
+    reason: string | null;
+    by: string | null;
+}
+
+/** Where a hardware contract's linked assets came from: any rented unit makes it a rental. */
+export type ContractRentalKind = 'rent' | 'buy' | 'none';
+
+/** A contract's state as the /contracts list words it, with "reminder" for an active one inside its reminder window. */
+export type ContractRentalState = 'active' | 'reminder' | 'due_today' | 'overdue' | 'cancelled' | 'expired';
+
+export type RentalAssetStatus = WarrantyStatus | 'writeoff';
+
+/** GET /reports/contracts/rentals/breakdown — ContractRentalsReport::breakdown(). */
+export interface ContractRentalsBreakdown {
+    scope: 'open' | 'all';
+    tiles: {
+        contracts: { total: number; rent: number; buy: number; none: number };
+        /** Rented units not written off, on contracts not yet past their end. */
+        rented_in_use: number;
+        avg_per_unit: number | null;
+        due_soon: number;
+        due_soon_held: number;
+        due_soon_ready: number;
+        ended_out: number;
+        ended_out_contracts: number;
+        unlinked: number;
+        unlinked_yearly: number;
+    };
+    /** Linked contracts (needing action first), then the unlinked ones. */
+    contracts: {
+        id: number;
+        code: string;
+        name: string;
+        vendor: ChartLabel | null;
+        kind: ContractRentalKind;
+        units: number;
+        statuses: Record<RentalAssetStatus, number>;
+        per_unit: number | null;
+        yearly: number;
+        end_date: string;
+        days_left: number;
+        state: ContractRentalState;
+        due_soon: number;
+        ended_out: number;
+        rank: number;
+    }[];
+    /** Models rented on running contracts, most extra over buying first. */
+    models: {
+        model_id: number | null;
+        name: string | null;
+        brand: string | null;
+        category: ChartLabel;
+        contracts: number;
+        units: number;
+        per_unit: number;
+        term_months: number;
+        rent_total: number;
+        avg_buy: number | null;
+        bought: number;
+        break_even_months: number | null;
+        over_buy: number | null;
+    }[];
+}
+
 export interface AssetWarrantyBreakdown {
     /** The "ภายใน" window in days. */
     within: number;

@@ -48,7 +48,7 @@ class ReportSnapshotService
             $this->slaRate($viewer, $from, $to),
             $this->requestsPending($viewer, $from, $to),
             $this->assetsInUse($viewer),
-            $this->fromTabular($viewer, 'contracts_expiring', ReportCatalogue::CONTRACTS_EXPIRING, ['within' => 30], 'overdue', 'overdue'),
+            $this->fromTabular($viewer, 'contracts_expiring', ReportCatalogue::CONTRACTS_RENEWALS, ['within' => 30], 'overdue', 'overdue'),
             $this->fromTabular($viewer, 'stock_below_min', ReportCatalogue::STOCK_BELOW_MIN, [], 'out_of_stock', 'out'),
         ]));
 

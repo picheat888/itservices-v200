@@ -11,6 +11,9 @@ import type {
     AssetWarrantyBreakdown,
     AssetWriteoffBreakdown,
     BacklogBoardTicket,
+    ContractOverviewBreakdown,
+    ContractRenewalsBreakdown,
+    ContractRentalsBreakdown,
     EmployeeOpenItemsBreakdown,
     EmployeeOverviewBreakdown,
     ExportFormat,
@@ -110,6 +113,24 @@ export const reportApi = {
     assetTransferBreakdown: (filters: TabularFilters) =>
         http
             .get<{ data: AssetTransferBreakdown }>('/reports/assets/transfer-history/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "ภาพรวมและค่าใช้จ่ายสัญญา": tiles, bills over the next 12 months, yearly cost by type and cycle, and vendors. */
+    contractOverviewBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: ContractOverviewBreakdown }>('/reports/contracts/overview/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "ต่ออายุและสิ้นสุดสัญญา": tiles, contracts ending each month, time left and closed contracts. */
+    contractRenewalsBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: ContractRenewalsBreakdown }>('/reports/contracts/renewals/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "สัญญาเช่าและทรัพย์สิน": tiles, asset status per contract and rent against buy per model. */
+    contractRentalsBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: ContractRentalsBreakdown }>('/reports/contracts/rentals/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
 
     /** "ประกันใกล้หมดอายุ": the next 12 months, time left, and the categories and vendors in periods. */

@@ -4,7 +4,8 @@ import { bindDateFormat } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ChevronDown, ChevronUp, Info } from 'lucide-react';
-import type { ChartLabel, ChartSeries } from '../types';
+import { Fragment } from 'react';
+import type { ChartLabel, ChartSeries, ChartTone } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { FILL, TEXT } from './chart-tones';
 import { InfoPopover } from './info-popover';
@@ -237,7 +238,7 @@ export function InfoMark({ info }: { info: string | string[] }) {
     return (
         <InfoPopover
             label={[info].flat().join(' ')}
-            className="text-muted-foreground hover:text-foreground -m-1 p-1"
+            className="text-muted-foreground hover:text-foreground -m-1.5 p-1.5"
             content={
                 <div className="max-w-64 space-y-1.5">
                     {[info].flat().map((line) => (
@@ -261,7 +262,86 @@ export function Swatch({ fill, children }: { fill: string; children: React.React
     );
 }
 
+/** A translated sentence with its {slot}s filled: `bold` slots as bold figures, `plain` slots as they are. */
+export function rich(template: string, bold: Record<string, React.ReactNode>, plain: Record<string, React.ReactNode> = {}) {
+    return template.split(/(\{\w+\})/).map((part, i) => {
+        const slot = /^\{(\w+)\}$/.exec(part)?.[1];
+        if (slot && slot in bold) {
+            return (
+                <b key={i} className="text-foreground font-mono font-semibold tabular-nums">
+                    {bold[slot]}
+                </b>
+            );
+        }
+        return <Fragment key={i}>{slot && slot in plain ? plain[slot] : part}</Fragment>;
+    });
+}
+
 /** A card body with nothing to draw. */
 export function CardEmpty({ children }: { children: React.ReactNode }) {
     return <div className="text-muted-foreground flex flex-1 items-center justify-center px-5 py-10 text-center text-sm">{children}</div>;
+}
+
+/** One piece of a counted bar: what it is, its colour and its count. */
+export interface BarPiece {
+    key: string;
+    label: string;
+    tone: ChartTone;
+    value: number;
+}
+
+/** Each piece of a counted bar keeps room for its number. */
+const PIECE_MIN_PX = 27;
+
+const pieceCount = (n: number, lang: string) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+
+/**
+ * A stacked bar with each count inside its piece (as the month chart's pieces). Every piece keeps
+ * room for its number; with `scale`, the bar's length is its total against that scale.
+ */
+export function CountBar({ pieces, scale }: { pieces: BarPiece[]; scale?: number }) {
+    const lang = useUiStore((s) => s.lang);
+    const shown = pieces.filter((p) => p.value > 0);
+    const total = shown.reduce((sum, p) => sum + p.value, 0);
+    if (total === 0) return <span className="text-muted-foreground">—</span>;
+    const width = scale === undefined ? '100%' : `max(${Math.min(100, (total / Math.max(1, scale)) * 100)}%, ${shown.length * PIECE_MIN_PX}px)`;
+    const text = shown.map((p) => `${p.label} ${pieceCount(p.value, lang)}`).join(', ');
+
+    return (
+        <InfoPopover
+            label={text}
+            content={<PieceDetail pieces={shown} />}
+            className={cn('block w-full min-w-0 cursor-pointer rounded-full', scale !== undefined && 'dark:bg-muted bg-slate-200')}
+        >
+            <span aria-hidden className="flex h-5 gap-px overflow-hidden rounded-full" style={{ width }}>
+                {shown.map((p) => (
+                    <span
+                        key={p.key}
+                        className={cn(
+                            'flex min-w-[26px] items-center justify-center overflow-hidden font-mono text-[11px] leading-none font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
+                            FILL[p.tone],
+                        )}
+                        style={{ flex: `${p.value} 1 0` }}
+                    >
+                        {pieceCount(p.value, lang)}
+                    </span>
+                ))}
+            </span>
+        </InfoPopover>
+    );
+}
+
+/** A bar's popover: each piece with its mark and count. */
+export function PieceDetail({ pieces }: { pieces: BarPiece[] }) {
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <div className="space-y-1">
+            {pieces.map((p) => (
+                <div key={p.key} className="flex items-center justify-between gap-4">
+                    <Swatch fill={FILL[p.tone]}>{p.label}</Swatch>
+                    <b className="font-mono tabular-nums">{pieceCount(p.value, lang)}</b>
+                </div>
+            ))}
+        </div>
+    );
 }

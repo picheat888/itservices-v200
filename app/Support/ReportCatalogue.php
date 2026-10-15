@@ -10,8 +10,9 @@ use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
 use App\Services\Report\Asset\AssetWriteoffReport;
 use App\Services\Report\Asset\WarrantyExpiringReport;
-use App\Services\Report\Contract\ContractExpiringReport;
-use App\Services\Report\Contract\ContractMonthlyCostReport;
+use App\Services\Report\Contract\ContractOverviewReport;
+use App\Services\Report\Contract\ContractRenewalsReport;
+use App\Services\Report\Contract\ContractRentalsReport;
 use App\Services\Report\Employee\EmployeeOpenItemsReport;
 use App\Services\Report\Employee\EmployeeOverviewReport;
 use App\Services\Report\Request\ItPendingRequestReport;
@@ -53,11 +54,13 @@ class ReportCatalogue
 
     public const ASSETS_WRITEOFFS = 'assets.writeoffs';
 
-    public const CONTRACTS_EXPIRING = 'contracts.expiring';
+    public const CONTRACTS_OVERVIEW = 'contracts.overview';
+
+    public const CONTRACTS_RENEWALS = 'contracts.renewals';
+
+    public const CONTRACTS_RENTALS = 'contracts.rentals';
 
     public const ASSETS_WARRANTY_EXPIRING = 'assets.warranty_expiring';
-
-    public const CONTRACTS_MONTHLY_COST = 'contracts.monthly_cost';
 
     public const STOCK_MOVEMENTS = 'stock.movements';
 
@@ -127,18 +130,27 @@ class ReportCatalogue
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
-            self::CONTRACTS_EXPIRING => [
+            self::CONTRACTS_OVERVIEW => [
                 'domain' => 'contracts',
                 'kind' => 'tabular',
-                'class' => ContractExpiringReport::class,
+                'class' => ContractOverviewReport::class,
                 'requires' => ['contracts.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
-            self::CONTRACTS_MONTHLY_COST => [
+            self::CONTRACTS_RENEWALS => [
                 'domain' => 'contracts',
                 'kind' => 'tabular',
-                'class' => ContractMonthlyCostReport::class,
+                'class' => ContractRenewalsReport::class,
                 'requires' => ['contracts.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            // Hardware contracts only: assets per contract, returns due, rent against buy per model.
+            self::CONTRACTS_RENTALS => [
+                'domain' => 'contracts',
+                'kind' => 'tabular',
+                'class' => ContractRentalsReport::class,
+                // Its rows name who holds each unit and where: asset data
+                'requires' => ['contracts.view', 'assets.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::ASSETS_OVERVIEW => [

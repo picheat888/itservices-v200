@@ -18,7 +18,7 @@ use Tests\TestCase;
  * Two asset tabular reports — "ภาพรวมของทรัพย์สิน" (assets.overview — its list, the old register) and
  * "ประกันใกล้หมดอายุ" (assets.warranty_expiring) — exercised end to end through the
  * generic /reports/tabular/{key} endpoints, the same way TabularReportEngineTest covers
- * contracts.expiring.
+ * contracts.renewals.
  */
 class AssetReportsTest extends TestCase
 {
