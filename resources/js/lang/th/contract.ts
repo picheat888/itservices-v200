@@ -16,13 +16,13 @@ export const contract: Dict = {
     contracts_title: 'สัญญา',
     contracts_sub: 'สัญญากับผู้ขายและผู้ให้บริการ พร้อมแจ้งเตือนวันหมดอายุ',
     contract_code: 'เลขที่สัญญา',
-    contract_code_hint: 'จำเป็นต้องกรอก และต้องไม่ซ้ำ',
+    contract_code_hint: 'ต้องกรอก และห้ามซ้ำกับสัญญาอื่น',
     contract_vendor: 'ผู้ขาย',
     contract_details: 'รายละเอียด',
     contract_section_info: 'ข้อมูลสัญญา',
-    contract_section_term: 'ระยะเวลา & มูลค่า',
+    contract_section_term: 'ระยะเวลาและมูลค่า',
     contract_section_notify: 'การแจ้งเตือน',
-    contract_section_closure: 'ยกเลิก & สิ้นสุดสัญญา',
+    contract_section_closure: 'ยกเลิกและสิ้นสุดสัญญา',
     contract_value_per_cycle: 'มูลค่า/รอบ',
     contract_total_value: 'มูลค่าทั้งหมด',
     contract_notes: 'หมายเหตุ',
@@ -33,15 +33,13 @@ export const contract: Dict = {
     contract_days_remaining: 'วันที่เหลือ',
     contract_duration: 'ระยะเวลาสัญญา',
     contract_reminder_threshold: 'เริ่มแจ้งเตือน',
-    contract_created: 'สร้างเมื่อ',
-    contract_updated: 'อัปเดตล่าสุด',
+    contract_created: 'เพิ่มเมื่อ',
+    contract_updated: 'แก้ไขล่าสุด',
     contract_cancelled_on: 'ยกเลิกเมื่อ',
     contract_cancelled_by: 'ยกเลิกโดย',
     contract_expired_on: 'สิ้นสุดเมื่อ',
     expiring_soon: 'ใกล้หมดอายุ',
     expired_contracts: 'เกินกำหนด',
-    expiring_soon_hint: 'สัญญาที่กำลังจะหมดอายุ',
-    expired_contracts_hint: 'สัญญาที่เลยวันสิ้นสุด ยังต้องดำเนินการ',
     contract_overdue: 'เกินกำหนด',
     contract_expired: 'สิ้นสุดแล้ว',
     contract_expire: 'สิ้นสุดสัญญา',
@@ -64,7 +62,6 @@ export const contract: Dict = {
     contract_attachments: 'เอกสารแนบ',
     contract_link_assets: 'ทรัพย์สินที่ผูก',
     contract_link_assets_sub: 'เชื่อมโยงทรัพย์สินที่เช่าใช้กับสัญญานี้',
-    contract_renew: 'ต่ออายุ',
     contract_cancel: 'ยกเลิกสัญญา',
     contract_reactivate: 'เปิดใช้อีกครั้ง',
     contract_cancelled: 'ยกเลิกแล้ว',
@@ -80,7 +77,7 @@ export const contract: Dict = {
     contract_delete_note: 'ลบสัญญาและเอกสารแนบทั้งหมดออกอย่างถาวร ใช้สำหรับกรณีเพิ่มผิดเท่านั้น และไม่สามารถกู้คืนได้',
     contract_cancel_confirm_title: 'ยืนยันยกเลิกสัญญา?',
     contract_cancel_reason: 'เหตุผลการยกเลิก',
-    contract_cancel_reason_ph: 'เช่น เลิกใช้ผู้ให้บริการ, เปลี่ยนไปใช้สัญญาใหม่ ฯลฯ',
+    contract_cancel_reason_ph: 'เช่น เลิกใช้ผู้ให้บริการรายนี้ หรือเปลี่ยนไปใช้สัญญาใหม่',
     contract_cancel_reason_required: 'กรุณาระบุเหตุผล',
     contract_cancel_failed: 'ยกเลิกไม่สำเร็จ',
 
@@ -98,16 +95,16 @@ export const contract: Dict = {
 
     // contract-form-drawer.tsx — step headings
     contract_step_n: 'ขั้นที่ {n}',
-    contract_step_type_sub: 'เลือกหมวดหมู่ เพื่อให้ระบบแสดงเฉพาะฟิลด์ที่จำเป็น',
+    contract_step_type_sub: 'เลือกประเภทสัญญา ฟอร์มจะแสดงเฉพาะช่องที่ต้องกรอก',
     contract_step_details_title: 'ข้อมูลสัญญา',
-    contract_step_details_sub: 'ระบุรหัสอ้างอิง รายละเอียด ผู้จำหน่าย ชื่อสัญญา และแนบเอกสารสัญญา',
+    contract_step_details_sub: 'ระบุเลขที่สัญญา รายละเอียด ผู้ขาย ชื่อสัญญา และแนบเอกสารสัญญา',
     contract_step_term_title: 'ระยะเวลาและมูลค่า',
     contract_step_term_sub: 'กำหนดวันเริ่ม–สิ้นสุด มูลค่า และรอบการเรียกเก็บ',
     contract_step_reminders_title: 'แจ้งเตือนก่อนหมดอายุ',
     contract_step_reminders_sub: 'เลือกอย่างน้อย 1 ช่วง ระบบจะส่งอีเมลและแจ้งเตือนในระบบ',
-    contract_step_link_assets_sub: 'เลือกทรัพย์สินที่ผูกกับสัญญานี้ (เฉพาะสัญญาประเภท Hardware)',
+    contract_step_link_assets_sub: 'เลือกทรัพย์สินที่ผูกกับสัญญานี้ (เฉพาะสัญญาฮาร์ดแวร์)',
     contract_step_review_title: 'ตรวจสอบก่อนบันทึก',
-    contract_step_review_sub: 'ตรวจสอบความถูกต้อง แก้ไขขั้นใดก็ได้จากแถบด้านบน',
+    contract_step_review_sub: 'ตรวจดูอีกครั้ง ถ้าต้องแก้ให้กดที่ขั้นนั้นในแถบด้านบน',
 
     // contract-form-drawer.tsx — type cards
     contract_type_software_sub: 'License / SaaS',
@@ -118,25 +115,25 @@ export const contract: Dict = {
 
     // contract-form-drawer.tsx — contract details and term fields
     contract_details_ph: 'เช่น สัญญาเช่าเครื่องพิมพ์ประจำปี',
-    contract_vendor_ph: 'เลือกผู้จำหน่าย',
+    contract_vendor_ph: 'เลือกผู้ขาย',
     contract_name_ph: 'เช่น Microsoft 365 - 320 สิทธิ์',
     contract_notes_ph: 'รายละเอียดเพิ่มเติม (ถ้ามี)',
     contract_estimate: 'ประมาณการ',
     contract_estimate_use: 'ใช้ค่านี้',
 
     // contract-form-drawer.tsx — linked assets picker
-    contract_link_assets_hardware_only: 'ผูกทรัพย์สินได้เฉพาะสัญญาประเภท Hardware - เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้',
-    contract_link_assets_search_ph: 'ค้นหา tag / ชื่อ',
+    contract_link_assets_hardware_only: 'ผูกทรัพย์สินได้เฉพาะสัญญาฮาร์ดแวร์ เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้',
+    contract_link_assets_search_ph: 'ค้นหารหัสทรัพย์สินหรือชื่อ',
     contract_link_assets_loading: 'กำลังโหลด…',
-    contract_link_assets_none: 'ไม่มี asset ให้เลือก',
+    contract_link_assets_none: 'ไม่มีทรัพย์สินให้เลือก',
     contract_link_assets_selected: 'เลือกแล้ว {n} รายการ',
-    contract_link_asset_locked: 'ตัดจำหน่ายหรือคืนผู้ให้เช่าแล้ว ผูกกับสัญญานี้ถาวร',
+    contract_link_asset_locked: 'ถอดออกไม่ได้ เพราะตัดจำหน่ายหรือคืนผู้ให้เช่าแล้ว',
     contract_type_locked: 'สัญญานี้มีทรัพย์สินที่คืนผู้ให้เช่าหรือตัดจำหน่ายแล้ว จึงต้องเป็นประเภทฮาร์ดแวร์',
     contract_asset_returned_to_vendor: 'คืนผู้ให้เช่าแล้ว',
 
     // contract-form-drawer.tsx — review card
-    contract_review_code: 'Contract No',
-    contract_review_name: 'Contract name',
+    contract_review_code: 'เลขที่สัญญา',
+    contract_review_name: 'ชื่อสัญญา',
     contract_review_term: 'ระยะเวลา',
     contract_review_assets_linked: '{n} รายการ',
     contract_files_one: '{n} ไฟล์',
@@ -148,10 +145,10 @@ export const contract: Dict = {
     contract_err_notify_required: 'เลือกอย่างน้อย 1 ช่วง',
 
     // pages/index.tsx — alert banners
-    contract_banner_expiring_one: 'ใกล้หมดอายุ : {n} สัญญา',
-    contract_banner_expiring_many: 'ใกล้หมดอายุ : {n} สัญญา',
-    contract_banner_overdue_one: 'เกินกำหนด : {n} สัญญา',
-    contract_banner_overdue_many: 'เกินกำหนด : {n} สัญญา',
+    contract_banner_expiring_one: 'สัญญาใกล้หมดอายุ {n} สัญญา',
+    contract_banner_expiring_many: 'สัญญาใกล้หมดอายุ {n} สัญญา',
+    contract_banner_overdue_one: 'สัญญาเกินกำหนด {n} สัญญา',
+    contract_banner_overdue_many: 'สัญญาเกินกำหนด {n} สัญญา',
 
     // pages/index.tsx — filters and sort
     contract_filter_all_types: 'ทุกประเภท',
@@ -167,19 +164,17 @@ export const contract: Dict = {
     // pages/index.tsx — contract table and pagination
     contract_days_overdue_short: 'เกินกำหนด {n} วัน',
     contract_badge_new: 'ใหม่',
-    contract_rows_per_page: 'แสดง',
-    contract_page_of: 'จาก',
 
     // pages/index.tsx — Overview tab
-    contract_hint_in_reminder: 'ตามช่วงแจ้งเตือนสัญญา',
+    contract_hint_in_reminder: 'อยู่ในช่วงแจ้งเตือนแล้ว',
     contract_hint_excl_cancelled: 'ไม่รวมสัญญาที่ยกเลิก',
     contract_timeline_upcoming: 'กำลังจะถึง',
     contract_timeline_in_reminder: 'ในช่วงแจ้งเตือน',
-    contract_timeline_overdue: 'เลยกำหนด',
+    contract_timeline_overdue: 'เกินกำหนด',
     contract_timeline_empty: 'ไม่มีสัญญาที่หมดอายุในช่วง 12 เดือนนี้',
     contract_timeline_ends: 'หมดอายุ {date}',
     contract_timeline_open: 'ดูสัญญา',
-    contract_timeline_expired_ago: 'หมดอายุไป {n} วัน',
+    contract_timeline_expired_ago: 'เกินกำหนด {n} วัน',
     contract_timeline_now: 'ปัจจุบัน',
 
     // contract-detail-drawer.tsx — header, tabs and days badge
@@ -192,7 +187,7 @@ export const contract: Dict = {
 
     // contract-detail-drawer.tsx — close and reactivate confirmations
     contract_cannot_close_title: 'ยังปิดสัญญาไม่ได้',
-    contract_cannot_close_desc: 'ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก {n} รายการ',
+    contract_cannot_close_desc: 'ต้องตัดจำหน่ายทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก {n} รายการ',
     contract_got_it: 'เข้าใจแล้ว',
     contract_reactivate_confirm_title: 'เปิดใช้สัญญาอีกครั้ง?',
 
@@ -206,10 +201,10 @@ export const contract: Dict = {
 
     // contract-assets-tab.tsx — linked assets table
     contract_assets_empty: 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน',
-    contract_asset_col_id: 'Asset ID',
+    contract_asset_col_id: 'รหัสทรัพย์สิน',
     contract_asset_col_name: 'ชื่อ',
-    contract_asset_col_serial: 'Serial',
-    contract_asset_col_owner: 'เจ้าของ',
+    contract_asset_col_serial: 'หมายเลขซีเรียล',
+    contract_asset_col_owner: 'ผู้ถือครอง',
 
     // contract-attachments-tab.tsx — preview toolbar
     contract_open_new_tab: 'เปิดแท็บใหม่',
