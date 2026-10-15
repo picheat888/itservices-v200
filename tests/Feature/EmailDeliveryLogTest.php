@@ -117,7 +117,7 @@ class EmailDeliveryLogTest extends TestCase
 
         $this->assertCount(3, $response->json('data'));
         $this->assertSame('c', $response->json('data.0.template_key'));
-        $this->assertSame(['sent' => 1, 'failed' => 1, 'skipped' => 1], $response->json('meta.counts'));
+        $this->assertSame(['all' => 3, 'sent' => 1, 'failed' => 1, 'skipped' => 1], $response->json('meta.counts'));
     }
 
     public function test_the_log_endpoint_filters_by_status_and_searches_the_recipient(): void
@@ -132,7 +132,9 @@ class EmailDeliveryLogTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.recipient_name', 'Manee Jaidee')
             // Counts stay whole-log even while the list is filtered.
-            ->assertJsonPath('meta.counts.sent', 1);
+            ->assertJsonPath('meta.counts.sent', 1)
+            ->assertJsonPath('meta.counts.all', 2)
+            ->assertJsonPath('meta.total', 1);
 
         $this->getJson('/api/email-logs?search=Manee')
             ->assertOk()

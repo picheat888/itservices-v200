@@ -23,7 +23,11 @@ export interface Column<T> {
      * the remainder, truncating rather than pushing the others around.
      */
     width?: string;
+    /** Hide the column (header and cells) on screens narrower than this breakpoint, e.g. a tablet in portrait. */
+    hideBelow?: 'lg' | 'xl';
 }
+
+const HIDE_BELOW: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell' };
 
 interface DataTableProps<T> {
     columns: Column<T>[];
@@ -182,6 +186,7 @@ export function DataTable<T>({
     const stickyHeader = !fillHeight && (maxBodyHeight !== undefined || fitsWidth);
 
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
+    const hideClass = (c: Column<T>) => (c.hideBelow ? HIDE_BELOW[c.hideBelow] : undefined);
 
     // Keys pressed on a control inside the row (a menu, a switch) stay with that control.
     const onRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: T) => {
@@ -261,6 +266,7 @@ export function DataTable<T>({
                                         // several and makes the header row taller than every data row.
                                         'text-muted-foreground px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase',
                                         alignClass(c.align),
+                                        hideClass(c),
                                     )}
                                 >
                                     {c.header}
@@ -274,7 +280,7 @@ export function DataTable<T>({
                             Array.from({ length: pageRows.length || loadingRows || 6 }).map((_, r) => (
                                 <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
                                     {columns.map((c, ci) => (
-                                        <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align))}>
+                                        <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align), hideClass(c))}>
                                             {loadingAvatar && ci === 0 ? (
                                                 <div className="flex items-center gap-2.5">
                                                     <div className="bg-muted h-8 w-8 shrink-0 animate-pulse rounded-full" />
@@ -321,7 +327,10 @@ export function DataTable<T>({
                                     )}
                                 >
                                     {columns.map((c) => (
-                                        <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align), c.className)}>
+                                        <td
+                                            key={c.key}
+                                            className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align), c.className, hideClass(c))}
+                                        >
                                             {c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)}
                                         </td>
                                     ))}

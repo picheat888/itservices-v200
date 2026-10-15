@@ -9,14 +9,19 @@ import { DataTable, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
-import { Field } from '@/shared/components/field';
+import { EmptyPane } from '@/shared/components/empty-pane';
+import { Field, FormErrorBanner, type FieldControlProps } from '@/shared/components/field';
+import { LoadFailed } from '@/shared/components/load-failed';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordStamps } from '@/shared/components/record-stamps';
+import { SaveButton } from '@/shared/components/save-button';
 import { SectionLabel } from '@/shared/components/section-label';
-import { SettingToggle } from '@/shared/components/setting-toggle';
+import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { useListParams, type ListParamPatch } from '@/shared/hooks/use-list-params';
+import { useListParams } from '@/shared/hooks/use-list-params';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { bindDateFormat, relativeTime, type DateFormatter } from '@/shared/lib/datetime';
@@ -28,6 +33,8 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import {
@@ -36,6 +43,7 @@ import {
     Check,
     ChevronUp,
     CornerDownLeft,
+    History,
     Italic,
     Link2,
     List,
@@ -44,18 +52,13 @@ import {
     PenLine,
     Pilcrow,
     RotateCcw,
-    Save,
     Search,
     Send,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
-// Sample values used to render {{variables}} in the preview / test drawer.
-//
-// Must list every variable the standard templates use — the chips below are the only place
-// an author finds out a variable exists, so one missing here is a variable nobody inserts.
-// EmailTemplateController::sampleVars() is the matching map on the server.
+// Sample values for {{variables}} in the preview; mirrors EmailTemplateController::sampleVars().
 const SAMPLE_VARS: Record<string, string> = {
     'user.first_name': 'Thanapon',
     'user.email': 'thanapon@abcd.co.th',
@@ -130,17 +133,13 @@ const SAMPLE_VARS: Record<string, string> = {
     'employee.working': '2026-09-01',
     'digest.count': '2',
     'digest.open_count': '2',
-    // The same numbers as the API's preview sample (EmailTemplateController), so the subject line
-    // above the preview agrees with the body: 2 waiting + 1 in progress = 3.
+    // Same numbers as the API preview sample: 2 waiting + 1 in progress = 3.
     'digest.working_count': '1',
     'digest.total': '3',
     'digest.expiring_count': '2',
     'digest.overdue_count': '1',
-    // Overridden with the real brand where it is rendered; this is the chip-list entry.
     'app.name': 'IT Service Desk',
-    // Placeholders only. The body preview is rendered by the API (EmailTemplateController's
-    // own sample vars), which holds the real example lists and tables; this map drives the
-    // variable chips and the subject line above the preview frame.
+    // Tables are filled by the API preview; listed here for the variable chips only.
     'asset.table': '',
     'digest.table': '',
     'digest.open_table': '',
@@ -155,9 +154,7 @@ const SAMPLE_VARS: Record<string, string> = {
     'stock.items_table': '',
 };
 
-// Every variable an author can insert, A-Z. SAMPLE_VARS is grouped by module for whoever
-// maintains it; the menu is read by someone hunting for one name, and hunting is alphabetical.
-// Sample values that are dates; written in the date setting with English month names, as the sent mail is.
+// Sample values that are dates, written in the date setting as the sent mail is.
 const SAMPLE_DATE_KEYS = new Set([
     'report.period',
     'stock.request_date',
@@ -182,13 +179,10 @@ function samplesIn(fmt: DateFormatter): Record<string, string> {
     );
 }
 
+// Every variable an author can insert, A-Z.
 const VARIABLE_NAMES = Object.keys(SAMPLE_VARS).sort((a, b) => a.localeCompare(b));
 
-/**
- * When a template goes out and to whom, in plain words, from the email_when_* / email_to_*
- * lang keys. Null for a template they don't describe (one an administrator added), which
- * then shows its technical key instead.
- */
+/** When a template goes out and to whom (email_when_* / email_to_*); null when no text exists for it. */
 function templateAudience(t: (key: string) => string, key: string): { when: string; to: string } | null {
     const id = key.replace(/\./g, '_');
     const when = t(`email_when_${id}`);
@@ -203,7 +197,6 @@ function TemplateAudienceLine({ templateKey }: { templateKey: string }) {
     if (!audience) return <span className="text-muted-foreground font-mono text-xs">{templateKey}</span>;
 
     return (
-        // Two label/value pairs set apart by space alone: the muted labels already mark where each starts.
         <span title={templateKey} className="text-muted-foreground inline-flex flex-wrap gap-x-5 text-xs">
             <span>
                 {t('email_when_label')} <span className="text-foreground">{audience.when}</span>
@@ -220,11 +213,7 @@ function variablesIn(text: string): string[] {
     return Array.from(new Set(Array.from(text.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
 }
 
-/**
- * The tokens this template's mail is not given — a typo, or one from another event. The
- * sender only replaces what it hands over, so these would reach the reader as literal
- * {{text}}. None when the template has no known list (a custom template).
- */
+/** Tokens this template's mail is not given, which would reach the reader as literal {{text}}. */
 function unknownVariables(tokens: string[], variables: string[] | null): string[] {
     return variables ? tokens.filter((tk) => !variables.includes(tk)) : [];
 }
@@ -246,39 +235,34 @@ function TagText({ text }: { text: string }) {
     );
 }
 
-/**
- * One line under the body editor saying whether its HTML is sound: blue when it is, a red
- * "HTML Syntax error" when it is not (the lines show red in the number column). Its height
- * never changes, so the editor keeps its size however many problems there are; the full
- * list opens over the editor on click.
- */
+/** One fixed-height line under the body editor: HTML sound or not; the full list opens on click. */
 function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: number }) {
     const t = useT();
     const triggerRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
-    // Inside the modal editor the list must portal into the dialog, or its clicks are dead.
+    // The list portals into the dialog, or its clicks are dead.
     const [container, setContainer] = useState<HTMLElement | null>(null);
     const total = (
-        <span className="text-muted-foreground ml-auto font-mono text-[11px]">
-            {t('email_html_line_count').replace('{count}', String(lineCount))}
-        </span>
+        <span className="text-muted-foreground ml-auto text-xs tabular-nums">{t('email_html_line_count').replace('{count}', String(lineCount))}</span>
     );
 
     if (issues.length === 0) {
         return (
-            <div role="status" className="border-border bg-brand/5 text-brand flex h-7 shrink-0 items-center gap-1.5 border-t px-2.5 text-xs">
-                <Check className="h-3.5 w-3.5" />
-                {t('email_html_ok')}
+            <div className="border-border bg-brand/5 text-brand-ink flex h-7 shrink-0 items-center gap-1.5 border-t px-2.5 text-xs">
+                <span role="status" className="inline-flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                    {t('email_html_ok')}
+                </span>
                 {total}
             </div>
         );
     }
 
     return (
-        <div
-            role="status"
-            className="flex h-7 shrink-0 items-center gap-1.5 border-t border-red-200 bg-red-50 px-2.5 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-        >
+        <div className="flex h-7 shrink-0 items-center gap-1.5 border-t border-red-200 bg-red-50 px-2.5 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+            <span role="status" className="sr-only">
+                {t('email_html_bad')}
+            </span>
             <Popover
                 open={open}
                 onOpenChange={(next) => {
@@ -292,24 +276,26 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
                         type="button"
                         className="inline-flex min-w-0 items-center gap-1.5 rounded font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-hidden"
                     >
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         {t('email_html_bad')}
-                        <ChevronUp className={cn('h-3.5 w-3.5 shrink-0 transition-transform', open && 'rotate-180')} />
+                        <ChevronUp
+                            className={cn('h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none', open && 'rotate-180')}
+                            aria-hidden
+                        />
                     </button>
                 </PopoverTrigger>
                 <PopoverContent
                     container={container}
                     side="top"
                     align="start"
-                    // The editor sees Esc first and marks it handled (so it stays open), which
-                    // stops Radix closing this list on Esc — close it here instead.
+                    // The editor marks Esc handled first, so this list closes itself.
                     onKeyDown={(e) => {
                         if (e.key === 'Escape') setOpen(false);
                     }}
                     className="w-[min(34rem,90vw)] p-0 text-xs"
                 >
                     <div className="border-border flex items-center gap-2 border-b px-3 py-2">
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-600 dark:text-red-400" />
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-700 dark:text-red-400" aria-hidden />
                         <span className="font-semibold">{t('email_html_bad')}</span>
                         <span className="text-muted-foreground ml-auto tabular-nums">
                             {issues.length === 1 ? t('email_html_count_one') : t('email_html_count').replace('{count}', String(issues.length))}
@@ -337,7 +323,7 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
         <ul className="divide-border divide-y">
             {shown.map((issue, i) => (
                 <li key={i} className="grid grid-cols-[3.75rem_minmax(0,1fr)] gap-2 py-1.5">
-                    <span className="font-mono text-[11px] text-red-600 tabular-nums dark:text-red-400">
+                    <span className="text-xs text-red-700 tabular-nums dark:text-red-400">
                         {t('email_html_line').replace('{line}', String(issue.line))}
                     </span>
                     <span className="text-foreground">
@@ -347,7 +333,7 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
             ))}
             {hidden > 0 && (
                 <li className="py-1.5">
-                    <button type="button" onClick={() => setShowAll(true)} className="text-brand underline-offset-2 hover:underline">
+                    <button type="button" onClick={() => setShowAll(true)} className="text-brand-ink underline-offset-2 hover:underline">
                         {t('email_html_more').replace('{count}', String(hidden))}
                     </button>
                 </li>
@@ -356,45 +342,52 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
     );
 }
 
-// Short notes for the "magic" placeholders that aren't a simple field — shown
-// beside the variable chips in the Edit drawer so a short body doesn't look broken.
-const VAR_NOTE: Record<string, { en: string; th: string }> = {
-    count: { en: 'number', th: 'จำนวน' },
-    'asset.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'digest.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'digest.open_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'digest.working_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'digest.expiring_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'digest.overdue_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'access.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'stock.request_summary_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'stock.requests_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'request.approval_history': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'stock.summary_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
-    'stock.items_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+// Note key beside the variable chips for placeholders that are not a simple field.
+const TABLE_VARS = [
+    'asset.table',
+    'digest.table',
+    'digest.open_table',
+    'digest.working_table',
+    'digest.expiring_table',
+    'digest.overdue_table',
+    'access.table',
+    'stock.request_summary_table',
+    'stock.requests_table',
+    'request.approval_history',
+    'stock.summary_table',
+    'stock.items_table',
+];
+const VAR_NOTE: Record<string, string> = {
+    count: 'email_var_note_number',
+    ...Object.fromEntries(TABLE_VARS.map((key) => [key, 'email_var_note_table'])),
 };
 
-// Badge per cadence, one colour each. Blue = sent the moment the event happens; amber and
-// violet = sent by a scheduled sweep, so the reader knows the template is not tied to one
-// action. Daily and weekly shared amber and so read as one thing at a glance, which is the
-// distinction that actually matters here: how long you wait before the next one goes out.
-// Each steps up a shade in dark mode, as every other badge in the app does (status-badge.tsx)
-// — the -600 shades alone were the one place that did not, and went muddy on a dark row.
+// Badge per cadence: blue = sent on the event, the others = sent by a schedule.
 const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: string }> = {
-    realtime: { badge: 'bg-blue-500/12 text-blue-600 dark:text-blue-400', labelKey: 'email_cadence_realtime' },
-    daily: { badge: 'bg-amber-500/12 text-amber-600 dark:text-amber-400', labelKey: 'email_cadence_daily' },
-    weekly: { badge: 'bg-violet-500/12 text-violet-600 dark:text-violet-400', labelKey: 'email_cadence_weekly' },
-    // Whenever the person who set the schedule chose (Report Center → scheduled reports).
-    scheduled: { badge: 'bg-teal-500/12 text-teal-600 dark:text-teal-400', labelKey: 'email_cadence_scheduled' },
+    realtime: { badge: 'bg-blue-500/12 text-blue-700 dark:text-blue-400', labelKey: 'email_cadence_realtime' },
+    daily: { badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-400', labelKey: 'email_cadence_daily' },
+    weekly: { badge: 'bg-violet-500/12 text-violet-700 dark:text-violet-400', labelKey: 'email_cadence_weekly' },
+    scheduled: { badge: 'bg-teal-500/12 text-teal-700 dark:text-teal-400', labelKey: 'email_cadence_scheduled' },
 };
 
-// The page's two halves: what gets sent, and what happened when it was.
 const TAB_IDS = ['email', 'notification', 'log'] as const;
 type EmailTab = (typeof TAB_IDS)[number];
 const isEmailTab = (v: string | null): v is EmailTab => v != null && (TAB_IDS as readonly string[]).includes(v);
+const TAB_LABEL_KEYS: Record<EmailTab, string> = { email: 'email_tab_email', notification: 'email_tab_notification', log: 'email_tab_log' };
 
-// Badge per delivery outcome. `skipped` is amber rather than red: nothing broke, there was
-// simply nobody to send to — which is a person to fix, not a server.
+// Module chip labels: a template key's prefix to the module name the menu uses.
+const MODULE_LABEL_KEYS: Record<string, string> = {
+    access: 'access_title',
+    asset: 'assets',
+    contract: 'contracts',
+    employee: 'employees',
+    report: 'reports',
+    request: 'requests',
+    stock: 'stock',
+    ticket: 'tickets',
+};
+
+// Badge per delivery outcome; skipped (nobody to send to) is amber, not red.
 const LOG_STATUS_META: Record<EmailLogStatus, { tone: 'green' | 'red' | 'amber'; labelKey: string }> = {
     sent: { tone: 'green', labelKey: 'email_log_sent' },
     failed: { tone: 'red', labelKey: 'email_log_failed' },
@@ -404,59 +397,39 @@ const LOG_STATUS_META: Record<EmailLogStatus, { tone: 'green' | 'red' | 'amber';
 /** Filter chips over the log: everything, then one per outcome. '' means no filter. */
 const LOG_FILTERS = ['', 'sent', 'failed', 'skipped'] as const;
 
-// localStorage key for the Email tab's remembered filters (search + module chip).
-const FILTER_KEY = 'email-templates.filters';
+// List and dialog params of the three tabs; a tab switch clears these (rows-per-page stays).
+const TAB_LIST_KEYS = ['search', 'module', 'status', 'page', 'dialog', 'view'];
 
-// List params of the three tabs; a tab switch clears these (rows-per-page stays).
-const TAB_LIST_KEYS = ['search', 'module', 'status', 'page'];
+const SEARCH_INPUT_PROPS = { type: 'search', autoComplete: 'off', spellCheck: false } as const;
 
-/** The Email tab's remembered filters as URL params, or null when nothing is saved. */
-function readRememberedFilters(): ListParamPatch | null {
-    try {
-        const saved: unknown = JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
-        const { search, module } = (saved ?? {}) as { search?: unknown; module?: unknown };
-        const patch: ListParamPatch = {};
-        if (typeof search === 'string' && search) patch.search = search;
-        if (typeof module === 'string' && module) patch.module = module;
-        return Object.keys(patch).length > 0 ? patch : null;
-    } catch {
-        return null;
-    }
-}
-
-function rememberFilters(search: string, module: string) {
-    try {
-        localStorage.setItem(FILTER_KEY, JSON.stringify({ search, module }));
-    } catch {
-        // Storage blocked: the URL still holds the filters.
-    }
-}
-
-function applyParamPatch(params: URLSearchParams, patch: ListParamPatch | null) {
-    for (const [key, value] of Object.entries(patch ?? {})) {
-        if (value) {
-            params.set(key, value);
-        } else {
-            params.delete(key);
-        }
-    }
+/** A filter chip with its count; aria-pressed carries the selection, not colour alone. */
+function FilterChip({ label, count, selected, onClick }: { label: string; count?: number; selected: boolean; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            aria-pressed={selected}
+            onClick={onClick}
+            className={cn(
+                'focus-visible:ring-brand/40 flex min-h-7 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
+                selected ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground',
+            )}
+        >
+            {label}
+            {count != null && <span className="font-semibold tabular-nums">{count.toLocaleString('en-US')}</span>}
+        </button>
+    );
 }
 
 function render(text: string, vars: Record<string, string>): string {
     return text.replace(/\{\{([\w.]+)\}\}/g, (_m, k) => vars[k] ?? `{{${k}}}`);
 }
 
-// Escapes text so it renders literally inside the highlight overlay (which uses
-// innerHTML); only our own <span> wrappers are real markup.
+// Escapes text for the highlight overlay (innerHTML); only our own <span>s are markup.
 function escapeHtml(text: string): string {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/**
- * Colour-codes HTML for the editor overlays: {{variables}} in violet, HTML tags
- * in sky-blue, everything else as plain text. All user content is HTML-escaped —
- * the returned string is safe to inject (only our own <span> wrappers are markup).
- */
+/** Colour-codes HTML for the editor overlays: variables violet, tags sky; all user text escaped. */
 function highlightHtml(src: string): string {
     const re = /(<\/?[a-zA-Z][^>]*>)|(\{\{[\w.]+\}\})/g;
     let out = '';
@@ -467,8 +440,7 @@ function highlightHtml(src: string): string {
         if (m[1]) {
             out += `<span class="text-sky-600 dark:text-sky-400">${escapeHtml(m[1])}</span>`;
         } else {
-            // No bold/padding — anything that changes glyph width would drift the caret
-            // (which is laid out by the textarea, not this overlay) out of alignment.
+            // No bold or padding: glyph width must match the textarea's caret.
             out += `<span class="rounded bg-violet-500/10 text-violet-600 dark:text-violet-400">${escapeHtml(m[2])}</span>`;
         }
         last = re.lastIndex;
@@ -490,23 +462,14 @@ function highlightLine(text: string, from: number, marks: HtmlIssue[]): string {
         if (cutEnd <= at) continue;
         const begin = Math.max(cutStart, at);
         out += highlightHtml(text.slice(at, begin));
-        // An underline, not a background or bold: anything that changes glyph width would
-        // drift the caret (laid out by the textarea, not this layer) out of alignment.
+        // An underline only: glyph width must match the textarea's caret.
         out += `<span class="underline decoration-red-500 decoration-wavy underline-offset-2">${highlightHtml(text.slice(begin, cutEnd))}</span>`;
         at = cutEnd;
     }
     return out + highlightHtml(text.slice(at));
 }
 
-/**
- * The body editor's colour layer, drawn one real line at a time with its number in the left
- * column. A long line wraps onto rows with no number of their own, so the numbers are the
- * ones the HTML warnings quote; the lines they name get a red number and their tag a red
- * underline. Each row is its own block, so an empty line still takes a row's height.
- *
- * A red number shows its line's problems on hover. The textarea starts right of the number
- * column, so the column is the one part of this layer the pointer can reach.
- */
+/** The body editor's colour layer, one numbered line per row; a red number shows its problems on hover. */
 function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlIssue[]; layerRef: RefObject<HTMLDivElement | null> }) {
     let offset = 0;
     const rows = value.split('\n').map((text, i) => {
@@ -538,7 +501,7 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
                             {lineIssues.length > 0 && (
                                 <span
                                     role="tooltip"
-                                    className="bg-foreground text-background invisible absolute top-0 left-full z-10 ml-2 w-max max-w-xs space-y-0.5 rounded-md px-2 py-1 text-left font-sans text-[11px] leading-snug whitespace-normal shadow-md group-hover:visible"
+                                    className="bg-foreground text-background invisible absolute top-0 left-full z-10 ml-2 w-max max-w-xs space-y-0.5 rounded-md px-2 py-1 text-left font-sans text-xs leading-snug whitespace-normal shadow-md group-hover:visible"
                                 >
                                     {lineIssues.map((issue, i) => (
                                         <span key={i} className="block">
@@ -571,104 +534,33 @@ function ToolBtn({ title, onClick, children }: { title: string; onClick: () => v
     );
 }
 
-function StatCard({
-    label,
-    value,
-    icon: Icon,
-    onClick,
-}: {
-    label: string;
-    value: string | number;
-    icon: typeof Mail;
-    /** Makes the card a button — only for a figure that has somewhere to lead. */
-    onClick?: () => void;
-}) {
-    return (
-        <Card
-            className={cn('p-5', onClick && 'hover:border-brand/40 cursor-pointer transition-colors')}
-            onClick={onClick}
-            role={onClick ? 'button' : undefined}
-        >
-            <div className="flex items-start justify-between">
-                <div className="text-muted-foreground text-sm">{label}</div>
-                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
-                    <Icon className="h-[18px] w-[18px]" />
-                </span>
-            </div>
-            <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-        </Card>
-    );
-}
-
 export default function EmailTemplatesPage() {
     const t = useT();
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useEmailTemplates();
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
-    // Active tab in ?tab=; each tab's search, filter chip, page and rows-per-page in ?search, module|status, page, per.
+    // Active tab in ?tab=; each tab's search, filter chip, page and rows-per-page in the URL.
     const [tab, changeTab] = useTabParam(isEmailTab, 'email');
     const list = useListParams();
     const search = list.get('search');
 
-    // A new tab starts unfiltered on page 1; the Email tab gets its remembered filters back.
+    // A new tab starts unfiltered on page 1.
     const switchTab = (next: EmailTab) => {
         if (next === tab) return;
-        changeTab(next, {
-            extra: (params) => {
-                for (const key of TAB_LIST_KEYS) params.delete(key);
-                if (next === 'email') applyParamPatch(params, readRememberedFilters());
-            },
-        });
+        changeTab(next, { omitWhen: 'email', extra: (params) => TAB_LIST_KEYS.forEach((key) => params.delete(key)) });
     };
-
-    // A bare Email-tab URL takes the remembered filters once; a link with list params wins.
-    const [initialRestore] = useState(() =>
-        tab === 'email' && !['search', 'module', 'page', 'per'].some((key) => list.searchParams.has(key)) ? readRememberedFilters() : null,
-    );
-    const restorePending = useRef(initialRestore !== null);
 
     const templates = useMemo(() => data?.data ?? [], [data]);
     const stats = data?.stats;
 
-    // The editor is URL-driven (?edit=<id>), like the contract dialog's ?view=: a reload or a
-    // shared link reopens it on the same template, and closing drops the param.
-    const [searchParams, setSearchParams] = useSearchParams();
-    // The Notification tab uses ?edit= for its own editor (by key), so only read it here on this tab.
-    const editId = tab === 'email' ? toRecordId(searchParams.get('edit')) : null;
-    const editing = editId === null ? null : (templates.find((tp) => tp.id === editId) ?? null);
-    const setEditing = (tp: EmailTemplate | null) =>
-        setSearchParams(
-            (sp) => {
-                const next = new URLSearchParams(sp);
-                if (tp) {
-                    next.set('edit', String(tp.id));
-                } else {
-                    next.delete('edit');
-                }
-                return next;
-            },
-            { replace: true },
-        );
-    // ?tab= and the remembered filters land in the URL in one replace on the first visit.
-    useEffect(() => {
-        if (searchParams.has('search') || searchParams.has('module')) restorePending.current = false;
-        const restore = restorePending.current ? initialRestore : null;
-        if (searchParams.get('tab') === null) {
-            changeTab(tab, { replace: true, extra: (params) => applyParamPatch(params, restore) });
-        } else if (restore) {
-            list.setParams(restore);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams]);
+    // The editor lives in ?dialog=<id>: links and reloads reopen it, Back closes it.
+    const templateIds = useMemo(() => templates.map((tp) => String(tp.id)), [templates]);
+    const [dialogId, setDialogId] = useDialogParam(templateIds);
+    const editing = tab === 'email' && dialogId !== null ? (templates.find((tp) => String(tp.id) === dialogId) ?? null) : null;
+    const setEditing = (tp: EmailTemplate | null) => setDialogId(tp ? String(tp.id) : null);
 
-    // A link to a template that no longer exists opens nothing; drop the dead param.
-    useEffect(() => {
-        if (data && editId !== null && !editing) setEditing(null);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data, editId, editing]);
-
-    // Derive unique module prefixes from keys (e.g. "ticket" from "ticket.created")
+    // Module prefixes from the keys ("ticket" from "ticket.created") with their counts.
     const modules = useMemo(() => {
         const counts: Record<string, number> = {};
         templates.forEach((tp) => {
@@ -680,14 +572,7 @@ export default function EmailTemplatesPage() {
     // An unknown ?module= reads as All once the templates have loaded.
     const urlModule = list.get('module');
     const module = !data || modules.some(([mod]) => mod === urlModule) ? urlModule : '';
-    const setSearch = (value: string) => {
-        list.setFilter('search', value);
-        rememberFilters(value, module);
-    };
-    const setModule = (value: string) => {
-        list.setFilter('module', value);
-        rememberFilters(search, value);
-    };
+    const moduleLabel = (mod: string) => (MODULE_LABEL_KEYS[mod] ? t(MODULE_LABEL_KEYS[mod]) : mod);
 
     const rows = useMemo(() => {
         let list = templates;
@@ -697,24 +582,29 @@ export default function EmailTemplatesPage() {
         return list;
     }, [templates, module, search]);
 
-    const toggle = (tp: EmailTemplate) => update.mutate({ id: tp.id, payload: { enabled: !tp.enabled } });
+    const toggle = (tp: EmailTemplate) =>
+        update.mutate(
+            { id: tp.id, payload: { enabled: !tp.enabled } },
+            { onError: () => useToastStore.getState().push(t('cred_err_generic'), 'error') },
+        );
+    const togglingId = update.isPending && update.variables?.payload.enabled !== undefined ? update.variables.id : null;
 
     const templateColumns: Column<EmailTemplate>[] = [
         {
             key: 'code',
-            header: 'ID',
+            header: t('email_col_id'),
             className: 'w-[8%]',
-            render: (tp) => <span className="text-muted-foreground font-mono text-xs">{tp.code}</span>,
+            render: (tp) => <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">{tp.code}</span>,
         },
         {
             key: 'name',
             header: t('email_template'),
-            className: 'w-[28%] max-w-0',
+            className: 'w-[30%] max-w-0',
             render: (tp) => (
-                <span className="flex items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-medium">{tp.name}</span>
                     {tp.is_modified && (
-                        <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                        <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
                             {t('email_modified')}
                         </span>
                     )}
@@ -724,15 +614,14 @@ export default function EmailTemplatesPage() {
         {
             key: 'key',
             header: t('email_audience_col'),
-            className: 'w-[24%] max-w-0',
-            // The technical trigger key stays one hover away for whoever maintains the senders.
+            className: 'w-[26%] max-w-0',
             render: (tp) => {
                 const audience = templateAudience(t, tp.key);
-                if (!audience) return <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>;
+                if (!audience) return <span className="bg-muted rounded-md px-2 py-0.5 text-xs">{tp.key}</span>;
                 return (
                     <div title={tp.key} className="min-w-0">
                         <div className="truncate text-xs">{audience.when}</div>
-                        <div className="text-muted-foreground truncate text-[11px]">
+                        <div className="text-muted-foreground truncate text-xs">
                             {t('email_to_label')} {audience.to}
                         </div>
                     </div>
@@ -742,9 +631,10 @@ export default function EmailTemplatesPage() {
         {
             key: 'cadence',
             header: t('email_type'),
-            className: 'w-[12%]',
+            className: 'w-[11%]',
+            hideBelow: 'lg',
             render: (tp) => (
-                <span className={cn('rounded-md px-2 py-0.5 text-[11px] font-semibold', CADENCE_META[tp.cadence].badge)}>
+                <span className={cn('rounded-md px-2 py-0.5 text-xs font-semibold whitespace-nowrap', CADENCE_META[tp.cadence].badge)}>
                     {t(CADENCE_META[tp.cadence].labelKey)}
                 </span>
             ),
@@ -752,19 +642,25 @@ export default function EmailTemplatesPage() {
         {
             key: 'last_sent',
             header: t('email_last_sent'),
-            className: 'w-[14%]',
+            className: 'w-[13%]',
+            hideBelow: 'lg',
             render: (tp) => (
-                <span className="text-muted-foreground font-mono text-xs">{relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}</span>
+                <span className="text-muted-foreground text-xs whitespace-nowrap">{relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}</span>
             ),
         },
         {
             key: 'enabled',
             header: t('email_enabled'),
-            className: 'w-[8%]',
-            // The switch lives inside a clickable row, so it has to keep its click.
+            className: 'w-[7%]',
+            // The switch sits in a clickable row, so it keeps its own click.
             render: (tp) => (
-                <span onClick={(e) => e.stopPropagation()}>
-                    <SettingToggle on={tp.enabled} onClick={() => toggle(tp)} label={tp.name} />
+                <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                        checked={tp.enabled}
+                        onChange={() => toggle(tp)}
+                        disabled={togglingId === tp.id}
+                        aria-label={t('email_toggle_named').replace('{name}', tp.name)}
+                    />
                 </span>
             ),
         },
@@ -772,8 +668,7 @@ export default function EmailTemplatesPage() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            className: 'w-[6%]',
-            // The row opens the editor too; this is the affordance that says so.
+            className: 'w-[5%]',
             render: (tp) => (
                 <button
                     type="button"
@@ -781,20 +676,19 @@ export default function EmailTemplatesPage() {
                         e.stopPropagation();
                         setEditing(tp);
                     }}
+                    aria-label={`${t('email_edit_preview')} ${tp.name}`}
                     title={t('email_edit_preview')}
-                    className="hover:bg-accent text-muted-foreground inline-flex h-8 w-8 items-center justify-center rounded-md"
+                    className="hover:bg-accent text-muted-foreground hover:text-foreground focus-visible:ring-brand/40 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
                 >
-                    <PenLine className="h-4 w-4" />
+                    <PenLine className="h-4 w-4" aria-hidden />
                 </button>
             ),
         },
     ];
 
-    // Whether any standard template currently differs from its standard (drives the
-    // visibility of the page-level "Reset all" button).
+    // Any standard template differing from its standard shows "Reset all".
     const anyModified = useMemo(() => templates.some((tp) => tp.is_modified), [templates]);
 
-    // Reset every standard template back to its standard content (after confirming).
     const resetAllToStandard = async () => {
         await confirm({
             variant: 'warn',
@@ -812,119 +706,82 @@ export default function EmailTemplatesPage() {
                     <h1 className="text-2xl font-bold">{t('email_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('email_sub')}</p>
                 </div>
-                {/* Belongs to the email templates; the Bell tab has its own per-bell reset. A test
-                    send lives in each template's editor (and the SMTP check in Settings). */}
-                <div className={cn('flex gap-2', tab === 'notification' && 'hidden')}>
-                    {anyModified && (
-                        <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending} title={t('email_reset_all')}>
-                            {resetAll.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                            {t('email_reset_all')}
-                        </Button>
-                    )}
-                </div>
+                {tab === 'email' && anyModified && (
+                    <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending}>
+                        {resetAll.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
+                        ) : (
+                            <RotateCcw className="h-4 w-4" aria-hidden />
+                        )}
+                        {t('email_reset_all')}
+                    </Button>
+                )}
             </div>
 
-            {/* One row of figures, belonging to whichever tab is open. */}
+            {/* Figures of whichever tab is open */}
             {tab === 'notification' ? (
                 <NotificationSettingsStats />
             ) : (
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    <StatCard label={t('email_templates')} value={stats?.templates ?? '—'} icon={Mail} />
-                    <StatCard label={t('email_enabled')} value={stats?.enabled ?? '—'} icon={Check} />
-                    <StatCard label={t('email_sent_today')} value={stats?.sent_today ?? '—'} icon={Send} />
-                    {/* The delivery rate is the one card with somewhere to go: the log behind it
-                    names the sends that make up the missing per cent. */}
+                    <StatCard label={t('email_templates')} value={String(stats?.templates ?? '—')} icon={Mail} loading={isLoading} />
+                    <StatCard label={t('email_enabled')} value={String(stats?.enabled ?? '—')} icon={Check} loading={isLoading} />
+                    <StatCard label={t('email_sent_today')} value={String(stats?.sent_today ?? '—')} icon={Send} loading={isLoading} />
                     <StatCard
                         label={t('email_delivery')}
                         value={stats?.delivery_rate != null ? `${stats.delivery_rate}%` : '—'}
-                        icon={Mail}
+                        icon={History}
+                        loading={isLoading}
                         onClick={() => switchTab('log')}
                     />
                 </div>
             )}
 
-            {/* Tabs are the card's top edge, the way every other tabbed page in the app sets
-                them: a row of labels floating on the page background belongs to nothing. */}
             <Card className="overflow-clip">
-                <div className="border-border flex items-center gap-1 border-b px-2">
-                    {TAB_IDS.map((id) => (
-                        <button
-                            key={id}
-                            type="button"
-                            onClick={() => switchTab(id)}
-                            className={cn(
-                                'relative px-3 py-3 text-sm font-medium',
-                                tab === id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            {t(id === 'email' ? 'email_tab_email' : id === 'notification' ? 'email_tab_notification' : 'email_tab_log')}
-                            {tab === id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
-                        </button>
-                    ))}
-                </div>
+                <PageTabs tabs={TAB_IDS.map((id) => ({ id, label: t(TAB_LABEL_KEYS[id]) }))} active={tab} onChange={switchTab} />
 
                 {tab === 'notification' && <NotificationSettingsPane />}
                 {tab === 'log' && <DeliveryLogPane />}
 
-                {/* Tab content sits inset in a padded block, the way every other tabbed list in
-                    the app lays out — full-width strips ruled off from each other made the table
-                    look bolted to the card rather than held by it. */}
                 {tab === 'email' && (
                     <div className="space-y-3 p-5">
-                        {/* No heading here: the tab above already named this half of the page. */}
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="text-muted-foreground text-xs">{t('email_templates_sub')}</div>
                             <div className="relative w-full max-w-xs">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_search')} className="pl-9" />
+                                <Search
+                                    className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                                    aria-hidden
+                                />
+                                <Input
+                                    {...SEARCH_INPUT_PROPS}
+                                    name="search"
+                                    aria-label={t('email_search')}
+                                    value={search}
+                                    onChange={(e) => list.setFilter('search', e.target.value)}
+                                    placeholder={t('email_search')}
+                                    className="pl-9"
+                                />
                             </div>
                         </div>
 
                         {/* Module filter chips */}
                         <div className="flex flex-wrap gap-1.5">
-                            <button
-                                type="button"
-                                onClick={() => setModule('')}
-                                className={cn(
-                                    'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                                    module === '' ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:bg-accent',
-                                )}
-                            >
-                                {lang === 'th' ? 'ทั้งหมด' : 'All'}
-                                <span
-                                    className={cn(
-                                        'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                                        module === '' ? 'bg-white/20' : 'bg-background',
-                                    )}
-                                >
-                                    {templates.length}
-                                </span>
-                            </button>
+                            <FilterChip
+                                label={t('all')}
+                                count={templates.length}
+                                selected={module === ''}
+                                onClick={() => list.setFilter('module', '')}
+                            />
                             {modules.map(([mod, count]) => (
-                                <button
+                                <FilterChip
                                     key={mod}
-                                    type="button"
-                                    onClick={() => setModule(mod)}
-                                    className={cn(
-                                        'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
-                                        module === mod ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:bg-accent',
-                                    )}
-                                >
-                                    {mod}
-                                    <span
-                                        className={cn(
-                                            'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                                            module === mod ? 'bg-white/20' : 'bg-background',
-                                        )}
-                                    >
-                                        {count}
-                                    </span>
-                                </button>
+                                    label={moduleLabel(mod)}
+                                    count={count}
+                                    selected={module === mod}
+                                    onClick={() => list.setFilter('module', mod)}
+                                />
                             ))}
                         </div>
 
-                        {/* Same shared table as the Logs tab — the two halves of this page used
-                            to be a hand-rolled <table> and a DataTable side by side. */}
                         <DataTable
                             columns={templateColumns}
                             rows={rows}
@@ -933,17 +790,8 @@ export default function EmailTemplatesPage() {
                             rowHeight={45}
                             onRowClick={setEditing}
                             paging={list.table.paging}
-                            emptyState={
-                                <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
-                                    <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
-                                        <Mail className="h-6 w-6" />
-                                    </span>
-                                    <div className="font-medium">{t('email_empty_title')}</div>
-                                    <div className="text-muted-foreground text-sm">
-                                        {search || module ? t('email_empty_filtered') : t('email_empty')}
-                                    </div>
-                                </div>
-                            }
+                            caption={t('email_templates')}
+                            emptyState={<EmptyPane icon={Mail} text={search || module ? t('email_empty_filtered') : t('email_empty')} />}
                         />
                     </div>
                 )}
@@ -954,7 +802,7 @@ export default function EmailTemplatesPage() {
                 fromAddress={data?.mail?.from_address || SAMPLE_VARS['user.email']}
                 onClose={() => setEditing(null)}
                 onSave={(payload) => (editing ? update.mutateAsync({ id: editing.id, payload }) : Promise.resolve())}
-                saving={update.isPending}
+                saving={update.isPending && update.variables?.payload.enabled === undefined}
                 onToggle={(id, enabled) => update.mutateAsync({ id, payload: { enabled } })}
                 onTest={(id, draft) => test.mutateAsync({ id, draft })}
                 testing={test.isPending}
@@ -965,29 +813,51 @@ export default function EmailTemplatesPage() {
     );
 }
 
-// Debounced render of the unsaved content through the real email layout, so the
-// preview matches what recipients get. Disabled (skipped) when `enabled` is false.
+// Debounced render of the unsaved content through the real email layout; only the newest request may land.
 function useLivePreview(enabled: boolean, templateKey: string | undefined, name: string, subject: string, body: string) {
     const [previewHtml, setPreviewHtml] = useState('');
     const [rendering, setRendering] = useState(false);
+    const [failed, setFailed] = useState(false);
+    const [attempt, setAttempt] = useState(0);
+    const latest = useRef(0);
+
     useEffect(() => {
         if (!enabled) return;
+        const request = ++latest.current;
         setRendering(true);
         const id = window.setTimeout(() => {
             emailTemplateApi
                 .renderPreview({ key: templateKey, name, subject, body_html: body })
-                .then(setPreviewHtml)
-                .catch(() => {})
-                .finally(() => setRendering(false));
+                .then((html) => {
+                    if (request !== latest.current) return;
+                    setPreviewHtml(html);
+                    setFailed(false);
+                })
+                .catch(() => {
+                    if (request === latest.current) setFailed(true);
+                })
+                .finally(() => {
+                    if (request === latest.current) setRendering(false);
+                });
         }, 400);
         return () => window.clearTimeout(id);
-    }, [enabled, templateKey, name, subject, body]);
-    return { previewHtml, rendering, setPreviewHtml };
+    }, [enabled, templateKey, name, subject, body, attempt]);
+
+    // Closing drops any request still in flight.
+    useEffect(() => {
+        if (!enabled) latest.current++;
+    }, [enabled]);
+
+    const clear = () => {
+        setPreviewHtml('');
+        setFailed(false);
+    };
+
+    return { previewHtml, rendering, failed, retry: () => setAttempt((n) => n + 1), clear };
 }
 
-// Single-line subject input with {{variable}} / tag highlighting (transparent input
-// over an escaped colour layer; horizontal scroll synced).
-function SubjectField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+// Single-line subject input over a colour layer that highlights {{variables}} and tags.
+function SubjectField({ value, onChange, ...control }: { value: string; onChange: (v: string) => void } & Partial<FieldControlProps>) {
     const hlRef = useRef<HTMLDivElement>(null);
     return (
         <div className="border-input bg-background hover:border-brand/50 focus-within:border-brand focus-within:ring-brand/15 relative h-10 rounded-md border transition-colors focus-within:ring-[3px]">
@@ -998,6 +868,9 @@ function SubjectField({ value, onChange }: { value: string; onChange: (v: string
                 dangerouslySetInnerHTML={{ __html: highlightHtml(value) }}
             />
             <input
+                {...control}
+                name="subject"
+                autoComplete="off"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 onScroll={(e) => {
@@ -1011,25 +884,21 @@ function SubjectField({ value, onChange }: { value: string; onChange: (v: string
     );
 }
 
-/**
- * Body HTML editor: a quick-tools toolbar + syntax-highlighted textarea + clickable
- * variable chips. Tools insert HTML at the caret or wrap the selection. `extraText`
- * (e.g. the subject) folds its variables into the chip list too.
- */
+/** Body HTML editor: quick tools, a highlighted textarea and the variable chips (subject's included). */
 function BodyEditor({
     value,
     onChange,
     extraText = '',
     variables,
+    ...control
 }: {
     value: string;
     onChange: (v: string) => void;
     extraText?: string;
     /** What this template's mail is given; null offers every known variable and flags none. */
     variables: string[] | null;
-}) {
+} & Partial<FieldControlProps>) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const ref = useRef<HTMLTextAreaElement>(null);
     const hlRef = useRef<HTMLDivElement>(null);
 
@@ -1066,47 +935,37 @@ function BodyEditor({
             return { text, selStart: pos, selEnd: pos };
         });
 
-    // The variables this template uses, A-Z. Occurrence order put them in whatever sequence
-    // the wording happened to reach them, which reshuffles the row on every edit — a list you
-    // scan for one name should keep names where you last saw them.
+    // The variables this template uses, A-Z, so names stay where they were seen.
     const tokens = variablesIn(`${extraText} ${value}`).sort((a, b) => a.localeCompare(b));
-    // Offer only what this mail is given: the other ~60 belong to other events and would
-    // go out as literal {{text}}.
+    // Offer only what this mail is given; others would go out as literal {{text}}.
     const offered = variables ?? VARIABLE_NAMES;
     const unknownTokens = unknownVariables(tokens, variables);
-    const htmlIssues = findHtmlIssues(value);
+    const htmlIssues = useMemo(() => findHtmlIssues(value), [value]);
 
     return (
-        // A flex column so the editor takes the height its column has to give: it used to be
-        // twelve rows tall in a pane three times that, and editing a long email meant
-        // scrolling a textarea inside a scrolling column inside the dialog.
-        //
-        // h-full, not flex-1: Field's `grow` wrapper is a plain block, so a flex-1 here had
-        // nothing to stretch against and the box sat at its minimum with 180px of empty
-        // column under it.
-        <div className="flex h-full min-h-0 flex-col">
+        <div className="flex h-full min-h-[24rem] flex-col lg:min-h-0">
             <div className="border-input bg-background focus-within:border-brand flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
-                {/* Quick tools — insert HTML at the caret / around the selection */}
+                {/* Quick tools */}
                 <div className={cn(CARD_HEADING, 'border-border flex shrink-0 flex-wrap items-center gap-0.5 border-b px-1.5 py-1')}>
                     <ToolBtn title={t('email_tool_bold')} onClick={() => wrap('<strong>', '</strong>')}>
-                        <Bold className="h-3.5 w-3.5" />
+                        <Bold className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
                     <ToolBtn title={t('email_tool_italic')} onClick={() => wrap('<em>', '</em>')}>
-                        <Italic className="h-3.5 w-3.5" />
+                        <Italic className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
                     <span className="bg-border mx-1 h-4 w-px" />
                     <ToolBtn title={t('email_tool_br')} onClick={() => insert('<br>\n')}>
-                        <CornerDownLeft className="h-3.5 w-3.5" />
+                        <CornerDownLeft className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
                     <ToolBtn title={t('email_tool_p')} onClick={() => wrap('<p>', '</p>')}>
-                        <Pilcrow className="h-3.5 w-3.5" />
+                        <Pilcrow className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
                     <ToolBtn title={t('email_tool_list')} onClick={insertList}>
-                        <List className="h-3.5 w-3.5" />
+                        <List className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
                     <span className="bg-border mx-1 h-4 w-px" />
                     <ToolBtn title={t('email_tool_link')} onClick={insertLink}>
-                        <Link2 className="h-3.5 w-3.5" />
+                        <Link2 className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
                     <select
                         value=""
@@ -1114,8 +973,9 @@ function BodyEditor({
                             if (e.target.value) insertVar(e.target.value);
                             e.currentTarget.value = '';
                         }}
+                        aria-label={t('email_insert_var')}
                         title={t('email_insert_var')}
-                        className="text-muted-foreground hover:text-foreground ml-auto h-7 cursor-pointer rounded bg-transparent px-1.5 text-xs outline-none"
+                        className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-brand/40 ml-auto h-7 cursor-pointer rounded bg-transparent px-1.5 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
                     >
                         <option value="">{`{{ }} ${t('email_insert_var')}`}</option>
                         {offered.map((k) => (
@@ -1123,15 +983,14 @@ function BodyEditor({
                         ))}
                     </select>
                 </div>
-                {/* Syntax highlight: a coloured layer under a transparent, scroll-synced textarea.
-                    Both layers are absolute now, so the box's height comes from the column
-                    rather than from a row count. */}
+                {/* Coloured layer under a transparent, scroll-synced textarea */}
                 <div className="relative min-h-[10rem] flex-1">
-                    {/* The line-number column's background, still while the lines scroll. */}
                     <div aria-hidden="true" className="bg-muted/40 border-border pointer-events-none absolute inset-y-0 left-0 w-9 border-r" />
                     <BodyHighlight value={value} marks={htmlIssues} layerRef={hlRef} />
                     <textarea
+                        {...control}
                         ref={ref}
+                        name="body_html"
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         onScroll={(e) => {
@@ -1150,7 +1009,7 @@ function BodyEditor({
 
             {tokens.length > 0 && (
                 <div className="mt-3 shrink-0">
-                    <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('email_variables')}</div>
+                    <div className="text-muted-foreground mb-2 text-xs font-semibold">{t('email_variables')}</div>
                     <div className="flex max-h-[5.5rem] flex-wrap gap-1.5 overflow-y-auto">
                         {tokens.map((tk) => {
                             const unknown = unknownTokens.includes(tk);
@@ -1162,23 +1021,23 @@ function BodyEditor({
                                     onClick={() => insertVar(tk)}
                                     title={unknown ? t('email_var_unknown') : t('email_insert_var')}
                                     className={cn(
-                                        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors',
+                                        'focus-visible:ring-brand/40 inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors focus-visible:ring-2 focus-visible:outline-hidden',
                                         unknown
                                             ? 'bg-red-50 text-red-700 ring-1 ring-red-300 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800'
                                             : 'bg-muted hover:bg-accent',
                                     )}
                                 >
-                                    {unknown && <AlertTriangle className="h-3 w-3" />}
+                                    {unknown && <AlertTriangle className="h-3 w-3" aria-hidden />}
                                     {`{{${tk}}}`}
-                                    {VAR_NOTE[tk] && <span className="text-muted-foreground ml-1 text-[10px]">{VAR_NOTE[tk][lang]}</span>}
+                                    {VAR_NOTE[tk] && <span className="text-muted-foreground ml-1 font-sans text-xs">{t(VAR_NOTE[tk])}</span>}
                                 </button>
                             );
                         })}
                     </div>
                     {unknownTokens.length > 0 ? (
-                        <p className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">{t('email_var_unknown_hint')}</p>
+                        <p className="mt-1.5 text-xs text-red-700 dark:text-red-400">{t('email_var_unknown_hint')}</p>
                     ) : (
-                        <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
+                        <p className="text-muted-foreground mt-1.5 text-xs">{t('email_var_hint')}</p>
                     )}
                 </div>
             )}
@@ -1186,34 +1045,27 @@ function BodyEditor({
     );
 }
 
-// Live email preview framed like an inbox message (from/to/subject + rendered body).
-/**
- * Delivery log — every email the system tried to send, newest first.
- *
- * Includes the ones that never left because the recipient has no address: those used to be
- * dropped inside whichever service was sending, so "why didn't they hear about it" had no
- * answer anywhere. Paginated server-side; the table grows by a row per email and is never
- * pruned, so it must never be fetched whole.
- */
-/**
- * The sent email, at its own height.
- *
- * A fixed-height frame clipped the message and put a second scrollbar inside a dialog that
- * already scrolls, so a long email read as a broken one. The frame grows to whatever the
- * email needs and the dialog does the scrolling.
- *
- * Sandboxed down to `allow-same-origin`, which is the one permission the measurement needs —
- * a fully sandboxed frame reports no document at all, so the height could never be read and
- * the email stayed clipped. Scripts, forms, popups and top-level navigation stay blocked.
- */
+/** The sent email at its own height; sandboxed to same-origin only, which the measuring needs. */
 function SentEmailFrame({ html, title, className }: { html: string; title: string; className?: string }) {
     const ref = useRef<HTMLIFrameElement>(null);
+    const observer = useRef<ResizeObserver | null>(null);
     const [height, setHeight] = useState(420);
 
-    const fit = () => {
-        const body = ref.current?.contentDocument?.body;
-        // A couple of pixels of slack: an exact fit leaves a scrollbar on some renderers.
-        if (body?.scrollHeight) setHeight(body.scrollHeight + 8);
+    useEffect(() => () => observer.current?.disconnect(), []);
+
+    const onLoad = () => {
+        const doc = ref.current?.contentDocument;
+        if (!doc?.body) return;
+        // Links stay inert: the preview is not a browser.
+        doc.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement | null)?.closest?.('a')) e.preventDefault();
+        });
+        // Refit when the width changes (dialog resize, tablet rotation).
+        const fit = () => setHeight(doc.body.scrollHeight + 8);
+        fit();
+        observer.current?.disconnect();
+        observer.current = new ResizeObserver(fit);
+        observer.current.observe(doc.body);
     };
 
     return (
@@ -1222,69 +1074,82 @@ function SentEmailFrame({ html, title, className }: { html: string; title: strin
             title={title}
             srcDoc={html}
             sandbox="allow-same-origin"
-            onLoad={fit}
+            onLoad={onLoad}
             style={{ height }}
             className={cn('border-border block w-full rounded-xl border bg-white', className)}
         />
     );
 }
 
-/**
- * One log entry: who it went to, what it said, and the email itself rebuilt as it was
- * received. Older rows carry no body — they were written before sent messages were kept —
- * and say so rather than showing an empty frame.
- */
+/** One log entry: who it went to, what it said, and the email rebuilt as it was received. */
 function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: () => void }) {
     const fmt = useDateFormat();
     const t = useT();
-    const { data } = useEmailLog(logId);
+    const { data, isError, refetch } = useEmailLog(logId);
     const { record: log } = useRecordView(logId, data);
-
-    if (!log) return null;
-
-    const meta = LOG_STATUS_META[log.status];
+    const meta = log ? LOG_STATUS_META[log.status] : null;
 
     return (
         <Dialog open={logId != null} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="!flex max-h-[min(860px,calc(100vh-72px))] max-w-[820px] flex-col gap-0 overflow-hidden p-0">
-                <FocusDialogHeader
-                    icon={Mail}
-                    eyebrow={log.template_key ?? '—'}
-                    title={log.subject}
-                    srDescription={t('email_log_sub')}
-                    subtitle={
-                        <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
-                            <span>{fmt.dateTime(log.created_at)}</span>
-                            <span>
-                                {log.recipient_name
-                                    ? `${log.recipient_name} (${log.to_email ?? t('email_log_no_address')})`
-                                    : (log.to_email ?? t('email_log_no_address'))}
+            <DialogContent className="!flex max-h-[min(860px,calc(100vh-72px))] w-[calc(100vw-2rem)] max-w-[820px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
+                {log && meta ? (
+                    <FocusDialogHeader
+                        icon={Mail}
+                        eyebrow={log.template_key ?? '—'}
+                        title={log.subject}
+                        srDescription={t('email_log_sub')}
+                        subtitle={
+                            <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
+                                <span>{fmt.dateTime(log.created_at)}</span>
+                                <span className="break-all">
+                                    {log.recipient_name
+                                        ? `${log.recipient_name} (${log.to_email ?? t('email_log_no_address')})`
+                                        : (log.to_email ?? t('email_log_no_address'))}
+                                </span>
                             </span>
-                        </span>
-                    }
-                    headerRight={<StatusBadge tone={meta.tone}>{t(meta.labelKey)}</StatusBadge>}
-                />
+                        }
+                        headerRight={<StatusBadge tone={meta.tone}>{t(meta.labelKey)}</StatusBadge>}
+                    />
+                ) : (
+                    <FocusDialogHeader
+                        icon={Mail}
+                        eyebrow={t('email_tab_log')}
+                        title={isError ? t('load_failed') : t('loading')}
+                        srDescription={t('email_log_sub')}
+                    />
+                )}
 
                 <div className="border-border/60 flex-1 space-y-4 overflow-y-auto border-t p-6">
-                    {/* Only failures have something to explain; a delivered email would just
-                        get a row of em dashes. */}
-                    {log.error && (
-                        <div className="bg-muted/40 border-border rounded-xl border px-4 py-3">
-                            <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{t('email_log_reason')}</div>
-                            <div className="mt-1 text-sm">{log.error}</div>
+                    {log ? (
+                        <>
+                            {log.error && (
+                                <div className="bg-muted/40 border-border rounded-xl border px-4 py-3">
+                                    <div className="text-muted-foreground text-xs font-medium">{t('email_log_reason')}</div>
+                                    <div className="mt-1 text-sm break-words">{log.error}</div>
+                                </div>
+                            )}
+
+                            <div>
+                                <SectionLabel>{t('email_log_content')}</SectionLabel>
+                                {log.preview_html ? (
+                                    <SentEmailFrame html={log.preview_html} title={t('email_log_content')} />
+                                ) : (
+                                    <div className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-10 text-center text-sm">
+                                        {t('email_log_no_content')}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : isError ? (
+                        <div className="py-10 text-center">
+                            <LoadFailed onRetry={() => refetch()} />
+                        </div>
+                    ) : (
+                        <div className="space-y-3" aria-busy>
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-72 w-full rounded-xl" />
                         </div>
                     )}
-
-                    <div>
-                        <SectionLabel>{t('email_log_content')}</SectionLabel>
-                        {log.preview_html ? (
-                            <SentEmailFrame html={log.preview_html} title={t('email_log_content')} />
-                        ) : (
-                            <div className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-10 text-center text-sm">
-                                {t('email_log_no_content')}
-                            </div>
-                        )}
-                    </div>
                 </div>
 
                 <div className="border-border/60 bg-muted/30 flex items-center justify-end border-t px-6 py-3.5">
@@ -1297,9 +1162,38 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
     );
 }
 
+/** Every email the system tried to send, newest first; paginated server-side. */
 function DeliveryLogPane() {
     const t = useT();
-    const [viewing, setViewing] = useState<number | null>(null);
+    const location = useLocation();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    // The open entry in ?view=<id>: links and reloads reopen it, Back closes it.
+    const viewing = toRecordId(searchParams.get('view'));
+    const openLog = (id: number) =>
+        setSearchParams(
+            (prev) => {
+                const next = new URLSearchParams(prev);
+                next.set('view', String(id));
+                return next;
+            },
+            { state: { viewPushed: true } },
+        );
+    const closeLog = () => {
+        if ((location.state as { viewPushed?: boolean } | null)?.viewPushed) {
+            navigate(-1);
+            return;
+        }
+        setSearchParams(
+            (prev) => {
+                const next = new URLSearchParams(prev);
+                next.delete('view');
+                return next;
+            },
+            { replace: true },
+        );
+    };
+
     // Status chip, search, page and rows-per-page live in the URL (?status, search, page, per).
     const list = useListParams();
     const { page, perPage } = list;
@@ -1308,7 +1202,7 @@ function DeliveryLogPane() {
     const setStatus = (value: EmailLogStatus | '') => list.setFilter('status', value);
     const query = list.get('search');
 
-    // The box updates as typed; ?search (and page 1) follow 350ms after the last key, re-armed on any URL change.
+    // The box updates as typed; ?search (and page 1) follow 350ms after the last key.
     const [search, setSearch] = useState(query);
     useEffect(() => {
         if (search === query) return;
@@ -1317,7 +1211,10 @@ function DeliveryLogPane() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, query, list.searchParams]);
 
-    const { data, isLoading, isFetching } = useEmailLogs({ page, per_page: perPage, search: query || undefined, status: status || undefined }, true);
+    const { data, isLoading, isFetching, isError, refetch } = useEmailLogs(
+        { page, per_page: perPage, search: query || undefined, status: status || undefined },
+        true,
+    );
 
     const rows = data?.data ?? [];
     const meta = data?.meta;
@@ -1334,30 +1231,28 @@ function DeliveryLogPane() {
             key: 'template',
             header: t('email_trigger'),
             className: 'w-[16%] max-w-0',
-            render: (r) => <span className="block truncate font-mono text-[11px]">{r.template_key ?? '—'}</span>,
+            hideBelow: 'lg',
+            render: (r) => <span className="block truncate text-xs">{r.template_key ?? '—'}</span>,
         },
         {
             key: 'subject',
             header: t('email_subject'),
-            className: 'w-[24%] max-w-0',
+            className: 'w-[26%] max-w-0',
             render: (r) => <span className="block truncate text-xs">{r.subject}</span>,
         },
         {
             key: 'recipient',
             header: t('email_log_recipient'),
             className: 'w-[19%] max-w-0',
-            // Name first when there is one — a skipped row has no address, so the name is
-            // all that says who was left out. With no name (rows written before the column
-            // existed) the address becomes the main line rather than sitting under a dash,
-            // which reads as missing data instead of "we only know the address".
+            // Name first when known; a skipped row has no address, so the name says who was left out.
             render: (r) =>
                 r.recipient_name ? (
                     <div className="min-w-0">
                         <div className="truncate text-xs font-medium">{r.recipient_name}</div>
-                        <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{r.to_email ?? t('email_log_no_address')}</div>
+                        <div className="text-muted-foreground mt-0.5 truncate text-xs">{r.to_email ?? t('email_log_no_address')}</div>
                     </div>
                 ) : (
-                    <div className="truncate font-mono text-[11px]">{r.to_email ?? t('email_log_no_address')}</div>
+                    <div className="truncate text-xs">{r.to_email ?? t('email_log_no_address')}</div>
                 ),
         },
         {
@@ -1369,37 +1264,40 @@ function DeliveryLogPane() {
         {
             key: 'error',
             header: t('email_log_reason'),
-            className: 'w-[15%] max-w-0',
+            className: 'w-[13%] max-w-0',
+            hideBelow: 'lg',
             render: (r) => <span className="text-muted-foreground block truncate text-xs">{r.error ?? '—'}</span>,
         },
     ];
 
     return (
         <div className="space-y-3 p-5">
-            {/* No heading: the tab above already named this half of the page. */}
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-muted-foreground text-xs">{t('email_log_sub')}</div>
                 <div className="relative w-full max-w-xs">
-                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_log_search')} className="pl-9" />
+                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" aria-hidden />
+                    <Input
+                        {...SEARCH_INPUT_PROPS}
+                        name="search"
+                        aria-label={t('email_log_search')}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder={t('email_log_search')}
+                        className="pl-9"
+                    />
                 </div>
             </div>
 
-            {/* Status chips carry counts for the whole log, not the page. */}
+            {/* Status chips with whole-log counts */}
             <div className="flex flex-wrap gap-1.5">
                 {LOG_FILTERS.map((value) => (
-                    <button
+                    <FilterChip
                         key={value || 'all'}
-                        type="button"
+                        label={value === '' ? t('all') : t(LOG_STATUS_META[value].labelKey)}
+                        count={counts?.[value || 'all']}
+                        selected={status === value}
                         onClick={() => setStatus(value)}
-                        className={cn(
-                            'rounded-full px-3 py-1 text-xs font-medium transition',
-                            status === value ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
-                        )}
-                    >
-                        {value === '' ? t('all') : t(LOG_STATUS_META[value].labelKey)}
-                        {counts && <span className="ml-1.5 font-mono opacity-70">{value === '' ? meta?.total : counts[value]}</span>}
-                    </button>
+                    />
                 ))}
             </div>
 
@@ -1409,7 +1307,8 @@ function DeliveryLogPane() {
                 rowKey={(r) => r.id}
                 loading={isLoading || isFetching}
                 rowHeight={44}
-                onRowClick={(r) => setViewing(r.id)}
+                onRowClick={(r) => openLog(r.id)}
+                caption={t('email_tab_log')}
                 server={{
                     page,
                     pageSize: perPage,
@@ -1417,70 +1316,93 @@ function DeliveryLogPane() {
                     onPageChange: list.table.paging.onPageChange,
                     onPageSizeChange: list.table.paging.onPageSizeChange,
                 }}
-                emptyState={<div className="text-muted-foreground py-10 text-center text-sm">{t('email_log_empty')}</div>}
+                emptyState={
+                    isError ? (
+                        <div className="py-10 text-center">
+                            <LoadFailed onRetry={() => refetch()} />
+                        </div>
+                    ) : (
+                        <EmptyPane icon={History} text={query || status ? t('email_log_empty_filtered') : t('email_log_empty')} />
+                    )
+                }
             />
 
-            <DeliveryLogDrawer logId={viewing} onClose={() => setViewing(null)} />
+            <DeliveryLogDrawer logId={viewing} onClose={closeLog} />
         </div>
     );
 }
 
+/** The live email as an inbox message: the header strip and card stay light in both themes, like the mail. */
 function PreviewPane({
     brand,
     from,
     subject,
     previewHtml,
     rendering,
+    failed,
+    onRetry,
 }: {
     brand: string;
     from: string;
     subject: string;
     previewHtml: string;
     rendering: boolean;
+    failed: boolean;
+    onRetry: () => void;
 }) {
     const dateConfig = useUiStore((s) => s.dateConfig);
     const mailDates = useMemo(() => bindDateFormat(dateConfig, 'en'), [dateConfig]);
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    // The signed-in account, because that is where "Send test" delivers and whose first name
-    // the body below already greets. The line used to print the literal {{user.email}} while
-    // every other field on the row was filled in, which read as data that failed to arrive.
+    // The signed-in account: where "Send test" delivers.
     const { user } = useAuth();
     return (
-        <div className="bg-muted/30 border-border relative min-h-0 border-t p-5 lg:overflow-y-auto lg:border-t-0 lg:border-r">
-            {/* On the card, not in a header strip a pane away: the reader is watching the
-                message change, and that is where the news that it is changing belongs. */}
-            {rendering && (
-                <span className="bg-background/90 text-muted-foreground absolute top-6 right-6 z-10 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] shadow-sm backdrop-blur-sm">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    {lang === 'th' ? 'กำลังอัปเดต' : 'Updating'}
-                </span>
+        <div className="bg-muted/30 border-border relative shrink-0 border-t p-5 lg:order-first lg:min-h-0 lg:overflow-y-auto lg:border-t-0 lg:border-r">
+            <span role="status" className={cn(!rendering && 'sr-only')}>
+                {rendering && (
+                    <span className="bg-background/90 text-muted-foreground absolute top-6 right-6 z-10 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs shadow-sm backdrop-blur-sm">
+                        <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" aria-hidden />
+                        {t('email_preview_updating')}
+                    </span>
+                )}
+            </span>
+            {failed && (
+                <div
+                    role="alert"
+                    className="mx-auto mb-3 flex max-w-[640px] flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                >
+                    <span className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+                        {t('email_preview_failed')}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={onRetry}>
+                        <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                        {t('retry')}
+                    </Button>
+                </div>
             )}
-            <div className="border-border mx-auto max-w-[640px] overflow-hidden rounded-xl border bg-white shadow-sm">
-                <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
-                    <div>
-                        <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
-                        <span className="font-mono">{from}</span>
+            <div className="mx-auto max-w-[640px] overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700">
+                <div className="flex flex-wrap gap-x-6 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs">
+                    <div className="min-w-0">
+                        <span className="text-slate-600">{t('email_preview_from')} </span>
+                        <span className="break-all">{from}</span>
                     </div>
-                    <div>
-                        <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
-                        <span className="font-mono">{user?.email || SAMPLE_VARS['user.email']}</span>
+                    <div className="min-w-0">
+                        <span className="text-slate-600">{t('email_preview_to')} </span>
+                        <span className="break-all">{user?.email || SAMPLE_VARS['user.email']}</span>
                     </div>
-                    <div className="text-foreground w-full truncate font-semibold">
-                        {/* app.name resolves to the real brand, the way the send path fills it. */}[{brand}]{' '}
-                        {render(subject, { ...samplesIn(mailDates), 'app.name': brand })}
+                    <div className="w-full truncate font-semibold">
+                        [{brand}] {render(subject, { ...samplesIn(mailDates), 'app.name': brand })}
                     </div>
                 </div>
                 {previewHtml ? (
-                    // The same self-measuring frame the delivery log uses: a fixed-height one
-                    // put a second scrollbar inside a pane that already scrolls, so a long
-                    // email read as a clipped one.
                     <SentEmailFrame html={previewHtml} title={t('email_preview')} className="rounded-none border-0" />
+                ) : failed ? (
+                    <div className="px-6 py-16 text-center text-sm text-slate-600">{t('email_preview_failed')}</div>
                 ) : (
                     <div className="space-y-3 p-6">
-                        <div className="bg-muted h-4 w-1/3 animate-pulse rounded" />
-                        <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
-                        <div className="bg-muted h-28 w-full animate-pulse rounded" />
+                        <div className="h-4 w-1/3 animate-pulse rounded bg-slate-100" />
+                        <div className="h-3 w-2/3 animate-pulse rounded bg-slate-100" />
+                        <div className="h-28 w-full animate-pulse rounded bg-slate-100" />
                     </div>
                 )}
             </div>
@@ -1488,13 +1410,11 @@ function PreviewPane({
     );
 }
 
-/**
- * Combined editor as a centered dialog (~75% of the viewport, rounded): a title
- * bar, a sub-header with the template name + enable toggle, then a split body with
- * the live preview on the left and the edit form on the right. The preview renders
- * the unsaved content through the real email layout (debounced) so the two panes
- * always agree and match what recipients receive.
- */
+type WordingField = 'name' | 'subject' | 'body_html';
+type WordingErrors = Partial<Record<WordingField, string>>;
+const WORDING_FIELDS: WordingField[] = ['name', 'subject', 'body_html'];
+
+/** The editor: form and live preview side by side on lg; under lg the form comes first, then the preview. */
 function EditorDialog({
     template,
     fromAddress,
@@ -1524,25 +1444,37 @@ function EditorDialog({
     const t = useT();
     const confirm = useConfirm();
     const { data: settings } = useSettings();
-    const brand = settings?.brand_name || 'ABCD IT';
+    const brand = settings?.brand_name || SAMPLE_VARS['app.name'];
+    // Kept through the close animation so the content doesn't blank.
+    const { record: shown } = useRecordView(template?.id ?? null, template);
 
     const [name, setName] = useState('');
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
-    // The switch saves the moment it is flipped (like the list's), so it is not part of the
-    // unsaved draft: closing without saving must not quietly undo it.
+    // The switch saves at once, so it is not part of the unsaved draft.
     const [enabled, setEnabled] = useState(true);
     const [toggling, setToggling] = useState(false);
-    // Saved/sent values to diff against (the Save button is disabled until something
-    // changes) plus short-lived success flags for the button check marks.
     const [base, setBase] = useState({ name: '', subject: '', body: '' });
     const [savedOk, setSavedOk] = useState(false);
     const [sentOk, setSentOk] = useState(false);
     const [resetOk, setResetOk] = useState(false);
+    const [errors, setErrors] = useState<WordingErrors>({});
+    const [attempt, setAttempt] = useState(0);
+    const savingRef = useRef(false);
+    // A confirm is open: Ctrl+S and a second save wait for it.
+    const asking = useRef(false);
+    const timers = useRef<number[]>([]);
+    const formRef = useRef<HTMLDivElement>(null);
 
-    const { previewHtml, rendering, setPreviewHtml } = useLivePreview(!!template, template?.key, name, subject, body);
+    const { previewHtml, rendering, failed, retry, clear } = useLivePreview(!!template, shown?.key, name, subject, body);
 
-    // Sync the form when a different template is opened (and clear the stale preview).
+    useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
+    const flash = (set: (on: boolean) => void) => {
+        set(true);
+        timers.current.push(window.setTimeout(() => set(false), 1600));
+    };
+
+    // Fill the form when a different template opens.
     useEffect(() => {
         if (template) {
             setName(template.name);
@@ -1550,25 +1482,49 @@ function EditorDialog({
             setBody(template.body_html);
             setEnabled(template.enabled);
             setBase({ name: template.name, subject: template.subject, body: template.body_html });
-            setPreviewHtml('');
+            clear();
             setSavedOk(false);
             setSentOk(false);
+            setResetOk(false);
+            setErrors({});
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
 
     const dirty = name !== base.name || subject !== base.subject || body !== base.body;
+    const hasErrors = WORDING_FIELDS.some((field) => errors[field]);
 
-    // Save: persist, flash a check, and reset the dirty baseline so the button greys out again.
-    // A variable this mail is not given would go out as literal {{text}}, and broken HTML is
-    // drawn differently by each mail client — so ask first, once, listing both.
+    const edit = (field: WordingField, set: (v: string) => void) => (value: string) => {
+        set(value);
+        if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    };
+
+    // Red fields, the banner shakes, focus goes to the first one.
+    const showErrors = (next: WordingErrors) => {
+        setErrors(next);
+        setAttempt((n) => n + 1);
+        const first = WORDING_FIELDS.find((field) => next[field]);
+        if (first) formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
+    };
+
     const handleSave = async () => {
-        if (!template || !dirty || saving) return;
+        if (!template || !dirty || saving || savingRef.current || asking.current) return;
+        const values: Record<WordingField, string> = { name, subject, body_html: body };
+        const missing: WordingErrors = {};
+        for (const field of WORDING_FIELDS) {
+            if (!values[field].trim()) missing[field] = t('email_err_required');
+        }
+        if (Object.keys(missing).length > 0) {
+            showErrors(missing);
+            return;
+        }
+
+        // Unknown variables go out as literal {{text}} and broken HTML renders differently per client: ask first.
         const unknown = unknownVariables(variablesIn(`${subject} ${body}`), template.variables);
         const htmlIssues = findHtmlIssues(body);
-        if (
-            (unknown.length > 0 || htmlIssues.length > 0) &&
-            !(await confirm({
+        if (unknown.length > 0 || htmlIssues.length > 0) {
+            asking.current = true;
+            const proceed = await confirm({
                 variant: 'warn',
                 title: t('email_check_title'),
                 description: (
@@ -1588,16 +1544,31 @@ function EditorDialog({
                     </div>
                 ),
                 confirmText: t('email_var_unknown_confirm'),
-            }))
-        )
-            return;
+            });
+            asking.current = false;
+            if (!proceed) return;
+        }
+
+        savingRef.current = true;
         try {
-            await onSave({ name, subject, body_html: body });
+            await onSave(values);
             setBase({ name, subject, body });
-            setSavedOk(true);
-            window.setTimeout(() => setSavedOk(false), 1600);
-        } catch {
-            useToastStore.getState().push(t('cred_err_generic'), 'error');
+            setErrors({});
+            flash(setSavedOk);
+        } catch (e: unknown) {
+            const response = (e as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } })?.response;
+            const serverErrors = response?.status === 422 ? response.data?.errors : undefined;
+            const next: WordingErrors = {};
+            for (const field of WORDING_FIELDS) {
+                if (serverErrors?.[field]) next[field] = values[field].trim() ? serverErrors[field][0] : t('email_err_required');
+            }
+            if (Object.keys(next).length > 0) {
+                showErrors(next);
+            } else {
+                useToastStore.getState().push(t('cred_err_generic'), 'error');
+            }
+        } finally {
+            savingRef.current = false;
         }
     };
 
@@ -1617,33 +1588,26 @@ function EditorDialog({
         }
     };
 
-    // Send test: fire the synchronous test send, flash a check on success.
+    // Sends what is on screen, saved or not; the answer says whether the mail left.
     const handleTest = async () => {
         if (!template || testing) return;
         try {
-            // What is on screen, saved or not — the preview beside this button already shows
-            // the unsaved wording, and a test of the stored copy would contradict it.
-            //
-            // The request succeeds even when the mail does not: the address may be
-            // malformed or the SMTP host unreachable, and the answer is in `sent`.
             const { sent } = await onTest(template.id, { name, subject, body_html: body });
             if (!sent) {
                 useToastStore.getState().push(t('email_test_failed'), 'error', t('email_test_failed_title'));
-
                 return;
             }
-            setSentOk(true);
-            window.setTimeout(() => setSentOk(false), 1600);
+            flash(setSentOk);
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
             useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
         }
     };
 
-    // Reset this template to its standard content (after confirming). The API returns
-    // the refreshed row, so sync the form + baseline to it without reopening the dialog.
+    // Back to the standard wording; the form and baseline take the refreshed row.
     const handleReset = async () => {
-        if (!template || resetting) return;
+        if (!template || resetting || asking.current) return;
+        asking.current = true;
         await confirm({
             variant: 'warn',
             title: t('email_reset_title'),
@@ -1658,15 +1622,16 @@ function EditorDialog({
                     setBody(next.body_html);
                     setEnabled(next.enabled);
                     setBase({ name: next.name, subject: next.subject, body: next.body_html });
-                    setPreviewHtml('');
+                    setErrors({});
+                    clear();
                 }
-                setResetOk(true);
-                window.setTimeout(() => setResetOk(false), 1600);
+                flash(setResetOk);
             },
         });
+        asking.current = false;
     };
 
-    // Confirm before discarding unsaved edits (X / Esc / click-outside / Cancel).
+    // Unsaved edits ask before closing (X, Esc, click outside, Cancel).
     const guardClose = useDiscardGuard(!!template && dirty);
     const requestClose = () => guardClose(onClose);
 
@@ -1684,19 +1649,18 @@ function EditorDialog({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template, dirty, saving, name, subject, body]);
 
+    const announcement = savedOk ? t('email_saved') : sentOk ? t('email_sent') : resetOk ? t('email_reset_done') : '';
+
     return (
         <Dialog open={!!template} onOpenChange={(o) => !o && requestClose()}>
             <DialogContent
                 onEscapeKeyDown={(e) => {
                     e.preventDefault();
-                    // Esc with the HTML problem list open closes only the list: this handler runs
-                    // first and marks the key handled, so the list closes itself (HtmlStatusBar).
+                    // Esc with the HTML problem list open closes only the list.
                     if (document.querySelector('[role="dialog"] [data-radix-popper-content-wrapper]')) return;
                     requestClose();
                 }}
-                // A click outside asks to close; focus leaving does not. Opening a confirm (save
-                // with unknown variables, Reset) moves focus into it, and treating that as
-                // "outside" stacked the discard prompt over the one just asked.
+                // A click outside asks to close; focus moving into a confirm does not.
                 onPointerDownOutside={(e) => {
                     e.preventDefault();
                     requestClose();
@@ -1704,93 +1668,108 @@ function EditorDialog({
                 onFocusOutside={(e) => e.preventDefault()}
                 className="flex h-[min(900px,90vh)] w-[min(1500px,92vw)] max-w-[min(1500px,92vw)] flex-col gap-0 overflow-hidden rounded-2xl p-0"
             >
-                {template && (
+                {shown && (
                     <>
-                        {/* One header, not three. The old first row said "Edit & preview" and the
-                            strip under it said PREVIEW and EDIT again, over two panes that are an
-                            email and a form — nobody was confusing them. */}
                         <FocusDialogHeader
                             icon={Mail}
                             eyebrow={
                                 <span className="flex items-center gap-2">
-                                    {template.code}
+                                    {shown.code}
                                     <span
                                         className={cn(
-                                            'rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-normal normal-case',
-                                            CADENCE_META[template.cadence].badge,
+                                            'rounded-md px-1.5 py-0.5 text-xs font-semibold tracking-normal normal-case',
+                                            CADENCE_META[shown.cadence].badge,
                                         )}
                                     >
-                                        {t(CADENCE_META[template.cadence].labelKey)}
+                                        {t(CADENCE_META[shown.cadence].labelKey)}
                                     </span>
                                 </span>
                             }
-                            title={name || template.name}
+                            title={name || shown.name}
                             srDescription={t('email_edit_preview')}
-                            subtitle={<TemplateAudienceLine templateKey={template.key} />}
+                            subtitle={<TemplateAudienceLine templateKey={shown.key} />}
                             titleSuffix={
                                 dirty ? (
                                     <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-normal">
-                                        <span className="bg-brand h-1.5 w-1.5 rounded-full" />
+                                        <span className="bg-brand h-1.5 w-1.5 rounded-full" aria-hidden />
                                         {t('email_unsaved')}
                                     </span>
                                 ) : undefined
                             }
                             headerRight={
-                                // The switch on top, who last reworded it right-aligned under it.
                                 <div className="flex shrink-0 flex-col items-end gap-1">
-                                    <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
-                                        <span className="text-muted-foreground">{t('email_enabled')}</span>
-                                        <SettingToggle on={enabled} onClick={handleToggle} label={t('email_enabled')} />
-                                    </label>
-                                    {/* Only once a person has reworded it — the seeded date alone says nothing. */}
-                                    {template.updated_by_name && (
-                                        <RecordStamps className="text-right" updatedAt={template.updated_at} updatedBy={template.updated_by_name} />
+                                    <div className="flex shrink-0 items-center gap-2 text-sm">
+                                        <span className="text-muted-foreground" aria-hidden>
+                                            {t('email_enabled')}
+                                        </span>
+                                        <Switch checked={enabled} onChange={handleToggle} disabled={toggling} aria-label={t('email_enabled')} />
+                                    </div>
+                                    {/* Only once a person has reworded it */}
+                                    {shown.updated_by_name && (
+                                        <RecordStamps className="text-right" updatedAt={shown.updated_at} updatedBy={shown.updated_by_name} />
                                     )}
                                 </div>
                             }
                         />
 
-                        {/* Body — the email is capped at 640px whatever the pane gives it, so the
-                            leftover width is worth more to the HTML the author is actually typing.
-                            Under lg the two panes stack and the body scrolls as one: side by side
-                            on a laptop each pane was ~440px, and the HTML is the half that suffers.
-                            Reversed, so the editor leads and the preview follows what you type. */}
-                        <div className="border-border flex min-h-0 flex-1 flex-col-reverse overflow-y-auto border-t lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:overflow-hidden">
-                            <PreviewPane brand={brand} from={fromAddress} subject={subject} previewHtml={previewHtml} rendering={rendering} />
-
-                            {/* Right — edit form. A flex column rather than a scrolling box, so the
-                                body editor grows into the dialog instead of staying twelve rows tall
-                                inside a pane three times its height. */}
-                            <div className="flex min-h-0 flex-col gap-4 p-5 lg:overflow-y-auto">
-                                <Field label={t('email_template')}>
-                                    <Input value={name} onChange={(e) => setName(e.target.value)} />
+                        {/* Body: preview left and form right on lg; stacked and scrolling as one below */}
+                        <div className="border-border flex min-h-0 flex-1 flex-col overflow-y-auto border-t lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:overflow-hidden">
+                            <div ref={formRef} className="flex shrink-0 flex-col gap-4 p-5 lg:min-h-0 lg:overflow-y-auto">
+                                {hasErrors && <FormErrorBanner message={t('email_err_fix')} shakeKey={attempt} />}
+                                <Field label={t('email_template')} error={errors.name} required>
+                                    <Input name="name" autoComplete="off" value={name} onChange={(e) => edit('name', setName)(e.target.value)} />
                                 </Field>
-                                <Field label={t('email_subject')}>
-                                    <SubjectField value={subject} onChange={setSubject} />
+                                <Field label={t('email_subject')} error={errors.subject} required>
+                                    <SubjectField value={subject} onChange={edit('subject', setSubject)} />
                                 </Field>
-                                <Field label={t('email_body')} grow>
-                                    <BodyEditor value={body} onChange={setBody} extraText={subject} variables={template.variables} />
+                                <Field label={t('email_body')} error={errors.body_html} required grow>
+                                    <BodyEditor value={body} onChange={edit('body_html', setBody)} extraText={subject} variables={shown.variables} />
                                 </Field>
                             </div>
+
+                            <PreviewPane
+                                brand={brand}
+                                from={fromAddress}
+                                subject={subject}
+                                previewHtml={previewHtml}
+                                rendering={rendering}
+                                failed={failed}
+                                onRetry={retry}
+                            />
                         </div>
 
-                        {/* Footer — Send Test (left) · Cancel / Save (right) */}
-                        <div className="border-border flex items-center justify-between gap-2 border-t px-6 py-3">
-                            <div className="flex gap-2">
+                        {/* Footer: test and reset left, cancel and save right */}
+                        <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t px-6 py-3">
+                            <span role="status" className="sr-only">
+                                {announcement}
+                            </span>
+                            <div className="flex flex-wrap gap-2">
                                 <Button variant="outline" onClick={handleTest} disabled={testing} title={t('email_test_hint')}>
-                                    {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
+                                    {testing ? (
+                                        <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
+                                    ) : sentOk ? (
+                                        <Check className="animate-in zoom-in-50 fade-in duration-300" aria-hidden />
+                                    ) : (
+                                        <Send aria-hidden />
+                                    )}
                                     {sentOk ? t('email_sent') : t('email_test')}
                                 </Button>
-                                {/* Quieter on purpose (it discards wording); off until the template differs, and the note says why */}
-                                {template.is_standard && (
-                                    <DisabledReason reason={template.is_modified ? null : t('email_reset_unchanged')} label={t('email_reset')}>
+                                {/* Off until the template differs from its standard; the note says why */}
+                                {shown.is_standard && (
+                                    <DisabledReason reason={shown.is_modified ? null : t('email_reset_unchanged')} label={t('email_reset')}>
                                         <Button
                                             variant="ghost"
                                             onClick={handleReset}
-                                            disabled={resetting || !template.is_modified}
-                                            title={template.is_modified ? t('email_reset_hint') : undefined}
+                                            disabled={resetting || !shown.is_modified}
+                                            title={shown.is_modified ? t('email_reset_hint') : undefined}
                                         >
-                                            {resetting ? <Loader2 className="animate-spin" /> : resetOk ? <Check /> : <RotateCcw />}
+                                            {resetting ? (
+                                                <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
+                                            ) : resetOk ? (
+                                                <Check className="animate-in zoom-in-50 fade-in duration-300" aria-hidden />
+                                            ) : (
+                                                <RotateCcw aria-hidden />
+                                            )}
                                             {resetOk ? t('email_reset_done') : t('email_reset')}
                                         </Button>
                                     </DisabledReason>
@@ -1800,10 +1779,9 @@ function EditorDialog({
                                 <Button variant="outline" onClick={requestClose}>
                                     {t('cancel')}
                                 </Button>
-                                <Button onClick={handleSave} disabled={!dirty || saving} title={t('email_save_hint')}>
-                                    {saving ? <Loader2 className="animate-spin" /> : savedOk ? <Check /> : <Save />}
-                                    {savedOk ? t('email_saved') : t('email_save')}
-                                </Button>
+                                <SaveButton onClick={handleSave} loading={saving} success={savedOk} disabled={!dirty} title={t('email_save_hint')}>
+                                    {t('email_save')}
+                                </SaveButton>
                             </div>
                         </div>
                     </>
@@ -1813,10 +1791,4 @@ function EditorDialog({
     );
 }
 
-/*
- * There is no create dialog: a template only leaves the building when code calls
- * sendTemplate() with its key, and every one of those keys is written in the source
- * (App\Support\EmailTemplates). A row added by hand would be editable, switchable and
- * testable, and no event in the system would ever send it — the Workflow module dropped
- * its own "new workflow" button for the same reason.
- */
+// No create dialog: templates arrive with the code that sends them (App\Support\EmailTemplates).
