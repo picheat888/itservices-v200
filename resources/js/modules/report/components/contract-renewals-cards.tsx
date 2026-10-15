@@ -1,6 +1,7 @@
 // "ต่ออายุและสิ้นสุดสัญญา" report: tiles, ending-by-month chart, time-left bands, the list's own cells and the closed-contracts card
 // (data: useContractRenewalsBreakdown).
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -19,7 +20,6 @@ import { ContractCode, ContractNameCell, TypePill } from './contract-cells';
 import { ContractLeftPill } from './contract-left-pill';
 import { compactMoney, contractMoney, ContractMonthCard } from './contract-month-card';
 import { CONTRACT_TYPE_TONE, CONTRACT_TYPES, type ContractTypeKey } from './contract-tones';
-import { InfoPopover } from './info-popover';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { summaryColumns } from './summary-strip';

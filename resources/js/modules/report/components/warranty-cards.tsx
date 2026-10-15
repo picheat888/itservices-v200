@@ -1,5 +1,6 @@
 // Warranty report cards: soon / expired segments, by month, time left, by category and by vendor (data: useAssetWarrantyBreakdown).
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -12,7 +13,6 @@ import { useAssetWarrantyBreakdown } from '../hooks/use-reports';
 import type { AssetWarrantyBreakdown, ChartTone, TabularFilters, WarrantyGroupFigures, WarrantyStatus } from '../types';
 import { type BarPiece, barTop, CardTitle, CODE_LINK, CountBar, CardEmpty as Empty, monthLabel, shortYear, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
-import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { DaysLeftBadge } from './tabular-cell';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';

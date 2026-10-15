@@ -1,5 +1,6 @@
 // Shared report card pieces: list folding, card headings, title with count, master-data label, stacked bar, month label, swatch.
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { bindDateFormat } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -8,7 +9,6 @@ import { Fragment } from 'react';
 import type { ChartLabel, ChartSeries, ChartTone } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { FILL, PIECE_INK, TEXT } from './chart-tones';
-import { InfoPopover } from './info-popover';
 
 /** First `top` rows plus the rest to fold into "อื่น ๆ"; one spare row is shown instead of folding a single name. */
 export function fold<T>(rows: T[], top: number, open: boolean, spare = 1) {

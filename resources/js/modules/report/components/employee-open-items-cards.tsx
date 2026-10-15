@@ -1,5 +1,6 @@
 // "สรุปเรื่องค้างของพนักงาน" report: topic segments, the headline tiles and the four topic cards (data: useEmployeeOpenItemsBreakdown).
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -8,7 +9,6 @@ import { useEmployeeOpenItemsBreakdown } from '../hooks/use-reports';
 import type { DataIssueKey, EmployeeOpenItemsBreakdown, OpenItemsAccountKind, OpenItemsGroup, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
 import { count } from './access-parts';
-import { InfoPopover } from './info-popover';
 import { KpiTile } from './kpi-tile';
 import { AccessCard, AccountCard, AssetCard, DataCard } from './open-items-tables';
 import { CardHeadingSkeleton, DataTableSkeleton, KpiRowSkeleton } from './report-skeletons';

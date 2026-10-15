@@ -1,5 +1,6 @@
 // "ภาพรวมคำขอ" report cards: submitted and completed by month, types by status, days to delivery, items asked for, departments (data: useRequestOverviewBreakdown).
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -35,7 +36,6 @@ import {
     Swatch,
 } from './chart-parts';
 import { FILL } from './chart-tones';
-import { InfoPopover } from './info-popover';
 import { BASIS_PCT, H_PCT, pct, W_PCT } from './percent-classes';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
