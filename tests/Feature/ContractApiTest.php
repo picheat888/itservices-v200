@@ -105,6 +105,26 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.0.attachments', []);
     }
 
+    /** The timeline axis runs from two months back to nine months ahead; nothing outside it may be sent. */
+    public function test_summary_timeline_holds_only_contracts_ending_inside_the_axis(): void
+    {
+        $this->travelTo('2026-10-15 09:00:00');
+        $this->actingAs($this->super());
+
+        $make = fn (string $code, string $end) => Contract::create([
+            'code' => $code, 'vendor' => 'A', 'name' => $code, 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => $end, 'value' => 1000, 'billing_cycle' => 'yearly',
+        ]);
+        $make('BEFORE', '2026-07-31');
+        $make('FIRST', '2026-08-01');
+        $make('LAST', '2027-07-31');
+        $make('AFTER', '2027-08-01');
+
+        $codes = collect($this->getJson('/api/contracts/summary')->assertOk()->json('timeline'))->pluck('code')->sort()->values()->all();
+
+        $this->assertSame(['FIRST', 'LAST'], $codes);
+    }
+
     public function test_summary_reports_status_counts(): void
     {
         $this->actingAs($this->super());
