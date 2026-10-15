@@ -199,6 +199,8 @@ export const contract: Dict = {
     contract_months_one: '{n} month',
     contract_months_many: '{n} months',
     contract_notify_chip: '{n}d',
+    contract_notify_on: 'on',
+    contract_notify_off: 'off',
     contract_reminder_days_before: '{n} days before expiry',
 
     // contract-assets-tab.tsx — linked assets table

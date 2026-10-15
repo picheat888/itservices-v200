@@ -54,6 +54,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                         key={a.id}
                         type="button"
                         onClick={() => setSelected(i)}
+                        aria-pressed={i === selected}
                         className={cn(
                             'flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
                             i === selected ? 'border-brand bg-brand/5 shadow-[inset_0_0_0_1px_var(--brand)]' : 'border-border hover:bg-accent/50',

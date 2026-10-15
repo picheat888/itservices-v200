@@ -80,7 +80,7 @@ function StatCard({
                 </span>
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-            {hint && <div className={cn('mt-1 text-xs', hintDanger ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground')}>{hint}</div>}
+            {hint && <div className={cn('mt-1 text-xs', hintDanger ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>{hint}</div>}
         </Card>
     );
 }
@@ -295,12 +295,11 @@ export default function ContractsPage() {
 
             {hasBanners && (
                 <div className="mb-2.5 space-y-2.5">
-                    <style>{bannerBlinkStyles}</style>
                     {!!summary?.expiring && (
                         <div className="rounded-md bg-amber-50 p-4 dark:bg-amber-500/10">
                             <div className="flex">
                                 <div className="shrink-0">
-                                    <AlertTriangle className="cf-blink h-5 w-5 text-amber-500 dark:text-amber-400" />
+                                    <AlertTriangle className={cn(BANNER_BLINK, 'h-5 w-5 text-amber-500 dark:text-amber-400')} aria-hidden />
                                 </div>
                                 <div className="ml-3 flex-1 md:flex md:items-center md:justify-between">
                                     <p className="text-foreground text-sm font-medium">
@@ -328,7 +327,7 @@ export default function ContractsPage() {
                         <div className="rounded-md bg-red-50 p-4 dark:bg-red-500/10">
                             <div className="flex">
                                 <div className="shrink-0">
-                                    <AlertOctagon className="cf-blink h-5 w-5 text-red-500 dark:text-red-400" />
+                                    <AlertOctagon className={cn(BANNER_BLINK, 'h-5 w-5 text-red-500 dark:text-red-400')} aria-hidden />
                                 </div>
                                 <div className="ml-3 flex-1 md:flex md:items-center md:justify-between">
                                     <p className="text-foreground text-sm font-medium">
@@ -372,9 +371,11 @@ export default function ContractsPage() {
                             <div className="relative w-full max-w-xs">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
+                                    type="search"
                                     value={searchText}
                                     onChange={(e) => setSearchText(e.target.value)}
                                     placeholder={`${t('contract_vendor')} / ${t('contract_details')}`}
+                                    aria-label={`${t('contract_vendor')} / ${t('contract_details')}`}
                                     className="pl-9"
                                 />
                             </div>
@@ -638,19 +639,21 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
     return (
         <tr
             onClick={() => onSelect(c.id)}
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                e.preventDefault();
+                onSelect(c.id);
+            }}
             className={cn(
-                'border-border/60 cursor-pointer border-b transition-colors last:border-0',
+                'border-border/60 focus-visible:bg-accent/50 focus-visible:outline-ring cursor-pointer border-b transition-colors last:border-0 focus-visible:outline-2 focus-visible:-outline-offset-2',
                 isNew ? 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12' : 'hover:bg-accent/40',
             )}
         >
             <td className="px-4 py-2.5">
                 <div className="flex items-center gap-2">
                     <span className="text-muted-foreground font-mono text-xs">{c.code}</span>
-                    {isNew && (
-                        <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
-                            {t('contract_badge_new')}
-                        </span>
-                    )}
+                    {isNew && <StatusBadge tone="green">{t('contract_badge_new')}</StatusBadge>}
                 </div>
             </td>
             <td className="max-w-[280px] truncate px-4 py-2.5">{c.details || <span className="text-muted-foreground">—</span>}</td>
@@ -679,18 +682,8 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
     );
 }
 
-/** Attention-grabbing double-blink (+ slight zoom) for the alert-banner icons. */
-const bannerBlinkStyles = `
-@keyframes cf-blink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  20% { opacity: .25; transform: scale(1.25); }
-  40% { opacity: 1; transform: scale(1); }
-  60% { opacity: .25; transform: scale(1.25); }
-  80% { opacity: 1; transform: scale(1); }
-}
-.cf-blink { animation: cf-blink 1.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .cf-blink { animation: none; } }
-`;
+/** Alert-banner icons pulse three times on arrival (4.2s, under WCAG 2.2.2's 5s), not forever. */
+const BANNER_BLINK = 'motion-safe:animate-[pulse_1.4s_ease-in-out_3]';
 
 function OverviewTab({
     summary,
@@ -847,33 +840,40 @@ function OverviewTab({
                             {/* Axis baseline */}
                             <div className="border-border absolute inset-x-0 bottom-0 border-t" />
                             {/* Contract dots, positioned by actual expiry date */}
-                            {placed.map(({ c, frac, lane }) => (
-                                <button
-                                    key={c.id}
-                                    title={
-                                        c.days <= 0
-                                            ? `${c.code}\n${c.name}\n${fmt.date(c.end)} (${t('contract_timeline_expired_ago').replace('{n}', String(-c.days))})`
-                                            : `${c.code}\n${c.name}\n${fmt.date(c.end)} (${t('contract_days_many').replace('{n}', String(c.days))})`
-                                    }
-                                    onClick={() => onSelect(c.id)}
-                                    className={cn(
-                                        'ring-background absolute h-3 w-3 -translate-x-1/2 rounded-full ring-2 transition-transform hover:z-10 hover:scale-125',
-                                        c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-500' : 'bg-brand',
-                                    )}
-                                    style={{ left: `${frac * 100}%`, bottom: `${8 + lane * 16}px` }}
-                                />
-                            ))}
+                            {placed.map(({ c, frac, lane }) => {
+                                const when =
+                                    c.days <= 0
+                                        ? t('contract_timeline_expired_ago').replace('{n}', String(-c.days))
+                                        : t('contract_days_many').replace('{n}', String(c.days));
+                                return (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        title={`${c.code}\n${c.name}\n${fmt.date(c.end)} (${when})`}
+                                        aria-label={`${c.code} ${c.name}, ${fmt.date(c.end)} (${when})`}
+                                        onClick={() => onSelect(c.id)}
+                                        className={cn(
+                                            // A 24px hit area around the 12px dot (WCAG 2.5.8)
+                                            'ring-background focus-visible:outline-ring absolute h-3 w-3 -translate-x-1/2 rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:z-10 hover:scale-125 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2',
+                                            c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-500' : 'bg-brand',
+                                        )}
+                                        style={{ left: `${frac * 100}%`, bottom: `${8 + lane * 16}px` }}
+                                    />
+                                );
+                            })}
                         </div>
                         <div className="relative z-10 mt-1 grid grid-cols-12 px-2 py-1.5">
                             {months.map((m) => (
                                 <div key={m.key} className="text-center leading-tight">
                                     {m.isNow && (
-                                        <div className="text-brand text-[9px] font-bold tracking-wide uppercase">{t('contract_timeline_now')}</div>
+                                        <div className="text-brand-ink text-[9px] font-bold tracking-wide uppercase">
+                                            {t('contract_timeline_now')}
+                                        </div>
                                     )}
-                                    <div className={cn('text-[11px] font-medium', m.isNow ? 'text-brand font-bold' : 'text-foreground')}>
+                                    <div className={cn('text-[11px] font-medium', m.isNow ? 'text-brand-ink font-bold' : 'text-foreground')}>
                                         {m.label}
                                     </div>
-                                    <div className={cn('text-[10px]', m.isNow ? 'text-brand/80' : 'text-muted-foreground')}>{m.year}</div>
+                                    <div className={cn('text-[10px]', m.isNow ? 'text-brand-ink' : 'text-muted-foreground')}>{m.year}</div>
                                 </div>
                             ))}
                         </div>
@@ -922,7 +922,7 @@ function OverviewTab({
                                 onClick={() => onSelect(c.id)}
                                 className="hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                             >
-                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/15 font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
+                                <span className="flex h-9 w-16 shrink-0 items-center justify-center rounded-full bg-amber-500/10 font-mono text-xs font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
                                     {t('contract_days_short').replace('{n}', String(c.days))}
                                 </span>
                                 <div className="min-w-0 flex-1">
