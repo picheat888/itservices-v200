@@ -1,5 +1,6 @@
 // Access overview report cards: type / state segments, grants and revocations by month, leavers, departments, resources to look after (data: useAccessOverviewBreakdown).
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -26,7 +27,6 @@ import {
     shortYear,
 } from './chart-parts';
 import { FILL } from './chart-tones';
-import { InfoPopover } from './info-popover';
 import { BASIS_PCT, H_PCT, pct } from './percent-classes';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';

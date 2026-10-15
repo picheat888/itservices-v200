@@ -1,5 +1,6 @@
 // Write-off report cards: by month, by reason, by category and rentals by contract (data: useAssetWriteoffBreakdown).
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -30,7 +31,6 @@ import {
     Swatch,
 } from './chart-parts';
 import { FILL, PIECE_INK } from './chart-tones';
-import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { niceMax } from './weekly-ticket-chart';

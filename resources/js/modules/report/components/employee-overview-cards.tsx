@@ -1,5 +1,6 @@
 // "ภาพรวมพนักงาน" report cards: the รายการ segment, headcount line, departments with their sections, leavers still holding access, and the list's cells (data: useEmployeeOverviewBreakdown).
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -15,7 +16,6 @@ import type { AccessType, EmployeeOverviewBreakdown, EmployeeOverviewCounts, Tab
 import { ACCESS_TYPES, DaysOut, GroupRow, heldStyle, NUM, Segments, TD, TH, TypeDot, TypeLabel, useFoldRow } from './access-overview-cards';
 import { count, deptName, type Lang, localName } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
-import { InfoPopover } from './info-popover';
 import { BASIS_PCT, pct } from './percent-classes';
 import { CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';

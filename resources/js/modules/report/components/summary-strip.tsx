@@ -1,13 +1,13 @@
 // Headline tiles above a tabular report (rows.summary, mirrors ReportSummary): share badge + meter, split bar + dots,
 // a note line, a goal meter, or a request trend (Delta + Sparkline). Formats: count, money, percent, hours, years, days.
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
 import { reportDates, Sparkline } from './chart-parts';
 import { FILL } from './chart-tones';
-import { InfoPopover } from './info-popover';
 import { KpiTile } from './kpi-tile';
 import { TileChart } from './tile-chart';
 import { YearsTip } from './years-tip';

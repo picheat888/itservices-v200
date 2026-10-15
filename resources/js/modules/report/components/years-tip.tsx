@@ -1,6 +1,6 @@
 // A decimal number of years ("4.3") that shows "4 ปี 4 เดือน" on hover, tap or keyboard, and says it to screen readers.
 import { useT } from '@/lang';
-import { InfoPopover } from './info-popover';
+import { InfoPopover } from '@/shared/components/info-popover';
 
 export function useYearsInWords() {
     const t = useT();

@@ -1,11 +1,11 @@
 // Tiny charts at the right of a summary tile's footer: seats by month (line), a count per group (columns).
 import { useT } from '@/lang';
+import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryChart } from '../types';
 import { monthLabel } from './chart-parts';
 import { FILL } from './chart-tones';
-import { InfoPopover } from './info-popover';
 
 type Line = Extract<SummaryChart, { kind: 'line' }>;
 type Columns = Extract<SummaryChart, { kind: 'columns' }>;
@@ -13,19 +13,6 @@ type Columns = Extract<SummaryChart, { kind: 'columns' }>;
 export function TileChart({ chart, title, lineClass }: { chart: SummaryChart; title: string; lineClass: string }) {
     if (chart.kind === 'line') return <LineChart chart={chart} title={title} className={lineClass} />;
     return <ColumnChart chart={chart} title={title} />;
-}
-
-/** One row of a chart's note: a mark, the words, the number on the right. */
-function NoteRow({ mark, text, value, muted }: { mark?: React.ReactNode; text: React.ReactNode; value: string; muted?: boolean }) {
-    return (
-        <div className={cn('flex items-center justify-between gap-4', muted && 'text-muted-foreground')}>
-            <span className="inline-flex min-w-0 items-center gap-1.5">
-                {mark}
-                <span className="truncate">{text}</span>
-            </span>
-            <b className={cn('font-mono tabular-nums', muted && 'font-normal')}>{value}</b>
-        </div>
-    );
 }
 
 const Dot = ({ className }: { className: string }) => <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', className)} />;

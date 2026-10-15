@@ -1,6 +1,7 @@
 // "คำขอที่รอ IT ส่งมอบ" cards (pages/requests-it-pending.tsx): data time, how long requests wait with bucket
 // popovers, who holds them by owner or type (the "แยกตาม" switch), and new joiners against their start day.
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -15,7 +16,6 @@ import type { ChartSeries, ItPendingBreakdown, ItPendingGroup, ItPendingJoiner, 
 import { Segments, TH } from './access-overview-cards';
 import { CardEmpty, CardTitle, CODE_LINK, fold, FoldToggle, StackBar, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
-import { InfoPopover } from './info-popover';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
