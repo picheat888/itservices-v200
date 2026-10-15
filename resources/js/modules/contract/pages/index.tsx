@@ -625,23 +625,16 @@ function OverviewTab({
         };
     });
 
-    // Place each contract at its true position along the axis (0–1 across the 12
-    // months) by its expiry day, then stack into lanes so near-overlapping dots
-    // spread vertically instead of piling on one spot — a real scatter timeline.
+    // Each dot sits at its expiry day; near neighbours stack into lanes
     const points = summary.timeline
-        .map((c) => {
+        .flatMap((c) => {
             const [y, mo, day] = c.end.split('-').map(Number);
-            let idx = months.findIndex((m) => m.key === `${y}-${mo - 1}`);
-            let within = 0.5;
-            if (idx === -1) {
-                // Outside the window: pin already-expired to the far left, far-future to the right.
-                idx = c.days <= 0 ? 0 : 11;
-                within = c.days <= 0 ? 0.1 : 0.9;
-            } else {
-                const daysInMonth = new Date(y, mo, 0).getDate();
-                within = Math.min(0.95, Math.max(0.05, (day - 0.5) / daysInMonth));
-            }
-            return { c, frac: (idx + within) / 12 };
+            const idx = months.findIndex((m) => m.key === `${y}-${mo - 1}`);
+            // Off the axis: no column to stand in
+            if (idx === -1) return [];
+            const daysInMonth = new Date(y, mo, 0).getDate();
+            const within = Math.min(0.95, Math.max(0.05, (day - 0.5) / daysInMonth));
+            return [{ c, frac: (idx + within) / 12 }];
         })
         .sort((a, b) => a.frac - b.frac);
 

@@ -132,10 +132,11 @@ class ContractController extends Controller
             ->take(5)
             ->values();
 
-        // Dots for the timeline: the full 2 months behind us (the window's two
-        // past columns) through ~12 months out.
+        // Timeline dots: exactly the page's 12-month axis (2 months back to 9 ahead)
+        $axisStart = now()->startOfMonth()->subMonthsNoOverflow(2);
+        $axisEnd = now()->startOfMonth()->addMonthsNoOverflow(9)->endOfMonth();
         $timeline = $live
-            ->filter(fn ($c) => $c->daysRemaining() > -95 && $c->daysRemaining() < 365)
+            ->filter(fn ($c) => $c->end_date->between($axisStart, $axisEnd))
             ->map(fn ($c) => [
                 'id' => $c->id,
                 'code' => $c->code,
