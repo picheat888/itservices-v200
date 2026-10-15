@@ -104,9 +104,9 @@ class EmailTemplateController extends Controller
         $this->gate($request);
 
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:150'],
-            'subject' => ['sometimes', 'string', 'max:255'],
-            'body_html' => ['sometimes', 'string'],
+            'name' => ['sometimes', 'required', 'string', 'max:150'],
+            'subject' => ['sometimes', 'required', 'string', 'max:255'],
+            'body_html' => ['sometimes', 'required', 'string'],
             'enabled' => ['sometimes', 'boolean'],
         ]);
 

@@ -68,7 +68,7 @@ export interface EmailLogListResponse {
         current_page: number;
         last_page: number;
         /** Counts across the whole log, not the current page. */
-        counts: Record<EmailLogStatus, number>;
+        counts: Record<EmailLogStatus | 'all', number>;
     };
 }
 

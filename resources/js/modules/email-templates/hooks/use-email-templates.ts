@@ -5,10 +5,6 @@ const KEY = ['email-templates'] as const;
 
 export const useEmailTemplates = () => useQuery({ queryKey: KEY, queryFn: emailTemplateApi.list });
 
-/**
- * The delivery log, paginated server-side — it gains a row per email and is never pruned.
- * Keeps the previous page on screen while the next one loads, so paging does not blink.
- */
 /** One log entry, fetched only while its drawer is open. */
 export const useEmailLog = (id: number | null) =>
     useQuery({
@@ -17,6 +13,7 @@ export const useEmailLog = (id: number | null) =>
         enabled: id != null,
     });
 
+/** The delivery log, paginated server-side; keeps the previous page on screen while the next loads. */
 export const useEmailLogs = (params: EmailLogParams, enabled: boolean) =>
     useQuery({
         queryKey: ['email-logs', params],

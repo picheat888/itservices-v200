@@ -93,6 +93,17 @@ class NotificationPermissionGateTest extends TestCase
         $this->assertTrue($template->fresh()->enabled, 'Switched off by someone who may only reword it.');
     }
 
+    public function test_an_email_cannot_be_saved_with_an_empty_name_subject_or_body(): void
+    {
+        $template = $this->emailTemplate();
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.email_edit']));
+
+        $this->putJson("/api/email-templates/{$template->id}", ['name' => '', 'subject' => '', 'body_html' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['name', 'subject', 'body_html']);
+        $this->assertSame('Subject', $template->fresh()->subject);
+    }
+
     public function test_switching_an_email_off_does_not_let_you_reword_it(): void
     {
         $template = $this->emailTemplate();

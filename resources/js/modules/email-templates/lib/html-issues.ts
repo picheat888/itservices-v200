@@ -89,13 +89,28 @@ const EMAIL_SAFE_TAGS = new Set([
     'ul',
 ]);
 
-const TAG_PATTERN = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?(\/?)>/g;
+// Attribute values may hold a '>' inside quotes.
+const TAG_PATTERN = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b(?:"[^"]*"|'[^']*'|[^'">])*?(\/?)>/g;
 
 export function findHtmlIssues(html: string): HtmlIssue[] {
     const issues: HtmlIssue[] = [];
     const open: (TagSpot & { tag: string })[] = [];
     const reportedUnsupported = new Set<string>();
-    const lineAt = (index: number) => html.slice(0, index).split('\n').length;
+    // Where each line starts, so a tag's line is a binary search rather than a re-split.
+    const lineStarts = [0];
+    for (let i = 0; i < html.length; i++) {
+        if (html[i] === '\n') lineStarts.push(i + 1);
+    }
+    const lineAt = (index: number) => {
+        let low = 0;
+        let high = lineStarts.length - 1;
+        while (low < high) {
+            const mid = (low + high + 1) >> 1;
+            if (lineStarts[mid] <= index) low = mid;
+            else high = mid - 1;
+        }
+        return low + 1;
+    };
 
     for (const match of html.matchAll(TAG_PATTERN)) {
         const [, slash, rawTag, selfClose] = match;

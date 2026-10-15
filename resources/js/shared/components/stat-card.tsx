@@ -17,7 +17,7 @@ export function StatCard({
     icon: LucideIcon;
     label: string;
     value: string;
-    sub: ReactNode;
+    sub?: ReactNode;
     onClick?: () => void;
     loading?: boolean;
 }) {
@@ -45,12 +45,12 @@ export function StatCard({
             {loading ? (
                 <>
                     <Skeleton className="mt-3 h-7 w-16" />
-                    <Skeleton className="mt-2.5 h-3 w-24" />
+                    {sub !== undefined && <Skeleton className="mt-2.5 h-3 w-24" />}
                 </>
             ) : (
                 <>
                     <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-                    <div className="text-muted-foreground mt-1 truncate text-xs">{sub}</div>
+                    {sub !== undefined && <div className="text-muted-foreground mt-1 truncate text-xs">{sub}</div>}
                 </>
             )}
         </Card>

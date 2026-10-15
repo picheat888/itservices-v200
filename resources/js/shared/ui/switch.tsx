@@ -30,7 +30,10 @@ export function Switch({
             )}
         >
             <span
-                className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', checked ? 'left-[1.125rem]' : 'left-0.5')}
+                className={cn(
+                    'absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform motion-reduce:transition-none',
+                    checked && 'translate-x-4',
+                )}
             />
         </button>
     );

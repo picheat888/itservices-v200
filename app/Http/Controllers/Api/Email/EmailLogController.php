@@ -125,9 +125,9 @@ class EmailLogController extends Controller
                 'per_page' => $paginator->perPage(),
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
-                // Counts for the whole log, not the page — the tab's own filter chips read
-                // these, and a count that changed with the page would be a lie.
+                // Whole-log counts for the filter chips, unaffected by status, search or page.
                 'counts' => [
+                    'all' => EmailLog::count(),
                     'sent' => EmailLog::where('status', 'sent')->count(),
                     'failed' => EmailLog::where('status', 'failed')->count(),
                     'skipped' => EmailLog::where('status', 'skipped')->count(),
