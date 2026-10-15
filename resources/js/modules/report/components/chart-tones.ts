@@ -100,3 +100,6 @@ export const STROKE: Record<ChartTone, string> = {
     'access-social': 'stroke-indigo-500',
     'access-software': 'stroke-amber-500',
 };
+
+/** The count printed inside a bar piece: white with a soft shadow in light mode, near-black in dark mode. */
+export const PIECE_INK = 'text-white [text-shadow:0_1px_1px_rgb(0_0_0/0.35)] dark:text-slate-950 dark:[text-shadow:none]';

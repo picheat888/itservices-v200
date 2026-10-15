@@ -3,6 +3,7 @@ import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ChevronRight } from 'lucide-react';
 import type { AccessDepartment } from '../types';
+import { PIECE_INK } from './chart-tones';
 import { pct, W_PCT } from './percent-classes';
 
 export type Lang = 'th' | 'en';
@@ -66,7 +67,8 @@ export function PieceBar({
                         key={p.key}
                         title={`${p.label}: ${p.text ?? count(p.value, lang)}`}
                         className={cn(
-                            'flex min-w-6 items-center justify-center font-mono text-[10.5px] font-semibold whitespace-nowrap text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
+                            'flex min-w-6 items-center justify-center font-mono text-[10.5px] font-semibold whitespace-nowrap tabular-nums',
+                            PIECE_INK,
                             W_PCT[pct(p.value, total)],
                             p.fill,
                         )}

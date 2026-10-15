@@ -76,9 +76,6 @@ function niceMoney(value: number): number {
     return [1, 1.2, 1.6, 2, 2.4, 3, 4, 5, 6, 8, 10].map((x) => x * power).find((x) => x >= value) ?? value;
 }
 
-/** A piece gets its own label once it is at least this share of the axis. */
-const PIECE_LABEL_SHARE = 0.12;
-
 /** One month with its items summed per type. */
 interface MonthFigures {
     month: ContractMonth;
@@ -317,14 +314,9 @@ export function ContractMonthCard({ title, info, months, mode, rowValue, monthFo
                                                             {pieces.map((k) => (
                                                                 <span
                                                                     key={k}
-                                                                    className={cn(
-                                                                        'flex min-h-[3px] w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10px] leading-none font-semibold text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                                                                        FILL[CONTRACT_TYPE_TONE[k]],
-                                                                    )}
+                                                                    className={cn('block min-h-[3px] w-full basis-0', FILL[CONTRACT_TYPE_TONE[k]])}
                                                                     style={{ flexGrow: m.by[k] }}
-                                                                >
-                                                                    {m.total > m.by[k] && m.by[k] / top >= PIECE_LABEL_SHARE ? axis(m.by[k]) : null}
-                                                                </span>
+                                                                />
                                                             ))}
                                                         </span>
                                                     </span>

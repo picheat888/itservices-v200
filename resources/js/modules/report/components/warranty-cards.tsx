@@ -38,9 +38,6 @@ const STATUSES: { key: WarrantyStatus; label_key: string; tone: ChartTone }[] = 
 /** The period tables' colours: expired red, in the window amber (amber = warranty), to a year blue, beyond green. */
 const PERIOD_TONES: Record<Period, ChartTone> = { expired: 'soft-red', within: 'soft-amber', mid: 'soft-blue', later: 'soft-green' };
 
-/** A month bar's piece gets its own count once it is at least this share of the tallest bar. */
-const SEGMENT_LABEL_SHARE = 0.12;
-
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
 const NUM = 'text-right font-mono tabular-nums';
@@ -248,16 +245,9 @@ function MonthCard({ months }: { months: Month[] }) {
                                                         m.statuses[s.key] > 0 ? (
                                                             <span
                                                                 key={s.key}
-                                                                className={cn(
-                                                                    'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold text-white tabular-nums [text-shadow:0_1px_1px_rgb(0_0_0/0.35)]',
-                                                                    FILL[s.tone],
-                                                                )}
+                                                                className={cn('block min-h-px w-full basis-0', FILL[s.tone])}
                                                                 style={{ flexGrow: m.statuses[s.key] }}
-                                                            >
-                                                                {m.total > m.statuses[s.key] && m.statuses[s.key] / top >= SEGMENT_LABEL_SHARE
-                                                                    ? count(m.statuses[s.key], lang)
-                                                                    : null}
-                                                            </span>
+                                                            />
                                                         ) : null,
                                                     )}
                                                 </span>
