@@ -19,15 +19,29 @@ export function useTableFitsWidth(boxRef: RefObject<HTMLElement | null>): boolea
 
     useLayoutEffect(() => {
         const box = boxRef.current;
-        const table = box?.querySelector('table');
-        if (!box || !table) return;
+        if (!box) return;
 
-        const measure = () => setFits(table.offsetWidth <= box.clientWidth + 1);
-        measure();
-        const observer = new ResizeObserver(measure);
-        observer.observe(box);
-        observer.observe(table);
-        return () => observer.disconnect();
+        // The <table> can mount after the box or be swapped for a new one when rows arrive
+        let table: HTMLTableElement | null = null;
+        const measure = () => setFits(!table || table.offsetWidth <= box.clientWidth + 1);
+        const sizes = new ResizeObserver(measure);
+        const follow = () => {
+            const current = box.querySelector('table');
+            if (current !== table) {
+                if (table) sizes.unobserve(table);
+                table = current;
+                if (table) sizes.observe(table);
+            }
+            measure();
+        };
+        sizes.observe(box);
+        follow();
+        const swaps = new MutationObserver(follow);
+        swaps.observe(box, { childList: true, subtree: true });
+        return () => {
+            sizes.disconnect();
+            swaps.disconnect();
+        };
     }, [boxRef]);
 
     return fits;
