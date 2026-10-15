@@ -85,29 +85,36 @@ export interface AppNotification {
     created_at_iso?: string;
 }
 
-/**
- * How many notifications exist of one payload type — the raw tally the tray's filter chips
- * are built from. `module` is only set on a test sample, which is tabbed under the module it
- * imitates rather than under a module of its own.
- */
+/** Tally of one kind (payload type, plus the imitated module on a test sample) for the tray's chips. */
 export interface NotificationTypeCount {
     type: string | null;
     module: string | null;
     count: number;
+    unread: number;
 }
 
 export interface NotificationsResponse {
-    /** The most recent rows only — the list is capped server-side. */
+    /** One page, newest first. */
     data: AppNotification[];
     unread: number;
     /** Every notification held, not just the ones in `data`. */
     total: number;
-    /** Real totals per payload type, so the chips do not count the window they were handed. */
+    /** Rows matching the requested kinds (all of them when none were asked for). */
+    matching: number;
+    has_more: boolean;
+    /** Real totals per kind, so the chips do not count the page they were handed. */
     counts: NotificationTypeCount[];
 }
 
+/** A page of the tray: optionally only some kinds ("type|module"), starting at an offset. */
+export interface NotificationListParams {
+    kinds?: string[];
+    offset?: number;
+}
+
 export const notificationApi = {
-    list: (): Promise<NotificationsResponse> => http.get<NotificationsResponse>('/notifications').then((r) => r.data),
+    list: (params: NotificationListParams = {}): Promise<NotificationsResponse> =>
+        http.get<NotificationsResponse>('/notifications', { params }).then((r) => r.data),
 
     markRead: (id: string): Promise<void> => http.put(`/notifications/${id}/read`).then(() => undefined),
 

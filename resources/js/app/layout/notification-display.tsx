@@ -176,27 +176,16 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     return { Icon: UserPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
 }
 
-/**
- * Headline line for a notification (vendor/contract code, stock item SKU, or employee
- * name/code).
- *
- * Code and name are joined by a plain hyphen — the em dash that used to sit here carried
- * more weight than the line needs, on rows that are already long (an auto-opened case
- * reads TKT-… - [RQ-…] Title). One character for all three, so the bell does not show
- * three different separators.
- *
- * A service request is the one kind that does not quote the stored title: that is the
- * server's canonical English string, so the bell composes the same wording the list uses,
- * in the reader's language. Hence the translator.
- */
+/** Headline line for a notification: tickets and requests lead with their number, the rest read "name (code)". */
 export function notificationTitle(n: AppNotification, t: Translate): string {
     // Named by the notification it samples, in the reader's own language.
     if (n.data.type === 'test') {
         return `${t('notif_test_prefix')} ${t(`notification_name_${(n.data.source_key ?? '').replace(/^notif_/, '')}`)}`;
     }
     if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
-    if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} - ${n.data.subject}`;
-    if (n.data.type === 'stock_alert') return `${n.data.sku} - ${n.data.name}`;
+    // Number first: long titles truncate, and the number is what people refer to.
+    if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} ${n.data.subject}`;
+    if (n.data.type === 'stock_alert') return `${n.data.name} (${n.data.sku})`;
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
     if (n.data.type === 'request') {
@@ -209,11 +198,10 @@ export function notificationTitle(n: AppNotification, t: Translate): string {
                   },
                   t,
               )
-            : // Bells delivered before the payload carried the type: their stored title is
-              // all there is, in whatever language it was written.
+            : // Older bells without a type: the stored title is all there is.
               (n.data.title ?? '');
 
-        return `${n.data.reference} - ${written}`;
+        return `${n.data.reference} ${written}`;
     }
     if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested' || n.data.type === 'asset_recalled')
         return `${n.data.asset_model} (${n.data.asset_tag})`;
