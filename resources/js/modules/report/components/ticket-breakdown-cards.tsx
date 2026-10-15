@@ -197,6 +197,8 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
         {
             key: 'split',
             header: t('rep_col_close_result'),
+            // A bar reads at any width: the table still fits an iPad's card
+            minWidth: '3rem',
             // A full-width bar per person — each split as a share of their own total, as sketched.
             render: (r) => <StackBar values={{ completed: r.completed, canceled: r.canceled }} series={STAFF_SERIES} scale={r.total} />,
         },

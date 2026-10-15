@@ -367,7 +367,7 @@ export function NotificationSettingsPane() {
             key: 'code',
             header: t('notification_col_id'),
             className: 'w-[6%]',
-            render: (n) => <span className="text-muted-foreground text-xs tabular-nums">{n.code}</span>,
+            render: (n) => <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">{n.code}</span>,
         },
         {
             key: 'name',

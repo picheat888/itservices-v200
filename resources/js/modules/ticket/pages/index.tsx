@@ -310,11 +310,7 @@ export default function TicketsPage() {
     // Columns for the shared DataTable (All / Assigned-to-me tabs):
     // Request at · Ticket no. · Subject · Request by · Category · Priority · Status · Responsible by
     const columns: Column<Ticket>[] = [
-        // A timestamp, a code, a person's name and a category name are single values: breaking one
-        // across two lines makes a row twice as tall and reads as two facts. They keep their line,
-        // and the subject beside them — the one column with a truncation already — gives up the
-        // width instead. Before this, one CCTV case (a longer prefix, a longer category name) was
-        // enough to wrap five columns of every row on the page.
+        // Dates, codes, names and categories keep one line; the subject is the column that gives
         {
             key: 'created',
             header: t('ticket_request_at'),
@@ -323,11 +319,7 @@ export default function TicketsPage() {
             render: (tk) => <DateTimeCell value={tk.created_at} />,
         },
         {
-            // The column that gives. `w-full max-w-0` hands it every pixel the fixed columns do
-            // not want and lets it shrink to nothing, so the table fits its card at any width and
-            // the subject truncates instead. Without it the table ran 11px past the card, and the
-            // overhang it lost was the last column's right padding — a row that looked flush
-            // against the edge while the first column sat properly inset.
+            // The column that gives: it takes what the fixed columns leave (at least DataTable's floor) and truncates
             key: 'subject',
             header: t('ticket_subject'),
             className: 'truncate font-medium',
@@ -380,12 +372,7 @@ export default function TicketsPage() {
                       header: t('ticket_sla'),
                       className: 'whitespace-nowrap',
                       width: '146px',
-                      // One chip: how much time is left. A repair case used to carry a second
-                      // "Repair" chip here, from back when the countdown itself could mislead —
-                      // it ran against the priority target and a case weeks inside its 30-day
-                      // repair KPI read as one about to breach. The countdown reads the winning
-                      // target now, so the chip was explaining a problem that no longer exists
-                      // while wrapping the column onto two lines.
+                      // One chip: the time left against the winning target
                       render: (tk: Ticket) => <TicketSlaBadge ticket={tk} t={t} />,
                   },
               ]
@@ -746,11 +733,11 @@ function TicketTable({
                             className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
                             onClick={() => onRow(tk)}
                         >
-                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tk.ticket_no}</td>
-                            <td className="w-full max-w-0 px-4 py-2.5 font-medium">
+                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs whitespace-nowrap">{tk.ticket_no}</td>
+                            <td className="w-full max-w-0 min-w-[12rem] px-4 py-2.5 font-medium">
                                 <TicketSubject ticket={tk} t={t} />
                             </td>
-                            <td className="px-4 py-2.5">
+                            <td className="px-4 py-2.5 whitespace-nowrap">
                                 <span className="flex items-center gap-2">
                                     <TicketCategoryIcon category={tk.category} className="text-muted-foreground h-4 w-4" />
                                     {t(`ticket_cat_${tk.category}`)}
@@ -765,7 +752,9 @@ function TicketTable({
                                 <TicketStatusBadge status={tk.status} t={t} />
                             </td>
                             {!compact && (
-                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tk.requester_code ?? tk.requester_name}</td>
+                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs whitespace-nowrap">
+                                    {tk.requester_code ?? tk.requester_name}
+                                </td>
                             )}
                             <td className="max-w-[170px] truncate px-4 py-2.5">
                                 {tk.assignee_name ? (

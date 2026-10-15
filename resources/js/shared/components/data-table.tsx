@@ -25,7 +25,12 @@ export interface Column<T> {
     width?: string;
     /** Hide the column (header and cells) on screens narrower than this breakpoint, e.g. a tablet in portrait. */
     hideBelow?: 'lg' | 'xl';
+    /** A column without a width keeps at least this much in a sized table (default 12rem); a bar or chip column can take less. */
+    minWidth?: string;
 }
+
+/** The least a column without a width keeps in a sized table, unless it sets its own minWidth. */
+const FLEX_COLUMN_MIN = '12rem';
 
 const HIDE_BELOW: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell' };
 
@@ -187,6 +192,13 @@ export function DataTable<T>({
 
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
     const hideClass = (c: Column<T>) => (c.hideBelow ? HIDE_BELOW[c.hideBelow] : undefined);
+    // Columns always shown: fixed widths plus room for each flexible one, so a narrow screen scrolls instead of squeezing it to 0
+    const shown = columns.filter((c) => !c.hideBelow);
+    const flexible = shown.filter((c) => !c.width);
+    const flexFloor =
+        !fillHeight && columns.some((c) => c.width) && flexible.length > 0
+            ? `calc(${[...shown.filter((c) => c.width).map((c) => c.width), ...flexible.map((c) => c.minWidth ?? FLEX_COLUMN_MIN)].join(' + ')})`
+            : undefined;
 
     // Keys pressed on a control inside the row (a menu, a switch) stay with that control.
     const onRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: T) => {
@@ -227,11 +239,7 @@ export function DataTable<T>({
                 ref={bodyRef}
                 className={cn(
                     'border-border rounded-xl border',
-                    // Scroll sideways rather than clip. A table wider than its card used to lose
-                    // the overhang with no way to reach it — eleven pixels of the last column on a
-                    // wide screen, a whole column on a laptop, and nothing on screen to say so.
-                    // A table that fits is clipped instead (same rounded edge, but not a scroll box),
-                    // so its header can stick to the top of the page.
+                    // Too wide: scroll sideways; fits: clip (not a scroll box) so the header can stick to the page
                     fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-auto' : fitsWidth ? 'overflow-clip' : 'overflow-x-auto',
                 )}
                 style={{
@@ -239,9 +247,18 @@ export function DataTable<T>({
                     ...(heldHeight ? { minHeight: heldHeight } : {}),
                 }}
             >
-                {/* fillHeight: `h-full` makes the browser stretch the rows to fill the body exactly,
-                    so the floored row count never leaves a gap under the last row. */}
-                <table className={cn('w-full text-sm', fillHeight && 'h-full', columns.some((c) => c.width) && 'table-fixed', tableClassName)}>
+                {/* fillHeight: h-full stretches the rows to fill the body with no gap under the last one */}
+                <table
+                    className={cn(
+                        'w-full text-sm',
+                        fillHeight && 'h-full',
+                        columns.some((c) => c.width) && 'table-fixed',
+                        // A caller's own min-w-* (at any breakpoint) wins over the floor
+                        flexFloor && 'min-w-(--flex-floor)',
+                        tableClassName,
+                    )}
+                    style={flexFloor ? ({ '--flex-floor': flexFloor } as React.CSSProperties) : undefined}
+                >
                     {caption && <caption className="sr-only">{caption}</caption>}
                     {columns.some((c) => c.width) && (
                         <colgroup>
