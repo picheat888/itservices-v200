@@ -198,6 +198,8 @@ export const contract: Dict = {
     contract_months_one: '{n} เดือน',
     contract_months_many: '{n} เดือน',
     contract_notify_chip: '{n} วัน',
+    contract_notify_on: 'แจ้งเตือน',
+    contract_notify_off: 'ไม่แจ้งเตือน',
     contract_reminder_days_before: '{n} วันก่อนหมดอายุ',
 
     // contract-assets-tab.tsx — linked assets table
@@ -217,5 +219,5 @@ export const contract: Dict = {
     contract_label_review: 'ตรวจสอบ',
     contract_days_one: '{n} วัน',
     contract_days_many: '{n} วัน',
-    contract_days_short: '{n}d',
+    contract_days_short: '{n} วัน',
 };

@@ -176,8 +176,8 @@ export function ContractDetailDrawer({
                 days <= 0
                     ? 'border-destructive/30 bg-destructive/10 dark:text-destructive text-red-700'
                     : c.in_reminder
-                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                      : 'border-brand/30 bg-brand/10 text-brand',
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                      : 'border-brand/30 bg-brand/10 text-brand-ink',
             )}
         >
             <Clock className="h-3 w-3" />
@@ -326,11 +326,12 @@ export function ContractDetailDrawer({
                                                 className={cn(
                                                     'rounded-full border px-2.5 py-0.5 text-xs font-medium',
                                                     n.on
-                                                        ? 'border-brand/30 bg-brand/10 text-brand'
-                                                        : 'border-border text-muted-foreground/40 line-through',
+                                                        ? 'border-brand/30 bg-brand/10 text-brand-ink'
+                                                        : 'border-border text-muted-foreground line-through',
                                                 )}
                                             >
                                                 {t('contract_notify_chip').replace('{n}', String(n.d))}
+                                                <span className="sr-only"> ({t(n.on ? 'contract_notify_on' : 'contract_notify_off')})</span>
                                             </span>
                                         ))}
                                     </div>

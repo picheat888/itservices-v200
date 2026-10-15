@@ -6,7 +6,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { cn } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
@@ -337,8 +337,10 @@ export function ContractFormDrawer({
         for (let s = step; s < clamped; s++) {
             const bad = STEP_FIELDS[s].filter((f) => all[f]);
             if (bad.length) {
-                setErr(Object.fromEntries(bad.map((f) => [f, all[f]])));
+                const found = Object.fromEntries(bad.map((f) => [f, all[f]]));
+                setErr(found);
                 setStep(s);
+                focusFirstError(found);
                 return;
             }
         }
@@ -355,6 +357,7 @@ export function ContractFormDrawer({
             setErr(e);
             const firstStep = Math.min(...Object.keys(e).map((f) => FIELD_STEP[f] ?? 1));
             setStep(firstStep);
+            focusFirstError(Object.fromEntries(Object.entries(e).filter(([f]) => (FIELD_STEP[f] ?? 1) === firstStep)));
             return;
         }
         setErr({});
@@ -419,8 +422,10 @@ export function ContractFormDrawer({
                 else if (field in FIELD_STEP) fieldErrors[field] ??= messages[0];
             }
             if (Object.keys(fieldErrors).length) {
+                const firstStep = Math.min(...Object.keys(fieldErrors).map((field) => FIELD_STEP[field]));
                 setErr(fieldErrors);
-                setStep(Math.min(...Object.keys(fieldErrors).map((field) => FIELD_STEP[field])));
+                setStep(firstStep);
+                focusFirstError(Object.fromEntries(Object.entries(fieldErrors).filter(([field]) => FIELD_STEP[field] === firstStep)));
                 return;
             }
             if (fileError || savingFiles) {
@@ -639,6 +644,7 @@ export function ContractFormDrawer({
                                                     <button
                                                         type="button"
                                                         onClick={() => setRemovedIds((r) => [...r, a.id])}
+                                                        aria-label={`${t('delete')} ${a.name}`}
                                                         className="text-muted-foreground hover:bg-accent hover:text-destructive shrink-0 rounded-md p-1"
                                                     >
                                                         <X className="h-4 w-4" />
@@ -653,13 +659,14 @@ export function ContractFormDrawer({
                                                 >
                                                     <FileText className="text-brand h-4 w-4 shrink-0" />
                                                     <span className="min-w-0 flex-1 truncate">{f.name}</span>
-                                                    <span className="bg-brand/10 text-brand shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+                                                    <span className="bg-brand/10 text-brand-ink shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                                                         {t('attachment_new')}
                                                     </span>
                                                     <span className="text-muted-foreground shrink-0 text-xs">{formatSize(f.size)}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPending((p) => p.filter((_, j) => j !== i))}
+                                                        aria-label={`${t('delete')} ${f.name}`}
                                                         className="text-muted-foreground hover:bg-accent hover:text-destructive shrink-0 rounded-md p-1"
                                                     >
                                                         <X className="h-4 w-4" />
@@ -668,14 +675,14 @@ export function ContractFormDrawer({
                                             ))}
 
                                             {!atMax && (
-                                                <label className="border-input text-muted-foreground hover:text-brand flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed px-3 py-4 text-center text-sm hover:bg-[#c4c4c40f]">
+                                                <label className="border-input text-muted-foreground hover:text-brand hover:bg-accent/40 focus-within:ring-ring flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed px-3 py-4 text-center text-sm focus-within:ring-2">
                                                     <Paperclip className="h-4 w-4" />
                                                     <span>{t('attachment_pick')}</span>
                                                     <input
                                                         type="file"
                                                         accept="application/pdf"
                                                         multiple
-                                                        className="hidden"
+                                                        className="sr-only"
                                                         onChange={(e) => {
                                                             onPickFiles(e.target.files);
                                                             e.target.value = '';
@@ -685,7 +692,9 @@ export function ContractFormDrawer({
                                             )}
 
                                             {fileErr ? (
-                                                <p className="text-destructive text-xs">{fileErr}</p>
+                                                <p role="alert" className="text-destructive text-xs">
+                                                    {fileErr}
+                                                </p>
                                             ) : (
                                                 <p className="text-muted-foreground text-xs">{t('attachment_hint')}</p>
                                             )}
@@ -742,27 +751,32 @@ export function ContractFormDrawer({
                                     error={err.total_value}
                                     name="total_value"
                                 >
-                                    <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        className="font-mono"
-                                        value={displayMoney(form.total_value)}
-                                        onChange={(e) => upd('total_value', sanitizeMoney(e.target.value))}
-                                        placeholder="0.00"
-                                    />
-                                    {totalValueEstimate != null && (
-                                        <button
-                                            type="button"
-                                            onClick={() => upd('total_value', String(totalValueEstimate))}
-                                            className="text-muted-foreground hover:text-brand mt-1 text-xs transition-colors"
-                                        >
-                                            {t('contract_estimate')} ≈{' '}
-                                            <span className="text-foreground font-mono font-semibold">
-                                                {symbol}
-                                                {totalValueEstimate.toLocaleString()}
-                                            </span>
-                                            <span className="ml-3 underline-offset-2 hover:underline">{t('contract_estimate_use')}</span>
-                                        </button>
+                                    {(control) => (
+                                        <>
+                                            <Input
+                                                {...control}
+                                                type="text"
+                                                inputMode="decimal"
+                                                className="font-mono"
+                                                value={displayMoney(form.total_value)}
+                                                onChange={(e) => upd('total_value', sanitizeMoney(e.target.value))}
+                                                placeholder="0.00"
+                                            />
+                                            {totalValueEstimate != null && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => upd('total_value', String(totalValueEstimate))}
+                                                    className="text-muted-foreground hover:text-brand mt-1 text-xs transition-colors"
+                                                >
+                                                    {t('contract_estimate')} ≈{' '}
+                                                    <span className="text-foreground font-mono font-semibold">
+                                                        {symbol}
+                                                        {totalValueEstimate.toLocaleString()}
+                                                    </span>
+                                                    <span className="ml-3 underline-offset-2 hover:underline">{t('contract_estimate_use')}</span>
+                                                </button>
+                                            )}
+                                        </>
                                     )}
                                 </Field>
                             </div>
@@ -772,8 +786,8 @@ export function ContractFormDrawer({
                         {step === 3 && (
                             <div className="mx-auto w-full max-w-[560px] space-y-5">
                                 <StepHead num={4} title={t('contract_step_reminders_title')} sub={t('contract_step_reminders_sub')} />
-                                <Field label={t('contract_notify')} required error={err.notify}>
-                                    <div className="flex flex-wrap gap-2">
+                                <Field label={t('contract_notify')} required error={err.notify} name="notify">
+                                    <div role="group" aria-label={t('contract_notify')} className="flex flex-wrap gap-2">
                                         {REMINDER_DAYS.map((d) => {
                                             const key = `notify_${d}` as ReminderKey;
                                             const on = form[key];
@@ -782,10 +796,11 @@ export function ContractFormDrawer({
                                                     type="button"
                                                     key={d}
                                                     onClick={() => upd(key, !on)}
+                                                    aria-pressed={on}
                                                     className={cn(
                                                         'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                                                         on
-                                                            ? 'border-brand bg-brand/10 text-brand'
+                                                            ? 'border-brand bg-brand/10 text-brand-ink'
                                                             : 'border-border text-muted-foreground hover:bg-accent',
                                                     )}
                                                 >
@@ -817,7 +832,7 @@ export function ContractFormDrawer({
                                                     value={assetSearch}
                                                     onChange={(e) => setAssetSearch(e.target.value)}
                                                     placeholder={t('contract_link_assets_search_ph')}
-                                                    className="border-0 pl-9 focus-visible:ring-0"
+                                                    className="border-0 pl-9 focus-visible:ring-inset"
                                                 />
                                             </div>
                                             <div className="max-h-72 overflow-auto">
@@ -840,6 +855,8 @@ export function ContractFormDrawer({
                                                                 key={a.id}
                                                                 type="button"
                                                                 onClick={() => toggleAsset(a.id)}
+                                                                role="checkbox"
+                                                                aria-checked={checked}
                                                                 disabled={locked}
                                                                 title={locked ? t('contract_link_asset_locked') : undefined}
                                                                 className="border-border/60 hover:bg-accent/40 flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"

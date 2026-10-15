@@ -21,6 +21,7 @@ const ChoiceCard = React.forwardRef<
     <button
         ref={ref}
         type={type}
+        aria-pressed={selected}
         className={cn(
             'focus-visible:border-brand focus-visible:ring-brand/15 border transition-colors focus:outline-hidden focus-visible:ring-[3px]',
             selected
