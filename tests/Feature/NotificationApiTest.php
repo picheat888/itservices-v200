@@ -172,9 +172,58 @@ class NotificationApiTest extends TestCase
         $this->assertSame(35, $body['total']);
         $this->assertSame(35, $body['unread']);
         $this->assertSame(
-            [['type' => 'contract_expiring', 'module' => null, 'count' => 35]],
+            [['type' => 'contract_expiring', 'module' => null, 'count' => 35, 'unread' => 35]],
             $body['counts'],
         );
+        $this->assertTrue($body['has_more']);
+    }
+
+    public function test_the_next_page_starts_at_the_offset(): void
+    {
+        $contract = $this->makeContract();
+        $user = User::factory()->create();
+        foreach (range(1, 35) as $ignored) {
+            $this->notify($user, $contract);
+        }
+
+        $body = $this->actingAs($user)->getJson('/api/notifications?offset=30')->assertOk()->json();
+
+        $this->assertCount(5, $body['data']);
+        $this->assertFalse($body['has_more']);
+    }
+
+    public function test_kinds_narrow_the_list_to_one_module_while_totals_stay_whole(): void
+    {
+        $user = User::factory()->create();
+        $contract = $this->makeContract();
+        foreach (range(1, 31) as $ignored) {
+            $this->notify($user, $contract);
+        }
+        $user->notify(new NotificationTestNotification('notif_asset_assigned', 'assets'));
+        $user->notify(new NotificationTestNotification('notif_ticket_new', 'tickets'));
+        $user->notifications()->where('data->type', 'test')->get()->each->markAsRead();
+
+        $body = $this->actingAs($user)->getJson('/api/notifications?kinds[]=test|assets')->assertOk()->json();
+
+        // Only the assets sample, though 32 newer-or-equal rows of other kinds exist
+        $this->assertCount(1, $body['data']);
+        $this->assertSame('assets', $body['data'][0]['data']['module']);
+        $this->assertSame(1, $body['matching']);
+        $this->assertFalse($body['has_more']);
+        $this->assertSame(33, $body['total']);
+        $this->assertSame(31, $body['unread']);
+
+        $counts = collect($body['counts'])->keyBy(fn (array $c) => $c['type'].'|'.$c['module']);
+        $this->assertSame(0, $counts['test|assets']['unread']);
+        $this->assertSame(31, $counts['contract_expiring|']['unread']);
+    }
+
+    public function test_kinds_and_offset_are_validated(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson('/api/notifications?offset=-1')->assertUnprocessable()->assertJsonValidationErrors('offset');
+        $this->actingAs($user)->getJson('/api/notifications?kinds=ticket')->assertUnprocessable()->assertJsonValidationErrors('kinds');
     }
 
     public function test_counts_are_grouped_per_type_so_the_front_end_can_map_them_to_modules(): void

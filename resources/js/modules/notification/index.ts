@@ -6,7 +6,7 @@
 // rewording a notification has to invalidate the wording every open tray is holding.
 
 // Hooks — tray
-export { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications } from './hooks/use-notifications';
+export { useDismissNotification, useMarkAllRead, useMarkRead, useNotificationFeed, useNotifications } from './hooks/use-notifications';
 
 // Hooks — notification configuration
 export { useNotificationMessages, useNotificationTemplateMutations, useNotificationTemplates, useNotificationText } from './hooks/use-notifications';

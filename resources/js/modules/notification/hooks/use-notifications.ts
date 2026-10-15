@@ -7,15 +7,18 @@ import {
 } from '@/modules/notification/api/notificationApi';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
 const KEY = ['notifications'] as const;
+// Under KEY, so every invalidation of the tray reaches the tab lists too.
+const FEED = [...KEY, 'feed'] as const;
+const PAGE_SIZE = 30;
 
 export function useNotifications() {
     return useQuery({
         queryKey: KEY,
-        queryFn: notificationApi.list,
+        queryFn: () => notificationApi.list(),
         // Near-realtime without WebSockets: poll often (even in a background tab) and
         // refetch the moment the tab regains focus — so new alerts surface within seconds
         // of a job/command running, no manual reload needed.
@@ -23,6 +26,20 @@ export function useNotifications() {
         refetchInterval: 15_000,
         refetchIntervalInBackground: true,
         refetchOnWindowFocus: true,
+    });
+}
+
+/** The tray's list for one tab, a page at a time: every kind when `kinds` is null, else only those. */
+export function useNotificationFeed(kinds: string[] | null) {
+    return useInfiniteQuery({
+        queryKey: [...FEED, kinds?.join(',') ?? 'all'],
+        queryFn: ({ pageParam }) => notificationApi.list({ kinds: kinds ?? undefined, offset: pageParam }),
+        initialPageParam: 0,
+        getNextPageParam: (last, pages) => (last.has_more ? pages.length * PAGE_SIZE : undefined),
+        // An empty list of kinds would ask for everything.
+        enabled: kinds === null || kinds.length > 0,
+        staleTime: 10_000,
+        refetchInterval: 15_000,
     });
 }
 
@@ -42,16 +59,7 @@ export function useMarkAllRead() {
     });
 }
 
-/**
- * Dismiss one notification, and take it out of the cached tray straight away.
- *
- * The optimistic step is what makes the figures keep up. Waiting for the round trip meant
- * pressing X several times in a row left the header and the filter chips reporting a tray
- * from a few clicks ago, and the row itself sat there until the refetch landed.
- *
- * `onSettled` still refetches: the optimistic copy is an informed guess, and only the server
- * knows what slid into the capped window behind the row that just went.
- */
+/** Dismiss one notification and take it out of the cached figures and tab lists at once; the refetch settles the rest. */
 export function useDismissNotification() {
     const qc = useQueryClient();
 
@@ -59,8 +67,12 @@ export function useDismissNotification() {
         mutationFn: (id: string) => notificationApi.dismiss(id),
         onMutate: async (id: string) => {
             await qc.cancelQueries({ queryKey: KEY });
+            const feeds = qc.getQueriesData<InfiniteData<NotificationsResponse>>({ queryKey: FEED });
+            qc.setQueriesData<InfiniteData<NotificationsResponse>>({ queryKey: FEED }, (old) =>
+                old ? { ...old, pages: old.pages.map((page) => ({ ...page, data: page.data.filter((n) => n.id !== id) })) } : old,
+            );
             const previous = qc.getQueryData<NotificationsResponse>(KEY);
-            if (!previous) return { previous };
+            if (!previous) return { previous, feeds };
 
             const going = previous.data.find((n) => n.id === id);
 
@@ -69,20 +81,22 @@ export function useDismissNotification() {
                 data: previous.data.filter((n) => n.id !== id),
                 unread: Math.max(0, previous.unread - (going && !going.read ? 1 : 0)),
                 total: Math.max(0, previous.total - 1),
-                // Drop the tally for this one's type, and drop the entry entirely once it hits
-                // zero — a chip for a category with nothing left in it is a dead end.
+                // An emptied kind drops out, so its chip does not lead nowhere.
                 counts: previous.counts
                     .map((c) =>
-                        c.type === (going?.data.type ?? null) && c.module === (going?.data.module ?? null) ? { ...c, count: c.count - 1 } : c,
+                        c.type === (going?.data.type ?? null) && c.module === (going?.data.module ?? null)
+                            ? { ...c, count: c.count - 1, unread: Math.max(0, c.unread - (going && !going.read ? 1 : 0)) }
+                            : c,
                     )
                     .filter((c) => c.count > 0),
             });
 
-            return { previous };
+            return { previous, feeds };
         },
         onError: (_err, _id, context) => {
             // Put the tray back exactly as it was; the row never actually went.
             if (context?.previous) qc.setQueryData(KEY, context.previous);
+            context?.feeds.forEach(([key, data]) => qc.setQueryData(key, data));
         },
         onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
     });
