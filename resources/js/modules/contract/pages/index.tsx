@@ -41,6 +41,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
+import { CONTRACT_TYPE_TONE } from '../tones';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'all'] as const;
@@ -61,18 +62,11 @@ function DaysCell({ days, inReminder, status }: { days: number; inReminder: bool
     const t = useT();
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
-    if (days <= 0) return <StatusBadge tone="red">{t('contract_days_overdue_short').replace('{n}', String(-days))}</StatusBadge>;
+    if (days === 0) return <StatusBadge tone="red">{t('contract_due_today')}</StatusBadge>;
+    if (days < 0) return <StatusBadge tone="red">{t('contract_days_overdue_short').replace('{n}', String(-days))}</StatusBadge>;
     if (inReminder) return <StatusBadge tone="amber">{t('contract_days_many').replace('{n}', String(days))}</StatusBadge>;
     return <StatusBadge tone="blue">{t('contract_days_short').replace('{n}', String(days))}</StatusBadge>;
 }
-
-const TYPE_TONE: Record<ContractType, 'blue' | 'violet' | 'amber' | 'green' | 'gray'> = {
-    software: 'blue',
-    hardware: 'violet',
-    service: 'amber',
-    connectivity: 'green',
-    other: 'gray',
-};
 
 export default function ContractsPage() {
     const t = useT();
@@ -559,7 +553,7 @@ function useContractColumns(newId: number | null, wide: boolean): Column<Contrac
             key: 'type',
             header: t('contract_type'),
             width: wide ? '130px' : '115px',
-            render: (c) => <StatusBadge tone={TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>,
+            render: (c) => <StatusBadge tone={CONTRACT_TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>,
         },
         wide && { key: 'start', header: t('contract_start'), width: '110px', className: 'font-mono text-xs', render: (c) => fmt.date(c.start) },
         { key: 'end', header: t('contract_end'), width: '110px', className: 'font-mono text-xs', render: (c) => fmt.date(c.end) },
@@ -571,16 +565,21 @@ function useContractColumns(newId: number | null, wide: boolean): Column<Contrac
         },
         { key: 'value', header: t('contract_value'), width: '130px', className: 'font-mono text-xs', render: (c) => c.value_display },
         // The days chip already says cancelled / expired / overdue, so tablets drop the status column
-        wide && { key: 'status', header: t('status'), width: '110px', render: (c) => <ContractStatusBadge status={c.status} /> },
+        wide && {
+            key: 'status',
+            header: t('status'),
+            width: '110px',
+            render: (c) => <ContractStatusBadge status={c.status} days={c.days_remaining} />,
+        },
     ];
     return columns.filter((c): c is Column<Contract> => c !== false);
 }
 
-function ContractStatusBadge({ status }: { status: ContractStatus }) {
+function ContractStatusBadge({ status, days }: { status: ContractStatus; days: number }) {
     const t = useT();
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
-    if (status === 'overdue') return <StatusBadge tone="red">{t('contract_overdue')}</StatusBadge>;
+    if (status === 'overdue') return <StatusBadge tone="red">{t(days === 0 ? 'contract_due_today' : 'contract_overdue')}</StatusBadge>;
     return <StatusBadge tone="green">{t('contract_active')}</StatusBadge>;
 }
 
@@ -680,7 +679,7 @@ function OverviewTab({
             <OverviewHeader />
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard label={t('contract_total')} value={String(summary.total)} sub={null} icon={FileText} />
-                <StatCard label={t('contract_active')} value={String(summary.active)} sub={null} icon={CheckCircle2} />
+                <StatCard label={t('contract_active_normal')} value={String(summary.active)} sub={null} icon={CheckCircle2} />
                 <StatCard
                     label={t('expiring_soon')}
                     value={String(summary.expiring)}
@@ -742,9 +741,11 @@ function OverviewTab({
                             {/* Contract dots, positioned by actual expiry date */}
                             {placed.map(({ c, frac, lane }) => {
                                 const when =
-                                    c.days <= 0
-                                        ? t('contract_timeline_expired_ago').replace('{n}', String(-c.days))
-                                        : t('contract_days_many').replace('{n}', String(c.days));
+                                    c.days === 0
+                                        ? t('contract_due_today')
+                                        : c.days < 0
+                                          ? t('contract_timeline_expired_ago').replace('{n}', String(-c.days))
+                                          : t('contract_days_many').replace('{n}', String(c.days));
                                 return (
                                     <InfoPopover
                                         key={c.id}
