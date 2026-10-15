@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -170,23 +171,14 @@ export function ContractDetailDrawer({
 
     // Days-remaining badge (header titleSuffix): hidden once terminal; colored by state.
     const daysBadge = terminal ? null : (
-        <span
-            className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-semibold',
-                days <= 0
-                    ? 'border-destructive/30 bg-destructive/10 dark:text-destructive text-red-700'
-                    : c.in_reminder
-                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                      : 'border-brand/30 bg-brand/10 text-brand-ink',
-            )}
-        >
-            <Clock className="h-3 w-3" />
+        <StatusBadge tone={days <= 0 ? 'red' : c.in_reminder ? 'amber' : 'blue'} dot={false} className="gap-1 font-semibold">
+            <Clock className="h-3 w-3" aria-hidden />
             {days <= 0
                 ? t('contract_days_overdue').replace('{n}', String(-days))
                 : c.in_reminder
                   ? t('contract_expires_in').replace('{n}', String(days))
                   : t('contract_days_left').replace('{n}', String(days))}
-        </span>
+        </StatusBadge>
     );
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
@@ -210,16 +202,13 @@ export function ContractDetailDrawer({
                         headerRight={
                             <div className="flex flex-col items-end gap-1">
                                 <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
-                                <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
-                                    <div>
-                                        {t('contract_created')}: {fmt.date(c.created_at)}
-                                        {c.created_by_name && ` ${t('contract_by')} ${c.created_by_name}`}
-                                    </div>
-                                    <div>
-                                        {t('contract_updated')}: {fmt.date(c.updated_at)}
-                                        {c.updated_by_name && ` ${t('contract_by')} ${c.updated_by_name}`}
-                                    </div>
-                                </div>
+                                <RecordStamps
+                                    className="text-right"
+                                    createdAt={c.created_at}
+                                    createdBy={c.created_by_name}
+                                    updatedAt={c.updated_at}
+                                    updatedBy={c.updated_by_name}
+                                />
                             </div>
                         }
                     />

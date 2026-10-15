@@ -1,26 +1,25 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCurrency } from '@/modules/settings';
-import { PAGE_SIZES } from '@/shared/components/data-table';
+import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { OverviewHeader } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { keepDialogState } from '@/shared/hooks/use-dialog-param';
-import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useMediaQuery } from '@/shared/hooks/use-media-query';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
-import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
+import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import {
     AlertOctagon,
     AlertTriangle,
@@ -28,8 +27,6 @@ import {
     ArrowUpDown,
     CalendarClock,
     CheckCircle2,
-    ChevronLeft,
-    ChevronRight,
     Clock,
     FileText,
     Filter,
@@ -57,33 +54,6 @@ const DEFAULT_SORT = 'end_asc';
 const SORT_VALUES = ['end_asc', 'end_desc', 'created_desc', 'created_asc', 'value_desc', 'value_asc'];
 // List keys of the All tab; cleared when the tab changes (rows-per-page stays).
 const LIST_KEYS = ['search', 'type', 'status', 'sort', 'page'];
-
-function StatCard({
-    label,
-    value,
-    hint,
-    hintDanger,
-    icon: Icon,
-}: {
-    label: string;
-    value: string | number;
-    hint?: string;
-    hintDanger?: boolean;
-    icon: typeof FileText;
-}) {
-    return (
-        <Card className="p-5">
-            <div className="flex items-start justify-between">
-                <div className="text-muted-foreground text-sm">{label}</div>
-                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
-                    <Icon className="h-[18px] w-[18px]" />
-                </span>
-            </div>
-            <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-            {hint && <div className={cn('mt-1 text-xs', hintDanger ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>{hint}</div>}
-        </Card>
-    );
-}
 
 /** Days-remaining cell: gray when cancelled/expired, blue far out, amber inside the reminder window, red once overdue. */
 function DaysCell({ days, inReminder, status }: { days: number; inReminder: boolean; status: ContractStatus }) {
@@ -148,8 +118,6 @@ export default function ContractsPage() {
     const setTypeFilter = (value: ContractType | '') => list.setFilter('type', value);
     const setStatusFilter = (value: StatusFilter) => list.setFilter('status', value);
     const setSort = (value: string) => list.setFilter('sort', value === DEFAULT_SORT ? '' : value);
-    const setPage = (next: number) => list.setParams({ page: next > 1 ? String(next) : null });
-    const setPerPage = (value: number) => list.setParams({ per: value === PAGE_SIZES[0] ? null : String(value), page: null });
     // Newly created contract — pinned at the top with a "New" badge for 8 seconds.
     const [newlyCreated, setNewlyCreated] = useState<Contract | null>(null);
     const newlyCreatedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,21 +173,13 @@ export default function ContractsPage() {
     }, [editParam, selected, editing?.id]);
 
     const rows = listData?.data ?? [];
-    // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
-    // header stick while the table fits its width.
-    const tableBoxRef = useRef<HTMLDivElement>(null);
-    const heldTableHeight = useHeldHeight(tableBoxRef, isLoading || isFetching);
-    const tableFitsWidth = useTableFitsWidth(tableBoxRef);
     const meta = listData?.meta;
-
-    // Pagination footer values with fallbacks so the footer (incl. "Rows per page") can render
-    // even during the initial load on a fresh reload, when `meta` is not yet available — matching
-    // the Stock table, whose shared DataTable footer is always visible.
     const totalRows = meta?.total ?? 0;
-    const perPageDisplay = meta?.per_page ?? perPage;
-    const currentPage = meta?.current_page ?? page;
-    const lastPage = meta?.last_page ?? 1;
     usePageInRange(list, meta?.last_page);
+    // Below lg (tablet portrait) the start date drops out so the rest keeps room
+    const wide = useMediaQuery('(min-width: 1024px)');
+    const columns = useContractColumns(newlyCreated?.id ?? null, wide);
+    const tableRows = newlyCreated ? [newlyCreated, ...rows.filter((r) => r.id !== newlyCreated.id)] : rows;
 
     // Switch tab and mirror it in the URL (?tab=); the All tab's list keys are cleared in the same write.
     const changeTab = (next: Tab) => {
@@ -312,10 +272,10 @@ export default function ContractsPage() {
                                         <button
                                             type="button"
                                             onClick={() => showAllWithStatus('expiring')}
-                                            className="font-medium whitespace-nowrap text-amber-800 hover:text-amber-600 dark:text-amber-300 dark:hover:text-amber-200"
+                                            className="inline-flex min-h-6 items-center gap-1 font-medium whitespace-nowrap text-amber-800 hover:text-amber-600 dark:text-amber-300 dark:hover:text-amber-200"
                                         >
                                             {t('contract_label_review')}
-                                            <span aria-hidden="true"> →</span>
+                                            <span aria-hidden="true">→</span>
                                         </button>
                                     </p>
                                 </div>
@@ -340,10 +300,10 @@ export default function ContractsPage() {
                                         <button
                                             type="button"
                                             onClick={() => showAllWithStatus('expired')}
-                                            className="font-medium whitespace-nowrap text-red-800 hover:text-red-600 dark:text-red-300 dark:hover:text-red-200"
+                                            className="inline-flex min-h-6 items-center gap-1 font-medium whitespace-nowrap text-red-800 hover:text-red-600 dark:text-red-300 dark:hover:text-red-200"
                                         >
                                             {t('contract_label_review')}
-                                            <span aria-hidden="true"> →</span>
+                                            <span aria-hidden="true">→</span>
                                         </button>
                                     </p>
                                 </div>
@@ -499,117 +459,19 @@ export default function ContractsPage() {
                             )}
                         </div>
 
-                        {/* overflow-clip, not -hidden: clips the same rounded edge without being a scroll box, which would stop the header sticking. */}
-                        <div className="border-border overflow-clip rounded-xl border">
-                            <div
-                                ref={tableBoxRef}
-                                className={cn(!tableFitsWidth && 'overflow-x-auto')}
-                                style={heldTableHeight ? { minHeight: heldTableHeight } : undefined}
-                            >
-                                <table className="w-full text-sm">
-                                    <thead
-                                        className={cn(
-                                            tableFitsWidth && 'bg-card sticky top-[var(--sticky-top,0px)] z-10 shadow-[0_1px_0_var(--color-border)]',
-                                        )}
-                                    >
-                                        <tr
-                                            className={cn(
-                                                TABLE_HEAD,
-                                                'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
-                                            )}
-                                        >
-                                            <th className="px-4 py-2.5">{t('contract_code')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_details')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_vendor')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_type')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_start')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_end')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_days_remaining')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_value')}</th>
-                                            <th className="px-4 py-2.5">{t('status')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {/* Shimmering skeleton rows during initial load and refetch (filter/sort/page) — matches the Stock table. */}
-                                        {isLoading || isFetching ? (
-                                            Array.from({ length: rows.length || 8 }).map((_, r) => (
-                                                <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
-                                                    {Array.from({ length: 9 }).map((_, c) => (
-                                                        <td key={c} className="px-4 py-2.5">
-                                                            <div className="bg-muted h-4 w-3/4 max-w-[160px] animate-pulse rounded" />
-                                                        </td>
-                                                    ))}
-                                                </tr>
-                                            ))
-                                        ) : rows.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={9} className="text-muted-foreground px-4 py-16 text-center text-sm">
-                                                    {t('contract_none')}
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            <>
-                                                {/* Newly-created contract pinned at top, independent of current sort order. */}
-                                                {newlyCreated && (
-                                                    <ContractRow key={`new-${newlyCreated.id}`} c={newlyCreated} isNew onSelect={setSelectedId} />
-                                                )}
-                                                {rows
-                                                    .filter((c) => c.id !== newlyCreated?.id)
-                                                    .map((c) => (
-                                                        <ContractRow key={c.id} c={c} onSelect={setSelectedId} />
-                                                    ))}
-                                            </>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
-                            <div className="flex items-center gap-2">
-                                <span>{t('contract_rows_per_page')}</span>
-                                <Select value={String(perPage)} onValueChange={(v) => setPerPage(Number(v))}>
-                                    <SelectTrigger className="h-8 w-[72px]">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {PAGE_SIZES.map((n) => (
-                                            <SelectItem key={n} value={String(n)}>
-                                                {n}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <span>
-                                    {totalRows === 0 ? 0 : (currentPage - 1) * perPageDisplay + 1}–{Math.min(currentPage * perPageDisplay, totalRows)}{' '}
-                                    {t('contract_page_of')} {totalRows}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => setPage(Math.max(1, page - 1))}
-                                        disabled={page <= 1}
-                                        aria-label={t('page_prev')}
-                                        className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
-                                    >
-                                        <ChevronLeft aria-hidden className="h-4 w-4" />
-                                    </button>
-                                    <span className="text-foreground px-1 font-medium">
-                                        {currentPage} / {lastPage}
-                                    </span>
-                                    <button
-                                        onClick={() => setPage(Math.min(lastPage, page + 1))}
-                                        disabled={page >= lastPage}
-                                        aria-label={t('page_next')}
-                                        className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
-                                    >
-                                        <ChevronRight aria-hidden className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <DataTable
+                            columns={columns}
+                            rows={tableRows}
+                            rowKey={(c) => c.id}
+                            onRowClick={(c) => setSelectedId(c.id)}
+                            rowClassName={(c) => (c.id === newlyCreated?.id ? NEW_ROW : undefined)}
+                            loading={isLoading || isFetching}
+                            loadingRows={rows.length || 8}
+                            caption={t('contracts_title')}
+                            emptyState={<div className="text-muted-foreground py-12 text-center text-sm">{t('contract_none')}</div>}
+                            tableClassName={wide ? 'min-w-[1260px]' : 'min-w-[1000px]'}
+                            server={{ ...list.table.paging, total: totalRows }}
+                        />
                     </div>
                 )}
             </Card>
@@ -632,54 +494,70 @@ export default function ContractsPage() {
     );
 }
 
-/** Single contract row — shared by the normal list and the "new" pinned row. */
-function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: boolean; onSelect: (id: number) => void }) {
+const NEW_ROW = 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12';
+
+/** Columns of the All-tab table; the pinned new contract carries a "New" badge. */
+function useContractColumns(newId: number | null, wide: boolean): Column<Contract>[] {
     const t = useT();
     const fmt = useDateFormat();
-    return (
-        <tr
-            onClick={() => onSelect(c.id)}
-            tabIndex={0}
-            onKeyDown={(e) => {
-                if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
-                e.preventDefault();
-                onSelect(c.id);
-            }}
-            className={cn(
-                'border-border/60 focus-visible:bg-accent/50 focus-visible:outline-ring cursor-pointer border-b transition-colors last:border-0 focus-visible:outline-2 focus-visible:-outline-offset-2',
-                isNew ? 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12' : 'hover:bg-accent/40',
-            )}
-        >
-            <td className="px-4 py-2.5">
-                <div className="flex items-center gap-2">
+    const columns: (Column<Contract> | false)[] = [
+        {
+            key: 'code',
+            header: t('contract_code'),
+            width: wide ? '150px' : '130px',
+            render: (c) => (
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-muted-foreground font-mono text-xs">{c.code}</span>
-                    {isNew && <StatusBadge tone="green">{t('contract_badge_new')}</StatusBadge>}
+                    {c.id === newId && <StatusBadge tone="green">{t('contract_badge_new')}</StatusBadge>}
                 </div>
-            </td>
-            <td className="max-w-[280px] truncate px-4 py-2.5">{c.details || <span className="text-muted-foreground">—</span>}</td>
-            <td className="px-4 py-2.5 font-medium">{c.vendor}</td>
-            <td className="px-4 py-2.5">
-                <StatusBadge tone={TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>
-            </td>
-            <td className="px-4 py-2.5 font-mono text-xs">{fmt.date(c.start)}</td>
-            <td className="px-4 py-2.5 font-mono text-xs">{fmt.date(c.end)}</td>
-            <td className="px-4 py-2.5">
-                <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />
-            </td>
-            <td className="px-4 py-2.5 font-mono text-xs">{c.value_display}</td>
-            <td className="px-4 py-2.5">
-                <StatusBadge tone={c.status === 'cancelled' || c.status === 'expired' ? 'gray' : c.status === 'overdue' ? 'red' : 'green'}>
-                    {c.status === 'cancelled'
-                        ? t('contract_cancelled')
-                        : c.status === 'expired'
-                          ? t('contract_expired')
-                          : c.status === 'overdue'
-                            ? t('contract_overdue')
-                            : t('contract_active')}
-                </StatusBadge>
-            </td>
-        </tr>
-    );
+            ),
+        },
+        {
+            key: 'details',
+            header: t('contract_details'),
+            render: (c) => (
+                <div className="line-clamp-2 break-words" title={c.details || undefined}>
+                    {c.details || <span className="text-muted-foreground">—</span>}
+                </div>
+            ),
+        },
+        {
+            key: 'vendor',
+            header: t('contract_vendor'),
+            width: wide ? '220px' : '160px',
+            render: (c) => (
+                <div className="line-clamp-2 font-medium break-words" title={c.vendor}>
+                    {c.vendor}
+                </div>
+            ),
+        },
+        {
+            key: 'type',
+            header: t('contract_type'),
+            width: wide ? '130px' : '115px',
+            render: (c) => <StatusBadge tone={TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>,
+        },
+        wide && { key: 'start', header: t('contract_start'), width: '110px', className: 'font-mono text-xs', render: (c) => fmt.date(c.start) },
+        { key: 'end', header: t('contract_end'), width: '110px', className: 'font-mono text-xs', render: (c) => fmt.date(c.end) },
+        {
+            key: 'days',
+            header: t('contract_days_remaining'),
+            width: '120px',
+            render: (c) => <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />,
+        },
+        { key: 'value', header: t('contract_value'), width: '130px', className: 'font-mono text-xs', render: (c) => c.value_display },
+        // The days chip already says cancelled / expired / overdue, so tablets drop the status column
+        wide && { key: 'status', header: t('status'), width: '110px', render: (c) => <ContractStatusBadge status={c.status} /> },
+    ];
+    return columns.filter((c): c is Column<Contract> => c !== false);
+}
+
+function ContractStatusBadge({ status }: { status: ContractStatus }) {
+    const t = useT();
+    if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
+    if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
+    if (status === 'overdue') return <StatusBadge tone="red">{t('contract_overdue')}</StatusBadge>;
+    return <StatusBadge tone="green">{t('contract_active')}</StatusBadge>;
 }
 
 /** Alert-banner icons pulse three times on arrival (4.2s, under WCAG 2.2.2's 5s), not forever. */
@@ -696,7 +574,7 @@ function OverviewTab({
 }) {
     const t = useT();
     const fmt = useDateFormat();
-    const { symbol } = useCurrency();
+    const { formatCompact } = useCurrency();
 
     // Loading state mirrors the real layout with pulsing placeholders (same feel as the Stock dashboard).
     if (!summary)
@@ -784,13 +662,18 @@ function OverviewTab({
         <div className="space-y-6 p-5">
             <OverviewHeader />
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <StatCard label={t('contract_total')} value={summary.total} icon={FileText} />
-                <StatCard label={t('contract_active')} value={summary.active} icon={CheckCircle2} />
-                <StatCard label={t('expiring_soon')} value={summary.expiring} hint={t('contract_hint_in_reminder')} hintDanger icon={Clock} />
+                <StatCard label={t('contract_total')} value={String(summary.total)} sub={null} icon={FileText} />
+                <StatCard label={t('contract_active')} value={String(summary.active)} sub={null} icon={CheckCircle2} />
+                <StatCard
+                    label={t('expiring_soon')}
+                    value={String(summary.expiring)}
+                    sub={<span className="text-red-600 dark:text-red-400">{t('contract_hint_in_reminder')}</span>}
+                    icon={Clock}
+                />
                 <StatCard
                     label={t('contract_annual_value')}
-                    value={summary.annual_value}
-                    hint={t('contract_hint_excl_cancelled')}
+                    value={String(summary.annual_value)}
+                    sub={t('contract_hint_excl_cancelled')}
                     icon={TrendingUp}
                 />
             </div>
@@ -893,13 +776,13 @@ function OverviewTab({
                             <div key={r.vendor}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{r.vendor}</span>
-                                    <span className="text-muted-foreground font-mono text-xs">
-                                        {symbol}
-                                        {Math.round(r.amount / 1000)}K
-                                    </span>
+                                    <span className="text-muted-foreground font-mono text-xs">{formatCompact(r.amount)}</span>
                                 </div>
                                 <div className="bg-muted h-2 overflow-hidden rounded-full">
-                                    <span className="bg-brand block h-full rounded-full" style={{ width: `${(r.amount / maxVendor) * 100}%` }} />
+                                    <span
+                                        className="bg-brand block h-full rounded-full"
+                                        style={{ width: `${maxVendor > 0 ? (r.amount / maxVendor) * 100 : 0}%` }}
+                                    />
                                 </div>
                             </div>
                         ))}
@@ -915,7 +798,9 @@ function OverviewTab({
                     {/* Up to 20 items (server-capped); scroll within the card so a long queue
                         doesn't stretch the layout past the Top-vendors card beside it. */}
                     <div className="divide-border/60 max-h-96 divide-y overflow-y-auto p-2">
-                        {summary.action_queue.length === 0 && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
+                        {summary.action_queue.length === 0 && (
+                            <div className="text-muted-foreground px-3 py-4 text-center text-sm">{t('contract_action_queue_empty')}</div>
+                        )}
                         {summary.action_queue.map((c) => (
                             <button
                                 key={c.id}

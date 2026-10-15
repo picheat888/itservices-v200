@@ -1,15 +1,11 @@
 import { useT } from '@/lang';
+import { EmptyPane } from '@/shared/components/empty-pane';
+import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { type ContractAttachment } from '@/shared/types';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 import { useState } from 'react';
-
-/** Human-readable file size, e.g. "1.4 MB" / "820 KB". */
-function formatSize(bytes: number): string {
-    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
 
 /** Split a filename into [head, tail] for middle-truncation, keeping the extension visible. */
 function splitName(name: string): [string, string] {
@@ -35,20 +31,15 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
     const [selected, setSelected] = useState(0);
 
     if (attachments.length === 0) {
-        return (
-            <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-sm">
-                <FileText className="text-muted-foreground/50 h-8 w-8" />
-                {t('attachment_none')}
-            </div>
-        );
+        return <EmptyPane icon={FileText} text={t('attachment_none')} />;
     }
 
     const active = attachments[Math.min(selected, attachments.length - 1)];
 
     return (
-        <div className="grid h-full grid-cols-[280px_1fr] gap-4">
+        <div className="flex h-full flex-col gap-4 lg:grid lg:grid-cols-[280px_1fr]">
             {/* File list — own scroll; contracts cap attachments at 5 so it stays short. */}
-            <div className="flex flex-col gap-2 overflow-y-auto pr-1">
+            <div className="flex max-h-40 shrink-0 flex-col gap-2 overflow-y-auto pr-1 lg:max-h-none">
                 {attachments.map((a, i) => (
                     <button
                         key={a.id}
@@ -65,14 +56,14 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                         </span>
                         <span className="min-w-0 flex-1">
                             <TruncName name={a.name} className="text-[13px] font-semibold" />
-                            <span className="text-muted-foreground block font-mono text-[11.5px]">{formatSize(a.size)}</span>
+                            <span className="text-muted-foreground block font-mono text-[11.5px]">{formatFileSize(a.size)}</span>
                         </span>
                     </button>
                 ))}
             </div>
 
             {/* Preview — iframe fills the frame. */}
-            <div className="border-border flex min-h-0 flex-col overflow-hidden rounded-xl border">
+            <div className="border-border flex min-h-[360px] flex-1 flex-col overflow-hidden rounded-xl border lg:min-h-0">
                 <div className={cn(CARD_HEADING, 'border-border/60 flex items-center gap-2 border-b px-3 py-2')}>
                     <TruncName name={active.name} className="flex-1 text-[12.5px] font-semibold" />
                     <a
