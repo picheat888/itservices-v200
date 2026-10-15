@@ -45,7 +45,7 @@ final class TicketLabels
     /** @var array<string, string> Kind of work (tickets.work_class, App\Enums\Ticket\TicketWorkClass). */
     private const WORK_CLASS_TH = [
         'standard' => 'งานปกติ',
-        'repair_internal' => 'งานซ่อม (ช่างภายในองค์กร)',
+        'repair_internal' => 'งานซ่อม (ช่างในบริษัท)',
         'repair_vendor' => 'งานซ่อม (ช่างภายนอก)',
     ];
 

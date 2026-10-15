@@ -3,6 +3,7 @@ import { useVendors, useWarehouses } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
@@ -14,8 +15,6 @@ import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, MoveRight, Penc
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
-
-const CLOSE_DELAY_MS = 1100;
 
 type SerialStatus = 'ok' | 'empty' | 'dup-system' | 'dup-batch';
 
@@ -281,7 +280,20 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
         return k ? t(`stock_mv_${k}` as Parameters<typeof t>[0]) : t('save');
     })();
 
+    const closeAfterSave = useCloseAfterSave(open, onClose);
+    // One movement per press: a second click or Enter during the save is ignored.
+    const sending = useRef(false);
     const submit = async () => {
+        if (sending.current || saved || done) return;
+        sending.current = true;
+        try {
+            await send();
+        } finally {
+            sending.current = false;
+        }
+    };
+
+    const send = async () => {
         if (!selected || !canSubmit) {
             return;
         }
@@ -300,7 +312,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     serial_ids: transferIsSerial ? [...transferSerialIds] : undefined,
                 });
                 setSaved(true);
-                setTimeout(onClose, CLOSE_DELAY_MS);
+                closeAfterSave();
             } catch (e) {
                 useToastStore.getState().push(stockRefusalText(e, t), 'error');
             }
@@ -319,7 +331,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     serial_ids: [...returnSerialIds],
                 });
                 setSaved(true);
-                setTimeout(onClose, CLOSE_DELAY_MS);
+                closeAfterSave();
             } catch (e) {
                 useToastStore.getState().push(stockRefusalText(e, t), 'error');
             }
@@ -351,7 +363,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                 });
             } else {
                 setSaved(true);
-                setTimeout(onClose, CLOSE_DELAY_MS);
+                closeAfterSave();
             }
         } catch (e) {
             useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -991,7 +1003,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={record.isPending}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton loading={record.isPending} onClick={submit} disabled={!canSubmit}>
+                    <SaveButton loading={record.isPending} success={saved} onClick={submit} disabled={!saved && !canSubmit}>
                         {actionLabel}
                     </SaveButton>
                 </DialogFooter>

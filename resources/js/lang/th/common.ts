@@ -5,6 +5,8 @@ export const common: Dict = {
     nav_workspace: 'พื้นที่ทำงาน',
     nav_admin: 'การจัดการระบบ',
     search_placeholder: 'ค้นหา…',
+    search_no_results: 'ไม่พบรายการ',
+    icon_none_found: 'ไม่พบไอคอน',
     toast_region: 'การแจ้งเตือน',
     filters: 'ตัวกรอง',
     reset_filters: 'ล้างตัวกรอง',
@@ -171,4 +173,9 @@ export const common: Dict = {
     record_added: 'เพิ่มเมื่อ',
     record_updated: 'แก้ไขล่าสุด',
     record_by: 'โดย',
+
+    // time-input.tsx — ช่องเลือกเวลา
+    time_hour: 'ชั่วโมง',
+    time_minute: 'นาที',
+    time_clear: 'ล้างเวลา',
 };

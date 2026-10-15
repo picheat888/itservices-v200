@@ -87,9 +87,9 @@ export function useBrandMutations() {
     const qc = useQueryClient();
     const inv = () => qc.invalidateQueries({ queryKey: BRANDS });
     return {
-        create: useMutation({ mutationFn: (p: { name: string; description?: string }) => brandApi.create(p), onSuccess: inv }),
+        create: useMutation({ mutationFn: (p: { name: string; description?: string | null }) => brandApi.create(p), onSuccess: inv }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; description?: string }) =>
+            mutationFn: (v: { id: number; name: string; description?: string | null }) =>
                 brandApi.update(v.id, { name: v.name, description: v.description }),
             onSuccess: inv,
         }),
@@ -102,11 +102,11 @@ export function useAssetModelMutations() {
     const inv = () => qc.invalidateQueries({ queryKey: MODELS });
     return {
         create: useMutation({
-            mutationFn: (p: { name: string; brand_id?: number | null; description?: string }) => assetModelApi.create(p),
+            mutationFn: (p: { name: string; brand_id?: number | null; description?: string | null }) => assetModelApi.create(p),
             onSuccess: inv,
         }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; brand_id?: number | null; description?: string }) =>
+            mutationFn: (v: { id: number; name: string; brand_id?: number | null; description?: string | null }) =>
                 assetModelApi.update(v.id, { name: v.name, brand_id: v.brand_id, description: v.description }),
             onSuccess: inv,
         }),
@@ -119,11 +119,11 @@ export function useCategoryMutations() {
     const inv = () => qc.invalidateQueries({ queryKey: CATS });
     return {
         create: useMutation({
-            mutationFn: (p: { name: string; name_th?: string; icon?: string | null; description?: string }) => categoryApi.create(p),
+            mutationFn: (p: { name: string; name_th?: string | null; icon?: string | null; description?: string | null }) => categoryApi.create(p),
             onSuccess: inv,
         }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; name_th?: string; icon?: string | null; description?: string }) =>
+            mutationFn: (v: { id: number; name: string; name_th?: string | null; icon?: string | null; description?: string | null }) =>
                 categoryApi.update(v.id, { name: v.name, name_th: v.name_th, icon: v.icon, description: v.description }),
             onSuccess: inv,
         }),
@@ -136,12 +136,26 @@ export function useVendorMutations() {
     const inv = () => qc.invalidateQueries({ queryKey: VENDORS });
     return {
         create: useMutation({
-            mutationFn: (p: { name: string; name_th?: string; contact?: string; phone?: string; email?: string; address?: string }) =>
-                vendorApi.create(p),
+            mutationFn: (p: {
+                name: string;
+                name_th?: string;
+                contact?: string | null;
+                phone?: string | null;
+                email?: string | null;
+                address?: string | null;
+            }) => vendorApi.create(p),
             onSuccess: inv,
         }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; name_th?: string; contact?: string; phone?: string; email?: string; address?: string }) =>
+            mutationFn: (v: {
+                id: number;
+                name: string;
+                name_th?: string;
+                contact?: string | null;
+                phone?: string | null;
+                email?: string | null;
+                address?: string | null;
+            }) =>
                 vendorApi.update(v.id, { name: v.name, name_th: v.name_th, contact: v.contact, phone: v.phone, email: v.email, address: v.address }),
             onSuccess: inv,
         }),
@@ -154,11 +168,11 @@ export function useWarehouseMutations() {
     const inv = () => qc.invalidateQueries({ queryKey: WAREHOUSES });
     return {
         create: useMutation({
-            mutationFn: (p: { name: string; description?: string }) => warehouseApi.create(p),
+            mutationFn: (p: { name: string; description?: string | null }) => warehouseApi.create(p),
             onSuccess: inv,
         }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; description?: string }) =>
+            mutationFn: (v: { id: number; name: string; description?: string | null }) =>
                 warehouseApi.update(v.id, { name: v.name, description: v.description }),
             onSuccess: inv,
         }),
@@ -170,9 +184,10 @@ export function useUnitMutations() {
     const qc = useQueryClient();
     const inv = () => qc.invalidateQueries({ queryKey: UNITS });
     return {
-        create: useMutation({ mutationFn: (p: { name: string; description?: string }) => unitApi.create(p), onSuccess: inv }),
+        create: useMutation({ mutationFn: (p: { name: string; description?: string | null }) => unitApi.create(p), onSuccess: inv }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; description?: string }) => unitApi.update(v.id, { name: v.name, description: v.description }),
+            mutationFn: (v: { id: number; name: string; description?: string | null }) =>
+                unitApi.update(v.id, { name: v.name, description: v.description }),
             onSuccess: inv,
         }),
         remove: useMutation({ mutationFn: (id: number) => unitApi.remove(id), onSuccess: inv }),
@@ -183,9 +198,9 @@ export function useWriteoffReasonMutations() {
     const qc = useQueryClient();
     const inv = () => qc.invalidateQueries({ queryKey: WRITEOFF_REASONS });
     return {
-        create: useMutation({ mutationFn: (p: { name: string; description?: string }) => writeoffReasonApi.create(p), onSuccess: inv }),
+        create: useMutation({ mutationFn: (p: { name: string; description?: string | null }) => writeoffReasonApi.create(p), onSuccess: inv }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; description?: string }) =>
+            mutationFn: (v: { id: number; name: string; description?: string | null }) =>
                 writeoffReasonApi.update(v.id, { name: v.name, description: v.description }),
             onSuccess: inv,
         }),
@@ -197,9 +212,9 @@ export function useWarrantyTypeMutations() {
     const qc = useQueryClient();
     const inv = () => qc.invalidateQueries({ queryKey: WARRANTY_TYPES });
     return {
-        create: useMutation({ mutationFn: (p: { name: string; description?: string }) => warrantyTypeApi.create(p), onSuccess: inv }),
+        create: useMutation({ mutationFn: (p: { name: string; description?: string | null }) => warrantyTypeApi.create(p), onSuccess: inv }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; description?: string }) =>
+            mutationFn: (v: { id: number; name: string; description?: string | null }) =>
                 warrantyTypeApi.update(v.id, { name: v.name, description: v.description }),
             onSuccess: inv,
         }),

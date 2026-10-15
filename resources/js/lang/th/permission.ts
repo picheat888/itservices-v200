@@ -105,7 +105,7 @@ export const permission: Dict = {
     'perm_desc_tickets.assign': 'มอบเคสที่ยังไม่มีผู้รับให้เจ้าหน้าที่',
     'perm_act_tickets.set_work_class': 'จัดประเภทงานซ่อมยาว',
     'perm_desc_tickets.set_work_class':
-        'ส่งเคสเป็นงานซ่อมให้ช่างภายในองค์กรหรือช่างภายนอก เพื่อให้วัดด้วย KPI งานซ่อมแทน SLA ของงานปกติ ทุกครั้งที่เปลี่ยนต้องกรอกเหตุผล และถูกบันทึกลงไทม์ไลน์ของเคส',
+        'ส่งเคสเป็นงานซ่อมให้ช่างในบริษัทหรือช่างภายนอก เพื่อให้วัดด้วย KPI งานซ่อมแทน SLA ของงานปกติ ทุกครั้งที่เปลี่ยนต้องกรอกเหตุผล และถูกบันทึกลงไทม์ไลน์ของเคส',
     'perm_act_tickets.level_hardware': 'Hardware',
     'perm_act_tickets.level_software': 'Software',
     'perm_act_tickets.level_network': 'Network',

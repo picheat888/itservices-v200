@@ -5,6 +5,8 @@ export const common: Dict = {
     nav_workspace: 'Workspace',
     nav_admin: 'Administration',
     search_placeholder: 'Search anything…',
+    search_no_results: 'No results',
+    icon_none_found: 'No icons found',
     toast_region: 'Notifications',
     filters: 'Filters',
     reset_filters: 'Clear filters',
@@ -171,4 +173,9 @@ export const common: Dict = {
     record_added: 'Added',
     record_updated: 'Last updated',
     record_by: 'by',
+
+    // time-input.tsx — time picker
+    time_hour: 'Hour',
+    time_minute: 'Minute',
+    time_clear: 'Clear time',
 };

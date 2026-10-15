@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Request\ServiceRequest;
 use App\Models\Settings\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,5 +66,33 @@ class LocationApiTest extends TestCase
         $this->putJson("/api/locations/{$location->id}", ['name' => 'HQ Floor 5'])
             ->assertOk()
             ->assertJsonPath('data.name', 'HQ Floor 5');
+    }
+
+    public function test_a_location_named_on_a_request_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->super());
+        $location = Location::create(['name' => 'Building B']);
+        $request = ServiceRequest::create([
+            'reference' => 'RQ-2026-0001', 'type' => 'computer', 'origin' => 'direct',
+            'requester_name' => 'Somchai', 'title' => 'New laptop', 'reason' => 'Needed for work.',
+            'status' => 'pending', 'location_id' => $location->id,
+        ]);
+
+        $this->deleteJson("/api/locations/{$location->id}")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'in_use')
+            ->assertJsonPath('count', 1);
+
+        $this->assertSame($location->id, $request->fresh()->location_id);
+    }
+
+    public function test_an_unused_location_can_be_deleted(): void
+    {
+        $this->actingAs($this->super());
+        $location = Location::create(['name' => 'Building C']);
+
+        $this->deleteJson("/api/locations/{$location->id}")->assertOk();
+
+        $this->assertDatabaseMissing('locations', ['id' => $location->id]);
     }
 }

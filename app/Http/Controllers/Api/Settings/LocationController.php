@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
+use App\Models\Request\ServiceRequest;
 use App\Models\Settings\Location;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,10 +38,11 @@ class LocationController extends Controller
         return response()->json(['data' => $location, 'message' => 'success']);
     }
 
-    /** Block deleting a location still referenced by an asset (guarded at the app layer; FK is defense-in-depth). */
+    /** Delete a location — blocked (409) while any asset or request still references it. */
     public function destroy(Location $location): JsonResponse
     {
-        $count = Asset::where('location_id', $location->id)->count();
+        $count = Asset::where('location_id', $location->id)->count()
+            + ServiceRequest::where('location_id', $location->id)->count();
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }

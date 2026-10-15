@@ -1,22 +1,17 @@
-/**
- * Settings → Tickets & SLA — เป้าหมายปิดเคส สามชุด และหน้าต่างเวลาทำการที่นาฬิกานับด้วย
- *
- * แยกออกมาจาก pages/index.tsx เพราะแท็บนี้ยาวกว่าแท็บอื่นมาก และการเพิ่มลิสต์ที่สาม
- * (เป้าหมายตามลักษณะงาน) จะดันไฟล์รวมไปเกิน 2,200 บรรทัด
- */
+// Settings → Ticket & SLA: working hours, pick-up and close targets (by priority, repair, request type) and the SLA goal.
+// A summary card jumps to each section; one Save button at the end saves the tab.
 import { useT } from '@/lang';
 import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge } from '@/modules/ticket';
+import { EmptyPane } from '@/shared/components/empty-pane';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
-import { REQUEST_TYPES, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
-import { TABLE_HEAD } from '@/shared/lib/surface';
+import { REQUEST_TYPE_META, REQUEST_TYPES } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, TicketCategory, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
 import { TimeInput } from '@/shared/ui/time-input';
-import { AlertCircle, Info, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Plus, Trash2, Wrench } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     type TicketSlaClock,
     type TicketSlaHours,
@@ -25,114 +20,100 @@ import {
     type TicketSlaWorkClassTarget,
 } from '../api/settingsApi';
 import { useSettings, useUpdateTicketSla } from '../hooks/use-settings';
+import { FIELD_ROW, FORM_WIDTH } from './form-layout';
+import {
+    ClockToggle,
+    DayPicker,
+    ErrorSummary,
+    FieldError,
+    NumberField,
+    SectionHead,
+    SLA_LABEL,
+    SlaSummary,
+    WorkdayBar,
+    type SlaError,
+} from './sla-parts';
 
 const SLA_PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
 
-// The two kinds of repair work a case can be classified as. 'standard' (non-repair) is never
-// offered here — the backend rejects it with 422.
+// The two kinds of repair; 'standard' is never offered here (the backend refuses it).
 const WORK_CLASSES = ['repair_internal', 'repair_vendor'] as const;
 const WORK_CLASS_LABEL_KEY: Record<(typeof WORK_CLASSES)[number], string> = {
     repair_internal: 'set_sla_work_repair_internal',
     repair_vendor: 'set_sla_work_repair_vendor',
 };
+const REPAIR_PAIRS = TICKET_CATEGORIES.length * WORK_CLASSES.length;
 
-/**
- * "≈ 3 working days" beside a target in hours — or "≈ N days" when the row's clock counts
- * calendar time instead of the working window.
- *
- * Nobody thinks in raw hours; they think in days. Which conversion applies depends on the
- * row's own clock: a business-clock target divides by the working window set further down
- * this same page (days off, out-of-hours and the break are skipped), while a calendar-clock
- * target is a flat ÷24 — 720 hours is 30 days, not 90 "working" ones. Below one day of either
- * kind there is nothing to add.
- */
-function workingDaysHint(resolveHours: number, hours: TicketSlaHours, clock: TicketSlaClock, t: (key: string) => string): string {
-    if (!Number.isFinite(resolveHours) || resolveHours < 1) return '';
+const SECTION = 'border-border scroll-mt-4 border-t py-5 focus:outline-none';
+const TABLE = 'border-border bg-card overflow-hidden rounded-lg border';
+const ROW = 'border-border grid items-center gap-x-4 gap-y-2 border-t px-3.5 py-2 first:border-t-0';
+const HEAD_ROW = 'bg-muted/50 text-muted-foreground hidden py-2 text-xs font-semibold @2xl:grid';
+const PRI_COLS = 'grid-cols-[minmax(0,1fr)_auto] @2xl:grid-cols-[7.5rem_minmax(0,1fr)_15rem]';
+const REP_COLS = 'grid-cols-2 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.3fr)_15rem_2.5rem]';
+const REQ_COLS = 'grid-cols-[minmax(0,1fr)_auto] @2xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_15rem]';
+const MINI_LABEL = 'text-muted-foreground mb-1 block text-xs font-semibold @2xl:hidden';
 
-    if (clock === 'calendar') {
-        const days = resolveHours / 24;
-        if (days < 1) return '';
-        return t('set_sla_approx_calendar_days').replace('{n}', String(Math.round(days)));
-    }
+type WorkRow = TicketSlaWorkClassTarget & { uid: number };
 
-    const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
-    const breakLength = hours.break_start && hours.break_end ? minutes(hours.break_end) - minutes(hours.break_start) : 0;
-    const perDay = minutes(hours.end) - minutes(hours.start) - breakLength;
-    if (perDay <= 0) return '';
+const minutesOf = (time: string | null) => (time ? Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)) : null);
+const fill = (text: string, vars: Record<string, string | number>) =>
+    Object.entries(vars).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), text);
+const oneDecimal = (n: number) => String(Math.round(n * 10) / 10);
+const validHours = (h: number) => Number.isInteger(h) && h >= 1 && h <= 8760;
 
-    // Only once the target is a full working day or more. Rounding 5 hours up to "≈ 1 day"
-    // both overstates it and makes 5 and 9 hours read as the same thing.
-    const target = resolveHours * 60;
-    if (target < perDay) return '';
-
-    return t('set_sla_approx_days').replace('{n}', String(Math.round(target / perDay)));
+/** Minutes the business clock counts in one working day (window less the break). */
+function workMinutesPerDay(hours: TicketSlaHours): number {
+    const breakLength = hours.break_start && hours.break_end ? minutesOf(hours.break_end)! - minutesOf(hours.break_start)! : 0;
+    return minutesOf(hours.end)! - minutesOf(hours.start)! - breakLength;
 }
 
-// ISO weekdays for the SLA working-window picker (1 = Monday … 7 = Sunday).
-const SLA_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+/** "≈ 3 working days" for a business-clock target, "≈ 30 days" for a round-the-clock one. */
+function daysHint(resolveHours: number, hours: TicketSlaHours, clock: TicketSlaClock, t: (key: string) => string): string {
+    if (!validHours(resolveHours)) return '';
+    if (clock === 'calendar') {
+        const days = resolveHours / 24;
+        return days >= 1 ? fill(t('set_sla_approx_calendar_days'), { n: oneDecimal(days) }) : '';
+    }
+    const perDay = workMinutesPerDay(hours);
+    if (perDay <= 0) return '';
+    const days = (resolveHours * 60) / perDay;
+    return days >= 1 ? fill(t('set_sla_approx_days'), { n: oneDecimal(days) }) : t('set_sla_under_day');
+}
 
-/**
- * Both exception tables list every option, always, and a switch decides whether the row
- * applies — so a row has to exist on screen for an option nobody has configured yet.
- *
- * The filled-in number is the target the case would have had anyway, which keeps the row
- * honest before anybody edits it: switching it on changes which rule decides the deadline,
- * not the deadline itself, until somebody types a different figure.
- *
- * Expanding on the way in also keeps the dirty check working. The rows come back from the
- * API ordered by their stored key, which is not the order these tables render in, so the
- * comparison has to run against a list built exactly the way the editable one was.
- */
+/** Every request type gets a row; an unconfigured one shows the medium target it would get anyway. */
 function expandRequestRows(stored: TicketSlaRequestTarget[], fallback: { resolve: number; clock: TicketSlaClock }): TicketSlaRequestTarget[] {
     const byType = new Map(stored.map((r) => [r.type, r]));
-
     return REQUEST_TYPES.map((type) => byType.get(type) ?? { type, resolve: fallback.resolve, clock: fallback.clock, enabled: false });
 }
 
-/** Settings → Tickets: edit the per-priority SLA targets + the working window they count against. */
+const requestKey = (r: TicketSlaRequestTarget) => `${r.type}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`;
+const workKey = (r: Pick<TicketSlaWorkClassTarget, 'category' | 'work_class'>) => `${r.category}:${r.work_class}`;
+const workSignature = (r: TicketSlaWorkClassTarget) => `${workKey(r)}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`;
+const stripUid = (rows: WorkRow[]): TicketSlaWorkClassTarget[] =>
+    rows.map(({ category, work_class, resolve, clock, enabled }) => ({ category, work_class, resolve, clock, enabled }));
+
 export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
     const { data } = useSettings();
     const update = useUpdateTicketSla();
-    // Shared by every clock select on this tab — priority rows, request-type rows and
-    // work-class rows all pick from the same two options.
-    const clockOptions = [
-        { value: 'business', label: t('set_sla_clock_business') },
-        { value: 'calendar', label: t('set_sla_clock_calendar') },
-    ];
     const stored = data?.ticket_sla;
     const storedRequest = data?.ticket_sla_request;
     const storedWork = data?.ticket_sla_work_class;
     const storedResponse = data?.ticket_sla_response;
     const storedGoal = data?.ticket_sla_goal;
     const storedHours = data?.ticket_sla_hours;
-    // What an unconfigured request type shows: the medium target, which is what a case with no
-    // priority is judged against anyway. Read off the saved values rather than the editable
-    // draft, so typing in the priority table never re-seeds the rows below it.
-    // Memoized so the seeding effect below can depend on it by reference instead of reaching
-    // for an eslint escape hatch.
+    // Unconfigured request types show the saved medium target, never the draft one.
     const reqFallback = useMemo(
         () => ({ resolve: stored?.medium?.resolve ?? 24, clock: stored?.medium?.clock ?? ('business' as TicketSlaClock) }),
         [stored?.medium?.resolve, stored?.medium?.clock],
     );
+    const nextUid = useRef(1);
+
     const [draft, setDraft] = useState<TicketSlaTargets>({});
-    // Targets keyed on what was requested. Every request type has a row and the switch decides
-    // whether it applies, so the table reads as the full set of choices rather than a list the
-    // administrator has to remember to add to.
     const [reqTargets, setReqTargets] = useState<TicketSlaRequestTarget[]>([]);
-    const [reqErrors, setReqErrors] = useState<Record<string, string>>({});
-    // Repair targets, one row per (ticket type, who does the work) pair. A list the
-    // administrator adds to rather than a fixed table: most pairs never happen — software does
-    // not go to a technician — and a case can only be classified into a pair that has a row, so
-    // the list is also the set of options a technician will be offered.
-    const [workTargets, setWorkTargets] = useState<TicketSlaWorkClassTarget[]>([]);
-    const [workErrors, setWorkErrors] = useState<Record<string, string>>({});
-    // First response is one system-wide target — priority doesn't exist while a case waits.
+    const [workTargets, setWorkTargets] = useState<WorkRow[]>([]);
     const [respTarget, setRespTarget] = useState(120);
-    const [respError, setRespError] = useState('');
-    // The share of cases that should close within target — the goal line the reports draw.
     const [goal, setGoal] = useState(90);
-    const [goalError, setGoalError] = useState('');
     const [hours, setHours] = useState<TicketSlaHours>({
         days: [1, 2, 3, 4, 5],
         start: '08:00',
@@ -141,8 +122,9 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
         break_end: '13:00',
     });
     const [saved, setSaved] = useState(false);
-    const [errors, setErrors] = useState<Record<string, { response?: string; resolve?: string }>>({});
-    const [hoursError, setHoursError] = useState('');
+    // Errors show once Save is refused, then follow every edit until a save goes through.
+    const [submitted, setSubmitted] = useState(false);
+    const [attempt, setAttempt] = useState(0);
 
     useEffect(() => {
         if (stored) setDraft(stored);
@@ -151,7 +133,7 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
         if (storedRequest) setReqTargets(expandRequestRows(storedRequest, reqFallback));
     }, [storedRequest, reqFallback]);
     useEffect(() => {
-        if (storedWork) setWorkTargets(storedWork);
+        if (storedWork) setWorkTargets(storedWork.map((row) => ({ ...row, uid: nextUid.current++ })));
     }, [storedWork]);
     useEffect(() => {
         if (storedResponse != null) setRespTarget(storedResponse);
@@ -163,615 +145,559 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
         if (storedHours) setHours(storedHours);
     }, [storedHours]);
 
-    const hoursDirty =
-        !!storedHours &&
-        (hours.start !== storedHours.start ||
-            hours.end !== storedHours.end ||
-            hours.break_start !== storedHours.break_start ||
-            hours.break_end !== storedHours.break_end ||
-            hours.days.join() !== storedHours.days.join());
-    // Compared as a whole: a row added, removed, switched, retimed or reclocked all count the same.
-    const reqSignature = (rows: TicketSlaRequestTarget[]) => rows.map((r) => `${r.type}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`).join('|');
-    // Compared against the SAME expansion the editable rows were built from, not against the
-    // raw payload: the API returns only the rows that exist, in its own key order, so comparing
-    // straight to it would report every untouched form as dirty.
-    const reqDirty = !!storedRequest && reqSignature(reqTargets) !== reqSignature(expandRequestRows(storedRequest, reqFallback));
-    const workSignature = (rows: TicketSlaWorkClassTarget[]) =>
-        rows.map((r) => `${r.category}:${r.work_class}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`).join('|');
-    const workDirty = !!storedWork && workSignature(workTargets) !== workSignature(storedWork);
-    const dirty =
-        hoursDirty ||
-        reqDirty ||
-        workDirty ||
-        (storedResponse != null && respTarget !== storedResponse) ||
-        (storedGoal != null && goal !== storedGoal) ||
-        (!!stored && SLA_PRIORITIES.some((p) => draft[p] && (draft[p].resolve !== stored[p]?.resolve || draft[p].clock !== stored[p]?.clock)));
+    // Unsaved edits, counted per thing a person changed (the hours block, a field, a row).
+    const changeCount = useMemo(() => {
+        if (!data) return 0;
+        let n = 0;
+        if (storedHours && JSON.stringify(hours) !== JSON.stringify(storedHours)) n++;
+        if (storedResponse != null && respTarget !== storedResponse) n++;
+        if (storedGoal != null && goal !== storedGoal) n++;
+        if (stored)
+            n += SLA_PRIORITIES.filter((p) => draft[p] && (draft[p].resolve !== stored[p]?.resolve || draft[p].clock !== stored[p]?.clock)).length;
+        if (storedRequest) {
+            const base = expandRequestRows(storedRequest, reqFallback);
+            n += reqTargets.filter((row, i) => !base[i] || requestKey(row) !== requestKey(base[i])).length;
+        }
+        if (storedWork) {
+            const before = storedWork.map(workSignature);
+            const after = workTargets.map(workSignature);
+            n += after.filter((sig, i) => sig !== before[i]).length + Math.max(0, before.length - after.length);
+        }
+        return n;
+    }, [
+        data,
+        hours,
+        storedHours,
+        respTarget,
+        storedResponse,
+        goal,
+        storedGoal,
+        draft,
+        stored,
+        reqTargets,
+        storedRequest,
+        reqFallback,
+        workTargets,
+        storedWork,
+    ]);
 
-    // Report unsaved edits up so the page asks before switching section.
     useEffect(() => {
-        onDirtyChange(dirty);
+        onDirtyChange(changeCount > 0);
         return () => onDirtyChange(false);
-    }, [dirty, onDirtyChange]);
+    }, [changeCount, onDirtyChange]);
 
+    const touch = () => setSaved(false);
     const setRequestTarget = (type: string, patch: Partial<TicketSlaRequestTarget>) => {
         setReqTargets((rows) => rows.map((r) => (r.type === type ? { ...r, ...patch } : r)));
-        setSaved(false);
-        setReqErrors((e) => ({ ...e, [type]: '' }));
+        touch();
     };
-    /** A pair identifies a row; nothing else in the list is unique on its own. */
-    const workKey = (row: Pick<TicketSlaWorkClassTarget, 'category' | 'work_class'>) => `${row.category}:${row.work_class}`;
-    const setWorkTarget = (key: string, patch: Partial<TicketSlaWorkClassTarget>) => {
-        setWorkTargets((rows) => rows.map((r) => (workKey(r) === key ? { ...r, ...patch } : r)));
-        setSaved(false);
-        setWorkErrors((e) => ({ ...e, [key]: '' }));
+    const setWorkTarget = (uid: number, patch: Partial<TicketSlaWorkClassTarget>) => {
+        setWorkTargets((rows) => rows.map((r) => (r.uid === uid ? { ...r, ...patch } : r)));
+        touch();
     };
     const addWorkTarget = () => {
-        // Starts on the first pair that has no row yet, at the KPI the organisation runs —
-        // 30 calendar days — so the row is a real target before anybody edits it.
+        // The first pair without a row, at the organisation's repair KPI: 30 days round the clock.
         const taken = new Set(workTargets.map(workKey));
         const next = TICKET_CATEGORIES.flatMap((c) => WORK_CLASSES.map((w) => ({ category: c, work_class: w }))).find(
             (pair) => !taken.has(workKey(pair)),
         );
         if (!next) return;
-        setWorkTargets((rows) => [...rows, { ...next, resolve: 720, clock: 'calendar', enabled: true }]);
-        setSaved(false);
+        setWorkTargets((rows) => [...rows, { ...next, resolve: 720, clock: 'calendar', enabled: true, uid: nextUid.current++ }]);
+        touch();
     };
-    const removeWorkTarget = (key: string) => {
-        setWorkTargets((rows) => rows.filter((r) => workKey(r) !== key));
-        setSaved(false);
+    const removeWorkTarget = (uid: number) => {
+        setWorkTargets((rows) => rows.filter((r) => r.uid !== uid));
+        touch();
     };
-
-    /** Toggle one working day, keeping the list in Mon→Sun order. */
-    const toggleDay = (d: number) => {
-        setHours((h) => ({ ...h, days: h.days.includes(d) ? h.days.filter((x) => x !== d) : [...h.days, d].sort((a, b) => a - b) }));
-        setSaved(false);
-        setHoursError('');
+    const toggleDay = (day: number) => {
+        setHours((h) => ({ ...h, days: h.days.includes(day) ? h.days.filter((x) => x !== day) : [...h.days, day].sort((a, b) => a - b) }));
+        touch();
     };
     const setHoursField = (key: 'start' | 'end', value: string) => {
         setHours((h) => ({ ...h, [key]: value }));
-        setSaved(false);
-        setHoursError('');
+        touch();
     };
-    /** Break inputs are clearable — an empty value means "no break". */
+    // An empty break time means no break.
     const setBreakField = (key: 'break_start' | 'break_end', value: string) => {
         setHours((h) => ({ ...h, [key]: value || null }));
-        setSaved(false);
-        setHoursError('');
+        touch();
+    };
+    const setPriority = (p: TicketPriority, patch: Partial<{ resolve: number; clock: TicketSlaClock }>) => {
+        setDraft((d) => ({ ...d, [p]: { resolve: d[p]?.resolve ?? 0, clock: d[p]?.clock ?? 'business', ...patch } }));
+        touch();
     };
 
-    const setField = (p: TicketPriority, value: number) => {
-        setDraft((d) => ({ ...d, [p]: { resolve: value, clock: d[p]?.clock ?? 'business' } }));
-        setSaved(false);
-        if (errors[p]?.resolve) setErrors((e) => ({ ...e, [p]: { ...e[p], resolve: undefined } }));
-    };
-    const setPriorityClock = (p: TicketPriority, clock: TicketSlaClock) => {
-        setDraft((d) => ({ ...d, [p]: { resolve: d[p]?.resolve ?? 0, clock } }));
-        setSaved(false);
-    };
-    const setResponse = (value: number) => {
-        setRespTarget(value);
-        setSaved(false);
-        setRespError('');
-    };
-    const changeGoal = (value: number) => {
-        setGoal(value);
-        setSaved(false);
-        setGoalError('');
-    };
+    const categoryLabel = (c: TicketCategory) => t(`ticket_cat_${c}`);
+    const workLabel = (w: TicketSlaWorkClassTarget['work_class']) => t(WORK_CLASS_LABEL_KEY[w as (typeof WORK_CLASSES)[number]]);
 
-    // First response is in minutes (1–10080, one system-wide value), resolution in
-    // hours (1–8760) and must be at least the first-response target (in minutes).
-    const handleSave = () => {
-        let respErr = '';
-        if (!Number.isInteger(respTarget) || respTarget < 1 || respTarget > 10080) {
-            respErr = t('set_sla_err_response');
-        }
-
-        const next: Record<string, { response?: string; resolve?: string }> = {};
-        for (const p of SLA_PRIORITIES) {
-            const resolve = draft[p]?.resolve ?? 0;
-            const rowErr: { resolve?: string } = {};
-
-            if (!Number.isInteger(resolve) || resolve < 1 || resolve > 8760) {
-                rowErr.resolve = t('set_sla_err_resolve');
-            } else if (!respErr && resolve * 60 < respTarget) {
-                rowErr.resolve = t('set_sla_err_order');
-            }
-            if (rowErr.resolve) next[p] = rowErr;
-        }
-
-        // Working window: at least one day, start strictly before end, and a break
-        // (when set) needs both ends, in order, inside the window.
-        let windowErr = '';
-        if (hours.days.length === 0) windowErr = t('set_sla_err_days');
-        else if (hours.start >= hours.end) windowErr = t('set_sla_err_window');
-        else if (!!hours.break_start !== !!hours.break_end) windowErr = t('set_sla_err_break_pair');
-        else if (
+    // Same rules as the server: response 1–10080 min, every resolve 1–8760 h and not under the response.
+    const errors = useMemo<SlaError[]>(() => {
+        const list: SlaError[] = [];
+        if (hours.days.length === 0) list.push({ id: 'sla-days', where: t('set_sla_days'), message: t('set_sla_err_days') });
+        if (hours.start >= hours.end) list.push({ id: 'sla-end', where: t('set_sla_work_time'), message: t('set_sla_err_window') });
+        if (!!hours.break_start !== !!hours.break_end) {
+            list.push({ id: 'sla-break-start', where: t('set_sla_break'), message: t('set_sla_err_break_pair') });
+        } else if (
             hours.break_start &&
             hours.break_end &&
             (hours.break_start >= hours.break_end || hours.break_start < hours.start || hours.break_end > hours.end)
         ) {
-            windowErr = t('set_sla_err_break_range');
+            list.push({ id: 'sla-break-start', where: t('set_sla_break'), message: t('set_sla_err_break_range') });
         }
-
-        // Request-type targets follow the same two rules as the priority rows.
-        const reqNext: Record<string, string> = {};
-        for (const row of reqTargets) {
-            if (!Number.isInteger(row.resolve) || row.resolve < 1 || row.resolve > 8760) {
-                reqNext[row.type] = t('set_sla_err_resolve');
-            } else if (!respErr && row.resolve * 60 < respTarget) {
-                reqNext[row.type] = t('set_sla_err_order');
-            }
+        const respOk = Number.isInteger(respTarget) && respTarget >= 1 && respTarget <= 10080;
+        if (!respOk) list.push({ id: 'sla-resp', where: t('set_sla_response_within'), message: t('set_sla_err_response') });
+        const resolveError = (h: number) =>
+            !validHours(h) ? t('set_sla_err_resolve') : respOk && h * 60 < respTarget ? fill(t('set_sla_err_order'), { n: respTarget }) : '';
+        for (const p of SLA_PRIORITIES) {
+            const message = resolveError(draft[p]?.resolve ?? 0);
+            if (message) list.push({ id: `sla-pri-${p}`, where: `${t('set_sla_resolve_within')} ${t(`ticket_prio_${p}`)}`, message });
         }
-
-        // Repair-work targets follow the same two rules, keyed on work class instead of type.
-        const workNext: Record<string, string> = {};
         for (const row of workTargets) {
-            if (!Number.isInteger(row.resolve) || row.resolve < 1 || row.resolve > 8760) {
-                workNext[row.work_class] = t('set_sla_err_resolve');
-            } else if (!respErr && row.resolve * 60 < respTarget) {
-                workNext[row.work_class] = t('set_sla_err_order');
-            }
+            const message = resolveError(row.resolve);
+            if (message)
+                list.push({
+                    id: `sla-rep-${row.uid}`,
+                    where: `${t('set_sla_work_title')} ${t(`ticket_cat_${row.category}`)} ${t(WORK_CLASS_LABEL_KEY[row.work_class as (typeof WORK_CLASSES)[number]])}`,
+                    message,
+                });
         }
+        for (const row of reqTargets) {
+            const message = resolveError(row.resolve);
+            const meta = REQUEST_TYPE_META[row.type as ServiceRequestType];
+            if (message) list.push({ id: `sla-req-${row.type}`, where: `${t('set_sla_request_title')} ${t(meta?.labelKey ?? row.type)}`, message });
+        }
+        if (!(Number.isInteger(goal) && goal >= 1 && goal <= 100))
+            list.push({ id: 'sla-goal', where: t('set_sla_goal'), message: t('set_sla_err_goal') });
+        return list;
+    }, [hours, respTarget, draft, workTargets, reqTargets, goal, t]);
 
-        const goalErr = !Number.isInteger(goal) || goal < 1 || goal > 100 ? t('set_sla_err_goal') : '';
+    const shown = submitted ? errors : [];
+    const errorOf = (id: string) => shown.find((e) => e.id === id)?.message ?? '';
+    const countErrors = (test: (id: string) => boolean) => shown.filter((e) => test(e.id)).length;
 
-        setRespError(respErr);
-        setGoalError(goalErr);
-        setErrors(next);
-        setReqErrors(reqNext);
-        setWorkErrors(workNext);
-        setHoursError(windowErr);
-        if (respErr || goalErr || Object.keys(next).length > 0 || Object.keys(reqNext).length > 0 || Object.keys(workNext).length > 0 || windowErr)
+    const handleSave = () => {
+        if (errors.length > 0) {
+            setSubmitted(true);
+            setAttempt((n) => n + 1);
             return;
+        }
         update.mutate(
             {
                 ticket_sla: draft,
                 ticket_sla_request: reqTargets,
-                ticket_sla_work_class: workTargets,
+                ticket_sla_work_class: stripUid(workTargets),
                 ticket_sla_response: respTarget,
                 ticket_sla_goal: goal,
                 ticket_sla_hours: hours,
             },
-            { onSuccess: () => setSaved(true) },
+            {
+                onSuccess: () => {
+                    setSaved(true);
+                    setSubmitted(false);
+                },
+            },
         );
     };
 
+    // Summary card values
+    const perDay = workMinutesPerDay(hours);
+    const days = [...hours.days].sort((a, b) => a - b);
+    const contiguous = days.length > 1 && days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+    const dayShort = (d: number) => t(`set_sla_day_${d}`);
+    const daysText = contiguous ? `${dayShort(days[0])}–${dayShort(days[days.length - 1])}` : days.map(dayShort).join(' ');
+    const respHint = Number.isInteger(respTarget) && respTarget >= 60 ? fill(t('set_sla_approx_hours'), { n: oneDecimal(respTarget / 60) }) : '';
+    const priValues = SLA_PRIORITIES.map((p) => draft[p]?.resolve).filter((v): v is number => Number.isFinite(v));
+    const reqValues = reqTargets.map((r) => r.resolve).filter(Number.isFinite);
+    const reqSame = reqValues.length > 0 && reqValues.every((v) => v === reqValues[0]) && reqTargets.every((r) => r.clock === reqTargets[0].clock);
+    const range = (values: number[]) =>
+        values.length === 0
+            ? '–'
+            : Math.min(...values) === Math.max(...values)
+              ? fill(t('set_sla_hours_short'), { n: values[0] })
+              : fill(t('set_sla_range_hours'), { from: Math.min(...values), to: Math.max(...values) });
+    const summary = {
+        days: daysText,
+        window: `${hours.start}–${hours.end}`,
+        breakText:
+            hours.break_start && hours.break_end
+                ? fill(t('set_sla_break_range'), { from: hours.break_start, to: hours.break_end })
+                : t('set_sla_no_break'),
+        response: `${Number.isFinite(respTarget) ? respTarget : '–'} ${t('set_sla_minutes')}`,
+        responseHint: respHint,
+        priority: range(priValues),
+        repair: workTargets.length > 0 ? fill(t('set_sla_sum_repair_n'), { n: workTargets.length }) : t('set_sla_sum_repair_none'),
+        request: reqSame ? fill(t('set_sla_sum_request_all'), { n: reqValues[0] }) : range(reqValues),
+        goal: `${Number.isFinite(goal) ? goal : '–'}%`,
+        hoursErrors: countErrors((id) => ['sla-days', 'sla-end', 'sla-break-start'].includes(id)),
+        responseErrors: countErrors((id) => id === 'sla-resp'),
+        closeErrors: countErrors((id) => /^sla-(pri|rep|req)-/.test(id)),
+        goalErrors: countErrors((id) => id === 'sla-goal'),
+    };
+
     return (
-        <div className="max-w-5xl">
-            <div className="mb-5">
-                <h2 className="text-lg font-semibold">{t('set_sla_title')}</h2>
-                <p className="text-muted-foreground text-sm">{t('set_sla_desc')}</p>
-            </div>
-
-            {/* One system-wide first-response target — a case has no priority while it waits. */}
-            <div className="mb-6">
-                <h3 className="text-sm font-semibold">{t('set_sla_response')}</h3>
-                <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_sla_response_help')}</p>
-                <div className="flex items-center gap-2">
-                    <span className="text-sm">{t('set_sla_response_within')}</span>
-                    <Input
-                        type="number"
-                        min={1}
-                        value={Number.isFinite(respTarget) ? respTarget : ''}
-                        onChange={(e) => setResponse(e.target.valueAsNumber)}
-                        aria-invalid={!!respError}
-                        className={cn(
-                            'h-9 w-24 font-mono',
-                            respError && 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                        )}
-                    />
-                    <span className="text-sm">{t('set_sla_minutes')}</span>
+        <div className="@container">
+            <div className={FORM_WIDTH}>
+                <div className="mb-4">
+                    <h2 className="text-lg font-semibold">{t('set_tickets')}</h2>
+                    <p className="text-muted-foreground text-sm">{t('set_sla_lead')}</p>
                 </div>
-                {respError && (
-                    <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        {respError}
-                    </p>
-                )}
-                <div className="mt-2.5 flex items-center gap-2 rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
-                    <Info className="h-4 w-4 shrink-0" />
-                    <span>{t('set_sla_response_note')}</span>
-                </div>
-            </div>
 
-            {/* The goal the reports hold the met-rate against — how many cases should make it. */}
-            <div className="border-border mb-6 border-t pt-5">
-                <h3 className="text-sm font-semibold">{t('set_sla_goal')}</h3>
-                <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_sla_goal_help')}</p>
-                <div className="flex items-center gap-2">
-                    <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={Number.isFinite(goal) ? goal : ''}
-                        onChange={(e) => changeGoal(e.target.valueAsNumber)}
-                        aria-invalid={!!goalError}
-                        className={cn(
-                            'h-9 w-24 font-mono',
-                            goalError && 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                        )}
-                    />
-                    <span className="text-sm">%</span>
-                </div>
-                {goalError && (
-                    <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        {goalError}
-                    </p>
-                )}
-            </div>
+                {shown.length > 0 && <ErrorSummary key={attempt} errors={shown} attempt={attempt} />}
 
-            {/* Resolution targets — its own section so the two goals read separately. */}
-            <div className="border-border mt-6 border-t pt-5">
-                <h3 className="text-sm font-semibold">{t('set_sla_resolution_title')}</h3>
-                <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_sla_resolution_help')}</p>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr
-                            className={cn(
-                                TABLE_HEAD,
-                                'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
+                <SlaSummary values={summary} />
+
+                {/* Working days and hours */}
+                <section id="sla-sec-hours" tabIndex={-1} aria-labelledby="sla-h-hours" className={cn(SECTION, 'mt-1 border-t-0')}>
+                    <SectionHead id="sla-h-hours" title={t('set_sla_hours_title')} desc={t('set_sla_hours_desc')} />
+                    <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
+                        <DayPicker id="sla-days" days={hours.days} onToggle={toggleDay} error={errorOf('sla-days')} />
+                        <div>
+                            <span id="sla-l-work" className={SLA_LABEL}>
+                                {t('set_sla_work_time')}
+                            </span>
+                            <div role="group" aria-labelledby="sla-l-work" className="flex flex-wrap items-center gap-2">
+                                <label htmlFor="sla-start" className="sr-only">
+                                    {t('set_sla_start')}
+                                </label>
+                                <TimeInput id="sla-start" value={hours.start} onChange={(v) => setHoursField('start', v)} className="w-28" />
+                                <span aria-hidden className="text-muted-foreground text-sm">
+                                    {t('set_sla_to')}
+                                </span>
+                                <label htmlFor="sla-end" className="sr-only">
+                                    {t('set_sla_end')}
+                                </label>
+                                <TimeInput
+                                    id="sla-end"
+                                    value={hours.end}
+                                    onChange={(v) => setHoursField('end', v)}
+                                    className="w-28"
+                                    invalid={!!errorOf('sla-end')}
+                                    ariaDescribedBy={errorOf('sla-end') ? 'sla-end-error' : undefined}
+                                />
+                            </div>
+                            <FieldError id="sla-end-error" message={errorOf('sla-end')} />
+                        </div>
+                        <div>
+                            <span id="sla-l-break" className={SLA_LABEL}>
+                                {t('set_sla_break')} <span className="text-muted-foreground font-normal">{t('set_sla_break_optional')}</span>
+                            </span>
+                            <div role="group" aria-labelledby="sla-l-break" className="flex flex-wrap items-center gap-2">
+                                <label htmlFor="sla-break-start" className="sr-only">
+                                    {t('set_sla_break_start')}
+                                </label>
+                                <TimeInput
+                                    id="sla-break-start"
+                                    value={hours.break_start ?? ''}
+                                    onChange={(v) => setBreakField('break_start', v)}
+                                    clearable
+                                    className="w-32"
+                                    invalid={!!errorOf('sla-break-start')}
+                                    ariaDescribedBy={errorOf('sla-break-start') ? 'sla-break-error' : undefined}
+                                />
+                                <span aria-hidden className="text-muted-foreground text-sm">
+                                    {t('set_sla_to')}
+                                </span>
+                                <label htmlFor="sla-break-end" className="sr-only">
+                                    {t('set_sla_break_end')}
+                                </label>
+                                <TimeInput
+                                    id="sla-break-end"
+                                    value={hours.break_end ?? ''}
+                                    onChange={(v) => setBreakField('break_end', v)}
+                                    clearable
+                                    className="w-32"
+                                    invalid={!!errorOf('sla-break-start')}
+                                    ariaDescribedBy={errorOf('sla-break-start') ? 'sla-break-error' : undefined}
+                                />
+                            </div>
+                            <FieldError id="sla-break-error" message={errorOf('sla-break-start')} />
+                        </div>
+                        <div className="self-end">
+                            <WorkdayBar
+                                start={minutesOf(hours.start) ?? 0}
+                                end={minutesOf(hours.end) ?? 0}
+                                breakStart={minutesOf(hours.break_start)}
+                                breakEnd={minutesOf(hours.break_end)}
+                            />
+                            {perDay > 0 && (
+                                <p className="text-muted-foreground mt-0.5 text-xs">{fill(t('set_sla_per_day'), { n: oneDecimal(perDay / 60) })}</p>
                             )}
-                        >
-                            <th className="px-3 py-2">{t('ticket_priority')}</th>
-                            <th className="px-3 py-2">{t('set_sla_resolution')}</th>
-                            <th className="px-3 py-2">{t('set_sla_clock')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {SLA_PRIORITIES.map((p) => (
-                            <tr key={p} className="border-border/60 border-b last:border-0">
-                                <td className="px-3 py-3">
-                                    <TicketPriorityBadge priority={p} t={t} />
-                                </td>
-                                <td className="px-3 py-3 align-top">
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            min={1}
-                                            value={Number.isFinite(draft[p]?.resolve) ? draft[p]?.resolve : ''}
-                                            onChange={(e) => setField(p, e.target.valueAsNumber)}
-                                            aria-invalid={!!errors[p]?.resolve}
-                                            className={cn(
-                                                'h-9 w-24 font-mono',
-                                                errors[p]?.resolve &&
-                                                    'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                            )}
-                                        />
-                                        <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
-                                        <span className="text-muted-foreground text-xs">
-                                            {workingDaysHint(draft[p]?.resolve, hours, draft[p]?.clock ?? 'business', t)}
-                                        </span>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Pick-up target and SLA goal */}
+                <section aria-labelledby="sla-h-main" className={SECTION}>
+                    <h3 id="sla-h-main" className="sr-only">{`${t('set_sla_response_within')} ${t('set_sla_goal')}`}</h3>
+                    <div className={FIELD_ROW}>
+                        <div>
+                            <label htmlFor="sla-resp" className={SLA_LABEL}>
+                                {t('set_sla_response_within')}
+                            </label>
+                            <NumberField
+                                id="sla-resp"
+                                value={respTarget}
+                                onChange={(v) => {
+                                    setRespTarget(v);
+                                    touch();
+                                }}
+                                unit={t('set_sla_minutes')}
+                                hint={respHint}
+                                max={10080}
+                                error={errorOf('sla-resp')}
+                            />
+                            <p className="text-muted-foreground mt-1.5 text-xs">{t('set_sla_response_help')}</p>
+                        </div>
+                        <div>
+                            <label htmlFor="sla-goal" className={SLA_LABEL}>
+                                {t('set_sla_goal')}
+                            </label>
+                            <NumberField
+                                id="sla-goal"
+                                value={goal}
+                                onChange={(v) => {
+                                    setGoal(v);
+                                    touch();
+                                }}
+                                unit="%"
+                                max={100}
+                                error={errorOf('sla-goal')}
+                            />
+                            {Number.isFinite(goal) && (
+                                <p className="text-muted-foreground mt-1.5 text-xs">{fill(t('set_sla_goal_help'), { n: goal })}</p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Close by priority */}
+                <section id="sla-sec-priority" tabIndex={-1} aria-labelledby="sla-h-pri" className={SECTION}>
+                    <SectionHead id="sla-h-pri" title={t('set_sla_pri_title')} desc={t('set_sla_pri_desc')} />
+                    <div role="table" aria-labelledby="sla-h-pri" className={TABLE}>
+                        <div role="row" className={cn(ROW, HEAD_ROW, PRI_COLS)}>
+                            <span role="columnheader">{t('ticket_priority')}</span>
+                            <span role="columnheader">{t('set_sla_resolve_within')}</span>
+                            <span role="columnheader">{t('set_sla_clock')}</span>
+                        </div>
+                        {SLA_PRIORITIES.map((p) => {
+                            const name = t(`ticket_prio_${p}`);
+                            const row = draft[p];
+                            return (
+                                <div key={p} role="row" className={cn(ROW, PRI_COLS)}>
+                                    <div role="rowheader" className="col-span-2 @2xl:col-span-1">
+                                        <TicketPriorityBadge priority={p} t={t} />
                                     </div>
-                                    {errors[p]?.resolve && (
-                                        <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
-                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                            {errors[p]?.resolve}
-                                        </p>
-                                    )}
-                                </td>
-                                <td className="px-3 py-3 align-top">
-                                    <span className="inline-block w-40">
-                                        <SearchSelect
-                                            value={draft[p]?.clock ?? 'business'}
-                                            onChange={(v) => setPriorityClock(p, v as TicketSlaClock)}
-                                            options={clockOptions}
+                                    <div role="cell">
+                                        <span aria-hidden className={MINI_LABEL}>
+                                            {t('set_sla_resolve_within')}
+                                        </span>
+                                        <NumberField
+                                            id={`sla-pri-${p}`}
+                                            value={row?.resolve ?? NaN}
+                                            onChange={(v) => setPriority(p, { resolve: v })}
+                                            unit={t('set_sla_hours')}
+                                            hint={daysHint(row?.resolve ?? NaN, hours, row?.clock ?? 'business', t)}
+                                            max={8760}
+                                            error={errorOf(`sla-pri-${p}`)}
+                                            ariaLabel={fill(t('set_sla_aria_resolve'), { name })}
                                         />
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            <div className="mt-3 flex items-center gap-2 rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
-                <Info className="h-4 w-4 shrink-0" />
-                <span>{t('set_sla_resolution_note')}</span>
-            </div>
+                                    </div>
+                                    <div role="cell">
+                                        <span aria-hidden className={MINI_LABEL}>
+                                            {t('set_sla_clock')}
+                                        </span>
+                                        <ClockToggle
+                                            name={`sla-clock-pri-${p}`}
+                                            value={row?.clock ?? 'business'}
+                                            onChange={(clock) => setPriority(p, { clock })}
+                                            legend={fill(t('set_sla_aria_clock'), { name })}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </section>
 
-            {/* Repair work is judged on its own KPI, and this table wins over the priority one
-                once a case is classified — which only a case somebody reported can be. That is
-                why this one keeps the left rule and the request table does not: this really is a
-                continuation of the priority path above it, an exception carved out of the same
-                population, while the request table governs a separate one.
-
-                Fixed rows for the same reason as the table above: there are only two kinds of
-                repair, and both should be visible whether or not anybody has set a figure yet. */}
-            <div className="border-border/70 mt-5 ml-1 border-l-2 pl-4">
-                <h3 className="text-sm font-semibold">{t('set_sla_work_title')}</h3>
-                <p className="text-muted-foreground mt-0.5 mb-3 text-xs">{t('set_sla_work_desc')}</p>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr
-                                className={cn(
-                                    TABLE_HEAD,
-                                    'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
-                                )}
-                            >
-                                <th className="px-3 py-2">{t('set_sla_col_ticket_type')}</th>
-                                <th className="px-3 py-2">{t('set_sla_col_work_class')}</th>
-                                <th className="px-3 py-2">{t('set_sla_resolution')}</th>
-                                <th className="px-3 py-2">{t('set_sla_clock')}</th>
-                                <th className="px-3 py-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                {/* Repair targets */}
+                <section id="sla-sec-repair" tabIndex={-1} aria-labelledby="sla-h-rep" className={SECTION}>
+                    <SectionHead
+                        id="sla-h-rep"
+                        title={t('set_sla_work_title')}
+                        desc={t('set_sla_work_desc')}
+                        aside={fill(t('set_sla_work_count'), { n: workTargets.length, max: REPAIR_PAIRS })}
+                    />
+                    {workTargets.length === 0 ? (
+                        <div className={TABLE}>
+                            <EmptyPane icon={Wrench} text={t('set_sla_work_empty')} />
+                            <div className="-mt-8 flex justify-center pb-6">
+                                <Button type="button" variant="outline" onClick={addWorkTarget}>
+                                    <Plus className="h-4 w-4" />
+                                    {t('set_sla_work_add')}
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div role="table" aria-labelledby="sla-h-rep" className={TABLE}>
+                            <div role="row" className={cn(ROW, HEAD_ROW, REP_COLS)}>
+                                <span role="columnheader">{t('set_sla_col_ticket_type')}</span>
+                                <span role="columnheader">{t('set_sla_col_work_class')}</span>
+                                <span role="columnheader">{t('set_sla_resolve_within')}</span>
+                                <span role="columnheader">{t('set_sla_clock')}</span>
+                                <span role="columnheader">
+                                    <span className="sr-only">{t('delete')}</span>
+                                </span>
+                            </div>
                             {workTargets.map((row) => {
-                                const key = workKey(row);
-                                const taken = new Set(workTargets.filter((r) => workKey(r) !== key).map(workKey));
+                                const taken = new Set(workTargets.filter((r) => r.uid !== row.uid).map(workKey));
+                                const name = `${categoryLabel(row.category)} ${workLabel(row.work_class)}`;
                                 return (
-                                    <tr key={key} className="border-border/60 border-b last:border-0">
-                                        <td className="px-3 py-3 align-top">
-                                            <span className="inline-block w-56">
-                                                <SearchSelect
-                                                    value={row.category}
-                                                    onChange={(v) => setWorkTarget(key, { category: v as TicketCategory })}
-                                                    // Every ticket type is listed on every row, and one whose
-                                                    // pair another row already claims is greyed with the reason.
-                                                    // Dropping it instead gave three rows of the same column
-                                                    // three different lists and a search box that answered "no
-                                                    // results" for a type sitting in plain sight one row down.
-                                                    options={TICKET_CATEGORIES.map((c) => ({
-                                                        value: c,
-                                                        label: t(`ticket_cat_${c}`),
-                                                        icon: <TicketCategoryIcon category={c} className="text-muted-foreground h-4 w-4" />,
-                                                        disabled: c !== row.category && taken.has(`${c}:${row.work_class}`),
-                                                        note:
-                                                            c !== row.category && taken.has(`${c}:${row.work_class}`)
-                                                                ? t('set_sla_pair_taken')
-                                                                : undefined,
-                                                    }))}
-                                                />
+                                    <div key={row.uid} role="row" className={cn(ROW, REP_COLS)}>
+                                        <div role="cell">
+                                            <span aria-hidden className={MINI_LABEL}>
+                                                {t('set_sla_col_ticket_type')}
                                             </span>
-                                        </td>
-                                        <td className="px-3 py-3 align-top">
-                                            <span className="inline-block w-52">
-                                                <SearchSelect
-                                                    value={row.work_class}
-                                                    onChange={(v) => setWorkTarget(key, { work_class: v as TicketSlaWorkClassTarget['work_class'] })}
-                                                    options={WORK_CLASSES.map((w) => ({
-                                                        value: w,
-                                                        label: t(WORK_CLASS_LABEL_KEY[w]),
-                                                        disabled: w !== row.work_class && taken.has(`${row.category}:${w}`),
-                                                        note:
-                                                            w !== row.work_class && taken.has(`${row.category}:${w}`)
-                                                                ? t('set_sla_pair_taken')
-                                                                : undefined,
-                                                    }))}
-                                                />
+                                            <SearchSelect
+                                                ariaLabel={fill(t('set_sla_aria_category'), { name })}
+                                                value={row.category}
+                                                onChange={(v) => setWorkTarget(row.uid, { category: v as TicketCategory })}
+                                                // Every type stays listed; one another row already claims is greyed with the reason.
+                                                options={TICKET_CATEGORIES.map((c) => ({
+                                                    value: c,
+                                                    label: categoryLabel(c),
+                                                    icon: <TicketCategoryIcon category={c} className="text-muted-foreground h-4 w-4" />,
+                                                    disabled: c !== row.category && taken.has(`${c}:${row.work_class}`),
+                                                    note:
+                                                        c !== row.category && taken.has(`${c}:${row.work_class}`)
+                                                            ? t('set_sla_pair_taken')
+                                                            : undefined,
+                                                }))}
+                                            />
+                                        </div>
+                                        <div role="cell">
+                                            <span aria-hidden className={MINI_LABEL}>
+                                                {t('set_sla_col_work_class')}
                                             </span>
-                                        </td>
-                                        <td className="px-3 py-3 align-top">
-                                            <div className="flex items-center gap-2 whitespace-nowrap">
-                                                <Input
-                                                    type="number"
-                                                    min={1}
-                                                    max={8760}
-                                                    value={Number.isFinite(row.resolve) ? row.resolve : ''}
-                                                    onChange={(e) => setWorkTarget(key, { resolve: e.target.valueAsNumber })}
-                                                    aria-invalid={!!workErrors[key]}
-                                                    className={cn(
-                                                        'h-9 w-24 font-mono',
-                                                        workErrors[key] &&
-                                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                                    )}
-                                                />
-                                                <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
-                                                <span className="text-muted-foreground text-xs">
-                                                    {workingDaysHint(row.resolve, hours, row.clock, t)}
-                                                </span>
-                                            </div>
-                                            {workErrors[key] && (
-                                                <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
-                                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                                    {workErrors[key]}
-                                                </p>
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-3 align-top">
-                                            <span className="inline-block w-40">
-                                                <SearchSelect
-                                                    value={row.clock}
-                                                    onChange={(v) => setWorkTarget(key, { clock: v as TicketSlaClock })}
-                                                    options={clockOptions}
-                                                />
+                                            <SearchSelect
+                                                ariaLabel={fill(t('set_sla_aria_work_class'), { name })}
+                                                value={row.work_class}
+                                                onChange={(v) => setWorkTarget(row.uid, { work_class: v as TicketSlaWorkClassTarget['work_class'] })}
+                                                options={WORK_CLASSES.map((w) => ({
+                                                    value: w,
+                                                    label: workLabel(w),
+                                                    disabled: w !== row.work_class && taken.has(`${row.category}:${w}`),
+                                                    note:
+                                                        w !== row.work_class && taken.has(`${row.category}:${w}`)
+                                                            ? t('set_sla_pair_taken')
+                                                            : undefined,
+                                                }))}
+                                            />
+                                        </div>
+                                        <div role="cell">
+                                            <span aria-hidden className={MINI_LABEL}>
+                                                {t('set_sla_resolve_within')}
                                             </span>
-                                        </td>
-                                        <td className="px-3 py-3 align-top">
+                                            <NumberField
+                                                id={`sla-rep-${row.uid}`}
+                                                value={row.resolve}
+                                                onChange={(v) => setWorkTarget(row.uid, { resolve: v })}
+                                                unit={t('set_sla_hours')}
+                                                hint={daysHint(row.resolve, hours, row.clock, t)}
+                                                max={8760}
+                                                error={errorOf(`sla-rep-${row.uid}`)}
+                                                ariaLabel={fill(t('set_sla_aria_resolve'), { name })}
+                                            />
+                                        </div>
+                                        <div role="cell">
+                                            <span aria-hidden className={MINI_LABEL}>
+                                                {t('set_sla_clock')}
+                                            </span>
+                                            <ClockToggle
+                                                name={`sla-clock-rep-${row.uid}`}
+                                                value={row.clock}
+                                                onChange={(clock) => setWorkTarget(row.uid, { clock })}
+                                                legend={fill(t('set_sla_aria_clock'), { name })}
+                                            />
+                                        </div>
+                                        <div role="cell" className="col-span-2 justify-self-end @2xl:col-span-1">
                                             <button
                                                 type="button"
-                                                onClick={() => removeWorkTarget(key)}
-                                                aria-label={t('delete')}
-                                                title={t('delete')}
-                                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid h-8 w-8 place-items-center rounded-md"
+                                                onClick={() => removeWorkTarget(row.uid)}
+                                                aria-label={fill(t('set_sla_work_remove'), { name })}
+                                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid h-10 w-10 place-items-center rounded-md"
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                <Trash2 className="h-4 w-4" aria-hidden />
                                             </button>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
                                 );
                             })}
-                        </tbody>
-                    </table>
-                </div>
+                            <div role="row" className={cn(ROW, 'py-1.5')}>
+                                <div role="cell">
+                                    <Button type="button" variant="ghost" onClick={addWorkTarget} disabled={workTargets.length >= REPAIR_PAIRS}>
+                                        <Plus className="h-4 w-4" />
+                                        {t('set_sla_work_add')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </section>
 
-                {workTargets.length === 0 && <p className="text-muted-foreground mt-1 mb-3 text-xs">{t('set_sla_work_empty')}</p>}
-
-                {/* An action is a button. The pair is chosen in the row it belongs to. */}
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={addWorkTarget}
-                    disabled={workTargets.length >= TICKET_CATEGORIES.length * WORK_CLASSES.length}
-                >
-                    <Plus className="h-4 w-4" />
-                    {t('set_sla_work_add')}
-                </Button>
+                {/* Cases opened from a request */}
+                <section id="sla-sec-request" tabIndex={-1} aria-labelledby="sla-h-req" className={SECTION}>
+                    <SectionHead id="sla-h-req" title={t('set_sla_request_title')} desc={t('set_sla_request_desc')} />
+                    <div role="table" aria-labelledby="sla-h-req" className={TABLE}>
+                        <div role="row" className={cn(ROW, HEAD_ROW, REQ_COLS)}>
+                            <span role="columnheader">{t('set_sla_col_request_type')}</span>
+                            <span role="columnheader">{t('set_sla_resolve_within')}</span>
+                            <span role="columnheader">{t('set_sla_clock')}</span>
+                        </div>
+                        {reqTargets.map((row) => {
+                            const meta = REQUEST_TYPE_META[row.type as ServiceRequestType];
+                            const name = t(meta?.labelKey ?? row.type);
+                            return (
+                                <div key={row.type} role="row" className={cn(ROW, REQ_COLS)}>
+                                    <div role="rowheader" className="col-span-2 flex min-w-0 items-center gap-2 text-sm font-medium @2xl:col-span-1">
+                                        {meta && <meta.icon className="h-4 w-4 shrink-0" style={{ color: meta.color }} aria-hidden />}
+                                        <span className="min-w-0">{name}</span>
+                                    </div>
+                                    <div role="cell">
+                                        <span aria-hidden className={MINI_LABEL}>
+                                            {t('set_sla_resolve_within')}
+                                        </span>
+                                        <NumberField
+                                            id={`sla-req-${row.type}`}
+                                            value={row.resolve}
+                                            onChange={(v) => setRequestTarget(row.type, { resolve: v })}
+                                            unit={t('set_sla_hours')}
+                                            hint={daysHint(row.resolve, hours, row.clock, t)}
+                                            max={8760}
+                                            error={errorOf(`sla-req-${row.type}`)}
+                                            ariaLabel={fill(t('set_sla_aria_resolve'), { name })}
+                                        />
+                                    </div>
+                                    <div role="cell">
+                                        <span aria-hidden className={MINI_LABEL}>
+                                            {t('set_sla_clock')}
+                                        </span>
+                                        <ClockToggle
+                                            name={`sla-clock-req-${row.type}`}
+                                            value={row.clock}
+                                            onChange={(clock) => setRequestTarget(row.type, { clock })}
+                                            legend={fill(t('set_sla_aria_clock'), { name })}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </section>
             </div>
 
-            {/* Cases opened from an approved request, where the length of the work was decided
-                by what was asked for rather than by how urgent anybody judged it.
-
-                Last, and a sibling section rather than an indented one: this is not an exception
-                to anything above it, it is the other half of the system. The priority table and
-                the repair exception carved out of it both govern cases somebody reported; this
-                one governs cases a request opened. The two sets cannot overlap — a reported case
-                has no request, and a request-born case is never given a priority — so neither is
-                a special case of the other, and nothing here continues from what precedes it.
-
-                Every request type gets a row whether or not it has been configured, and none of
-                them can be switched off: a request-born case has no priority to fall back to, so
-                a disabled rule would drop it onto the built-in default with nothing saying so. */}
-            <div className="mt-6">
-                <h3 className="text-sm font-semibold">{t('set_sla_request_title')}</h3>
-                <p className="text-muted-foreground mt-0.5 mb-3 text-xs">{t('set_sla_request_desc')}</p>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr
-                                className={cn(
-                                    TABLE_HEAD,
-                                    'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
-                                )}
-                            >
-                                <th className="px-3 py-2">{t('set_sla_col_request_type')}</th>
-                                <th className="px-3 py-2">{t('set_sla_resolution')}</th>
-                                <th className="px-3 py-2">{t('set_sla_clock')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reqTargets.map((row) => {
-                                const meta = REQUEST_TYPE_META[row.type as ServiceRequestType];
-                                return (
-                                    <tr key={row.type} className="border-border/60 border-b last:border-0">
-                                        <td className="px-3 py-3">
-                                            <span className="flex items-center gap-2">
-                                                {meta && <meta.icon className="h-4 w-4 shrink-0" style={{ color: meta.color }} />}
-                                                <span>{t(meta?.labelKey ?? row.type)}</span>
-                                            </span>
-                                        </td>
-                                        {/* Always applies: a request-born case has no priority to fall back to. */}
-                                        <td className="px-3 py-3 align-top">
-                                            <div className="flex items-center gap-2">
-                                                <Input
-                                                    type="number"
-                                                    min={1}
-                                                    max={8760}
-                                                    value={Number.isFinite(row.resolve) ? row.resolve : ''}
-                                                    onChange={(e) => setRequestTarget(row.type, { resolve: e.target.valueAsNumber })}
-                                                    aria-invalid={!!reqErrors[row.type]}
-                                                    className={cn(
-                                                        'h-9 w-24 font-mono',
-                                                        reqErrors[row.type] &&
-                                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                                    )}
-                                                />
-                                                <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
-                                                <span className="text-muted-foreground text-xs">
-                                                    {workingDaysHint(row.resolve, hours, row.clock, t)}
-                                                </span>
-                                            </div>
-                                            {reqErrors[row.type] && (
-                                                <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
-                                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                                    {reqErrors[row.type]}
-                                                </p>
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-3 align-top">
-                                            <span className="inline-block w-40">
-                                                <SearchSelect
-                                                    value={row.clock}
-                                                    onChange={(v) => setRequestTarget(row.type, { clock: v as TicketSlaClock })}
-                                                    options={clockOptions}
-                                                />
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {/* Working window the SLA clocks count against — outside it the clock pauses. */}
-            <div className="border-border mt-6 border-t pt-5">
-                <h3 className="text-sm font-semibold">{t('set_sla_hours_title')}</h3>
-                <p className="text-muted-foreground mt-0.5 mb-3.5 text-xs">{t('set_sla_hours_desc')}</p>
-
-                <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-                    <div>
-                        <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('set_sla_days')}</div>
-                        <div className="flex gap-1.5">
-                            {SLA_DAYS.map((d) => (
-                                <button
-                                    key={d}
-                                    type="button"
-                                    onClick={() => toggleDay(d)}
-                                    aria-pressed={hours.days.includes(d)}
-                                    className={cn(
-                                        'focus-visible:border-brand focus-visible:ring-brand/15 h-9 w-9 rounded-md border text-xs font-semibold transition-colors focus:outline-hidden focus-visible:ring-[3px]',
-                                        hours.days.includes(d)
-                                            ? 'border-brand bg-brand/10 text-brand'
-                                            : 'border-border text-muted-foreground hover:border-brand/50',
-                                    )}
-                                >
-                                    {t(`set_sla_day_${d}`)}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex items-end gap-2">
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('set_sla_start')}</div>
-                            <TimeInput value={hours.start} onChange={(v) => setHoursField('start', v)} className="h-9 w-28" />
-                        </div>
-                        <span className="text-muted-foreground pb-2.5 text-xs">–</span>
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('set_sla_end')}</div>
-                            <TimeInput value={hours.end} onChange={(v) => setHoursField('end', v)} className="h-9 w-28" />
-                        </div>
-                    </div>
-                    <div className="flex items-end gap-2">
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('set_sla_break')}</div>
-                            <TimeInput
-                                value={hours.break_start ?? ''}
-                                onChange={(v) => setBreakField('break_start', v)}
-                                clearable
-                                className="h-9 w-32"
-                            />
-                        </div>
-                        <span className="text-muted-foreground pb-2.5 text-xs">–</span>
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-medium">&nbsp;</div>
-                            <TimeInput value={hours.break_end ?? ''} onChange={(v) => setBreakField('break_end', v)} clearable className="h-9 w-32" />
-                        </div>
-                    </div>
-                </div>
-                {hoursError && (
-                    <p className="text-destructive mt-2 flex items-center gap-1.5 text-xs">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        {hoursError}
-                    </p>
-                )}
-                <div className="mt-3 flex items-center gap-2 rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
-                    <Info className="h-4 w-4 shrink-0" />
-                    <span>{t('set_sla_hours_note')}</span>
-                </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-5">
-                <SaveButton onClick={handleSave} loading={update.isPending} success={saved} disabled={!dirty}>
+            {/* Save */}
+            <div className={cn(FORM_WIDTH, 'flex items-center justify-end gap-3 pt-2')}>
+                <SaveButton onClick={handleSave} loading={update.isPending} success={saved && changeCount === 0} disabled={changeCount === 0}>
                     {t('save')}
                 </SaveButton>
             </div>

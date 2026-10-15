@@ -11,6 +11,10 @@ interface SearchSelectProps {
     options: SelectOption[];
     placeholder?: string;
     className?: string;
+    /** Trigger id, so a <label htmlFor> names it. */
+    id?: string;
+    /** Accessible name when no visible label points at the trigger. */
+    ariaLabel?: string;
 }
 
 interface DropdownRect {
@@ -51,7 +55,7 @@ function scrollableAncestor(from: HTMLElement | null): HTMLElement | null {
 }
 
 /** Dropdown with an inline search box, rendered as a portal so it is never clipped by parent overflow. */
-export function SearchSelect({ value, onChange, options, placeholder, className }: SearchSelectProps) {
+export function SearchSelect({ value, onChange, options, placeholder, className, id, ariaLabel }: SearchSelectProps) {
     const t = useT();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -162,6 +166,9 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
             <button
                 ref={triggerRef}
                 type="button"
+                id={id}
+                aria-label={ariaLabel}
+                aria-expanded={open}
                 onClick={handleOpen}
                 className={cn(
                     'border-input bg-background flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm',
@@ -190,17 +197,14 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                             top: rect.top,
                             bottom: rect.bottom,
                             left: rect.left,
-                            // The trigger's width is a floor, not the width: in a 128px column a
-                            // panel sized to its trigger cut "Network" down to "Net…", which is
-                            // not a list you can read. Panels are portaled, so a wider one
-                            // disturbs no layout.
+                            // Trigger width is a floor; the panel may grow to fit its labels.
                             minWidth: rect.width,
                             maxWidth: rect.maxWidth,
                             width: 'max-content',
                             maxHeight: rect.maxHeight,
                             zIndex: 9999,
                         }}
-                        className="bg-popover flex flex-col overflow-hidden rounded-md border shadow-md"
+                        className="bg-popover animate-in fade-in-0 zoom-in-95 flex flex-col overflow-hidden rounded-md border shadow-md"
                     >
                         {/* Search row */}
                         <div className="flex shrink-0 items-center border-b px-3">
@@ -218,7 +222,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                         {/* Options list */}
                         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">
                             {filtered.length === 0 ? (
-                                <div className="text-muted-foreground px-3 py-2 text-sm">No results</div>
+                                <div className="text-muted-foreground px-3 py-2 text-sm">{t('search_no_results')}</div>
                             ) : (
                                 filtered.map((opt) => (
                                     <button

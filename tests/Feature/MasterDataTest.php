@@ -413,6 +413,41 @@ class MasterDataTest extends TestCase
             ->assertJsonPath('count', 2);
     }
 
+    public function test_a_brand_with_models_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->superUser());
+        $brand = Brand::create(['name' => 'Dell']);
+        $model = AssetModel::create(['name' => 'Latitude 5440', 'brand_id' => $brand->id]);
+
+        $this->deleteJson("/api/brands/{$brand->id}")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'in_use')
+            ->assertJsonPath('count', 1);
+
+        $this->assertSame($brand->id, $model->fresh()->brand_id);
+    }
+
+    public function test_optional_fields_can_be_cleared_with_null(): void
+    {
+        $this->actingAs($this->superUser());
+        $vendor = Vendor::create(['name' => 'TechCorp', 'name_th' => 'Tech TH', 'contact' => 'Somchai', 'phone' => '021234567', 'email' => 'sales@techcorp.test', 'address' => 'Bangkok']);
+        $category = Category::create(['name' => 'Laptop', 'name_th' => 'Laptop TH', 'description' => 'Portable computers']);
+        $brand = Brand::create(['name' => 'Dell', 'description' => 'Computers']);
+
+        $this->putJson("/api/vendors/{$vendor->id}", ['name' => 'TechCorp', 'name_th' => 'Tech TH', 'contact' => null, 'phone' => null, 'email' => null, 'address' => null])->assertOk();
+        $this->putJson("/api/categories/{$category->id}", ['name' => 'Laptop', 'name_th' => null, 'icon' => null, 'description' => null])->assertOk();
+        $this->putJson("/api/brands/{$brand->id}", ['name' => 'Dell', 'description' => null])->assertOk();
+
+        $vendor->refresh();
+        $this->assertNull($vendor->contact);
+        $this->assertNull($vendor->phone);
+        $this->assertNull($vendor->email);
+        $this->assertNull($vendor->address);
+        $this->assertNull($category->fresh()->name_th);
+        $this->assertNull($category->fresh()->description);
+        $this->assertNull($brand->fresh()->description);
+    }
+
     public function test_asset_model_name_is_unique_per_brand(): void
     {
         $dell = Brand::create(['name' => 'Dell']);
