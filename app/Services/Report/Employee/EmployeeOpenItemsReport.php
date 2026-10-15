@@ -107,7 +107,7 @@ class EmployeeOpenItemsReport extends TabularReport
             ReportSummary::make('open_access', 'สิทธิ์ค้างถอน', $people('access'), 'red'),
         ];
         if ($this->withAccounts) {
-            $tiles[] = ReportSummary::make('open_accounts', 'บัญชีผู้ใช้งาน', $rows->where('grp', 'acct')->count(), 'violet');
+            $tiles[] = ReportSummary::make('open_accounts', 'บัญชีเข้าใช้งาน', $rows->where('grp', 'acct')->count(), 'amber');
         }
         $tiles[] = ReportSummary::make('open_data', 'ข้อมูลไม่ครบ', $people('data'), 'amber');
 

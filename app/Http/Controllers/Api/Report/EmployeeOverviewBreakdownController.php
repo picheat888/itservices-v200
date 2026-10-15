@@ -18,6 +18,6 @@ class EmployeeOverviewBreakdownController extends Controller
         /** @var EmployeeOverviewReport $report */
         $report = $request->report();
 
-        return response()->json(['data' => $report->breakdown($request->user(), $request->filters())]);
+        return response()->json(['data' => $report->breakdown($request->user(), $request->filters()), 'message' => 'success']);
     }
 }

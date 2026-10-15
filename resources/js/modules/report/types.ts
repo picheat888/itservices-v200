@@ -1219,7 +1219,6 @@ export interface EmployeeOverviewBreakdown {
         people: number;
         grants: number;
         by_type: Record<AccessType, number>;
-        left_total: number;
         rows: {
             employee: { id: number; code: string; name: string; name_th: string | null };
             department: { name: string; name_th: string | null } | null;

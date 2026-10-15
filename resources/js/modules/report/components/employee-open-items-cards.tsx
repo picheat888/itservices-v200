@@ -21,8 +21,19 @@ const DATA_ISSUES: DataIssueKey[] = ['mgr_left', 'no_mgr', 'no_email', 'no_dept'
 const ACCOUNT_KINDS: OpenItemsAccountKind[] = ['left', 'must_change', 'expired'];
 
 /** Each topic's colour in the tiles' bars and keys. */
-const GROUP_FILL: Record<OpenItemsGroup, string> = { asset: 'bg-red-500', access: 'bg-cyan-600', acct: 'bg-violet-500', data: 'bg-amber-600' };
-const ACCOUNT_FILL: Record<OpenItemsAccountKind, string> = { left: 'bg-violet-700', must_change: 'bg-violet-400', expired: 'bg-violet-300' };
+const GROUP_FILL: Record<OpenItemsGroup, string> = {
+    asset: 'bg-red-600 dark:bg-red-400',
+    access: 'bg-cyan-600 dark:bg-cyan-400',
+    acct: 'bg-orange-500 dark:bg-orange-400',
+    data: 'bg-fuchsia-600 dark:bg-fuchsia-400',
+};
+const ACCOUNT_FILL: Record<OpenItemsAccountKind, string> = {
+    left: 'bg-red-600 dark:bg-red-400',
+    must_change: 'bg-amber-400 dark:bg-amber-300',
+    expired: 'bg-orange-500 dark:bg-orange-400',
+};
+const ISSUE_FILL = 'bg-fuchsia-600 dark:bg-fuchsia-400';
+const OTHER_FILL = 'bg-slate-500 dark:bg-slate-400';
 
 /** Fills {name} slots of a sentence with bold values. */
 function rich(template: string, values: Record<string, React.ReactNode>) {
@@ -49,24 +60,43 @@ interface Piece {
     unit?: string;
 }
 
-const KEY_CLASS = 'inline-flex items-center gap-1 whitespace-nowrap';
-
 function KeyDot({ fill }: { fill: string }) {
-    return <i aria-hidden className={cn('inline-block h-1.5 w-1.5 shrink-0 rounded-full', fill)} />;
+    return <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', fill)} />;
 }
 
-/** A tile's key under its bar: a dot, the short name and the number. */
-function Key({ pieces }: { pieces: Piece[] }) {
+/** A tile's key on one line (names cut with "…"); the full split opens in a note on hover or tap. */
+function Key({ title, label, line, split = line }: { title: string; label: string; line: Piece[]; split?: Piece[] }) {
     const lang = useUiStore((s) => s.lang);
     return (
-        <span className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]">
-            {pieces.map((p) => (
-                <span key={p.key} className={KEY_CLASS}>
+        <InfoPopover
+            label={label}
+            className="grid w-full min-w-0 auto-cols-[minmax(0,max-content)] grid-flow-col items-center gap-x-2.5 text-left"
+            content={
+                <div className="min-w-44 space-y-1">
+                    <div className="font-semibold">{title}</div>
+                    {split.map((p) => (
+                        <div key={p.key} className="flex items-center justify-between gap-4">
+                            <span className="inline-flex items-center gap-1.5">
+                                <KeyDot fill={p.fill} />
+                                {p.label}
+                            </span>
+                            <b className={cn('font-mono tabular-nums', p.n === 0 && 'text-muted-foreground font-normal')}>
+                                {count(p.n, lang)}
+                                {p.unit && <span className="font-sans font-normal"> {p.unit}</span>}
+                            </b>
+                        </div>
+                    ))}
+                </div>
+            }
+        >
+            {line.map((p) => (
+                <span key={p.key} className="flex min-w-0 items-center gap-1">
                     <KeyDot fill={p.fill} />
-                    {p.short} <b className="text-foreground font-mono tabular-nums">{count(p.n, lang)}</b>
+                    <span className="truncate">{p.short}</span>
+                    <b className="text-foreground shrink-0 font-mono font-semibold tabular-nums">{count(p.n, lang)}</b>
                 </span>
             ))}
-        </span>
+        </InfoPopover>
     );
 }
 
@@ -80,42 +110,6 @@ function barOf(pieces: Piece[], unit: string, lang: 'th' | 'en') {
         className: p.fill,
         title: `${p.label}: ${count(p.n, lang)} ${p.unit ?? unit}`,
     }));
-}
-
-/** Read aloud: what the bar says. */
-function Said({ text }: { text: string }) {
-    return <span className="sr-only">{text}</span>;
-}
-
-/** The data tile's key: the commonest issue, the rest folded under "อื่น ๆ" with a note that lists them. */
-function DataKey({ top, rest }: { top: Piece; rest: Piece[] }) {
-    const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const folded = rest.reduce((s, p) => s + p.n, 0);
-    return (
-        <span className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]">
-            <span className={KEY_CLASS}>
-                <KeyDot fill={top.fill} />
-                {top.short} <b className="text-foreground font-mono tabular-nums">{count(top.n, lang)}</b>
-            </span>
-            {rest.length > 0 && (
-                <InfoPopover
-                    label={t('rep_ef_other')}
-                    className={cn(KEY_CLASS, 'cursor-help underline decoration-dotted underline-offset-2')}
-                    content={
-                        <div className="space-y-1">
-                            {rest.map((p) => (
-                                <p key={p.key}>{rich(t('rep_ef_other_line').replace('{label}', p.label), { n: count(p.n, lang) })}</p>
-                            ))}
-                        </div>
-                    }
-                >
-                    <KeyDot fill="bg-amber-300" />
-                    {t('rep_ef_other')} <b className="text-foreground font-mono tabular-nums">{count(folded, lang)}</b>
-                </InfoPopover>
-            )}
-        </span>
-    );
 }
 
 /* ─────────────────────────── topic segments ─────────────────────────── */
@@ -171,17 +165,17 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
             : []),
         { key: 'data', n: data.data.people, fill: GROUP_FILL.data, label: t('rep_ef_group_data'), short: t('rep_ef_short_data') },
     ];
-    const said = (pieces: Piece[]) =>
+    const said = (pieces: Piece[], unit = people) =>
         pieces
             .filter((p) => p.n > 0)
-            .map((p) => `${p.label} ${n(p.n)}`)
+            .map((p) => `${p.label} ${n(p.n)} ${p.unit ?? unit}`)
             .join(', ');
 
     // ข้อมูลไม่ครบ: the commonest issue, the rest folded
     const issuePieces: Piece[] = DATA_ISSUES.map((k) => ({
         key: k,
         n: data.data.by_issue[k],
-        fill: 'bg-amber-700',
+        fill: ISSUE_FILL,
         label: t(`rep_ef_issue_${k}`),
         short: t(`rep_ef_short_${k}`),
     }))
@@ -196,7 +190,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
                         {
                             key: 'other',
                             n: otherIssues.reduce((s, p) => s + p.n, 0),
-                            fill: 'bg-amber-300',
+                            fill: OTHER_FILL,
                             label: t('rep_ef_other'),
                             short: t('rep_ef_other'),
                         },
@@ -221,13 +215,9 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
                 label={t('rep_ef_k_total')}
                 value={n(data.people_total)}
                 unit={people}
-                bar={data.people_total > 0 ? barOf(groupPieces, people, lang) : undefined}
                 footer={
                     data.people_total > 0 ? (
-                        <>
-                            <Key pieces={groupPieces} />
-                            <Said text={t('rep_ef_total_said').replace('{parts}', said(groupPieces))} />
-                        </>
+                        <Key title={t('rep_ef_by_topic')} label={t('rep_ef_total_said').replace('{parts}', said(groupPieces))} line={groupPieces} />
                     ) : (
                         t('rep_ef_total_none')
                     )
@@ -263,10 +253,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
                     bar={acct.accounts > 0 ? barOf(accountPieces, accountsUnit, lang) : undefined}
                     footer={
                         acct.accounts > 0 ? (
-                            <>
-                                <Key pieces={accountPieces} />
-                                <Said text={said(accountPieces)} />
-                            </>
+                            <Key title={t('rep_ef_group_acct')} label={said(accountPieces, accountsUnit)} line={accountPieces} />
                         ) : (
                             t('rep_ef_acct_none')
                         )
@@ -281,10 +268,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
                 bar={data.data.people > 0 ? barOf(dataBar, people, lang) : undefined}
                 footer={
                     topIssue ? (
-                        <>
-                            <DataKey top={topIssue} rest={otherIssues} />
-                            <Said text={said(issuePieces)} />
-                        </>
+                        <Key title={t('rep_ef_group_data')} label={said(issuePieces)} line={dataBar} split={issuePieces} />
                     ) : (
                         t('rep_ef_data_none')
                     )

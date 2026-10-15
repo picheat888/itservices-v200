@@ -145,7 +145,7 @@ function PointNote({ point, title, unit }: { point: Point; title: string; unit: 
             )}
             {outs.length > 0 && (
                 <div className="border-border border-t pt-1">
-                    <StatusBadge tone="amber">{t('rep_eo_pop_out')}</StatusBadge> <Names events={outs} />
+                    <StatusBadge tone="red">{t('rep_eo_pop_out')}</StatusBadge> <Names events={outs} />
                 </div>
             )}
             {outs.some((e) => e.before_start) && (
@@ -290,7 +290,7 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
                 <p className="sr-only">{summary}</p>
                 <div ref={ref} className="relative">
                     {width > 0 && (
-                        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} className="block">
+                        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" className="block">
                             {ticks.map((v) => (
                                 <g key={v}>
                                     <path d={`M${ml} ${ys(v).toFixed(1)}H${W - mr}`} className="stroke-border" strokeDasharray="2 3" />
@@ -383,7 +383,14 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
                             {points.map((p, j) => (
                                 <InfoPopover
                                     key={p.start}
-                                    label={`${when(p)} ${t('rep_eo_people_n').replace('{n}', count(p.headcount, lang))}`}
+                                    label={[
+                                        when(p),
+                                        t('rep_eo_people_n').replace('{n}', count(p.headcount, lang)),
+                                        p.joined > 0 && `${t('rep_eo_pop_in')} ${count(p.joined, lang)}`,
+                                        p.left > 0 && `${t('rep_eo_pop_out')} ${count(p.left, lang)}`,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' ')}
                                     className="focus-visible:ring-brand h-full min-w-0 flex-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
                                     anchor={() => dots.current[j]?.getBoundingClientRect() ?? null}
                                     content={<PointNote point={p} title={labelOf(p).long} unit={unit} />}
@@ -499,7 +506,7 @@ function DepartmentCard({
                 <CardEmpty>{t('rep_eo_dept_empty')}</CardEmpty>
             ) : (
                 <div className="flex flex-1 flex-col overflow-x-auto">
-                    <table className="w-full min-w-[40rem] table-fixed text-sm">
+                    <table className="w-full min-w-[34rem] table-fixed text-sm">
                         <caption className="sr-only">{t('rep_eo_dept_caption')}</caption>
                         {cols}
                         <thead>
@@ -542,7 +549,7 @@ function DepartmentCard({
                             <FoldToggle open={listOpen} total={data.departments.length} onToggle={onListToggle} />
                         </div>
                     )}
-                    <table className={cn('border-border w-full min-w-[40rem] table-fixed border-t text-sm', !folds && 'mt-auto')}>
+                    <table className={cn('border-border w-full min-w-[34rem] table-fixed border-t text-sm', !folds && 'mt-auto')}>
                         <caption className="sr-only">{t('rep_eo_dept_total').replace('{n}', count(data.departments.length, lang))}</caption>
                         {cols}
                         <tbody>
@@ -597,14 +604,14 @@ function DeptRows({
                         type="button"
                         onClick={onToggle}
                         aria-expanded={open}
-                        className="hover:text-brand focus-visible:ring-brand inline-flex max-w-full items-center gap-1 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
+                        className="hover:text-brand-ink focus-visible:ring-brand inline-flex max-w-full items-center gap-1 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
                         title={name}
                     >
                         <ChevronRight
                             aria-hidden
                             className={cn('h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none', open && 'rotate-90')}
                         />
-                        <span className="truncate">{name}</span>
+                        <span className="line-clamp-2">{name}</span>
                     </button>
                 </th>
                 <Cells s={row} total={total} />
@@ -612,8 +619,8 @@ function DeptRows({
             {open &&
                 row.sections.map((s) => (
                     <tr key={s.id ?? 'none'} className="border-border/60 border-b text-[13px]">
-                        <th scope="row" className={cn(TD, 'truncate pl-10 text-left font-normal', s.name === null && 'text-muted-foreground')}>
-                            {localName(s, lang) ?? t('rep_eo_no_section')}
+                        <th scope="row" className={cn(TD, 'pl-10 text-left font-normal', s.name === null && 'text-muted-foreground')}>
+                            <span className="line-clamp-2">{localName(s, lang) ?? t('rep_eo_no_section')}</span>
                         </th>
                         <Cells s={s} total={total} />
                     </tr>
@@ -698,7 +705,7 @@ function HoldingCard({
     const link = data.can_open_access && canOpen('/reports/access-overview') && (
         <Link
             to="/reports/access-overview"
-            className="text-brand focus-visible:ring-brand rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="text-brand-ink focus-visible:ring-brand rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
         >
             {t('rep_eo_open_access')} <span aria-hidden>↗</span>
         </Link>
@@ -795,9 +802,11 @@ function HoldingCard({
 function GrantChip({ type, name }: { type: AccessType; name: string }) {
     const t = useT();
     return (
-        <span title={t(`rep_ac_type_${type}`)} className="bg-muted inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px]">
+        <span className="bg-muted inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px]">
             <TypeDot type={type} />
-            <span className="sr-only">{t(`rep_ac_type_${type}`)} </span>
+            <span className="text-foreground/65 dark:text-muted-foreground font-medium">
+                {t(type === 'software' ? 'rep_ac_type_software' : `rep_ac_type_${type}_short`)}
+            </span>
             <span translate="no">{name}</span>
         </span>
     );
@@ -813,7 +822,7 @@ function PersonLink({ id, name, code }: { id: number; name: string; code: string
                 <Link
                     to={href}
                     translate="no"
-                    className="text-brand focus-visible:ring-brand rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    className="text-brand-ink focus-visible:ring-brand rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
                 >
                     {name}
                 </Link>
@@ -842,7 +851,7 @@ function Dash() {
 /** เข้าใหม่ / ลาออก in words, with "ยังไม่เริ่มงาน" under a joiner who starts later. */
 export function KindCell({ row }: { row: Row }) {
     const t = useT();
-    if (row.movement_kind === 'left') return <StatusBadge tone="amber">{t('rep_kind_left')}</StatusBadge>;
+    if (row.movement_kind === 'left') return <StatusBadge tone="red">{t('rep_kind_left')}</StatusBadge>;
     const ahead = (num(row.upcoming_days) ?? 0) > 0;
     return (
         <div className="flex flex-col items-start gap-0.5">
@@ -882,7 +891,7 @@ export function EmployeeCell({ row }: { row: Row }) {
                     to={href}
                     translate="no"
                     title={name}
-                    className="text-brand focus-visible:ring-brand block max-w-[14rem] truncate rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    className="text-brand-ink focus-visible:ring-brand line-clamp-2 block max-w-[14rem] rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
                 >
                     {name}
                 </Link>
@@ -904,8 +913,8 @@ export function DepartmentCell({ row }: { row: Row }) {
     const section = named(row.section, lang);
     return (
         <div className="min-w-0">
-            <div className="max-w-[14rem] truncate">{department ?? <Dash />}</div>
-            <div className="text-muted-foreground max-w-[14rem] truncate text-xs">{section ?? t('rep_eo_no_section')}</div>
+            <div className="line-clamp-2 max-w-[14rem]">{department ?? <Dash />}</div>
+            <div className="text-muted-foreground line-clamp-2 max-w-[14rem] text-xs">{section ?? t('rep_eo_no_section')}</div>
         </div>
     );
 }

@@ -181,12 +181,12 @@ class EmployeeOverviewReportTest extends TestCase
         $data = $this->breakdown();
 
         $this->assertSame('2026-10-13', $data['as_of']);
-        // No start date is never counted as working; resigned without a last day has left.
-        $this->assertSame(3, $data['headcount']['start']); // Stay, Leaver, NoticeGiven
+        // No start date is never counted as working; resigned without a last day leaves yesterday.
+        $this->assertSame(4, $data['headcount']['start']); // Stay, Leaver, NoticeGiven, LeftLongAgo
         $this->assertSame(3, $data['headcount']['end']);   // Stay, Joiner, NoticeGiven
         $this->assertSame(['started' => 2, 'upcoming' => 1], $data['joiners']);
-        $this->assertSame(3, $data['leavers']['count']);   // Leaver, Both, NoticeGiven
-        $this->assertSame(100.0, (float) $data['leavers']['rate']);
+        $this->assertSame(4, $data['leavers']['count']);   // Leaver, Both, NoticeGiven, LeftLongAgo
+        $this->assertSame(114.3, (float) $data['leavers']['rate']);
         $this->assertSame(1, $data['leavers']['still_working']);
     }
 
@@ -313,6 +313,76 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertSame(2, $data['leavers']['count']);
     }
 
+    public function test_resigners_without_a_last_day_or_with_one_before_the_start_keep_every_row_adding_up(): void
+    {
+        $it = Department::create(['code' => 'IT', 'name' => 'IT']);
+        $hr = Department::create(['code' => 'HR', 'name' => 'HR']);
+        $line = Section::create(['code' => 'L1', 'department_id' => $it->id, 'name' => 'Line 1']);
+        $this->employee('Stay', ['department_id' => $it->id, 'section_id' => $line->id, 'joined_at' => '2020-01-01']);
+        $noLastDay = $this->employee('NoLastDay', ['department_id' => $it->id, 'section_id' => $line->id, 'joined_at' => '2026-03-01', 'status' => 'resigned']);
+        $longGone = $this->employee('LongGone', ['department_id' => $it->id, 'joined_at' => '2015-01-01', 'status' => 'resigned']);
+        $badDates = $this->employee('BadDates', ['department_id' => $hr->id, 'joined_at' => '2026-04-01', 'status' => 'resigned', 'last_day' => '2026-03-15']);
+        $this->employee('Leaver', ['department_id' => $hr->id, 'joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-06-30']);
+
+        $data = $this->breakdown();
+        $adds = fn (array $r) => $r['end'] === $r['start'] + $r['joined'] - $r['left'];
+        $counts = fn (array $r) => array_intersect_key($r, array_flip(['start', 'joined', 'left', 'end']));
+        $rows = collect($data['departments'])->keyBy('name');
+
+        foreach ($data['departments'] as $row) {
+            $this->assertTrue($adds($row), "{$row['name']}: ".json_encode($counts($row)));
+            foreach ($row['sections'] as $section) {
+                $this->assertTrue($adds($section), "{$row['name']} / {$section['name']}: ".json_encode($counts($section)));
+            }
+        }
+        $this->assertTrue($adds($data['total']), json_encode($data['total']));
+        // NoLastDay and LongGone leave yesterday; BadDates leaves on the start day.
+        $this->assertSame(['start' => 2, 'joined' => 1, 'left' => 2, 'end' => 1], $counts($rows['IT']));
+        $this->assertSame(['start' => 1, 'joined' => 1, 'left' => 2, 'end' => 0], $counts($rows['HR']));
+        $this->assertSame(4, $data['leavers']['count']);
+        foreach ($data['points'] as $point) {
+            $this->assertSame($point['base'] + $point['joined'] - $point['left'], $point['headcount'], $point['end']);
+        }
+        $badEvent = collect($data['points'])->pluck('events')->flatten(1)->first(fn (array $e) => $e['kind'] === 'left' && $e['id'] === $badDates->id);
+        $this->assertSame(['date' => '2026-03-15', 'before_start' => true], ['date' => $badEvent['date'], 'before_start' => $badEvent['before_start']]);
+
+        // The list shows the same leavers as the tile, without a last day where none is recorded.
+        $body = $this->actingAs($this->userWith(['employees.view']))
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31&kind=left')->assertOk()->json();
+        $left = collect($body['data'])->keyBy('employee_code');
+        $this->assertCount(4, $left);
+        $this->assertSame(4, collect($body['summary'])->keyBy('key')['eo_left']['value']);
+        $this->assertNull($left[$noLastDay->code]['last_day']);
+        $this->assertNull($left[$longGone->code]['last_day']);
+    }
+
+    public function test_leavers_holding_access_match_the_open_items_report_with_no_last_day_last(): void
+    {
+        $noLastDay = $this->employee('NoLastDay', ['code' => 'EMP-1', 'status' => 'resigned']);
+        $ten = $this->employee('Ten', ['code' => 'EMP-10', 'status' => 'resigned', 'last_day' => '2026-09-01']);
+        $nine = $this->employee('Nine', ['code' => 'EMP-9', 'status' => 'resigned', 'last_day' => '2026-09-01']);
+        $oldest = $this->employee('Oldest', ['code' => 'EMP-50', 'status' => 'resigned', 'last_day' => '2026-01-01']);
+        foreach ([$noLastDay, $ten, $nine, $oldest] as $e) {
+            $this->grant($e, 'All '.$e->code);
+        }
+
+        $response = $this->actingAs($this->userWith(['employees.view']))
+            ->getJson('/api/reports/employees/overview/breakdown?from=2026-01-01&to=2026-10-31')->assertOk();
+        $holding = $response->json('data.holding');
+        $openItems = $this->actingAs($this->userWith(['employees.view']))
+            ->getJson('/api/reports/employees/open-items/breakdown')->assertOk();
+
+        $order = [$oldest->code, $nine->code, $ten->code, $noLastDay->code];
+        $this->assertSame($order, array_column(array_column($holding['rows'], 'employee'), 'code'));
+        $this->assertSame($order, array_column($openItems->json('data.access.rows'), 'code'));
+        $this->assertSame(array_column($openItems->json('data.access.rows'), 'days_out'), array_column($holding['rows'], 'days_out'));
+        $this->assertNull($holding['rows'][3]['days_out']);
+        $this->assertSame(['people' => 4, 'grants' => 4], ['people' => $holding['people'], 'grants' => $holding['grants']]);
+        $this->assertArrayNotHasKey('left_total', $holding);
+        $this->assertSame('success', $response->json('message'));
+        $this->assertSame('success', $openItems->json('message'));
+    }
+
     public function test_a_leaver_drops_the_line_in_the_month_after_their_last_day(): void
     {
         $this->employee('Stay', ['joined_at' => '2020-01-01']);
@@ -352,6 +422,28 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertNull($tile['share'], 'a bar without a badge');
         $this->assertSame('amber', $tile['attention']);
         $this->assertSame('rep_n_eo_prep_next', $tile['note']['label_key']);
+    }
+
+    public function test_rejected_requests_stay_open_and_cancelled_ones_are_not_counted(): void
+    {
+        $rejected = $this->employee('Rejected', ['joined_at' => '2026-10-20']);
+        $this->onboarding($rejected, 'rejected');
+        $cancelled = $this->employee('Cancelled', ['joined_at' => '2026-10-21']);
+        $this->onboarding($cancelled, 'cancelled');
+        $completed = $this->employee('Completed', ['joined_at' => '2026-10-22']);
+        $this->onboarding($completed, 'completed');
+        $this->onboarding($completed, 'cancelled');
+
+        $rows = collect($this->actingAs($this->userWith(['employees.view']))
+            ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data'))
+            ->keyBy('employee_code');
+        $prep = $this->breakdown()['prep'];
+
+        $this->assertSame(['preparing', '0/1'], [$rows[$rejected->code]['prep_status'], $rows[$rejected->code]['onboarding']]);
+        $this->assertSame(['none', null], [$rows[$cancelled->code]['prep_status'], $rows[$cancelled->code]['onboarding']]);
+        $this->assertSame(['ready', '1/1'], [$rows[$completed->code]['prep_status'], $rows[$completed->code]['onboarding']]);
+        $this->assertSame(1, $prep['people']);
+        $this->assertSame(['done' => 0, 'total' => 1], ['done' => $prep['done'], 'total' => $prep['total']]);
     }
 
     public function test_a_start_more_than_a_week_ahead_is_not_urgent(): void
