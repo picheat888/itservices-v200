@@ -158,6 +158,13 @@ class ContractService
      */
     public function cancel(Contract $contract, string $reason): Contract
     {
+        // A second cancel would overwrite who cancelled it and why
+        if ($contract->cancelled_at !== null || $contract->expired_at !== null) {
+            throw ValidationException::withMessages([
+                'contract' => 'This contract has already been closed.',
+            ]);
+        }
+
         // Cancel = early termination — only valid while the contract is still
         // running. Once the term has ended (overdue) it can only be expired.
         if ($contract->daysRemaining() <= 0) {
@@ -183,6 +190,12 @@ class ContractService
      */
     public function reactivate(Contract $contract): Contract
     {
+        if ($contract->cancelled_at === null && $contract->expired_at === null) {
+            throw ValidationException::withMessages([
+                'contract' => 'Only a cancelled or expired contract can be reactivated.',
+            ]);
+        }
+
         $contract->update([
             'cancelled_at' => null,
             'cancel_reason' => null,
@@ -193,8 +206,8 @@ class ContractService
     }
 
     /**
-     * Mark a contract as expired — a permanent, admin-driven close-out. Unlike
-     * cancel this cannot be undone. Every linked asset must be written off first.
+     * Mark a contract as expired — the admin close-out once its term has ended; contracts.reactivate
+     * can reopen it. Every linked asset must be written off first.
      *
      * @throws ValidationException
      */

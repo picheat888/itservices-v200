@@ -25,13 +25,12 @@ class ContractAttachmentController extends Controller
     private const MAX_FILES = 5;
 
     /**
-     * Stores one or more uploaded PDFs against the contract. Creating a contract
-     * (contracts.create) or editing one (contracts.edit) both allow uploading,
-     * since the add form attaches files immediately after the contract is saved.
+     * Stores one or more uploaded PDFs against the contract: contracts.edit for any contract,
+     * contracts.create only for a contract the uploader created (the add form uploads right after saving).
      */
     public function store(Request $request, Contract $contract): JsonResponse
     {
-        abort_unless($this->canManage($request), 403);
+        abort_unless($this->canUpload($request, $contract), 403);
 
         $request->validate([
             'files' => ['required', 'array', 'min:1'],
@@ -78,11 +77,14 @@ class ContractAttachmentController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /** Upload is allowed for users who can create or edit contracts (super bypasses). */
-    private function canManage(Request $request): bool
+    private function canUpload(Request $request, Contract $contract): bool
     {
         $user = $request->user();
+        if ($user === null) {
+            return false;
+        }
 
-        return (bool) ($user?->hasPermission('contracts.create') || $user?->hasPermission('contracts.edit'));
+        return $user->hasPermission('contracts.edit')
+            || ($user->hasPermission('contracts.create') && $contract->created_by === $user->id);
     }
 }

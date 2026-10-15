@@ -8,6 +8,7 @@ use App\Models\Contract\ContractAlertLog;
 use App\Models\Contract\ContractBellLog;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\Vendor;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use App\Services\Contract\ContractExpiryAlertService;
@@ -371,5 +372,64 @@ class ContractExpiryAlertTest extends TestCase
             ->assertOk();
 
         $this->assertSame(0, $this->bellsFor($user, $contract));
+    }
+
+    /** The edit payload for a contract, with any field overridden. */
+    private function editPayload(Contract $contract, array $overrides = []): array
+    {
+        return array_merge([
+            'code' => 'CT-RENEW-1', 'vendor_id' => $contract->vendor_id ?? Vendor::firstOrCreate(['name' => 'Microsoft'])->id, 'name' => $contract->name, 'details' => 'Licences',
+            'type' => 'software', 'start_date' => $contract->start_date->toDateString(), 'end_date' => $contract->end_date->toDateString(),
+            'value' => $contract->value, 'billing_cycle' => $contract->billing_cycle, 'notify_30' => true,
+        ], $overrides);
+    }
+
+    /** Renewing by moving the end date starts the reminders over, as reactivate does. */
+    public function test_moving_the_end_date_resets_the_ledgers(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->grant('itrole', 'contracts.edit');
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+        $this->service()->run();
+
+        $this->actingAs($user)
+            ->putJson("/api/contracts/{$contract->id}", $this->editPayload($contract, ['end_date' => now()->addYear()->toDateString()]))
+            ->assertOk();
+
+        $this->assertSame(0, ContractAlertLog::where('contract_id', $contract->id)->count());
+        $this->assertSame(0, ContractBellLog::where('contract_id', $contract->id)->count());
+    }
+
+    public function test_an_edit_that_keeps_the_end_date_keeps_the_ledgers(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->grant('itrole', 'contracts.edit');
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+        $this->service()->run();
+
+        $this->actingAs($user)
+            ->putJson("/api/contracts/{$contract->id}", $this->editPayload($contract, ['name' => 'M365 E3']))
+            ->assertOk();
+
+        $this->assertSame(1, ContractAlertLog::where('contract_id', $contract->id)->count());
+    }
+
+    /** Contract text is the editor's input: it lands in the email as text, never as markup. */
+    public function test_contract_text_is_escaped_in_the_alert_email(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+        $contract->update(['name' => '<a href="https://evil.example">Re-authenticate</a>']);
+
+        $this->service()->run();
+
+        Bus::assertDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => str_contains($job->html, '&lt;a href=')
+            && ! str_contains($job->html, '<a href="https://evil.example">'));
     }
 }
