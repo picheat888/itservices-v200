@@ -70,7 +70,7 @@ export const contract: Dict = {
     contract_cancelled: 'ยกเลิกแล้ว',
     contract_notification_schedule: 'กำหนดการแจ้งเตือน',
     contract_register_sub: 'ลงทะเบียนสัญญากับผู้ขายหรือผู้ให้บริการ',
-    contract_timeline: 'ไทม์ไลน์การหมดอายุ - 12 เดือนข้างหน้า',
+    contract_timeline: 'ไทม์ไลน์การหมดอายุ',
     contract_top_vendors: 'ผู้ขายที่ใช้จ่ายสูงสุด',
     contract_action_queue: 'ต้องดำเนินการ',
     contract_action_queue_empty: 'ไม่มีสัญญาที่ต้องดำเนินการ',
@@ -177,6 +177,8 @@ export const contract: Dict = {
     contract_timeline_in_reminder: 'ในช่วงแจ้งเตือน',
     contract_timeline_overdue: 'เลยกำหนด',
     contract_timeline_empty: 'ไม่มีสัญญาที่หมดอายุในช่วง 12 เดือนนี้',
+    contract_timeline_ends: 'หมดอายุ {date}',
+    contract_timeline_open: 'ดูสัญญา',
     contract_timeline_expired_ago: 'หมดอายุไป {n} วัน',
     contract_timeline_now: 'ปัจจุบัน',
 
