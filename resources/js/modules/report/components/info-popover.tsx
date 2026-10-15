@@ -17,10 +17,12 @@ export function InfoPopover({
     style,
     side = 'top',
     anchor,
+    onActivate,
 }: {
     /** What a screen reader hears for the trigger. */
     label: string;
-    content: React.ReactNode;
+    /** The note; a function gets `close` for a button inside it. */
+    content: React.ReactNode | ((close: () => void) => React.ReactNode);
     children: React.ReactNode;
     className?: string;
     contentClassName?: string;
@@ -29,11 +31,14 @@ export function InfoPopover({
     side?: 'top' | 'right';
     /** A point to open from instead of the trigger (a chart bar's top); the note moves to its left when there is no room above. */
     anchor?: () => DOMRect | null;
+    /** A mouse click or Enter runs this instead of pinning the note; a tap still opens the note. */
+    onActivate?: () => void;
 }) {
     const [open, setOpen] = useState(false);
     const [place, setPlace] = useState<Side>(side);
     const closing = useRef<number | null>(null);
     const openedByHover = useRef(false);
+    const pressedBy = useRef<string | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const [note, setNote] = useState<HTMLDivElement | null>(null);
     // The page's scrolling area starts under the top bar; a bar top scrolled out of it is held at its edge
@@ -75,7 +80,17 @@ export function InfoPopover({
                 aria-label={label}
                 onPointerEnter={hover(true)}
                 onPointerLeave={hover(false)}
+                onPointerDown={(event) => (pressedBy.current = event.pointerType)}
                 onClick={(event) => {
+                    const by = pressedBy.current;
+                    pressedBy.current = null;
+                    if (onActivate && by !== 'touch') {
+                        event.preventDefault();
+                        openedByHover.current = false;
+                        setOpen(false);
+                        onActivate();
+                        return;
+                    }
                     if (openedByHover.current) {
                         event.preventDefault();
                         openedByHover.current = false;
@@ -96,7 +111,7 @@ export function InfoPopover({
                 onPointerLeave={hover(false)}
                 className={cn('w-auto max-w-xs px-3 py-2 text-left font-sans text-xs font-normal whitespace-normal', contentClassName)}
             >
-                {content}
+                {typeof content === 'function' ? content(() => setOpen(false)) : content}
             </PopoverContent>
         </Popover>
     );

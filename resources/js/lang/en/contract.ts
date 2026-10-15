@@ -70,7 +70,7 @@ export const contract: Dict = {
     contract_cancelled: 'Cancelled',
     contract_notification_schedule: 'Notification schedule',
     contract_register_sub: 'Register a vendor or service contract',
-    contract_timeline: 'Expiration timeline - next 12 months',
+    contract_timeline: 'Expiration timeline',
     contract_top_vendors: 'Top vendors by spend',
     contract_action_queue: 'Action queue',
     contract_action_queue_empty: 'No contracts need action',
@@ -178,6 +178,8 @@ export const contract: Dict = {
     contract_timeline_in_reminder: 'In reminder window',
     contract_timeline_overdue: 'Overdue',
     contract_timeline_empty: 'No expirations in this 12-month window.',
+    contract_timeline_ends: 'Ends {date}',
+    contract_timeline_open: 'Open contract',
     contract_timeline_expired_ago: 'expired {n}d ago',
     contract_timeline_now: 'NOW',
 

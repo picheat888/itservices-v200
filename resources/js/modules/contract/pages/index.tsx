@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
+import { InfoPopover } from '@/modules/report';
 import { useCurrency } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
@@ -16,7 +17,7 @@ import { useMediaQuery } from '@/shared/hooks/use-media-query';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
-import type { Contract, ContractStatus, ContractType } from '@/shared/types';
+import type { Contract, ContractStatus, ContractSummary, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
@@ -494,6 +495,29 @@ export default function ContractsPage() {
     );
 }
 
+/** Hover / tap note on a timeline dot: what the contract is, when it ends, and a way in. */
+function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][number]; onOpen: () => void }) {
+    const t = useT();
+    const fmt = useDateFormat();
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground font-mono text-[11px]">{dot.code}</span>
+                <DaysCell days={dot.days} inReminder={dot.in_reminder} status={dot.days <= 0 ? 'overdue' : 'active'} />
+            </div>
+            <div className="line-clamp-2 text-[13px] leading-snug font-semibold">{dot.name}</div>
+            {dot.vendor && <div className="text-muted-foreground truncate">{dot.vendor}</div>}
+            <div className="border-border flex items-center justify-between gap-2 border-t pt-1.5">
+                <span>{t('contract_timeline_ends').replace('{date}', fmt.date(dot.end))}</span>
+                <button type="button" onClick={onOpen} className="text-brand-ink inline-flex min-h-6 items-center gap-1 font-medium hover:underline">
+                    {t('contract_timeline_open')}
+                    <ArrowRight className="h-3 w-3" aria-hidden />
+                </button>
+            </div>
+        </div>
+    );
+}
+
 const NEW_ROW = 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12';
 
 /** Columns of the All-tab table; the pinned new contract carries a "New" badge. */
@@ -722,19 +746,29 @@ function OverviewTab({
                                         ? t('contract_timeline_expired_ago').replace('{n}', String(-c.days))
                                         : t('contract_days_many').replace('{n}', String(c.days));
                                 return (
-                                    <button
+                                    <InfoPopover
                                         key={c.id}
-                                        type="button"
-                                        title={`${c.code}\n${c.name}\n${fmt.date(c.end)} (${when})`}
-                                        aria-label={`${c.code} ${c.name}, ${fmt.date(c.end)} (${when})`}
-                                        onClick={() => onSelect(c.id)}
+                                        label={`${c.code} ${c.name}, ${fmt.date(c.end)} (${when})`}
+                                        content={(close) => (
+                                            <TimelineDotNote
+                                                dot={c}
+                                                onOpen={() => {
+                                                    close();
+                                                    onSelect(c.id);
+                                                }}
+                                            />
+                                        )}
+                                        onActivate={() => onSelect(c.id)}
+                                        contentClassName="w-64"
                                         className={cn(
                                             // A 24px hit area around the 12px dot (WCAG 2.5.8)
-                                            'ring-background focus-visible:outline-ring absolute h-3 w-3 -translate-x-1/2 rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:z-10 hover:scale-125 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2',
+                                            'ring-background focus-visible:outline-ring absolute h-3 w-3 -translate-x-1/2 cursor-pointer rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:z-10 hover:scale-125 focus-visible:z-10',
                                             c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-500' : 'bg-brand',
                                         )}
                                         style={{ left: `${frac * 100}%`, bottom: `${8 + lane * 16}px` }}
-                                    />
+                                    >
+                                        {null}
+                                    </InfoPopover>
                                 );
                             })}
                         </div>
