@@ -80,12 +80,29 @@ class ContractApiTest extends TestCase
         // An unlinked asset must NOT appear under this contract.
         Asset::create(['asset_code' => 'INB-LT-01', 'type' => 'laptop', 'status' => 'ready']);
 
+        $this->getJson("/api/contracts/{$contract->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.linked_assets')
+            ->assertJsonPath('data.linked_assets.0.asset_code', 'INB-SV-01')
+            ->assertJsonPath('data.linked_assets.0.name', 'Dell PowerEdge R750')
+            ->assertJsonPath('data.linked_assets.0.status', 'deployed');
+    }
+
+    /** The list shows no assets or attachments, so it does not load them for every row. */
+    public function test_the_list_leaves_out_assets_and_attachments(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create([
+            'code' => 'CT-LEAN-1', 'vendor' => 'Dell', 'name' => 'Server support', 'type' => 'hardware',
+            'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100000, 'billing_cycle' => 'yearly',
+        ]);
+        Asset::create(['asset_code' => 'INB-SV-02', 'type' => 'server', 'status' => 'deployed', 'contract_id' => $contract->id]);
+
         $this->getJson('/api/contracts')
             ->assertOk()
-            ->assertJsonCount(1, 'data.0.linked_assets')
-            ->assertJsonPath('data.0.linked_assets.0.asset_code', 'INB-SV-01')
-            ->assertJsonPath('data.0.linked_assets.0.name', 'Dell PowerEdge R750')
-            ->assertJsonPath('data.0.linked_assets.0.status', 'deployed');
+            ->assertJsonPath('data.0.code', 'CT-LEAN-1')
+            ->assertJsonPath('data.0.linked_assets', [])
+            ->assertJsonPath('data.0.attachments', []);
     }
 
     public function test_summary_reports_status_counts(): void
@@ -644,5 +661,37 @@ class ContractApiTest extends TestCase
         $this->postJson("/api/contracts/{$overdue->id}/cancel", ['reason' => 'Too late'])
             ->assertStatus(422)->assertJsonValidationErrors('contract');
         $this->assertNull($overdue->fresh()->cancelled_at);
+    }
+
+    /** The Overview tile adds every live contract's yearly amount, not its per-cycle value. */
+    public function test_summary_annual_value_is_each_live_contract_per_year(): void
+    {
+        $this->actingAs($this->super());
+        Contract::create(['vendor' => 'A', 'name' => 'Monthly', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addYears(2), 'value' => 10000, 'billing_cycle' => 'monthly']);
+        Contract::create(['vendor' => 'B', 'name' => 'Quarterly', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addYears(2), 'value' => 20000, 'billing_cycle' => 'quarterly']);
+
+        $this->getJson('/api/contracts/summary')->assertOk()->assertJsonPath('annual_value', '฿200K');
+    }
+
+    /** A second cancel (double click, stale tab) must not overwrite who cancelled it and why. */
+    public function test_cancelling_a_cancelled_contract_is_rejected(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'First reason'])->assertOk();
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Second reason'])
+            ->assertStatus(422)->assertJsonValidationErrors('contract');
+
+        $this->assertSame('First reason', $contract->fresh()->cancel_reason);
+    }
+
+    public function test_reactivating_an_active_contract_is_rejected(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $this->postJson("/api/contracts/{$contract->id}/reactivate")
+            ->assertStatus(422)->assertJsonValidationErrors('contract');
     }
 }

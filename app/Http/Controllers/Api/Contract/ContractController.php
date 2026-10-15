@@ -38,7 +38,7 @@ class ContractController extends Controller
         $this->gateView($request);
 
         $query = Contract::query()
-            ->with(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category']);
+            ->with('vendor');
 
         // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
         match ($request->query('sort', 'end_asc')) {
@@ -120,7 +120,7 @@ class ContractController extends Controller
         $cancelled = $contracts->filter(fn ($c) => $c->cancelled_at !== null && $c->expired_at === null);
         $expired = $contracts->filter(fn ($c) => $c->expired_at !== null);
 
-        $annual = $live->sum('value');
+        $annual = $live->sum(fn ($c) => $c->annualValue());
 
         $topVendors = $contracts
             ->groupBy(fn ($c) => $c->vendor?->name)
@@ -195,6 +195,10 @@ class ContractController extends Controller
     {
         $before = $contract->getOriginal();
         $contract = $this->service->update($contract, $request->validated());
+        // A new end date is a renewal: its reminders start over
+        if (! $contract->end_date->isSameDay($before['end_date'])) {
+            $this->alertService->resetForContract($contract);
+        }
         AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract), subject: $contract);
 
         return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'creator', 'updater', 'canceller'])))
@@ -236,7 +240,7 @@ class ContractController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /** Permanently marks a contract as expired (admin close-out). Requires contracts.expire. */
+    /** Marks a contract as expired (admin close-out; reactivate can reopen it). Requires contracts.expire. */
     public function expire(Request $request, Contract $contract): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.expire'), 403);

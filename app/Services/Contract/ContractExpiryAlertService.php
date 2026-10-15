@@ -186,13 +186,14 @@ class ContractExpiryAlertService
     {
         foreach ($recipients as $recipient) {
             $this->email->sendTemplate($template, $recipient->email, array_merge([
-                'user.first_name' => explode(' ', (string) $recipient->name)[0] ?? 'there',
-                'contract.vendor' => $contract->vendor?->name,
-                'contract.name' => $contract->name,
-                'contract.code' => $contract->code,
+                // Escaped: the body is HTML and these are typed by people
+                'user.first_name' => e(explode(' ', (string) $recipient->name)[0] ?: 'there'),
+                'contract.vendor' => e((string) $contract->vendor?->name),
+                'contract.name' => e((string) $contract->name),
+                'contract.code' => e((string) $contract->code),
                 // Written the way the reader writes a date, not the way the column stores it.
                 'contract.end_date' => DateDisplay::emailDate($contract->end_date),
-                'contract.details' => filled($contract->details) ? $contract->details : '-',
+                'contract.details' => e(filled($contract->details) ? $contract->details : '-'),
             ], $extraVars), url("/contracts?view={$contract->id}"), 'Open the contract', $recipient->name);
         }
     }

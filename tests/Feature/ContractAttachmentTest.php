@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAttachment;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -102,6 +104,44 @@ class ContractAttachmentTest extends TestCase
 
         $this->assertDatabaseMissing('contract_attachments', ['id' => $attachment->id]);
         Storage::disk('local')->assertMissing($attachment->path);
+    }
+
+    /** A user whose role grants only contracts.create. */
+    private function creatorOnly(): User
+    {
+        $role = Role::create(['key' => 'creator_'.uniqid(), 'name' => 'Creator', 'is_system' => false]);
+        RolePermission::create(['role_id' => $role->id, 'permission' => 'contracts.create', 'allowed' => true]);
+
+        return User::factory()->create(['role' => $role->key]);
+    }
+
+    /** The add form uploads right after saving, so a create-only user may attach files to a contract they created. */
+    public function test_a_create_only_user_can_attach_to_their_own_contract(): void
+    {
+        Storage::fake('local');
+        $user = $this->creatorOnly();
+        $this->actingAs($user);
+        $contract = $this->contract();
+        $this->assertSame($user->id, $contract->created_by);
+
+        $this->postJson("/api/contracts/{$contract->id}/attachments", [
+            'files' => [UploadedFile::fake()->create('agreement.pdf', 100, 'application/pdf')],
+        ])->assertOk();
+    }
+
+    /** Without contracts.edit, someone else's contract is not theirs to change. */
+    public function test_a_create_only_user_cannot_attach_to_another_users_contract(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->super());
+        $contract = $this->contract();
+
+        $this->actingAs($this->creatorOnly())
+            ->postJson("/api/contracts/{$contract->id}/attachments", [
+                'files' => [UploadedFile::fake()->create('agreement.pdf', 100, 'application/pdf')],
+            ])->assertForbidden();
+
+        $this->assertSame(0, ContractAttachment::count());
     }
 
     public function test_requires_permission_to_upload(): void
