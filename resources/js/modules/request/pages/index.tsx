@@ -592,7 +592,7 @@ export default function RequestsPage() {
                 )}
             </Card>
 
-            <RequestCreateDialog open={adding} onClose={() => closeParam('add')} />
+            <RequestCreateDialog open={adding && canSubmit} onClose={() => closeParam('add')} />
             <RequestDetailDialog requestId={viewId} onClose={() => closeParam('view')} />
             <DecisionDialog request={decide?.request ?? null} action={decide?.action ?? null} onClose={() => setDecide(null)} />
         </div>
