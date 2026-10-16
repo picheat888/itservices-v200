@@ -22,7 +22,6 @@ export const stock: Dict = {
     stock_track_serial_off: 'รับเข้า–เบิกจ่ายด้วยจำนวนเท่านั้น (ของสิ้นเปลือง/อุปกรณ์เสริม)',
     stock_keep_serials_confirm: 'ทุกชิ้นของรายการนี้จะต้องกรอก Serial ตอนรับเข้า ต้องการเปิดใช้งานหรือไม่?',
     stock_enable: 'เปิดใช้งาน',
-    stock_edit_confirm: 'ต้องการบันทึกการแก้ไขรายการนี้หรือไม่?',
     stock_view: 'ดู',
     stock_detail: 'รายละเอียดสินค้า',
     stock_serial_list: 'หมายเลข Serial',
