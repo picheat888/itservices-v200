@@ -26,6 +26,8 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
     return (
         <button
             type="button"
+            role="switch"
+            aria-checked={on}
             disabled={locked}
             onClick={onClick}
             className={cn(

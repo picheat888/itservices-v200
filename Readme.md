@@ -5676,5 +5676,5 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 ### สิทธิ์กลุ่ม "โปรไฟล์ของฉัน" — 2026-10-16
 - การดูทรัพย์สิน/สิทธิ์เข้าถึงของตัวเองไม่ต้องมีสิทธิ์อีกต่อไป แค่บัญชีผูกพนักงาน (`/assets/mine`, `/access/mine`, pill ใน sidebar, กระดิ่งและอีเมลตอน IT โอนของ)
 - key ใหม่ `profile.edit` (เดิม `employees.edit_own`) และ `profile.return_assets` (เดิม `assets.return`) อยู่กลุ่ม "โปรไฟล์ของฉัน" ไม่มี master; ลบ `assets.my` และ `access.my`
-- migration `2026_10_16_120000_rename_self_service_permissions` เปลี่ยนชื่อแถวใน `role_permissions` บน DB จริง กันซ้ำ และ rollback ได้
+- migration `2026_10_16_120000_rename_self_service_permissions` เปลี่ยนชื่อแถวใน `role_permissions` กันซ้ำ เก็บค่า `allowed` เดิมไว้ และ rollback ได้ ต้องรัน `php artisan migrate` บน DB จริงหลัง deploy ถึงจะมีผล ระหว่างนั้นปุ่มขอคืน/แก้ข้อมูลส่วนตัวจะถูกปฏิเสธ
 - หน้า Permission มี card "โปรไฟล์ของฉัน" สวิตช์ 2 ตัว card Employee ไม่มี edit_own แล้ว, hint ใน dialog โอนย้ายเหลือกรณี "ยังไม่มีบัญชี"
