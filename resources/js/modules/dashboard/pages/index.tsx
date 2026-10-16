@@ -1,12 +1,12 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useContractSummary } from '@/modules/contract';
+import { PROFILE_ASSETS_SEARCH } from '@/modules/profile';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { relativeTime } from '@/shared/lib/datetime';
-import { PROFILE_ASSETS_SEARCH } from '@/shared/lib/dialog-search';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';

@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 const PARAM = 'dialog';
+const NO_COMPANIONS: readonly string[] = [];
 
 export interface SetDialogOptions {
     over?: boolean;
@@ -69,7 +70,7 @@ export function useDialogParam<T extends string>(
 }
 
 /** Keeps `?dialog=<name>` in step with a dialog the app shows on its own (no history entry: Back cannot close it). */
-export function useShownDialogParam(name: string, shown: boolean): void {
+export function useShownDialogParam(name: string, shown: boolean, companions: readonly string[] = NO_COMPANIONS): void {
     const [params, setParams] = useSearchParams();
     const inUrl = params.get(PARAM) === name;
 
@@ -77,11 +78,11 @@ export function useShownDialogParam(name: string, shown: boolean): void {
         if (shown === inUrl) return;
         setParams(
             (next) => {
-                if (shown) next.set(PARAM, name);
-                else next.delete(PARAM);
+                if (!shown) return dialogCloseParams(next, companions);
+                next.set(PARAM, name);
                 return next;
             },
             { replace: true, state: keepDialogState() },
         );
-    }, [name, shown, inUrl, setParams]);
+    }, [name, shown, inUrl, companions, setParams]);
 }

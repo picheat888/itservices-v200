@@ -44,10 +44,8 @@ function profileFields(user: User): Record<ProfileFormKey, string> {
     };
 }
 
-type FormKey = ProfileFormKey;
-
 /** API field name → form field, for showing a server error under its field. */
-const SERVER_FIELDS: Record<string, FormKey> = {
+const SERVER_FIELDS: Record<string, ProfileFormKey> = {
     first_name: 'firstName',
     last_name: 'lastName',
     first_name_th: 'firstNameTh',
@@ -81,23 +79,20 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
     const canEdit = can('employees.edit_own');
     // Each tab answers to its own page's permission, so the drawer never shows what that page would refuse
-    const seesAssets = can('assets.my');
-    const seesAccess = can('access.my');
-    const seesTickets = can('tickets.my');
-    const seesRequests = can('requests.submit');
-    const sees: Record<Exclude<ProfileSection, 'profile'>, boolean> = {
-        assets: seesAssets,
-        tickets: seesTickets,
-        requests: seesRequests,
-        access: seesAccess,
+    const sees: Record<ProfileSection, boolean> = {
+        profile: true,
+        assets: can('assets.my'),
+        tickets: can('tickets.my'),
+        requests: can('requests.submit'),
+        access: can('access.my'),
     };
-    const allowed = PROFILE_SECTIONS.filter((s) => s === 'profile' || sees[s]);
+    const allowed = PROFILE_SECTIONS.filter((s) => sees[s]);
     const [tab, setTab] = useProfileSection(allowed);
 
-    const { data: myAssets = [], isLoading: assetsLoading } = useMyAssets(open && seesAssets);
-    const { data: myAccess, isLoading: accessLoading } = useMyAccess(open && seesAccess);
-    const { data: myTickets, isLoading: ticketsLoading } = useTickets({ page: 1, per_page: TAB_ROWS, requested: true }, open && seesTickets);
-    const { data: myRequests, isLoading: requestsLoading } = useRequests({ page: 1, per_page: TAB_ROWS, scope: 'mine' }, open && seesRequests);
+    const { data: myAssets = [], isLoading: assetsLoading } = useMyAssets(open && sees.assets);
+    const { data: myAccess, isLoading: accessLoading } = useMyAccess(open && sees.access);
+    const { data: myTickets, isLoading: ticketsLoading } = useTickets({ page: 1, per_page: TAB_ROWS, requested: true }, open && sees.tickets);
+    const { data: myRequests, isLoading: requestsLoading } = useRequests({ page: 1, per_page: TAB_ROWS, scope: 'mine' }, open && sees.requests);
 
     // Copy buttons in the rail, announced like the Employee viewer's
     const [copied, setCopied] = useState<string | null>(null);
@@ -111,8 +106,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
     };
 
-    const [fields, setFields] = useState<Record<FormKey, string>>({ firstName: '', lastName: '', firstNameTh: '', lastNameTh: '', phone: '' });
-    const [errors, setErrors] = useState<Partial<Record<FormKey, string>>>({});
+    const [fields, setFields] = useState<Record<ProfileFormKey, string>>({ firstName: '', lastName: '', firstNameTh: '', lastNameTh: '', phone: '' });
+    const [errors, setErrors] = useState<Partial<Record<ProfileFormKey, string>>>({});
     const [photo, setPhoto] = useState<File | null>(null);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [formError, setFormError] = useState('');
@@ -171,7 +166,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         setFormErrorCount((n) => n + 1);
     };
 
-    const edit = (key: FormKey) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const edit = (key: ProfileFormKey) => (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setFields((f) => ({ ...f, [key]: value }));
         setErrors((er) => (key in er ? { ...er, [key]: undefined } : er));
@@ -196,7 +191,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
     const save = async () => {
         setFormError('');
-        const found: Partial<Record<FormKey, string>> = {};
+        const found: Partial<Record<ProfileFormKey, string>> = {};
         if (!firstName.trim()) found.firstName = t('profile_name_required');
         if (!lastName.trim()) found.lastName = t('profile_last_name_required');
         if (Object.keys(found).length) {
@@ -217,7 +212,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
             setPhoto(null);
         } catch (e: unknown) {
             const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-            const server: Partial<Record<FormKey, string>> = {};
+            const server: Partial<Record<ProfileFormKey, string>> = {};
             for (const [key, messages] of Object.entries(data?.errors ?? {})) {
                 if (SERVER_FIELDS[key] && messages[0]) server[SERVER_FIELDS[key]] = messages[0];
             }
@@ -230,34 +225,20 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         }
     };
 
-    const tabs: DialogTab<ProfileSection>[] = [
-        { id: 'profile', label: t('profile_tab_details'), icon: UserRound },
-        ...(seesAssets
-            ? [
-                  {
-                      id: 'assets' as const,
-                      label: t('emp_v_tab_assets'),
-                      icon: Box,
-                      count: assetsLoading ? undefined : myAssets.length,
-                      dot: myAssets.some((a) => a.status === 'pending_acceptance'),
-                  },
-              ]
-            : []),
-        ...(seesTickets
-            ? [{ id: 'tickets' as const, label: t('emp_v_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : myTickets?.meta?.total }]
-            : []),
-        ...(seesRequests
-            ? [
-                  {
-                      id: 'requests' as const,
-                      label: t('requests'),
-                      icon: Inbox,
-                      count: requestsLoading ? undefined : myRequests?.meta?.total,
-                  },
-              ]
-            : []),
-        ...(seesAccess ? [{ id: 'access' as const, label: t('emp_v_tab_access'), icon: Shield, count: accessCount }] : []),
-    ];
+    // Tab bar, in PROFILE_SECTIONS order
+    const tabMeta: Record<ProfileSection, Omit<DialogTab<ProfileSection>, 'id'>> = {
+        profile: { label: t('profile_tab_details'), icon: UserRound },
+        assets: {
+            label: t('emp_v_tab_assets'),
+            icon: Box,
+            count: assetsLoading ? undefined : myAssets.length,
+            dot: myAssets.some((a) => a.status === 'pending_acceptance'),
+        },
+        tickets: { label: t('emp_v_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : myTickets?.meta?.total },
+        requests: { label: t('requests'), icon: Inbox, count: requestsLoading ? undefined : myRequests?.meta?.total },
+        access: { label: t('emp_v_tab_access'), icon: Shield, count: accessCount },
+    };
+    const tabs: DialogTab<ProfileSection>[] = allowed.map((id) => ({ id, ...tabMeta[id] }));
 
     const seeAll = (to: string) => (
         <Link to={to} onClick={leaveTo(to)} className="text-brand mt-3 inline-block shrink-0 self-start text-sm font-medium hover:underline">

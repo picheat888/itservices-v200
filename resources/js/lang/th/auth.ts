@@ -1,6 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const auth: Dict = {
+    profile_signout: 'ออกจากระบบ',
     login_title: 'เข้าสู่ระบบ',
     login_sub: 'ยินดีต้อนรับสู่ระบบ IT Service Desk',
     login_field: 'ชื่อผู้ใช้',

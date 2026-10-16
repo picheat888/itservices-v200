@@ -60,11 +60,7 @@ export const useAssetContractOptions = (enabled = true) =>
 export const useRecipientReadiness = (enabled = true) =>
     useQuery({ queryKey: ['asset-recipient-readiness'], queryFn: assetApi.recipientReadiness, enabled });
 
-/**
- * Assets assigned to the current user (My Assets page + sidebar badge). Polls on the
- * same cadence as notifications so the badge appears in step with the bell/toast when
- * an asset is handed over from another session — no page reload needed.
- */
+/** Assets assigned to the current user, for the profile drawer's Assets tab; polls in step with the bell. */
 export const useMyAssets = (enabled = true) =>
     useQuery({
         queryKey: ['assets-mine'],

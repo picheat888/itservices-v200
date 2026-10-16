@@ -1,14 +1,12 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from '@/modules/report';
-import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
-import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { iconMeta, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
+import { iconMeta, notificationMessage, notificationTarget, notificationTitle, openNotificationTarget } from './notification-display';
 
 /** Asset query keys refreshed the instant an asset notification arrives, so the
  *  My Assets list (and the admin lists) update in step with the toast rather than
@@ -132,9 +130,7 @@ export function useNotificationToasts(openChangePassword: () => void): void {
                     if (n.data.type === 'password_expiring') {
                         openChangePasswordRef.current();
                     } else {
-                        const resolved = resolveNotificationTarget(target, searchRef.current);
-                        if (typeof resolved === 'string') navigateRef.current(resolved);
-                        else navigateRef.current(resolved, { state: dialogPushedState() });
+                        openNotificationTarget(navigateRef.current, n, searchRef.current);
                     }
                 },
             });

@@ -23,3 +23,9 @@ test('a path target passes through unchanged', () => {
 test('a query target merges into the current page query', () => {
     assert.deepEqual(resolveNotificationTarget('?dialog=profile&section=assets', '?tab=my'), { search: '?tab=my&dialog=profile&section=assets' });
 });
+
+test("a query target drops the page's own modal params", () => {
+    assert.deepEqual(resolveNotificationTarget('?dialog=profile&section=assets', '?tab=my&view=12'), {
+        search: '?tab=my&dialog=profile&section=assets',
+    });
+});

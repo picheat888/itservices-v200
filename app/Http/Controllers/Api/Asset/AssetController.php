@@ -230,21 +230,7 @@ class AssetController extends Controller
         return ['unit' => $unit, 'data' => $data];
     }
 
-    /**
-     * Which employees cannot confirm receipt themselves — the hand-over dialog warns before
-     * IT picks one of them.
-     *
-     * Accepting an asset needs two things that are decided outside this module: a login
-     * account linked to the employee, and the assets.my permission that opens My Assets,
-     * the only page carrying an Accept button. Without either, the hand-over lands in
-     * pending acceptance and stays there, because nobody can act on it. Handing over is
-     * still allowed — plenty of staff have no account and receive kit in person — so this
-     * only tells IT what to expect.
-     *
-     * Returns the exceptions rather than the whole roster: a map of employee id → why.
-     * Read-only peek at accounts under the assets.transfer gate (choosing a recipient is an
-     * Assets decision and must not also require permission to administer users).
-     */
+    /** Employees who cannot accept a hand-over in the profile drawer's Assets tab (no linked account or no assets.my), as id → reason. */
     public function recipientReadiness(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
@@ -464,8 +450,7 @@ class AssetController extends Controller
      */
     public function requestReturn(Request $request, Asset $asset): JsonResponse
     {
-        // Returning one's own asset is gated by assets.return (self-service, separate
-        // from assets.my which merely opens the My Assets page).
+        // Returning one's own asset is gated by assets.return, apart from assets.my (the profile drawer's Assets tab).
         abort_unless((bool) $request->user()?->hasPermission('assets.return'), 403);
         $employeeId = $request->user()?->linkedEmployee()?->id;
         abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id && $asset->status === AssetStatus::Deployed, 403);

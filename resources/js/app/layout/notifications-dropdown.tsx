@@ -8,14 +8,12 @@ import {
     useNotifications,
     useNotificationText,
 } from '@/modules/notification';
-import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
-import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { cn } from '@/shared/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { Loader2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { iconMeta, moduleOf, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
+import { iconMeta, moduleOf, notificationMessage, notificationTitle, openNotificationTarget } from './notification-display';
 
 // "All", then the catalogue's groups; a module tab shows once it has something in it.
 const NOTIF_TABS: { id: string; label: string }[] = [{ id: 'all', label: 'notif_all' }, ...NOTIFICATION_GROUPS];
@@ -114,9 +112,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
         if (n.data.type === 'password_expiring') {
             onChangePassword();
         } else {
-            const resolved = resolveNotificationTarget(notificationTarget(n), location.search);
-            if (typeof resolved === 'string') navigate(resolved);
-            else navigate(resolved, { state: dialogPushedState() });
+            openNotificationTarget(navigate, n, location.search);
         }
         onClose();
     };

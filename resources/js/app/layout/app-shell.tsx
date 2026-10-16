@@ -13,6 +13,7 @@ import { Topbar } from './topbar';
 import { useNotificationToasts } from './use-notification-toasts';
 
 const SHELL_DIALOGS = ['profile', 'password'] as const;
+const SHELL_DIALOG_COMPANIONS = [PROFILE_SECTION_PARAM];
 
 export function AppShell() {
     useDocumentTitle();
@@ -31,9 +32,9 @@ export function AppShell() {
     const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !user?.remembered);
     const [notifOpen, setNotifOpen] = useState(false);
     // My Profile and Change password live in the URL (?dialog=), so Back closes them.
-    const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS, [PROFILE_SECTION_PARAM]);
+    const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS, SHELL_DIALOG_COMPANIONS);
     // Set your password is raised by the account itself, so the URL only follows it.
-    useShownDialogParam('set-password', !!user?.must_change_password);
+    useShownDialogParam('set-password', !!user?.must_change_password, SHELL_DIALOG_COMPANIONS);
     // An owed password change is the only thing on screen: no My Profile over the wall
     const passwordOwed = !!user?.must_change_password || !!user?.password_expired;
     // The expiry wall replaces any open shell dialog, so it does not come back afterwards (set-password swaps the param itself)
