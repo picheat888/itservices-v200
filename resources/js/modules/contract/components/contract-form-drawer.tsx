@@ -12,6 +12,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -145,6 +146,7 @@ export function ContractFormDrawer({
 }) {
     const fmt = useDateFormat();
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     const { create, update, uploadAttachments, deleteAttachment } = useContractMutations();
@@ -357,6 +359,7 @@ export function ContractFormDrawer({
             return;
         }
         setErr({});
+        if (editing && isDirty && !(await confirmEdit({ name: editing.name, sub: editing.code }))) return;
 
         const payload = {
             code: form.code.trim(),

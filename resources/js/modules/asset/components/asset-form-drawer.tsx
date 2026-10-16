@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -66,6 +67,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  */
 export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; editing: Asset | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { symbol } = useCurrency();
     const { create, update } = useAssetMutations();
@@ -196,6 +198,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         }
         setErr(e);
         if (Object.keys(e).length) return;
+        if (editing && isDirty && !(await confirmEdit({ name: editing.model, sub: editing.asset_code }))) return;
 
         // Shared fields; acquisition fields differ by source (rented ones are derived server-side).
         const payload: AssetPayload = {

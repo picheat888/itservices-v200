@@ -9,6 +9,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketAttachment, TicketCategory } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
@@ -30,6 +31,7 @@ const ACCEPT_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'zip', 'doc', 'docx', 'xls', 'x
  */
 export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const { update, uploadAttachments, deleteAttachment } = useTicketMutations();
 
     const [category, setCategory] = useState<TicketCategory>('hardware');
@@ -90,6 +92,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         if (phone.replace(/\D/g, '').length < 3) e.phone = t('ticket_err_phone');
         setErrors(e);
         if (Object.keys(e).length) return;
+        if (isDirty && !(await confirmEdit({ name: ticket.subject, sub: ticket.ticket_no }))) return;
 
         setDeleted(0);
         setFormError('');
