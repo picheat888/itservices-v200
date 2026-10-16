@@ -5672,3 +5672,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - หน้า Asset: พิมพ์ค้นหาเขียนแค่ `?search` แล้วรีเซ็ตหน้าเมื่อคำค้นถูกส่งหลัง debounce (pattern เดียวกับ Stock) วัดจริง: พิมพ์ 4 ตัวอักษรจากหน้า 2 ยิง `/api/assets` 1 ครั้ง
 - `SerialToggle` ใช้ track เดียวกับ shared `Switch` (`bg-muted-foreground/80 dark:/60`) ผ่าน contrast 3:1 และ thumb เลื่อนด้วย `translate-x` แทน `left`
 - ฟอร์มบันทึกการเคลื่อนไหว (`movement-drawer.tsx`) ตัดโหมด "จ่ายออก" ที่ไม่มีทางเปิดออก และประกาศ `MovementKind = receive | return | transfer` ให้ type บังคับ: การจ่ายออกเกิดได้ทางเดียวคือ คำขอเบิก → อนุมัติ → จ่าย (กติกาของระบบ) ลบคีย์ `stock_issue_to_ph`
+
+### สิทธิ์กลุ่ม "โปรไฟล์ของฉัน" — 2026-10-16
+- การดูทรัพย์สิน/สิทธิ์เข้าถึงของตัวเองไม่ต้องมีสิทธิ์อีกต่อไป แค่บัญชีผูกพนักงาน (`/assets/mine`, `/access/mine`, pill ใน sidebar, กระดิ่งและอีเมลตอน IT โอนของ)
+- key ใหม่ `profile.edit` (เดิม `employees.edit_own`) และ `profile.return_assets` (เดิม `assets.return`) อยู่กลุ่ม "โปรไฟล์ของฉัน" ไม่มี master; ลบ `assets.my` และ `access.my`
+- migration `2026_10_16_120000_rename_self_service_permissions` เปลี่ยนชื่อแถวใน `role_permissions` บน DB จริง กันซ้ำ และ rollback ได้
+- หน้า Permission มี card "โปรไฟล์ของฉัน" สวิตช์ 2 ตัว card Employee ไม่มี edit_own แล้ว, hint ใน dialog โอนย้ายเหลือกรณี "ยังไม่มีบัญชี"
