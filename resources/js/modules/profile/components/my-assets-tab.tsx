@@ -11,11 +11,10 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useUiStore } from '@/stores/ui';
 import { useMutationState } from '@tanstack/react-query';
-import { Check, CheckCheck, ChevronDown, ChevronUp, Inbox, Laptop, Link2Off, Loader2, Undo2 } from 'lucide-react';
+import { Check, CheckCheck, Inbox, Laptop, Link2Off, Loader2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { HeadRow, LoadingRows, PAGE, SectionHeading, ShowAllRow, TableCard } from './profile-table';
 
-// Rows shown before "show all"
-const PAGE = 5;
 // Accepted rows hold their place this long after the last accept finishes
 const SETTLE_MS = 3000;
 
@@ -32,30 +31,13 @@ function Sep({ className }: { className?: string }) {
 function ColumnHeader({ dateLabel }: { dateLabel: string }) {
     const t = useT();
     return (
-        <div className={cn(ROW_GRID, 'bg-muted border-border text-muted-foreground border-b py-2 text-[11px] font-bold tracking-wide uppercase')}>
+        <HeadRow grid={ROW_GRID}>
             <div>{t('emp_v_col_device')}</div>
             <div className={WIDE_ONLY}>{t('emp_v_col_tag')}</div>
             <div className={WIDE_ONLY}>{t('emp_v_col_serial')}</div>
             <div className="text-center">{dateLabel}</div>
             <div />
-        </div>
-    );
-}
-
-function ShowAllRow({ total, expanded, onToggle }: { total: number; expanded: boolean; onToggle: () => void }) {
-    const t = useT();
-    if (total <= PAGE) return null;
-    const Icon = expanded ? ChevronUp : ChevronDown;
-    return (
-        <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-semibold transition-colors"
-        >
-            <Icon className="h-3.5 w-3.5" aria-hidden />
-            {expanded ? t('profile_assets_show_less') : t('profile_assets_show_all').replace('{n}', String(total - PAGE))}
-        </button>
+        </HeadRow>
     );
 }
 
@@ -118,15 +100,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
 
     if (!linked) return <EmptyPane icon={Link2Off} text={t('my_assets_no_link')} />;
 
-    if (loading) {
-        return (
-            <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="bg-muted h-12 animate-pulse rounded-xl" />
-                ))}
-            </div>
-        );
-    }
+    if (loading) return <LoadingRows />;
 
     const pending = assets.filter((a) => a.status === 'pending_acceptance');
     // Rows accepted in this sitting keep their place in the pending table until the tab closes
@@ -158,7 +132,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
         <div className="flex flex-col gap-3.5">
             {/* Pending acceptance */}
             {pendingRows.length > 0 && (
-                <div className="bg-card overflow-hidden rounded-xl border border-emerald-500/30 shadow-xs">
+                <TableCard className="border-emerald-500/30">
                     <div className="flex items-center gap-2 border-b border-emerald-500/25 bg-emerald-500/10 px-4 py-2 text-[13px] font-extrabold text-emerald-700 dark:text-emerald-400">
                         <Inbox className="h-4 w-4 shrink-0" aria-hidden />
                         {t('profile_assets_pending_caption')}
@@ -243,18 +217,15 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                         );
                     })}
                     <ShowAllRow total={pendingRows.length} expanded={showAllPending} onToggle={() => setShowAllPending((v) => !v)} />
-                </div>
+                </TableCard>
             )}
 
             {/* Held */}
-            <div className="mt-0.5 flex items-center gap-2">
-                <span className="text-sm font-bold">{t('profile_assets_held_heading')}</span>
-                <span className="text-muted-foreground text-xs">{held.length}</span>
-            </div>
+            <SectionHeading title={t('profile_assets_held_heading')} count={held.length} />
             {held.length === 0 ? (
                 <EmptyPane icon={Laptop} text={t('my_assets_empty')} />
             ) : (
-                <div className="bg-card border-border overflow-hidden rounded-xl border shadow-xs">
+                <TableCard>
                     <ColumnHeader dateLabel={t('emp_v_col_received')} />
                     {heldShown.map((a, i) => {
                         const meta = HELD_STATUS_META[a.status] ?? null;
@@ -294,7 +265,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                         );
                     })}
                     <ShowAllRow total={held.length} expanded={showAllHeld} onToggle={() => setShowAllHeld((v) => !v)} />
-                </div>
+                </TableCard>
             )}
         </div>
     );
