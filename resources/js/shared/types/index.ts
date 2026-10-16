@@ -298,6 +298,7 @@ export interface Asset {
     cover_end: string | null;
     registered_date: string | null;
     owned_since: string | null;
+    handed_over_at: string | null;
     notes: string | null;
     last_reason: string | null;
     /** Why it was written off (Settings → Assets); last_reason is the free-text note. */

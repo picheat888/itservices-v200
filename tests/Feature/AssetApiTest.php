@@ -524,6 +524,23 @@ class AssetApiTest extends TestCase
         $this->getJson('/api/assets/mine')->assertOk()->assertJsonCount(2, 'data');
     }
 
+    public function test_mine_carries_the_hand_over_time_of_a_pending_asset(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-7101', 'first_name' => 'Me', 'last_name' => 'User']);
+        $user = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.my', 'allowed' => true]);
+        $pending = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-7101', 'owner_employee_id' => $employee->id]);
+        $legacy = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-7101', 'owner_employee_id' => $employee->id]);
+        AssetTransfer::forceCreate(['asset_id' => $pending->id, 'asset_tag' => $pending->asset_code, 'asset_model' => 'M', 'kind' => 'relocate', 'from_owner' => 'A', 'to_owner' => 'B', 'created_at' => '2026-10-01 09:00:00']);
+        AssetTransfer::forceCreate(['asset_id' => $pending->id, 'asset_tag' => $pending->asset_code, 'asset_model' => 'M', 'kind' => 'handover', 'from_owner' => 'WH-01', 'to_owner' => 'EMP-7101', 'created_at' => '2026-10-15 14:30:00']);
+
+        $this->actingAs($user);
+        $rows = collect($this->getJson('/api/assets/mine')->assertOk()->json('data'))->keyBy('id');
+
+        $this->assertSame('2026-10-15 14:30', $rows[$pending->id]['handed_over_at']);
+        $this->assertNull($rows[$legacy->id]['handed_over_at']);
+    }
+
     public function test_only_the_recipient_employee_can_accept_a_handover(): void
     {
         $employee = Employee::create(['code' => 'EMP-9001', 'first_name' => 'Rec', 'last_name' => 'Ipient']);
