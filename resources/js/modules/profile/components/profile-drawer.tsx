@@ -132,6 +132,12 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         if (inputRef.current) inputRef.current.value = '';
     }, [open, user]);
 
+    // Focus follows the open tab, also when the section settles after the first paint
+    useEffect(() => {
+        if (!open) return;
+        document.getElementById(dialogTabId(panelId, tab))?.focus({ preventScroll: true });
+    }, [open, tab, panelId]);
+
     // One object URL per picked photo, released when it changes
     const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
     useEffect(() => () => (photoUrl ? URL.revokeObjectURL(photoUrl) : undefined), [photoUrl]);
@@ -250,14 +256,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent
                 className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0"
-                // Land on the open tab, not the first copy button in the rail
-                onOpenAutoFocus={(e) => {
-                    const activeTab = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(`#${CSS.escape(dialogTabId(panelId, tab))}`);
-                    if (activeTab) {
-                        e.preventDefault();
-                        activeTab.focus({ preventScroll: true });
-                    }
-                }}
+                // The effect above places focus on the open tab, not the first copy button in the rail
+                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <DialogTitle className="sr-only">{t('profile')}</DialogTitle>
                 <span role="status" aria-live="polite" className="sr-only">
