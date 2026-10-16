@@ -55,4 +55,24 @@ class RenameSelfServicePermissionsMigrationTest extends TestCase
         $this->assertSame(['access.my', 'assets.my', 'employees.edit_own'], $this->keysOf($b));
         $this->assertSame(0, RolePermission::where('permission', 'like', 'profile.%')->count());
     }
+
+    public function test_denied_rows_stay_denied_through_up_and_down(): void
+    {
+        $role = Role::firstOrCreate(['key' => 'mig_denied'], ['name' => 'Denied']);
+        RolePermission::create(['role_id' => $role->id, 'permission' => 'employees.edit_own', 'allowed' => false]);
+
+        $migration = $this->migration();
+        $migration->up();
+
+        $row = RolePermission::where('role_id', $role->id)->where('permission', 'profile.edit')->first();
+        $this->assertNotNull($row);
+        $this->assertFalse((bool) $row->allowed);
+        $this->assertSame(1, RolePermission::where('role_id', $role->id)->count());
+
+        $migration->down();
+
+        $row = RolePermission::where('role_id', $role->id)->where('permission', 'employees.edit_own')->first();
+        $this->assertNotNull($row);
+        $this->assertFalse((bool) $row->allowed);
+    }
 }
