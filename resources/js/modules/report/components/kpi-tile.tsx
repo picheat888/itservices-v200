@@ -5,6 +5,7 @@
  */
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import type { LucideIcon } from 'lucide-react';
 
 export function KpiTile({
     label,
@@ -16,6 +17,8 @@ export function KpiTile({
     alert,
     meter,
     bar,
+    icon: Icon,
+    className,
 }: {
     label: string;
     /** Shown on hover over the label — what a plain-worded figure really measures. */
@@ -31,14 +34,24 @@ export function KpiTile({
     meter?: { value: number; goal: number };
     /** Stacked pieces as percents of the track, each with its fill class. */
     bar?: { key: string; percent: number; className: string; title?: string }[];
+    /** Brand-coloured icon at the top right (Dashboard tiles). */
+    icon?: LucideIcon;
+    className?: string;
 }) {
     return (
-        <Card className={cn('flex min-w-0 flex-col gap-1.5 p-4', alert === 'red' ? 'border-red-500/50' : alert && 'border-amber-500/50')}>
+        <Card className={cn('flex min-w-0 flex-col gap-1.5 p-4', alert === 'red' ? 'border-red-500/50' : alert && 'border-amber-500/50', className)}>
             <div className="text-muted-foreground flex items-center justify-between gap-2 text-sm">
                 <span className="truncate" title={hint}>
                     {label}
                 </span>
-                {badge}
+                {Icon ? (
+                    <span className="flex shrink-0 items-center gap-2">
+                        {badge}
+                        <Icon aria-hidden className="text-brand h-[18px] w-[18px]" />
+                    </span>
+                ) : (
+                    badge
+                )}
             </div>
             <div className="text-2xl font-bold">
                 {value}
