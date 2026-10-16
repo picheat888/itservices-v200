@@ -148,6 +148,11 @@ const LIVE = new Set<string>([
     'settings.requestdata',
     'settings.assets',
     'settings.security',
+    'dashboard.view_it',
+    'dashboard.view_requests',
+    'dashboard.view_contracts',
+    'dashboard.view_hr',
+    'dashboard.view_activity',
 ]);
 
 export const isLivePermission = (key: string) => LIVE.has(key);

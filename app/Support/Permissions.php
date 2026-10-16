@@ -17,6 +17,8 @@ class Permissions
     public static function catalog(): array
     {
         return [
+            // Dashboard sections; no master — everyone opens the page, each switch adds one section.
+            'dashboard' => ['view_it', 'view_requests', 'view_contracts', 'view_hr', 'view_activity'],
             'tickets' => [
                 'module',
                 'view_dashboard', 'view_all',
@@ -137,6 +139,7 @@ class Permissions
                 'access.email_add', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_edit', 'access.file_view', 'access.module', 'access.my', 'access.overview', 'access.social_add', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_edit', 'access.software_view',
                 'assets.edit', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.return', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
                 'contracts.alerts', 'contracts.module', 'contracts.view', 'contracts.view_dashboard',
+                'dashboard.view_contracts', 'dashboard.view_hr', 'dashboard.view_it', 'dashboard.view_requests',
                 'employees.add', 'employees.edit', 'employees.module', 'employees.reset_password', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
                 'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
                 'settings.access', 'settings.requestdata',
@@ -147,6 +150,7 @@ class Permissions
             'hr' => [
                 'access.my',
                 'assets.my', 'assets.return',
+                'dashboard.view_hr',
                 'employees.add', 'employees.edit', 'employees.module', 'employees.resign', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
                 'requests.module', 'requests.submit',
                 'tickets.create', 'tickets.edit_own', 'tickets.my',
@@ -163,6 +167,7 @@ class Permissions
                 'access.email_add', 'access.email_delete', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_delete', 'access.file_edit', 'access.file_view', 'access.module', 'access.my', 'access.overview', 'access.social_add', 'access.social_delete', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_delete', 'access.software_edit', 'access.software_view',
                 'assets.cancel_writeoff', 'assets.delete', 'assets.edit', 'assets.force_recall', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.retire', 'assets.return', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
                 'contracts.alerts', 'contracts.cancel', 'contracts.create', 'contracts.delete', 'contracts.edit', 'contracts.expire', 'contracts.module', 'contracts.reactivate', 'contracts.view', 'contracts.view_dashboard', 'contracts.view_lifecycle',
+                'dashboard.view_activity', 'dashboard.view_contracts', 'dashboard.view_hr', 'dashboard.view_it', 'dashboard.view_requests',
                 'employees.add', 'employees.cancel_resign', 'employees.delete', 'employees.department_add', 'employees.department_delete', 'employees.department_edit', 'employees.edit', 'employees.edit_own', 'employees.module', 'employees.position_add', 'employees.position_delete', 'employees.position_edit', 'employees.position_special', 'employees.reset_password', 'employees.resign', 'employees.section_add', 'employees.section_delete', 'employees.section_edit', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
                 'notifications.email_edit', 'notifications.email_test', 'notifications.email_toggle', 'notifications.inapp_edit', 'notifications.inapp_test', 'notifications.inapp_toggle', 'notifications.logs', 'notifications.module',
                 'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
@@ -177,6 +182,7 @@ class Permissions
                 'access.my',
                 'assets.delete', 'assets.edit', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.retire', 'assets.return', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
                 'contracts.alerts', 'contracts.cancel', 'contracts.create', 'contracts.delete', 'contracts.edit', 'contracts.expire', 'contracts.module', 'contracts.reactivate', 'contracts.view', 'contracts.view_dashboard', 'contracts.view_lifecycle',
+                'dashboard.view_contracts',
                 'requests.module', 'requests.submit',
                 'settings.access', 'settings.assets', 'settings.masterdata',
                 'stock.approve', 'stock.fulfill', 'stock.manage_items', 'stock.module', 'stock.receive', 'stock.request', 'stock.return', 'stock.transfer', 'stock.view', 'stock.view_count', 'stock.view_dashboard', 'stock.view_events', 'stock.view_request',

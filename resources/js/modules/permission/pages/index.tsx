@@ -27,6 +27,7 @@ import { useUiStore } from '@/stores/ui';
 import {
     ArrowLeftRight,
     Briefcase,
+    LayoutDashboard,
     Check,
     ChevronLeft,
     ChevronRight,
@@ -152,6 +153,7 @@ export default function PermissionsPage() {
 const SELF_SERVICE_KEYS = ['assets.my', 'assets.return', 'access.my'];
 
 const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
+    { label: 'nav_overview', icon: LayoutDashboard, modules: ['dashboard'] },
     { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access'] },
     // `workflows` is listed under ADMIN_GROUPS, not here — the sidebar puts the screen
     // under Administration, and the matrix mirrors the sidebar.
