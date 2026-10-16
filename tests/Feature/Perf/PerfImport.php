@@ -12,8 +12,10 @@ use App\Support\Perf\SqlWriter;
 use App\Support\Perf\Targets;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Connection;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 // Test helper: runs perf steps into a temp file and imports it into a second in-memory sqlite database
 class PerfImport
@@ -66,7 +68,12 @@ class PerfImport
         DB::purge('perf_sqlite');
         Artisan::call('migrate', ['--database' => 'perf_sqlite', '--force' => true]);
         $db = DB::connection('perf_sqlite');
-        $db->unprepared(file_get_contents($file));
+        try {
+            $db->unprepared(file_get_contents($file));
+        } catch (QueryException $e) {
+            // The exception message embeds the whole file; keep only the driver's own words
+            throw new RuntimeException('Import failed: '.substr($e->getPrevious()?->getMessage() ?? $e->getMessage(), 0, 400));
+        }
 
         return $db;
     }

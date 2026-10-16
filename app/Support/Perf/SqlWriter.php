@@ -75,6 +75,20 @@ class SqlWriter
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $set
+     * @param  array<string, mixed>  $where
+     */
+    public function update(string $table, array $set, array $where): void
+    {
+        if (isset($this->buffer[$table])) {
+            $this->flush($table);
+        }
+        $assign = implode(',', array_map(fn (string $c, mixed $v): string => $this->ident($c).'='.$this->format($v), array_keys($set), $set));
+        $cond = implode(' AND ', array_map(fn (string $c, mixed $v): string => $this->ident($c).'='.$this->format($v), array_keys($where), $where));
+        $this->raw("UPDATE {$this->ident($table)} SET {$assign} WHERE {$cond};\n");
+    }
+
     private function flush(string $table): void
     {
         if ($this->buffer[$table] === []) {
