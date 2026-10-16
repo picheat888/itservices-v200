@@ -113,7 +113,7 @@ class AssetService
                 $templateKey,
                 $recipient->email,
                 $vars + ['user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there'],
-                url($path),
+                url('/').$path,
                 $actionLabel,
                 $recipient->name,
             );
@@ -326,7 +326,7 @@ class AssetService
             // most likely to miss the bell are the ones who rarely open the portal.
             $this->emailEach([$user], 'asset.assigned', $this->assetVars($asset) + [
                 'asset.from' => (string) ($fromLabel ?: $from ?: '-'),
-            ], '/my-assets-access', 'Accept the hand-over');
+            ], '/?dialog=profile&section=assets', 'Accept the hand-over');
         }
     }
 
@@ -348,7 +348,7 @@ class AssetService
         if ($user && $user->hasPermission('assets.my')) {
             $user->notify(new AssetRecalledNotification($asset, $subtype));
             // One template for both subtypes — see asset.recalled in EmailTemplates.
-            $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/my-assets-access', 'View my assets');
+            $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/?dialog=profile&section=assets', 'View my assets');
         }
     }
 
