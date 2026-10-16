@@ -42,7 +42,7 @@ export const dashboard: Dict = {
     dash_todo_approvals: 'คำขอรอคุณพิจารณา',
     dash_todo_awaiting_it: 'คำขอรอทีม IT ดำเนินการ',
     dash_todo_contracts: 'สัญญาใกล้หมดอายุ',
-    dash_todo_accept: 'รอคุณกดรับ',
+    dash_todo_accept: 'รอคุณรับมอบ',
     dash_age_le7: 'ไม่เกิน 7 วัน',
     dash_age_8_14: '8 ถึง 14 วัน',
     dash_age_gt14: 'เกิน 14 วัน',

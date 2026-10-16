@@ -42,7 +42,7 @@ export const notification: Dict = {
     notif_request_completed: 'Your request is complete',
     notif_request_cancelled: 'Cancelled by the requester',
     notif_request_blocked_no_account: 'Waiting on {actor}, who has no login yet. Create one to move the request on.',
-    notif_asset_assigned: 'An asset was transferred to you. Check and accept it.',
+    notif_asset_assigned: 'IT handed you an asset. Accept it in My Profile.',
     notif_asset_return_requested: 'An asset is being returned. Check it in.',
     notif_asset_recalled_cancelled: 'The asset transfer was cancelled',
     notif_asset_recalled_taken_back: 'IT took the asset back',

@@ -335,7 +335,7 @@ class AssetService
         if ($user) {
             $user->notify(new AssetRecalledNotification($asset, $subtype));
             // One template for both subtypes — see asset.recalled in EmailTemplates.
-            $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/?dialog=profile&section=assets', 'View my assets');
+            $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/?dialog=profile&section=assets', 'Open My Profile');
         }
     }
 

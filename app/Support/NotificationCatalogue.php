@@ -298,8 +298,8 @@ class NotificationCatalogue
                 'name' => 'Asset handed over to you',
                 'trigger' => 'IT transfers an asset to an employee',
                 'audience' => 'The recipient',
-                'message_en' => 'An asset was transferred to you. Check and accept it.',
-                'message_th' => 'โอนทรัพย์สินให้คุณแล้ว รอคุณตรวจรับ',
+                'message_en' => 'IT handed you an asset. Accept it in My Profile.',
+                'message_th' => 'IT โอนทรัพย์สินให้คุณแล้ว กดรับมอบในโปรไฟล์ของฉัน',
                 'enabled' => true,
             ],
             [

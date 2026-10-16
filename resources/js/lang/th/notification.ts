@@ -42,7 +42,7 @@ export const notification: Dict = {
     notif_request_completed: 'คำขอเสร็จสิ้นแล้ว',
     notif_request_cancelled: 'ผู้ขอยกเลิกคำขอแล้ว',
     notif_request_blocked_no_account: 'รอ {actor} อนุมัติ แต่ยังไม่มีบัญชีเข้าใช้งาน สร้างบัญชีให้ก่อน',
-    notif_asset_assigned: 'โอนทรัพย์สินให้คุณแล้ว รอคุณตรวจรับ',
+    notif_asset_assigned: 'IT โอนทรัพย์สินให้คุณแล้ว กดรับมอบในโปรไฟล์ของฉัน',
     notif_asset_return_requested: 'มีทรัพย์สินส่งคืน รอคุณตรวจรับ',
     notif_asset_recalled_cancelled: 'ยกเลิกการโอนทรัพย์สินแล้ว',
     notif_asset_recalled_taken_back: 'IT เรียกคืนทรัพย์สินนี้แล้ว',
