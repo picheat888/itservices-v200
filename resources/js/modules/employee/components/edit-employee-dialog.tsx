@@ -260,7 +260,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             setOrgConfirm(true);
             return;
         }
-        if (employee && !(await confirmEdit({ name: lang === 'th' ? (employee.name_th ?? employee.name) : employee.name, sub: employee.code })))
+        if (employee && isDirty && !(await confirmEdit({ name: lang === 'th' ? (employee.name_th ?? employee.name) : employee.name, sub: employee.code })))
             return;
         await persist();
     };
