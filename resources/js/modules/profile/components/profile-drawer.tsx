@@ -1,3 +1,4 @@
+// My Profile drawer: cover, read-only rail, and tabs (details form, assets, tickets, requests, access) held in ?section=.
 import { useT } from '@/lang';
 import { useMyAccess } from '@/modules/access';
 import { useMyAssets } from '@/modules/asset';
@@ -17,21 +18,21 @@ import {
 import { useRequests } from '@/modules/request';
 import { useTickets } from '@/modules/ticket';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
-import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Asset, User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
-import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { AtSign, Box, Briefcase, Building2, Camera, Hash, Inbox, KeyRound, Phone, Shield, Ticket, UserCheck, UserRound, Users } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useProfileSection } from '../hooks/use-profile-section';
+import { PROFILE_SECTIONS, type ProfileSection } from '../types';
+import { ProfileDetailsTab, type ProfileFormKey } from './profile-details-tab';
 
 // Names are stored as one space-joined string: the first word is the given name, the rest the surname
 function splitName(full: string | null | undefined): [string, string] {
@@ -40,7 +41,7 @@ function splitName(full: string | null | undefined): [string, string] {
 }
 
 /** The editable fields as the form is seeded from the user — also the baseline for unsaved changes. */
-function profileFields(user: User) {
+function profileFields(user: User): Record<ProfileFormKey, string> {
     // Prefer the linked employee's split fields; fall back to splitting the composed name.
     const [fn, ln] = splitName(user.name);
     const [fnTh, lnTh] = splitName(user.name_th);
@@ -53,7 +54,7 @@ function profileFields(user: User) {
     };
 }
 
-type FormKey = keyof ReturnType<typeof profileFields>;
+type FormKey = ProfileFormKey;
 
 /** API field name → form field, for showing a server error under its field. */
 const SERVER_FIELDS: Record<string, FormKey> = {
@@ -86,13 +87,10 @@ const heldAsset = (a: Asset): EmployeeHeldAsset => ({
     owned_since: a.owned_since,
 });
 
-type TabId = 'profile' | 'assets' | 'tickets' | 'requests' | 'access';
-
 /** How many of your own tickets / requests the tabs hold; "see all" opens the page for the rest. */
 const TAB_ROWS = 50;
 
 export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boolean; onClose: () => void; onChangePassword: () => void }) {
-    const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { user, can } = useAuth();
@@ -110,6 +108,14 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const seesAccess = can('access.my');
     const seesTickets = can('tickets.my');
     const seesRequests = can('requests.submit');
+    const sees: Record<Exclude<ProfileSection, 'profile'>, boolean> = {
+        assets: seesAssets,
+        tickets: seesTickets,
+        requests: seesRequests,
+        access: seesAccess,
+    };
+    const allowed = PROFILE_SECTIONS.filter((s) => s === 'profile' || sees[s]);
+    const [tab, setTab] = useProfileSection(allowed);
 
     const { data: myAssets = [], isLoading: assetsLoading } = useMyAssets(open && seesAssets);
     const { data: myAccess, isLoading: accessLoading } = useMyAccess(open && seesAccess);
@@ -128,7 +134,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
     };
 
-    const [tab, setTab] = useState<TabId>('profile');
     const [fields, setFields] = useState<Record<FormKey, string>>({ firstName: '', lastName: '', firstNameTh: '', lastNameTh: '', phone: '' });
     const [errors, setErrors] = useState<Partial<Record<FormKey, string>>>({});
     const [photo, setPhoto] = useState<File | null>(null);
@@ -152,7 +157,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         setCropSrc(null);
         setFormError('');
         setSaved(false);
-        setTab('profile');
         if (inputRef.current) inputRef.current.value = '';
     }, [open, user]);
 
@@ -249,7 +253,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         }
     };
 
-    const tabs: DialogTab<TabId>[] = [
+    const tabs: DialogTab<ProfileSection>[] = [
         { id: 'profile', label: t('profile_tab_details'), icon: UserRound },
         ...(seesAssets
             ? [{ id: 'assets' as const, label: t('emp_v_tab_assets'), icon: Box, count: assetsLoading ? undefined : myAssets.length }]
@@ -269,19 +273,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
             : []),
         ...(seesAccess ? [{ id: 'access' as const, label: t('emp_v_tab_access'), icon: Shield, count: accessCount }] : []),
     ];
-
-    const textField = (key: FormKey, label: string, props: React.ComponentProps<typeof Input> = {}) => (
-        <Field label={label} name={key} error={errors[key]} required={key === 'firstName' || key === 'lastName'}>
-            <Input value={fields[key]} onChange={edit(key)} disabled={!canEdit} {...props} />
-        </Field>
-    );
-
-    // Set by HR, so shown but never editable here
-    const readField = (label: string, value: string | null | undefined) => (
-        <Field label={label}>
-            <Input value={value || '—'} readOnly className="bg-muted/50 font-mono" />
-        </Field>
-    );
 
     const seeAll = (to: string) => (
         <Link to={to} onClick={leaveTo(to)} className="text-brand mt-3 inline-block shrink-0 self-start text-sm font-medium hover:underline">
@@ -422,27 +413,15 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             )}
                         >
                             {tab === 'profile' && (
-                                <div className="max-w-xl space-y-4">
-                                    <FormErrorBanner message={formError} shakeKey={formErrorCount} />
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {readField(t('emp_employee_id'), emp?.code)}
-                                        {readField(t('joined'), emp?.joined_at ? fmt.date(emp.joined_at) : null)}
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {textField('firstName', t('emp_first_name'), { autoComplete: 'given-name' })}
-                                        {textField('lastName', t('emp_last_name'), { autoComplete: 'family-name' })}
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {textField('firstNameTh', t('emp_first_name_th'), { autoComplete: 'off' })}
-                                        {textField('lastNameTh', t('emp_last_name_th'), { autoComplete: 'off' })}
-                                    </div>
-                                    {textField('phone', t('emp_phone'), {
-                                        type: 'tel',
-                                        inputMode: 'tel',
-                                        autoComplete: 'tel',
-                                        className: 'font-mono',
-                                    })}
-                                </div>
+                                <ProfileDetailsTab
+                                    fields={fields}
+                                    errors={errors}
+                                    canEdit={canEdit}
+                                    emp={emp}
+                                    formError={formError}
+                                    formErrorCount={formErrorCount}
+                                    onEdit={edit}
+                                />
                             )}
 
                             {tab === 'assets' && (

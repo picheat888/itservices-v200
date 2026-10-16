@@ -1,4 +1,5 @@
 import { ChangePasswordDialog, SessionTimeoutModal, SetPasswordDialog, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
+import { PROFILE_SECTION_PARAM, ProfileDrawer } from '@/modules/profile';
 import { settingsApi } from '@/modules/settings';
 import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
@@ -7,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { NotificationsDropdown } from './notifications-dropdown';
-import { ProfileDrawer } from './profile-drawer';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { useNotificationToasts } from './use-notification-toasts';
@@ -31,7 +31,7 @@ export function AppShell() {
     const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !user?.remembered);
     const [notifOpen, setNotifOpen] = useState(false);
     // My Profile and Change password live in the URL (?dialog=), so Back closes them.
-    const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS);
+    const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS, [PROFILE_SECTION_PARAM]);
     // Set your password is raised by the account itself, so the URL only follows it.
     useShownDialogParam('set-password', !!user?.must_change_password);
     // An owed password change is the only thing on screen: no My Profile over the wall
