@@ -5,6 +5,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Email\EmailTemplate;
 use App\Models\Notification\NotificationTemplate;
 use App\Support\NotificationCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +18,8 @@ class NotificationWordingMigrationTest extends TestCase
     private const REQUEST_REWORDING = '2026_10_12_111034_update_request_bell_wording_in_notification_templates.php';
 
     private const SEPARATOR_REWORDING = '2026_10_15_144607_update_bell_wording_without_separators_in_notification_templates.php';
+
+    private const HANDOVER_REWORDING = '2026_10_17_001235_update_asset_handover_wording.php';
 
     private function migration(string $file): object
     {
@@ -94,6 +97,8 @@ class NotificationWordingMigrationTest extends TestCase
         $this->storeOldWording($wording);
 
         $migration->up();
+        // The hand-over bell was reworded again later; the chain ends at the catalogue
+        $this->migration(self::HANDOVER_REWORDING)->up();
 
         foreach (array_keys($wording) as $key) {
             $row = NotificationTemplate::where('key', $key)->firstOrFail();
@@ -117,6 +122,50 @@ class NotificationWordingMigrationTest extends TestCase
 
         $migration->down();
         $this->assertSame('เคสใหม่รอการรับ - แตะเพื่อดู', $row->fresh()->message_th);
+    }
+
+    public function test_handover_rewording_moves_the_bell_and_email_and_reverses(): void
+    {
+        $this->storeBell('notif_asset_assigned', 'An asset was transferred to you. Check and accept it.', 'โอนทรัพย์สินให้คุณแล้ว รอคุณตรวจรับ');
+        EmailTemplate::updateOrCreate(['key' => 'asset.assigned'], [
+            'name' => 'Asset transferred to you',
+            'subject' => 'Asset Management: Your new asset is ready: {{asset.code}}',
+            'body_html' => '<p>Hi</p><p>Please confirm receipt in {{app.name}}.</p><p>Bye</p>',
+        ]);
+        $migration = $this->migration(self::HANDOVER_REWORDING);
+
+        $migration->up();
+
+        $standard = NotificationCatalogue::find('notif_asset_assigned');
+        $bell = NotificationTemplate::where('key', 'notif_asset_assigned')->firstOrFail();
+        $this->assertSame($standard['message_en'], $bell->message_en);
+        $this->assertSame($standard['message_th'], $bell->message_th);
+        $mail = EmailTemplate::where('key', 'asset.assigned')->firstOrFail();
+        $this->assertSame('Asset Management: {{asset.code}} is waiting for you to accept', $mail->subject);
+        $this->assertSame('<p>Hi</p><p>Open My Profile in {{app.name}} and press Accept.</p><p>Bye</p>', $mail->body_html);
+
+        $migration->down();
+
+        $this->assertSame('โอนทรัพย์สินให้คุณแล้ว รอคุณตรวจรับ', $bell->fresh()->message_th);
+        $this->assertSame('Asset Management: Your new asset is ready: {{asset.code}}', $mail->fresh()->subject);
+        $this->assertSame('<p>Hi</p><p>Please confirm receipt in {{app.name}}.</p><p>Bye</p>', $mail->fresh()->body_html);
+    }
+
+    public function test_handover_rewording_keeps_an_administrators_wording(): void
+    {
+        $this->storeBell('notif_asset_assigned', 'Your laptop is here', 'เครื่องมาถึงแล้ว');
+        EmailTemplate::updateOrCreate(['key' => 'asset.assigned'], [
+            'name' => 'Asset transferred to you',
+            'subject' => 'Your kit',
+            'body_html' => '<p>Come and pick it up.</p>',
+        ]);
+
+        $this->migration(self::HANDOVER_REWORDING)->up();
+
+        $this->assertSame('Your laptop is here', NotificationTemplate::where('key', 'notif_asset_assigned')->firstOrFail()->message_en);
+        $mail = EmailTemplate::where('key', 'asset.assigned')->firstOrFail();
+        $this->assertSame('Your kit', $mail->subject);
+        $this->assertSame('<p>Come and pick it up.</p>', $mail->body_html);
     }
 
     public function test_no_standard_bell_message_uses_a_dash_separator(): void

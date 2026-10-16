@@ -402,10 +402,10 @@ You can tracking progress in {{app.name}}.</p>
                 // Mailed beside the bell, which opens the profile drawer's Assets tab.
                 'key' => 'asset.assigned',
                 'name' => 'Asset transferred to you (ทรัพย์สินที่โอนไปยังผู้ใช้งาน)',
-                'subject' => 'Asset Management: Your new asset is ready: {{asset.code}}',
+                'subject' => 'Asset Management: {{asset.code}} is waiting for you to accept',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>An asset has been transferred to you.</p>
-<p>Please confirm receipt in {{app.name}}.</p>
+<p>Open My Profile in {{app.name}} and press Accept.</p>
 <br>
 <p><u><strong>Information</strong></u></p>
 <p><strong style="color:#64748b">Asset:</strong> <strong>{{asset.code}}</strong><br>
