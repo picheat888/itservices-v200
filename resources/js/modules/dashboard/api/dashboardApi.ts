@@ -1,3 +1,4 @@
+// Types and the call for the front page's one summary endpoint (GET /api/dashboard/summary).
 import { http } from '@/shared/lib/http';
 
 /** One asset handed to the reader that they have not accepted yet. */
@@ -25,48 +26,63 @@ export interface MyRequestRow {
     status: string;
 }
 
-export interface MyAssetRow {
-    id: number;
-    asset_code: string;
-    tag: string | null;
-    model: string | null;
-    category: string | null;
-    status: string;
-}
+export type AccessType = 'email_group' | 'file_share' | 'social_platform' | 'software';
 
-/** The reader's own half of the front page. Blocks for IT and HR land beside it later. */
 export interface DashboardMine {
-    kpi: { open_tickets: number; pending_requests: number; assets: number; resolved_this_month: number };
-    pending_acceptance: PendingAsset[];
+    kpi: {
+        open_tickets: number;
+        open_split: { open: number; in_progress: number };
+        requests_unfinished: number;
+        requests_split: { pending: number; approved: number };
+        assets: number;
+        assets_pending: number;
+        access_total: number;
+        access_by_type: Record<AccessType, number>;
+        closed_this_month: number;
+    };
+    todo: {
+        my_jobs: { total: number; over_sla: number; due_soon: number; on_track: number } | null;
+        approvals: { count: number; oldest_days: number } | null;
+        pending_acceptance: PendingAsset[];
+    };
     tickets: MyTicketRow[];
+    tickets_total: number;
     requests: MyRequestRow[];
-    assets: MyAssetRow[];
+    requests_total: number;
 }
 
-/** One person's share of the case queue. `assignee_id` null is the unassigned pile. */
+export interface DailyCount {
+    date: string;
+    count: number;
+}
+
+/** A 14-day figure: the sum, the busiest day, and one point per day (today last). */
+export interface SeriesFigure {
+    total: number;
+    peak: number;
+    series: number[];
+}
+
+/** One person's in-progress cases. */
 export interface WorkloadRow {
-    assignee_id: number | null;
+    assignee_id: number;
     name: string | null;
     open: number;
-    closed: number;
-}
-
-/** One day of the volume chart: what arrived, and what was still open when the day ended. */
-export interface VolumeDay {
-    date: string;
-    opened: number;
-    backlog: number;
 }
 
 export interface DashboardIt {
-    window_days: number;
-    volume_days: number;
-    volume: VolumeDay[];
-    by_status: { open: number; in_progress: number; completed: number; canceled: number };
+    waiting: { count: number; oldest_days: number };
+    backlog: { open: number; in_progress: number; over_sla: number; delta_14d: number; series: number[] };
+    opened: SeriesFigure;
+    closed: SeriesFigure;
+    sla: { rate: number | null; measured: number; goal: number };
+    avg_resolve_hours: number | null;
+    volume: DailyCount[];
+    unassigned: number;
     workload: WorkloadRow[];
 }
 
-/** A request step that has sat with somebody past the reminder threshold. */
+/** A request step that has sat with somebody past the stalled threshold. */
 export interface WaitingRequestRow {
     id: number;
     reference: string;
@@ -76,23 +92,25 @@ export interface WaitingRequestRow {
 }
 
 export interface DashboardRequests {
-    window_days: number;
-    by_status: { pending: number; approved: number; rejected: number; completed: number; cancelled: number };
-    by_type: { type: string; count: number }[];
+    awaiting_it: { count: number; le7: number; d8_14: number; gt14: number };
+    filed: SeriesFigure;
+    pending: { count: number; oldest_days: number };
+    filed_30d: number;
+    completed_30d: number;
+    rejected_30d: number;
+    cancelled_30d: number;
+    avg_days_to_complete: number | null;
     waiting_after_days: number;
-    waiting_count: number;
+    waiting_total: number;
     waiting: WaitingRequestRow[];
+    by_type: { type: string; count: number }[];
 }
 
-export interface RecentHire {
-    id: number;
-    name: string;
-    position: string | null;
-    department: string | null;
-    joined_at: string | null;
+export interface DashboardContracts {
+    expiring: { total: number; d30: number; d31_plus: number; overdue: number };
 }
 
-export interface DepartmentHeadcount {
+export interface DepartmentCount {
     id: number;
     name: string;
     name_th: string | null;
@@ -100,9 +118,9 @@ export interface DepartmentHeadcount {
 }
 
 export interface DashboardHr {
-    kpi: { headcount: number; new_this_month: number; pending_onboarding: number; resigned_this_month: number };
-    recent_hires: RecentHire[];
-    headcount_by_department: DepartmentHeadcount[];
+    by_department: DepartmentCount[];
+    no_department: number;
+    headcount: number;
 }
 
 export interface ActivityRow {
@@ -113,16 +131,19 @@ export interface ActivityRow {
     at: string | null;
 }
 
-/**
- * Blocks the reader may not see are absent, not empty — the page draws what arrived, so
- * "you have no permission" and "there is nothing here" never look the same.
- */
+export interface DashboardActivity {
+    items: ActivityRow[];
+    today_count: number;
+}
+
+/** Blocks the reader may not see are absent, not empty. */
 export interface DashboardSummary {
     mine: DashboardMine;
     it?: DashboardIt;
     requests?: DashboardRequests;
+    contracts?: DashboardContracts;
     hr?: DashboardHr;
-    activity?: ActivityRow[];
+    activity?: DashboardActivity;
 }
 
 export const dashboardApi = {
