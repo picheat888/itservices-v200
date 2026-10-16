@@ -10,6 +10,10 @@ class SqlWriter
 {
     private const CHUNK = 1000;
 
+    private const COMMIT_EVERY = 20;
+
+    private int $chunks = 0;
+
     /** @var resource */
     private $handle;
 
@@ -29,7 +33,7 @@ class SqlWriter
         }
         $this->handle = fopen($path, 'wb');
         if ($this->isMariadb()) {
-            $this->raw("SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\nSET UNIQUE_CHECKS=0;\nSET autocommit=0;\n");
+            $this->raw("SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\nSET autocommit=0;\n");
         }
     }
 
@@ -97,6 +101,11 @@ class SqlWriter
         $cols = implode(',', array_map($this->ident(...), $this->columns[$table]));
         $this->raw("INSERT INTO {$this->ident($table)} ({$cols}) VALUES ".implode(",\n", $this->buffer[$table]).";\n");
         $this->buffer[$table] = [];
+
+        // Keep each transaction modest so the server's undo log stays small
+        if ($this->isMariadb() && ++$this->chunks % self::COMMIT_EVERY === 0) {
+            $this->raw("COMMIT;\n");
+        }
     }
 
     public function close(): void
@@ -105,7 +114,7 @@ class SqlWriter
             $this->flush($table);
         }
         if ($this->isMariadb()) {
-            $this->raw("COMMIT;\nSET FOREIGN_KEY_CHECKS=1;\nSET UNIQUE_CHECKS=1;\n");
+            $this->raw("COMMIT;\nSET FOREIGN_KEY_CHECKS=1;\n");
         }
         fclose($this->handle);
     }

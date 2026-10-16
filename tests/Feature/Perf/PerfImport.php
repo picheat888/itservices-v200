@@ -33,10 +33,10 @@ class PerfImport
     }
 
     /** @param list<class-string<PerfStep>> $steps */
-    public static function run(array $steps, float $scale = 0.1): array
+    public static function run(array $steps, float $scale = 0.1, int $seed = 1): array
     {
         $file = sys_get_temp_dir().DIRECTORY_SEPARATOR.'perf_'.uniqid().'.sql';
-        $ctx = self::context($file, $scale);
+        $ctx = self::context($file, $scale, $seed);
         foreach ($steps as $step) {
             (new $step)->run($ctx);
         }

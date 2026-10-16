@@ -184,6 +184,10 @@ class Tickets implements PerfStep
             } else {
                 $at = $takenAt->addMinutes($rng->int(30, 3 * 1440));
             }
+            // Cases older than a month are closed, however late
+            if ($at > $this->end && $created < $this->end->subDays(30)) {
+                $at = $takenAt->addSeconds(max(1800, (int) ($takenAt->diffInSeconds($this->end) * (0.3 + 0.7 * $rng->float()))));
+            }
             $resolvedAt = $at <= $this->end ? $at : null;
         }
         if ($resolvedAt !== null) {
