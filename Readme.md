@@ -40,7 +40,7 @@
 
 ### Frontend
 - **SPA bootstrap** — react-router + React Query + axios (`services/http.ts` มี `ensureCsrf`) + `ProtectedRoute` ตาม role
-- **Theme** — ฟอนต์ Manrope + JetBrains Mono, accent น้ำเงิน (slate enterprise), dark mode, density, radius scale
+- **Theme** — ฟอนต์ Noto Sans Thai ตัวเดียวทั้งแอป, accent น้ำเงิน (slate enterprise), dark mode, density, radius scale
 - **i18n EN/TH** (`lib/i18n.ts`) + ปุ่มสลับภาษาธงชาติ
 - **Zustand UI store** (`stores/ui.ts`) — dark / lang / density / radius / sidebar style / branding (persist)
 - **App Shell**
@@ -5522,7 +5522,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 
 ### ฟอนต์: ใช้ Noto Sans Thai ทั้งระบบ — 2026-10-15
 - `--font-sans` ใน `resources/css/app.css` เหลือ `'Noto Sans Thai'` ตัวเดียว (เดิม Manrope สำหรับอังกฤษ/ตัวเลข + Noto Sans Thai สำหรับไทย) Noto Sans Thai มีชุดอักษร latin / latin-ext ในตัว จึงใช้ฟอนต์เดียวได้ทั้งหน้า
-- โหลดฟอนต์ใน `app.blade.php` และหน้า error (`errors/layout.blade.php`) เป็น Noto Sans Thai 400–800 ไม่โหลด Manrope แล้ว (800 ใช้กับ `font-extrabold` 17 จุด) JetBrains Mono ยังโหลดไว้สำหรับรหัสในโมดูลอื่น
+- โหลดฟอนต์ใน `app.blade.php` และหน้า error (`errors/layout.blade.php`) เป็น Noto Sans Thai 400–800 ไม่โหลด Manrope แล้ว (800 ใช้กับ `font-extrabold` 17 จุด) JetBrains Mono ถูกถอดออกทั้งหมดเมื่อ 2026-10-16 (ดูหัวข้อ "ฟอนต์: ถอด JetBrains Mono")
 - หน้าตั้งค่าเลิกใช้ตัวพิมพ์ดีด 7 จุด (ช่อง SMTP host / ชื่อผู้ใช้ / อีเมลผู้ส่ง, Port และเลขผู้เสียภาษีเป็น `tabular-nums`, อีเมลในตารางซัพพลายเออร์, ตัวเลขจำนวนในข้อมูลคำขอ)
 - ตรวจใน Chrome: `document.fonts` โหลด Noto Sans Thai 400/500/600/700 ไม่มี Manrope; หน้าตั้งค่า (อีเมล, Ticket & SLA) และ Dashboard แสดงผลปกติ
 
@@ -5643,4 +5643,13 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ลิงก์ลึก `?dialog=profile&section=assets` ใช้โดยกระดิ่ง อีเมล การ์ดบน Dashboard และปุ่มอวาตาร์ใน sidebar (เอาเมนู "ทรัพย์สิน และการเข้าถึงของฉัน" ออกแล้ว)
 - `/assets/mine` เพิ่ม `handed_over_at` จากแถวล่าสุดของ handover trail
 - เพิ่ม lang namespace `lang/<locale>/profile.ts` และลบคีย์ `mya_*` / `my_assets_*` ที่ไม่มีใครอ่านออกจาก `asset.ts` ทั้งสองภาษา
+- การ์ด "รอคุณกดรับ" บน Dashboard เปลี่ยนเป็นแถบบรรทัดเดียว (mockup บอร์ด C): ตัวเลขจำนวนรายการ ประโยคบอกว่า IT ส่งมอบแล้วและกดรับเพื่ออะไร chip สรุปตามรุ่น (ประเภท + รุ่น + ×จำนวน จัดกลุ่มฝั่งหน้าเว็บด้วย `groupPendingAssets`) และปุ่ม "ไปกดรับที่โปรไฟล์ของฉัน" เปิด Drawer; payload `pending_acceptance` เพิ่ม `category` / `category_th`
 - `useDialogParam` รองรับ companion params และ `resolveNotificationTarget` เก็บ query ของหน้าเดิมไว้ให้ ไม่ทำ redirect จาก `/my-assets-access` เพราะยังเป็นช่วงก่อน go-live
+
+### ฟอนต์: ถอด JetBrains Mono ออกทั้งแอป — 2026-10-16
+- หน้าเว็บเหลือ Noto Sans Thai ตัวเดียว: เลิกโหลด JetBrains Mono จาก Google Fonts ใน `app.blade.php` ลบตัวแปร `--font-mono` และกฎ `.font-mono` ใน `app.css` และลบคลาส `font-mono` ออกจากคอมโพเนนต์ทั้งหมด (~550 จุด 138 ไฟล์) รวมถึง `font-sans` / `placeholder:font-sans` ที่มีไว้หนี mono
+- ตัวเลขของ Noto Sans Thai กว้างเท่ากันอยู่แล้ว (วัดใน Chrome: 0 กับ 1 กว้างเท่ากัน) จึงไม่ต้องใส่ `tabular-nums` แทน
+- เซลล์ตารางที่เดิมอาศัย CSS `table .font-mono { white-space: nowrap }` เปลี่ยนเป็นคลาส `whitespace-nowrap` ตรงจุด กฎกลางเหลือเฉพาะ `table th`
+- ถอด prop `mono` ที่เหลือหน้าที่แค่สลับฟอนต์/ลดขนาดตัวอักษร ออกจาก KV / ReviewRow / RailRow / IdChip / InfoCell / ReadOnlyField และถอด flag `mono` ของฟิลด์คำขอตลอดสาย (`RequestSchemas`, `RequestService::fieldsDisplay`, type `fields_display`, `OnboardingServiceField`) ค่าของทั้งสองฝั่งแสดงขนาดเดียวกับข้อความปกติแล้ว
+- `useDateColumnWidth` วัดความกว้างด้วย `text-xs` ธรรมดา และ `dateFieldClass` ไม่ใส่ mono แล้ว
+- PDF ยังใช้ Sarabun (DomPDF ต้องฝัง TTF) และอีเมลยังใช้ Segoe UI/Arial ตามเดิม

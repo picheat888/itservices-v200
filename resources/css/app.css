@@ -8,7 +8,6 @@
 
 @theme {
     --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
     --color-brand: var(--brand);
     --color-brand-foreground: var(--brand-foreground);
@@ -271,13 +270,7 @@
         -webkit-font-smoothing: antialiased;
     }
 
-    .font-mono {
-        font-family: var(--font-mono);
-        font-feature-settings: 'tnum';
-    }
-
-    /* Tables: codes and headings stay on one line; a narrow table scrolls in its frame */
-    table .font-mono,
+    /* Tables: headings stay on one line; a narrow table scrolls in its frame */
     table th {
         white-space: nowrap;
     }

@@ -14,11 +14,7 @@ function NextBillCell({ value }: { value: unknown }) {
     const t = useT();
     const fmt = useDateFormat();
     const date = str(value);
-    return date ? (
-        <span className="font-mono text-xs">{fmt.date(date)}</span>
-    ) : (
-        <span className="text-muted-foreground text-xs">{t('rep_cov_paid_up')}</span>
-    );
+    return date ? <span className="text-xs">{fmt.date(date)}</span> : <span className="text-muted-foreground text-xs">{t('rep_cov_paid_up')}</span>;
 }
 
 /** The end date, and under it the time left. */
@@ -27,7 +23,7 @@ function EndCell({ row }: { row: Row }) {
     const days = typeof row.days_left === 'number' ? row.days_left : null;
     return (
         <div>
-            <div className="font-mono text-xs">{fmt.date(str(row.end_date))}</div>
+            <div className="text-xs">{fmt.date(str(row.end_date))}</div>
             {days !== null && (
                 <div className="mt-0.5">
                     <ContractLeftPill days={days} inReminder={str(row.time_state) === 'reminder'} />

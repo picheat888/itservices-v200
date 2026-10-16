@@ -8,7 +8,7 @@ import type { CSSProperties } from 'react';
 /**
  * Shared header for the app's centered focus dialogs (contract View/Edit, access
  * Manage, …): a type-icon tile, an uppercase eyebrow, the title with an optional
- * mono code chip and title-suffix slot, an optional sub-line, an optional
+ * code chip and title-suffix slot, an optional sub-line, an optional
  * right-edge slot, and an sr-only description.
  *
  * The eyebrow is tracked-out capitals in English only: Thai has no case, and letter-spacing
@@ -102,7 +102,7 @@ export function FocusDialogHeader({
                     {code && (
                         <span
                             className={cn(
-                                'shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold',
+                                'shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold',
                                 accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : 'bg-brand/10 text-brand-ink',
                             )}
                             style={codeStyle}

@@ -100,7 +100,7 @@ export default function ReportsPage() {
                                             )}
                                         >
                                             {c.label}
-                                            <span className="font-mono opacity-70">{c.count}</span>
+                                            <span className="opacity-70">{c.count}</span>
                                         </button>
                                     ))}
                                 </div>

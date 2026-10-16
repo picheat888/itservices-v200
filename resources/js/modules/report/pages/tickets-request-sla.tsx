@@ -26,7 +26,7 @@ function SlaPill({ value }: { value: unknown }) {
 /** Hours to fix in one decimal ("73.0"), as the per-type table and the summary tiles print them. */
 function FixHours({ value }: { value: unknown }) {
     const lang = useUiStore((s) => s.lang);
-    return <span className="font-mono">{typeof value === 'number' ? oneDecimal(value, lang) : '—'}</span>;
+    return <span>{typeof value === 'number' ? oneDecimal(value, lang) : '—'}</span>;
 }
 
 type Label = { name?: string; name_th?: string | null } | null;

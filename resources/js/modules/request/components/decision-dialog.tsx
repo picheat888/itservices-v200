@@ -108,7 +108,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                             {step ?? requestTitle(ctx.request, t)}
                         </DialogDescription>
                     </div>
-                    <span className="text-muted-foreground shrink-0 font-mono text-xs">{ctx.request.reference}</span>
+                    <span className="text-muted-foreground shrink-0 text-xs">{ctx.request.reference}</span>
                 </div>
 
                 <div className="space-y-4">
@@ -138,9 +138,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                         <dl className="grid grid-cols-[minmax(96px,max-content)_1fr] gap-x-3 gap-y-1.5">
                             {ctx.request.fields_display.map((row) => (
                                 <SlipRow key={row.key} label={lang === 'th' ? row.label_th : row.label_en}>
-                                    <span className={cn(row.mono && 'font-mono text-xs')}>
-                                        {lang === 'th' ? row.value_th || row.value : row.value}
-                                    </span>
+                                    <span>{lang === 'th' ? row.value_th || row.value : row.value}</span>
                                 </SlipRow>
                             ))}
                             <SlipRow label={t('req_requester')}>{ctx.request.requester.name}</SlipRow>

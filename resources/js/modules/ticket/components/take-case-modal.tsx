@@ -175,7 +175,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                                                                 : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
                                                         )}
                                                     >
-                                                        <span className="font-mono">{a.asset_code}</span>
+                                                        <span>{a.asset_code}</span>
                                                         <span>{a.model ?? '—'}</span>
                                                     </button>
                                                 );

@@ -17,7 +17,7 @@ export function ContractCode({ id, code }: { id: number; code: string }) {
             {code}
         </Link>
     ) : (
-        <span className="font-mono text-xs font-semibold" translate="no">
+        <span className="text-xs font-semibold" translate="no">
             {code}
         </span>
     );

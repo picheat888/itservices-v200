@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 export interface SearchOption {
     value: string;
     label: string;
-    /** Right-aligned monospace tag (e.g. a code or on-hand qty). */
+    /** Right-aligned tag (e.g. a code or on-hand qty). */
     sub?: string;
     /** Optional small pill shown before the sub (e.g. a department tag). */
     tag?: string;
@@ -327,7 +327,7 @@ export function SearchableSelect({
                                 {o.tag}
                             </span>
                         )}
-                        {o.sub && <span className="text-muted-foreground shrink-0 font-mono text-xs">{o.sub}</span>}
+                        {o.sub && <span className="text-muted-foreground shrink-0 text-xs">{o.sub}</span>}
                     </button>
                 ))}
             </div>
@@ -374,7 +374,7 @@ export function SearchableSelect({
                     <span title={selected?.label} className={cn('min-w-0 truncate', !selected && 'text-muted-foreground')}>
                         {selected ? selected.label : (placeholder ?? t('select_placeholder'))}
                     </span>
-                    {selected?.sub && <span className="text-muted-foreground shrink-0 font-mono text-xs">{selected.sub}</span>}
+                    {selected?.sub && <span className="text-muted-foreground shrink-0 text-xs">{selected.sub}</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
                     {/* Room for the clear button, which sits over the trigger as its own control */}

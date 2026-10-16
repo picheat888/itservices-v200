@@ -40,7 +40,7 @@ const PERIOD_TONES: Record<Period, ChartTone> = { expired: 'soft-red', within: '
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
-const NUM = 'text-right font-mono tabular-nums';
+const NUM = 'text-right tabular-nums';
 
 const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
 
@@ -77,7 +77,7 @@ function Legend({ pieces, counts }: { pieces: Omit<BarPiece, 'value'>[]; counts?
             {pieces.map((p) => (
                 <Swatch key={p.key} fill={FILL[p.tone]}>
                     {p.label}
-                    {counts && <b className="text-foreground font-mono font-semibold tabular-nums">{count(counts[p.key] ?? 0, lang)}</b>}
+                    {counts && <b className="text-foreground font-semibold tabular-nums">{count(counts[p.key] ?? 0, lang)}</b>}
                 </Swatch>
             ))}
         </span>
@@ -122,7 +122,7 @@ export function WarrantyStateSegments({ filters, patch }: { filters: TabularFilt
                     )}
                 >
                     {t(s.label)}
-                    {data && <span className="font-mono">{count(data.category_totals?.periods[s.period] ?? 0, lang)}</span>}
+                    {data && <span>{count(data.category_totals?.periods[s.period] ?? 0, lang)}</span>}
                 </button>
             ))}
         </div>
@@ -191,7 +191,7 @@ function MonthCard({ months }: { months: Month[] }) {
                                 {ticks.map((v) => (
                                     <span
                                         key={v}
-                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        className="text-muted-foreground absolute right-0 translate-y-1/2 text-[10.5px] leading-none tabular-nums"
                                         style={at(v)}
                                     >
                                         {count(v, lang)}
@@ -233,7 +233,7 @@ function MonthCard({ months }: { months: Month[] }) {
                                                 {m.total > 0 && (
                                                     <span
                                                         className={cn(
-                                                            'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                            'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                             m.month === thisMonth && 'text-brand',
                                                         )}
                                                     >
@@ -288,12 +288,12 @@ function MonthDetail({ month, used }: { month: Month; used: typeof STATUSES }) {
                 .map((s) => (
                     <div key={s.key} className="flex items-center justify-between gap-4">
                         <Swatch fill={FILL[s.tone]}>{t(s.label_key)}</Swatch>
-                        <b className="font-mono tabular-nums">{count(month.statuses[s.key], lang)}</b>
+                        <b className="tabular-nums">{count(month.statuses[s.key], lang)}</b>
                     </div>
                 ))}
             <div className="border-border flex items-center justify-between gap-4 border-t pt-1">
                 <span>{t('rep_wty_month_total')}</span>
-                <b className="font-mono tabular-nums">{count(month.total, lang)}</b>
+                <b className="tabular-nums">{count(month.total, lang)}</b>
             </div>
         </div>
     );
@@ -346,7 +346,7 @@ function TimeLeftCard({ bands }: { bands: AssetWarrantyBreakdown['bands'] }) {
                                     {t(`rep_wty_band_${b.key}`)}
                                 </span>
                                 <CountBar pieces={statusPieces(t, b.statuses, used)} scale={max} />
-                                <b className="min-w-8 text-right font-mono font-semibold tabular-nums">{count(b.total, lang)}</b>
+                                <b className="min-w-8 text-right font-semibold tabular-nums">{count(b.total, lang)}</b>
                             </li>
                         ))}
                     </ul>
@@ -393,7 +393,7 @@ function NearestCell({ row, within, onMore }: { row: WarrantyGroupFigures; withi
                         {row.nearest.code}
                     </Link>
                 ) : (
-                    <span className="font-mono text-xs font-semibold" translate="no">
+                    <span className="text-xs font-semibold" translate="no">
                         {row.nearest.code}
                     </span>
                 )}

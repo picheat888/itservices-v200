@@ -204,7 +204,7 @@ export function ProductKeySection({
                             placeholder={t('access_ph_product_key')}
                             aria-label={t('access_key_title')}
                             autoComplete="off"
-                            className="pr-11 font-mono tracking-wider"
+                            className="pr-11 tracking-wider"
                         />
                         <button
                             type="button"

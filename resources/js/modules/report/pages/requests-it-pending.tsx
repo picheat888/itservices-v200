@@ -77,7 +77,7 @@ function TicketCell({ row }: { row: Row }) {
                     {number}
                 </Link>
             ) : (
-                <span className="font-mono text-xs" translate="no">
+                <span className="text-xs" translate="no">
                     {number}
                 </span>
             )}

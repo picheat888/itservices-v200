@@ -91,15 +91,12 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                             max={available || undefined}
                             value={qtyInput}
                             onChange={(e) => setQtyInput(e.target.value)}
-                            className="font-mono"
                             aria-invalid={over}
                         />
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                             <span className="text-muted-foreground">
                                 {t('stock_available')}:{' '}
-                                <b className={cn('font-mono', available > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive')}>
-                                    {available}
-                                </b>{' '}
+                                <b className={cn(available > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive')}>{available}</b>{' '}
                                 {selected?.unit}
                             </span>
                             {over && (

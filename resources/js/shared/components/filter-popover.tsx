@@ -205,7 +205,7 @@ export function FilterPopover({
                                 {label ?? t('filters')}
                             </span>
                             {count > 0 && (
-                                <span className="bg-brand/10 text-brand flex h-5 min-w-5 items-center justify-center rounded-full px-1 font-mono text-[11px] font-bold">
+                                <span className="bg-brand/10 text-brand flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
                                     {count}
                                 </span>
                             )}
@@ -227,7 +227,7 @@ export function FilterPopover({
                         {resultCount !== undefined && (
                             <div className="border-border/60 flex items-center gap-2 border-t px-3.5 py-2.5">
                                 <span role="status" aria-live="polite" className="text-muted-foreground text-xs">
-                                    {t('filter_found')} <span className="text-foreground font-mono text-[13px] font-bold">{resultCount}</span>{' '}
+                                    {t('filter_found')} <span className="text-foreground text-[13px] font-bold">{resultCount}</span>{' '}
                                     {t('filter_items')}
                                 </span>
                                 <button

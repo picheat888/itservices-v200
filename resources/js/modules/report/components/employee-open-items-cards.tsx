@@ -40,7 +40,7 @@ function rich(template: string, values: Record<string, React.ReactNode>) {
     return template.split(/(\{\w+\})/).map((part, i) => {
         const slot = /^\{(\w+)\}$/.exec(part);
         return slot ? (
-            <b key={i} className="text-foreground font-mono tabular-nums">
+            <b key={i} className="text-foreground tabular-nums">
                 {values[slot[1]]}
             </b>
         ) : (
@@ -80,9 +80,9 @@ function Key({ title, label, line, split = line }: { title: string; label: strin
                                 <KeyDot fill={p.fill} />
                                 {p.label}
                             </span>
-                            <b className={cn('font-mono tabular-nums', p.n === 0 && 'text-muted-foreground font-normal')}>
+                            <b className={cn('tabular-nums', p.n === 0 && 'text-muted-foreground font-normal')}>
                                 {count(p.n, lang)}
-                                {p.unit && <span className="font-sans font-normal"> {p.unit}</span>}
+                                {p.unit && <span className="font-normal"> {p.unit}</span>}
                             </b>
                         </div>
                     ))}
@@ -93,7 +93,7 @@ function Key({ title, label, line, split = line }: { title: string; label: strin
                 <span key={p.key} className="flex min-w-0 items-center gap-1">
                     <KeyDot fill={p.fill} />
                     <span className="truncate">{p.short}</span>
-                    <b className="text-foreground shrink-0 font-mono font-semibold tabular-nums">{count(p.n, lang)}</b>
+                    <b className="text-foreground shrink-0 font-semibold tabular-nums">{count(p.n, lang)}</b>
                 </span>
             ))}
         </InfoPopover>

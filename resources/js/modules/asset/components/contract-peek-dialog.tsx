@@ -32,11 +32,11 @@ const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = 
 type TabId = 'overview' | 'assets';
 
 /** A single label/value pair in the Overview grids. */
-function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function KV({ label, value }: { label: string; value: React.ReactNode }) {
     return (
         <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">{label}</div>
-            <div className={mono ? 'font-mono text-sm' : 'text-sm'}>{value || '—'}</div>
+            <div className="text-sm">{value || '—'}</div>
         </div>
     );
 }
@@ -138,10 +138,10 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         );
 
     const assetColumns: Column<ContractLinkedAsset>[] = [
-        { key: 'asset_code', header: 'Asset ID', render: (a) => <span className="font-mono text-xs">{a.asset_code}</span> },
+        { key: 'asset_code', header: 'Asset ID', render: (a) => <span className="text-xs">{a.asset_code}</span> },
         { key: 'name', header: lang === 'th' ? 'ชื่อ' : 'Name', render: (a) => <span className="font-medium">{a.name}</span> },
         { key: 'type', header: lang === 'th' ? 'ประเภท' : 'Type', render: (a) => a.type ?? '—' },
-        { key: 'serial', header: 'Serial', render: (a) => <span className="font-mono text-xs">{a.serial ?? '—'}</span> },
+        { key: 'serial', header: 'Serial', render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
         { key: 'owner', header: lang === 'th' ? 'เจ้าของ' : 'Owner', render: (a) => a.owner ?? '—' },
         {
             key: 'status',
@@ -170,9 +170,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                         <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                             <span className="truncate">{c ? c.name || c.details || '—' : '—'}</span>
                             {c?.code && (
-                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
-                                    {c.code}
-                                </span>
+                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">{c.code}</span>
                             )}
                             {c && (
                                 <span className="bg-accent text-muted-foreground shrink-0 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
@@ -216,7 +214,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                     <div className="sm:col-span-3">
                                         <KV label={t('contract_type')} value={t(`contract_type_${c.type}`)} />
                                     </div>
-                                    <KV label={t('contract_code')} value={c.code} mono />
+                                    <KV label={t('contract_code')} value={c.code} />
                                     <KV label={t('contract_vendor')} value={c.vendor} />
                                     <KV label={t('contract_name')} value={c.name} />
                                     <div className="sm:col-span-3">
@@ -235,8 +233,8 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                             <div>
                                 <SectionLabel>{t('contract_section_term')}</SectionLabel>
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                    <KV label={t('contract_start')} value={fmt.date(c.start)} mono />
-                                    <KV label={t('contract_end')} value={fmt.date(c.end)} mono />
+                                    <KV label={t('contract_start')} value={fmt.date(c.start)} />
+                                    <KV label={t('contract_end')} value={fmt.date(c.end)} />
                                     <KV
                                         label={t('contract_duration')}
                                         value={(() => {
@@ -249,8 +247,8 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                         })()}
                                     />
                                     <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
-                                    <KV label={t('contract_value_per_cycle')} value={c.value_display} mono />
-                                    <KV label={t('contract_total_value')} value={c.total_value_display || '—'} mono />
+                                    <KV label={t('contract_value_per_cycle')} value={c.value_display} />
+                                    <KV label={t('contract_total_value')} value={c.total_value_display || '—'} />
                                 </div>
                             </div>
 
@@ -259,11 +257,9 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                 <div>
                                     <SectionLabel>{t('contract_section_closure')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                        {cancelled && c.cancelled_at && (
-                                            <KV label={t('contract_cancelled_on')} value={fmt.date(c.cancelled_at)} mono />
-                                        )}
+                                        {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={fmt.date(c.cancelled_at)} />}
                                         {c.status === 'expired' && c.expired_at && (
-                                            <KV label={t('contract_expired_on')} value={fmt.date(c.expired_at)} mono />
+                                            <KV label={t('contract_expired_on')} value={fmt.date(c.expired_at)} />
                                         )}
                                         {cancelled && c.cancel_reason && (
                                             <div className="sm:col-span-3">

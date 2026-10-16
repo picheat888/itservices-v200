@@ -107,7 +107,7 @@ function TypeSplit({ m, used, mode }: { m: MonthFigures; used: ContractTypeKey[]
                 <div key={k} className="flex items-center justify-between gap-4">
                     <Swatch fill={FILL[CONTRACT_TYPE_TONE[k]]}>{t(`contract_type_${k}`)}</Swatch>
                     <span className="whitespace-nowrap">
-                        <b className="font-mono font-bold tabular-nums">
+                        <b className="font-bold tabular-nums">
                             {mode === 'money' ? contractMoney(m.by[k], lang) : t('rep_cmc_contracts').replace('{n}', count(m.contracts[k], lang))}
                         </b>
                         {mode === 'money' && (
@@ -150,14 +150,14 @@ function MonthList({
             {shown.map((item) => (
                 <div key={`${item.id}-${item.date}`} className="flex items-start justify-between gap-4">
                     <span className="min-w-0">
-                        <span className="block font-mono text-[11.5px] font-semibold" translate="no">
+                        <span className="block text-[11.5px] font-semibold" translate="no">
                             {item.code}
                         </span>
                         <small className="text-muted-foreground block max-w-52 truncate text-xs" title={item.name}>
                             {item.name}
                         </small>
                     </span>
-                    <b className="font-mono font-bold whitespace-nowrap tabular-nums">{rowValue(item)}</b>
+                    <b className="font-bold whitespace-nowrap tabular-nums">{rowValue(item)}</b>
                 </div>
             ))}
             {rows.length > shown.length && (
@@ -243,7 +243,7 @@ export function ContractMonthCard({ title, info, months, mode, rowValue, monthFo
                                 {[0, top / 2, top].map((v) => (
                                     <span
                                         key={v}
-                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        className="text-muted-foreground absolute right-0 translate-y-1/2 text-[10.5px] leading-none tabular-nums"
                                         style={at(v)}
                                     >
                                         {axis(v)}
@@ -303,7 +303,7 @@ export function ContractMonthCard({ title, info, months, mode, rowValue, monthFo
                                                         {m.total > 0 && (
                                                             <span
                                                                 className={cn(
-                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[10.5px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center text-[10.5px] font-semibold whitespace-nowrap tabular-nums',
                                                                     current && 'text-brand-ink',
                                                                 )}
                                                             >

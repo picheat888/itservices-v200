@@ -146,7 +146,7 @@ export function BacklogSlaSegments({ filters, patch }: { filters: TabularFilters
                     )}
                 >
                     {t(s.label)}
-                    <span className="font-mono opacity-80">{count(s.value)}</span>
+                    <span>{count(s.value)}</span>
                 </button>
             ))}
         </div>
@@ -162,7 +162,7 @@ function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
         <>
             <i className={cn('mt-1 h-2 w-2 shrink-0 rounded-full', (ticket.priority && PRIORITY_DOT[ticket.priority]) || NO_PRIORITY_DOT)} />
             <span className="min-w-0">
-                <span className="text-muted-foreground block font-mono text-xs">{ticket.ticket_no}</span>
+                <span className="text-muted-foreground block text-xs">{ticket.ticket_no}</span>
                 <span className="block truncate text-xs font-semibold">{ticket.subject}</span>
                 <span
                     className={cn(
@@ -240,7 +240,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                 <div className="flex min-w-0 flex-col gap-2 pt-7">
                                     <div className={cn('flex items-baseline justify-between gap-1.5 border-b-2 pb-1.5', lane.tone)}>
                                         <span className="text-muted-foreground text-xs font-semibold">{t(lane.label)}</span>
-                                        <b className={cn('font-mono text-lg', lane.count)}>{items.length}</b>
+                                        <b className={cn('text-lg', lane.count)}>{items.length}</b>
                                     </div>
                                     {items.length === 0 ? (
                                         <span className="text-muted-foreground py-2 text-xs">{t('rep_bl_none')}</span>
@@ -364,7 +364,7 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
                 <span className={cn('min-w-0 truncate', apart && 'font-semibold text-amber-600 dark:text-amber-400')}>{label}</span>
                 {/* Each part's count over it, as "ค้างตามหมวด"; the length against whoever holds the most. */}
                 <StackBar values={{ over_sla: r.over_sla, due_soon: r.due_soon, on_track: r.on_track }} series={OWNER_SERIES} scale={max} />
-                <span className="text-right font-mono font-semibold">{r.n}</span>
+                <span className="text-right font-semibold">{r.n}</span>
             </FilterRow>
         );
     };
@@ -463,7 +463,7 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
                                     the bar's length against the largest category. */}
                                 <StackBar values={{ over_sla: r.over_sla, not_over_sla: r.n - r.over_sla }} series={CATEGORY_SERIES} scale={max} />
                                 {/* Same size and weight as the totals of "ค้างอยู่กับใคร" beside it. */}
-                                <span className="text-right font-mono font-semibold">{r.n}</span>
+                                <span className="text-right font-semibold">{r.n}</span>
                             </FilterRow>
                         );
                     })}

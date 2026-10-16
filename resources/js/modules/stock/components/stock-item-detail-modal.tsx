@@ -53,7 +53,7 @@ function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: Re
     return (
         <div className="px-4 py-3">
             <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">{label}</div>
-            <div className="mt-0.5 font-mono text-xl leading-tight font-bold tabular-nums">{value}</div>
+            <div className="mt-0.5 text-xl leading-tight font-bold tabular-nums">{value}</div>
             {sub != null && <div className="text-muted-foreground mt-0.5 text-[11px]">{sub}</div>}
         </div>
     );
@@ -64,7 +64,7 @@ function SectionLabel({ children, right }: { children: ReactNode; right?: ReactN
     return (
         <div className="mb-2 flex items-center justify-between">
             <span className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">{children}</span>
-            {right != null && <span className="font-mono text-xs">{right}</span>}
+            {right != null && <span className="text-xs">{right}</span>}
         </div>
     );
 }
@@ -85,7 +85,7 @@ function Pager({
 }) {
     return (
         <div className="border-border bg-muted/20 flex items-center justify-between border-t px-3 py-2">
-            <span className="text-muted-foreground font-mono text-[11px]">
+            <span className="text-muted-foreground text-[11px]">
                 {page * perPage + 1}–{Math.min((page + 1) * perPage, total)} / {total}
             </span>
             <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ function Pager({
                 >
                     <ChevronLeft className="h-4 w-4" />
                 </button>
-                <span className="font-mono text-xs tabular-nums">
+                <span className="text-xs tabular-nums">
                     {page + 1}/{pageCount}
                 </span>
                 <button
@@ -207,9 +207,7 @@ export function StockItemDetailModal({
                                 </div>
                                 <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                                     <span className="truncate">{item.name}</span>
-                                    <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
-                                        {item.sku}
-                                    </span>
+                                    <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">{item.sku}</span>
                                     <span
                                         className={cn(
                                             'inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold',
@@ -293,13 +291,13 @@ export function StockItemDetailModal({
                                         </Meta>
                                         <Meta label={lang === 'th' ? 'หน่วย' : 'Unit'}>{item.unit}</Meta>
                                         <Meta label="Min / Max">
-                                            <span className="font-mono">
+                                            <span>
                                                 {item.min_stock} / {item.max_stock}
                                             </span>
                                         </Meta>
                                         <Meta label={t('stock_warranty')}>{item.warranty ?? '—'}</Meta>
                                         <Meta label={lang === 'th' ? 'เคลื่อนไหวล่าสุด' : 'Last move'}>
-                                            <span className="font-mono">{fmt.date(item.last_move_at)}</span>
+                                            <span>{fmt.date(item.last_move_at)}</span>
                                         </Meta>
                                     </div>
 
@@ -313,7 +311,7 @@ export function StockItemDetailModal({
                                                             <Warehouse className="h-3 w-3 shrink-0" />
                                                             <span className="truncate">{b.warehouse}</span>
                                                         </div>
-                                                        <div className="mt-1 font-mono text-lg leading-none font-bold tabular-nums">
+                                                        <div className="mt-1 text-lg leading-none font-bold tabular-nums">
                                                             {b.qty}
                                                             <span className="text-muted-foreground ml-1 text-xs font-normal">{item.unit}</span>
                                                         </div>
@@ -358,7 +356,7 @@ export function StockItemDetailModal({
                                                                         expanded ? 'bg-accent/30 border-transparent' : 'border-border/60',
                                                                     )}
                                                                 >
-                                                                    <td className="px-3 py-1.5 font-mono text-xs">
+                                                                    <td className="px-3 py-1.5 text-xs whitespace-nowrap">
                                                                         <span className="inline-flex items-center gap-1.5">
                                                                             <ChevronDown
                                                                                 className={cn(
@@ -369,17 +367,17 @@ export function StockItemDetailModal({
                                                                             {l.doc_no ?? '—'}
                                                                         </span>
                                                                     </td>
-                                                                    <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                                    <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap">
                                                                         {fmt.date(l.received_at)}
                                                                     </td>
-                                                                    <td className="px-3 py-1.5 text-right font-mono text-xs">
+                                                                    <td className="px-3 py-1.5 text-right text-xs whitespace-nowrap">
                                                                         {format(l.unit_cost)}
                                                                     </td>
-                                                                    <td className="px-3 py-1.5 text-right font-mono">
+                                                                    <td className="px-3 py-1.5 text-right whitespace-nowrap">
                                                                         {l.qty_remaining}
                                                                         <span className="text-muted-foreground">/{l.qty_received}</span>
                                                                     </td>
-                                                                    <td className="px-3 py-1.5 text-right font-mono font-semibold">
+                                                                    <td className="px-3 py-1.5 text-right font-semibold whitespace-nowrap">
                                                                         {format(l.value)}
                                                                     </td>
                                                                 </tr>
@@ -395,7 +393,7 @@ export function StockItemDetailModal({
                                                                                     {fmt.date(l.received_at)}
                                                                                 </Meta>
                                                                                 <Meta label={t('stock_qty')}>
-                                                                                    <span className="font-mono">
+                                                                                    <span>
                                                                                         {l.qty_remaining}/{l.qty_received}
                                                                                     </span>
                                                                                 </Meta>
@@ -455,17 +453,17 @@ export function StockItemDetailModal({
                                                 <tbody>
                                                     {pagedSerials.map((s, i) => (
                                                         <tr key={s.id} className="border-border/60 border-b last:border-0">
-                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                            <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap">
                                                                 {serialPage * SERIALS_PER_PAGE + i + 1}
                                                             </td>
-                                                            <td className="px-3 py-1.5 font-mono">{s.serial}</td>
+                                                            <td className="px-3 py-1.5 whitespace-nowrap">{s.serial}</td>
                                                             <td className="px-3 py-1.5">
                                                                 <StatusBadge tone={SN_TONE[s.status]}>
                                                                     {t(`stock_sn_${s.status}` as Parameters<typeof t>[0])}
                                                                 </StatusBadge>
                                                             </td>
                                                             <td className="px-3 py-1.5">{s.warehouse ?? '—'}</td>
-                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                            <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap">
                                                                 {fmt.date(s.received_at)}
                                                             </td>
                                                         </tr>

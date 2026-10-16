@@ -21,7 +21,7 @@ export function BacklogAging({ aging }: { aging: TicketOverviewSummary['backlog'
         <div className="grid grid-cols-2 gap-2 px-5 pt-3.5 pb-4 sm:grid-cols-4">
             {BUCKETS.map((b) => (
                 <div key={b.key} className="flex min-w-0 flex-col items-center gap-1.5">
-                    <b className={cn('w-full rounded-lg py-2.5 text-center font-mono text-xl leading-tight', b.tone)}>{aging[b.key]}</b>
+                    <b className={cn('w-full rounded-lg py-2.5 text-center text-xl leading-tight', b.tone)}>{aging[b.key]}</b>
                     <span className="text-muted-foreground w-full truncate text-center text-xs" title={t(b.label)}>
                         {t(b.label)}
                     </span>

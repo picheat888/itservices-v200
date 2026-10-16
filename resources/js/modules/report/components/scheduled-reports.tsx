@@ -92,7 +92,7 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                     !item.active && 'opacity-50',
                 )}
             >
-                <span className="font-mono text-[10px] leading-none font-bold uppercase">{item.format}</span>
+                <span className="text-[10px] leading-none font-bold uppercase">{item.format}</span>
                 <Clock className="text-muted-foreground h-3 w-3" />
             </span>
 

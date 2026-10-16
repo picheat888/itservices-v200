@@ -163,7 +163,7 @@ function AgeCard({ data, cardRef, heldHeight }: { data: ItPendingBreakdown; card
                 <section aria-labelledby="rqi-age-now" className={SECTION}>
                     <h3 id="rqi-age-now" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
                         {t('rep_rqi_age_now')}
-                        <b className="font-mono">{t('rep_rqi_n').replace('{n}', f.number(waiting.total))}</b>
+                        <b>{t('rep_rqi_n').replace('{n}', f.number(waiting.total))}</b>
                         {waiting.avg_days !== null && (
                             <span className="text-muted-foreground text-xs font-normal">
                                 {t('rep_rqi_avg').replace('{n}', f.decimal(waiting.avg_days))}
@@ -180,7 +180,7 @@ function AgeCard({ data, cardRef, heldHeight }: { data: ItPendingBreakdown; card
                     <div>
                         <h3 id="rqi-age-done" className="flex flex-wrap items-baseline gap-x-2.5 text-sm font-semibold">
                             {t('rep_rqi_age_done')}
-                            <b className="font-mono">{t('rep_rqi_n').replace('{n}', f.number(delivered.total))}</b>
+                            <b>{t('rep_rqi_n').replace('{n}', f.number(delivered.total))}</b>
                         </h3>
                         <p className="text-muted-foreground text-xs">
                             {(delivered.avg_days !== null ? t('rep_rqi_done_avg').replace('{n}', f.decimal(delivered.avg_days)) + ' ' : '') +
@@ -207,9 +207,7 @@ function BucketFace({ band, count }: { band: (typeof BANDS)[number]; count: numb
     const f = useFormat();
     return (
         <>
-            <b className={cn('font-mono text-xl leading-tight font-bold', count === 0 ? 'text-muted-foreground font-medium' : band.ink)}>
-                {f.number(count)}
-            </b>
+            <b className={cn('text-xl leading-tight font-bold', count === 0 ? 'text-muted-foreground font-medium' : band.ink)}>{f.number(count)}</b>
             <span className="text-muted-foreground max-w-full truncate text-xs">{t(band.label)}</span>
         </>
     );
@@ -245,7 +243,7 @@ function WaitingBucket({ band, figures }: { band: (typeof BANDS)[number]; figure
                     {rows.map(([key, n]) => (
                         <div key={key} className={cn('flex items-center justify-between gap-4', n === 0 && 'text-muted-foreground')}>
                             <span>{t(key)}</span>
-                            <b className={cn('font-mono', n === 0 ? 'font-normal' : 'font-semibold')}>{f.number(n)}</b>
+                            <b className={cn(n === 0 ? 'font-normal' : 'font-semibold')}>{f.number(n)}</b>
                         </div>
                     ))}
                 </div>
@@ -307,7 +305,7 @@ function GroupRow({
                 </span>
             </span>
             {total > 0 ? <StackBar values={values} series={SERIES} scale={scale} /> : <span className="text-muted-foreground">—</span>}
-            <b className="text-right font-mono font-semibold">{f.number(total)}</b>
+            <b className="text-right font-semibold">{f.number(total)}</b>
         </button>
     );
 }
@@ -458,7 +456,7 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {legend.map(([key, label, n]) => (
                             <Swatch key={key} fill={VERDICT_FILL[key]}>
-                                {t(label)} <b className="text-foreground font-mono font-semibold">{f.number(n)}</b>
+                                {t(label)} <b className="text-foreground font-semibold">{f.number(n)}</b>
                             </Swatch>
                         ))}
                     </span>
@@ -601,9 +599,7 @@ function RequestState({ joiner, request, left }: { joiner: ItPendingJoiner; requ
             {request.reference}
         </Link>
     ) : (
-        <span className="font-mono" translate="no">
-            {request.reference}
-        </span>
+        <span translate="no">{request.reference}</span>
     );
 
     let pill: React.ReactNode;

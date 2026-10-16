@@ -135,7 +135,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 
                             <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
                                 <ReadOnlyField label={t('resign_f_name')} value={name} />
-                                <ReadOnlyField label={t('resign_f_code')} value={shown?.code ?? null} mono />
+                                <ReadOnlyField label={t('resign_f_code')} value={shown?.code ?? null} />
                                 <ReadOnlyField label={t('position')} value={shown?.position ?? null} />
                                 <ReadOnlyField label={t('department')} value={department} />
                             </dl>
@@ -230,11 +230,11 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 }
 
 /** A label with a value the resignation cannot change — who this decision is about. */
-function ReadOnlyField({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
+function ReadOnlyField({ label, value }: { label: string; value: string | null }) {
     return (
         <div className="min-w-0">
             <dt className="text-muted-foreground text-sm leading-none font-medium">{label}</dt>
-            <dd className={cn('mt-1.5 truncate text-[15px] font-semibold', mono && 'font-mono text-sm')}>{value || '—'}</dd>
+            <dd className={'mt-1.5 truncate text-[15px] font-semibold'}>{value || '—'}</dd>
         </div>
     );
 }
@@ -314,7 +314,7 @@ function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHel
                         <div className="min-w-0 flex-1">
                             <div className="flex items-baseline gap-2">
                                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{a.model ?? a.asset_code}</span>
-                                <span className="text-muted-foreground shrink-0 font-mono text-xs">{a.serial ?? a.asset_code}</span>
+                                <span className="text-muted-foreground shrink-0 text-xs">{a.serial ?? a.asset_code}</span>
                             </div>
                             <div className="mt-0.5 flex items-center gap-2">
                                 <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1.5 text-xs">

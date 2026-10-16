@@ -49,7 +49,7 @@ export function StatCard({
                 </>
             ) : (
                 <>
-                    <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
+                    <div className="mt-2 text-3xl font-bold">{value}</div>
                     {sub !== undefined && <div className="text-muted-foreground mt-1 truncate text-xs">{sub}</div>}
                 </>
             )}

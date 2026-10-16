@@ -210,7 +210,7 @@ export default function RequestsPage() {
         {
             key: 'reference',
             header: 'ID',
-            render: (r) => <span className="font-mono text-xs font-semibold">{r.reference}</span>,
+            render: (r) => <span className="text-xs font-semibold">{r.reference}</span>,
         },
         {
             key: 'title',
@@ -502,7 +502,7 @@ export default function RequestsPage() {
                                         )}
                                     >
                                         {label}
-                                        {count != null && count > 0 && <span className="ml-1.5 font-mono">{count}</span>}
+                                        {count != null && count > 0 && <span className="ml-1.5">{count}</span>}
                                     </button>
                                 ))}
                             </div>
@@ -618,9 +618,7 @@ function DashCard({
                 <Icon className="text-muted-foreground h-4 w-4" />
                 <h2 className="text-sm font-semibold">{title}</h2>
                 {count != null && (
-                    <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-1.5 py-0.5 font-mono text-[11px]">
-                        {count}
-                    </span>
+                    <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-1.5 py-0.5 text-[11px]">{count}</span>
                 )}
                 {action}
             </div>

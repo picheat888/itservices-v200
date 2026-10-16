@@ -28,11 +28,11 @@ function ListLine({ row }: { row: List['rows'][number] }) {
         <div className="grid gap-x-4 gap-y-0.5 px-5 py-2.5 text-sm lg:grid-cols-[9rem_10rem_minmax(0,1fr)_10rem_minmax(0,1.4fr)] lg:items-baseline">
             <DateTimeCell value={row.at} className="text-muted-foreground" />
             {canOpen(href) ? (
-                <Link to={href} className="text-brand font-mono font-medium hover:underline">
+                <Link to={href} className="text-brand font-medium hover:underline">
                     {row.code}
                 </Link>
             ) : (
-                <span className="font-mono font-medium">{row.code}</span>
+                <span className="font-medium">{row.code}</span>
             )}
             {/* Category, then the model spaced after it. */}
             <span className="truncate">

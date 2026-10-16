@@ -172,7 +172,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                     {opts?.entity && (
                         <div className="bg-muted/50 rounded-lg border px-3.5 py-2.5">
                             <p className="text-foreground truncate text-sm font-medium">{opts.entity.name}</p>
-                            {opts.entity.sub && <p className="text-muted-foreground mt-0.5 truncate font-mono text-xs">{opts.entity.sub}</p>}
+                            {opts.entity.sub && <p className="text-muted-foreground mt-0.5 truncate text-xs">{opts.entity.sub}</p>}
                         </div>
                     )}
 

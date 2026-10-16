@@ -229,7 +229,7 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                             <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
                                 <span>{t('notification_variables')}:</span>
                                 {placeholdersIn(bell.message_en).map((token) => (
-                                    <code key={token} className="bg-accent text-foreground rounded px-1.5 py-0.5 font-mono text-xs">
+                                    <code key={token} className="bg-accent text-foreground rounded px-1.5 py-0.5 text-xs">
                                         {token}
                                     </code>
                                 ))}

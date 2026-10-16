@@ -113,7 +113,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                 ) : isCompletion ? (
                     <Flag className="h-3 w-3" />
                 ) : (
-                    <span className="font-mono text-[11px] font-bold">{row.position}</span>
+                    <span className="text-[11px] font-bold">{row.position}</span>
                 ),
             // An untaken group step names its people, or its department and positions
             title: isCompletion

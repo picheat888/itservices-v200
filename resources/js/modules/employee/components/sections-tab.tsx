@@ -96,7 +96,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     };
 
     const columns: Column<Section>[] = [
-        { key: 'code', header: t('section_code'), render: (s) => <span className="text-muted-foreground font-mono text-xs">{s.code}</span> },
+        { key: 'code', header: t('section_code'), render: (s) => <span className="text-muted-foreground text-xs">{s.code}</span> },
         { key: 'name', header: t('section'), render: (s) => <span className="font-medium">{lang === 'th' ? (s.name_th ?? s.name) : s.name}</span> },
         { key: 'department', header: t('department'), render: (s) => <span className="text-muted-foreground">{deptLabel(s) ?? '—'}</span> },
         {
@@ -104,7 +104,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
             header: t('section_members'),
             align: 'right',
             render: (s) => (
-                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
                     {s.members_count ?? 0}
                 </span>

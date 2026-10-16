@@ -61,7 +61,7 @@ function FormatChip({ format }: { format: string }) {
         format === 'xlsx'
             ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600/30 dark:border-emerald-400/30'
             : 'text-red-600 dark:text-red-400 border-red-600/30 dark:border-red-400/30';
-    return <span className={`rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-bold uppercase ${tone}`}>{format}</span>;
+    return <span className={`rounded border px-1.5 py-0.5 text-[10.5px] font-bold uppercase ${tone}`}>{format}</span>;
 }
 
 function StatusPill({ tone, children }: { tone: 'blue' | 'red'; children: React.ReactNode }) {

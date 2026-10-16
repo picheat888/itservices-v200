@@ -70,7 +70,7 @@ function NameCell({
             )}
             <div className="min-w-0">
                 <div className="font-medium">{name}</div>
-                {sub && <div className="text-muted-foreground max-w-[240px] truncate font-mono text-[11.5px]">{sub}</div>}
+                {sub && <div className="text-muted-foreground max-w-[240px] truncate text-[11.5px]">{sub}</div>}
             </div>
         </div>
     );
@@ -497,7 +497,7 @@ export default function AccessControlPage() {
             key: 'size',
             header: t('access_size'),
             className: 'w-[16%]',
-            render: (s) => <span className="font-mono text-[12.5px] whitespace-nowrap">{sizeText(s.size, s.size_unit) ?? '—'}</span>,
+            render: (s) => <span className="text-[12.5px] whitespace-nowrap">{sizeText(s.size, s.size_unit) ?? '—'}</span>,
         },
         { key: 'owner', header: t('access_owner'), className: 'w-[18%]', render: (s) => <OwnerCell owner={s.owner} photoUrl={s.owner_photo_url} /> },
         { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => s.department ?? '—' },
@@ -527,7 +527,7 @@ export default function AccessControlPage() {
                 const used = s.seats_used ?? s.members?.length ?? 0;
                 const over = s.seats != null && used > s.seats;
                 return (
-                    <span className={cn('inline-flex items-center font-mono text-[12.5px]', over && 'text-destructive font-semibold')}>
+                    <span className={cn('inline-flex items-center text-[12.5px]', over && 'text-destructive font-semibold')}>
                         {used}/
                         {s.seats != null ? (
                             s.seats

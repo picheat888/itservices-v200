@@ -69,7 +69,7 @@ export function CancelRequestDialog({
                         <DialogTitle className="text-base font-bold">{t('req_cancel_title')}</DialogTitle>
                         <DialogDescription className="mt-1.5 text-xs">{t('req_cancel_hint')}</DialogDescription>
                     </div>
-                    <span className="text-muted-foreground shrink-0 font-mono text-xs">{ctx.reference}</span>
+                    <span className="text-muted-foreground shrink-0 text-xs">{ctx.reference}</span>
                 </div>
 
                 <div className="space-y-4">

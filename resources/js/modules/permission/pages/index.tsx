@@ -425,7 +425,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                     <div className="border-border mb-3 flex items-center gap-2 border-b pb-1.5">
                                         <SectionIcon className="text-muted-foreground h-4 w-4" />
                                         <span className="text-foreground text-sm font-bold">{t(section.label)}</span>
-                                        <span className="text-muted-foreground ml-auto font-mono text-[11px]">
+                                        <span className="text-muted-foreground ml-auto text-[11px]">
                                             {sectionOn} / {sectionActions.length}
                                         </span>
                                     </div>
@@ -750,7 +750,7 @@ function GroupRolesTab() {
                                 </span>
                             )}
                             <div className="border-border text-muted-foreground mt-3 flex items-center justify-between border-t pt-3 text-sm">
-                                <span className="text-foreground flex items-center gap-1.5 font-mono font-semibold">
+                                <span className="text-foreground flex items-center gap-1.5 font-semibold">
                                     <Users className="h-3.5 w-3.5" /> {g.member_count}
                                 </span>
                                 <span>{translate(lang, 'perm_ui_members')}</span>
@@ -864,7 +864,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                                         'bg-muted text-muted-foreground rounded px-2 py-0.5',
                                         // Struck-through prose is fine for "Manager → Supervisor"; a struck-through
                                         // email body is a page of unreadable text. Long values say "before" instead.
-                                        long ? 'block max-h-32 overflow-auto font-mono text-xs break-all whitespace-pre-wrap' : 'line-through',
+                                        long ? 'block max-h-32 overflow-auto text-xs break-all whitespace-pre-wrap' : 'line-through',
                                     )}
                                 >
                                     {diffValue(before)}
@@ -874,7 +874,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                                 <span
                                     className={cn(
                                         'bg-brand/10 text-brand rounded px-2 py-0.5 font-medium',
-                                        long && 'block max-h-32 overflow-auto font-mono text-xs break-all whitespace-pre-wrap',
+                                        long && 'block max-h-32 overflow-auto text-xs break-all whitespace-pre-wrap',
                                     )}
                                 >
                                     {diffValue(after)}
@@ -944,7 +944,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                     <div className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase">{t('audit_records')}</div>
                     <div className="flex flex-wrap gap-1">
                         {(details.items ?? []).map((item) => (
-                            <span key={item} className="bg-muted text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
+                            <span key={item} className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs">
                                 {item}
                             </span>
                         ))}
@@ -954,7 +954,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
             {Object.entries(details.facts ?? {}).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{key}</span>
-                    <span className="bg-muted rounded px-2 py-0.5 font-mono text-xs">{value}</span>
+                    <span className="bg-muted rounded px-2 py-0.5 text-xs">{value}</span>
                 </div>
             ))}
         </div>
@@ -1222,7 +1222,7 @@ function AuditTab() {
                                                         until User, Target and Time were pushed off the screen entirely. */}
                                                     <div className="max-w-[36rem] min-w-0">
                                                         <div className="font-medium">{l.action}</div>
-                                                        {summary && <div className="text-muted-foreground truncate font-mono text-xs">{summary}</div>}
+                                                        {summary && <div className="text-muted-foreground truncate text-xs">{summary}</div>}
                                                     </div>
                                                 </div>
                                             </td>
@@ -1236,7 +1236,7 @@ function AuditTab() {
                                             </td>
                                             <td className="text-muted-foreground px-5 py-3">{l.target ?? '—'}</td>
                                             <td
-                                                className="text-muted-foreground px-5 py-3 font-mono text-xs whitespace-nowrap"
+                                                className="text-muted-foreground px-5 py-3 text-xs whitespace-nowrap"
                                                 title={fmt.dateTime(l.created_at)}
                                             >
                                                 {auditAgo(l.created_at, lang, fmt.dateTime(l.created_at))}

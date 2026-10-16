@@ -79,10 +79,10 @@ export default function ItemHistoryPage() {
                             <span>{view ? t(VIEW_META[view].titleKey as Parameters<typeof t>[0]) : t('stock_hist_overview')}</span>
                             <span className="text-muted-foreground font-normal">{data.item.name}</span>
                         </div>
-                        <div className="mt-0.5 font-mono text-sm">SKU : {data.item.sku}</div>
+                        <div className="mt-0.5 text-sm">SKU : {data.item.sku}</div>
                     </div>
                     <div className="text-right text-sm whitespace-nowrap">
-                        {t('stock_current')} <span className="font-mono text-base font-bold">{data.item.current_stock}</span>
+                        {t('stock_current')} <span className="text-base font-bold">{data.item.current_stock}</span>
                     </div>
                 </div>
                 <hr className="mt-2 border-black/50" />
@@ -105,7 +105,7 @@ export default function ItemHistoryPage() {
                 <div className="min-w-0">
                     <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{t('stock_history_title')}</div>
                     <h1 className="mt-1 truncate text-xl font-semibold">{data.item.name}</h1>
-                    <div className="text-muted-foreground mt-1 font-mono text-sm">{data.item.sku}</div>
+                    <div className="text-muted-foreground mt-1 text-sm">{data.item.sku}</div>
                 </div>
                 <button
                     type="button"
@@ -154,7 +154,7 @@ export default function ItemHistoryPage() {
 
                 <div className="border-border bg-muted/30 mb-6 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm print:hidden">
                     <span className="text-muted-foreground">{t('stock_current')}</span>
-                    <span className="font-mono text-lg font-bold">{data.item.current_stock}</span>
+                    <span className="text-lg font-bold">{data.item.current_stock}</span>
                 </div>
 
                 {data.item.track_serial && (
@@ -162,12 +162,7 @@ export default function ItemHistoryPage() {
                         headers={['#', t('stock_hist_serial'), t('stock_hist_receive_date'), t('stock_hist_receive_no')]}
                         rows={data.serials.map((s, i) => {
                             const recv = s.events.find((e) => e.event === 'received');
-                            return [
-                                String(i + 1),
-                                <span className="font-mono">{s.serial}</span>,
-                                fmt(recv?.occurred_at ?? null),
-                                recv?.doc_no ?? '—',
-                            ];
+                            return [String(i + 1), <span>{s.serial}</span>, fmt(recv?.occurred_at ?? null), recv?.doc_no ?? '—'];
                         })}
                     />
                 )}
@@ -190,7 +185,7 @@ export default function ItemHistoryPage() {
         const action = (m: Movement) => t(`stock_mv_${m.type}` as Parameters<typeof t>[0]);
         const serialCell = (m: Movement) => {
             const list = serialsOf(m, ev);
-            return list.length ? <span className="font-mono text-xs">{list.join(', ')}</span> : '—';
+            return list.length ? <span className="text-xs">{list.join(', ')}</span> : '—';
         };
 
         let headers: string[];
@@ -210,7 +205,7 @@ export default function ItemHistoryPage() {
             ];
             rows = movements.map((m, i) => [
                 String(i + 1),
-                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                <span>{m.doc_no ?? '—'}</span>,
                 fmt(m.moved_at),
                 action(m),
                 m.from_label ?? '—',
@@ -235,15 +230,15 @@ export default function ItemHistoryPage() {
             ];
             rows = movements.map((m, i) => [
                 String(i + 1),
-                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                <span>{m.doc_no ?? '—'}</span>,
                 fmt(m.moved_at),
                 action(m),
                 m.from_label ?? '—',
                 m.reference ?? '—',
                 m.to_label ?? '—',
-                m.unit_cost != null ? <span className="font-mono">{m.unit_cost}</span> : '—',
+                m.unit_cost != null ? <span>{m.unit_cost}</span> : '—',
                 serialCell(m),
-                <span className="font-mono">{m.qty}</span>,
+                <span>{m.qty}</span>,
                 m.notes ?? '—',
             ]);
         } else if (view === 'adjust') {
@@ -260,13 +255,13 @@ export default function ItemHistoryPage() {
             ];
             rows = movements.map((m, i) => [
                 String(i + 1),
-                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                <span>{m.doc_no ?? '—'}</span>,
                 fmt(m.moved_at),
                 m.reference ?? '—',
                 action(m),
                 m.recorded_by ?? '—',
                 serialCell(m),
-                <span className="font-mono">{m.qty}</span>,
+                <span>{m.qty}</span>,
                 m.notes ?? '—',
             ]);
         } else {
@@ -284,14 +279,14 @@ export default function ItemHistoryPage() {
             ];
             rows = movements.map((m, i) => [
                 String(i + 1),
-                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                <span>{m.doc_no ?? '—'}</span>,
                 fmt(m.moved_at),
                 action(m),
                 m.from_label ?? '—',
                 m.to_label ?? '—',
                 m.recorded_by ?? '—',
                 serialCell(m),
-                <span className="font-mono">{m.qty}</span>,
+                <span>{m.qty}</span>,
                 m.notes ?? '—',
             ]);
         }

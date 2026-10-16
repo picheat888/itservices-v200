@@ -115,7 +115,7 @@ export function Sidebar({ onProfile }: { onProfile: (section?: ProfileSection) =
                                             ) : (
                                                 // Dark mode, active row (NavLink sets aria-current="page"): the tint-on-tint
                                                 // pill read at ~3.7:1 there, so it turns solid brand.
-                                                <span className="bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                                                <span className="bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold">
                                                     {badge}
                                                 </span>
                                             ))}

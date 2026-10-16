@@ -493,12 +493,7 @@ export function RequestCreateDialog({
                                     {schema
                                         .filter((f) => (fields[f.key] ?? '') !== '')
                                         .map((f) => (
-                                            <ReviewRow
-                                                key={f.key}
-                                                k={fieldLabel(f)}
-                                                v={displayValue(f, fields[f.key], lang, options?.sources)}
-                                                mono={f.mono}
-                                            />
+                                            <ReviewRow key={f.key} k={fieldLabel(f)} v={displayValue(f, fields[f.key], lang, options?.sources)} />
                                         ))}
                                     {files.length > 0 && (
                                         <ReviewRow k={t('req_attach_section')} v={t('req_attach_review').replace('{n}', String(files.length))} />
@@ -566,7 +561,7 @@ export function RequestCreateDialog({
                             >
                                 <div className="bg-brand h-full rounded-full transition-[width]" style={{ width: `${uploadPct}%` }} />
                             </div>
-                            <span className="text-muted-foreground font-mono text-xs">{uploadPct}%</span>
+                            <span className="text-muted-foreground text-xs">{uploadPct}%</span>
                         </div>
                     )}
                     <div className="flex-1" />
@@ -722,7 +717,7 @@ function SchemaField({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={schema.placeholder}
-                className={cn(schema.mono && 'font-mono', error && 'border-destructive')}
+                className={cn(error && 'border-destructive')}
             />
         </Field>
     );
@@ -841,11 +836,11 @@ function displayValue(
     return raw;
 }
 
-function ReviewRow({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
+function ReviewRow({ k, v }: { k: string; v: string }) {
     return (
         <div className="odd:bg-muted/30 flex justify-between gap-4 px-4 py-2 text-sm">
             <span className="text-muted-foreground shrink-0 text-xs leading-6">{k}</span>
-            <span className={cn('min-w-0 text-right font-semibold break-words', mono && 'font-mono text-sm')}>{v}</span>
+            <span className={'min-w-0 text-right font-semibold break-words'}>{v}</span>
         </div>
     );
 }

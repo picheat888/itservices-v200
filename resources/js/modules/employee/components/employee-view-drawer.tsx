@@ -219,9 +219,7 @@ export function EmployeeViewDrawer({
                         </div>
                         {altName && <div className="text-muted-foreground mb-2.5 text-[13px]">{altName}</div>}
                         <div className="flex flex-wrap gap-1.5">
-                            <IdChip icon={Hash} mono>
-                                {emp.code}
-                            </IdChip>
+                            <IdChip icon={Hash}>{emp.code}</IdChip>
                             <IdChip icon={Briefcase}>{emp.position || '—'}</IdChip>
                             <IdChip icon={Building2}>{lang === 'th' ? (emp.department_th ?? emp.department) : emp.department}</IdChip>
                         </div>
@@ -251,7 +249,7 @@ export function EmployeeViewDrawer({
                         <TriangleAlert className="h-[15px] w-[15px] shrink-0" />
                         <span>{t('emp_v_resigned_note')}</span>
                         {emp.last_day && (
-                            <span className="ml-2 font-mono">
+                            <span className="ml-2">
                                 {t('emp_v_last_day')} {fmt.date(emp.last_day)}
                             </span>
                         )}
@@ -295,7 +293,6 @@ export function EmployeeViewDrawer({
                                 value={emp.phone}
                                 copied={copied === 'phone'}
                                 onCopy={(v) => copy(v, 'phone')}
-                                mono
                             />
                         </section>
 
@@ -308,7 +305,6 @@ export function EmployeeViewDrawer({
                                 value={emp.username}
                                 copied={copied === 'user'}
                                 onCopy={(v) => copy(v, 'user')}
-                                mono
                             />
                         </section>
 
@@ -326,7 +322,7 @@ export function EmployeeViewDrawer({
                             />
                             <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp.position} />
                             <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={managerName} />
-                            <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={fmt.date(emp.joined_at)} mono />
+                            <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={fmt.date(emp.joined_at)} />
                         </section>
                     </aside>
 

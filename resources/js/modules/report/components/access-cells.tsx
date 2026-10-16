@@ -39,7 +39,7 @@ export function EmployeeCell({ row }: { row: AccessRow }) {
                     {name}
                 </div>
             )}
-            <div className="text-muted-foreground font-mono text-xs">{str(row.employee_code)}</div>
+            <div className="text-muted-foreground text-xs">{str(row.employee_code)}</div>
         </div>
     );
 }

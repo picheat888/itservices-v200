@@ -124,7 +124,7 @@ export function AssetReceiveModal({
                             <div className="min-w-0">
                                 <div className="truncate text-sm font-semibold">{shownAsset.model}</div>
                                 <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
-                                    <span className="font-mono">{shownAsset.asset_code}</span>
+                                    <span>{shownAsset.asset_code}</span>
                                     {shownAsset.warehouse && (
                                         <span>
                                             {lang === 'th' ? 'เดิมอยู่' : 'from'}: {shownAsset.warehouse}

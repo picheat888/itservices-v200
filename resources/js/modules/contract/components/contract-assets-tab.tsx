@@ -25,10 +25,10 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
     }
 
     const columns: Column<ContractLinkedAsset>[] = [
-        { key: 'asset_code', header: t('contract_asset_col_id'), render: (a) => <span className="font-mono text-xs">{a.asset_code}</span> },
+        { key: 'asset_code', header: t('contract_asset_col_id'), render: (a) => <span className="text-xs">{a.asset_code}</span> },
         { key: 'name', header: t('contract_asset_col_name'), render: (a) => <span className="font-medium">{a.name}</span> },
         { key: 'type', header: t('contract_label_type'), render: (a) => a.type ?? '—' },
-        { key: 'serial', header: t('contract_asset_col_serial'), render: (a) => <span className="font-mono text-xs">{a.serial ?? '—'}</span> },
+        { key: 'serial', header: t('contract_asset_col_serial'), render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
         { key: 'owner', header: t('contract_asset_col_owner'), render: (a) => a.owner ?? '—' },
         {
             key: 'status',

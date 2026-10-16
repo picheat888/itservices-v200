@@ -191,11 +191,11 @@ export default function WorkflowsPage() {
                                             <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-2 py-0.5 font-medium">
                                                 {t(REQUEST_TYPE_META[wf.request_type].labelKey)}
                                             </span>
-                                            <span className="font-mono">
+                                            <span>
                                                 {approvals} {t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')}
                                             </span>
                                             {wf.measured && (
-                                                <span className="font-mono">
+                                                <span>
                                                     {t('wf_row_decision')} {wf.measured.avg_days}
                                                     {t('wf_days_suffix')}
                                                 </span>

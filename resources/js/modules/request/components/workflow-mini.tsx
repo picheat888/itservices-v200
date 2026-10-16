@@ -55,7 +55,7 @@ export function WorkflowMini({ request }: { request: ServiceRequest }) {
                     <span key={i} className={cn('h-[5px] min-w-[2px] flex-1 rounded-full', TICK_CLASS[tick])} />
                 ))}
             </div>
-            <span className={cn('w-8 shrink-0 text-right font-mono text-xs tabular-nums', rejected ? 'text-destructive' : 'text-muted-foreground')}>
+            <span className={cn('w-8 shrink-0 text-right text-xs tabular-nums', rejected ? 'text-destructive' : 'text-muted-foreground')}>
                 {label}
             </span>
         </div>

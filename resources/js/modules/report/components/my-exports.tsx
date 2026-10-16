@@ -95,7 +95,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                 )}
                 title={item.file_name ?? undefined}
             >
-                <span className="font-mono text-[10px] leading-none font-bold uppercase">{item.format}</span>
+                <span className="text-[10px] leading-none font-bold uppercase">{item.format}</span>
                 <span className="text-muted-foreground text-[9px] leading-none">{size ?? '—'}</span>
             </span>
 

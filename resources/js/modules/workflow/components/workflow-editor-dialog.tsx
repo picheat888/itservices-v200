@@ -272,9 +272,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                         <div className="mb-3 flex items-end justify-between gap-3">
                             <SectionLabel className="mb-0">
                                 {t('wf_steps')}{' '}
-                                <span className="text-muted-foreground font-mono text-xs">
-                                    ({t('wf_steps_count').replace('{n}', String(approvalCount))})
-                                </span>
+                                <span className="text-muted-foreground text-xs">({t('wf_steps_count').replace('{n}', String(approvalCount))})</span>
                             </SectionLabel>
                             <Button variant="outline" size="sm" onClick={addStep}>
                                 <Plus className="h-4 w-4" />
@@ -296,7 +294,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                         <span className="bg-background absolute top-2 -left-[29px] h-[22px] w-[22px] rounded-full">
                                             <span
                                                 className={cn(
-                                                    'flex h-full w-full items-center justify-center rounded-full border-2 font-mono text-[11px] font-bold',
+                                                    'flex h-full w-full items-center justify-center rounded-full border-2 text-[11px] font-bold',
                                                     isEnd
                                                         ? 'border-brand/40 bg-brand/10 text-brand'
                                                         : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',

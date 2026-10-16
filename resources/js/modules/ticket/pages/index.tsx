@@ -456,7 +456,7 @@ export default function TicketsPage() {
                                                 <span className="text-sm font-semibold">{t('ticket_by_category')}</span>
                                             </div>
                                             <span className="text-muted-foreground text-xs">
-                                                <b className="text-foreground font-mono font-bold">{totalCats.toLocaleString('en-US')}</b>{' '}
+                                                <b className="text-foreground font-bold">{totalCats.toLocaleString('en-US')}</b>{' '}
                                                 {t('ticket_trend_tickets')}
                                             </span>
                                         </div>
@@ -475,7 +475,7 @@ export default function TicketsPage() {
                                                                 style={{ width: `${(c.count / maxCat) * 100}%` }}
                                                             />
                                                         </div>
-                                                        <span className="w-16 shrink-0 text-right font-mono text-sm font-semibold whitespace-nowrap">
+                                                        <span className="w-16 shrink-0 text-right text-sm font-semibold whitespace-nowrap">
                                                             {c.count.toLocaleString('en-US')}{' '}
                                                             <span className="text-muted-foreground text-[11px] font-medium">{pct}%</span>
                                                         </span>
@@ -735,7 +735,7 @@ function TicketTable({
                             className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
                             onClick={() => onRow(tk)}
                         >
-                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs whitespace-nowrap">{tk.ticket_no}</td>
+                            <td className="text-muted-foreground px-4 py-2.5 text-xs whitespace-nowrap">{tk.ticket_no}</td>
                             <td className="w-full max-w-0 min-w-[12rem] px-4 py-2.5 font-medium">
                                 <TicketSubject ticket={tk} t={t} />
                             </td>
@@ -754,7 +754,7 @@ function TicketTable({
                                 <TicketStatusBadge status={tk.status} t={t} />
                             </td>
                             {!compact && (
-                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs whitespace-nowrap">
+                                <td className="text-muted-foreground px-4 py-2.5 text-xs whitespace-nowrap">
                                     {tk.requester_code ?? tk.requester_name}
                                 </td>
                             )}
@@ -765,7 +765,7 @@ function TicketTable({
                                     <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
                                 )}
                             </td>
-                            {!compact && <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{fmt.date(tk.updated_at)}</td>}
+                            {!compact && <td className="text-muted-foreground px-4 py-2.5 text-xs whitespace-nowrap">{fmt.date(tk.updated_at)}</td>}
                         </tr>
                     ))}
                 </tbody>

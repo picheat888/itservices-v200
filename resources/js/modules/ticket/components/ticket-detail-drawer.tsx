@@ -54,13 +54,11 @@ const SLA_BAR_TONE: Record<NonNullable<Ticket['sla']>['state'], string> = {
 function RailRow({
     label,
     value,
-    mono = true,
     wrap = false,
     quiet = false,
 }: {
     label: string;
     value: React.ReactNode;
-    mono?: boolean;
     wrap?: boolean;
     /** For a fact that has already settled — still worth having, no longer worth chasing. */
     quiet?: boolean;
@@ -68,26 +66,17 @@ function RailRow({
     return (
         <div className="flex items-baseline justify-between gap-3 text-xs">
             <span className="text-muted-foreground shrink-0">{label}</span>
-            <span
-                className={cn(
-                    'min-w-0 text-right',
-                    wrap ? 'text-balance' : 'truncate',
-                    mono && 'font-mono text-[11.5px]',
-                    quiet && 'text-muted-foreground',
-                )}
-            >
-                {value || '—'}
-            </span>
+            <span className={cn('min-w-0 text-right', wrap ? 'text-balance' : 'truncate', quiet && 'text-muted-foreground')}>{value || '—'}</span>
         </div>
     );
 }
 
 /** Small label/value pair used in the details grid and the rail. */
-function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function KV({ label, value }: { label: string; value: React.ReactNode }) {
     return (
         <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">{label}</div>
-            <div className={mono ? 'font-mono text-sm' : 'text-sm'}>{value || '—'}</div>
+            <div className="text-sm">{value || '—'}</div>
         </div>
     );
 }
@@ -157,7 +146,7 @@ function SpineStep({
                 {(meta || when) && (
                     <div className="text-muted-foreground text-xs leading-relaxed">
                         {meta}
-                        {when && <div className="font-mono text-[11px]">{when}</div>}
+                        {when && <div className="text-[11px]">{when}</div>}
                     </div>
                 )}
             </div>
@@ -508,13 +497,13 @@ export function TicketDetailDrawer({
                                                         </span>
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                                                        <KV label={t('ticket_asset_no')} value={view.related_asset_tag} mono />
-                                                        <KV label={t('ticket_asset_tag')} value={view.related_asset_tag_name} mono />
+                                                        <KV label={t('ticket_asset_no')} value={view.related_asset_tag} />
+                                                        <KV label={t('ticket_asset_tag')} value={view.related_asset_tag_name} />
                                                         <KV
                                                             label={t('ticket_asset_brand_model')}
                                                             value={[view.related_asset_brand, view.related_asset_model].filter(Boolean).join(' ')}
                                                         />
-                                                        <KV label={t('ticket_asset_serial')} value={view.related_asset_serial} mono />
+                                                        <KV label={t('ticket_asset_serial')} value={view.related_asset_serial} />
                                                     </div>
                                                 </div>
                                             </section>
@@ -549,9 +538,7 @@ export function TicketDetailDrawer({
                                                             <div className={cn('min-w-0 flex-1', !last && 'pb-4')}>
                                                                 <div className="flex flex-wrap items-baseline gap-x-2">
                                                                     <span className="text-sm leading-tight font-semibold">{entry.title}</span>
-                                                                    <span className="text-muted-foreground font-mono text-[11px]">
-                                                                        {fmtWhen(entry.when)}
-                                                                    </span>
+                                                                    <span className="text-muted-foreground text-[11px]">{fmtWhen(entry.when)}</span>
                                                                 </div>
                                                                 {/* Taking a case without leaving a note is allowed, so the
                                                                     row stands on its own headline when there is no body. */}
@@ -628,13 +615,13 @@ export function TicketDetailDrawer({
                                                                     >
                                                                         {a.name}
                                                                     </button>
-                                                                    <div className="text-muted-foreground flex flex-wrap gap-x-3 font-mono text-[11px]">
+                                                                    <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
                                                                         <span>{formatFileSize(a.size)}</span>
                                                                         {a.created_at && <span>{fmtWhen(a.created_at)}</span>}
                                                                     </div>
                                                                     {/* Filed with the request, not uploaded here — and not removable. */}
                                                                     {a.from_request && (
-                                                                        <span className="border-brand/30 bg-brand/5 text-brand mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+                                                                        <span className="border-brand/30 bg-brand/5 text-brand mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold">
                                                                             <Paperclip className="h-2.5 w-2.5 shrink-0" />
                                                                             {a.from_request}
                                                                         </span>
@@ -699,7 +686,7 @@ export function TicketDetailDrawer({
                             <div className="bg-border/60 my-3 h-px" />
                             <SectionLabel>{t('ticket_open_by')}</SectionLabel>
                             <div className="space-y-3 pl-1">
-                                <KV label={t('ticket_full_name')} value={view.requester_name ?? view.requester_code} mono={!view.requester_name} />
+                                <KV label={t('ticket_full_name')} value={view.requester_name ?? view.requester_code} />
                                 <KV
                                     label={t('ticket_callback_phone')}
                                     value={
@@ -713,7 +700,6 @@ export function TicketDetailDrawer({
                                             </a>
                                         ) : null
                                     }
-                                    mono
                                 />
                             </div>
 
@@ -733,7 +719,7 @@ export function TicketDetailDrawer({
                                     <SectionLabel>{t('ticket_expected_at')}</SectionLabel>
                                     <div className="pl-1 text-sm">
                                         {view.expected_at ? (
-                                            <span className="font-mono">{fmtWhen(view.expected_at)}</span>
+                                            <span>{fmtWhen(view.expected_at)}</span>
                                         ) : (
                                             <span className="text-muted-foreground italic">{t('ticket_expected_at_pending')}</span>
                                         )}
@@ -789,7 +775,6 @@ export function TicketDetailDrawer({
                                                     <RailRow
                                                         label={t(pastLabel)}
                                                         value={resolveNotStarted ? t('ticket_sla_resolve_not_started') : fmtWhen(pastDue)}
-                                                        mono={!resolveNotStarted}
                                                         quiet
                                                     />
                                                 </>
@@ -804,18 +789,8 @@ export function TicketDetailDrawer({
                                             taking. A figure shown next to nothing reads as a commitment. */}
                                         {view.responded_at && view.sla_target && (
                                             <>
-                                                <RailRow
-                                                    label={t('ticket_sla_target_from')}
-                                                    value={slaTargetAmount(view.sla_target, t)}
-                                                    mono={false}
-                                                    wrap
-                                                />
-                                                <RailRow
-                                                    label={t('ticket_sla_source')}
-                                                    value={slaTargetSource(view.sla_target, t)}
-                                                    mono={false}
-                                                    wrap
-                                                />
+                                                <RailRow label={t('ticket_sla_target_from')} value={slaTargetAmount(view.sla_target, t)} wrap />
+                                                <RailRow label={t('ticket_sla_source')} value={slaTargetSource(view.sla_target, t)} wrap />
                                             </>
                                         )}
                                     </div>

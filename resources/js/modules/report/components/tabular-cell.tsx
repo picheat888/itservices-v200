@@ -69,14 +69,12 @@ function CellValue({ column, value }: { column: TabularColumnDef; value: unknown
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
             });
-            return <span className={cn('font-mono', Number(value) === 0 && ZERO)}>{formatted}</span>;
+            return <span className={cn(Number(value) === 0 && ZERO)}>{formatted}</span>;
         }
         case 'number':
-            return (
-                <span className={cn('font-mono', Number(value) === 0 && ZERO)}>{value === null || value === undefined ? '—' : String(value)}</span>
-            );
+            return <span className={cn(Number(value) === 0 && ZERO)}>{value === null || value === undefined ? '—' : String(value)}</span>;
         case 'date':
-            return <span className="font-mono text-xs">{fmt.date(value as string | null)}</span>;
+            return <span className="text-xs">{fmt.date(value as string | null)}</span>;
         case 'datetime':
             return <DateTimeCell value={value as string | null} />;
         case 'days_left':

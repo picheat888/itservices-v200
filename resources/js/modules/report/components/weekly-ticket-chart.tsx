@@ -122,11 +122,11 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                 {ticks.map((v, i) => (
                     <g key={v}>
                         <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} className="stroke-border" strokeWidth={1} />
-                        <text x={PAD.l - 8} y={y(v) + 3.5} textAnchor="end" className="fill-muted-foreground font-mono text-[10.5px]">
+                        <text x={PAD.l - 8} y={y(v) + 3.5} textAnchor="end" className="fill-muted-foreground text-[10.5px]">
                             {v}
                         </text>
                         {/* Right axis: the backlog line's own scale, same three gridlines. */}
-                        <text x={W - PAD.r + 8} y={y(v) + 3.5} className="fill-red-500 font-mono text-[10.5px]">
+                        <text x={W - PAD.r + 8} y={y(v) + 3.5} className="fill-red-500 text-[10.5px]">
                             {(backlogMax / 2) * i}
                         </text>
                     </g>
@@ -163,7 +163,7 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                     const startMonth = spans[i].start.slice(0, 7);
                     const showMonth = n === 0 || startMonth !== spans[labelled[n - 1]].start.slice(0, 7);
                     return (
-                        <g key={`axis-${i}`} className="fill-muted-foreground font-mono" fontSize={axisFont}>
+                        <g key={`axis-${i}`} className="fill-muted-foreground" fontSize={axisFont}>
                             <text x={xOf(i)} y={axisY} textAnchor="middle">
                                 {spans[i].days}
                             </text>
@@ -190,7 +190,7 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                             // Under the point when it sits at the top, so the label is never clipped.
                             y={yBacklog(lastBacklog) < PAD.t + 16 ? yBacklog(lastBacklog) + 18 : yBacklog(lastBacklog) - 9}
                             textAnchor="end"
-                            className="fill-foreground pointer-events-none font-mono text-[11px] font-bold"
+                            className="fill-foreground pointer-events-none text-[11px] font-bold"
                         >
                             {t('rep_weekly_backlog_end').replace('{n}', String(lastBacklog))}
                         </text>

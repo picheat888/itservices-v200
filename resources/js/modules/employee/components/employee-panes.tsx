@@ -17,12 +17,11 @@ import { HELD_STATUS_META } from '../lib/held-assets';
 export const RAIL_HEADING = 'text-muted-foreground border-border border-b pb-1.5 text-xs font-bold';
 
 /** A chip of identity under the name (code, position, department…). */
-export function IdChip({ icon: Icon, mono, children }: { icon: LucideIcon; mono?: boolean; children: React.ReactNode }) {
+export function IdChip({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
     return (
         <span
             className={cn(
                 'bg-muted border-border text-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium',
-                mono && 'font-mono',
             )}
         >
             <Icon className="text-muted-foreground h-3 w-3" aria-hidden />
@@ -36,14 +35,12 @@ export function RailRow({
     icon,
     label,
     value,
-    mono,
     copied,
     onCopy,
 }: {
     icon: React.ReactNode;
     label: string;
     value?: string | null;
-    mono?: boolean;
     copied?: boolean;
     onCopy?: (value: string) => void;
 }) {
@@ -53,7 +50,7 @@ export function RailRow({
             <div className="bg-muted text-muted-foreground grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg">{icon}</div>
             <div className="min-w-0 flex-1">
                 <div className="text-muted-foreground text-xs">{label}</div>
-                <div className={cn('mt-0.5 text-[13px] leading-snug font-medium break-words', mono && 'font-mono text-xs')}>{value || '—'}</div>
+                <div className={'mt-0.5 text-[13px] leading-snug font-medium break-words'}>{value || '—'}</div>
             </div>
             {onCopy && value && (
                 <button
@@ -152,7 +149,7 @@ export function AccessPane({ access, loading, emptyText }: { access: EmployeeAcc
                         <div className="text-muted-foreground flex items-center gap-2 text-[12.5px] font-bold">
                             {grp.icon}
                             {grp.label}
-                            <span className="bg-muted inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[11px] font-bold">
+                            <span className="bg-muted inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 text-[11px] font-bold">
                                 {rows.length}
                             </span>
                         </div>
@@ -168,17 +165,15 @@ export function AccessPane({ access, loading, emptyText }: { access: EmployeeAcc
                                             {r.resource_name}
                                         </div>
                                     ) : grp.key === 'social' ? (
-                                        // One line: platform name, then the URL in mono
+                                        // One line: platform name, then the URL in
                                         <div className="min-w-0 flex-1 truncate text-[13px] leading-tight">
                                             <span className="font-semibold">{r.resource_name}</span>
-                                            {r.resource_detail && (
-                                                <span className="text-muted-foreground ml-2 font-mono text-[11px]">{r.resource_detail}</span>
-                                            )}
+                                            {r.resource_detail && <span className="text-muted-foreground ml-2 text-[11px]">{r.resource_detail}</span>}
                                         </div>
                                     ) : (
                                         <div className="min-w-0 flex-1">
                                             <div className="truncate text-[13px] leading-tight font-medium">{r.resource_name}</div>
-                                            <div className="text-muted-foreground truncate font-mono text-[11px] leading-tight">
+                                            <div className="text-muted-foreground truncate text-[11px] leading-tight">
                                                 {r.resource_detail ?? r.resource_code}
                                             </div>
                                         </div>
@@ -262,7 +257,7 @@ export function AssetsPane({
         {
             key: 'serial',
             header: t('emp_v_col_serial'),
-            render: (a) => <span className="text-foreground font-mono text-xs">{a.serial ?? a.asset_code}</span>,
+            render: (a) => <span className="text-foreground text-xs">{a.serial ?? a.asset_code}</span>,
         },
         {
             key: 'received',
@@ -312,7 +307,7 @@ export function TicketsPane({
             render: (tk) => (
                 <div className="min-w-0">
                     <div className="truncate text-xs font-medium">{tk.subject}</div>
-                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{tk.ticket_no}</div>
+                    <div className="text-muted-foreground mt-0.5 truncate text-[11px]">{tk.ticket_no}</div>
                 </div>
             ),
         },
@@ -376,7 +371,7 @@ export function RequestsPane({ requests, loading, emptyText }: { requests: Emplo
                             </StatusBadge>
                         )}
                     </div>
-                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{r.reference}</div>
+                    <div className="text-muted-foreground mt-0.5 truncate text-[11px]">{r.reference}</div>
                 </div>
             ),
         },

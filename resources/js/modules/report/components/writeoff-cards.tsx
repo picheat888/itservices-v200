@@ -79,7 +79,7 @@ const SEGMENT_LABEL_SHARE = 0.12;
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
-const NUM = 'text-right font-mono tabular-nums';
+const NUM = 'text-right tabular-nums';
 
 const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
 const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
@@ -97,7 +97,7 @@ function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<str
             {series.map((s) => (
                 <Swatch key={s.key} fill={FILL[s.tone]}>
                     {t(s.label_key)}
-                    {counts && <b className="text-foreground font-mono font-semibold tabular-nums">{count(counts[s.key] ?? 0, lang)}</b>}
+                    {counts && <b className="text-foreground font-semibold tabular-nums">{count(counts[s.key] ?? 0, lang)}</b>}
                 </Swatch>
             ))}
         </span>
@@ -189,7 +189,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                 {ticks.map((v) => (
                                     <span
                                         key={v}
-                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        className="text-muted-foreground absolute right-0 translate-y-1/2 text-[10.5px] leading-none tabular-nums"
                                         style={at(v)}
                                     >
                                         {count(v, lang)}
@@ -236,7 +236,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                     {density.top && m.total > 0 && (
                                                         <span
                                                             className={cn(
-                                                                'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                                 m.month === thisMonth && 'text-brand',
                                                             )}
                                                         >
@@ -254,7 +254,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                                                                 <span
                                                                     key={s.key}
                                                                     className={cn(
-                                                                        'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden font-mono text-[10.5px] leading-none font-semibold tabular-nums',
+                                                                        'flex min-h-px w-full basis-0 items-center justify-center overflow-hidden text-[10.5px] leading-none font-semibold tabular-nums',
                                                                         FILL[s.tone],
                                                                         PIECE_INK,
                                                                     )}
@@ -315,12 +315,12 @@ function MonthDetail({ month, partialNote }: { month: Month; partialNote: string
             {SERIES.filter((s) => month[s.key] > 0).map((s) => (
                 <div key={s.key} className="flex items-center justify-between gap-4">
                     <Swatch fill={FILL[s.tone]}>{t(s.label_key)}</Swatch>
-                    <b className="font-mono tabular-nums">{count(month[s.key], lang)}</b>
+                    <b className="tabular-nums">{count(month[s.key], lang)}</b>
                 </div>
             ))}
             <div className="border-border flex items-center justify-between gap-4 border-t pt-1">
                 <span>{t('rep_wo_month_col_total')}</span>
-                <b className="font-mono tabular-nums">{count(month.total, lang)}</b>
+                <b className="tabular-nums">{count(month.total, lang)}</b>
             </div>
             {partialNote && <div className="text-muted-foreground">{partialNote}</div>}
         </div>
@@ -352,7 +352,7 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
                                     {name(r)}
                                 </span>
                                 <StackBar values={{ bought: r.bought, rented: r.rented }} series={SOURCES} scale={max} />
-                                <b className="min-w-8 text-right font-mono font-semibold tabular-nums">{count(r.total, lang)}</b>
+                                <b className="min-w-8 text-right font-semibold tabular-nums">{count(r.total, lang)}</b>
                             </li>
                         ))}
                     </ul>
@@ -464,11 +464,11 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
                                         </td>
                                         <td className={cn(TD, 'text-right')}>
                                             {c.under_warranty > 0 ? (
-                                                <StatusBadge tone="amber" dot={false} className="font-mono tabular-nums">
+                                                <StatusBadge tone="amber" dot={false} className="tabular-nums">
                                                     {count(c.under_warranty, lang)}
                                                 </StatusBadge>
                                             ) : (
-                                                <span className="text-muted-foreground font-mono tabular-nums">0</span>
+                                                <span className="text-muted-foreground tabular-nums">0</span>
                                             )}
                                         </td>
                                     </tr>
@@ -614,7 +614,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                                     {c.code}
                                                 </Link>
                                             ) : (
-                                                <span className="font-mono text-xs font-semibold">{c.code}</span>
+                                                <span className="text-xs font-semibold">{c.code}</span>
                                             )}
                                             {c.name && (
                                                 <div className="text-muted-foreground max-w-[16rem] truncate text-xs" title={c.name}>

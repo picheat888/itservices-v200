@@ -113,7 +113,7 @@ export function ExportReportDialog({
                                 className="flex gap-3 rounded-lg p-3 text-left"
                             >
                                 <span
-                                    className={`flex h-10 w-9 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold uppercase ${c.tone}`}
+                                    className={`flex h-10 w-9 shrink-0 items-center justify-center rounded text-[10px] font-bold uppercase ${c.tone}`}
                                 >
                                     {c.value}
                                 </span>

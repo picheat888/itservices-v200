@@ -93,7 +93,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                                 value={form.tag}
                                 onChange={(e) => set('tag', e.target.value.toUpperCase())}
                                 placeholder={t('dept_code_auto')}
-                                className="font-mono uppercase"
+                                className="uppercase"
                                 maxLength={50}
                                 spellCheck={false}
                                 autoComplete="off"

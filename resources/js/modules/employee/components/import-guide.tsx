@@ -91,7 +91,7 @@ function ColumnTable() {
                 <tbody className="divide-border/60 divide-y">
                     {rows.map((row) => (
                         <tr key={row.column} className="align-top">
-                            <td className="px-3 py-1.5 font-mono text-[11px] font-medium whitespace-nowrap">{row.column}</td>
+                            <td className="px-3 py-1.5 text-[11px] font-medium whitespace-nowrap">{row.column}</td>
                             <td className="px-1 py-1.5 whitespace-nowrap">{row.required !== 'no' && <RequiredTag kind={row.required} />}</td>
                             <td className="text-muted-foreground px-3 py-1.5 leading-relaxed">{t(row.noteKey)}</td>
                         </tr>
@@ -229,7 +229,7 @@ function ValidValues() {
                                 <span className="block truncate text-xs font-medium">{row.value}</span>
                                 <span className="text-muted-foreground block truncate text-[11px]">
                                     {row.where && <span className="mr-1.5">↳ {row.where}</span>}
-                                    {row.aliases.length > 0 && <span className="font-mono">{row.aliases.join(', ')}</span>}
+                                    {row.aliases.length > 0 && <span>{row.aliases.join(', ')}</span>}
                                 </span>
                             </span>
                             {copied === row.key ? (

@@ -169,7 +169,7 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
                                     </div>
                                     <div className="space-y-1">
                                         <div className="text-base font-semibold break-all">{pv.name}</div>
-                                        <div className="text-muted-foreground flex flex-wrap gap-x-3 font-mono text-xs">
+                                        <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
                                             <span>{formatFileSize(pv.size)}</span>
                                             {meta?.(pv) && <span>{meta(pv)}</span>}
                                         </div>

@@ -35,7 +35,7 @@ export function HorizontalBars({
                         {b.value !== null && <span className={`block h-full rounded-full ${b.tone ?? 'bg-brand'}`} style={{ width: pct(b.value) }} />}
                         {goal !== undefined && <em className="bg-foreground/50 absolute -top-0.5 -bottom-0.5 w-0.5" style={{ left: pct(goal) }} />}
                     </div>
-                    <span className="text-right font-mono text-xs font-bold">{b.value === null ? '—' : `${b.value}${unit}`}</span>
+                    <span className="text-right text-xs font-bold">{b.value === null ? '—' : `${b.value}${unit}`}</span>
                 </div>
             ))}
         </div>

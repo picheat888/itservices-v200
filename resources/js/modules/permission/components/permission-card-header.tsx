@@ -58,7 +58,7 @@ export function PermissionCardHeader({ module, on, total, lang }: { module: stri
                 {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
                 <span className="truncate">{moduleLabel(module, lang)}</span>
             </span>
-            <span className={cn('shrink-0 font-mono text-[10.5px] font-bold', on === 0 ? 'text-muted-foreground' : 'text-brand')}>
+            <span className={cn('shrink-0 text-[10.5px] font-bold', on === 0 ? 'text-muted-foreground' : 'text-brand')}>
                 {on}/{total}
             </span>
         </div>

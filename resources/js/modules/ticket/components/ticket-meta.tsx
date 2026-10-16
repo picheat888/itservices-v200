@@ -139,7 +139,7 @@ export function TicketSubject({ ticket, t, showNo }: { ticket: Ticket; t: T; sho
                 <span className="block truncate" title={ticket.subject}>
                     {ticket.subject}
                 </span>
-                {showNo && <span className="text-muted-foreground block truncate font-mono text-[11px]">{ticket.ticket_no}</span>}
+                {showNo && <span className="text-muted-foreground block truncate text-[11px]">{ticket.ticket_no}</span>}
             </span>
         </span>
     );

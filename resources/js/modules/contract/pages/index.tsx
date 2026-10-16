@@ -498,7 +498,7 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
     return (
         <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground font-mono text-[11px]">{dot.code}</span>
+                <span className="text-muted-foreground text-[11px]">{dot.code}</span>
                 <DaysCell days={dot.days} inReminder={dot.in_reminder} status={dot.days <= 0 ? 'overdue' : 'active'} />
             </div>
             <div className="line-clamp-2 text-[13px] leading-snug font-semibold">{dot.name}</div>
@@ -527,7 +527,7 @@ function useContractColumns(newId: number | null, wide: boolean): Column<Contrac
             width: wide ? '150px' : '130px',
             render: (c) => (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-muted-foreground font-mono text-xs">{c.code}</span>
+                    <span className="text-muted-foreground text-xs">{c.code}</span>
                     {c.id === newId && <StatusBadge tone="green">{t('contract_badge_new')}</StatusBadge>}
                 </div>
             ),
@@ -557,15 +557,21 @@ function useContractColumns(newId: number | null, wide: boolean): Column<Contrac
             width: wide ? '130px' : '115px',
             render: (c) => <StatusBadge tone={CONTRACT_TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>,
         },
-        wide && { key: 'start', header: t('contract_start'), width: '110px', className: 'font-mono text-xs', render: (c) => fmt.date(c.start) },
-        { key: 'end', header: t('contract_end'), width: '110px', className: 'font-mono text-xs', render: (c) => fmt.date(c.end) },
+        wide && {
+            key: 'start',
+            header: t('contract_start'),
+            width: '110px',
+            className: 'whitespace-nowrap text-xs',
+            render: (c) => fmt.date(c.start),
+        },
+        { key: 'end', header: t('contract_end'), width: '110px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.end) },
         {
             key: 'days',
             header: t('contract_days_remaining'),
             width: '120px',
             render: (c) => <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />,
         },
-        { key: 'value', header: t('contract_value'), width: '130px', className: 'font-mono text-xs', render: (c) => c.value_display },
+        { key: 'value', header: t('contract_value'), width: '130px', className: 'whitespace-nowrap text-xs', render: (c) => c.value_display },
         // The days chip already says cancelled / expired / overdue, so tablets drop the status column
         wide && {
             key: 'status',
@@ -806,7 +812,7 @@ function OverviewTab({
                             <div key={r.vendor}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{r.vendor}</span>
-                                    <span className="text-muted-foreground font-mono text-xs">{formatCompact(r.amount)}</span>
+                                    <span className="text-muted-foreground text-xs">{formatCompact(r.amount)}</span>
                                 </div>
                                 <div className="bg-muted h-2 overflow-hidden rounded-full">
                                     <span
@@ -837,7 +843,7 @@ function OverviewTab({
                                 onClick={() => onSelect(c.id)}
                                 className="hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                             >
-                                <span className="flex h-9 w-16 shrink-0 items-center justify-center rounded-full bg-amber-500/10 font-mono text-xs font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
+                                <span className="flex h-9 w-16 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
                                     {t('contract_days_short').replace('{n}', String(c.days))}
                                 </span>
                                 <div className="min-w-0 flex-1">

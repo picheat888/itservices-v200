@@ -241,7 +241,6 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                 <Input
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
-                                    className="font-mono"
                                     maxLength={60}
                                     placeholder="+66 81 234 5678 / ext. 1305"
                                 />
@@ -294,7 +293,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                             <div className="bg-muted h-1.5 w-40 overflow-hidden rounded-full">
                                 <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${overallPct}%` }} />
                             </div>
-                            <span className="text-muted-foreground font-mono text-xs">{overallPct}%</span>
+                            <span className="text-muted-foreground text-xs">{overallPct}%</span>
                         </div>
                     )}
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>

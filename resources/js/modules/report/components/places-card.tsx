@@ -46,9 +46,7 @@ function CountColumns({ rows, tone, max }: { rows: PlaceRow[]; tone: string; max
             <div className="border-border flex h-40 items-end gap-3 border-b">
                 {rows.map((row, i) => (
                     <div key={i} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
-                        <span className={cn('font-mono text-xs font-semibold', row.apart && 'text-muted-foreground')}>
-                            {row.total.toLocaleString()}
-                        </span>
+                        <span className={cn('text-xs font-semibold', row.apart && 'text-muted-foreground')}>{row.total.toLocaleString()}</span>
                         <span
                             role="img"
                             aria-label={`${label(row.label)}: ${row.total}`}
@@ -86,7 +84,7 @@ function CountLine({ row, tone, max }: { row: PlaceRow; tone: string; max: numbe
             <div className="dark:bg-muted h-2.5 overflow-hidden rounded-full bg-slate-200">
                 <span className={cn('block h-full rounded-full', tone, row.apart && 'opacity-50')} style={{ width: `${(row.total / max) * 100}%` }} />
             </div>
-            <span className="w-8 text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
+            <span className="w-8 text-right font-semibold">{row.total.toLocaleString()}</span>
         </div>
     );
 }
@@ -132,7 +130,7 @@ function ShareLine({ row, series }: { row: PlaceRow; series: ChartSeries[] }) {
                     {parts.map((s) => (
                         <span
                             key={s.key}
-                            className={cn('shrink-0 text-center font-mono text-xs leading-none font-semibold', TEXT[s.tone])}
+                            className={cn('shrink-0 text-center text-xs leading-none font-semibold', TEXT[s.tone])}
                             style={{ width: width(s) }}
                         >
                             {row.values[s.key]}
@@ -145,7 +143,7 @@ function ShareLine({ row, series }: { row: PlaceRow; series: ChartSeries[] }) {
                     ))}
                 </div>
             </div>
-            <span className="w-8 self-end text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
+            <span className="w-8 self-end text-right font-semibold">{row.total.toLocaleString()}</span>
         </div>
     );
 }
@@ -223,7 +221,7 @@ function ShareRing({ row, series, centerKey }: { row: PlaceRow; series: ChartSer
                     x={30}
                     y={center ? 38.5 : 34.5}
                     textAnchor="middle"
-                    className={cn('font-mono text-[11.5px] font-bold', center ? cn('fill-current', TEXT[center.tone]) : 'fill-foreground')}
+                    className={cn('text-[11.5px] font-bold', center ? cn('fill-current', TEXT[center.tone]) : 'fill-foreground')}
                 >
                     {share === null ? '—' : `${share}%`}
                 </text>
@@ -231,7 +229,7 @@ function ShareRing({ row, series, centerKey }: { row: PlaceRow; series: ChartSer
             <span className="w-full truncate text-xs" title={label(row.label)}>
                 {label(row.label)}
             </span>
-            <span className="flex items-center gap-2 font-mono text-[11px]">
+            <span className="flex items-center gap-2 text-[11px]">
                 {series.map((s) => (
                     <span
                         key={s.key}

@@ -141,7 +141,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     {/* SKU is system-generated (SKU-#######); always read-only —
                         a placeholder hint stands in until the server assigns it. */}
                     <Field label="SKU" required={!!item}>
-                        <Input value={form.sku} disabled placeholder={t('stock_sku_auto')} className="font-mono" />
+                        <Input value={form.sku} disabled placeholder={t('stock_sku_auto')} />
                     </Field>
                     <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
@@ -217,22 +217,10 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <Field label="Min">
-                            <Input
-                                type="number"
-                                min={0}
-                                value={form.min_stock}
-                                onChange={(e) => set('min_stock', Math.max(0, +e.target.value))}
-                                className="font-mono"
-                            />
+                            <Input type="number" min={0} value={form.min_stock} onChange={(e) => set('min_stock', Math.max(0, +e.target.value))} />
                         </Field>
                         <Field label="Max">
-                            <Input
-                                type="number"
-                                min={0}
-                                value={form.max_stock}
-                                onChange={(e) => set('max_stock', Math.max(0, +e.target.value))}
-                                className="font-mono"
-                            />
+                            <Input type="number" min={0} value={form.max_stock} onChange={(e) => set('max_stock', Math.max(0, +e.target.value))} />
                         </Field>
                     </div>
                     {Number(form.max_stock) < Number(form.min_stock) && <p className="text-destructive text-xs">{t('stock_minmax_invalid')}</p>}

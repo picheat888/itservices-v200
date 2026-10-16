@@ -69,7 +69,7 @@ export function PageTabs<T extends string>({
                     >
                         {tb.label}
                         {tb.count != null && tb.count > 0 && (
-                            <span title={tb.countTitle} className={cn('rounded-full px-1.5 py-0.5 font-mono text-[11px]', TONES[tb.tone ?? 'muted'])}>
+                            <span title={tb.countTitle} className={cn('rounded-full px-1.5 py-0.5 text-[11px]', TONES[tb.tone ?? 'muted'])}>
                                 {tb.count.toLocaleString('en-US')}
                             </span>
                         )}

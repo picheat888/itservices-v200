@@ -210,7 +210,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                     {t('reset_password_new')}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="min-w-0 flex-1 font-mono text-lg leading-snug font-semibold tracking-[0.12em] break-all">
+                                    <span className="min-w-0 flex-1 text-lg leading-snug font-semibold tracking-[0.12em] break-all">
                                         {newPassword}
                                     </span>
                                     <button
@@ -265,7 +265,6 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                                     setErrors({});
                                                     setUsernameSaved(false);
                                                 }}
-                                                className="font-mono"
                                                 autoComplete="off"
                                                 autoCapitalize="none"
                                                 autoCorrect="off"

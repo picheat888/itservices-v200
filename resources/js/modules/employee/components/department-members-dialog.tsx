@@ -46,7 +46,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                 </div>
             ),
         },
-        { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.code}</span> },
+        { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground text-xs">{m.code}</span> },
         {
             key: 'section',
             header: t('emp_section'),
@@ -70,7 +70,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     <DialogTitle className="flex items-center gap-2">
                         <Building2 className="text-muted-foreground h-4 w-4" />
                         {deptName}
-                        {view?.tag && <span className="text-muted-foreground font-mono text-xs font-normal">{view.tag}</span>}
+                        {view?.tag && <span className="text-muted-foreground text-xs font-normal">{view.tag}</span>}
                     </DialogTitle>
                     <DialogDescription className="flex flex-wrap gap-x-3" aria-busy={isLoading || sectionsLoading || undefined}>
                         <span>

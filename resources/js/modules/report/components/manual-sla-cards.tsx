@@ -231,7 +231,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                                           : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300',
                                 )}
                             >
-                                <b className="font-mono text-xl">{band.n}</b>
+                                <b className="text-xl">{band.n}</b>
                                 <span className="text-xs">{t(`rep_ms_late_${band.key}`)}</span>
                             </div>
                         ))}
@@ -264,11 +264,11 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                             >
                                 <span className="truncate">
                                     {canOpen(href) ? (
-                                        <Link to={href} className="font-mono text-xs font-bold hover:underline">
+                                        <Link to={href} className="text-xs font-bold hover:underline">
                                             {o.ticket_no}
                                         </Link>
                                     ) : (
-                                        <span className="font-mono text-xs font-bold">{o.ticket_no}</span>
+                                        <span className="text-xs font-bold">{o.ticket_no}</span>
                                     )}
                                     {o.category && <span className="text-muted-foreground ml-2">{t(`ticket_cat_${o.category}`)}</span>}
                                 </span>

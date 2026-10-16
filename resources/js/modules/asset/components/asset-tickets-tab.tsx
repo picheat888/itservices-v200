@@ -52,7 +52,7 @@ export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; 
             header: t('asset_tk_subject'),
             render: (tk) => (
                 <div>
-                    <span className="text-muted-foreground block font-mono text-[11px]">{tk.ticket_no}</span>
+                    <span className="text-muted-foreground block text-[11px]">{tk.ticket_no}</span>
                     <span className="font-medium">{tk.subject}</span>
                 </div>
             ),

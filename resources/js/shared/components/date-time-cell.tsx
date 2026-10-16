@@ -8,7 +8,7 @@ export function DateTimeCell({ value, className }: { value: DateValue; className
     const time = fmt.time(value);
 
     return (
-        <div data-date-cell className={cn('font-mono text-xs leading-snug', className)}>
+        <div data-date-cell className={cn('text-xs leading-snug', className)}>
             <div className="whitespace-nowrap">{fmt.date(value)}</div>
             {time !== EMPTY_DATE && <div className="text-muted-foreground text-[11px] whitespace-nowrap">{time}</div>}
         </div>
