@@ -6,10 +6,10 @@ import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
-import { AlertTriangle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useStockItems, useStockRequestActions } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
@@ -18,35 +18,30 @@ import { stockRefusalText } from '../lib/refusal';
 export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
     const { submit } = useStockRequestActions();
-    const { data: items = [] } = useStockItems({});
+    const { data: items = [] } = useStockItems({}, open);
     const [sku, setSku] = useState('');
-    // Keep the raw text so the field can be cleared/retyped freely; derive the number.
+    // Raw text so the field can be cleared/retyped freely; the number is derived
     const [qtyInput, setQtyInput] = useState('1');
     const qty = parseInt(qtyInput, 10) || 0;
     const [reason, setReason] = useState('');
-    const [initialSku, setInitialSku] = useState('');
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         if (!open) return;
-        const first = items[0];
-        setSku(first ? String(first.id) : '');
-        setInitialSku(first ? String(first.id) : '');
+        setSku('');
         setSaved(false);
         setQtyInput('1');
         setReason('');
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
-    // Available-to-request = on-hand − reserved (approved-but-unfulfilled requests),
-    // so two approvals can't over-commit the same stock.
+    // Available-to-request = on-hand − reserved (approved-but-unfulfilled requests)
     const selected = items.find((i) => String(i.id) === sku);
     const onHand = selected?.current_stock ?? 0;
     const reserved = selected?.reserved ?? 0;
     const available = Math.max(0, onHand - reserved);
     const over = qty > available;
     const canSubmit = !!sku && qty >= 1 && !!reason.trim() && !over;
-    const isDirty = sku !== initialSku || qtyInput !== '1' || reason !== '';
+    const isDirty = sku !== '' || qtyInput !== '1' || reason !== '';
     const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     const closeAfterSave = useCloseAfterSave(open, onClose);
@@ -70,45 +65,55 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{t('stock_new_request')}</DialogTitle>
+                    <DialogDescription className="sr-only">{t('stock_new_request')}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
                     <Field label={t('stock_item')} required>
                         <SearchableSelect
                             value={sku}
                             onChange={setSku}
+                            placeholder={t('stock_select_sku')}
                             options={items.map((i) => ({
                                 value: String(i.id),
-                                label: `${i.sku} - ${i.name}`,
-                                sub: `(${i.current_stock})`,
+                                label: i.name,
+                                sub: i.sku,
+                                hint: `${t('stock_stock')} ${i.current_stock} ${i.unit ?? ''}`.trim(),
                                 search: `${i.sku} ${i.name}`,
                             }))}
                         />
                     </Field>
-                    <Field label={t('stock_qty')} required>
-                        <Input
-                            type="number"
-                            min={1}
-                            max={available || undefined}
-                            value={qtyInput}
-                            onChange={(e) => setQtyInput(e.target.value)}
-                            aria-invalid={over}
-                        />
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                            <span className="text-muted-foreground">
-                                {t('stock_available')}:{' '}
-                                <b className={cn(available > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive')}>{available}</b>{' '}
-                                {selected?.unit}
-                            </span>
-                            {over && (
-                                <span className="text-destructive flex items-center gap-1 font-medium">
-                                    <AlertTriangle className="h-3.5 w-3.5" />
-                                    {t('stock_request_over')} ({available})
-                                </span>
-                            )}
-                        </div>
+                    <Field label={t('stock_qty')} required error={over ? `${t('stock_request_over')} (${available})` : undefined}>
+                        {(control) => (
+                            <>
+                                <Input
+                                    {...control}
+                                    type="number"
+                                    name="qty"
+                                    inputMode="numeric"
+                                    min={1}
+                                    max={available || undefined}
+                                    value={qtyInput}
+                                    onChange={(e) => setQtyInput(e.target.value)}
+                                />
+                                <div className="text-muted-foreground mt-1.5 text-xs">
+                                    {t('stock_available')}{' '}
+                                    <b className={cn('tabular-nums', available > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive')}>
+                                        {available}
+                                    </b>{' '}
+                                    {selected?.unit}
+                                </div>
+                            </>
+                        )}
                     </Field>
                     <Field label={t('stock_reason')} required>
-                        <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('stock_reason_ph')} />
+                        <Textarea
+                            name="reason"
+                            rows={2}
+                            className="min-h-0"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder={`${t('stock_reason_ph')}…`}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

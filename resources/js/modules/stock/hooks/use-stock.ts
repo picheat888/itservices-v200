@@ -26,7 +26,8 @@ interface StockItemFilters {
 }
 
 /** Full (filtered) item list for pickers/drawers — returns every matching item, not a page. */
-export const useStockItems = (filters: StockItemFilters) => useQuery({ queryKey: [...ITEMS, 'all', filters], queryFn: () => stockApi.list(filters) });
+export const useStockItems = (filters: StockItemFilters, enabled = true) =>
+    useQuery({ queryKey: [...ITEMS, 'all', filters], queryFn: () => stockApi.list(filters), enabled });
 
 /** Server-paginated item list for the Stock items table (page/sort/filters handled by the API). */
 export const useStockItemsPage = (params: StockItemPageParams) =>
@@ -36,7 +37,7 @@ export const useStockItemsPage = (params: StockItemPageParams) =>
 export const useStockSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary, enabled });
 
 /** Every serial known to the system — used to flag duplicates while receiving. */
-export const useExistingSerials = () => useQuery({ queryKey: [...ITEMS, 'serials'], queryFn: stockApi.existingSerials });
+export const useExistingSerials = (enabled = true) => useQuery({ queryKey: [...ITEMS, 'serials'], queryFn: stockApi.existingSerials, enabled });
 
 /** A single stock item with its per-unit serials (for the detail view). */
 export const useStockItem = (id: number | null) =>

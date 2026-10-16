@@ -33,6 +33,7 @@ export interface Column<T> {
 const FLEX_COLUMN_MIN = '12rem';
 
 const HIDE_BELOW: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell' };
+const HIDE_BELOW_COL: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-column', xl: 'hidden xl:table-column' };
 
 interface DataTableProps<T> {
     columns: Column<T>[];
@@ -263,7 +264,11 @@ export function DataTable<T>({
                     {columns.some((c) => c.width) && (
                         <colgroup>
                             {columns.map((c) => (
-                                <col key={c.key} style={c.width ? { width: c.width } : undefined} />
+                                <col
+                                    key={c.key}
+                                    className={c.hideBelow ? HIDE_BELOW_COL[c.hideBelow] : undefined}
+                                    style={c.width ? { width: c.width } : undefined}
+                                />
                             ))}
                         </colgroup>
                     )}

@@ -6,13 +6,12 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SerialToggle } from '@/shared/components/serial-toggle';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { cn } from '@/shared/lib/utils';
 import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Label } from '@/shared/ui/label';
+import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
 import { useEffect, useState } from 'react';
 import type { StockItemPayload } from '../api/stockApi';
@@ -33,8 +32,7 @@ const empty: StockItemPayload = {
     warranty_type_id: null,
 };
 
-/** Map an existing item onto the editable form payload (keys ordered to match
- *  `empty` so two payloads can be compared for the "is dirty" check). */
+/** Map an existing item onto the form payload (keys ordered like `empty` for the dirty check). */
 function itemToForm(item: StockItem): StockItemPayload {
     return {
         sku: item.sku,
@@ -65,7 +63,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     const { data: brands = [] } = useBrands();
     const { data: models = [] } = useAssetModels();
     const [form, setForm] = useState<StockItemPayload>(empty);
-    // When on, the item name is generated from Brand + Model instead of typed.
+    // When on, the item name is generated from Brand + Model instead of typed
     const [autoName, setAutoName] = useState(false);
     const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
@@ -78,9 +76,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
         setSaved(false);
     }, [open, item]);
 
-    // Auto item name = "Brand Model" (whichever parts exist), resolved from the
-    // selected master ids. Kept in sync while the Auto switch is on; turning it off
-    // leaves the last value editable.
+    // Auto item name = "Brand Model", kept in sync while the switch is on
     const brandName = brands.find((b) => b.id === form.brand_id)?.name;
     const modelName = models.find((m) => m.id === form.model_id)?.name;
     const autoItemName = [brandName, modelName].filter(Boolean).join(' ').trim();
@@ -90,29 +86,28 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
         }
     }, [autoName, autoItemName]);
 
-    // Save stays disabled until something changes; the same check guards closing.
+    // Save stays disabled until something changes; the same check guards closing
     const isDirty = JSON.stringify(form) !== JSON.stringify(item ? itemToForm(item) : empty);
     const guardClose = useDiscardGuard(open && isDirty && !saved);
-    // SKU is auto-generated on create; everything else below is required.
+    const minMaxInvalid = Number(form.max_stock) < Number(form.min_stock);
+    // SKU is auto-generated on create; everything else below is required
     const isValid =
         !!form.name.trim() &&
         form.category_id != null &&
         form.brand_id != null &&
         form.model_id != null &&
         form.warranty_type_id != null &&
-        // Max must be at least Min.
-        Number(form.max_stock) >= Number(form.min_stock);
+        !minMaxInvalid;
 
     const set = <K extends keyof StockItemPayload>(k: K, v: StockItemPayload[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-    // Models are scoped to the chosen brand; with no brand picked, show them all.
+    // Models are scoped to the chosen brand; with no brand picked, show them all
     const selectedBrand = brands.find((b) => b.id === form.brand_id);
     const modelOptions = selectedBrand ? models.filter((m) => m.brand_id === selectedBrand.id) : models;
 
     const submit = async () => {
-        // SKU is auto-generated on create, so only the name is required (matches `isValid`).
         if (saving || saved || !form.name.trim() || (item && !form.sku.trim())) return;
-        // Editing an existing item asks for confirmation before saving changes.
+        // Editing an existing item asks for confirmation before saving
         if (item) {
             if (!(await confirm({ variant: 'edit', title: t('stock_edit_item'), description: t('stock_edit_confirm') }))) {
                 return;
@@ -131,56 +126,38 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
         }
     };
 
+    const dialogTitle = item ? t('stock_edit_item') : t('stock_new_item');
+
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>{item ? t('stock_edit_item') : t('stock_new_item')}</DialogTitle>
+                    <DialogTitle>{dialogTitle}</DialogTitle>
+                    <DialogDescription className="sr-only">{dialogTitle}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
-                    {/* SKU is system-generated (SKU-#######); always read-only —
-                        a placeholder hint stands in until the server assigns it. */}
+                    {/* SKU is system-generated; always read-only */}
                     <Field label="SKU" required={!!item}>
-                        <Input value={form.sku} disabled placeholder={t('stock_sku_auto')} />
+                        <Input name="sku" value={form.sku} disabled placeholder={t('stock_sku_auto')} />
                     </Field>
-                    <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                            <Label>
-                                {t('stock_item_name')}
-                                <span className="text-destructive ml-0.5">*</span>
-                            </Label>
-                            {/* Small switch: build the name automatically from Brand + Model. */}
-                            <button
-                                type="button"
-                                onClick={() => setAutoName((v) => !v)}
-                                aria-pressed={autoName}
-                                title={t('stock_item_name_auto_hint')}
-                                className="text-muted-foreground flex items-center gap-1.5 text-xs"
-                            >
+                    <Field
+                        label={t('stock_item_name')}
+                        required
+                        action={
+                            <span className="text-muted-foreground flex items-center gap-1.5 text-xs" title={t('stock_item_name_auto_hint')}>
                                 <span className="font-medium">{t('stock_item_name_auto')}</span>
-                                <span
-                                    className={cn(
-                                        'relative h-4 w-7 shrink-0 rounded-full transition-colors',
-                                        autoName ? 'bg-brand' : 'bg-muted-foreground/30',
-                                    )}
-                                >
-                                    <span
-                                        className={cn(
-                                            'absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all',
-                                            autoName ? 'left-[14px]' : 'left-0.5',
-                                        )}
-                                    />
-                                </span>
-                            </button>
-                        </div>
+                                <Switch checked={autoName} onChange={setAutoName} aria-label={t('stock_item_name_auto')} />
+                            </span>
+                        }
+                    >
                         <Input
+                            name="name"
                             value={form.name}
                             onChange={(e) => set('name', e.target.value)}
                             disabled={autoName}
                             placeholder={autoName ? t('stock_item_name_auto_hint') : undefined}
-                            autoFocus
                         />
-                    </div>
+                    </Field>
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('stock_category')} required>
                             <SearchableSelect
@@ -193,7 +170,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                             <SearchableSelect
                                 value={form.unit_id != null ? String(form.unit_id) : ''}
                                 onChange={(v) => set('unit_id', v ? Number(v) : null)}
-                                placeholder="unit"
+                                placeholder={t('stock_unit')}
                                 options={units.map((u) => ({ value: String(u.id), label: u.name, search: u.name }))}
                             />
                         </Field>
@@ -216,14 +193,27 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         </Field>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label="Min">
-                            <Input type="number" min={0} value={form.min_stock} onChange={(e) => set('min_stock', Math.max(0, +e.target.value))} />
+                        <Field label={t('stock_min_stock')}>
+                            <Input
+                                type="number"
+                                name="min_stock"
+                                inputMode="numeric"
+                                min={0}
+                                value={form.min_stock}
+                                onChange={(e) => set('min_stock', Math.max(0, +e.target.value))}
+                            />
                         </Field>
-                        <Field label="Max">
-                            <Input type="number" min={0} value={form.max_stock} onChange={(e) => set('max_stock', Math.max(0, +e.target.value))} />
+                        <Field label={t('stock_max_stock')} error={minMaxInvalid ? t('stock_minmax_invalid') : undefined}>
+                            <Input
+                                type="number"
+                                name="max_stock"
+                                inputMode="numeric"
+                                min={0}
+                                value={form.max_stock}
+                                onChange={(e) => set('max_stock', Math.max(0, +e.target.value))}
+                            />
                         </Field>
                     </div>
-                    {Number(form.max_stock) < Number(form.min_stock) && <p className="text-destructive text-xs">{t('stock_minmax_invalid')}</p>}
                     <Field label={t('stock_warranty')} required>
                         <SearchableSelect
                             value={form.warranty_type_id != null ? String(form.warranty_type_id) : ''}

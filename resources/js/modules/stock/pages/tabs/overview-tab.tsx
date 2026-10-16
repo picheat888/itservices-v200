@@ -1,23 +1,22 @@
 import { useT } from '@/lang';
 import { OverviewHeader } from '@/shared/components/overview-period';
+import { StatCard } from '@/shared/components/stat-card';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
-import { AlertTriangle, Archive, Check, Layers, Warehouse } from 'lucide-react';
+import { AlertTriangle, Archive, Check, ChevronRight, Layers, Warehouse } from 'lucide-react';
 import { useStockSummary } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
 
-export type Kpi = { label: string; value: string | number; sub: string; icon: typeof Archive };
+export type Kpi = { label: string; value: string | number; sub: string; icon: typeof Archive; onClick?: () => void };
 
-/** Scoped keyframes for the dashboard consoles (LED pulse, live ping). */
-const stockConsoleStyles = `
-@keyframes sc-led { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
-@keyframes sc-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
-.sc-led { box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 20%, transparent); animation: sc-led 1.1s ease-in-out infinite; }
-.sc-ping { animation: sc-ping 1.5s cubic-bezier(0,0,.2,1) infinite; }
-@media (prefers-reduced-motion: reduce) { .sc-led, .sc-ping { animation: none; } }
-`;
+/** Reorder rows listed before the rest fold behind "view all". */
+const REORDER_SHOWN = 6;
+
+const PANEL = 'flex h-auto max-h-[22rem] flex-col overflow-hidden p-0 lg:h-[22rem]';
+const PANEL_LIST = 'divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain p-2';
+const PANEL_TITLE = 'text-sm font-semibold';
 
 export function OverviewTab({
     summary,
@@ -25,6 +24,7 @@ export function OverviewTab({
     kpis,
     onSelectWarehouse,
     onSelectCategory,
+    onViewAlerts,
     canEvents,
 }: {
     summary: ReturnType<typeof useStockSummary>['data'];
@@ -32,12 +32,13 @@ export function OverviewTab({
     kpis: Kpi[];
     onSelectWarehouse: (warehouse: string) => void;
     onSelectCategory: (category: string) => void;
-    /** When false the movements query is skipped and the recent-movements widget is hidden (caller lacks stock.view_events). */
+    /** Opens the Items tab filtered to the alert statuses. */
+    onViewAlerts: () => void;
+    /** When false the recent-movements card is hidden (caller lacks stock.view_events). */
     canEvents: boolean;
 }) {
     const fmt = useDateFormat();
-    // Recent movements are folded into the summary payload so they arrive with every other
-    // panel (no separate, lagging query). Empty for users without view_events (card hidden).
+    // Recent movements ride along in the summary payload; empty for users without view_events.
     const movements = summary?.recent_movements ?? [];
     const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
     // Items below their minimum, out-of-stock first, are the reorder queue.
@@ -45,33 +46,26 @@ export function OverviewTab({
     return (
         <div className="space-y-8">
             <OverviewHeader />
-            {/* KPI cards live on the Overview tab. */}
+            {/* KPI cards */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {kpis.map((k) => {
-                    const Icon = k.icon;
-                    return (
-                        <Card key={k.label} className="p-5">
-                            <div className="flex items-start justify-between">
-                                <div className="text-muted-foreground text-sm">{k.label}</div>
-                                <span className="text-brand bg-brand/10 flex h-9 w-9 items-center justify-center rounded-lg">
-                                    <Icon className="h-[18px] w-[18px]" />
-                                </span>
-                            </div>
-                            <div className="mt-2 text-3xl font-bold">
-                                {summary ? k.value : <div className="bg-muted h-8 w-16 animate-pulse rounded" />}
-                            </div>
-                            <div className="text-muted-foreground mt-1 text-xs">{k.sub}</div>
-                        </Card>
-                    );
-                })}
+                {kpis.map((k) => (
+                    <StatCard
+                        key={k.label}
+                        icon={k.icon}
+                        label={k.label}
+                        value={String(k.value)}
+                        sub={k.sub}
+                        onClick={k.onClick}
+                        loading={!summary}
+                    />
+                ))}
             </div>
 
             {!summary ? (
-                // Skeleton mirrors the real card grid (header + rows) so it reads the same as
-                // the loaded state and the recent-movements card's own loading skeleton.
-                <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+                // Skeleton mirrors the real card grid (header + rows).
+                <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
                     {Array.from({ length: canEvents ? 4 : 3 }).map((_, i) => (
-                        <Card key={i} className="flex h-[22rem] flex-col overflow-hidden">
+                        <Card key={i} className={PANEL}>
                             <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
                                 <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                                 <div className="bg-muted h-4 w-36 animate-pulse rounded" />
@@ -92,38 +86,45 @@ export function OverviewTab({
                     ))}
                 </div>
             ) : (
-                <>
-                    <style>{stockConsoleStyles}</style>
-                    {/* One grid holds every panel so a hidden card (e.g. Recent movements
-                        when the user lacks view_events) lets the rest reflow up to fill it. */}
-                    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-                        {/* Action queue — reorder card with left severity accents */}
-                        <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3')}>
-                                <div className="flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                                    <span className="text-sm font-semibold">{t('stock_action_queue')}</span>
-                                </div>
-                                {reorderItems.length > 0 && (
-                                    <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-[11px] font-bold text-red-700">
-                                        {reorderItems.length}
-                                    </span>
-                                )}
+                // One grid holds every panel so a hidden card lets the rest reflow up.
+                <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+                    {/* Reorder queue */}
+                    <Card className={PANEL}>
+                        <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3')}>
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" aria-hidden />
+                                <h2 className={PANEL_TITLE}>{t('stock_action_queue')}</h2>
                             </div>
-                            {reorderItems.length === 0 ? (
-                                <div className="text-muted-foreground flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-12 text-center text-sm">
-                                    <Check className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
-                                    {t('stock_all_stocked')}
-                                </div>
-                            ) : (
-                                <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto p-2">
-                                    {reorderItems.slice(0, 6).map((it) => {
+                            {reorderItems.length > 0 && (
+                                <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-[11px] font-bold text-red-700 tabular-nums">
+                                    {reorderItems.length}
+                                </span>
+                            )}
+                        </div>
+                        {reorderItems.length === 0 ? (
+                            <div className="text-muted-foreground flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-12 text-center text-sm">
+                                <Check className="h-6 w-6 text-emerald-500 dark:text-emerald-400" aria-hidden />
+                                {t('stock_all_stocked')}
+                            </div>
+                        ) : (
+                            <>
+                                <div className={PANEL_LIST}>
+                                    {reorderItems.slice(0, REORDER_SHOWN).map((it) => {
                                         const out = it.current_stock === 0;
                                         return (
                                             <div key={it.id} className="hover:bg-accent/30 flex items-stretch gap-3 px-3 py-2.5 transition-colors">
-                                                <span className={cn('w-1 shrink-0 rounded-full', out ? 'bg-destructive sc-led' : 'bg-amber-500')} />
+                                                <span
+                                                    className={cn(
+                                                        'w-1 shrink-0 rounded-full',
+                                                        out ? 'bg-destructive ring-destructive/20 ring-[3px]' : 'bg-amber-500',
+                                                    )}
+                                                    aria-hidden
+                                                />
                                                 <div className="min-w-0 flex-1 py-0.5">
-                                                    <div className="truncate text-sm font-medium">{it.name}</div>
+                                                    <div className="truncate text-sm font-medium">
+                                                        <span className="sr-only">{t(out ? 'stock_st_out' : 'stock_st_low')} </span>
+                                                        {it.name}
+                                                    </div>
                                                     <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
                                                         <span>{it.sku}</span>
                                                         <span>
@@ -135,12 +136,84 @@ export function OverviewTab({
                                                     </div>
                                                 </div>
                                                 <div className="shrink-0 text-right">
-                                                    <div className="text-muted-foreground text-[11px]">
+                                                    <div className="text-muted-foreground text-[11px] tabular-nums">
                                                         {it.current_stock}/{it.min_stock}
                                                     </div>
-                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                                        +{Math.max(0, it.max_stock - it.current_stock)}
+                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-xs font-bold text-emerald-700 tabular-nums dark:text-emerald-400">
+                                                        <span className="sr-only">{t('stock_reorder_qty')} </span>+
+                                                        {Math.max(0, it.max_stock - it.current_stock)}
                                                     </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {reorderItems.length > REORDER_SHOWN && (
+                                    <button
+                                        type="button"
+                                        onClick={onViewAlerts}
+                                        className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring mt-auto flex w-full shrink-0 items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                                    >
+                                        {t('stock_show_all_alerts').replace('{n}', String(reorderItems.length))}
+                                        <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </Card>
+
+                    {/* Recent movements (stock.view_events only) */}
+                    {canEvents && (
+                        <Card className={PANEL}>
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2.5 border-b px-5 py-3')}>
+                                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+                                <h2 className={PANEL_TITLE}>{t('stock_recent_moves')}</h2>
+                            </div>
+                            {movements.length === 0 ? (
+                                <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">
+                                    {t('stock_no_moves')}
+                                </div>
+                            ) : (
+                                <div className={PANEL_LIST}>
+                                    {movements.slice(0, 6).map((m) => {
+                                        const meta = MV_META[m.type];
+                                        const MIcon = meta.icon;
+                                        return (
+                                            <div key={m.id} className="hover:bg-accent/40 flex items-center gap-3 px-3 py-2.5 transition-colors">
+                                                <span
+                                                    className={cn(
+                                                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                                                        MV_TONE_BG[meta.tone],
+                                                    )}
+                                                    aria-hidden
+                                                >
+                                                    <MIcon className="h-4 w-4" />
+                                                </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate text-sm font-medium">{m.item_name}</div>
+                                                    <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
+                                                        <span>{m.sku}</span>
+                                                        <span>{t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="shrink-0 text-right">
+                                                    <div
+                                                        className={cn(
+                                                            'text-sm font-bold tabular-nums',
+                                                            meta.sign > 0
+                                                                ? 'text-emerald-700 dark:text-emerald-400'
+                                                                : meta.sign < 0
+                                                                  ? 'text-destructive'
+                                                                  : '',
+                                                        )}
+                                                    >
+                                                        {meta.sign > 0 ? '+' : meta.sign < 0 ? '−' : ''}
+                                                        {m.qty}
+                                                    </div>
+                                                    <div className="text-muted-foreground text-[10px] whitespace-nowrap">
+                                                        <span className="lg:hidden">{fmt.date(m.moved_at)}</span>
+                                                        <span className="hidden lg:inline">{fmt.dateTime(m.moved_at)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
@@ -148,136 +221,77 @@ export function OverviewTab({
                                 </div>
                             )}
                         </Card>
+                    )}
 
-                        {/* Recent movements — only shown when the user has stock.view_events */}
-                        {canEvents && (
-                            <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                                <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3')}>
-                                    <div className="flex items-center gap-2.5">
-                                        <span className="relative flex h-2 w-2">
-                                            <span className="sc-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                    {/* By warehouse */}
+                    <Card className={PANEL}>
+                        <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
+                            <Warehouse className="text-muted-foreground h-4 w-4" aria-hidden />
+                            <h2 className={PANEL_TITLE}>{t('stock_by_warehouse')}</h2>
+                        </div>
+                        <div className={PANEL_LIST}>
+                            {summary.by_warehouse.map((w) => (
+                                <button
+                                    type="button"
+                                    key={w.warehouse}
+                                    onClick={() => onSelectWarehouse(w.warehouse)}
+                                    title={t('stock_view_items')}
+                                    className="hover:bg-accent/30 group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors"
+                                >
+                                    <div className="flex min-w-0 items-center gap-2.5">
+                                        <span
+                                            className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+                                            aria-hidden
+                                        >
+                                            <Warehouse className="h-3.5 w-3.5" />
                                         </span>
-                                        <span className="text-sm font-semibold">{t('stock_recent_moves')}</span>
+                                        <span className="group-hover:text-brand truncate text-sm font-medium transition-colors">{w.warehouse}</span>
                                     </div>
-                                    <span className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">live</span>
-                                </div>
-                                {movements.length === 0 ? (
-                                    <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">
-                                        {t('stock_no_moves')}
+                                    <div className="flex shrink-0 gap-4 text-right text-sm tabular-nums">
+                                        <div className="w-12">
+                                            <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
+                                            {w.skus}
+                                        </div>
+                                        <div className="w-14">
+                                            <div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>
+                                            {w.units}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto p-2">
-                                        {movements.slice(0, 6).map((m) => {
-                                            const meta = MV_META[m.type];
-                                            const MIcon = meta.icon;
-                                            const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
-                                            return (
-                                                <div key={m.id} className="hover:bg-accent/40 flex items-center gap-3 px-3 py-2.5 transition-colors">
-                                                    <span
-                                                        className={cn(
-                                                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                                                            MV_TONE_BG[meta.tone],
-                                                        )}
-                                                    >
-                                                        <MIcon className="h-4 w-4" />
-                                                    </span>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="truncate text-sm font-medium">{m.item_name}</div>
-                                                        <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
-                                                            <span>{m.sku}</span>
-                                                            <span>{t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="shrink-0 text-right">
-                                                        <div
-                                                            className={cn(
-                                                                'text-sm font-bold',
-                                                                inbound ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive',
-                                                            )}
-                                                        >
-                                                            {inbound ? '+' : '−'}
-                                                            {m.qty}
-                                                        </div>
-                                                        <div className="text-muted-foreground text-[10px]">{fmt.dateTime(m.moved_at)}</div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </Card>
-                        )}
+                                </button>
+                            ))}
+                        </div>
+                    </Card>
 
-                        {/* By warehouse */}
-                        <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
-                                <Warehouse className="text-muted-foreground h-4 w-4" />
-                                <span className="text-sm font-semibold">{t('stock_by_warehouse')}</span>
-                            </div>
-                            <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto p-2">
-                                {summary.by_warehouse.map((w) => (
-                                    <button
-                                        type="button"
-                                        key={w.warehouse}
-                                        onClick={() => onSelectWarehouse(w.warehouse)}
-                                        title={t('stock_view_items')}
-                                        className="hover:bg-accent/30 group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors"
-                                    >
-                                        <div className="flex min-w-0 items-center gap-2.5">
-                                            <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
-                                                <Warehouse className="h-3.5 w-3.5" />
-                                            </span>
-                                            <span className="group-hover:text-brand truncate text-sm font-medium transition-colors">
-                                                {w.warehouse}
-                                            </span>
-                                        </div>
-                                        <div className="flex shrink-0 gap-4 text-right text-sm">
-                                            <div className="w-12">
-                                                <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
-                                                {w.skus}
-                                            </div>
-                                            <div className="w-14">
-                                                <div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>
-                                                {w.units}
-                                            </div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </Card>
-
-                        {/* By category */}
-                        <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
-                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
-                                <Layers className="text-muted-foreground h-4 w-4" />
-                                <span className="text-sm font-semibold">{t('stock_by_category')}</span>
-                            </div>
-                            <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-4">
-                                {summary.by_category.map((c) => (
-                                    <button
-                                        type="button"
-                                        key={c.category}
-                                        onClick={() => onSelectCategory(c.category)}
-                                        title={t('stock_view_items')}
-                                        className="group block w-full text-left"
-                                    >
-                                        <div className="mb-1.5 flex items-center justify-between text-sm">
-                                            <span className="group-hover:text-brand font-medium transition-colors">{c.category}</span>
-                                            <span className="text-muted-foreground text-xs">{c.units}</span>
-                                        </div>
-                                        <div className="bg-muted h-2 overflow-hidden rounded-full">
-                                            <span
-                                                className="bg-brand block h-full rounded-full transition-all"
-                                                style={{ width: `${(c.units / maxUnits) * 100}%` }}
-                                            />
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-                </>
+                    {/* By category */}
+                    <Card className={PANEL}>
+                        <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
+                            <Layers className="text-muted-foreground h-4 w-4" aria-hidden />
+                            <h2 className={PANEL_TITLE}>{t('stock_by_category')}</h2>
+                        </div>
+                        <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto overscroll-contain p-4">
+                            {summary.by_category.map((c) => (
+                                <button
+                                    type="button"
+                                    key={c.category}
+                                    onClick={() => onSelectCategory(c.category)}
+                                    title={t('stock_view_items')}
+                                    className="group block w-full text-left"
+                                >
+                                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                        <span className="group-hover:text-brand min-w-0 truncate font-medium transition-colors">{c.category}</span>
+                                        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{c.units}</span>
+                                    </div>
+                                    <div className="bg-muted h-2 overflow-hidden rounded-full">
+                                        <span
+                                            className="bg-brand block h-full rounded-full transition-[width]"
+                                            style={{ width: `${(c.units / maxUnits) * 100}%` }}
+                                        />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </Card>
+                </div>
             )}
         </div>
     );

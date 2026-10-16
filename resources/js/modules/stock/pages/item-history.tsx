@@ -1,9 +1,11 @@
 import { useT } from '@/lang';
+import { useCurrency } from '@/modules/settings';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
+import { buttonVariants } from '@/shared/ui/button';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer, SlidersHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -11,25 +13,27 @@ import { useStockItemHistory } from '../hooks/use-stock';
 
 type View = 'issue' | 'receive' | 'adjust' | 'transfer';
 type Movement = StockItemHistory['movements'][number];
+type Translate = ReturnType<typeof useT>;
+type FormatDateTime = ReturnType<typeof useDateFormat>['dateTime'];
 
 const VIEW_META: Record<View, { titleKey: string; icon: typeof ArrowDownToLine; tone: string; bg: string }> = {
     issue: { titleKey: 'stock_hist_issue', icon: ArrowUpFromLine, tone: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950/40' },
     receive: {
         titleKey: 'stock_hist_receive',
         icon: ArrowDownToLine,
-        tone: 'text-emerald-600 dark:text-emerald-400',
+        tone: 'text-emerald-700 dark:text-emerald-400',
         bg: 'bg-emerald-100 dark:bg-emerald-950/40',
     },
     adjust: {
         titleKey: 'stock_hist_adjust',
         icon: SlidersHorizontal,
-        tone: 'text-amber-600 dark:text-amber-400',
+        tone: 'text-amber-700 dark:text-amber-400',
         bg: 'bg-amber-100 dark:bg-amber-950/40',
     },
     transfer: {
         titleKey: 'stock_hist_transfer',
         icon: ArrowLeftRight,
-        tone: 'text-blue-600 dark:text-blue-400',
+        tone: 'text-blue-700 dark:text-blue-400',
         bg: 'bg-blue-100 dark:bg-blue-950/40',
     },
 };
@@ -50,11 +54,13 @@ export default function ItemHistoryPage() {
     const view = (params.get('v') as View | null) ?? null;
     const { data, isLoading } = useStockItemHistory(id ? Number(id) : null);
     const { dateTime: fmt } = useDateFormat();
+    const { format: formatMoney } = useCurrency();
 
     if (isLoading || !data) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <div className="border-muted-foreground/30 border-t-primary h-7 w-7 animate-spin rounded-full border-2" />
+            <div role="status" className="flex min-h-screen items-center justify-center">
+                <div className="border-muted-foreground/30 border-t-primary h-7 w-7 animate-spin rounded-full border-2" aria-hidden />
+                <span className="sr-only">{t('loading')}</span>
             </div>
         );
     }
@@ -79,10 +85,12 @@ export default function ItemHistoryPage() {
                             <span>{view ? t(VIEW_META[view].titleKey as Parameters<typeof t>[0]) : t('stock_hist_overview')}</span>
                             <span className="text-muted-foreground font-normal">{data.item.name}</span>
                         </div>
-                        <div className="mt-0.5 text-sm">SKU : {data.item.sku}</div>
+                        <div className="mt-0.5 text-sm">
+                            {t('stock_sku')}: {data.item.sku}
+                        </div>
                     </div>
                     <div className="text-right text-sm whitespace-nowrap">
-                        {t('stock_current')} <span className="text-base font-bold">{data.item.current_stock}</span>
+                        {t('stock_current')} <span className="text-base font-bold tabular-nums">{data.item.current_stock}</span>
                     </div>
                 </div>
                 <hr className="mt-2 border-black/50" />
@@ -93,9 +101,9 @@ export default function ItemHistoryPage() {
                 <button
                     type="button"
                     onClick={() => setParams({})}
-                    className="text-muted-foreground hover:text-foreground mb-3 inline-flex items-center gap-1 text-sm font-medium print:hidden"
+                    className="text-muted-foreground hover:text-foreground mb-3 inline-flex min-h-6 items-center gap-1 px-1 text-sm font-medium print:hidden"
                 >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4" aria-hidden />
                     {t('stock_hist_back')}
                 </button>
             )}
@@ -103,21 +111,26 @@ export default function ItemHistoryPage() {
             {/* Header (screen only) */}
             <div className="mb-6 flex items-start justify-between gap-4 print:hidden">
                 <div className="min-w-0">
-                    <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{t('stock_history_title')}</div>
+                    <div className="text-muted-foreground text-xs font-semibold">{t('stock_history_title')}</div>
                     <h1 className="mt-1 truncate text-xl font-semibold">{data.item.name}</h1>
                     <div className="text-muted-foreground mt-1 text-sm">{data.item.sku}</div>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => window.open(`/pdf/stock-items/${data.item.id}/history?v=${view ?? 'summary'}`, '_blank')}
-                    className="border-border hover:bg-muted/50 inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium print:hidden"
+                <a
+                    href={`/pdf/stock-items/${data.item.id}/history?v=${view ?? 'summary'}`}
+                    target="_blank"
+                    rel="noopener"
+                    className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'shrink-0 print:hidden')}
                 >
-                    <Printer className="h-4 w-4" />
+                    <Printer className="h-4 w-4" aria-hidden />
                     {t('stock_history_pdf')}
-                </button>
+                </a>
             </div>
 
-            {view ? <CategoryView view={view} movements={moves(view)} serialsOf={serialsOf} /> : <Hub data={data} onOpen={(v) => setParams({ v })} />}
+            {view ? (
+                <CategoryView view={view} movements={moves(view)} serialsOf={serialsOf} t={t} fmt={fmt} formatMoney={formatMoney} />
+            ) : (
+                <Hub data={data} onOpen={(v) => setParams({ v })} t={t} fmt={fmt} />
+            )}
 
             {/* Print-only footer */}
             <div className="mt-6 hidden justify-center gap-x-3 border-t border-black/30 pt-2 text-xs print:flex">
@@ -126,220 +139,250 @@ export default function ItemHistoryPage() {
             </div>
         </div>
     );
+}
 
-    // ── Hub ───────────────────────────────────────────────────────────────
-    function Hub({ data, onOpen }: { data: StockItemHistory; onOpen: (v: View) => void }) {
-        return (
-            <>
-                <h2 className="mb-2 text-sm font-semibold">{t('stock_history_other')}</h2>
-                <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden">
-                    {(Object.keys(VIEW_META) as View[]).map((v) => {
-                        const meta = VIEW_META[v];
-                        const Icon = meta.icon;
-                        return (
-                            <button
-                                key={v}
-                                type="button"
-                                onClick={() => onOpen(v)}
-                                className="border-border hover:bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition"
-                            >
-                                <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', meta.bg)}>
-                                    <Icon className={cn('h-4 w-4', meta.tone)} />
-                                </span>
-                                <span className="truncate">{t(meta.titleKey as Parameters<typeof t>[0])}</span>
-                            </button>
-                        );
+// ── Hub ───────────────────────────────────────────────────────────────
+function Hub({ data, onOpen, t, fmt }: { data: StockItemHistory; onOpen: (v: View) => void; t: Translate; fmt: FormatDateTime }) {
+    return (
+        <>
+            <h2 className="mb-2 text-sm font-semibold">{t('stock_history_other')}</h2>
+            <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden">
+                {(Object.keys(VIEW_META) as View[]).map((v) => {
+                    const meta = VIEW_META[v];
+                    const Icon = meta.icon;
+                    return (
+                        <button
+                            key={v}
+                            type="button"
+                            onClick={() => onOpen(v)}
+                            className="border-border hover:bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition"
+                        >
+                            <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', meta.bg)} aria-hidden>
+                                <Icon className={cn('h-4 w-4', meta.tone)} />
+                            </span>
+                            <span className="min-w-0 truncate">{t(meta.titleKey as Parameters<typeof t>[0])}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div className="border-border bg-muted/30 mb-6 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm print:hidden">
+                <span className="text-muted-foreground">{t('stock_current')}</span>
+                <span className="text-lg font-bold tabular-nums">{data.item.current_stock}</span>
+            </div>
+
+            {data.item.track_serial && (
+                <Table
+                    headers={['#', t('stock_hist_serial'), t('stock_hist_receive_date'), t('stock_hist_receive_no')]}
+                    rows={data.serials.map((s, i) => {
+                        const recv = s.events.find((e) => e.event === 'received');
+                        return [String(i + 1), <span>{s.serial}</span>, fmt(recv?.occurred_at ?? null), recv?.doc_no ?? '—'];
                     })}
-                </div>
+                    emptyText={t('stock_history_no_events')}
+                />
+            )}
+        </>
+    );
+}
 
-                <div className="border-border bg-muted/30 mb-6 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm print:hidden">
-                    <span className="text-muted-foreground">{t('stock_current')}</span>
-                    <span className="text-lg font-bold">{data.item.current_stock}</span>
-                </div>
+// ── A category sub-view ────────────────────────────────────────────────
+function CategoryView({
+    view,
+    movements,
+    serialsOf,
+    t,
+    fmt,
+    formatMoney,
+}: {
+    view: View;
+    movements: Movement[];
+    serialsOf: (m: Movement, e: SerialEvent['event']) => string[];
+    t: Translate;
+    fmt: FormatDateTime;
+    formatMoney: (value: number) => string;
+}) {
+    const meta = VIEW_META[view];
+    const ev = VIEW_FILTER[view].event;
+    const action = (m: Movement) => t(`stock_mv_${m.type}` as Parameters<typeof t>[0]);
+    const serialCell = (m: Movement) => {
+        const list = serialsOf(m, ev);
+        return list.length ? <span className="text-xs">{list.join(', ')}</span> : '—';
+    };
+    const qtyCell = (m: Movement) => <span className="tabular-nums">{m.qty}</span>;
 
-                {data.item.track_serial && (
-                    <Table
-                        headers={['#', t('stock_hist_serial'), t('stock_hist_receive_date'), t('stock_hist_receive_no')]}
-                        rows={data.serials.map((s, i) => {
-                            const recv = s.events.find((e) => e.event === 'received');
-                            return [String(i + 1), <span>{s.serial}</span>, fmt(recv?.occurred_at ?? null), recv?.doc_no ?? '—'];
-                        })}
-                    />
-                )}
-            </>
-        );
+    let headers: string[];
+    let rows: ReactNode[][];
+    // Column indexes that wrap (serial lists and notes); every other cell stays on one line.
+    let wrapColumns: number[];
+
+    if (view === 'issue') {
+        headers = [
+            '#',
+            t('stock_doc_no'),
+            t('audit_time'),
+            t('stock_hist_action'),
+            t('stock_warehouse'),
+            t('stock_hist_issue_by'),
+            t('stock_hist_request_by'),
+            t('stock_hist_request_no'),
+            t('stock_hist_serials'),
+        ];
+        wrapColumns = [8];
+        rows = movements.map((m, i) => [
+            String(i + 1),
+            <span>{m.doc_no ?? '—'}</span>,
+            fmt(m.moved_at),
+            action(m),
+            m.from_label ?? '—',
+            m.recorded_by ?? '—',
+            m.to_label ?? '—',
+            m.reference ?? '—',
+            serialCell(m),
+        ]);
+    } else if (view === 'receive') {
+        headers = [
+            '#',
+            t('stock_doc_no'),
+            t('audit_time'),
+            t('stock_hist_action'),
+            t('stock_supplier'),
+            t('stock_hist_ref_doc'),
+            t('stock_warehouse'),
+            t('stock_cost'),
+            t('stock_hist_serials'),
+            t('stock_qty'),
+            t('stock_hist_note'),
+        ];
+        wrapColumns = [8, 10];
+        rows = movements.map((m, i) => [
+            String(i + 1),
+            <span>{m.doc_no ?? '—'}</span>,
+            fmt(m.moved_at),
+            action(m),
+            m.from_label ?? '—',
+            m.reference ?? '—',
+            m.to_label ?? '—',
+            m.unit_cost != null ? <span className="tabular-nums">{formatMoney(m.unit_cost)}</span> : '—',
+            serialCell(m),
+            qtyCell(m),
+            m.notes ?? '—',
+        ]);
+    } else if (view === 'adjust') {
+        headers = [
+            '#',
+            t('stock_doc_no'),
+            t('audit_time'),
+            t('stock_hist_ref_doc'),
+            t('stock_hist_action'),
+            t('stock_hist_adjust_by'),
+            t('stock_hist_serials'),
+            t('stock_qty'),
+            t('stock_hist_note'),
+        ];
+        wrapColumns = [6, 8];
+        rows = movements.map((m, i) => [
+            String(i + 1),
+            <span>{m.doc_no ?? '—'}</span>,
+            fmt(m.moved_at),
+            m.reference ?? '—',
+            action(m),
+            m.recorded_by ?? '—',
+            serialCell(m),
+            qtyCell(m),
+            m.notes ?? '—',
+        ]);
+    } else {
+        headers = [
+            '#',
+            t('stock_doc_no'),
+            t('audit_time'),
+            t('stock_hist_action'),
+            t('stock_from'),
+            t('stock_to'),
+            t('stock_hist_transfer_by'),
+            t('stock_hist_serials'),
+            t('stock_qty'),
+            t('stock_hist_note'),
+        ];
+        wrapColumns = [7, 9];
+        rows = movements.map((m, i) => [
+            String(i + 1),
+            <span>{m.doc_no ?? '—'}</span>,
+            fmt(m.moved_at),
+            action(m),
+            m.from_label ?? '—',
+            m.to_label ?? '—',
+            m.recorded_by ?? '—',
+            serialCell(m),
+            qtyCell(m),
+            m.notes ?? '—',
+        ]);
     }
 
-    // ── A category sub-view ────────────────────────────────────────────────
-    function CategoryView({
-        view,
-        movements,
-        serialsOf,
-    }: {
-        view: View;
-        movements: Movement[];
-        serialsOf: (m: Movement, e: SerialEvent['event']) => string[];
-    }) {
-        const meta = VIEW_META[view];
-        const ev = VIEW_FILTER[view].event;
-        const action = (m: Movement) => t(`stock_mv_${m.type}` as Parameters<typeof t>[0]);
-        const serialCell = (m: Movement) => {
-            const list = serialsOf(m, ev);
-            return list.length ? <span className="text-xs">{list.join(', ')}</span> : '—';
-        };
+    const Icon = meta.icon;
+    return (
+        <>
+            <div className="mb-3 flex items-center gap-2 print:hidden">
+                <span className={cn('flex h-7 w-7 items-center justify-center rounded-full', meta.bg)} aria-hidden>
+                    <Icon className={cn('h-4 w-4', meta.tone)} />
+                </span>
+                <h2 className="text-base font-semibold">{t(meta.titleKey as Parameters<typeof t>[0])}</h2>
+                <span className="text-muted-foreground text-sm tabular-nums">({movements.length})</span>
+            </div>
+            <Table headers={headers} rows={rows} wrapColumns={wrapColumns} emptyText={t('stock_history_no_events')} />
+        </>
+    );
+}
 
-        let headers: string[];
-        let rows: ReactNode[][];
-
-        if (view === 'issue') {
-            headers = [
-                '#',
-                t('stock_doc_no'),
-                t('audit_time'),
-                t('stock_hist_action'),
-                t('stock_warehouse'),
-                t('stock_hist_issue_by'),
-                t('stock_hist_request_by'),
-                t('stock_hist_request_no'),
-                t('stock_hist_serials'),
-            ];
-            rows = movements.map((m, i) => [
-                String(i + 1),
-                <span>{m.doc_no ?? '—'}</span>,
-                fmt(m.moved_at),
-                action(m),
-                m.from_label ?? '—',
-                m.recorded_by ?? '—',
-                m.to_label ?? '—',
-                m.reference ?? '—',
-                serialCell(m),
-            ]);
-        } else if (view === 'receive') {
-            headers = [
-                '#',
-                t('stock_doc_no'),
-                t('audit_time'),
-                t('stock_hist_action'),
-                t('stock_supplier'),
-                t('stock_hist_ref_doc'),
-                t('stock_warehouse'),
-                t('stock_cost'),
-                t('stock_hist_serials'),
-                t('stock_qty'),
-                t('stock_hist_note'),
-            ];
-            rows = movements.map((m, i) => [
-                String(i + 1),
-                <span>{m.doc_no ?? '—'}</span>,
-                fmt(m.moved_at),
-                action(m),
-                m.from_label ?? '—',
-                m.reference ?? '—',
-                m.to_label ?? '—',
-                m.unit_cost != null ? <span>{m.unit_cost}</span> : '—',
-                serialCell(m),
-                <span>{m.qty}</span>,
-                m.notes ?? '—',
-            ]);
-        } else if (view === 'adjust') {
-            headers = [
-                '#',
-                t('stock_doc_no'),
-                t('audit_time'),
-                t('stock_hist_ref_doc'),
-                t('stock_hist_action'),
-                t('stock_hist_adjust_by'),
-                t('stock_hist_serials'),
-                t('stock_qty'),
-                t('stock_hist_note'),
-            ];
-            rows = movements.map((m, i) => [
-                String(i + 1),
-                <span>{m.doc_no ?? '—'}</span>,
-                fmt(m.moved_at),
-                m.reference ?? '—',
-                action(m),
-                m.recorded_by ?? '—',
-                serialCell(m),
-                <span>{m.qty}</span>,
-                m.notes ?? '—',
-            ]);
-        } else {
-            headers = [
-                '#',
-                t('stock_doc_no'),
-                t('audit_time'),
-                t('stock_hist_action'),
-                t('stock_from'),
-                t('stock_to'),
-                t('stock_hist_transfer_by'),
-                t('stock_hist_serials'),
-                t('stock_qty'),
-                t('stock_hist_note'),
-            ];
-            rows = movements.map((m, i) => [
-                String(i + 1),
-                <span>{m.doc_no ?? '—'}</span>,
-                fmt(m.moved_at),
-                action(m),
-                m.from_label ?? '—',
-                m.to_label ?? '—',
-                m.recorded_by ?? '—',
-                serialCell(m),
-                <span>{m.qty}</span>,
-                m.notes ?? '—',
-            ]);
-        }
-
-        const Icon = meta.icon;
-        return (
-            <>
-                <div className="mb-3 flex items-center gap-2 print:hidden">
-                    <span className={cn('flex h-7 w-7 items-center justify-center rounded-full', meta.bg)}>
-                        <Icon className={cn('h-4 w-4', meta.tone)} />
-                    </span>
-                    <h2 className="text-base font-semibold">{t(meta.titleKey as Parameters<typeof t>[0])}</h2>
-                    <span className="text-muted-foreground text-sm">({movements.length})</span>
-                </div>
-                <Table headers={headers} rows={rows} />
-            </>
-        );
-    }
-
-    // ── Shared table shell (horizontal scroll for wide tables) ─────────────
-    function Table({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
-        return (
-            <div className="border-border overflow-x-auto rounded-xl border">
-                <table className="w-full text-sm">
-                    <thead className={TABLE_HEAD}>
-                        <tr className="text-muted-foreground border-border border-b text-left text-[11px] font-semibold tracking-wide uppercase">
-                            {headers.map((h, i) => (
-                                <th key={i} className="px-3 py-2 whitespace-nowrap">
-                                    {h}
-                                </th>
+// ── Shared table shell (horizontal scroll for wide tables) ─────────────
+function Table({
+    headers,
+    rows,
+    wrapColumns = [],
+    emptyText,
+}: {
+    headers: string[];
+    rows: ReactNode[][];
+    wrapColumns?: number[];
+    emptyText: string;
+}) {
+    return (
+        <div className="border-border overflow-x-auto rounded-xl border">
+            <table className="w-full text-sm">
+                <thead className={TABLE_HEAD}>
+                    <tr className="text-muted-foreground border-border border-b text-left text-xs font-semibold">
+                        {headers.map((h, i) => (
+                            <th key={i} scope="col" className="px-3 py-2 whitespace-nowrap">
+                                {h}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((cells, r) => (
+                        <tr key={r} className="border-border/60 border-b last:border-0">
+                            {cells.map((c, ci) => (
+                                <td
+                                    key={ci}
+                                    className={cn(
+                                        'px-3 py-2 align-top',
+                                        wrapColumns.includes(ci) ? 'max-w-[28rem] min-w-[12rem] break-words whitespace-normal' : 'whitespace-nowrap',
+                                    )}
+                                >
+                                    {c}
+                                </td>
                             ))}
                         </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map((cells, r) => (
-                            <tr key={r} className="border-border/60 border-b last:border-0">
-                                {cells.map((c, ci) => (
-                                    <td key={ci} className="px-3 py-2 align-top whitespace-nowrap">
-                                        {c}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                        {rows.length === 0 && (
-                            <tr>
-                                <td colSpan={headers.length} className="text-muted-foreground px-3 py-8 text-center">
-                                    {t('stock_history_no_events')}
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-        );
-    }
+                    ))}
+                    {rows.length === 0 && (
+                        <tr>
+                            <td colSpan={headers.length} className="text-muted-foreground px-3 py-8 text-center">
+                                {emptyText}
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
 }

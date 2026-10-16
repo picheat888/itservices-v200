@@ -36,20 +36,20 @@ import {
     Warehouse,
     X,
 } from 'lucide-react';
-import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MovementDrawer } from '../components/movement-drawer';
 import { RequestDrawer } from '../components/request-drawer';
 import { StockItemDetailModal } from '../components/stock-item-detail-modal';
 import { StockItemModal } from '../components/stock-item-modal';
 import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
+import { ALERT_BLINK } from './shared';
 import { AuditTab } from './tabs/counting-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { OverviewTab } from './tabs/overview-tab';
 import { RequestsTab } from './tabs/requests-tab';
 
-// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
+// The page's tabs, mirrored in the URL (?tab=).
 const STOCK_TABS = ['overview', 'items', 'movements', 'requests', 'audit'] as const;
 type StockTab = (typeof STOCK_TABS)[number];
 const isStockTab = (v: string | null): v is StockTab => STOCK_TABS.includes(v as StockTab);
@@ -119,19 +119,15 @@ const STATUS_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 
     dead: 'gray',
 };
 
-// Fixed screen anchors for the min/max gridlines — identical on every row so the
-// markers (and their labels) line up vertically down the whole Stock items table.
+// Fixed screen anchors for the min/max gridlines, so markers line up across rows.
 const BAR_MIN_X = 20;
 const BAR_MAX_X = 80;
 
-/** Visual Min/Max bar (bullet-chart style). The min/max gridlines are pinned at
- *  fixed positions so they align across rows; the current value is mapped onto the
- *  low (0..min) / healthy (min..max) / over (max..) zones via piecewise scaling. */
-function StockBar({ item }: { item: StockItem }) {
+/** Visual Min/Max bar (bullet-chart style): fixed min/max gridlines, current value scaled piecewise. */
+function StockBar({ item, t }: { item: StockItem; t: ReturnType<typeof useT> }) {
     const { min_stock: min, max_stock: max, current_stock: cur } = item;
 
-    // Map the current value to a screen percentage so that `min` always lands on
-    // BAR_MIN_X and `max` always on BAR_MAX_X, regardless of the row's actual values.
+    // Piecewise mapping: `min` lands on BAR_MIN_X and `max` on BAR_MAX_X.
     let curPct: number;
     if (cur <= min) {
         curPct = min > 0 ? (cur / min) * BAR_MIN_X : 0;
@@ -151,8 +147,8 @@ function StockBar({ item }: { item: StockItem }) {
                 ? 'bg-muted-foreground'
                 : 'bg-emerald-500';
     return (
-        <div className="w-full min-w-[160px] pb-0.5">
-            <div className="bg-muted relative h-1.5 w-full rounded-full">
+        <div className="w-full min-w-[160px] pb-0.5" role="img" aria-label={`${t('stock_current')} ${cur}, Min ${min}, Max ${max}`}>
+            <div className="bg-muted relative h-1.5 w-full rounded-full" aria-hidden>
                 {/* Healthy band between the fixed min and max gridlines. */}
                 <div
                     className="absolute inset-y-0 rounded-full bg-emerald-500/20"
@@ -162,9 +158,9 @@ function StockBar({ item }: { item: StockItem }) {
                 <div className="absolute -inset-y-0.5 w-px bg-blue-500" style={{ left: `${BAR_MAX_X}%` }} />
                 <div className={cn('absolute inset-y-0 left-0 rounded-full', fill)} style={{ width: `${curPct}%` }} />
             </div>
-            {/* Min / Max labels sit under the fixed gridlines → aligned across all rows. */}
-            <div className="relative mt-1 h-3 text-[10px]">
-                <span className="absolute -translate-x-1/2 whitespace-nowrap text-amber-600 dark:text-amber-400" style={{ left: `${BAR_MIN_X}%` }}>
+            {/* Min / Max labels under the fixed gridlines. */}
+            <div className="relative mt-1 h-3 text-[10px]" aria-hidden>
+                <span className="absolute -translate-x-1/2 whitespace-nowrap text-amber-700 dark:text-amber-400" style={{ left: `${BAR_MIN_X}%` }}>
                     {min}
                 </span>
                 <span className="absolute -translate-x-1/2 whitespace-nowrap text-blue-600 dark:text-blue-400" style={{ left: `${BAR_MAX_X}%` }}>
@@ -175,20 +171,7 @@ function StockBar({ item }: { item: StockItem }) {
     );
 }
 
-/** Attention-grabbing double-blink (+ slight zoom) for the alert-banner icon. */
-const stockBlinkStyles = `
-@keyframes cf-blink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  20% { opacity: .25; transform: scale(1.25); }
-  40% { opacity: 1; transform: scale(1); }
-  60% { opacity: .25; transform: scale(1.25); }
-  80% { opacity: 1; transform: scale(1); }
-}
-.cf-blink { animation: cf-blink 1.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .cf-blink { animation: none; } }
-`;
-
-/** Alert banner shown when any items are in a warning state. Displays real item data grouped by type. */
+/** Alert banner shown when any items are in a warning state, with a count per type. */
 function AlertCard({
     summary,
     t,
@@ -199,9 +182,14 @@ function AlertCard({
     onViewItems: () => void;
 }) {
     const hasCritical = summary.out_count > 0 || summary.low_count > 0;
+    const counts = [
+        { key: 'out', count: summary.out_count, label: t('stock_alert_out'), className: 'text-destructive' },
+        { key: 'low', count: summary.low_count, label: t('stock_alert_low'), className: 'text-amber-700 dark:text-amber-400' },
+        { key: 'over', count: summary.over_count, label: t('stock_alert_over'), className: 'text-blue-700 dark:text-blue-400' },
+        { key: 'dead', count: summary.dead_count, label: t('stock_alert_dead'), className: 'text-muted-foreground' },
+    ].filter((c) => c.count > 0);
     return (
         <Card className={cn('border p-4', hasCritical ? 'border-destructive/40 bg-destructive/5' : 'border-amber-500/40 bg-amber-500/5')}>
-            <style>{stockBlinkStyles}</style>
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -212,49 +200,22 @@ function AlertCard({
                                 ? 'bg-destructive/10 dark:text-destructive text-red-700'
                                 : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                         )}
+                        aria-hidden
                     >
-                        <AlertTriangle className="cf-blink h-5 w-5" />
+                        <AlertTriangle className={cn(ALERT_BLINK, 'h-5 w-5')} />
                     </span>
                     <div>
                         <div className="font-semibold">{t('stock_minmax_alerts')}</div>
-                        <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs">
-                            {[
-                                summary.out_count > 0 && (
-                                    <span key="out" className="text-destructive font-medium">
-                                        {summary.out_count} {t('stock_alert_out')}
-                                    </span>
-                                ),
-                                summary.low_count > 0 && (
-                                    <span key="low" className="font-medium text-amber-600 dark:text-amber-400">
-                                        {summary.low_count} {t('stock_alert_low')}
-                                    </span>
-                                ),
-                                summary.over_count > 0 && (
-                                    <span key="over" className="font-medium text-blue-600 dark:text-blue-400">
-                                        {summary.over_count} {t('stock_alert_over')}
-                                    </span>
-                                ),
-                                summary.dead_count > 0 && (
-                                    <span key="dead" className="text-muted-foreground font-medium">
-                                        {summary.dead_count} {t('stock_alert_dead')}
-                                    </span>
-                                ),
-                            ]
-                                .filter(Boolean)
-                                .reduce<React.ReactNode[]>(
-                                    (acc, el, i) =>
-                                        i === 0
-                                            ? [el]
-                                            : [
-                                                  ...acc,
-                                                  <span key={`sep-${i}`} className="text-muted-foreground/50">
-                                                      |
-                                                  </span>,
-                                                  el,
-                                              ],
-                                    [],
-                                )}
-                        </div>
+                        <ul className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                            {counts.map((c) => (
+                                <li
+                                    key={c.key}
+                                    className={cn('bg-background/60 rounded-full border px-2 py-0.5 font-medium tabular-nums', c.className)}
+                                >
+                                    {c.count} {c.label}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
                 <Button variant="outline" size="sm" className="shrink-0" onClick={onViewItems}>
@@ -268,8 +229,8 @@ function AlertCard({
 export default function StockPage() {
     const t = useT();
     const confirm = useConfirm();
-    // Every gate on this page lives under the stock.* prefix, so it is added here
-    // and the call sites below stay short.
+    const filterIds = { cat: useId(), wh: useId(), status: useId(), sort: useId() };
+    // Every gate on this page lives under the stock.* prefix.
     const { can: hasPermission } = useAuth();
     const can = (p: string) => hasPermission(`stock.${p}`);
     const canManage = can('manage_items');
@@ -295,7 +256,22 @@ export default function StockPage() {
         saveItemFilters(next);
         list.setParams(itemFilterParams(next));
     };
-    const setSearch = (value: string) => setItemFilters({ search: value });
+    // Typing only writes ?search; the page returns to 1 when the debounced search is sent.
+    const setSearch = (value: string) => {
+        const next = { ...itemFilters, search: value };
+        saveItemFilters(next);
+        list.setParams({ search: value || null });
+    };
+    const pageSearch = useRef(sentSearch);
+    const searchChanged = sentSearch !== pageSearch.current;
+    useEffect(() => {
+        if (!searchChanged) return;
+        if (list.page > 1) {
+            list.setParams({ page: null });
+            return;
+        }
+        pageSearch.current = sentSearch;
+    }, [searchChanged, sentSearch, list.page]); // eslint-disable-line react-hooks/exhaustive-deps
     const setCat = (value: string) => setItemFilters({ cat: value });
     const setWh = (value: string) => setItemFilters({ wh: value });
     const setStatusFilter = (value: string) => setItemFilters({ status: value });
@@ -332,9 +308,7 @@ export default function StockPage() {
         if (Object.values(saved).some(Boolean)) list.setParams(saved);
     }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
     const [editItem, setEditItem] = useState<StockItem | null>(null);
-    // Item detail is URL-driven (?view=<id>) so a reload / shared link reopens it; closing drops it.
-    // Only a real record id opens the modal: Number('abc') is NaN, which passes an
-    // `!= null` guard and used to fetch /stock-items/NaN.
+    // Item detail is URL-driven (?view=<id>); only a real record id opens it.
     const viewId = toRecordId(searchParams.get('view'));
     const setViewId = (id: number | null) =>
         setSearchParams(
@@ -388,13 +362,14 @@ export default function StockPage() {
         warehouse: wh === 'all' ? undefined : wh,
         status: statusFilter === 'all' ? undefined : statusFilter,
         sort: itemSort,
-        page: itemsPage,
+        page: searchChanged ? 1 : itemsPage,
         per_page: itemsPerPage,
     });
     const items = itemsPageData?.data ?? [];
     const itemsTotal = itemsPageData?.meta.total ?? 0;
 
-    const { data: requestsPage } = useStockRequests();
+    const canViewRequests = can('view_request');
+    const { data: requestsPage } = useStockRequests({}, canViewRequests);
     const pendingRequests = requestsPage?.meta.pending ?? 0;
     // Outstanding work = awaiting approval (pending) + awaiting fulfillment (approved).
     const outstandingRequests = requestsPage?.meta.outstanding ?? 0;
@@ -405,10 +380,7 @@ export default function StockPage() {
 
     const { remove } = useStockItemMutations();
 
-    // Delete an empty SKU after a confirm. Only items with 0 on-hand and 0 value are
-    // deletable (the button is disabled otherwise); the server enforces this too, and
-    // refuses again for a SKU that has ever moved — the dialog stays open and says so
-    // rather than failing with the generic message.
+    // Delete an empty SKU after a confirm; a server refusal is shown inside the dialog.
     const confirmDelete = async (i: StockItem) => {
         await confirm({
             variant: 'danger',
@@ -431,10 +403,17 @@ export default function StockPage() {
     const statusBadge = (s: StockItemStatus) => <StatusBadge tone={STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>;
 
     const columns: Column<StockItem>[] = [
-        { key: 'sku', header: 'SKU', render: (i) => <span className="text-xs">{i.sku}</span> },
+        {
+            key: 'sku',
+            header: t('stock_sku'),
+            width: '120px',
+            className: 'whitespace-nowrap',
+            render: (i) => <span className="text-xs">{i.sku}</span>,
+        },
         {
             key: 'name',
             header: t('stock_item'),
+            minWidth: '14rem',
             render: (i) => (
                 <div>
                     <div className="text-sm font-medium">{i.name}</div>
@@ -442,41 +421,51 @@ export default function StockPage() {
                 </div>
             ),
         },
-        { key: 'category', header: t('stock_category'), render: (i) => <span className="text-sm">{i.category ?? '—'}</span> },
-        { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, className: 'min-w-[180px]', render: (i) => <StockBar item={i} /> },
+        {
+            key: 'category',
+            header: t('stock_category'),
+            width: '140px',
+            hideBelow: 'lg',
+            render: (i) => <span className="text-sm">{i.category ?? '—'}</span>,
+        },
+        { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, width: '200px', render: (i) => <StockBar item={i} t={t} /> },
         {
             key: 'current',
             header: t('stock_current'),
             align: 'right',
-            render: (i) => <span className="text-sm font-bold">{i.current_stock.toLocaleString()}</span>,
+            width: '90px',
+            render: (i) => <span className="text-sm font-bold tabular-nums">{i.current_stock.toLocaleString()}</span>,
         },
         {
             key: 'value',
             header: t('stock_value'),
             align: 'right',
-            render: (i) => <span className="text-xs">{format(i.total_value)}</span>,
+            width: '120px',
+            render: (i) => <span className="text-xs tabular-nums">{format(i.total_value)}</span>,
         },
-        { key: 'status', header: t('status'), render: (i) => statusBadge(i.status) },
+        { key: 'status', header: t('status'), width: '120px', render: (i) => statusBadge(i.status) },
         {
             key: 'actions',
-            header: '',
+            header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
+            width: '90px',
             render: (i) => {
-                // An item is removable only when it holds no stock and carries no value.
+                // Removable only when it holds no stock and carries no value.
                 const deletable = i.current_stock === 0 && i.total_value === 0;
                 return (
                     <div className="flex justify-end gap-1">
                         {canManage && (
                             <button
-                                // Stop the click from bubbling to the row (which opens the detail view).
+                                type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setEditItem(i);
                                 }}
                                 title={t('stock_edit_item')}
+                                aria-label={t('stock_edit_item')}
                                 className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                             >
-                                <SquarePen className="h-4 w-4" />
+                                <SquarePen className="h-4 w-4" aria-hidden />
                             </button>
                         )}
                         {can('delete') && (
@@ -491,7 +480,7 @@ export default function StockPage() {
                                     aria-label={t('stock_delete_item')}
                                     className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-50"
                                 >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-4 w-4" aria-hidden />
                                 </button>
                             </DisabledReason>
                         )}
@@ -501,15 +490,23 @@ export default function StockPage() {
         },
     ];
 
+    const viewAlerts = () => openItems({ status: 'alerts' });
     const kpis = [
         { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${summary?.total_units ?? 0} ${t('stock_units_total')}`, icon: Archive },
         {
             label: t('stock_kpi_low'),
             value: summary ? summary.out_count + summary.low_count + summary.over_count : '—',
-            sub: t('stock_needs_reorder'),
+            sub: t('stock_kpi_alerts_sub'),
             icon: AlertTriangle,
+            onClick: viewAlerts,
         },
-        { label: t('stock_kpi_over'), value: pendingRequests, sub: t('stock_overstock'), icon: Send },
+        {
+            label: t('stock_kpi_requests'),
+            value: pendingRequests,
+            sub: t('stock_kpi_requests_pending'),
+            icon: Send,
+            onClick: canViewRequests ? () => changeTab('requests') : undefined,
+        },
         { label: t('stock_kpi_value'), value: summary ? formatCompact(summary.total_value) : '—', sub: t('stock_at_cost'), icon: Boxes },
     ];
 
@@ -526,8 +523,7 @@ export default function StockPage() {
     ];
     const tabs = allTabs.filter((tb) => can(tb.view));
 
-    // If the currently active tab is filtered out (user lost permission), fall back to the first
-    // available tab — replace, so Back does not bounce the reader into it again.
+    // A tab the reader may not open falls back to the first available one (replace, so Back stays clean).
     useEffect(() => {
         if (tabs.length > 0 && !tabs.some((tb) => tb.id === tab)) {
             setTab(tabs[0].id, { replace: true });
@@ -555,14 +551,14 @@ export default function StockPage() {
                 <div className="flex flex-wrap items-center gap-2">
                     {can('request') && (
                         <Button onClick={() => setReqOpen(true)}>
-                            <FilePlus2 className="h-4 w-4" />
+                            <FilePlus2 className="h-4 w-4" aria-hidden />
                             {t('stock_request')}
                         </Button>
                     )}
                 </div>
             </div>
 
-            {hasAlerts && summary && <AlertCard summary={summary} t={t} onViewItems={() => openItems({ status: 'alerts' })} />}
+            {hasAlerts && summary && <AlertCard summary={summary} t={t} onViewItems={viewAlerts} />}
 
             <Card className="overflow-clip">
                 {/* Outstanding work and stock alerts: red pills. */}
@@ -578,6 +574,7 @@ export default function StockPage() {
                             // Jump to the Items tab showing only the chosen warehouse / category.
                             onSelectWarehouse={(w) => openItems({ search: '', cat: 'all', status: 'all', wh: w })}
                             onSelectCategory={(c) => openItems({ search: '', wh: 'all', status: 'all', cat: c })}
+                            onViewAlerts={viewAlerts}
                         />
                     )}
 
@@ -585,11 +582,17 @@ export default function StockPage() {
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center gap-2">
                                 <div className="relative w-full max-w-xs">
-                                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                    <Search
+                                        className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                                        aria-hidden
+                                    />
                                     <Input
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         placeholder={t('stock_search')}
+                                        aria-label={t('stock_search')}
+                                        name="search"
+                                        autoComplete="off"
                                         className="pl-9"
                                     />
                                 </div>
@@ -597,11 +600,15 @@ export default function StockPage() {
                                     {() => (
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                    <Tag className="h-3.5 w-3.5" />
+                                                <label
+                                                    htmlFor={filterIds.cat}
+                                                    className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                                >
+                                                    <Tag className="h-3.5 w-3.5" aria-hidden />
                                                     {t('stock_category')}
-                                                </div>
+                                                </label>
                                                 <SearchableSelect
+                                                    id={filterIds.cat}
                                                     active={cat !== 'all'}
                                                     value={cat}
                                                     onChange={setCat}
@@ -617,11 +624,15 @@ export default function StockPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                    <Warehouse className="h-3.5 w-3.5" />
+                                                <label
+                                                    htmlFor={filterIds.wh}
+                                                    className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                                >
+                                                    <Warehouse className="h-3.5 w-3.5" aria-hidden />
                                                     {t('stock_warehouse')}
-                                                </div>
+                                                </label>
                                                 <SearchableSelect
+                                                    id={filterIds.wh}
                                                     active={wh !== 'all'}
                                                     value={wh}
                                                     onChange={setWh}
@@ -642,11 +653,15 @@ export default function StockPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                    <CircleDot className="h-3.5 w-3.5" />
+                                                <label
+                                                    htmlFor={filterIds.status}
+                                                    className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                                >
+                                                    <CircleDot className="h-3.5 w-3.5" aria-hidden />
                                                     {t('status')}
-                                                </div>
+                                                </label>
                                                 <SearchableSelect
+                                                    id={filterIds.status}
                                                     active={statusFilter !== 'all'}
                                                     value={statusFilter}
                                                     onChange={setStatusFilter}
@@ -673,11 +688,15 @@ export default function StockPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                    <ArrowUpDown className="h-3.5 w-3.5" />
+                                                <label
+                                                    htmlFor={filterIds.sort}
+                                                    className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium"
+                                                >
+                                                    <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />
                                                     {t('stock_sort_by')}
-                                                </div>
+                                                </label>
                                                 <SearchableSelect
+                                                    id={filterIds.sort}
                                                     active={itemSort !== DEFAULT_ITEM_SORT}
                                                     value={itemSort}
                                                     onChange={setItemSort}
@@ -708,32 +727,32 @@ export default function StockPage() {
                                         onClick={resetItemFilters}
                                         className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
                                     >
-                                        <X className="h-3 w-3" />
+                                        <X className="h-3 w-3" aria-hidden />
                                         {t('reset_filters')}
                                     </button>
                                 )}
                                 <div className="ml-auto flex flex-wrap items-center gap-2">
                                     {can('receive') && (
                                         <Button variant="outline" onClick={() => setMoveKind('receive')}>
-                                            <ArrowDownToLine className="h-4 w-4" />
+                                            <ArrowDownToLine className="h-4 w-4" aria-hidden />
                                             {t('stock_mv_receive')}
                                         </Button>
                                     )}
                                     {can('return') && (
                                         <Button variant="outline" onClick={() => setMoveKind('return')}>
-                                            <RotateCcw className="h-4 w-4" />
+                                            <RotateCcw className="h-4 w-4" aria-hidden />
                                             {t('stock_mv_return')}
                                         </Button>
                                     )}
                                     {can('transfer') && (
                                         <Button variant="outline" onClick={() => setMoveKind('transfer')}>
-                                            <ArrowLeftRight className="h-4 w-4" />
+                                            <ArrowLeftRight className="h-4 w-4" aria-hidden />
                                             {t('stock_mv_transfer')}
                                         </Button>
                                     )}
                                     {canManage && (
                                         <Button onClick={openAdd}>
-                                            <Plus className="h-4 w-4" />
+                                            <Plus className="h-4 w-4" aria-hidden />
                                             {t('stock_new_sku')}
                                         </Button>
                                     )}
@@ -748,10 +767,11 @@ export default function StockPage() {
                                             key={c.key}
                                             type="button"
                                             onClick={c.clear}
+                                            aria-label={`${t('remove_filter')}: ${c.label}`}
                                             className="bg-brand/10 text-brand hover:bg-brand/20 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
                                         >
                                             {c.label}
-                                            <X className="h-3 w-3" />
+                                            <X className="h-3 w-3" aria-hidden />
                                         </button>
                                     ))}
                                 </div>
@@ -763,6 +783,7 @@ export default function StockPage() {
                                 rowKey={(i) => i.id}
                                 onRowClick={(i) => setViewId(i.id)}
                                 loading={itemsLoading || itemsFetching}
+                                caption={t('stock_items_tab')}
                                 server={{ ...list.table.paging, total: itemsTotal }}
                             />
                         </div>

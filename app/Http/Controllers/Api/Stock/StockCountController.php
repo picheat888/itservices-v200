@@ -10,6 +10,7 @@ use App\Services\Stock\StockCountService;
 use App\Services\Stock\StockNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StockCountController extends Controller
 {
@@ -21,10 +22,7 @@ class StockCountController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('stock.view_count'), 403);
     }
 
-    /**
-     * Mutating a count session (open / save / commit / cancel). Counting is a single
-     * permission now, so the same key gates both reading and mutating.
-     */
+    /** Mutating a count session (open / save / commit / cancel): the one counting permission. */
     private function gateManage(Request $request): void
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.view_count'), 403);
@@ -54,7 +52,11 @@ class StockCountController extends Controller
     {
         $this->gateManage($request);
         $data = $request->validate([
-            'warehouse' => ['nullable', 'string', 'max:120'],
+            // An existing warehouse or the 'Unassigned' sentinel; null counts every warehouse.
+            'warehouse' => ['nullable', 'string', 'max:120', Rule::when(
+                fn ($input) => $input->warehouse !== 'Unassigned',
+                Rule::exists('warehouses', 'name'),
+            )],
             'category' => ['nullable', 'string', 'max:120'],
             'note' => ['nullable', 'string', 'max:2000'],
             'stock_item_ids' => ['array'],
