@@ -54,6 +54,8 @@ class BackfillRequestTypePermissionsMigrationTest extends TestCase
         $lead = Role::firstOrCreate(['key' => 'it_supervisorleader'], ['name' => 'Lead']);
         $this->grant($a, ['requests.module', 'requests.submit']);
         $this->grant($b, ['requests.module']);
+        $this->grant($admin, ['requests.module', 'requests.view_all']);
+        $this->grant($lead, ['requests.module', 'requests.view_all']);
 
         return [$a, $b, $admin, $lead];
     }
@@ -72,6 +74,16 @@ class BackfillRequestTypePermissionsMigrationTest extends TestCase
         $this->assertFalse($this->allowed($a, 'requests.cancel_any'));
         $this->assertFalse($this->allowed($b, 'requests.cancel_any'));
         $this->assertSame(13, RolePermission::where('role_id', $b->id)->whereIn('permission', $this->typeKeys())->count());
+    }
+
+    public function test_an_it_lead_without_view_all_gets_no_cancel_right(): void
+    {
+        [, , $admin] = $this->arrange();
+        RolePermission::where('role_id', $admin->id)->where('permission', 'requests.view_all')->delete();
+
+        $this->migration()->up();
+
+        $this->assertFalse($this->allowed($admin, 'requests.cancel_any'));
     }
 
     public function test_a_second_up_adds_nothing_and_keeps_existing_rows(): void
@@ -97,6 +109,6 @@ class BackfillRequestTypePermissionsMigrationTest extends TestCase
         $migration->down();
 
         $this->assertSame(0, RolePermission::whereIn('permission', [...$this->typeKeys(), 'requests.cancel_any'])->count());
-        $this->assertSame(3, RolePermission::where('permission', 'like', 'requests.%')->count());
+        $this->assertSame(7, RolePermission::where('permission', 'like', 'requests.%')->count());
     }
 }
