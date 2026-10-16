@@ -14,7 +14,6 @@ export const profile: Dict = {
     profile_account: 'Login account',
     profile_contact: 'Contact',
     profile_tab_details: 'Personal info',
-    profile_see_all: 'Open the full page',
     profile_no_tickets: "You haven't reported any tickets yet.",
     profile_no_access: "You don't have any access yet.",
     profile_no_requests: "You haven't submitted any requests yet.",
@@ -32,7 +31,4 @@ export const profile: Dict = {
     profile_assets_accept_all: 'Accept all',
     profile_assets_accept_all_confirm: 'Confirm you have received all {n} of these assets.',
     profile_assets_accepted: 'Accepted',
-    // my-tickets-tab.tsx / my-requests-tab.tsx — Tickets and Requests tabs
-    profile_tickets_heading: 'My tickets',
-    profile_requests_heading: 'My requests',
 };

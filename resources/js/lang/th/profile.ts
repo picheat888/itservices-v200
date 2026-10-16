@@ -14,7 +14,6 @@ export const profile: Dict = {
     profile_account: 'บัญชีเข้าใช้งาน',
     profile_contact: 'ข้อมูลติดต่อ',
     profile_tab_details: 'ข้อมูลส่วนตัว',
-    profile_see_all: 'เปิดหน้าเต็ม',
     profile_no_tickets: 'คุณยังไม่เคยแจ้ง Ticket',
     profile_no_access: 'คุณยังไม่มีสิทธิ์เข้าถึง',
     profile_no_requests: 'คุณยังไม่เคยยื่นคำขอ',
@@ -32,7 +31,4 @@ export const profile: Dict = {
     profile_assets_accept_all: 'รับมอบทั้งหมด',
     profile_assets_accept_all_confirm: 'ยืนยันว่าได้รับทรัพย์สินทั้ง {n} รายการนี้ครบแล้ว',
     profile_assets_accepted: 'รับมอบแล้ว',
-    // my-tickets-tab.tsx / my-requests-tab.tsx — แท็บ Ticket และคำขอ
-    profile_tickets_heading: 'Ticket ของฉัน',
-    profile_requests_heading: 'คำขอของฉัน',
 };

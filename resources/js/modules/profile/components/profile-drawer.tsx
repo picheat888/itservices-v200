@@ -3,7 +3,7 @@ import { useT } from '@/lang';
 import { useMyAccess } from '@/modules/access';
 import { useMyAssets } from '@/modules/asset';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
-import { AccessPane, IdChip, PhotoCropDialog, RAIL_HEADING, RailRow, useEmployee } from '@/modules/employee';
+import { AccessPane, IdChip, PhotoCropDialog, RAIL_HEADING, RailRow, RequestsPane, TicketsPane, useEmployee } from '@/modules/employee';
 import { useRequests } from '@/modules/request';
 import { useTickets } from '@/modules/ticket';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
@@ -11,19 +11,16 @@ import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { focusFirstError } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { AtSign, Box, Briefcase, Building2, Camera, Hash, Inbox, KeyRound, Phone, Shield, Ticket, UserCheck, UserRound, Users } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { useProfileSection } from '../hooks/use-profile-section';
 import { PROFILE_SECTIONS, type ProfileSection } from '../types';
 import { MyAssetsTab } from './my-assets-tab';
-import { MyRequestsTab } from './my-requests-tab';
-import { MyTicketsTab } from './my-tickets-tab';
 import { ProfileDetailsTab, type ProfileFormKey } from './profile-details-tab';
 
 // Names are stored as one space-joined string: the first word is the given name, the rest the surname
@@ -73,7 +70,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const { user, can } = useAuth();
     const update = useUpdateProfile();
     const inputRef = useRef<HTMLInputElement>(null);
-    const navigate = useNavigate();
     const panelId = useId();
 
     // The full employee record: department, position, joined date…
@@ -142,12 +138,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const hasUnsaved = open && isDirty && !saved;
     const guardClose = useDiscardGuard(hasUnsaved);
     // A "see all" link waits for the discard answer; the new page drops ?dialog= and so closes the drawer.
-    const leaveTo = (to: string) => (e: React.MouseEvent) => {
-        if (!hasUnsaved) return;
-        e.preventDefault();
-        guardClose(() => navigate(to));
-    };
-
     if (!user) return null;
 
     const { firstName, lastName, firstNameTh, lastNameTh, phone } = fields;
@@ -241,12 +231,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         access: { label: t('emp_v_tab_access'), icon: Shield, count: accessCount },
     };
     const tabs: DialogTab<ProfileSection>[] = allowed.map((id) => ({ id, ...tabMeta[id] }));
-
-    const seeAll = (to: string) => (
-        <Link to={to} onClick={leaveTo(to)} className="text-muted-foreground hover:text-foreground text-xs font-semibold hover:underline">
-            {t('profile_see_all')}
-        </Link>
-    );
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
@@ -375,8 +359,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             role="tabpanel"
                             id={panelId}
                             aria-labelledby={dialogTabId(panelId, tab)}
-                            // Table tabs size their rows to the pane (fillHeight), like the Employee viewer
-                            className="min-h-0 flex-1 overflow-y-auto p-4 xl:p-5"
+                            // Ticket and request tables size their rows to the pane (fillHeight), like the Employee viewer
+                            className={cn('min-h-0 flex-1 p-4 xl:p-5', tab === 'tickets' || tab === 'requests' ? 'flex flex-col' : 'overflow-y-auto')}
                         >
                             {tab === 'profile' && (
                                 <ProfileDetailsTab
@@ -399,10 +383,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 />
                             )}
                             {tab === 'tickets' && (
-                                <MyTicketsTab tickets={myTickets?.data ?? []} loading={ticketsLoading} seeAll={seeAll('/tickets?tab=my')} />
+                                <TicketsPane tickets={myTickets?.data ?? []} loading={ticketsLoading} emptyText={t('profile_no_tickets')} />
                             )}
                             {tab === 'requests' && (
-                                <MyRequestsTab requests={myRequests?.data ?? []} loading={requestsLoading} seeAll={seeAll('/requests?tab=all')} />
+                                <RequestsPane requests={myRequests?.data ?? []} loading={requestsLoading} emptyText={t('profile_no_requests')} />
                             )}
                             {tab === 'access' && <AccessPane access={myAccess} loading={accessLoading} emptyText={t('profile_no_access')} />}
                         </div>
