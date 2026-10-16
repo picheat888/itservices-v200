@@ -10,6 +10,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { isOnBehalfRequest, REQUEST_ONBOARDING_BADGE, REQUEST_STATUS_META, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { EmployeeAccess, EmployeeAccessRow } from '@/shared/types';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Check, Copy, Folder, Globe, Inbox, Laptop, Mail, Package, Shield, Tag, Ticket, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
 import { HELD_STATUS_META } from '../lib/held-assets';
@@ -35,12 +36,15 @@ export function RailRow({
     icon,
     label,
     value,
+    loading,
     copied,
     onCopy,
 }: {
     icon: React.ReactNode;
     label: string;
     value?: string | null;
+    /** The value is still on its way: a placeholder bar instead of "—" */
+    loading?: boolean;
     copied?: boolean;
     onCopy?: (value: string) => void;
 }) {
@@ -50,7 +54,11 @@ export function RailRow({
             <div className="bg-muted text-muted-foreground grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg">{icon}</div>
             <div className="min-w-0 flex-1">
                 <div className="text-muted-foreground text-xs">{label}</div>
-                <div className={'mt-0.5 text-[13px] leading-snug font-medium break-words'}>{value || '—'}</div>
+                {loading && !value ? (
+                    <Skeleton className="mt-1.5 h-3 w-24" />
+                ) : (
+                    <div className={'mt-0.5 text-[13px] leading-snug font-medium break-words'}>{value || '—'}</div>
+                )}
             </div>
             {onCopy && value && (
                 <button
