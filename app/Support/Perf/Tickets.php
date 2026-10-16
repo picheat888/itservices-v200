@@ -46,6 +46,9 @@ class Tickets implements PerfStep
     /** @var list<array{0: int, 1: string}> */
     private array $it = [];
 
+    /** @var list<array<string, mixed>> employees with a login */
+    private array $users = [];
+
     /** @var array<int, ?int> user id by employee id */
     private array $userOf = [];
 
@@ -64,6 +67,7 @@ class Tickets implements PerfStep
         $this->employees = $ctx->reg->get('employees');
         foreach ($this->employees as $e) {
             $this->userOf[$e['id']] = $e['user_id'];
+            $e['user_id'] !== null && $this->users[] = $e;
             if ($e['kind'] === 'it') {
                 $this->it[] = [$e['user_id'], $e['name']];
             }
@@ -97,8 +101,10 @@ class Tickets implements PerfStep
     /** @return array<string, mixed> */
     private function requesterAt(CarbonImmutable $at): array
     {
+        // Most cases come from people with a login; the rest were opened for them by IT
+        $pool = $this->ctx->rng->chance(0.7) ? $this->users : $this->employees;
         for ($try = 0; $try < 12; $try++) {
-            $e = $this->ctx->rng->pick($this->employees);
+            $e = $this->ctx->rng->pick($pool);
             if ($e['joined_at'] <= $at && ($e['last_day'] === null || $e['last_day'] > $at)) {
                 return $e;
             }
