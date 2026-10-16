@@ -27,4 +27,6 @@ export const profile: Dict = {
     profile_assets_held_heading: 'ทรัพย์สินของฉัน',
     profile_assets_col_handed_over: 'มอบหมายเมื่อ',
     profile_pending_assets_badge: '{n} รายการรอรับ',
+    profile_assets_show_all: 'แสดงทั้งหมด อีก {n} รายการ',
+    profile_assets_show_less: 'แสดงน้อยลง',
 };
