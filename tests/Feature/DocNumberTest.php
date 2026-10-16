@@ -38,4 +38,15 @@ class DocNumberTest extends TestCase
         $this->assertSame('TRF-2026-002', $this->record('transfer', 2026));
         $this->assertSame('RCV-2026-001', $this->record('receive', 2026));
     }
+
+    public function test_continues_past_three_digits(): void
+    {
+        $item = $this->item();
+        foreach (['ISS-2026-998', 'ISS-2026-999', 'ISS-2026-1000'] as $no) {
+            StockMovement::create(['doc_no' => $no, 'type' => 'issue', 'stock_item_id' => $item->id, 'qty' => 1, 'moved_at' => now()]);
+        }
+
+        $this->assertSame('ISS-2026-1001', DocNumber::next('issue', 2026));
+        $this->assertSame('ISS-2025-001', DocNumber::next('issue', 2025));
+    }
 }
