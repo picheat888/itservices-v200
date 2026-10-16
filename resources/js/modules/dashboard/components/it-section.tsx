@@ -1,12 +1,11 @@
 // Dashboard "งาน IT": the live queue, two weeks of flow and the overview report's SLA figures, then the volume and workload cards.
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
 import { useFoldRow } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { CircleCheck, CirclePlus, Layers, Target, Timer, Wrench } from 'lucide-react';
 import type { DashboardIt } from '../api/dashboardApi';
-import { dashLinks } from '../lib/links';
+import { useDashLinks } from '../hooks/use-dash-links';
 import { DashTile, Delta, PAIR_GRID, SectionHeading, SparkFooter, TILE_GRID } from './dash-parts';
 import { OpenedPerDayCard } from './opened-per-day-card';
 import { WorkloadCard } from './workload-card';
@@ -15,8 +14,7 @@ const FOLDS = ['workload'] as const;
 
 export function ItSection({ it }: { it: DashboardIt }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
     const row = useFoldRow(FOLDS);
     const backlog = it.backlog.open + it.backlog.in_progress;
     const peak = (n: number) => t('dash_peak_cases').replace('{n}', String(n));

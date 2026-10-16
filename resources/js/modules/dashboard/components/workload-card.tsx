@@ -1,10 +1,9 @@
 // Dashboard IT card "ภาระงานของทีม": the unassigned queue first, then each person's in-progress cases; folds after 10.
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
 import { CardEmpty, CardTitle, FILL, fold, FoldToggle, heldStyle, Swatch } from '@/modules/report';
 import { Card } from '@/shared/ui/card';
 import type { DashboardIt } from '../api/dashboardApi';
-import { dashLinks } from '../lib/links';
+import { useDashLinks } from '../hooks/use-dash-links';
 import { HBarRow, NARROW } from './dash-parts';
 
 const WORKLOAD_TOP = 10;
@@ -23,8 +22,7 @@ export function WorkloadCard({
     heldHeight: number | null;
 }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
     const total = it.backlog.open + it.backlog.in_progress;
     const scale = Math.max(it.unassigned, ...it.workload.map((row) => row.open), 1);
     const { folds, shown } = fold(it.workload, WORKLOAD_TOP, open);

@@ -1,23 +1,19 @@
 // Dashboard "งานที่รอคุณ": tiles that ask the reader to act, in priority order; the section hides when none apply.
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
-import { PROFILE_ASSETS_SEARCH } from '@/modules/profile';
 import { FILL } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { useUiStore } from '@/stores/ui';
 import { CircleCheckBig, FileText, Inbox, Package, PackageCheck, UserX, Wrench } from 'lucide-react';
 import type { DashboardSummary } from '../api/dashboardApi';
+import { useDashLinks } from '../hooks/use-dash-links';
 import { sharePieces } from '../lib/dash-math';
-import { dashLinks } from '../lib/links';
 import { groupPendingAssets } from '../lib/pending-groups';
 import { DashTile, LegendFooter, SectionHeading, TILE_GRID } from './dash-parts';
 
 export function TodoSection({ data }: { data: DashboardSummary }) {
     const t = useT();
-    const { can } = useAuth();
     const lang = useUiStore((s) => s.lang);
-    const links = dashLinks(can);
+    const links = useDashLinks();
     const { my_jobs: jobs, approvals, pending_acceptance: toAccept } = data.mine.todo;
     const waiting = data.it?.waiting;
     const awaitingIt = data.requests?.awaiting_it;
@@ -129,8 +125,7 @@ export function TodoSection({ data }: { data: DashboardSummary }) {
         toAccept.length > 0 && (
             <DashTile
                 key="accept"
-                to={{ search: PROFILE_ASSETS_SEARCH }}
-                state={dialogPushedState()}
+                to={links.profileAssets}
                 icon={PackageCheck}
                 label={t('dash_todo_accept')}
                 value={toAccept.length}

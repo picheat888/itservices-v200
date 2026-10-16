@@ -1,6 +1,5 @@
 // Dashboard "พนักงานและกิจกรรม": active staff per department and the latest audit-log entries.
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
 import { CardEmpty, CardTitle, FILL, fold, FoldToggle, heldStyle, useFoldRow } from '@/modules/report';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
@@ -8,8 +7,8 @@ import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
 import type { DashboardActivity, DashboardHr } from '../api/dashboardApi';
+import { useDashLinks } from '../hooks/use-dash-links';
 import { localName } from '../lib/dash-math';
-import { dashLinks } from '../lib/links';
 import { CardLink, HBarRow, NARROW, PAIR_GRID, rowDelay, SectionHeading, WIDE } from './dash-parts';
 
 const FOLDS = ['departments'] as const;
@@ -18,8 +17,7 @@ const FULL = 'flex min-w-0 flex-col xl:col-span-5';
 
 export function PeopleSection({ hr, activity }: { hr?: DashboardHr; activity?: DashboardActivity }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
     const row = useFoldRow(FOLDS);
     const both = !!hr && !!activity;
 

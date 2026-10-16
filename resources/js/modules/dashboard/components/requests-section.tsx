@@ -1,6 +1,5 @@
 // Dashboard "คำขอ": 14- and 30-day request figures, then the stalled list and the split by type.
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
 import { CardEmpty, CardTitle, CODE_LINK, FILL, fold, FoldToggle, heldStyle, useFoldRow } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
@@ -8,8 +7,8 @@ import { Card } from '@/shared/ui/card';
 import { CircleCheck, CircleX, FilePlus, Hourglass, Inbox, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { DashboardRequests } from '../api/dashboardApi';
+import { useDashLinks } from '../hooks/use-dash-links';
 import { sharePieces } from '../lib/dash-math';
-import { dashLinks } from '../lib/links';
 import {
     CardLink,
     DashTile,
@@ -30,8 +29,7 @@ const TYPES_TOP = 5;
 
 export function RequestsSection({ requests }: { requests: DashboardRequests }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
     const row = useFoldRow(FOLDS);
     const declined = requests.rejected_30d + requests.cancelled_30d;
 
@@ -126,8 +124,7 @@ function WaitingCard({
     heldHeight: number | null;
 }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
     const listLink = links.requestsStatus('pending');
 
     return (
