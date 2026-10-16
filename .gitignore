@@ -42,3 +42,5 @@ yarn-error.log
 
 # Office temp lock files
 ~$*
+
+/storage/perf
