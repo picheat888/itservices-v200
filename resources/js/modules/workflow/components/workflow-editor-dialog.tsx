@@ -11,6 +11,7 @@ import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/reque
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -65,6 +66,7 @@ const CHAIN_LABEL_PRESETS = ['Supervisor / Head', 'Manager / Asst. Manager', 'De
  */
 export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const { update, preview } = useWorkflowMutations();
 
     const [shown, setShown] = useState<Workflow | null>(null);
@@ -213,6 +215,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
             focusFirstError({ name: 'required' });
             return;
         }
+        if (isDirty && !(await confirmEdit({ name: wf.name, sub: t(REQUEST_TYPE_META[wf.request_type].labelKey) }))) return;
         try {
             await update.mutateAsync({
                 id: wf.id,

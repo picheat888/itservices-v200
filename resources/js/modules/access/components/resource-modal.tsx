@@ -10,6 +10,7 @@ import { refusalReason } from '@/shared/lib/api-errors';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -194,6 +195,7 @@ function toPayload(kind: AccessKind, form: FormState): Record<string, unknown> {
  */
 export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kind: AccessKind; row: AnyResource | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useAccessMutations(kind);
     const { data: employees = [] } = useEmployees();
@@ -367,6 +369,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
             focusFirstError(errs as Record<string, string>);
             return;
         }
+        if (row && isDirty && !(await confirmEdit({ name: row.name, sub: row.code }))) return;
         const payload = toPayload(kind, form);
         // Owner is set at creation only; on edit it's managed via the members dialog.
         if (!row && (kind === 'email-groups' || kind === 'file-shares')) {
