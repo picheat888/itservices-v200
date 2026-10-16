@@ -27,24 +27,15 @@ class Permissions
                 'create', 'edit_own',
                 'my', 'jobs',
             ],
-            // notify_* gate who HEARS about a request, separately from who may act on it:
-            // the completion queue is a rota, and the people who want the mail about a
-            // stalled approval are not always the ones allowed to close it.
-            // `module` opens the screen and its sidebar entry, like every other module.
-            // Before it existed the page was gated on "holds any of submit/view_all/complete",
-            // which meant there was no single switch to hand somebody the module — and the
-            // permission card had no master row to hang the rest off.
+            // notify_* gate who hears about a request, apart from who may act on it.
             'requests' => ['module', 'submit', 'view_all', 'complete', 'notify_approved', 'notify_stalled'],
-            // Reads like every other module: the master opens the screen and its sidebar
-            // entry, `manage` is the right to change a chain. Before the master existed,
-            // "may look at the approval chains" and "may rewrite them" were one switch.
+            // The master opens the screen; `manage` is the right to change a chain.
             'workflows' => ['module', 'manage'],
             'assets' => [
                 'module',
                 'view_dashboard', 'view', 'register', 'edit', 'delete',
                 'manage', 'transfer', 'receive', 'retire',
                 'special', 'force_recall', 'cancel_writeoff',
-                'my', 'return',
             ],
             'contracts' => [
                 'module',
@@ -66,22 +57,19 @@ class Permissions
                 'section_add', 'section_edit', 'section_delete',
                 'department_add', 'department_edit', 'department_delete',
                 'position_add', 'position_edit', 'position_delete', 'position_special',
-                'edit_own',
             ],
+            // Self-service for the signed-in person; no master, no hierarchy.
+            'profile' => ['edit', 'return_assets'],
             'access' => [
                 'module',
                 'overview',
-                // Self-service: what THIS person may reach. Master-independent, like assets.my.
-                'my',
                 'email_view', 'email_add', 'email_edit', 'email_delete',
                 'file_view', 'file_add', 'file_edit', 'file_delete',
                 'social_view', 'social_add', 'social_edit', 'social_delete',
                 'software_view', 'software_add', 'software_edit', 'software_delete',
             ],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'view_audit'],
-            // Email & Notification. Was the single key system.configure_notifications until the
-            // page grew a second tab and a delivery log worth handing out apart from the
-            // wording — see notificationHierarchy().
+            // Email & Notification — see notificationHierarchy().
             'notifications' => [
                 'module',
                 'email_edit', 'email_toggle', 'email_test',
@@ -136,11 +124,12 @@ class Permissions
         return [
             // IT Support — day-to-day tickets, requests, assets and access
             'admin' => [
-                'access.email_add', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_edit', 'access.file_view', 'access.module', 'access.my', 'access.overview', 'access.social_add', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_edit', 'access.software_view',
-                'assets.edit', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.return', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
+                'access.email_add', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_edit', 'access.file_view', 'access.module', 'access.overview', 'access.social_add', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_edit', 'access.software_view',
+                'assets.edit', 'assets.manage', 'assets.module', 'assets.receive', 'assets.register', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
                 'contracts.alerts', 'contracts.module', 'contracts.view', 'contracts.view_dashboard',
                 'dashboard.view_contracts', 'dashboard.view_hr', 'dashboard.view_it', 'dashboard.view_requests',
                 'employees.add', 'employees.edit', 'employees.module', 'employees.reset_password', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
+                'profile.return_assets',
                 'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
                 'settings.access', 'settings.requestdata',
                 'stock.module', 'stock.request', 'stock.view', 'stock.view_dashboard', 'stock.view_request',
@@ -148,28 +137,27 @@ class Permissions
             ],
             // HR Recruit — the employee register, plus self-service
             'hr' => [
-                'access.my',
-                'assets.my', 'assets.return',
                 'dashboard.view_hr',
                 'employees.add', 'employees.edit', 'employees.module', 'employees.resign', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
+                'profile.return_assets',
                 'requests.module', 'requests.submit',
                 'tickets.create', 'tickets.edit_own', 'tickets.my',
             ],
             // Staff — self-service only
             'user' => [
-                'access.my',
-                'assets.my', 'assets.return',
+                'profile.return_assets',
                 'requests.module', 'requests.submit',
                 'tickets.create', 'tickets.edit_own', 'tickets.my',
             ],
             // IT Supervisor/Leader — everything IT runs, including permissions and settings
             'it_supervisorleader' => [
-                'access.email_add', 'access.email_delete', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_delete', 'access.file_edit', 'access.file_view', 'access.module', 'access.my', 'access.overview', 'access.social_add', 'access.social_delete', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_delete', 'access.software_edit', 'access.software_view',
-                'assets.cancel_writeoff', 'assets.delete', 'assets.edit', 'assets.force_recall', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.retire', 'assets.return', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
+                'access.email_add', 'access.email_delete', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_delete', 'access.file_edit', 'access.file_view', 'access.module', 'access.overview', 'access.social_add', 'access.social_delete', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_delete', 'access.software_edit', 'access.software_view',
+                'assets.cancel_writeoff', 'assets.delete', 'assets.edit', 'assets.force_recall', 'assets.manage', 'assets.module', 'assets.receive', 'assets.register', 'assets.retire', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
                 'contracts.alerts', 'contracts.cancel', 'contracts.create', 'contracts.delete', 'contracts.edit', 'contracts.expire', 'contracts.module', 'contracts.reactivate', 'contracts.view', 'contracts.view_dashboard', 'contracts.view_lifecycle',
                 'dashboard.view_activity', 'dashboard.view_contracts', 'dashboard.view_hr', 'dashboard.view_it', 'dashboard.view_requests',
-                'employees.add', 'employees.cancel_resign', 'employees.delete', 'employees.department_add', 'employees.department_delete', 'employees.department_edit', 'employees.edit', 'employees.edit_own', 'employees.module', 'employees.position_add', 'employees.position_delete', 'employees.position_edit', 'employees.position_special', 'employees.reset_password', 'employees.resign', 'employees.section_add', 'employees.section_delete', 'employees.section_edit', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
+                'employees.add', 'employees.cancel_resign', 'employees.delete', 'employees.department_add', 'employees.department_delete', 'employees.department_edit', 'employees.edit', 'employees.module', 'employees.position_add', 'employees.position_delete', 'employees.position_edit', 'employees.position_special', 'employees.reset_password', 'employees.resign', 'employees.section_add', 'employees.section_delete', 'employees.section_edit', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
                 'notifications.email_edit', 'notifications.email_test', 'notifications.email_toggle', 'notifications.inapp_edit', 'notifications.inapp_test', 'notifications.inapp_toggle', 'notifications.logs', 'notifications.module',
+                'profile.edit', 'profile.return_assets',
                 'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
                 'settings.access', 'settings.assets', 'settings.company', 'settings.masterdata', 'settings.requestdata', 'settings.sla',
                 'stock.approve', 'stock.fulfill', 'stock.manage_items', 'stock.module', 'stock.receive', 'stock.request', 'stock.return', 'stock.transfer', 'stock.view', 'stock.view_count', 'stock.view_dashboard', 'stock.view_events', 'stock.view_request',
@@ -179,10 +167,10 @@ class Permissions
             ],
             // IT Admin & Document — assets, contracts and the stock room
             'it_stock' => [
-                'access.my',
-                'assets.delete', 'assets.edit', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.retire', 'assets.return', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
+                'assets.delete', 'assets.edit', 'assets.manage', 'assets.module', 'assets.receive', 'assets.register', 'assets.retire', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
                 'contracts.alerts', 'contracts.cancel', 'contracts.create', 'contracts.delete', 'contracts.edit', 'contracts.expire', 'contracts.module', 'contracts.reactivate', 'contracts.view', 'contracts.view_dashboard', 'contracts.view_lifecycle',
                 'dashboard.view_contracts',
+                'profile.return_assets',
                 'requests.module', 'requests.submit',
                 'settings.access', 'settings.assets', 'settings.masterdata',
                 'stock.approve', 'stock.fulfill', 'stock.manage_items', 'stock.module', 'stock.receive', 'stock.request', 'stock.return', 'stock.transfer', 'stock.view', 'stock.view_count', 'stock.view_dashboard', 'stock.view_events', 'stock.view_request',
@@ -240,7 +228,6 @@ class Permissions
 
     /**
      * Employee permission tree used for client cascade and server normalization.
-     * `standalone` keys (edit_own — self-service) are never gated by the master.
      *
      * @return array{master: string, standalone: list<string>, groups: array<string, list<string>>}
      */
@@ -248,7 +235,7 @@ class Permissions
     {
         return [
             'master' => 'employees.module',
-            'standalone' => ['employees.edit_own'],
+            'standalone' => [],
             'groups' => [
                 'employees.view_dashboard' => [],
                 'employees.view' => [
@@ -264,10 +251,7 @@ class Permissions
     }
 
     /**
-     * Enforce the employee hierarchy on a granted set: a management child requires its
-     * group's view key; every view key requires the master. `standalone` keys survive
-     * even when the master is off (edit_own is self-service). Non-employee keys pass
-     * through untouched. Returns the normalized list.
+     * Enforce the employee hierarchy: a management child requires its group's view key; every view key requires the master.
      *
      * @param  list<string>  $granted
      * @return list<string>
@@ -297,10 +281,7 @@ class Permissions
     }
 
     /**
-     * Access Directory permission tree (mirrors the stock/contract shape): the master
-     * gates the module + sidebar; each registry's view key gates its tab and reads,
-     * and its add/edit/delete children. The edit keys also cover owner/member
-     * management for their registry. Overview is a single view key with no children.
+     * Access Directory permission tree: master gates the module, each registry's view key gates its add/edit/delete children.
      *
      * @return array{master: string, groups: array<string, list<string>>}
      */
@@ -308,7 +289,6 @@ class Permissions
     {
         return [
             'master' => 'access.module',
-            'standalone' => ['access.my'],
             'groups' => [
                 'access.overview' => [],
                 'access.email_view' => ['access.email_add', 'access.email_edit', 'access.email_delete'],
@@ -332,15 +312,8 @@ class Permissions
         $set = array_flip($granted);
         $hierarchy = self::accessHierarchy();
 
-        // Without the master, drop every access key except the self-service one: seeing what
-        // you yourself may reach is not a registry right.
         if (! isset($set[$hierarchy['master']])) {
-            $keep = array_flip($hierarchy['standalone']);
-
-            return array_values(array_filter(
-                $granted,
-                fn ($key) => ! str_starts_with($key, 'access.') || isset($keep[$key]),
-            ));
+            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'access.')));
         }
 
         foreach ($hierarchy['groups'] as $viewKey => $children) {
@@ -403,23 +376,14 @@ class Permissions
     }
 
     /**
-     * Asset permission tree used for client cascade and server normalization.
-     * Mirrors the contract/employee hierarchy: master gates the module + sidebar;
-     * each group's view key gates its management children (cascade). The self-service
-     * "My Assets" pair (`my` + its child `return`) is `standalone` — it survives even
-     * when the master is off, so an ordinary employee can accept/return their own
-     * assets without any Assets-module access (like employees.edit_own).
+     * Asset permission tree: master gates the module, each group's view key gates its management children.
      *
-     * @return array{master: string, standalone: array{view: string, children: list<string>}, groups: array<string, list<string>>}
+     * @return array{master: string, groups: array<string, list<string>>}
      */
     public static function assetHierarchy(): array
     {
         return [
             'master' => 'assets.module',
-            'standalone' => [
-                'view' => 'assets.my',
-                'children' => ['assets.return'],
-            ],
             'groups' => [
                 'assets.view_dashboard' => [],
                 'assets.view' => ['assets.register', 'assets.edit', 'assets.delete'],
@@ -430,11 +394,7 @@ class Permissions
     }
 
     /**
-     * Enforce the asset hierarchy on a granted set: a management child requires its
-     * group's view key; every group key requires the master. The self-service pair
-     * (`assets.my` + `assets.return`) survives even when the master is off, but
-     * `assets.return` still requires `assets.my`. Non-asset keys pass through
-     * untouched. Returns the normalized list.
+     * Enforce the asset hierarchy: a management child requires its group's view key; every group key requires the master.
      *
      * @param  list<string>  $granted
      * @return list<string>
@@ -443,23 +403,9 @@ class Permissions
     {
         $set = array_flip($granted);
         $hierarchy = self::assetHierarchy();
-        $standalone = $hierarchy['standalone'];
 
-        // Self-service is master-independent, but `return` still requires `my`.
-        if (! isset($set[$standalone['view']])) {
-            foreach ($standalone['children'] as $child) {
-                unset($set[$child]);
-            }
-        }
-
-        // Without the master, drop every asset key except the self-service pair.
         if (! isset($set[$hierarchy['master']])) {
-            $keep = array_flip([$standalone['view'], ...$standalone['children']]);
-
-            return array_values(array_filter(
-                array_keys($set),
-                fn ($key) => ! str_starts_with($key, 'assets.') || isset($keep[$key]),
-            ));
+            return array_values(array_filter(array_keys($set), fn ($key) => ! str_starts_with($key, 'assets.')));
         }
 
         // Master on: a management child requires its group view.
