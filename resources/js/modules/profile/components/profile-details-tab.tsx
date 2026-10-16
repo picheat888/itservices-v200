@@ -4,6 +4,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import type { Employee } from '@/shared/types';
 import { Input } from '@/shared/ui/input';
+import { Skeleton } from '@/shared/ui/skeleton';
 
 export type ProfileFormKey = 'firstName' | 'lastName' | 'firstNameTh' | 'lastNameTh' | 'phone';
 
@@ -12,6 +13,7 @@ export function ProfileDetailsTab({
     errors,
     canEdit,
     emp,
+    empLoading,
     formError,
     formErrorCount,
     onEdit,
@@ -20,6 +22,7 @@ export function ProfileDetailsTab({
     errors: Partial<Record<ProfileFormKey, string>>;
     canEdit: boolean;
     emp: Employee | undefined;
+    empLoading: boolean;
     formError: string;
     formErrorCount: number;
     onEdit: (key: ProfileFormKey) => (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -37,7 +40,7 @@ export function ProfileDetailsTab({
     const readFact = (label: string, value: string | null | undefined) => (
         <div className="min-w-0 space-y-1">
             <dt className="text-muted-foreground text-xs">{label}</dt>
-            <dd className="truncate text-sm font-medium">{value || '—'}</dd>
+            {empLoading && !value ? <Skeleton className="mt-1 h-3.5 w-24" /> : <dd className="truncate text-sm font-medium">{value || '—'}</dd>}
         </div>
     );
 

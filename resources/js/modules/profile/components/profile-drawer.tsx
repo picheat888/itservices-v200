@@ -15,6 +15,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { AtSign, Box, Briefcase, Building2, Camera, Hash, Inbox, KeyRound, Phone, Shield, Ticket, UserCheck, UserRound, Users } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -73,7 +74,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const panelId = useId();
 
     // The full employee record: department, position, joined date…
-    const { data: emp } = useEmployee(open ? (user?.employee_id ?? null) : null);
+    const { data: emp, isLoading: empLoading } = useEmployee(open ? (user?.employee_id ?? null) : null);
 
     const canEdit = can('employees.edit_own');
     // Each tab answers to its own page's permission, so the drawer never shows what that page would refuse
@@ -296,13 +297,22 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                     <div className="min-w-0 flex-1">
                         <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
                             <h2 className="truncate text-xl leading-tight font-extrabold tracking-tight">{displayName}</h2>
-                            {emp?.status === 'resigned' ? (
+                            {empLoading ? (
+                                <Skeleton className="h-5 w-16 rounded-full" />
+                            ) : emp?.status === 'resigned' ? (
                                 <StatusBadge tone="red">{t('resigned')}</StatusBadge>
                             ) : (
                                 emp && <StatusBadge tone="green">{t('active')}</StatusBadge>
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
+                            {empLoading && (
+                                <>
+                                    <Skeleton className="h-6 w-20 rounded-full" />
+                                    <Skeleton className="h-6 w-24 rounded-full" />
+                                    <Skeleton className="h-6 w-16 rounded-full" />
+                                </>
+                            )}
                             {emp?.code && <IdChip icon={Hash}>{emp.code}</IdChip>}
                             {emp?.position && <IdChip icon={Briefcase}>{emp.position}</IdChip>}
                             {department && <IdChip icon={Building2}>{department}</IdChip>}
@@ -345,10 +355,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             />
                         </RailSection>
                         <RailSection title={t('profile_details')}>
-                            <RailRow icon={<Users className="h-3.5 w-3.5" />} label={t('emp_section')} value={section} />
-                            <RailRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={department} />
-                            <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp?.position} />
-                            <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={manager} />
+                            <RailRow icon={<Users className="h-3.5 w-3.5" />} label={t('emp_section')} value={section} loading={empLoading} />
+                            <RailRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={department} loading={empLoading} />
+                            <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp?.position} loading={empLoading} />
+                            <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={manager} loading={empLoading} />
                         </RailSection>
                     </aside>
 
@@ -368,6 +378,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                     errors={errors}
                                     canEdit={canEdit}
                                     emp={emp}
+                                    empLoading={empLoading}
                                     formError={formError}
                                     formErrorCount={formErrorCount}
                                     onEdit={edit}
