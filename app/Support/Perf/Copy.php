@@ -210,6 +210,8 @@ class Copy implements PerfStep
             $kinds[$kind] = (int) $byName[$name];
         }
         $reg->remember('category_by_kind', $kinds);
+        $stockNames = ['Toner / Cartridge', 'Computer parts', 'Cable', 'Accessories', 'Consumables'];
+        $reg->remember('stock_category_ids', array_values(array_map('intval', array_intersect_key($byName, array_flip($stockNames)))));
 
         $reg->remember('role_id_by_key', array_map('intval', $this->db->table('roles')->pluck('id', 'key')->all()));
         $reg->remember('default_group_id', (int) $this->db->table('app_settings')->where('key', 'default_employee_group_id')->value('value'));
