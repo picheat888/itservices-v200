@@ -109,6 +109,11 @@ export function RequestPermissionTree({
                 if (group) {
                     group.children.forEach((c) => next.delete(c));
                 }
+                // Last type off switches filing off too
+                const owner = GROUPS.find((g) => g.fillOnGrant && g.children.includes(key));
+                if (owner && !owner.children.some((c) => next.has(c))) {
+                    next.delete(owner.view);
+                }
             } else {
                 next.add(key);
                 const parent = GROUPS.find((g) => g.children.includes(key));

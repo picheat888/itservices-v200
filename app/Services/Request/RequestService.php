@@ -410,7 +410,7 @@ class RequestService
 
     public function cancel(ServiceRequest $request, User $actor, string $reason): ServiceRequest
     {
-        abort_unless($request->isOwnedOrFiledBy($actor) || $actor->hasPermission('requests.cancel_any'), 403);
+        abort_unless($request->mayBeCancelledBy($actor, $actor->hasPermission('requests.cancel_any')), 403);
 
         [$request, $wasCurrent] = DB::transaction(function () use ($request, $actor, $reason) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);

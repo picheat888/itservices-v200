@@ -100,6 +100,48 @@ class BackfillRequestTypePermissionsMigrationTest extends TestCase
         $this->assertTrue($this->allowed($a, 'requests.cancel_any'));
     }
 
+    public function test_a_submit_role_saved_with_every_type_denied_ends_with_all_allowed(): void
+    {
+        [$a] = $this->arrange();
+        foreach ($this->typeKeys() as $key) {
+            RolePermission::create(['role_id' => $a->id, 'permission' => $key, 'allowed' => false]);
+        }
+
+        $this->migration()->up();
+
+        $this->assertSame(13, $this->allowedTypeCount($a));
+        $this->assertSame(13, RolePermission::where('role_id', $a->id)->whereIn('permission', $this->typeKeys())->count());
+    }
+
+    public function test_a_submit_role_with_some_types_allowed_keeps_exactly_those(): void
+    {
+        [$a] = $this->arrange();
+        $chosen = array_slice($this->typeKeys(), 0, 2);
+        foreach ($this->typeKeys() as $key) {
+            RolePermission::create(['role_id' => $a->id, 'permission' => $key, 'allowed' => in_array($key, $chosen)]);
+        }
+
+        $this->migration()->up();
+
+        $this->assertSame(2, $this->allowedTypeCount($a));
+        $this->assertTrue($this->allowed($a, $chosen[0]));
+        $this->assertTrue($this->allowed($a, $chosen[1]));
+    }
+
+    public function test_a_second_up_after_the_repair_adds_nothing(): void
+    {
+        [$a] = $this->arrange();
+        RolePermission::create(['role_id' => $a->id, 'permission' => $this->typeKeys()[0], 'allowed' => false]);
+
+        $migration = $this->migration();
+        $migration->up();
+        $count = RolePermission::count();
+        $migration->up();
+
+        $this->assertSame($count, RolePermission::count());
+        $this->assertSame(13, $this->allowedTypeCount($a));
+    }
+
     public function test_down_removes_the_fourteen_keys(): void
     {
         $this->arrange();

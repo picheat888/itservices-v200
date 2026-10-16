@@ -453,7 +453,7 @@ class EmployeeController extends Controller
      * here without a deploy, which is the whole point of those fields being rows.
      *
      * A separate endpoint from service-requests/options on purpose: that one is gated by
-     * requests.submit and carries every request type, its workflow and five source lists.
+     * requests.submit and carries the request types the user may file, their workflows and source lists.
      * The HR role happens to hold requests.submit today, but an administrator can revoke
      * it, and Step 3 would then break on a permission belonging to a module this form
      * never opens. Gated by employees.add — the cross-module "peek" rule.

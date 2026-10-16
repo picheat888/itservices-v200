@@ -33,10 +33,7 @@ class StoreServiceRequestRequest extends FormRequest
      */
     public function rules(): array
     {
-        // No `title` rule on purpose: it is derived from the type, so the server composes
-        // it (RequestService::canonicalTitle) and anything a client sends is dropped by
-        // validated(). It used to be required, and the wizard filled it with its own
-        // rendering — which is how the stored title ended up in the requester's language.
+        // No title rule: the server composes it (RequestService::canonicalTitle).
         $rules = [
             'type' => ['required', Rule::enum(RequestType::class)],
             'reason' => ['required', 'string', 'min:10', 'max:5000'],
