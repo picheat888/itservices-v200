@@ -43,9 +43,6 @@ class TicketBacklogReport extends TabularReport
     /** tickets.source on screen (i18n keys) — the file reads TicketLabels::source(). */
     private const SOURCE_KEYS = ['manual' => 'rep_source_manual', 'auto_request' => 'rep_source_auto_request'];
 
-    /** "Due soon" reaches this far ahead. */
-    private const SOON_HOURS = 24;
-
     public function key(): string
     {
         return 'tickets.backlog';
@@ -146,14 +143,7 @@ class TicketBacklogReport extends TabularReport
     /** Which of the page's SLA segments a ticket falls in, for a column to group or filter the sheet by. */
     private static function slaState(Ticket $ticket): string
     {
-        $hours = self::hoursLeft($ticket);
-
-        return match (true) {
-            $hours === null => 'no_due',
-            $hours < 0 => 'over_sla',
-            $hours <= self::SOON_HOURS => 'due_soon',
-            default => 'on_track',
-        };
+        return TicketMetrics::liveSlaState($ticket, now());
     }
 
     public function summary(Builder $query, array $filters): array
@@ -239,7 +229,7 @@ class TicketBacklogReport extends TabularReport
     /** SQL: the edge of "due soon", the app clock inlined (generated here, never reader input). */
     private static function soonSql(): string
     {
-        return "'".now()->addHours(self::SOON_HOURS)->toDateTimeString()."'";
+        return "'".now()->addHours(TicketMetrics::SOON_HOURS)->toDateTimeString()."'";
     }
 
     /**
