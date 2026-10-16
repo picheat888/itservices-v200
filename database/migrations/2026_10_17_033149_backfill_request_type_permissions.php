@@ -1,6 +1,6 @@
 <?php
 
-// Gives every role that may file requests all 13 type keys (repairing a submit role saved with none), and IT leads holding view_all the cancel_any right; other roles get denied rows.
+// Backfills the 13 type keys for submit roles (repairing roles saved with none) and cancel_any for IT leads with view_all.
 
 use App\Enums\Request\RequestType;
 use Illuminate\Database\Migrations\Migration;
@@ -43,7 +43,7 @@ return new class extends Migration
                         ->update(['allowed' => true, 'updated_at' => now()]);
                 }
 
-                foreach ($this->typeKeys() as $key) {
+                foreach ($typeKeys as $key) {
                     $this->addRow($roleId, $key, in_array($roleId, $filerIds));
                 }
                 $this->addRow($roleId, self::CANCEL_ANY, in_array($roleId, $cancelIds));
