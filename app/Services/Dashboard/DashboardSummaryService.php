@@ -117,7 +117,7 @@ class DashboardSummaryService
             ],
             // The one thing on this page that asks the reader to act, so it is a list and not
             // a number: each row is an asset they have to accept before it counts as theirs.
-            'pending_acceptance' => Asset::with('model')
+            'pending_acceptance' => Asset::with(['model', 'category'])
                 ->where('owner_employee_id', $employeeId)
                 ->where('status', AssetStatus::PendingAcceptance->value)
                 ->latest('id')
@@ -127,6 +127,8 @@ class DashboardSummaryService
                     'asset_code' => $asset->asset_code,
                     'tag' => $asset->tag,
                     'model' => $asset->model?->name,
+                    'category' => $asset->category?->name,
+                    'category_th' => $asset->category?->name_th,
                 ])->all(),
             'tickets' => (clone $openTickets)->with('assignee')->latest('id')->limit(self::LIST_LIMIT)->get()
                 ->map(fn (Ticket $ticket) => [

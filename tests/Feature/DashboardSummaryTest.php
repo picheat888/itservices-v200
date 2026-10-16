@@ -9,6 +9,7 @@ use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\Category;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -74,7 +75,10 @@ class DashboardSummaryTest extends TestCase
     public function test_assets_waiting_to_be_accepted_are_listed_separately(): void
     {
         $me = $this->staff();
-        Asset::factory()->create(['owner_employee_id' => $me->employee_id, 'status' => 'pending_acceptance', 'asset_code' => 'PC-9001']);
+        $category = Category::create(['name' => 'Switch', 'name_th' => 'สวิตช์']);
+        Asset::factory()->create([
+            'owner_employee_id' => $me->employee_id, 'status' => 'pending_acceptance', 'asset_code' => 'PC-9001', 'category_id' => $category->id,
+        ]);
         Asset::factory()->create(['owner_employee_id' => $me->employee_id, 'status' => 'deployed']);
         Asset::factory()->create(['owner_employee_id' => null, 'status' => 'pending_acceptance']);
 
@@ -82,6 +86,9 @@ class DashboardSummaryTest extends TestCase
 
         $this->assertCount(1, $body['pending_acceptance']);
         $this->assertSame('PC-9001', $body['pending_acceptance'][0]['asset_code']);
+        // The strip groups by model and names the category, so both ride along.
+        $this->assertSame('Switch', $body['pending_acceptance'][0]['category']);
+        $this->assertSame('สวิตช์', $body['pending_acceptance'][0]['category_th']);
         // Both still count as the reader's kit — one of them just has not been accepted yet.
         $this->assertSame(2, $body['kpi']['assets']);
     }
