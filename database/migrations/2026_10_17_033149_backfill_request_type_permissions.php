@@ -1,6 +1,6 @@
 <?php
 
-// Gives every role that may file requests all 13 type keys, and IT leads the cancel_any right; other roles get denied rows.
+// Gives every role that may file requests all 13 type keys, and IT leads holding view_all the cancel_any right; other roles get denied rows.
 
 use App\Enums\Request\RequestType;
 use Illuminate\Database\Migrations\Migration;
@@ -20,7 +20,13 @@ return new class extends Migration
                 ->where('allowed', true)
                 ->pluck('role_id')
                 ->all();
-            $cancelIds = DB::table('roles')->whereIn('key', self::CANCEL_ANY_ROLES)->pluck('id')->all();
+            $cancelIds = DB::table('roles')
+                ->join('role_permissions', 'role_permissions.role_id', '=', 'roles.id')
+                ->whereIn('roles.key', self::CANCEL_ANY_ROLES)
+                ->where('role_permissions.permission', 'requests.view_all')
+                ->where('role_permissions.allowed', true)
+                ->pluck('roles.id')
+                ->all();
 
             foreach (DB::table('roles')->pluck('id') as $roleId) {
                 foreach ($this->typeKeys() as $key) {
