@@ -20,6 +20,7 @@ use App\Models\Settings\WriteoffReason;
 use App\Models\User;
 use App\Services\Asset\AssetService;
 use App\Support\OverviewPeriod;
+use App\Support\SearchTerms;
 use App\Support\SystemTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -119,18 +120,13 @@ class AssetController extends Controller
 
         $query = Asset::query()->with(['contract.vendor', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department'])->latest('id');
 
-        if ($request->filled('search')) {
-            $q = '%'.$request->query('search').'%';
-            $query->where(function ($w) use ($q) {
-                $w->where('asset_code', 'like', $q)
-                    ->orWhere('tag', 'like', $q)
-                    ->orWhereHas('model', fn ($m) => $m->where('name', 'like', $q))
-                    // Owner is a shared label on the asset, or the holding employee's code.
-                    ->orWhere('owner', 'like', $q)
-                    ->orWhereHas('ownerEmployee', fn ($e) => $e->where('code', 'like', $q)->orWhere('first_name', 'like', $q)->orWhere('last_name', 'like', $q))
-                    ->orWhere('serial', 'like', $q);
-            });
-        }
+        SearchTerms::apply($query, $request->query('search'), [
+            'asset_code', 'tag', 'serial',
+            SearchTerms::related('model', ['name']),
+            // Owner is a shared label on the asset, or the holding employee.
+            'owner',
+            SearchTerms::related('ownerEmployee', ['code', ...SearchTerms::personName()]),
+        ]);
         if ($request->filled('type')) {
             // The filter still sends the category name; match it through the relation.
             $query->whereHas('category', fn ($c) => $c->where('name', $request->query('type')));

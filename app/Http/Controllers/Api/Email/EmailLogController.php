@@ -8,6 +8,7 @@ use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
 use App\Services\Email\EmailNotificationService;
 use App\Support\EmailTemplates;
+use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -98,13 +99,7 @@ class EmailLogController extends Controller
             $query->where('status', $status);
         }
 
-        if ($search = trim((string) $request->query('search'))) {
-            $query->where(function ($q) use ($search) {
-                foreach (['recipient_name', 'to_email', 'subject', 'template_key'] as $column) {
-                    $q->orWhere($column, 'like', "%{$search}%");
-                }
-            });
-        }
+        SearchTerms::apply($query, $request->query('search'), ['recipient_name', 'to_email', 'subject', 'template_key']);
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);

@@ -133,4 +133,23 @@ class EmployeeAccountLinkTest extends TestCase
 
         $this->assertLessThan($codes->search('521310'), $codes->search('681310'));
     }
+
+    public function test_index_search_finds_by_email_and_username(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        Employee::create(['code' => 'EMP-9101', 'first_name' => 'Mail', 'last_name' => 'Match', 'email' => 'unique.mail@corp.test']);
+        Employee::create(['code' => 'EMP-9102', 'first_name' => 'Mirror', 'last_name' => 'Match', 'email' => 'm@x.test', 'username' => 'mirrored.login']);
+        // Linked account whose username was never copied onto the employee.
+        $accountOnly = Employee::create(['code' => 'EMP-9103', 'first_name' => 'Account', 'last_name' => 'Only', 'email' => 'a@x.test']);
+        User::factory()->create(['employee_id' => $accountOnly->id, 'username' => 'account.login']);
+        Employee::create(['code' => 'EMP-9104', 'first_name' => 'No', 'last_name' => 'Match', 'email' => 'n@x.test']);
+
+        $search = fn (string $q) => collect($this->getJson('/api/employees?page=1&search='.urlencode($q))->json('data'))->pluck('code')->all();
+
+        $this->assertSame(['EMP-9101'], $search('unique.mail'));
+        $this->assertSame(['EMP-9102'], $search('mirrored.login'));
+        $this->assertSame(['EMP-9103'], $search('account.login'));
+        $this->assertSame([], $search('nobody.here'));
+    }
 }

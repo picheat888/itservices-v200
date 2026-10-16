@@ -30,6 +30,7 @@ use App\Services\Request\WorkflowResolverService;
 use App\Support\CsvReader;
 use App\Support\OverviewPeriod;
 use App\Support\RequestSchemas;
+use App\Support\SearchTerms;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -128,7 +129,7 @@ class EmployeeController extends Controller
 
     /**
      * Returns all employees (for dashboard/pickers) or a paginated page
-     * with search+department filtering when the ?page query param is present.
+     * with search (name, code, email, username) + department filtering when ?page is present.
      */
     public function index(Request $request): JsonResponse
     {
@@ -146,16 +147,10 @@ class EmployeeController extends Controller
 
             $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
 
-            if ($request->filled('search')) {
-                $q = '%'.$request->query('search').'%';
-                $query->where(function ($w) use ($q) {
-                    $w->where('first_name', 'like', $q)
-                        ->orWhere('last_name', 'like', $q)
-                        ->orWhere('first_name_th', 'like', $q)
-                        ->orWhere('last_name_th', 'like', $q)
-                        ->orWhere('code', 'like', $q);
-                });
-            }
+            SearchTerms::apply($query, $request->query('search'), [
+                ...SearchTerms::personName(), 'code', 'email', 'username',
+                SearchTerms::related('user', ['username']),
+            ]);
 
             if ($request->filled('department_id')) {
                 $query->where('department_id', (int) $request->query('department_id'));

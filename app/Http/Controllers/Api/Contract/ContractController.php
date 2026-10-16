@@ -10,6 +10,7 @@ use App\Models\Contract\Contract;
 use App\Models\Settings\AppSetting;
 use App\Services\Contract\ContractExpiryAlertService;
 use App\Services\Contract\ContractService;
+use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -49,16 +50,13 @@ class ContractController extends Controller
             'value_asc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('value', 'asc'),
             default => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('end_date', 'asc'),
         };
+        // Tie-breaker so equal dates/values never swap or repeat across pages.
+        $query->orderBy('id');
 
-        if ($request->filled('search')) {
-            $q = '%'.$request->query('search').'%';
-            $query->where(function ($w) use ($q) {
-                $w->whereHas('vendor', fn ($v) => $v->where('name', 'like', $q))
-                    ->orWhere('details', 'like', $q)
-                    ->orWhere('name', 'like', $q)
-                    ->orWhere('code', 'like', $q);
-            });
-        }
+        SearchTerms::apply($query, $request->query('search'), [
+            'code', 'name', 'details',
+            SearchTerms::related('vendor', ['name']),
+        ]);
 
         if ($request->filled('type')) {
             $query->where('type', $request->query('type'));

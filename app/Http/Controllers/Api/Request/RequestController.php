@@ -15,6 +15,7 @@ use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Services\Request\RequestService;
 use App\Support\OverviewPeriod;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
@@ -113,23 +114,15 @@ class RequestController extends Controller
         if ($type = $request->query('type')) {
             $query->where('type', $type);
         }
-        if ($search = trim((string) $request->query('search'))) {
-            // The service name is matched against the TYPE, not the stored title: the title is
-            // one canonical English string while the SPA writes the service name in the
-            // reader's language, so a Thai reader searching what they see on screen would
-            // otherwise find nothing. RequestType::matching() resolves the term against both
-            // languages, and `type` is indexed where a leading-wildcard LIKE on title cannot
-            // be. The title LIKE stays for rows written before the server owned that column.
-            $types = RequestType::matching($search);
-            $query->where(function ($q) use ($search, $types) {
-                $q->where('reference', 'like', "%{$search}%")
-                    ->orWhere('title', 'like', "%{$search}%")
-                    ->orWhere('requester_name', 'like', "%{$search}%");
-                if ($types !== []) {
+        // Each word also matches the service name in either language through the TYPE (the stored title is English only).
+        SearchTerms::apply($query, $request->query('search'), [
+            'reference', 'title', 'requester_name',
+            function ($q, string $like, string $word) {
+                if ($types = RequestType::matching($word)) {
                     $q->orWhereIn('type', $types);
                 }
-            });
-        }
+            },
+        ]);
         // Tab scopes: awaiting my decision / the IT completion queue / only my own.
         if ($request->query('scope') === 'approvals') {
             // An account with no employee record cannot be anybody's approver, so the answer

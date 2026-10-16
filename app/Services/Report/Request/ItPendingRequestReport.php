@@ -11,6 +11,7 @@ use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Services\Report\TicketLabels;
 use App\Support\DateDisplay;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -79,12 +80,7 @@ class ItPendingRequestReport extends TabularReport
     private function waitingQuery(array $filters): Builder
     {
         return $this->scoped(ServiceRequest::query()->where('status', 'approved'), $filters)
-            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
-                $like = '%'.$search.'%';
-                $q->where(fn (Builder $w) => $w->where('reference', 'like', $like)
-                    ->orWhere('title', 'like', $like)
-                    ->orWhere('requester_name', 'like', $like));
-            });
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['reference', 'title', 'requester_name']));
     }
 
     /**

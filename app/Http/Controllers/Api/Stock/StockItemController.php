@@ -15,6 +15,7 @@ use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Support\DateDisplay;
 use App\Support\DocumentName;
+use App\Support\SearchTerms;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,15 +57,11 @@ class StockItemController extends Controller
                 ->selectRaw('COALESCE(SUM(qty_remaining * unit_cost), 0)')
                 ->whereColumn('stock_item_id', 'stock_items.id')]);
 
-        if ($request->filled('search')) {
-            $q = '%'.$request->query('search').'%';
-            $query->where(function ($w) use ($q) {
-                $w->where('name', 'like', $q)
-                    ->orWhere('sku', 'like', $q)
-                    ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', $q))
-                    ->orWhereHas('model', fn ($m) => $m->where('name', 'like', $q));
-            });
-        }
+        SearchTerms::apply($query, $request->query('search'), [
+            'stock_items.name', 'stock_items.sku',
+            SearchTerms::related('brand', ['name']),
+            SearchTerms::related('model', ['name']),
+        ]);
         if ($request->filled('category')) {
             // The filter still sends the category name; match it through the relation.
             $query->whereHas('category', fn ($c) => $c->where('name', $request->query('category')));
@@ -87,6 +84,8 @@ class StockItemController extends Controller
             'value_asc' => $query->orderBy('value_total', 'asc'),
             default => $query->orderBy('name', 'asc'),
         };
+        // Tie-breaker so equal names/stock/values never swap or repeat across pages.
+        $query->orderBy('stock_items.id');
 
         // `all=1` returns the full (filtered) list — used by item pickers/drawers,
         // which are selectors, not paginated tables.

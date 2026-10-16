@@ -7,6 +7,7 @@ import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
@@ -1047,11 +1048,12 @@ function AuditTab() {
     // Search, filters, page and rows-per-page live in the URL (?search, category, user, page, per).
     const list = useListParams();
     const { page, perPage: pageSize } = list;
-    const q = list.get('search');
+    const search = list.get('search');
     const categoryParam = list.get('category');
     const category = AUDIT_CATEGORIES.includes(categoryParam) ? categoryParam : 'all';
     const user = list.get('user') || 'all';
-    const filters: AuditFilters = { q, category, user };
+    const sentSearch = useDebouncedSearch(search);
+    const filters: AuditFilters = { search: sentSearch, category, user };
 
     const { data, isLoading } = useAuditLogs(page, pageSize, filters);
     // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
@@ -1138,7 +1140,12 @@ function AuditTab() {
             <div className="border-border flex flex-wrap items-center gap-2 border-b px-5 py-3">
                 <div className="relative w-full max-w-xs">
                     <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                    <Input value={q} onChange={(e) => setFilter('search', e.target.value)} placeholder={t('search_placeholder')} className="pl-9" />
+                    <Input
+                        value={search}
+                        onChange={(e) => setFilter('search', e.target.value)}
+                        placeholder={t('search_placeholder')}
+                        className="pl-9"
+                    />
                 </div>
                 <div className="w-44">
                     <SearchableSelect value={category} onChange={(v) => setFilter('category', v)} options={categoryOptions} />

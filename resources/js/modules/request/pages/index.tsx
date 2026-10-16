@@ -8,6 +8,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import {
@@ -98,6 +99,7 @@ export default function RequestsPage() {
     const list = useListParams();
     const { page, perPage } = list;
     const search = list.get('search');
+    const sentSearch = useDebouncedSearch(search);
     const status = pickAllowed(list.get('status'), REQUEST_STATUSES);
     const type = pickAllowed(list.get('type'), REQUEST_TYPES);
 
@@ -135,9 +137,9 @@ export default function RequestsPage() {
     const [period, setPeriod] = useOverviewPeriod();
     const listParams =
         tab === 'approvals'
-            ? { page, per_page: perPage, search, status, type, scope: 'approvals' as const }
+            ? { page, per_page: perPage, search: sentSearch, status, type, scope: 'approvals' as const }
             : tab === 'all'
-              ? { page, per_page: perPage, search, status, type }
+              ? { page, per_page: perPage, search: sentSearch, status, type }
               : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
     const { data: pageData, isLoading, isFetching, isError, refetch } = useRequests(listParams);
     const rows = pageData?.data ?? [];

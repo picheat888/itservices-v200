@@ -11,6 +11,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useMediaQuery } from '@/shared/hooks/use-media-query';
@@ -84,6 +85,7 @@ export default function ContractsPage() {
     const list = useListParams();
     const { page, perPage } = list;
     const search = list.get('search');
+    const sentSearch = useDebouncedSearch(search);
     const ALL_TYPES = '__all__';
     const typeParam = list.get('type');
     const typeFilter: ContractType | '' = CONTRACT_TYPES.includes(typeParam as ContractType) ? (typeParam as ContractType) : '';
@@ -129,7 +131,7 @@ export default function ContractsPage() {
         {
             page,
             per_page: perPage,
-            search,
+            search: sentSearch,
             tab: listEnabledTab,
             type: typeFilter || undefined,
             sort,

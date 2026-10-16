@@ -7,6 +7,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
@@ -287,6 +288,7 @@ export default function StockPage() {
         sort: list.get('sort'),
     });
     const { search, cat, wh, status: statusFilter, sort: itemSort } = itemFilters;
+    const sentSearch = useDebouncedSearch(search);
     // A filter the reader picks is also remembered for their next visit; a shared link's filters are not.
     const setItemFilters = (patch: Partial<ItemFilters>) => {
         const next = { ...itemFilters, ...patch };
@@ -381,7 +383,7 @@ export default function StockPage() {
         isLoading: itemsLoading,
         isFetching: itemsFetching,
     } = useStockItemsPage({
-        search: search || undefined,
+        search: sentSearch || undefined,
         category: cat === 'all' ? undefined : cat,
         warehouse: wh === 'all' ? undefined : wh,
         status: statusFilter === 'all' ? undefined : statusFilter,

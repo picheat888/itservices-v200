@@ -10,6 +10,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -57,12 +58,10 @@ class StockMovementReport extends TabularReport
                 $q->where(fn (Builder $w) => $w->where('from_label', $name)->orWhere('to_label', $name));
             })
             ->when($filters['category_id'], fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)))
-            ->when($filters['search'], function (Builder $q, string $search) {
-                $like = '%'.$search.'%';
-                $q->where(fn (Builder $w) => $w->where('doc_no', 'like', $like)
-                    ->orWhere('reference', 'like', $like)
-                    ->orWhereHas('item', fn (Builder $i) => $i->where('sku', 'like', $like)->orWhere('name', 'like', $like)));
-            })
+            ->when($filters['search'], fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
+                'doc_no', 'reference',
+                SearchTerms::related('item', ['sku', 'name']),
+            ]))
             ->orderBy('moved_at')
             ->orderBy('id');
     }

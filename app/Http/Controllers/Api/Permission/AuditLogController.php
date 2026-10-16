@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Permission;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,16 +26,10 @@ class AuditLogController extends Controller
         $perPage = (int) $request->query('per_page', 20);
         $perPage = max(10, min(100, $perPage)); // clamp 10–100
 
-        $query = AuditLog::query()->latest();
+        // Newest first; id breaks ties between entries written in the same second.
+        $query = AuditLog::query()->latest()->latest('id');
 
-        // Free-text search across action / target / actor.
-        if ($q = trim((string) $request->query('q', ''))) {
-            $query->where(function ($w) use ($q) {
-                $w->where('action', 'like', "%{$q}%")
-                    ->orWhere('target', 'like', "%{$q}%")
-                    ->orWhere('user_name', 'like', "%{$q}%");
-            });
-        }
+        SearchTerms::apply($query, $request->query('search'), ['action', 'target', 'user_name']);
 
         // Category filter (created / updated / deleted / workflow / auth).
         $verbs = self::CATEGORY_VERBS[$request->query('category')] ?? null;

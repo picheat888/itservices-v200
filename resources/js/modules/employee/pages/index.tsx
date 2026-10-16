@@ -10,6 +10,7 @@ import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -684,11 +685,12 @@ function DirectoryTab({
     const statusParam = list.get('status');
     const statusFilter = isDirStatus(statusParam) ? statusParam : 'all';
     const { page, perPage } = list;
+    const sentSearch = useDebouncedSearch(search);
 
     const { data, isLoading, isFetching } = useEmployeeDirectory({
         page,
         per_page: perPage,
-        search,
+        search: sentSearch,
         department_id: deptFilter,
         status: statusFilter,
     });
