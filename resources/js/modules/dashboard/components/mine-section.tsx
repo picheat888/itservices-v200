@@ -118,7 +118,7 @@ function MyTicketsCard({ mine }: { mine: DashboardMine }) {
 
     return (
         <Card className={WIDE}>
-            <CardTitle title={t('dash_my_tickets')} sub={t('dash_n_cases').replace('{n}', String(mine.tickets_total))} />
+            <CardTitle level="h3" title={t('dash_my_tickets')} sub={t('dash_n_cases').replace('{n}', String(mine.tickets_total))} />
             {mine.tickets.length === 0 ? (
                 <CardEmpty>{t('dash_empty_tickets')}</CardEmpty>
             ) : (
@@ -170,7 +170,7 @@ function MyRequestsCard({ mine }: { mine: DashboardMine }) {
 
     return (
         <Card className={NARROW}>
-            <CardTitle title={t('dash_my_requests')} sub={t('dash_n_requests').replace('{n}', String(mine.requests_total))} />
+            <CardTitle level="h3" title={t('dash_my_requests')} sub={t('dash_n_requests').replace('{n}', String(mine.requests_total))} />
             {mine.requests.length === 0 ? (
                 <CardEmpty>{t('dash_empty_requests')}</CardEmpty>
             ) : (

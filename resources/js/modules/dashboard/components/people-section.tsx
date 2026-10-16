@@ -78,6 +78,7 @@ function DepartmentsCard({
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={className}>
             <CardTitle
+                level="h3"
                 title={t('dash_by_department')}
                 note={t('dash_n_departments').replace('{n}', String(hr.by_department.length))}
                 sub={t('dash_active_people').replace('{n}', String(hr.headcount))}
@@ -118,6 +119,7 @@ function ActivityCard({
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={className}>
             <CardTitle
+                level="h3"
                 title={t('dash_recent_activity')}
                 note={t('dash_latest_n').replace('{n}', String(activity.items.length))}
                 sub={t('dash_today_n').replace('{n}', String(activity.today_count))}
