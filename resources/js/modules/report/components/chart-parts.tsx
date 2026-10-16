@@ -211,6 +211,7 @@ export function CardTitle({
     note,
     info,
     sub,
+    level: Heading = 'h2',
 }: {
     id?: string;
     title: React.ReactNode;
@@ -218,13 +219,15 @@ export function CardTitle({
     /** How the card counts, behind an ⓘ beside the title (read once, not every time); one paragraph each. */
     info?: string | string[];
     sub?: React.ReactNode;
+    /** h3 where the card sits under a section heading (Dashboard). */
+    level?: 'h2' | 'h3';
 }) {
     return (
         <div className={cn(CARD_HEADING_TINT, 'border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-5 py-3')}>
             <div className="flex flex-wrap items-center gap-x-2">
-                <h2 id={id} className="text-sm font-semibold">
+                <Heading id={id} className="text-sm font-semibold">
                     {title}
-                </h2>
+                </Heading>
                 {info && <InfoMark info={info} />}
                 {note && <p className="text-muted-foreground text-xs">{note}</p>}
             </div>

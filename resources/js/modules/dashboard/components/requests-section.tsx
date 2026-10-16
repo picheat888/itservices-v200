@@ -131,6 +131,7 @@ function WaitingCard({
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={WIDE}>
             <CardTitle
+                level="h3"
                 title={t('dash_waiting_over').replace('{n}', String(requests.waiting_after_days))}
                 sub={t('dash_n_requests').replace('{n}', String(requests.waiting_total))}
             />
@@ -200,7 +201,7 @@ function ByTypeCard({
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={NARROW}>
-            <CardTitle title={t('dash_by_type')} note={t('dash_last_30d')} sub={t('dash_total_requests').replace('{n}', String(total))} />
+            <CardTitle level="h3" title={t('dash_by_type')} note={t('dash_last_30d')} sub={t('dash_total_requests').replace('{n}', String(total))} />
             {total === 0 ? (
                 <CardEmpty>{t('dash_empty_requests_window')}</CardEmpty>
             ) : (

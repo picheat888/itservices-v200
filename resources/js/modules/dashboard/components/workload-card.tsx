@@ -30,6 +30,7 @@ export function WorkloadCard({
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={NARROW}>
             <CardTitle
+                level="h3"
                 title={t('dash_team_workload')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">

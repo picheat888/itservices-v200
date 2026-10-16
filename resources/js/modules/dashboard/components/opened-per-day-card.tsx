@@ -25,7 +25,12 @@ export function OpenedPerDayCard({
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={WIDE}>
-            <CardTitle title={t('dash_opened_per_day')} note={t('dash_last_14d')} sub={t('dash_total_cases').replace('{n}', String(total))} />
+            <CardTitle
+                level="h3"
+                title={t('dash_opened_per_day')}
+                note={t('dash_last_14d')}
+                sub={t('dash_total_cases').replace('{n}', String(total))}
+            />
             {total === 0 ? (
                 <CardEmpty>{t('dash_empty_window')}</CardEmpty>
             ) : (
