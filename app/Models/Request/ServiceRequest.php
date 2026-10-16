@@ -205,4 +205,10 @@ class ServiceRequest extends Model
     {
         return $user->id === $this->user_id || $user->id === $this->submitted_by_user_id;
     }
+
+    /** Owner or filer, or an actor holding requests.cancel_any. */
+    public function mayBeCancelledBy(User $actor, bool $holdsCancelAny): bool
+    {
+        return $this->isOwnedOrFiledBy($actor) || $holdsCancelAny;
+    }
 }

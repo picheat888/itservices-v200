@@ -1,6 +1,6 @@
 <?php
 
-// Gives every role that may file requests all 13 type keys, and IT leads holding view_all the cancel_any right; other roles get denied rows.
+// Gives every role that may file requests all 13 type keys (repairing a submit role saved with none), and IT leads holding view_all the cancel_any right; other roles get denied rows.
 
 use App\Enums\Request\RequestType;
 use Illuminate\Database\Migrations\Migration;
@@ -28,7 +28,21 @@ return new class extends Migration
                 ->pluck('roles.id')
                 ->all();
 
+            $typeKeys = $this->typeKeys();
+
             foreach (DB::table('roles')->pluck('id') as $roleId) {
+                $holdsNoType = ! DB::table('role_permissions')
+                    ->where('role_id', $roleId)
+                    ->whereIn('permission', $typeKeys)
+                    ->where('allowed', true)
+                    ->exists();
+                if (in_array($roleId, $filerIds) && $holdsNoType) {
+                    DB::table('role_permissions')
+                        ->where('role_id', $roleId)
+                        ->whereIn('permission', $typeKeys)
+                        ->update(['allowed' => true, 'updated_at' => now()]);
+                }
+
                 foreach ($this->typeKeys() as $key) {
                     $this->addRow($roleId, $key, in_array($roleId, $filerIds));
                 }

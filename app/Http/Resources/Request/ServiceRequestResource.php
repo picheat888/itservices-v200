@@ -101,7 +101,7 @@ class ServiceRequestResource extends JsonResource
             ],
             'can_approve' => $canApprove,
             'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending
-                && ($this->resource->isOwnedOrFiledBy($viewer) || $this->viewerMayCancelAny($request)),
+                && $this->resource->mayBeCancelledBy($viewer, $this->viewerMayCancelAny($request)),
             // Held back while a linked case is still in flight: closing that case is what
             // completes the request, so the button would only ever return the 422 that
             // RequestService::complete answers with.

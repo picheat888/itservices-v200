@@ -9,15 +9,7 @@ use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Requests was the last workspace module without a master key. Its permission card fell
- * through to the page's plain fallback — a flat list of five switches — because there was
- * no master to hang a tree off, and there was no single switch that handed somebody the
- * module: the page was gated on "holds any of submit / view_all / complete".
- *
- * The master exists now. What matters is that it behaves like every other module's, and
- * that roles granted before it existed keep the access they already had.
- */
+// Covers the requests.module master key: grantable, gating the tree, and applied when a role is saved.
 class RequestPermissionGateTest extends TestCase
 {
     use RefreshDatabase;
@@ -47,7 +39,7 @@ class RequestPermissionGateTest extends TestCase
         $this->assertEqualsCanonicalizing($granted, Permissions::normalizeRequests($granted));
     }
 
-    public function test_the_tree_survives_a_full_grant_untouched(): void
+    public function test_normalizing_a_grant_with_no_type_keys_leaves_it_unchanged(): void
     {
         $full = ['requests.module', 'requests.submit', 'requests.view_all', 'requests.complete',
             'requests.notify_approved', 'requests.notify_stalled'];
