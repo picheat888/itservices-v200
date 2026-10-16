@@ -10,6 +10,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -41,6 +42,7 @@ const empty = {
 export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean; onClose: () => void; employee: Employee | null }) {
     const fmt = useDateFormat();
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
@@ -258,6 +260,8 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             setOrgConfirm(true);
             return;
         }
+        if (employee && !(await confirmEdit({ name: lang === 'th' ? (employee.name_th ?? employee.name) : employee.name, sub: employee.code })))
+            return;
         await persist();
     };
 

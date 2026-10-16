@@ -4,7 +4,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { fieldError, refusalText } from '@/shared/lib/api-errors';
 import type { Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
@@ -15,6 +15,7 @@ import { usePositionMutations } from '../hooks/use-positions';
 export function PositionModal({ open, onClose, position }: { open: boolean; onClose: () => void; position: Position | null }) {
     const t = useT();
     const confirm = useConfirm();
+    const confirmEdit = useConfirmEdit();
     const { create, update } = usePositionMutations();
     const [title, setTitle] = useState('');
     const [allowSpecial, setAllowSpecial] = useState(false);
@@ -47,6 +48,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
     const submit = async (e: FormEvent) => {
         e.preventDefault();
         if (!canSave) return;
+        if (position && !(await confirmEdit({ name: position.title, sub: position.code }))) return;
         setError('');
         const payload = { title: title.trim(), allow_special_position: allowSpecial };
         try {
