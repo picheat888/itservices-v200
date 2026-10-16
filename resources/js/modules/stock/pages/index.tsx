@@ -502,8 +502,8 @@ export default function StockPage() {
         },
         {
             label: t('stock_kpi_requests'),
-            value: pendingRequests,
-            sub: t('stock_kpi_requests_pending'),
+            value: canViewRequests ? pendingRequests : '—',
+            sub: canViewRequests ? t('stock_kpi_requests_pending') : t('stock_kpi_requests_no_right'),
             icon: Send,
             onClick: canViewRequests ? () => changeTab('requests') : undefined,
         },

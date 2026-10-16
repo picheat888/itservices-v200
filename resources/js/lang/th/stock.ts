@@ -120,6 +120,7 @@ export const stock: Dict = {
     stock_kpi_alerts_sub: 'SKU ที่มีการแจ้งเตือน',
     stock_kpi_requests: 'คำขอ',
     stock_kpi_requests_pending: 'รอดำเนินการ',
+    stock_kpi_requests_no_right: 'ไม่มีสิทธิ์ดูคำขอ',
     stock_minmax_alerts: 'แจ้งเตือนสต็อก',
     stock_alert_out: 'หมดสต็อก',
     stock_alert_low: 'ต่ำกว่า Min',
