@@ -14,6 +14,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
@@ -68,6 +69,7 @@ const TAB_ROWS = 50;
 export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boolean; onClose: () => void; onChangePassword: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const confirmEdit = useConfirmEdit();
     const { user, can } = useAuth();
     const update = useUpdateProfile();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -199,6 +201,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
             focusFirstError(found as Record<string, string>);
             return;
         }
+        if (user && isDirty && !(await confirmEdit({ name: lang === 'th' ? (user.name_th ?? user.name) : user.name, sub: user.employee_code })))
+            return;
         const form = new FormData();
         form.append('first_name', firstName.trim());
         form.append('last_name', lastName.trim());
