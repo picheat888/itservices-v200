@@ -8,16 +8,34 @@ import { PermissionCardHeader } from './permission-card-header';
 
 // Mirrors App\Support\Permissions::requestHierarchy() — keep in sync.
 const MASTER = 'requests.module';
-// Three capabilities, none of them a view/management split, so no group wears the "View" chip.
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'requests.submit', children: [], chip: false },
-    { view: 'requests.view_all', children: [], chip: false },
-    { view: 'requests.complete', children: [], chip: false },
+// Per-type filing keys, shown as a cluster under `submit`.
+const SUBMIT_TYPES = [
+    'requests.submit_computer',
+    'requests.submit_hardware',
+    'requests.submit_mobile',
+    'requests.submit_email',
+    'requests.submit_social',
+    'requests.submit_fileshare',
+    'requests.submit_software',
+    'requests.submit_recovery',
+    'requests.submit_mailgroup',
+    'requests.submit_telephone',
+    'requests.submit_network',
+    'requests.submit_cctv',
+    'requests.submit_other',
 ];
-// Who HEARS about the completion queue, which is not the same question as who may work it —
-// a manager can want to know a request landed without being the one who closes it. Grouped
-// under a heading rather than under `complete` so neither key implies the other; the master
-// is their only gate. (Same shape as the Ticket card's level cluster.)
+type Group = { view: string; children: string[]; cluster?: { title: string; hint: string }; fillOnGrant?: boolean };
+const GROUPS: Group[] = [
+    {
+        view: 'requests.submit',
+        children: SUBMIT_TYPES,
+        cluster: { title: 'perm_ui_request_types', hint: 'perm_ui_request_types_hint' },
+        fillOnGrant: true,
+    },
+    { view: 'requests.view_all', children: ['requests.cancel_any'] },
+    { view: 'requests.complete', children: [] },
+];
+// Notification keys, gated by the master only.
 const NOTIFY = ['requests.notify_approved', 'requests.notify_stalled'];
 // Every gated key under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children]), ...NOTIFY];
@@ -61,15 +79,7 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
     );
 }
 
-/**
- * Renders the Requests permission card as a master → group → child tree with cascade, the
- * same shape as every other module card: turning a parent off clears + locks its children,
- * turning a child on implies its ancestors. Super is read-only (everything shown on + locked).
- * An (i) hint is shown for keys that carry a description.
- *
- * Requests used to fall through to the page's plain fallback card — a flat list of five
- * switches — because the module had no master to hang a tree off. It has one now.
- */
+/** Requests permission card: master → group → child tree with cascade; super is read-only. */
 export function RequestPermissionTree({
     draft,
     setDraft,
@@ -106,8 +116,12 @@ export function RequestPermissionTree({
                     next.add(parent.view);
                     next.add(MASTER);
                 }
-                if (GROUPS.some((g) => g.view === key)) {
+                const group = GROUPS.find((g) => g.view === key);
+                if (group) {
                     next.add(MASTER);
+                    if (group.fillOnGrant) {
+                        group.children.forEach((c) => next.add(c));
+                    }
                 }
             }
             return next;
@@ -142,17 +156,18 @@ export function RequestPermissionTree({
                                     {label(group.view, lang)}
                                     {viewInfo && <InfoHint text={viewInfo} />}
                                 </span>
-                                <span className="ml-auto flex items-center gap-2">
-                                    {group.chip !== false && (
-                                        <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-                                            {translate(lang, 'perm_ui_view')}
-                                        </span>
-                                    )}
+                                <span className="ml-auto">
                                     <Switch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
                                 </span>
                             </div>
                             {group.children.length > 0 && (
                                 <div className="border-border ml-2 space-y-0.5 border-l pl-3">
+                                    {group.cluster && (
+                                        <div className="flex min-h-[30px] items-center gap-1 text-[12.5px] font-medium">
+                                            {translate(lang, group.cluster.title)}
+                                            <InfoHint text={translate(lang, group.cluster.hint)} />
+                                        </div>
+                                    )}
                                     {group.children.map((child) => {
                                         const childInfo = info(child, lang);
                                         return (
@@ -173,8 +188,7 @@ export function RequestPermissionTree({
                     );
                 })}
 
-                {/* Notification cluster — a heading, not a switch: there is no "may be
-                    notified" right to grant, only the two mails underneath it. */}
+                {/* Notification cluster */}
                 <div className="py-0.5">
                     <div className="flex min-h-[34px] items-center gap-2">
                         <span className="flex items-center gap-1 text-sm font-medium">

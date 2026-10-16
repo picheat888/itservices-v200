@@ -1,9 +1,7 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
 
-// Module + action display labels now live in lang/<locale>/permissions.ts
-// (keys perm_mod_<module> / perm_act_<module>.<action>). These helpers resolve
-// them and fall back to the raw key/action when a label is absent.
+// Module/action labels from lang perm_mod_* / perm_act_*; falls back to the raw key.
 export const moduleLabel = (key: string, lang: Lang) => {
     const k = `perm_mod_${key}`;
     const v = translate(lang, k);
@@ -22,11 +20,7 @@ export const actionDescription = (module: string, action: string, lang: Lang) =>
     return v === k ? '' : v;
 };
 
-// Permission keys whose enforcement is actually live today. Everything else is shown
-// with a "(Coming soon)" tag AND locked, so a key left out of this list cannot be
-// granted through the UI at all — which is how requests.* and workflows.manage sat
-// enforced by the API but ungrantable, reading as unbuilt features.
-// A key belongs here as soon as anything checks it. PermissionMatrixTest asserts that.
+// Live keys; anything missing is locked as "(Coming soon)" (checked by PermissionMatrixTest).
 const LIVE = new Set<string>([
     'tickets.view_all',
     'tickets.create',
@@ -59,7 +53,21 @@ const LIVE = new Set<string>([
     'contracts.reactivate',
     'requests.module',
     'requests.submit',
+    'requests.submit_computer',
+    'requests.submit_hardware',
+    'requests.submit_mobile',
+    'requests.submit_email',
+    'requests.submit_social',
+    'requests.submit_fileshare',
+    'requests.submit_software',
+    'requests.submit_recovery',
+    'requests.submit_mailgroup',
+    'requests.submit_telephone',
+    'requests.submit_network',
+    'requests.submit_cctv',
+    'requests.submit_other',
     'requests.view_all',
+    'requests.cancel_any',
     'requests.complete',
     'requests.notify_approved',
     'requests.notify_stalled',
