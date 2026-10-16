@@ -10,20 +10,26 @@ import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
-import { AlertTriangle, Check, ClipboardList, FileText, Loader2, Search, Trash2, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertTriangle, Ban, Check, ClipboardList, FileText, Loader2, Search, Zap } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
+
+// Small section heading inside the count dialogs.
+const EYEBROW = 'text-muted-foreground text-xs font-semibold';
 
 /** Stock Count / Audit: open a session, enter physical counts, commit adjustments. */
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const fmt = useDateFormat();
     const t = useT();
     const confirm = useConfirm();
+    const whFieldId = useId();
+    const catFieldId = useId();
     // Page and rows-per-page live in the URL (?page, ?per).
     const list = useListParams();
     const { page, perPage } = list;
@@ -37,11 +43,10 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const { data: warehouses = [] } = useWarehouses();
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const { data: session } = useStockCount(selectedId);
-    // Open state is separate from selectedId so the loaded session content stays mounted
-    // while the sheet animates closed (closing keeps selectedId; only the next open replaces it).
+    // Open state is separate from selectedId so the loaded session stays mounted during the close animation.
     const [sheetOpen, setSheetOpen] = useState(false);
-    const { data: allItems = [] } = useStockItems({});
     const [creating, setCreating] = useState(false);
+    const { data: allItems = [] } = useStockItems({}, creating);
     const [wh, setWh] = useState('all');
     const [cat, setCat] = useState('all');
     const [selectedSkus, setSelectedSkus] = useState<number[]>([]);
@@ -113,6 +118,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         setSelectedSkus([]);
         setSkuSearch('');
     };
+    const guardPickerClose = useDiscardGuard(creating && selectedSkus.length > 0);
 
     const start = async () => {
         if (selectedSkus.length === 0) return;
@@ -191,8 +197,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const guardSheetClose = useDiscardGuard(sheetOpen && sheetDirty);
     const closeSheet = () => setSheetOpen(false);
 
-    // Live audit summary for the open sheet: counted progress, # of discrepancies, net variance.
-    // In draft it reflects what's typed (entries); once committed it reads the stored line values.
+    // Live audit summary for the open sheet: draft reads the typed entries, committed reads stored values.
     const countSummary = (() => {
         const lines = session?.lines ?? [];
         let counted = 0;
@@ -243,7 +248,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: t('stock_count_progress'),
             className: 'whitespace-nowrap',
             render: (s) => (
-                <span className="text-xs">
+                <span className="text-xs tabular-nums">
                     {s.counted_lines ?? 0}/{s.line_count ?? 0}
                 </span>
             ),
@@ -264,7 +269,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             render: (s) =>
                 s.status === 'committed' && s.adjust_mode ? (
                     <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                        {s.adjust_mode === 'manual' ? <FileText className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+                        {s.adjust_mode === 'manual' ? <FileText className="h-3 w-3" aria-hidden /> : <Zap className="h-3 w-3" aria-hidden />}
                         {s.adjust_mode === 'manual' ? t('stock_count_mode_badge_manual') : t('stock_count_mode_badge_auto')}
                     </span>
                 ) : (
@@ -273,11 +278,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         },
         {
             key: 'actions',
-            header: '',
+            header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
             render: (s) =>
                 s.status === 'draft' && can('view_count') ? (
                     <button
+                        type="button"
                         // Cancel a draft session — confirm first, and stop the row's open-on-click.
                         onClick={async (e) => {
                             e.stopPropagation();
@@ -292,10 +298,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 errorMessage: (e) => stockRefusalText(e, t),
                             });
                         }}
-                        title={t('stock_count_cancel')}
+                        aria-label={t('stock_count_cancel_draft')}
+                        title={t('stock_count_cancel_draft')}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                     >
-                        <Trash2 className="h-4 w-4" />
+                        <Ban className="h-4 w-4" aria-hidden />
                     </button>
                 ) : null,
         },
@@ -303,15 +310,14 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <div className="text-muted-foreground text-sm">{t('stock_counting_system')}</div>
-                {can('view_count') && (
+            {can('view_count') && (
+                <div className="flex justify-end">
                     <Button onClick={() => setCreating(true)}>
-                        <ClipboardList className="h-4 w-4" />
-                        {t('stock_count_action')}
+                        <ClipboardList className="h-4 w-4" aria-hidden />
+                        {t('stock_count_start_new')}
                     </Button>
-                )}
-            </div>
+                </div>
+            )}
 
             <DataTable
                 columns={sessionColumns}
@@ -326,49 +332,59 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             />
 
             {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}
-            <Dialog open={creating} onOpenChange={(o) => !o && resetPicker()}>
+            <Dialog open={creating} onOpenChange={(o) => !o && guardPickerClose(resetPicker)}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>{t('stock_new_count')}</DialogTitle>
+                        <DialogDescription>{t('stock_new_count_desc')}</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         {/* Scope: warehouse + category (counts show what actually has stock) */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_warehouse')}</div>
-                                <SearchableSelect value={wh} onChange={onPickWarehouse} options={warehouseOptions} />
+                                <label htmlFor={whFieldId} className="text-muted-foreground mb-1 block text-xs font-medium">
+                                    {t('stock_warehouse')}
+                                </label>
+                                <SearchableSelect id={whFieldId} value={wh} onChange={onPickWarehouse} options={warehouseOptions} />
                             </div>
                             <div>
-                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_category')}</div>
-                                <SearchableSelect value={cat} onChange={setCat} options={categoryOptions} />
+                                <label htmlFor={catFieldId} className="text-muted-foreground mb-1 block text-xs font-medium">
+                                    {t('stock_category')}
+                                </label>
+                                <SearchableSelect id={catFieldId} value={cat} onChange={setCat} options={categoryOptions} />
                             </div>
                         </div>
 
                         {/* SKU picker */}
                         <div className="border-border overflow-hidden rounded-xl border">
                             <div className={cn(CARD_HEADING, 'border-border flex items-center gap-3 border-b px-3 py-2')}>
-                                <button
-                                    type="button"
-                                    onClick={toggleAllVisible}
-                                    disabled={skuList.length === 0}
-                                    className="flex items-center gap-2 text-sm font-medium disabled:opacity-40"
+                                <label
+                                    className={cn(
+                                        'flex items-center gap-2 text-sm font-medium',
+                                        skuList.length === 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
+                                    )}
                                 >
-                                    <span
-                                        className={cn(
-                                            'flex h-4 w-4 items-center justify-center rounded border',
-                                            allVisibleSelected ? 'bg-brand border-brand text-brand-foreground' : 'border-input',
-                                        )}
-                                    >
-                                        {allVisibleSelected && <Check className="h-3 w-3" />}
-                                    </span>
+                                    <Checkbox
+                                        className="size-4"
+                                        checked={allVisibleSelected}
+                                        disabled={skuList.length === 0}
+                                        onCheckedChange={toggleAllVisible}
+                                    />
                                     {t('stock_select_all')}
-                                </button>
-                                <span className="text-muted-foreground text-xs">
+                                </label>
+                                <span className="text-muted-foreground text-xs tabular-nums">
                                     {selectedSkus.length} {t('stock_count_selected')}
                                 </span>
                                 <div className="relative ml-auto w-44">
-                                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                                    <Search
+                                        className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
+                                        aria-hidden
+                                    />
                                     <Input
+                                        type="search"
+                                        name="sku-search"
+                                        autoComplete="off"
+                                        aria-label={t('stock_search')}
                                         value={skuSearch}
                                         onChange={(e) => setSkuSearch(e.target.value)}
                                         placeholder={t('stock_search')}
@@ -376,34 +392,28 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     />
                                 </div>
                             </div>
-                            <div className="max-h-72 overflow-auto">
+                            <div className="max-h-72 overflow-auto overscroll-contain">
                                 {skuList.length === 0 ? (
                                     <div className="text-muted-foreground py-10 text-center text-sm">{t('stock_count_empty_scope')}</div>
                                 ) : (
                                     skuList.map((i) => {
                                         const checked = selectedSkus.includes(i.id);
                                         return (
-                                            <button
+                                            <label
                                                 key={i.id}
-                                                type="button"
-                                                onClick={() => toggleSku(i.id)}
-                                                className="hover:bg-accent/40 border-border/60 flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-0"
+                                                className={cn(
+                                                    'hover:bg-accent/40 border-border/60 flex w-full cursor-pointer items-center gap-3 border-b px-3 py-2 text-left transition-colors last:border-0',
+                                                    checked && 'bg-brand/5',
+                                                )}
                                             >
-                                                <span
-                                                    className={cn(
-                                                        'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                                                        checked ? 'bg-brand border-brand text-brand-foreground' : 'border-input',
-                                                    )}
-                                                >
-                                                    {checked && <Check className="h-3 w-3" />}
-                                                </span>
+                                                <Checkbox className="size-4" checked={checked} onCheckedChange={() => toggleSku(i.id)} />
                                                 <div className="min-w-0 flex-1">
                                                     <div className="text-xs">{i.sku}</div>
                                                     <div className="text-muted-foreground truncate text-xs">{i.name}</div>
                                                 </div>
                                                 <span className="text-muted-foreground shrink-0 text-xs">{i.category ?? '—'}</span>
-                                                <span className="w-12 shrink-0 text-right text-sm font-semibold">{i.current_stock}</span>
-                                            </button>
+                                                <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums">{i.current_stock}</span>
+                                            </label>
                                         );
                                     })
                                 )}
@@ -411,7 +421,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={resetPicker}>
+                        <Button variant="outline" onClick={() => guardPickerClose(resetPicker)}>
                             {t('cancel')}
                         </Button>
                         <Button onClick={start} disabled={open.isPending || selectedSkus.length === 0}>
@@ -424,68 +434,59 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
             <Dialog open={sheetOpen} onOpenChange={(o) => !o && guardSheetClose(closeSheet)}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl">
                     {session ? (
                         <>
                             <DialogHeader>
-                                <DialogTitle className="space-y-1">
-                                    {/* Title + status on top; reference drops to its own line below. */}
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-base font-semibold">{t('stock_count_sheet_title')}</span>
-                                        <StatusBadge tone={statusTone(session.status)}>
-                                            {t(`stock_count_${session.status}` as Parameters<typeof t>[0])}
-                                        </StatusBadge>
-                                        {session.status === 'committed' && session.adjust_mode && (
-                                            <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-normal">
-                                                {session.adjust_mode === 'manual' ? <FileText className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
-                                                {session.adjust_mode === 'manual'
-                                                    ? t('stock_count_mode_badge_manual')
-                                                    : t('stock_count_mode_badge_auto')}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-muted-foreground text-xs font-semibold">{session.reference}</span>
-                                        <span className="text-muted-foreground text-xs font-normal">
-                                            {session.warehouse || t('stock_count_all_wh')}
+                                <DialogTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
+                                    {t('stock_count_sheet_title')}
+                                    <StatusBadge tone={statusTone(session.status)}>
+                                        {t(`stock_count_${session.status}` as Parameters<typeof t>[0])}
+                                    </StatusBadge>
+                                    {session.status === 'committed' && session.adjust_mode && (
+                                        <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-normal">
+                                            {session.adjust_mode === 'manual' ? (
+                                                <FileText className="h-3 w-3" aria-hidden />
+                                            ) : (
+                                                <Zap className="h-3 w-3" aria-hidden />
+                                            )}
+                                            {session.adjust_mode === 'manual' ? t('stock_count_mode_badge_manual') : t('stock_count_mode_badge_auto')}
                                         </span>
-                                    </div>
+                                    )}
                                 </DialogTitle>
+                                <DialogDescription className="flex flex-wrap items-center gap-2 text-xs">
+                                    <span className="font-semibold">{session.reference}</span>
+                                    <span>{session.warehouse || t('stock_count_all_wh')}</span>
+                                </DialogDescription>
                             </DialogHeader>
 
                             {/* Audit summary — counted progress, discrepancy count, net variance. */}
                             <div className="border-border grid grid-cols-3 gap-px overflow-hidden rounded-lg border">
                                 <div className="bg-card px-3 py-2 text-center">
-                                    <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-                                        {t('stock_count_sum_progress')}
-                                    </div>
-                                    <div className="mt-0.5 text-sm font-semibold">
+                                    <div className={EYEBROW}>{t('stock_count_sum_progress')}</div>
+                                    <div className="mt-0.5 text-sm font-semibold tabular-nums">
                                         {countSummary.counted}
                                         <span className="text-muted-foreground">/{countSummary.total}</span>
                                     </div>
                                 </div>
                                 <div className="bg-card px-3 py-2 text-center">
-                                    <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-                                        {t('stock_count_sum_discrepancies')}
-                                    </div>
+                                    <div className={EYEBROW}>{t('stock_count_sum_discrepancies')}</div>
                                     <div
                                         className={cn(
-                                            'mt-0.5 text-sm font-semibold',
-                                            countSummary.discrepancies > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
+                                            'mt-0.5 text-sm font-semibold tabular-nums',
+                                            countSummary.discrepancies > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
                                         )}
                                     >
                                         {countSummary.discrepancies}
                                     </div>
                                 </div>
                                 <div className="bg-card px-3 py-2 text-center">
-                                    <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-                                        {t('stock_count_sum_net')}
-                                    </div>
+                                    <div className={EYEBROW}>{t('stock_count_sum_net')}</div>
                                     <div
                                         className={cn(
-                                            'mt-0.5 text-sm font-semibold',
+                                            'mt-0.5 text-sm font-semibold tabular-nums',
                                             countSummary.net > 0
-                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                ? 'text-emerald-700 dark:text-emerald-400'
                                                 : countSummary.net < 0
                                                   ? 'text-destructive'
                                                   : 'text-muted-foreground',
@@ -496,14 +497,22 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 </div>
                             </div>
 
-                            <div className="max-h-[60vh] overflow-auto">
+                            <div className="max-h-[60vh] overflow-auto overscroll-contain">
                                 <table className="w-full text-sm">
                                     <thead className={cn(TABLE_HEAD, 'sticky top-0 z-10 backdrop-blur')}>
-                                        <tr className="border-border text-muted-foreground border-b text-left text-[11px] font-semibold tracking-wide uppercase">
-                                            <th className="w-full px-3 py-2">{t('stock_item')}</th>
-                                            <th className="w-24 px-3 py-2 text-right whitespace-nowrap">{t('stock_count_system')}</th>
-                                            <th className="w-28 px-3 py-2 text-right whitespace-nowrap">{t('stock_count_counted')}</th>
-                                            <th className="w-28 px-3 py-2 text-right whitespace-nowrap">{t('stock_count_variance')}</th>
+                                        <tr className="border-border text-muted-foreground border-b text-left text-xs font-semibold">
+                                            <th scope="col" className="w-full px-3 py-2">
+                                                {t('stock_item')}
+                                            </th>
+                                            <th scope="col" className="w-24 px-3 py-2 text-right whitespace-nowrap">
+                                                {t('stock_count_system')}
+                                            </th>
+                                            <th scope="col" className="w-28 px-3 py-2 text-right whitespace-nowrap">
+                                                {t('stock_count_counted')}
+                                            </th>
+                                            <th scope="col" className="w-28 px-3 py-2 text-right whitespace-nowrap">
+                                                {t('stock_count_variance')}
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -530,6 +539,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                         <div className="flex items-center gap-2">
                                                             {/* State dot: hollow = uncounted, green = over, red = short, grey = matched. */}
                                                             <span
+                                                                aria-hidden
                                                                 className={cn(
                                                                     'h-1.5 w-1.5 shrink-0 rounded-full',
                                                                     variance === null
@@ -554,13 +564,15 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                         {isDraft ? (
                                                             <Input
                                                                 inputMode="numeric"
+                                                                name={`count-${l.id}`}
+                                                                aria-label={`${t('stock_count_counted')} ${l.sku ?? ''}`}
                                                                 value={entered}
                                                                 placeholder="0"
                                                                 onChange={(e) =>
                                                                     setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }))
                                                                 }
                                                                 className={cn(
-                                                                    'ml-auto h-8 w-20 text-right tabular-nums',
+                                                                    'ml-auto h-8 w-20 scroll-mt-10 text-right tabular-nums',
                                                                     variance !== null && variance !== 0 && 'border-primary/50',
                                                                 )}
                                                             />
@@ -596,9 +608,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <>
                                     {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
                                     <div className="border-border space-y-2.5 rounded-lg border p-3">
-                                        <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                                            {t('stock_count_mode_label')}
-                                        </div>
+                                        <div className={EYEBROW}>{t('stock_count_mode_label')}</div>
                                         <div className="grid grid-cols-2 gap-2">
                                             {(['auto', 'manual'] as const).map((m) => {
                                                 const active = mode === m;
@@ -618,11 +628,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                                 : active
                                                                   ? m === 'manual'
                                                                       ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-950/30 dark:text-amber-400'
-                                                                      : 'border-primary bg-primary/10 text-primary'
+                                                                      : 'border-brand bg-brand/5 text-brand'
                                                                   : 'border-border text-muted-foreground hover:bg-muted/50',
                                                         )}
                                                     >
-                                                        <Icon className="h-4 w-4" />
+                                                        <Icon className="h-4 w-4" aria-hidden />
                                                         {t(m === 'auto' ? 'stock_count_mode_auto_name' : 'stock_count_mode_manual_name')}
                                                     </button>
                                                 );
@@ -637,9 +647,9 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                             )}
                                         >
                                             {mode === 'manual' ? (
-                                                <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+                                                <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
                                             ) : (
-                                                <Zap className="mt-px h-3.5 w-3.5 shrink-0" />
+                                                <Zap className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
                                             )}
                                             <span>{mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}</span>
                                         </div>
@@ -659,8 +669,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                 }
                                             }}
                                         >
-                                            {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                                            {t('stock_count_save')}
+                                            {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                                            {savingDraft ? t('saving') : t('stock_count_save')}
                                         </Button>
                                         <Button
                                             disabled={!anyCounted || savingDraft || committing || committedFlash}
@@ -690,8 +700,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                     return;
                                                 }
 
-                                                // No shorts — confirm once more (message reflects the chosen mode's
-                                                // effect on stock) and let the dialog own the save+commit steps.
+                                                // No shorts — confirm once more and let the dialog own the save+commit steps.
                                                 await confirm({
                                                     variant: 'warn',
                                                     title: t('stock_count_commit_confirm'),
@@ -711,11 +720,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                             }}
                                         >
                                             {committing ? (
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                                             ) : committedFlash ? (
-                                                <Check className="h-3.5 w-3.5" />
+                                                <Check className="h-3.5 w-3.5" aria-hidden />
                                             ) : null}
-                                            {committedFlash ? t('stock_count_committed') : t('stock_count_commit')}
+                                            {committing ? t('saving') : committedFlash ? t('stock_count_committed') : t('stock_count_commit')}
                                         </Button>
                                     </DialogFooter>
                                 </>
@@ -726,9 +735,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             {/* Radix requires a DialogTitle even while the session loads. */}
                             <DialogHeader>
                                 <DialogTitle className="text-base font-semibold">{t('stock_count_sheet_title')}</DialogTitle>
+                                <DialogDescription className="sr-only">{t('loading')}</DialogDescription>
                             </DialogHeader>
-                            <div className="flex items-center justify-center py-16">
-                                <div className="border-muted-foreground/30 border-t-primary h-6 w-6 animate-spin rounded-full border-2" />
+                            <div role="status" className="flex items-center justify-center py-16">
+                                <div className="border-muted-foreground/30 border-t-primary h-6 w-6 animate-spin rounded-full border-2" aria-hidden />
+                                <span className="sr-only">{t('loading')}</span>
                             </div>
                         </>
                     )}
@@ -740,9 +751,9 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 <DialogContent className="max-w-lg">
                     <DialogHeader>
                         <DialogTitle>{t('stock_count_serial_verify_title')}</DialogTitle>
+                        <DialogDescription className="text-xs">{t('stock_count_serial_verify_hint')}</DialogDescription>
                     </DialogHeader>
-                    <div className="text-muted-foreground text-xs">{t('stock_count_serial_verify_hint')}</div>
-                    <div className="max-h-[60vh] space-y-3 overflow-auto">
+                    <div className="max-h-[60vh] space-y-3 overflow-auto overscroll-contain">
                         {(serialCheck ?? []).map((it) => {
                             const ticked = missingByItem[it.stock_item_id] ?? [];
                             const ok = ticked.length === it.need;
@@ -754,9 +765,10 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                             <div className="text-muted-foreground truncate text-xs">{it.name}</div>
                                         </div>
                                         <span
+                                            aria-live="polite"
                                             className={cn(
-                                                'shrink-0 text-[11px] font-semibold',
-                                                ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400',
+                                                'shrink-0 text-[11px] font-semibold tabular-nums',
+                                                ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400',
                                             )}
                                         >
                                             {t('stock_count_serial_tick_n').replace('{n}', String(it.need))} ({ticked.length}/{it.need})
@@ -766,29 +778,22 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                         {it.serials.map((s) => {
                                             const checked = ticked.includes(s.id);
                                             return (
-                                                <button
+                                                <label
                                                     key={s.id}
-                                                    type="button"
-                                                    onClick={() => toggleSerial(it.stock_item_id, s.id)}
                                                     className={cn(
-                                                        'flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition',
+                                                        'flex w-full cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition',
                                                         checked
                                                             ? 'border-destructive bg-red-50 dark:bg-red-950/20'
                                                             : 'border-border hover:bg-muted/40',
                                                     )}
                                                 >
-                                                    <span
-                                                        className={cn(
-                                                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                                                            checked
-                                                                ? 'bg-destructive border-destructive text-destructive-foreground'
-                                                                : 'border-input',
-                                                        )}
-                                                    >
-                                                        {checked && <Check className="h-3 w-3" />}
-                                                    </span>
+                                                    <Checkbox
+                                                        className="data-[state=checked]:border-destructive data-[state=checked]:bg-destructive data-[state=checked]:text-destructive-foreground size-4"
+                                                        checked={checked}
+                                                        onCheckedChange={() => toggleSerial(it.stock_item_id, s.id)}
+                                                    />
                                                     <span>{s.serial}</span>
-                                                </button>
+                                                </label>
                                             );
                                         })}
                                     </div>
@@ -801,8 +806,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             {t('stock_count_back')}
                         </Button>
                         <Button disabled={!serialCheckOk || committing} onClick={() => runCommit(missingByItem)}>
-                            {committing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                            {t('stock_count_commit')}
+                            {committing ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                            ) : (
+                                <Check className="h-3.5 w-3.5" aria-hidden />
+                            )}
+                            {committing ? t('saving') : t('stock_count_commit')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

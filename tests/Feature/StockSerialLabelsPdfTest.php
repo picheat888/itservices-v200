@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Settings\AppSetting;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
@@ -13,6 +14,12 @@ use Tests\TestCase;
 class StockSerialLabelsPdfTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Warehouse::firstOrCreate(['name' => 'Main']);
+    }
 
     private function super(): User
     {

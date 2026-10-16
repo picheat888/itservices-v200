@@ -48,12 +48,21 @@ export function MovementsTab() {
         {
             key: 'doc_no',
             header: t('stock_doc_no'),
+            width: '120px',
+            className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs font-semibold">{m.doc_no ?? '—'}</span>,
         },
-        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="text-xs">{fmt.dateTime(m.moved_at)}</span> },
+        {
+            key: 'moved_at',
+            header: t('audit_time'),
+            width: '140px',
+            className: 'whitespace-nowrap',
+            render: (m) => <span className="text-xs">{fmt.dateTime(m.moved_at)}</span>,
+        },
         {
             key: 'type',
             header: t('stock_mv_type'),
+            width: '130px',
             render: (m) => {
                 const meta = MV_META[m.type];
                 const Icon = meta.icon;
@@ -75,15 +84,23 @@ export function MovementsTab() {
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', render: (m) => <span className="font-bold tabular-nums">{m.qty}</span> },
-        { key: 'from', header: t('stock_events_from'), render: (m) => <span className="text-sm">{m.from || '—'}</span> },
-        { key: 'to', header: t('stock_events_to'), render: (m) => <span className="text-sm">{m.to || '—'}</span> },
+        { key: 'qty', header: t('stock_qty'), align: 'right', width: '80px', render: (m) => <span className="font-bold tabular-nums">{m.qty}</span> },
+        { key: 'from', header: t('stock_events_from'), width: '130px', render: (m) => <span className="text-sm">{m.from || '—'}</span> },
+        { key: 'to', header: t('stock_events_to'), width: '130px', render: (m) => <span className="text-sm">{m.to || '—'}</span> },
         {
             key: 'reference',
             header: t('stock_reference'),
+            width: '140px',
+            hideBelow: 'lg',
             render: (m) => <span className="text-muted-foreground text-xs">{m.reference || '—'}</span>,
         },
-        { key: 'recorded_by', header: t('stock_by'), render: (m) => <span className="text-sm">{m.recorded_by || '—'}</span> },
+        {
+            key: 'recorded_by',
+            header: t('stock_by'),
+            width: '150px',
+            hideBelow: 'lg',
+            render: (m) => <span className="text-sm">{m.recorded_by || '—'}</span>,
+        },
     ];
 
     return (
@@ -149,7 +166,9 @@ export function MovementsTab() {
                                                     <DialogTitle className="min-w-0 truncate text-base leading-tight font-semibold">
                                                         {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}
                                                     </DialogTitle>
-                                                    <span className="text-muted-foreground shrink-0 text-[11px]">{fmt.dateTime(viewMove.moved_at)}</span>
+                                                    <span className="text-muted-foreground shrink-0 text-[11px]">
+                                                        {fmt.dateTime(viewMove.moved_at)}
+                                                    </span>
                                                 </div>
                                                 <DialogDescription className="mt-0.5 text-[11px]">
                                                     {t('stock_doc_no')}: {viewMove.doc_no ?? '—'}
@@ -192,12 +211,16 @@ export function MovementsTab() {
                                         ) : viewMove.from || viewMove.to ? (
                                             <div className="border-border grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl border p-3">
                                                 <div className="min-w-0">
-                                                    <div className={EYEBROW}>{viewMove.type === 'receive' ? t('stock_supplier') : t('stock_from')}</div>
+                                                    <div className={EYEBROW}>
+                                                        {viewMove.type === 'receive' ? t('stock_supplier') : t('stock_from')}
+                                                    </div>
                                                     <div className="truncate text-sm">{viewMove.from || '—'}</div>
                                                 </div>
                                                 <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
                                                 <div className="min-w-0 text-right">
-                                                    <div className={EYEBROW}>{viewMove.type === 'receive' ? t('stock_warehouse') : t('stock_to')}</div>
+                                                    <div className={EYEBROW}>
+                                                        {viewMove.type === 'receive' ? t('stock_warehouse') : t('stock_to')}
+                                                    </div>
                                                     <div className="truncate text-sm">{viewMove.to || '—'}</div>
                                                 </div>
                                             </div>

@@ -138,6 +138,39 @@ class StockItemTest extends TestCase
             ->assertJsonCount(25, 'data');
     }
 
+    public function test_equal_sort_values_paginate_without_repeating_or_skipping_rows(): void
+    {
+        for ($n = 1; $n <= 25; $n++) {
+            $this->makeItem(['name' => 'Same name']);
+        }
+        $user = $this->superUser();
+
+        $seen = [];
+        foreach ([1, 2, 3] as $page) {
+            $rows = $this->actingAs($user)
+                ->getJson("/api/stock-items?per_page=10&page={$page}&sort=name_asc")
+                ->assertOk()
+                ->json('data');
+            $seen = array_merge($seen, array_column($rows, 'id'));
+        }
+
+        $this->assertCount(25, $seen);
+        $this->assertSame(StockItem::orderBy('id')->pluck('id')->all(), $seen);
+    }
+
+    public function test_search_matches_by_model_name(): void
+    {
+        $model = AssetModel::create(['name' => 'ThinkPad T14']);
+        $match = $this->makeItem(['name' => 'Battery', 'model_id' => $model->id]);
+        $this->makeItem(['name' => 'Battery']);
+
+        $this->actingAs($this->superUser())
+            ->getJson('/api/stock-items?search=T14')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $match->id);
+    }
+
     public function test_summary_reports_alert_buckets(): void
     {
         $this->makeItem(['current_stock' => 0, 'min_stock' => 3]);            // out

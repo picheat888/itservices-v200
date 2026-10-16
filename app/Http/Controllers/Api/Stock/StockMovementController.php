@@ -36,10 +36,7 @@ class StockMovementController extends Controller
         private readonly StockBalanceService $balances,
     ) {}
 
-    /**
-     * Permission required to record each movement type. Issuing is NOT here on
-     * purpose — stock only leaves via fulfilling a Request (see StockRequestController).
-     */
+    /** Permission per movement type; issuing only happens by fulfilling a Request (StockRequestController). */
     private const TYPE_PERMISSION = [
         'receive' => 'stock.receive',
         'return' => 'stock.return',
@@ -74,13 +71,7 @@ class StockMovementController extends Controller
         ]);
     }
 
-    /**
-     * Serial codes tied to a movement (for the detail dialog), sourced from the serial-event
-     * log. Events link primarily by stock_movement_id (receive/transfer/issue all set it now);
-     * a shared reference is only a legacy fallback for older events that predate that link —
-     * scoped to events with no movement id so it never bleeds serials across split movements
-     * that share the same request reference.
-     */
+    /** Serial codes tied to a movement (for the detail dialog), sourced from the serial-event log. */
     public function serials(Request $request, StockMovement $movement): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
@@ -112,12 +103,7 @@ class StockMovementController extends Controller
         return StockItemSerial::whereIn('id', $serialIds)->orderBy('serial')->pluck('serial')->values();
     }
 
-    /**
-     * Stream an A4 sheet of 50 × 25 mm serial-number stickers for one movement, each
-     * carrying a real (scannable) Code 128 barcode. Rendered server-side with dompdf so
-     * the output is identical everywhere and immune to browser print settings — the
-     * barcode bars are HTML elements dompdf always renders (no "background graphics" toggle).
-     */
+    /** Stream an A4 sheet of 50 × 25 mm Code 128 serial stickers for one movement (dompdf). */
     public function labelsPdf(Request $request, StockMovement $movement): StreamedResponse
     {
         $user = $request->user();
@@ -131,10 +117,7 @@ class StockMovementController extends Controller
         $movement->loadMissing('item');
         $serials = $this->serialCodesFor($movement);
 
-        // One Code 128 barcode per serial, rendered as HTML (no GD needed). Render at a
-        // FIXED width so the bars scale to fill the sticker's inner width (~47 mm ≈ 177 px
-        // at 96 dpi) regardless of how many characters the serial has — short serials no
-        // longer leave the label looking half-empty.
+        // One Code 128 barcode per serial as HTML, at a fixed width (~47 mm ≈ 177 px) to fill the sticker.
         $type = new TypeCode128;
         $renderer = new HtmlRenderer;
         $labels = $serials->map(fn (string $serial) => [
@@ -163,15 +146,20 @@ class StockMovementController extends Controller
     /** Record a movement (receive/issue/return/transfer) and adjust on-hand stock. */
     public function store(Request $request): JsonResponse
     {
+        // Warehouse labels name an existing warehouse or the 'Unassigned' sentinel; a receive's from_label is the vendor.
+        $knownWarehouse = fn (string $field) => Rule::when(
+            fn ($input) => $input->{$field} !== 'Unassigned' && ($field === 'to_label' || $input->type === 'transfer'),
+            Rule::exists('warehouses', 'name'),
+        );
+
         $data = $request->validate([
             'type' => ['required', Rule::in(array_keys(self::TYPE_PERMISSION))],
             'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
-            // Quantity is derived from the serial list on a serialized receive or from
-            // serial_ids on a serialized transfer, so it is only required when neither is supplied.
+            // qty is derived from serials (serialized receive) or serial_ids (serialized transfer / return).
             'qty' => ['required_without_all:serials,serial_ids', 'nullable', 'integer', 'min:1'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
-            'from_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:200'],
-            'to_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:200'],
+            'from_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:120', $knownWarehouse('from_label')],
+            'to_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:120', $knownWarehouse('to_label')],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'moved_at' => ['nullable', 'date'],
@@ -186,6 +174,7 @@ class StockMovementController extends Controller
         $item = StockItem::findOrFail($data['stock_item_id']);
         $serials = $this->validateSerials($data, $item);
         $this->validateReturnSerials($data, $item);
+        $this->validateTransferSerials($data, $item);
 
         $movement = $this->record($data, $request->user()?->name, $request->user()?->id, $serials);
 
@@ -262,12 +251,38 @@ class StockMovementController extends Controller
     }
 
     /**
-     * Persist a movement and apply its delta to the item's current stock inside a
-     * transaction. Transfer movements are stock- and cost-neutral: only the per-warehouse
-     * balance (and serial location for serialized items) is moved. Outbound (non-transfer)
-     * movements that would drive stock negative are rejected. When serials are supplied
-     * (serialized receive), the unit count is driven by the serial list and one
-     * StockItemSerial row is registered per unit.
+     * For a serialized transfer, every chosen serial must belong to the item, be in stock,
+     * and sit in the source warehouse. No-op otherwise.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function validateTransferSerials(array $data, StockItem $item): void
+    {
+        if ($data['type'] !== 'transfer' || ! $item->track_serial) {
+            return;
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $data['serial_ids'] ?? [])));
+        if ($ids === []) {
+            Refusal::fail('transfer_serials_required', field: 'serial_ids');
+        }
+
+        $fromLabel = (string) ($data['from_label'] ?? '');
+        $sourceWarehouseId = $fromLabel === 'Unassigned' ? null : Warehouse::where('name', $fromLabel)->value('id');
+
+        $inSource = StockItemSerial::whereIn('id', $ids)
+            ->where('stock_item_id', $item->id)
+            ->where('status', 'in_stock')
+            ->where('warehouse_id', $sourceWarehouseId)
+            ->count();
+
+        if ($inSource !== count($ids)) {
+            Refusal::fail('transfer_serials_invalid', field: 'serial_ids');
+        }
+    }
+
+    /**
+     * Persist a movement and apply it to the item's stock, balances, lots and serials in one transaction.
      *
      * @param  array<string, mixed>  $data
      * @param  array<int, string>  $serials
@@ -281,11 +296,16 @@ class StockMovementController extends Controller
             $isTransfer = $type === 'transfer';
             $inbound = in_array($type, StockMovement::INBOUND, true);
 
-            // Quantity: serialized receive → number of serials; serialized transfer → number of picked serials.
-            $serialIds = $data['serial_ids'] ?? [];
+            $serialIds = array_values(array_unique(array_map('intval', $data['serial_ids'] ?? [])));
+            // Serialized transfer: the item's own serials among the picked ids; qty follows this list.
+            $transferSerials = $isTransfer && $item->track_serial && $serialIds !== []
+                ? StockItemSerial::lockForUpdate()->whereIn('id', $serialIds)->where('stock_item_id', $item->id)->get()
+                : collect();
+
+            // Quantity: serialized receive → number of serials; serialized transfer/return → number of picked serials.
             $qty = match (true) {
                 $serials !== [] => count($serials),
-                $isTransfer && $item->track_serial => count($serialIds),
+                $isTransfer && $item->track_serial => $transferSerials->count(),
                 $type === 'return' && $item->track_serial && $serialIds !== [] => count($serialIds),
                 default => (int) ($data['qty'] ?? 0),
             };
@@ -293,8 +313,7 @@ class StockMovementController extends Controller
             $fromWh = $data['from_label'] ?? null;
             $toWh = $data['to_label'] ?? null;
 
-            // Outbound (non-transfer) needs enough total stock; transfer/issue per-warehouse
-            // guard is enforced by the balance service below.
+            // Outbound (non-transfer) needs enough total stock; per-warehouse guard is in the balance service.
             if (! $inbound && ! $isTransfer && $item->current_stock < $qty) {
                 Refusal::fail('not_enough_stock', ['available' => $item->current_stock], 'qty');
             }
@@ -308,8 +327,7 @@ class StockMovementController extends Controller
                 'stock_item_id' => $item->id,
                 'qty' => $qty,
                 'unit_cost' => $unitCost,
-                // A return carries neither a source label nor an external reference
-                // (only the destination warehouse matters), so drop them for that type.
+                // A return keeps only its destination warehouse.
                 'from_label' => $type === 'return' ? null : $fromWh,
                 'to_label' => $toWh,
                 'reference' => $type === 'return' ? null : ($data['reference'] ?? null),
@@ -322,10 +340,9 @@ class StockMovementController extends Controller
             if ($isTransfer) {
                 // Stock- and cost-neutral: only the per-warehouse balance (and serial location) move.
                 $this->balances->move($item, (string) $fromWh, (string) $toWh, $qty);
-                if ($item->track_serial && $serialIds !== []) {
-                    $moved = StockItemSerial::whereIn('id', $serialIds)->where('stock_item_id', $item->id)->get();
-                    StockItemSerial::whereIn('id', $moved->pluck('id'))->update(['warehouse_id' => Warehouse::resolveId((string) $toWh)]);
-                    foreach ($moved as $row) {
+                if ($transferSerials->isNotEmpty()) {
+                    StockItemSerial::whereIn('id', $transferSerials->pluck('id'))->update(['warehouse_id' => Warehouse::resolveId((string) $toWh)]);
+                    foreach ($transferSerials as $row) {
                         StockItemSerialEvent::log($row, 'transferred', [
                             'stock_movement_id' => $movement->id,
                             'from_label' => (string) $fromWh,
@@ -339,9 +356,7 @@ class StockMovementController extends Controller
                 $item->last_move_at = $movement->moved_at->toDateString();
                 $item->save();
             } else {
-                // Resolve the inbound lot cost BEFORE changing current_stock: a null-cost
-                // (qty-only return) lot must value at the average of the stock that existed
-                // *before* this movement, not the inflated post-increment denominator.
+                // Inbound lot cost is the pre-movement average, so resolve it before current_stock changes.
                 $inboundLotCost = $inbound ? ($unitCost ?? $item->avgCost()) : null;
 
                 $item->current_stock += $movement->delta();
@@ -349,8 +364,7 @@ class StockMovementController extends Controller
                 $item->save();
 
                 if ($inbound) {
-                    // Resolve the destination warehouse once; default to 'Unassigned'
-                    // (never '') when the caller didn't pick one, so balances and serials agree.
+                    // Destination defaults to 'Unassigned' (never '') so balances and serials agree.
                     $inboundWarehouse = $toWh ?: 'Unassigned';
                     $this->balances->add($item, $inboundWarehouse, $qty);
 
@@ -393,14 +407,8 @@ class StockMovementController extends Controller
     }
 
     /**
-     * Bring previously-issued serials back into stock: flip them to in_stock in the
-     * destination warehouse, reopen FIFO lots at each unit's original receive cost,
-     * and log a 'returned' event per serial linked to the return movement.
-     *
-     * When a serial's original receive movement had a NULL unit_cost (qty-only receive),
-     * $fallbackCost is used instead of letting addLot recompute avgCost() on the
-     * already-incremented item — $fallbackCost must be the pre-movement average captured
-     * by the caller before current_stock was incremented.
+     * Bring issued serials back into stock in the destination warehouse, reopening FIFO lots at
+     * each unit's receive cost ($fallbackCost = pre-movement average when that cost is null).
      *
      * @param  array<int>  $serialIds
      */
@@ -417,10 +425,7 @@ class StockMovementController extends Controller
             'warehouse_id' => Warehouse::resolveId($warehouse),
         ]);
 
-        // Reopen one FIFO lot per distinct original receive cost. The serial's
-        // stock_movement_id still points at its receive movement (transfers never change it).
-        // When the original cost is null, use $fallbackCost (pre-increment average) so we
-        // never call avgCost() on the already-incremented item's denominator.
+        // One FIFO lot per distinct receive cost (the serial's stock_movement_id is its receive movement).
         $serials->groupBy(fn (StockItemSerial $s) => $s->movement?->unit_cost)
             ->each(function ($group) use ($item, $movement, $fallbackCost) {
                 $cost = $group->first()->movement?->unit_cost;

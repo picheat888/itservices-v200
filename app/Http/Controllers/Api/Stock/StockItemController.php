@@ -49,10 +49,9 @@ class StockItemController extends Controller
         $query = StockItem::query()
             ->select('stock_items.*')
             ->with(['lots', 'balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category'])
-            // Reserved = qty committed by approved-but-unfulfilled requests (not yet
-            // deducted from on-hand). Used to show "available to request" in New Request.
+            // Reserved = qty held by approved-but-unfulfilled requests.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
-            // FIFO stock value as a subquery column so we can sort by it at the DB.
+            // FIFO stock value as a sortable subquery column.
             ->addSelect(['value_total' => StockLot::query()
                 ->selectRaw('COALESCE(SUM(qty_remaining * unit_cost), 0)')
                 ->whereColumn('stock_item_id', 'stock_items.id')]);
@@ -63,12 +62,11 @@ class StockItemController extends Controller
             SearchTerms::related('model', ['name']),
         ]);
         if ($request->filled('category')) {
-            // The filter still sends the category name; match it through the relation.
+            // Category filter arrives as a name.
             $query->whereHas('category', fn ($c) => $c->where('name', $request->query('category')));
         }
         if ($request->filled('warehouse')) {
-            // Warehouse is no longer a SKU attribute — filter by where stock
-            // actually sits (per-warehouse balances).
+            // Warehouse filter = where stock sits (per-warehouse balances).
             $warehouse = $request->query('warehouse');
             $query->whereHas('balances', fn ($q) => $q->whereHas('warehouse', fn ($w) => $w->where('name', $warehouse)));
         }
@@ -87,8 +85,7 @@ class StockItemController extends Controller
         // Tie-breaker so equal names/stock/values never swap or repeat across pages.
         $query->orderBy('stock_items.id');
 
-        // `all=1` returns the full (filtered) list — used by item pickers/drawers,
-        // which are selectors, not paginated tables.
+        // all=1: full filtered list for pickers/drawers.
         if ($request->boolean('all')) {
             $items = $query->get();
 

@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { RecordStamps } from '@/shared/components/record-stamps';
+import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
@@ -11,9 +13,8 @@ import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
-import { useUiStore } from '@/stores/ui';
-import { Box, ChevronDown, ChevronLeft, ChevronRight, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Box, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
+import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
 import { StockMovementsTab } from './stock-movements-tab';
 
@@ -42,7 +43,7 @@ type TabId = 'overview' | 'movements' | 'lots' | 'serials';
 function Meta({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="min-w-0">
-            <div className="text-muted-foreground text-[11px] tracking-wide uppercase">{label}</div>
+            <div className="text-muted-foreground text-[11px]">{label}</div>
             <div className="truncate text-sm">{children}</div>
         </div>
     );
@@ -52,7 +53,7 @@ function Meta({ label, children }: { label: string; children: ReactNode }) {
 function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
     return (
         <div className="px-4 py-3">
-            <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">{label}</div>
+            <div className="text-muted-foreground text-[10px] font-medium">{label}</div>
             <div className="mt-0.5 text-xl leading-tight font-bold tabular-nums">{value}</div>
             {sub != null && <div className="text-muted-foreground mt-0.5 text-[11px]">{sub}</div>}
         </div>
@@ -60,16 +61,16 @@ function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: Re
 }
 
 /** Section heading with an optional value pinned to the right. */
-function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
+function SectionRow({ children, right }: { children: ReactNode; right?: ReactNode }) {
     return (
-        <div className="mb-2 flex items-center justify-between">
-            <span className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">{children}</span>
+        <div className="flex items-start justify-between gap-3">
+            <SectionLabel>{children}</SectionLabel>
             {right != null && <span className="text-xs">{right}</span>}
         </div>
     );
 }
 
-/** Reusable table footer pager (prev / page-of / next), shared by lots and serials. */
+/** Table footer pager (prev / page-of / next), shared by lots and serials. */
 function Pager({
     page,
     pageCount,
@@ -83,9 +84,10 @@ function Pager({
     perPage: number;
     onPage: (p: number) => void;
 }) {
+    const t = useT();
     return (
         <div className="border-border bg-muted/20 flex items-center justify-between border-t px-3 py-2">
-            <span className="text-muted-foreground text-[11px]">
+            <span className="text-muted-foreground text-[11px] tabular-nums">
                 {page * perPage + 1}–{Math.min((page + 1) * perPage, total)} / {total}
             </span>
             <div className="flex items-center gap-2">
@@ -93,10 +95,10 @@ function Pager({
                     type="button"
                     onClick={() => onPage(Math.max(0, page - 1))}
                     disabled={page === 0}
-                    aria-label="Previous page"
-                    className="hover:bg-accent flex h-6 w-6 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-30"
+                    aria-label={t('page_prev')}
+                    className="hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-30"
                 >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4" aria-hidden />
                 </button>
                 <span className="text-xs tabular-nums">
                     {page + 1}/{pageCount}
@@ -105,10 +107,10 @@ function Pager({
                     type="button"
                     onClick={() => onPage(Math.min(pageCount - 1, page + 1))}
                     disabled={page >= pageCount - 1}
-                    aria-label="Next page"
-                    className="hover:bg-accent flex h-6 w-6 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-30"
+                    aria-label={t('page_next')}
+                    className="hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-30"
                 >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4" aria-hidden />
                 </button>
             </div>
         </div>
@@ -116,10 +118,8 @@ function Pager({
 }
 
 /**
- * StockItemDetailModal — read-only SKU detail as a 1100px tabbed focus dialog
- * (Overview / Movements / Lots / Serials). The dialog stays mounted and toggles
- * `open` so it animates closed; the last item is retained so content doesn't flash
- * to skeleton during the fade-out.
+ * StockItemDetailModal — read-only SKU detail as a tabbed focus dialog
+ * (Overview / Movements / Lots / Serials); the last item is retained through the close animation.
  */
 export function StockItemDetailModal({
     itemId,
@@ -132,21 +132,16 @@ export function StockItemDetailModal({
 }) {
     const fmt = useDateFormat();
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
-    // System-timezone date for UTC timestamps (received_at) — last_move_at is a pure date, shown as-is.
+    const lotDetailId = useId();
     const { data, isError } = useStockItem(itemId);
-    // History is fetched here (and reused by the Movements tab via the same query key)
-    // so the Movements tab count is known up front.
+    // History is fetched here (same query key as the Movements tab) so the tab count is known up front
     const { data: history } = useStockItemHistory(itemId);
     const open = itemId !== null;
-    // The id resolved to nothing: the record is gone, or the link was never valid.
+    // The id resolved to nothing: the record is gone, or the link was never valid
     const missing = isError && !data;
 
-    // Retains the last item for the exit animation, but never renders it under another
-    // item's id: opening a second item from the list swaps `itemId` while the dialog is
-    // open, and until that item's data lands the dialog shows its skeleton rather than
-    // the previous item's SKU, balances and lots.
+    // Last item retained for the exit animation, never rendered under another item's id
     const { record: item } = useRecordView(itemId, data);
 
     const [tab, setTab] = useState<TabId>('overview');
@@ -169,22 +164,18 @@ export function StockItemDetailModal({
     const pagedSerials = serials.slice(serialPage * SERIALS_PER_PAGE, serialPage * SERIALS_PER_PAGE + SERIALS_PER_PAGE);
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: lang === 'th' ? 'ภาพรวม' : 'Overview' },
-        { id: 'movements', label: lang === 'th' ? 'การเคลื่อนไหว' : 'Movements', count: history?.movements.length },
-        { id: 'lots', label: lang === 'th' ? 'ล็อตต้นทุน' : 'Lots', count: lots.length },
-        // Serials tab only exists for serialized items.
-        ...(item?.track_serial ? [{ id: 'serials' as TabId, label: lang === 'th' ? 'ซีเรียล' : 'Serials', count: serials.length }] : []),
+        { id: 'overview', label: t('sub_overview') },
+        { id: 'movements', label: t('stock_tab_movements'), count: history?.movements.length },
+        { id: 'lots', label: t('stock_tab_lots'), count: lots.length },
+        // Serials tab only exists for serialized items
+        ...(item?.track_serial ? [{ id: 'serials' as TabId, label: t('stock_tab_serials'), count: serials.length }] : []),
     ];
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            {/* The focus frame is sized for a full item sheet; the not-found panel is two
-                lines, so it drops the fixed height and takes a small box instead. */}
+            {/* The not-found panel drops the fixed focus height */}
             <DialogContent className={cn(focusDialogContentClass, missing && recordMissingContentClass)}>
                 {missing ? (
-                    // The id is well-formed but there is no item behind it — a deleted SKU, or a
-                    // stale link. Without this the skeleton below stayed up for good: it is shown
-                    // whenever the record is absent, and absence alone never says why.
                     <RecordMissing onClose={onClose} />
                 ) : !item ? (
                     <div className="space-y-4 px-6 py-6">
@@ -197,48 +188,47 @@ export function StockItemDetailModal({
                 ) : (
                     <>
                         {/* Header */}
-                        <div className="flex items-center gap-3 px-6 pt-5 pb-4">
-                            <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                                <Package className="h-5 w-5" />
-                            </div>
-                            <div className="min-w-0">
-                                <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">
-                                    {lang === 'th' ? 'สินค้าคงคลัง' : 'Stock Item'}
+                        <FocusDialogHeader
+                            icon={Package}
+                            eyebrow={t('stock_item_eyebrow')}
+                            title={item.name}
+                            code={item.sku}
+                            srDescription={[item.sku, [item.brand, item.model].filter(Boolean).join(' ')].filter(Boolean).join(': ')}
+                            titleSuffix={
+                                <span
+                                    className={cn(
+                                        'inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold',
+                                        item.track_serial ? 'bg-brand/10 text-brand-ink' : 'bg-muted text-muted-foreground',
+                                    )}
+                                >
+                                    {item.track_serial ? <ShieldCheck className="h-3 w-3" aria-hidden /> : <Box className="h-3 w-3" aria-hidden />}
+                                    {item.track_serial ? t('stock_serialized') : t('stock_qty_only')}
+                                </span>
+                            }
+                            headerRight={
+                                <div className="flex flex-col items-end gap-1">
+                                    <StatusBadge tone={ITEM_TONE[item.status]}>{t(`stock_st_${item.status}` as Parameters<typeof t>[0])}</StatusBadge>
+                                    <RecordStamps
+                                        className="text-right"
+                                        createdAt={item.created_at}
+                                        createdBy={item.created_by_name}
+                                        updatedAt={item.updated_at}
+                                        updatedBy={item.updated_by_name}
+                                    />
                                 </div>
-                                <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
-                                    <span className="truncate">{item.name}</span>
-                                    <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">{item.sku}</span>
-                                    <span
-                                        className={cn(
-                                            'inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold',
-                                            item.track_serial ? 'bg-brand/10 text-brand' : 'bg-muted text-muted-foreground',
-                                        )}
-                                    >
-                                        {item.track_serial ? <ShieldCheck className="h-3 w-3" /> : <Box className="h-3 w-3" />}
-                                        {item.track_serial ? t('stock_serialized') : t('stock_qty_only')}
-                                    </span>
-                                </DialogTitle>
-                                <DialogDescription className="sr-only">
-                                    {[item.sku, [item.brand, item.model].filter(Boolean).join(' ')].filter(Boolean).join(': ')}
-                                </DialogDescription>
-                            </div>
-                            <div className="ml-auto flex shrink-0 flex-col items-end gap-1 pr-8">
-                                <StatusBadge tone={ITEM_TONE[item.status]}>{t(`stock_st_${item.status}` as Parameters<typeof t>[0])}</StatusBadge>
-                                <RecordStamps
-                                    className="text-right"
-                                    createdAt={item.created_at}
-                                    createdBy={item.created_by_name}
-                                    updatedAt={item.updated_at}
-                                    updatedBy={item.updated_by_name}
-                                />
-                            </div>
-                        </div>
+                            }
+                        />
 
                         {/* Tab bar */}
                         <DialogTabs className="px-6" tabs={tabs} active={tab} onChange={setTab} />
 
                         {/* Body */}
-                        <div className={cn('min-h-0 flex-1', tab === 'movements' ? 'overflow-hidden p-6' : 'overflow-y-auto px-6 py-5')}>
+                        <div
+                            className={cn(
+                                'min-h-0 flex-1 overscroll-contain',
+                                tab === 'movements' ? 'overflow-hidden p-6' : 'overflow-y-auto px-6 py-5',
+                            )}
+                        >
                             {/* Overview */}
                             {tab === 'overview' && (
                                 <div className="space-y-5">
@@ -249,12 +239,8 @@ export function StockItemDetailModal({
                                             sub={
                                                 item.reserved != null && item.reserved > 0 ? (
                                                     <span className="flex flex-wrap gap-x-3">
-                                                        <span>{lang === 'th' ? `สำรอง ${item.reserved}` : `${item.reserved} reserved`}</span>
-                                                        <span>
-                                                            {lang === 'th'
-                                                                ? `ว่าง ${item.current_stock - item.reserved}`
-                                                                : `${item.current_stock - item.reserved} free`}
-                                                        </span>
+                                                        <span>{t('stock_reserved_n').replace('{n}', String(item.reserved))}</span>
+                                                        <span>{t('stock_free_n').replace('{n}', String(item.current_stock - item.reserved))}</span>
                                                     </span>
                                                 ) : (
                                                     <span className="lowercase">{item.unit}</span>
@@ -284,19 +270,17 @@ export function StockItemDetailModal({
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-4 gap-x-6 gap-y-3">
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
                                         <Meta label={t('stock_category')}>{item.category ?? '—'}</Meta>
-                                        <Meta label={lang === 'th' ? 'ยี่ห้อ / รุ่น' : 'Brand / Model'}>
-                                            {[item.brand, item.model].filter(Boolean).join(' ') || '—'}
-                                        </Meta>
-                                        <Meta label={lang === 'th' ? 'หน่วย' : 'Unit'}>{item.unit}</Meta>
-                                        <Meta label="Min / Max">
-                                            <span>
+                                        <Meta label={t('stock_brand_model')}>{[item.brand, item.model].filter(Boolean).join(' ') || '—'}</Meta>
+                                        <Meta label={t('stock_unit')}>{item.unit}</Meta>
+                                        <Meta label={t('stock_min_max')}>
+                                            <span className="tabular-nums">
                                                 {item.min_stock} / {item.max_stock}
                                             </span>
                                         </Meta>
                                         <Meta label={t('stock_warranty')}>{item.warranty ?? '—'}</Meta>
-                                        <Meta label={lang === 'th' ? 'เคลื่อนไหวล่าสุด' : 'Last move'}>
+                                        <Meta label={t('stock_last_move')}>
                                             <span>{fmt.date(item.last_move_at)}</span>
                                         </Meta>
                                     </div>
@@ -308,7 +292,7 @@ export function StockItemDetailModal({
                                                 {balances.map((b) => (
                                                     <div key={b.warehouse} className="border-border bg-card rounded-lg border px-3 py-2.5">
                                                         <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                                                            <Warehouse className="h-3 w-3 shrink-0" />
+                                                            <Warehouse className="h-3 w-3 shrink-0" aria-hidden />
                                                             <span className="truncate">{b.warehouse}</span>
                                                         </div>
                                                         <div className="mt-1 text-lg leading-none font-bold tabular-nums">
@@ -331,58 +315,75 @@ export function StockItemDetailModal({
                             {/* Lots */}
                             {tab === 'lots' && (
                                 <div>
-                                    <SectionLabel right={format(item.total_value)}>{t('stock_lots_title')}</SectionLabel>
+                                    <SectionRow right={format(item.total_value)}>{t('stock_lots_title')}</SectionRow>
                                     {lots.length > 0 ? (
-                                        <div className="border-border overflow-hidden rounded-lg border">
+                                        <div className="border-border overflow-x-auto rounded-lg border">
                                             <table className="w-full text-sm">
                                                 <thead className={TABLE_HEAD}>
                                                     <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] uppercase">
-                                                        <th className="px-3 py-2 font-medium">{t('stock_hist_receive_no')}</th>
-                                                        <th className="px-3 py-2 font-medium">{t('stock_date')}</th>
-                                                        <th className="px-3 py-2 text-right font-medium">{t('stock_unit_cost')}</th>
-                                                        <th className="px-3 py-2 text-right font-medium">{t('stock_lot_remaining')}</th>
-                                                        <th className="px-3 py-2 text-right font-medium">{t('stock_lot_value')}</th>
+                                                        <th scope="col" className="px-3 py-2 font-medium">
+                                                            {t('stock_hist_receive_no')}
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 font-medium">
+                                                            {t('stock_date')}
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 text-right font-medium">
+                                                            {t('stock_unit_cost')}
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 text-right font-medium">
+                                                            {t('stock_lot_remaining')}
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 text-right font-medium">
+                                                            {t('stock_lot_value')}
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {pagedLots.map((l) => {
                                                         const expanded = expandedLot === l.id;
+                                                        const detailId = `${lotDetailId}-${l.id}`;
                                                         return (
                                                             <Fragment key={l.id}>
                                                                 <tr
-                                                                    onClick={() => setExpandedLot((id) => (id === l.id ? null : l.id))}
                                                                     className={cn(
-                                                                        'hover:bg-accent/40 cursor-pointer border-b transition-colors',
+                                                                        'border-b transition-colors',
                                                                         expanded ? 'bg-accent/30 border-transparent' : 'border-border/60',
                                                                     )}
                                                                 >
-                                                                    <td className="px-3 py-1.5 text-xs whitespace-nowrap">
-                                                                        <span className="inline-flex items-center gap-1.5">
+                                                                    <td className="px-3 py-1.5 text-xs">
+                                                                        <button
+                                                                            type="button"
+                                                                            aria-expanded={expanded}
+                                                                            aria-controls={expanded ? detailId : undefined}
+                                                                            onClick={() => setExpandedLot((id) => (id === l.id ? null : l.id))}
+                                                                            className="hover:bg-accent focus-visible:ring-ring -mx-1 inline-flex min-h-7 items-center gap-1.5 rounded px-1 text-left focus-visible:ring-2 focus-visible:outline-hidden"
+                                                                        >
                                                                             <ChevronDown
                                                                                 className={cn(
-                                                                                    'h-3.5 w-3.5 transition-transform',
+                                                                                    'h-3.5 w-3.5 shrink-0 transition-transform',
                                                                                     expanded && 'rotate-180',
                                                                                 )}
+                                                                                aria-hidden
                                                                             />
-                                                                            {l.doc_no ?? '—'}
-                                                                        </span>
+                                                                            <span translate="no">{l.doc_no ?? '—'}</span>
+                                                                        </button>
                                                                     </td>
                                                                     <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap">
                                                                         {fmt.date(l.received_at)}
                                                                     </td>
-                                                                    <td className="px-3 py-1.5 text-right text-xs whitespace-nowrap">
+                                                                    <td className="px-3 py-1.5 text-right text-xs whitespace-nowrap tabular-nums">
                                                                         {format(l.unit_cost)}
                                                                     </td>
-                                                                    <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                                                                    <td className="px-3 py-1.5 text-right whitespace-nowrap tabular-nums">
                                                                         {l.qty_remaining}
                                                                         <span className="text-muted-foreground">/{l.qty_received}</span>
                                                                     </td>
-                                                                    <td className="px-3 py-1.5 text-right font-semibold whitespace-nowrap">
+                                                                    <td className="px-3 py-1.5 text-right font-semibold whitespace-nowrap tabular-nums">
                                                                         {format(l.value)}
                                                                     </td>
                                                                 </tr>
                                                                 {expanded && (
-                                                                    <tr className="border-border/60 border-b last:border-0">
+                                                                    <tr id={detailId} className="border-border/60 border-b last:border-0">
                                                                         <td colSpan={5} className="bg-muted/20 px-4 py-3">
                                                                             <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
                                                                                 <Meta label={t('stock_reference')}>{l.reference || '—'}</Meta>
@@ -393,17 +394,14 @@ export function StockItemDetailModal({
                                                                                     {fmt.date(l.received_at)}
                                                                                 </Meta>
                                                                                 <Meta label={t('stock_qty')}>
-                                                                                    <span>
+                                                                                    <span className="tabular-nums">
                                                                                         {l.qty_remaining}/{l.qty_received}
                                                                                     </span>
                                                                                 </Meta>
                                                                             </div>
                                                                             {l.notes && (
                                                                                 <div className="text-muted-foreground mt-2.5 text-xs">
-                                                                                    <span className="tracking-wide uppercase">
-                                                                                        {t('stock_notes')}:
-                                                                                    </span>{' '}
-                                                                                    {l.notes}
+                                                                                    <span>{t('stock_notes')}:</span> {l.notes}
                                                                                 </div>
                                                                             )}
                                                                         </td>
@@ -435,28 +433,40 @@ export function StockItemDetailModal({
                             {/* Serials (tab only present when track_serial) */}
                             {tab === 'serials' && (
                                 <div>
-                                    <SectionLabel right={<span className="text-muted-foreground">{serials.length}</span>}>
+                                    <SectionRow right={<span className="text-muted-foreground tabular-nums">{serials.length}</span>}>
                                         {t('stock_serial_list')}
-                                    </SectionLabel>
+                                    </SectionRow>
                                     {serials.length > 0 ? (
-                                        <div className="border-border overflow-hidden rounded-lg border">
+                                        <div className="border-border overflow-x-auto rounded-lg border">
                                             <table className="w-full text-sm">
                                                 <thead className={TABLE_HEAD}>
                                                     <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] uppercase">
-                                                        <th className="w-8 px-3 py-2 font-medium">#</th>
-                                                        <th className="px-3 py-2 font-medium">Serial</th>
-                                                        <th className="px-3 py-2 font-medium">{t('status')}</th>
-                                                        <th className="px-3 py-2 font-medium">{t('stock_warehouse')}</th>
-                                                        <th className="px-3 py-2 font-medium">{t('stock_serial_received')}</th>
+                                                        <th scope="col" className="w-8 px-3 py-2 font-medium">
+                                                            #
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 font-medium">
+                                                            {t('stock_hist_serial')}
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 font-medium">
+                                                            {t('status')}
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 font-medium">
+                                                            {t('stock_warehouse')}
+                                                        </th>
+                                                        <th scope="col" className="px-3 py-2 font-medium">
+                                                            {t('stock_serial_received')}
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {pagedSerials.map((s, i) => (
                                                         <tr key={s.id} className="border-border/60 border-b last:border-0">
-                                                            <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap">
+                                                            <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap tabular-nums">
                                                                 {serialPage * SERIALS_PER_PAGE + i + 1}
                                                             </td>
-                                                            <td className="px-3 py-1.5 whitespace-nowrap">{s.serial}</td>
+                                                            <td className="px-3 py-1.5" translate="no">
+                                                                {s.serial}
+                                                            </td>
                                                             <td className="px-3 py-1.5">
                                                                 <StatusBadge tone={SN_TONE[s.status]}>
                                                                     {t(`stock_sn_${s.status}` as Parameters<typeof t>[0])}
@@ -495,14 +505,16 @@ export function StockItemDetailModal({
                                 href={`/stock/items/${item.id}/history`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-muted-foreground hover:text-foreground mr-auto inline-flex items-center gap-1.5 text-sm font-medium"
+                                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring mr-auto inline-flex min-h-8 items-center gap-1.5 rounded text-sm font-medium focus-visible:ring-2 focus-visible:outline-hidden"
                             >
-                                <History className="h-4 w-4" />
-                                {lang === 'th' ? 'ประวัติทั้งหมด' : 'Full history'}
+                                <History className="h-4 w-4" aria-hidden />
+                                {t('stock_history_full')}
+                                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                                <span className="sr-only">{t('stock_opens_new_tab')}</span>
                             </a>
                             {onEdit && (
                                 <Button variant="outline" onClick={() => onEdit(item)}>
-                                    <SquarePen className="h-4 w-4" />
+                                    <SquarePen className="h-4 w-4" aria-hidden />
                                     {t('edit')}
                                 </Button>
                             )}

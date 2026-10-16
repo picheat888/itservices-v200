@@ -6,6 +6,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,6 +14,14 @@ use Tests\TestCase;
 class StockMovementSerialsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        foreach (['Main', 'WH-1', 'WH-2'] as $name) {
+            Warehouse::firstOrCreate(['name' => $name]);
+        }
+    }
 
     private function super(): User
     {

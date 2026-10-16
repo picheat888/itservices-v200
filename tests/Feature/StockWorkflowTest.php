@@ -20,6 +20,14 @@ class StockWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        foreach (['WH-1', 'WH-2', 'WH-A', 'WH-B', 'WH-HQ'] as $name) {
+            Warehouse::firstOrCreate(['name' => $name]);
+        }
+    }
+
     private function superUser(): User
     {
         return User::factory()->create(['role' => 'super']);

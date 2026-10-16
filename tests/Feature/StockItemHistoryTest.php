@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,6 +13,14 @@ use Tests\TestCase;
 class StockItemHistoryTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        foreach (['Main', 'HQ'] as $name) {
+            Warehouse::firstOrCreate(['name' => $name]);
+        }
+    }
 
     private function super(): User
     {

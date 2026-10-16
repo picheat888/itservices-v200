@@ -7,7 +7,10 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class StockCountTest extends TestCase
@@ -157,6 +160,55 @@ class StockCountTest extends TestCase
         $this->assertSame(0, StockMovement::count());
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422)->assertJsonPath('message', 'count_closed');
+    }
+
+    public function test_committing_twice_applies_the_adjustment_once(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422)->assertJsonPath('message', 'count_closed');
+
+        $this->assertSame(7, $item->fresh()->current_stock);
+        $this->assertSame(1, StockMovement::where('type', 'adjust_down')->where('stock_item_id', $item->id)->count());
+    }
+
+    public function test_commit_rechecks_draft_status_under_lock(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
+
+        // A concurrent commit closes the count the moment this commit's transaction begins.
+        $fired = false;
+        Event::listen(TransactionBeginning::class, function () use (&$fired, $count) {
+            if (! $fired) {
+                $fired = true;
+                DB::table('stock_counts')->where('id', $count['id'])->update(['status' => 'committed']);
+            }
+        });
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422)->assertJsonPath('message', 'count_closed');
+
+        $this->assertSame(10, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::count());
+    }
+
+    public function test_open_refuses_an_unknown_warehouse_and_creates_none(): void
+    {
+        $this->item('A-1', 10, 'Main');
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/stock-counts', ['warehouse' => 'Nowhere'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['warehouse']);
+
+        $this->assertDatabaseMissing('warehouses', ['name' => 'Nowhere']);
+        $this->assertDatabaseCount('stock_counts', 0);
     }
 
     public function test_manual_commit_is_report_only(): void

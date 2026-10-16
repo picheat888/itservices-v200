@@ -54,9 +54,7 @@ class StockCountService
                 : null;
 
             foreach ($items as $item) {
-                // Serialized items reconcile against their in-stock serials (the authoritative on-hand
-                // record), which can drift from current_stock; everything else snapshots current_stock
-                // — or, in a one-warehouse count, that warehouse's balance.
+                // Serialized: in-stock serials; else current_stock, or that warehouse's balance in a one-warehouse count.
                 $systemQty = match (true) {
                     (bool) $item->track_serial => (int) $item->serials()->where('status', 'in_stock')
                         ->when($warehouseId, fn ($q, $id) => $q->where('warehouse_id', $id))->count(),
@@ -99,46 +97,42 @@ class StockCountService
     }
 
     /**
-     * Commit a draft. In Auto mode, every counted line whose count differs from
-     * system stock records an adjust_up/adjust_down movement, sets the item's
-     * current_stock to the counted value, and reconciles FIFO lots. In Manual
-     * mode the session is closed as a report only — stock is left untouched.
-     * The chosen mode is persisted on the count.
-     */
-    /**
-     * Commit a draft. In Auto mode, every counted line whose count differs from system
-     * stock records an adjust movement, sets current_stock to the counted value, and
-     * reconciles FIFO lots. Serialized lines additionally mark the supplied missing
-     * serials as 'adjusted'. In Manual mode the session is closed as a report only —
-     * stock is untouched — and serialized counts are rejected.
+     * Commit a draft. Auto: each counted line with a variance records an adjust movement, moves
+     * the balance and total, reconciles FIFO lots and marks ticked-missing serials 'adjusted'.
+     * Manual: closed as a report only (serialized counts refused). The mode is persisted.
      *
      * @param  array<int, array<int>>  $missingSerials  stock-item id => serial ids ticked as not found
      */
     public function commit(StockCount $count, User $user, StockCountAdjustMode $mode = StockCountAdjustMode::Auto, array $missingSerials = []): StockCount
     {
-        abort_unless($count->status === StockCountStatus::Draft, 422, 'count_closed');
+        DB::transaction(function () use ($count, $user, $mode, $missingSerials) {
+            $this->lockInDraft($count);
 
-        $lines = $count->lines()->with('item')->get();
+            $lines = $count->lines()->with('item')->get();
 
-        // Manual is report-only; it can't reconcile the per-unit serials a serialized count needs.
-        if ($mode === StockCountAdjustMode::Manual && $lines->contains(fn ($l) => (bool) $l->item?->track_serial)) {
-            abort(422, 'count_serial_needs_auto');
-        }
+            // Manual is report-only; it can't reconcile the per-unit serials a serialized count needs.
+            if ($mode === StockCountAdjustMode::Manual && $lines->contains(fn ($l) => (bool) $l->item?->track_serial)) {
+                abort(422, 'count_serial_needs_auto');
+            }
 
-        DB::transaction(function () use ($count, $user, $mode, $lines, $missingSerials) {
             if ($mode === StockCountAdjustMode::Auto) {
                 foreach ($lines as $line) {
                     $variance = $line->variance();
-                    if ($variance === null || $variance === 0 || $line->item === null) {
+                    if ($variance === null || $variance === 0) {
                         continue;
                     }
 
-                    // Which shelf the difference belongs to. Refused (rolling the whole commit
-                    // back) when an all-warehouse count cannot say — count it per warehouse.
-                    $warehouse = $this->warehouseForDifference($count, $line->item);
+                    /** @var StockItem|null $item */
+                    $item = StockItem::whereKey($line->stock_item_id)->lockForUpdate()->first();
+                    if ($item === null) {
+                        continue;
+                    }
 
-                    if ($line->item->track_serial) {
-                        $this->reconcileSerials($line->item, $variance, $missingSerials[$line->stock_item_id] ?? [], $count->reference, $user);
+                    // The shelf the difference belongs to; refused when an all-warehouse count cannot say.
+                    $warehouse = $this->warehouseForDifference($count, $item);
+
+                    if ($item->track_serial) {
+                        $this->reconcileSerials($item, $variance, $missingSerials[$line->stock_item_id] ?? [], $count->reference, $user);
                     }
 
                     StockMovement::create([
@@ -154,20 +148,18 @@ class StockCountService
                         'moved_at' => now(),
                     ]);
 
-                    // The warehouse balance moves by the difference, and so does the total. A
-                    // one-warehouse count must not overwrite the total with one shelf's count;
-                    // an all-warehouse count lands on the counted figure either way.
+                    // Balance and total move by the difference; an all-warehouse count lands on the counted figure.
                     $variance > 0
-                        ? $this->balanceService->add($line->item, $warehouse, $variance)
-                        : $this->balanceService->remove($line->item, $warehouse, abs($variance));
-                    $total = $count->warehouse !== null ? $line->item->current_stock + $variance : $line->counted_qty;
-                    $line->item->update([
+                        ? $this->balanceService->add($item, $warehouse, $variance)
+                        : $this->balanceService->remove($item, $warehouse, abs($variance));
+                    $total = $count->warehouse !== null ? $item->current_stock + $variance : $line->counted_qty;
+                    $item->update([
                         'current_stock' => $total,
                         'last_move_at' => now()->toDateString(),
                     ]);
 
                     // Realign FIFO lots with the new total.
-                    $this->lotService->reconcile($line->item, $total);
+                    $this->lotService->reconcile($item, $total);
                 }
             }
 
@@ -187,17 +179,16 @@ class StockCountService
         return $count->fresh('lines');
     }
 
-    /**
-     * Mark the ticked-missing serials of a serialized line as 'adjusted'. Only shortages
-     * are supported: exactly |variance| in-stock serials belonging to the item must be
-     * supplied; a positive variance (counted exceeds recorded serials) is rejected.
-     *
-     * @param  array<int>  $serialIds
-     */
+    /** Re-read the count under lock inside the transaction so two commits cannot both pass. */
+    private function lockInDraft(StockCount $count): void
+    {
+        $count->setRawAttributes(StockCount::lockForUpdate()->findOrFail($count->id)->getAttributes(), true);
+        abort_unless($count->status === StockCountStatus::Draft, 422, 'count_closed');
+    }
+
     /**
      * The warehouse a counted difference is booked against: the count's own warehouse, else
-     * the one warehouse the item holds stock in ('Unassigned' when none). An item spread
-     * over several warehouses is refused — the difference has no one place to go.
+     * the one warehouse the item holds stock in ('Unassigned' when none); spread items are refused.
      */
     private function warehouseForDifference(StockCount $count, StockItem $item): string
     {
@@ -213,6 +204,11 @@ class StockCountService
         return $holding->first()?->warehouse?->name ?? 'Unassigned';
     }
 
+    /**
+     * Mark the ticked-missing serials of a serialized line as 'adjusted' (shortages only: exactly |variance| ids).
+     *
+     * @param  array<int>  $serialIds
+     */
     private function reconcileSerials(StockItem $item, int $variance, array $serialIds, string $reference, User $user): void
     {
         if ($variance > 0) {
