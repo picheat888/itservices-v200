@@ -13,17 +13,16 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The self-service access list — the lower half of "My assets & access".
+ * The self-service access list — the profile drawer's Access tab.
  *
- * Employees had no way at all to see which systems they can reach; this is that answer, and
- * it answers to its own right (`access.my`) rather than to the Access Directory's master,
- * which is the right to browse everybody's.
+ * A linked employee sees their own grants with no permission at all; the Access Directory's
+ * master is the right to browse everybody's, which a plain employee never needs.
  */
 class MyAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function staff(array $permissions = ['access.my'], string $name = 'Somchai'): User
+    private function staff(array $permissions = [], string $name = 'Somchai'): User
     {
         $employee = Employee::create(['first_name' => $name, 'status' => 'active']);
         $user = User::factory()->create(['employee_id' => $employee->id]);
@@ -73,37 +72,30 @@ class MyAccessTest extends TestCase
         $this->actingAs($me)->getJson('/api/access/mine')->assertOk()->assertJsonCount(0, 'data.file_shares');
     }
 
-    /**
-     * The right stands on its own: the Access Directory master is the right to browse
-     * everybody's access, and a plain employee has no business holding it to see their own.
-     */
-    public function test_it_answers_to_access_my_and_not_to_the_directory_master(): void
+    /** A linked employee with no permissions at all still sees their own access. */
+    public function test_a_linked_employee_needs_no_permission(): void
     {
-        $withoutIt = $this->staff([]);
-        $this->actingAs($withoutIt)->getJson('/api/access/mine')->assertForbidden();
+        $me = $this->staff();
 
-        $withIt = $this->staff(['access.my'], 'Manee');
-        $this->actingAs($withIt)->getJson('/api/access/mine')->assertOk();
+        $this->assertSame([], $me->permissions());
+        $this->actingAs($me)->getJson('/api/access/mine')->assertOk();
     }
 
-    /** Normalisation must not strip the self-service key along with the rest of access.*. */
-    public function test_the_self_service_key_survives_the_master_being_off(): void
+    /** With the master off, normalisation keeps no access.* key at all. */
+    public function test_no_access_key_survives_the_master_being_off(): void
     {
-        $kept = Permissions::normalizeAccess(['access.my', 'access.email_view', 'access.overview']);
+        $kept = Permissions::normalizeAccess(['access.email_view', 'access.overview']);
 
-        $this->assertSame(['access.my'], array_values($kept));
+        $this->assertSame([], array_values($kept));
+        $this->assertNotContains('access.my', Permissions::all());
     }
 
-    /**
-     * An account with no employee record still gets a page. It is where somebody would look
-     * to find out nothing is linked to them yet — a 500 there teaches them nothing.
-     */
+    /** An account with no employee record still gets a page, with every list empty. */
     public function test_an_account_with_no_employee_record_gets_an_empty_list(): void
     {
         $user = User::factory()->create(['employee_id' => null]);
-        RolePermission::firstOrCreate(['role_id' => $user->role_id, 'permission' => 'access.my'], ['allowed' => true]);
 
-        $this->actingAs($user->refresh())->getJson('/api/access/mine')->assertOk()
+        $this->actingAs($user)->getJson('/api/access/mine')->assertOk()
             ->assertJsonCount(0, 'data.software')
             ->assertJsonCount(0, 'data.file_shares')
             ->assertJsonCount(0, 'data.email_groups')

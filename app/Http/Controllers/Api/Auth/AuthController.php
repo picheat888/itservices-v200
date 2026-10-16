@@ -118,13 +118,13 @@ class AuthController extends Controller
 
     /**
      * Lets a user edit their OWN profile (name / Thai name / phone / photo).
-     * Gated by employees.edit_own. Writes to the linked Employee record and
+     * Gated by profile.edit. Writes to the linked Employee record and
      * mirrors the display name onto the User account.
      */
     public function updateProfile(Request $request): JsonResponse
     {
         $user = $request->user();
-        abort_unless((bool) $user->hasPermission('employees.edit_own'), 403);
+        abort_unless((bool) $user->hasPermission('profile.edit'), 403);
 
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],

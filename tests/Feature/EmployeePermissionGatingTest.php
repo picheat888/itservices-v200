@@ -52,17 +52,27 @@ class EmployeePermissionGatingTest extends TestCase
         $this->assertNotContains('employees.section_add', $stored);
     }
 
-    public function test_save_preserves_edit_own_without_master(): void
+    public function test_save_preserves_profile_keys_without_any_master(): void
     {
         $admin = $this->admin();
         $role = Role::create(['key' => 'emp_own', 'name' => 'Own', 'is_system' => false]);
 
         $this->actingAs($admin)->putJson("/api/permissions/{$role->key}", [
-            'permissions' => ['employees.edit_own'],
+            'permissions' => ['profile.edit', 'profile.return_assets'],
         ])->assertOk();
 
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
-        $this->assertContains('employees.edit_own', $stored);
+        $this->assertContains('profile.edit', $stored);
+        $this->assertContains('profile.return_assets', $stored);
+    }
+
+    public function test_the_retired_edit_own_key_is_rejected(): void
+    {
+        $role = Role::create(['key' => 'emp_old', 'name' => 'Old', 'is_system' => false]);
+
+        $this->actingAs($this->admin())->putJson("/api/permissions/{$role->key}", [
+            'permissions' => ['employees.edit_own'],
+        ])->assertUnprocessable();
     }
 
     public function test_section_store_requires_section_add(): void
