@@ -17,7 +17,7 @@ function PendingAssetsPill({ count }: { count: number }) {
     const t = useT();
     if (count <= 0) return null;
     return (
-        <span className="ring-sidebar absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white ring-2">
+        <span className="ring-sidebar absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-700 px-1 text-[10px] font-bold text-white ring-2">
             <span aria-hidden="true">{count}</span>
             <span className="sr-only">{t('profile_pending_assets_badge').replace('{n}', String(count))}</span>
         </span>
