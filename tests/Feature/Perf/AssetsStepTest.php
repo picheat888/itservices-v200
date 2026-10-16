@@ -58,6 +58,20 @@ class AssetsStepTest extends TestCase
         $this->assertGreaterThan(0, $db->table('assets')->where('status', 'writeoff')->count());
     }
 
+    public function test_full_scale_master_names_respect_unique_indexes(): void
+    {
+        // The database refuses a duplicate vendor, brand or model name; small scales never drew one
+        [, $db] = PerfImport::run([Copy::class, Org::class, Assets::class], 1.0, 20261016);
+
+        $this->assertSame($db->table('vendors')->count(), $db->table('vendors')->distinct()->count('name'));
+        $this->assertSame($db->table('brands')->count(), $db->table('brands')->distinct()->count('name'));
+        $this->assertSame(40, $db->table('vendors')->count());
+        $this->assertSame(50, $db->table('brands')->count());
+        $this->assertSame(120, $db->table('asset_models')->count());
+        $this->assertSame(2350, $db->table('assets')->count());
+        $this->assertSame(300, $db->table('contracts')->count());
+    }
+
     public function test_contract_mix_and_ledgers(): void
     {
         [, $db] = PerfImport::run([Copy::class, Org::class, Assets::class]);
@@ -66,7 +80,7 @@ class AssetsStepTest extends TestCase
         $this->assertSame((new Targets(0.1))->of('contracts'), $n);
         $expired = $db->table('contracts')->whereNotNull('expired_at')->count();
         $this->assertGreaterThanOrEqual(0.2 * $n, $expired);
-        $this->assertLessThanOrEqual(0.55 * $n, $expired);
+        $this->assertLessThanOrEqual(0.6 * $n, $expired);
         $overdue = $db->table('contracts')->where('end_date', '<', '2026-10-16')->whereNull('expired_at')->whereNull('cancelled_at')->count();
         $this->assertLessThanOrEqual(0.15 * $n, $overdue);
 

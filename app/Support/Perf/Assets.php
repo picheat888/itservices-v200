@@ -90,16 +90,16 @@ class Assets implements PerfStep
         $vendorNames = [];
         for ($i = 0; $i < $this->ctx->targets->of('vendors'); $i++) {
             $id = $reg->nextId('vendors');
-            $name = $rng->pick(self::VENDOR_PREFIX).' '.$rng->pick(self::VENDOR_SUFFIX);
+            $name = self::VENDOR_PREFIX[$i % 10].' '.self::VENDOR_SUFFIX[intdiv($i, 10) % 6].($i >= 60 ? ' '.$i : '');
             $contact = NamePool::first($rng).' '.NamePool::last($rng);
             $this->ctx->sql->insert('vendors', $this->fill('vendors', [
-                'id' => $id, 'name' => $i < 10 ? $name : $name.' '.$i, 'name_th' => null, 'contact' => $contact,
+                'id' => $id, 'name' => $name, 'name_th' => null, 'contact' => $contact,
                 'phone' => sprintf('02-%03d-%04d', $rng->int(100, 999), $rng->int(1000, 9999)),
                 'email' => 'sales'.$id.'@vendor.perf.local', 'address' => $rng->int(1, 999).' Rama IV Road, Bangkok',
                 'created_at' => $stamp, 'updated_at' => $stamp,
             ]));
             $vendorIds[] = $id;
-            $vendorNames[$id] = $i < 10 ? $name : $name.' '.$i;
+            $vendorNames[$id] = $name;
         }
 
         $brandIds = [];
@@ -138,7 +138,7 @@ class Assets implements PerfStep
     {
         $rng = $this->ctx->rng;
         $clock = $this->ctx->clock;
-        $earliest = CarbonImmutable::parse('2022-01-01');
+        $earliest = CarbonImmutable::parse('2023-01-01');
         $latest = CarbonImmutable::parse('2026-09-30');
 
         $contracts = [];

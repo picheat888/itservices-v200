@@ -46,6 +46,27 @@ class SqlWriterTest extends TestCase
         $this->assertSame(2500, $w->counts()['t']);
     }
 
+    public function test_commits_every_twenty_chunks_on_mariadb_only(): void
+    {
+        $path = $this->tmp();
+        $w = new SqlWriter($path, 'mariadb');
+        for ($i = 1; $i <= 45000; $i++) {
+            $w->insert('t', ['id' => $i]);
+        }
+        $w->close();
+        $sql = file_get_contents($path);
+        // 45 chunks: after chunk 20 and 40, plus the closing commit
+        $this->assertSame(3, substr_count($sql, "COMMIT;\n"));
+
+        $path2 = $this->tmp();
+        $w2 = new SqlWriter($path2, 'sqlite');
+        for ($i = 1; $i <= 45000; $i++) {
+            $w2->insert('t', ['id' => $i]);
+        }
+        $w2->close();
+        $this->assertStringNotContainsString('COMMIT;', file_get_contents($path2));
+    }
+
     public function test_escapes_quotes_backslashes_and_unicode(): void
     {
         $row = ['name' => "O'Brien \\ ทดสอบ", 'data' => ['k' => 'ทดสอบ']];

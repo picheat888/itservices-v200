@@ -5688,3 +5688,20 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ไม่รวม: การกระทำที่เปลี่ยนสถานะ (มอบหมาย ส่งต่อ ปิดเคส ลาออก โอนย้าย ตัดจำหน่าย ยกเลิก อนุมัติ ตั้งรหัสผ่าน ย้ายที่ตั้งทรัพย์สิน จัดการสมาชิก Access) และตั้งค่าที่บันทึกทันที; การเปลี่ยนแค่รูปแบบวันที่ในแท็บระบบไม่ถาม
 - กล่องยืนยันกลาง (ทุก variant): ปิดแล้ว focus กลับไปที่ปุ่มที่เปิด เว้นแต่ฟอร์มย้าย focus ไปช่องที่ error เองแล้ว (เดิมหลุดไป body) บรรทัดชื่อรายการถูกอ่านเป็นคำอธิบายของกล่อง ไอคอน `aria-hidden` ข้อความผิดพลาด `role=alert`
 - ตรวจใน Chrome: ข้อความ contrast 4.84–17.22 (สว่าง) และ 5.91–16.41 (มืด), ปุ่ม 38px, ใช้คีย์บอร์ดล้วนได้ (Enter เปิด, Tab ไปปุ่มยืนยัน, Enter บันทึก, Esc ยกเลิก), ที่ 768px กล่องกว้าง 426px ไม่มี scroll แนวนอน
+
+### ชุดข้อมูล Performance 3 ปี (DB `itservices_perf`) — 2026-10-17
+- ใช้ทดสอบ Performance: องค์กร 1,000 คน คอม 900 อุปกรณ์อื่น 1,300 จำลองการใช้งาน 3 ปี (2023-11 ถึง 2026-10-16) แยกจาก DB จริงทั้งหมด ไม่แตะข้อมูลใน `itservices`
+- สร้างและนำเข้า (4 ขั้น ต้อง migrate DB จริงให้ทันโค้ดก่อน เพราะค่าตั้งต้นและตาราง `migrations` คัดลอกมาจาก DB จริงแบบอ่านอย่างเดียว):
+  ```
+  php artisan perf:generate                 # → storage/perf/itservices_perf.sql (ไม่ commit)
+  mysql -uroot -p -e "CREATE DATABASE itservices_perf CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+  php artisan migrate --database=perf       # โครงสร้างจาก migration ชุดเดียวกับของจริง
+  mysql -uroot -p itservices_perf < storage/perf/itservices_perf.sql
+  php artisan migrate --database=perf       # migration ที่ DB จริงยังไม่ได้รัน (ถ้ามี)
+  ```
+- ใช้งาน: ตั้ง `DB_DATABASE=itservices_perf` ใน `.env` แล้วรัน `composer run demo` (บัญชี `admin` เดิม และบัญชีสร้างใหม่ทุกคนใช้รหัส `Password1!`) `--seed=` ให้ไฟล์เดิมเสมอ `--scale=0.1` ย่อทุกตารางข้อมูลเคลื่อนไหว
+- ผลรอบเต็ม: 1,796,774 แถว ไฟล์ 462 MB สร้าง 145 วินาที (RAM สูงสุด 1.5 GB) นำเข้า 26 วินาที DB 714 MB: audit_logs 733,565 · notifications 579,550 · ticket_updates 149,908 · request_approvals 81,880 · email_logs 75,552 · tickets 60,000 · service_requests 24,000 · stock_movements 24,485 · assets 2,350 · employees 1,000
+- notifications / audit_logs / email_logs สร้างตามเหตุการณ์ในอัตราเดียวกับแอป ไม่ได้ถูกจำกัดให้ตรงเป้าในแผน จึงมากกว่า 200,000 / 300,000 / 70,000
+- ทุกตารางที่ไม่ใช่ runtime มีข้อมูล ยกเว้น `workflow_step_approvers` (ว่างในค่าตั้งต้นที่คัดลอกมา) ไม่มีไฟล์แนบจริงบนดิสก์ (มีแค่แถวใน DB) ตรวจ FK ทั้ง 137 ความสัมพันธ์ไม่มีแถวกำพร้า
+- ตัวสร้างอยู่ที่ `app/Support/Perf/` (1 ไฟล์ต่อขั้น: Copy, Org, Assets, Stock, Access, Requests, Tickets, Logs) คำสั่ง `perf:generate` ทดสอบด้วย `tests/Unit/Perf` และ `tests/Feature/Perf`
+- แก้บั๊กในระบบจริงระหว่างทาง: `DocNumber::next()` ออกเลขเอกสาร stock ซ้ำเมื่อเกิน 999 ใบต่อประเภทต่อปี (เรียงสตริงแล้วอ่าน 3 หลักท้าย) ตอนนี้นับเชิงตัวเลข

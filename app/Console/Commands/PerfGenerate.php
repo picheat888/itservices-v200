@@ -33,6 +33,7 @@ class PerfGenerate extends Command
 
     public function handle(): int
     {
+        ini_set('memory_limit', '-1');
         $started = microtime(true);
         $out = $this->option('out') ?: storage_path('perf/itservices_perf.sql');
         $dialect = $this->option('dialect') ?: (DB::connection()->getDriverName() === 'sqlite' ? 'sqlite' : 'mariadb');
@@ -53,7 +54,7 @@ class PerfGenerate extends Command
         $sql->close();
 
         $this->table(['table', 'rows'], collect($sql->counts())->map(fn (int $n, string $t): array => [$t, number_format($n)])->values()->all());
-        $this->info(sprintf('%s rows in %s (%.1fs)', number_format(array_sum($sql->counts())), $out, microtime(true) - $started));
+        $this->info(sprintf('%s rows in %s (%.1fs, peak memory %d MB)', number_format(array_sum($sql->counts())), $out, microtime(true) - $started, memory_get_peak_usage(true) / 1048576));
 
         return self::SUCCESS;
     }
