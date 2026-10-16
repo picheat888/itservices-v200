@@ -125,7 +125,8 @@ function WaitingCard({
 }) {
     const t = useT();
     const links = useDashLinks();
-    const listLink = links.requestsStatus('pending');
+    // Every request: the stalled set holds approval steps and IT completion steps alike.
+    const listLink = links.requestsAll;
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={WIDE}>
