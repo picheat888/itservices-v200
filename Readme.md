@@ -5671,3 +5671,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ปุ่มเมนูด้านข้าง / ภาษา / ธีม / กระดิ่งใน `topbar.tsx` มี `aria-label` (กระดิ่งบอกจำนวนที่ยังไม่อ่าน) ไอคอนและป้ายตัวเลขเป็น `aria-hidden`; เพิ่มคีย์ `toggle_sidebar` ใน common
 - หน้า Asset: พิมพ์ค้นหาเขียนแค่ `?search` แล้วรีเซ็ตหน้าเมื่อคำค้นถูกส่งหลัง debounce (pattern เดียวกับ Stock) วัดจริง: พิมพ์ 4 ตัวอักษรจากหน้า 2 ยิง `/api/assets` 1 ครั้ง
 - `SerialToggle` ใช้ track เดียวกับ shared `Switch` (`bg-muted-foreground/80 dark:/60`) ผ่าน contrast 3:1 และ thumb เลื่อนด้วย `translate-x` แทน `left`
+- ฟอร์มบันทึกการเคลื่อนไหว (`movement-drawer.tsx`) ตัดโหมด "จ่ายออก" ที่ไม่มีทางเปิดออก และประกาศ `MovementKind = receive | return | transfer` ให้ type บังคับ: การจ่ายออกเกิดได้ทางเดียวคือ คำขอเบิก → อนุมัติ → จ่าย (กติกาของระบบ) ลบคีย์ `stock_issue_to_ph`

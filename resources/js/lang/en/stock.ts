@@ -141,7 +141,6 @@ export const stock: Dict = {
     stock_new_count_desc: 'Choose the warehouse, category and SKUs to count',
     stock_opens_new_tab: 'opens in a new tab',
     stock_reference_ph: 'e.g. PO-2026-118 or REQ-12',
-    stock_issue_to_ph: 'Employee code, e.g. EMP-1234',
     stock_serial_rows: 'Serial rows',
     stock_serial_rows_fewer: 'Fewer serial rows',
     stock_serial_rows_more: 'More serial rows',

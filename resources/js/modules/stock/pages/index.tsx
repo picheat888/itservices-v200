@@ -12,7 +12,7 @@ import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-para
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { cn, toRecordId } from '@/shared/lib/utils';
-import type { StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
+import type { StockItem, StockItemStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { MovementDrawer } from '../components/movement-drawer';
+import { MovementDrawer, type MovementKind } from '../components/movement-drawer';
 import { RequestDrawer } from '../components/request-drawer';
 import { StockItemDetailModal } from '../components/stock-item-detail-modal';
 import { StockItemModal } from '../components/stock-item-modal';
@@ -343,7 +343,7 @@ export default function StockPage() {
             },
             { replace: true },
         );
-    const [moveKind, setMoveKind] = useState<StockMovementType | null>(null);
+    const [moveKind, setMoveKind] = useState<MovementKind | null>(null);
     const [reqOpen, setReqOpen] = useState(false);
 
     const { data: summary } = useStockSummary();
