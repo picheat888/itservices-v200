@@ -8,7 +8,8 @@
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
-        "test:dates": "node --test tests/js/datetime.test.ts tests/js/axis-labels.test.ts"
+        "test:dates": "node --test tests/js/datetime.test.ts tests/js/axis-labels.test.ts",
+        "test:js": "node --test tests/js/*.test.ts"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
