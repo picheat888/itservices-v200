@@ -15,6 +15,7 @@ use App\Support\Perf\Rng;
 use App\Support\Perf\SqlWriter;
 use App\Support\Perf\Stock;
 use App\Support\Perf\Targets;
+use App\Support\Perf\Tickets;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,7 @@ class PerfGenerate extends Command
     protected $description = 'Generate the 3-year performance dataset as a .sql file';
 
     /** @var list<class-string<PerfStep>> */
-    public const STEPS = [Copy::class, Org::class, Assets::class, Stock::class, Access::class, Requests::class];
+    public const STEPS = [Copy::class, Org::class, Assets::class, Stock::class, Access::class, Requests::class, Tickets::class];
 
     public function handle(): int
     {

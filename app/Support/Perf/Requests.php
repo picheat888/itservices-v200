@@ -471,12 +471,13 @@ class Requests implements PerfStep
             }
         }
 
+        $requestReason = $rng->pick(self::REASONS);
         $attachments = $rng->chance(0.25) ? $this->attachment($id, $created) : null;
         $sql->insert('service_requests', $this->fill('service_requests', [
             'id' => $id, 'reference' => $reference, 'type' => $type, 'origin' => $d['origin'], 'workflow_id' => $reg->get('workflow_ids')[$type] ?? null,
             'auto_ticket' => $autoTicket, 'user_id' => $d['owner_user'], 'submitted_by_user_id' => $d['submitter']['user_id'], 'submitted_by_name' => $d['submitter']['name'],
             'employee_id' => $employee['id'], 'requester_name' => $employee['name'], 'department_name' => $reg->get('department_names')[$employee['dept_id']],
-            'title' => $title, 'reason' => $rng->pick(self::REASONS), 'fields' => $display === [] ? null : ($raw + ['_display' => $display]),
+            'title' => $title, 'reason' => $requestReason, 'fields' => $display === [] ? null : ($raw + ['_display' => $display]),
             'location_id' => $columns['location_id'] ?? null, 'software_id' => $columns['software_id'] ?? null, 'social_platform_id' => $columns['social_platform_id'] ?? null,
             'email_group_id' => $columns['email_group_id'] ?? null, 'file_share_id' => $columns['file_share_id'] ?? null, 'request_option_id' => $columns['request_option_id'] ?? null,
             'status' => $status, 'ticket_id' => null, 'approved_at' => $times['approved'], 'rejected_at' => $times['rejected'], 'completed_at' => $times['completed'],
@@ -503,7 +504,7 @@ class Requests implements PerfStep
             'request_id' => $id, 'reference' => $reference, 'title' => $title, 'type' => $type, 'category' => $requestType->ticketCategory()->value,
             'employee_id' => $employee['id'], 'requester_name' => $employee['name'], 'department_name' => $reg->get('department_names')[$employee['dept_id']],
             'origin' => $d['origin'], 'opened_at' => $times['approved'], 'outcome' => $ticketOutcome, 'settled_at' => $settledAt, 'reason' => $reason,
-            'display' => $display, 'attachment' => $attachments,
+            'display' => $display, 'attachment' => $attachments, 'request_reason' => $requestReason, 'type_label' => $requestType->label(),
         ];
     }
 

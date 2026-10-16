@@ -75,6 +75,19 @@ class SqlWriterTest extends TestCase
         $w->insert('t', ['b' => 1]);
     }
 
+    public function test_update_flushes_pending_rows_first(): void
+    {
+        $path = $this->tmp();
+        $w = new SqlWriter($path, 'mariadb');
+        $w->insert('t', ['id' => 1, 'a' => null]);
+        $w->update('t', ['a' => 5], ['id' => 1]);
+        $w->close();
+        $sql = file_get_contents($path);
+        $this->assertStringContainsString('UPDATE `t` SET `a`=5 WHERE `id`=1;', $sql);
+        $this->assertLessThan(strpos($sql, 'UPDATE `t`'), strpos($sql, 'INSERT INTO `t`'));
+        $this->assertSame(1, substr_count($sql, 'INSERT INTO `t`'));
+    }
+
     public function test_formats_null_bool_and_carbon(): void
     {
         $path = $this->tmp();
