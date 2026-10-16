@@ -26,7 +26,8 @@ return new class extends Migration
                 ->map(fn ($roleId) => ['role_id' => $roleId, 'permission' => $switch, 'allowed' => true, 'created_at' => $now, 'updated_at' => $now])
                 ->all();
 
-            DB::table('role_permissions')->insertOrIgnore($rows);
+            // Upsert: a Role Template saved before this ran already wrote the switch as off.
+            DB::table('role_permissions')->upsert($rows, ['role_id', 'permission'], ['allowed', 'updated_at']);
         }
     }
 
