@@ -76,14 +76,15 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     // The full employee record: department, position, joined date…
     const { data: emp, isLoading: empLoading } = useEmployee(open ? (user?.employee_id ?? null) : null);
 
-    const canEdit = can('employees.edit_own');
-    // Each tab answers to its own page's permission, so the drawer never shows what that page would refuse
+    const canEdit = can('profile.edit');
+    const linked = !!user?.employee_code;
+    // Assets and Access show for any linked employee; Tickets and Requests answer to their page's permission
     const sees: Record<ProfileSection, boolean> = {
         profile: true,
-        assets: can('assets.my'),
+        assets: linked,
         tickets: can('tickets.my'),
         requests: can('requests.submit'),
-        access: can('access.my'),
+        access: linked,
     };
     const allowed = PROFILE_SECTIONS.filter((s) => sees[s]);
     const [urlTab, setTab] = useProfileSection(allowed);
@@ -392,12 +393,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             )}
 
                             {tab === 'assets' && (
-                                <MyAssetsTab
-                                    assets={myAssets}
-                                    loading={assetsLoading}
-                                    linked={!!user.employee_code}
-                                    canReturn={can('assets.return')}
-                                />
+                                <MyAssetsTab assets={myAssets} loading={assetsLoading} linked={linked} canReturn={can('profile.return_assets')} />
                             )}
                             {tab === 'tickets' && (
                                 <TicketsPane tickets={myTickets?.data ?? []} loading={ticketsLoading} emptyText={t('profile_no_tickets')} />

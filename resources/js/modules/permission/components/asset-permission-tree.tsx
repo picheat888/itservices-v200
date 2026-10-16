@@ -8,8 +8,7 @@ import { PermissionCardHeader } from './permission-card-header';
 
 // Mirrors App\Support\Permissions::assetHierarchy() — keep in sync.
 const MASTER = 'assets.module';
-// The self-service pair (assets.my + assets.return) is NOT here: it is master-independent
-// and now lives in its own card — see self-service-permission-tree.tsx.
+// Returning your own kit is profile.return_assets, on the My Profile card.
 // `chip: false` hides the "View" tag — used for single-switch groups (Dashboard) and
 // the management/special groups, which gate a whole area rather than a view/manage split.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
@@ -18,7 +17,7 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'assets.manage', children: ['assets.transfer', 'assets.receive', 'assets.retire'], chip: false },
     { view: 'assets.special', children: ['assets.force_recall', 'assets.cancel_writeoff'], chip: false },
 ];
-// Every key that lives under the master (excludes the standalone my/return pair).
+// Every key in the card; all of them live under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 
 const label = (key: string, lang: Lang) => actionLabel('assets', key.replace('assets.', ''), lang);
@@ -63,9 +62,7 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
 /**
  * Renders the Assets permission card as a master → group → management tree with
  * cascade (mirrors ContractPermissionTree): turning a parent off clears + locks its
- * children; turning a child on implies its ancestors. The "My Assets" pair
- * (`my` + `return`) is a standalone self-service group the master never locks —
- * `return` still requires `my`. Super is read-only (everything shown on + locked).
+ * children; turning a child on implies its ancestors. Super is read-only (everything shown on + locked).
  */
 export function AssetPermissionTree({
     draft,
@@ -171,7 +168,6 @@ export function AssetPermissionTree({
                     );
                 })}
             </div>
-
         </div>
     );
 }

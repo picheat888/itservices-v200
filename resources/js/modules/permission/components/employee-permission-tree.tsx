@@ -7,7 +7,6 @@ import { PermissionCardHeader } from './permission-card-header';
 
 // Mirrors App\Support\Permissions::employeeHierarchy() — keep in sync.
 const MASTER = 'employees.module';
-const STANDALONE = 'employees.edit_own';
 // `chip: false` hides the "View" tag — used for single-switch groups (Dashboard,
 // Org chart) that gate their whole tab rather than a view/management split.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
@@ -33,7 +32,7 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     },
     { view: 'employees.view_org', children: [], chip: false },
 ];
-// Every key that lives under the master (excludes the standalone edit_own).
+// Every key in the card; all of them live under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 
 const label = (key: string, lang: Lang) => actionLabel('employees', key.replace('employees.', ''), lang);
@@ -77,8 +76,7 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
 /**
  * Renders the Employee permission card as a master → view → management tree with
  * cascade: turning a parent off clears + locks its children; turning a child on
- * implies its ancestors. `edit_own` is a standalone self-service switch the master
- * never locks. Super is read-only (everything shown on + locked).
+ * implies its ancestors. Super is read-only (everything shown on + locked).
  */
 export function EmployeePermissionTree({
     draft,
@@ -124,14 +122,11 @@ export function EmployeePermissionTree({
         });
     };
 
-    const editOwnOn = has(STANDALONE);
-    const gatedActive = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
-    const activeCount = gatedActive + (editOwnOn ? 1 : 0);
-    const totalCount = GATED_KEYS.length + 1; // + edit_own
+    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
 
     return (
         <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="employees" on={activeCount} total={totalCount} lang={lang} />
+            <PermissionCardHeader module="employees" on={activeCount} total={GATED_KEYS.length} lang={lang} />
 
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
@@ -174,17 +169,6 @@ export function EmployeePermissionTree({
                         </div>
                     );
                 })}
-            </div>
-
-            {/* Standalone self-service switch — never locked by the master. */}
-            <div className="border-border flex items-center gap-2.5 border-t px-3.5 py-2.5">
-                <div className="min-w-0">
-                    <div className="text-sm font-medium">{label(STANDALONE, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_profile')}</div>
-                </div>
-                <div className="ml-auto">
-                    <Switch on={editOwnOn} locked={isSuper} onClick={() => toggle(STANDALONE)} />
-                </div>
             </div>
         </div>
     );
