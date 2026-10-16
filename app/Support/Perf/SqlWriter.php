@@ -33,7 +33,7 @@ class SqlWriter
         }
         $this->handle = fopen($path, 'wb');
         if ($this->isMariadb()) {
-            $this->raw("SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\nSET autocommit=0;\n");
+            $this->raw("SET NAMES utf8mb4;\nSET SESSION sql_mode=REPLACE(@@sql_mode,'NO_BACKSLASH_ESCAPES','');\nSET FOREIGN_KEY_CHECKS=0;\nSET autocommit=0;\n");
         }
     }
 
@@ -133,7 +133,7 @@ class SqlWriter
             is_int($v) => (string) $v,
             is_float($v) => rtrim(rtrim(sprintf('%.6F', $v), '0'), '.'),
             $v instanceof CarbonInterface => "'".$v->format('Y-m-d H:i:s')."'",
-            is_array($v) => $this->quote(json_encode($v, JSON_UNESCAPED_SLASHES)),
+            is_array($v) => $this->quote(json_encode($v, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
             default => $this->quote((string) $v),
         };
     }

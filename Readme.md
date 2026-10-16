@@ -5700,7 +5700,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
   php artisan migrate --database=perf       # migration ที่ DB จริงยังไม่ได้รัน (ถ้ามี)
   ```
 - ใช้งาน: ตั้ง `DB_DATABASE=itservices_perf` ใน `.env` แล้วรัน `composer run demo` (บัญชี `admin` เดิม และบัญชีสร้างใหม่ทุกคนใช้รหัส `Password1!`) `--seed=` ให้ไฟล์เดิมเสมอ `--scale=0.1` ย่อทุกตารางข้อมูลเคลื่อนไหว
-- ผลรอบเต็ม: 1,796,774 แถว ไฟล์ 462 MB สร้าง 145 วินาที (RAM สูงสุด 1.5 GB) นำเข้า 26 วินาที DB 714 MB: audit_logs 733,565 · notifications 579,550 · ticket_updates 149,908 · request_approvals 81,880 · email_logs 75,552 · tickets 60,000 · service_requests 24,000 · stock_movements 24,485 · assets 2,350 · employees 1,000
+- ผลรอบเต็ม: 1,794,493 แถว ไฟล์ 462 MB สร้าง 145 วินาที (RAM สูงสุด 1.5 GB) นำเข้า 26 วินาที DB 714 MB: audit_logs 733,565 · notifications 579,550 · ticket_updates 149,908 · request_approvals 81,880 · email_logs 75,552 · tickets 60,000 · service_requests 24,000 · stock_movements 24,485 · assets 2,350 · employees 1,000
 - notifications / audit_logs / email_logs สร้างตามเหตุการณ์ในอัตราเดียวกับแอป ไม่ได้ถูกจำกัดให้ตรงเป้าในแผน จึงมากกว่า 200,000 / 300,000 / 70,000
 - ทุกตารางที่ไม่ใช่ runtime มีข้อมูล ยกเว้น `workflow_step_approvers` (ว่างในค่าตั้งต้นที่คัดลอกมา) ไม่มีไฟล์แนบจริงบนดิสก์ (มีแค่แถวใน DB) ตรวจ FK ทั้ง 137 ความสัมพันธ์ไม่มีแถวกำพร้า
 - ตัวสร้างอยู่ที่ `app/Support/Perf/` (1 ไฟล์ต่อขั้น: Copy, Org, Assets, Stock, Access, Requests, Tickets, Logs) คำสั่ง `perf:generate` ทดสอบด้วย `tests/Unit/Perf` และ `tests/Feature/Perf`
@@ -5714,3 +5714,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ตัวเลขตรงกับรายงาน: ปิดทัน SLA และเวลาแก้ไขเฉลี่ย 30 วันใช้ `TicketOverviewReportService::kpisForAll()` (สูตรเดียวกับรายงานภาพรวม Ticket มี parity test) สถานะ SLA ของเคสที่ค้างใช้ `TicketMetrics::liveSlaState()` ร่วมกับรายงานงานค้าง สัญญาใกล้หมดอายุนับแบบเดียวกับรายการสัญญา (ช่วงแจ้งเตือนของแต่ละสัญญา) คำขอค้างใช้เกณฑ์ของ `RequestStalledService` (3 วัน)
 - ต่างจาก spec ตามที่ตกลง: สัญญาแบ่ง "ใน 30 วัน / หลัง 30 วัน", การ์ดคำขอค้างใช้เกณฑ์ 3 วัน, ตัวเลขไม่ใช้ font-mono, ช่องรอรับมอบแสดงรุ่นแทนวันส่งมอบ, การ์ดสิทธิ์ใช้การ์ดกลาง
 - Test: `tests/Feature/Dashboard/*BlockTest.php`, `DashboardSummaryTest`, `DashboardPermissionsTest`, `Report/TicketLiveSlaStateTest`, `tests/js/dash-math.test.ts`, `tests/js/dash-links.test.ts` ตรวจใน Chrome ทั้งโหมดสว่าง/มืด และ 768px กับบัญชีพนักงานทั่วไปและผู้ดูแลระบบ
+- ไฟล์ `.sql` มี hash รหัสผ่านของ admin และ app_settings ทั้งหมดจาก DB จริง เก็บใน `storage/perf` (gitignore) อย่าส่งต่อ ส่วนรหัสผ่านที่สร้างใหม่ตั้งเป็นวันใกล้ปัจจุบันเพื่อไม่ให้นโยบายรหัสผ่านหมดอายุล็อกผู้ใช้

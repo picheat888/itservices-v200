@@ -164,7 +164,7 @@ class Tickets implements PerfStep
             }
         }
 
-        $priority = $takenAt ? $rng->weighted(['critical' => 5, 'high' => 20, 'medium' => 50, 'low' => 25]) : null;
+        $priority = $plan === null && $takenAt ? $rng->weighted(['critical' => 5, 'high' => 20, 'medium' => 50, 'low' => 25]) : null;
         $workClass = $takenAt ? $rng->weighted(['standard' => 85, 'repair_internal' => 10, 'repair_vendor' => 5]) : 'standard';
         [$assigneeId, $assigneeName] = $takenAt ? $rng->pick($this->it) : [null, null];
 

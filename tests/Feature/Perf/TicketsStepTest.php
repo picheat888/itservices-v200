@@ -74,6 +74,13 @@ class TicketsStepTest extends TestCase
         $this->assertSame($this->db->table('tickets')->count(), $this->db->table('tickets')->distinct()->count('ticket_no'));
     }
 
+    public function test_auto_request_tickets_carry_no_priority(): void
+    {
+        // The app refuses a priority on a case opened from a request
+        $this->assertSame(0, $this->db->table('tickets')->where('source', 'auto_request')->whereNotNull('priority')->count());
+        $this->assertGreaterThan(0, $this->db->table('tickets')->where('source', 'manual')->whereNotNull('priority')->count());
+    }
+
     public function test_auto_tickets_mirror_their_requests(): void
     {
         $plans = $this->ctx->reg->get('auto_tickets');
