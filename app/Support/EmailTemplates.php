@@ -399,9 +399,7 @@ You can tracking progress in {{app.name}}.</p>
                 'cadence' => 'weekly',
             ],
             [
-                // The bell fires at the same moment and links to My Assets; this reaches the
-                // recipient who is not in the portal — which is most people, most of the time,
-                // and a hand-over nobody accepts sits in limbo until they do.
+                // Mailed beside the bell, which opens the profile drawer's Assets tab.
                 'key' => 'asset.assigned',
                 'name' => 'Asset transferred to you (ทรัพย์สินที่โอนไปยังผู้ใช้งาน)',
                 'subject' => 'Asset Management: Your new asset is ready: {{asset.code}}',

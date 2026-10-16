@@ -5,7 +5,6 @@ import type { Dict } from '@/lang/types';
  */
 export const profile: Dict = {
     // profile-drawer.tsx — cover, rail, footer
-    profile_signout: 'ออกจากระบบ',
     profile_name: 'ชื่อ',
     profile_change_photo: 'เปลี่ยนรูป',
     profile_name_required: 'กรุณากรอกชื่อ',

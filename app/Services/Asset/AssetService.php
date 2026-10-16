@@ -330,14 +330,7 @@ class AssetService
         }
     }
 
-    /**
-     * Bell alert to the employee an asset was pulled back from. Same shape as
-     * notifyRecipient(): resolved through the employee's login account and gated by
-     * assets.my, because the bell opens My Assets — a reader without that page has
-     * nowhere to land.
-     *
-     * A shared (owner-less) asset has no employee to tell, so nothing is sent.
-     */
+    /** Bell alert to the employee an asset was pulled back from, gated by assets.my (the bell opens the profile drawer's Assets tab). */
     private function notifyRecalledHolder(?Employee $holder, Asset $asset, string $subtype): void
     {
         if (! $holder) {

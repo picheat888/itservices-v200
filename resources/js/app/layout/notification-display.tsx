@@ -1,5 +1,7 @@
 import type { AppNotification } from '@/modules/notification';
-import { PROFILE_ASSETS_SEARCH } from '@/shared/lib/dialog-search';
+import { PROFILE_ASSETS_SEARCH } from '@/modules/profile';
+import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
+import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { requestTitle } from '@/shared/lib/request-meta';
 import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
 import {
@@ -28,6 +30,7 @@ import {
     UserPlus,
     XCircle,
 } from 'lucide-react';
+import type { NavigateFunction } from 'react-router-dom';
 
 /**
  * Shared presentation helpers for notifications, used by both the bell dropdown
@@ -338,4 +341,11 @@ export function notificationTarget(n: AppNotification): string {
         return '/stock?tab=items';
     }
     return `/employees?highlight=${n.data.employee_id}`;
+}
+
+/** Opens a notification's target: a path navigates, a `?…` target opens its dialog over the current page. */
+export function openNotificationTarget(navigate: NavigateFunction, n: AppNotification, currentSearch: string): void {
+    const resolved = resolveNotificationTarget(notificationTarget(n), currentSearch);
+    if (typeof resolved === 'string') navigate(resolved);
+    else navigate(resolved, { state: dialogPushedState() });
 }
