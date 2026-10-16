@@ -21,6 +21,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -29,6 +30,7 @@ use Tests\TestCase;
  */
 class RequestStalledReminderTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private User $requester;
@@ -49,7 +51,9 @@ class RequestStalledReminderTest extends TestCase
         $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $sup->id, 'position_id' => $title('Staff/Officer')]);
 
         $userRole = Role::firstOrCreate(['key' => 'user'], ['name' => 'Staff']);
-        RolePermission::updateOrCreate(['role_id' => $userRole->id, 'permission' => 'requests.submit'], ['allowed' => true]);
+        foreach (self::requestFiler() as $permission) {
+            RolePermission::updateOrCreate(['role_id' => $userRole->id, 'permission' => $permission], ['allowed' => true]);
+        }
 
         $this->requester = User::factory()->create(['role' => 'user', 'employee_id' => $staff->id]);
         $this->supUser = User::factory()->create(['role' => 'user', 'employee_id' => $sup->id, 'email' => 'sup@example.com']);

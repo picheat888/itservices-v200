@@ -25,6 +25,7 @@ use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -34,6 +35,7 @@ use Tests\TestCase;
  */
 class EmployeeOnboardingRequestTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private Employee $director;
@@ -591,7 +593,7 @@ class EmployeeOnboardingRequestTest extends TestCase
         // Their own account, provisioned later. The request carries employee_id = them,
         // but user_id is null (they had none when HR filed it) — so "my requests" used to
         // miss it and the detail returned 403. Their own onboarding was invisible to them.
-        $own = $this->makeUser('user', ['requests.submit'], $employee);
+        $own = $this->makeUser('user', self::requestFiler(), $employee);
 
         $this->actingAs($own)->getJson('/api/service-requests')
             ->assertOk()
@@ -628,10 +630,12 @@ class EmployeeOnboardingRequestTest extends TestCase
 
     public function test_a_request_somebody_filed_for_themselves_is_announced_once(): void
     {
-        RolePermission::updateOrCreate(
-            ['role_id' => Role::where('key', 'hr')->firstOrFail()->id, 'permission' => 'requests.submit'],
-            ['allowed' => true],
-        );
+        foreach (self::requestFiler() as $permission) {
+            RolePermission::updateOrCreate(
+                ['role_id' => Role::where('key', 'hr')->firstOrFail()->id, 'permission' => $permission],
+                ['allowed' => true],
+            );
+        }
 
         $response = $this->actingAs($this->hrUser)->postJson('/api/service-requests', [
             'type' => 'computer',
@@ -656,7 +660,7 @@ class EmployeeOnboardingRequestTest extends TestCase
         $this->addEmployee(['computer'])->assertCreated();
         $employee = Employee::where('first_name', 'Somchai')->firstOrFail();
         $request = ServiceRequest::firstOrFail();
-        $own = $this->makeUser('user', ['requests.submit'], $employee);
+        $own = $this->makeUser('user', self::requestFiler(), $employee);
 
         // Onboarding belongs to whoever runs it: the new hire may follow their own
         // request, not cancel the laptop HR asked for on their first day.
@@ -689,7 +693,7 @@ class EmployeeOnboardingRequestTest extends TestCase
     {
         // Seeing requests is a Request-module read, so HR needs that permission too.
         RolePermission::updateOrCreate(
-            ['role_id' => Role::where('key', 'hr')->firstOrFail()->id, 'permission' => 'requests.submit'],
+            ['role_id' => Role::where('key', 'hr')->firstOrFail()->id, 'permission' => 'requests.module'],
             ['allowed' => true],
         );
 

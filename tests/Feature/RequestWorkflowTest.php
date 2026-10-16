@@ -26,6 +26,7 @@ use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -35,6 +36,7 @@ use Tests\TestCase;
  */
 class RequestWorkflowTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private Employee $mgr;
@@ -66,7 +68,7 @@ class RequestWorkflowTest extends TestCase
             'first_name' => 'Staff', 'manager_id' => $this->sup->id, 'position_id' => $this->positionId('Staff/Officer'),
         ]);
 
-        $this->requester = $this->makeUser('user', ['requests.submit'], $this->staff);
+        $this->requester = $this->makeUser('user', self::requestFiler(), $this->staff);
         $this->supUser = $this->makeUser('user', [], $this->sup);
         $this->mgrUser = $this->makeUser('user', [], $this->mgr);
     }
@@ -594,7 +596,7 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($admin)->getJson('/api/service-requests')->assertJsonPath('meta.total', 1);
 
         // view_all holders see everything.
-        $auditor = $this->makeUser('auditor', ['requests.view_all']);
+        $auditor = $this->makeUser('auditor', ['requests.module', 'requests.view_all']);
         $this->actingAs($auditor)->getJson('/api/service-requests')->assertJsonPath('meta.total', 1);
 
         // The sidebar badge counts the approval waiting on Sup.
@@ -616,7 +618,7 @@ class RequestWorkflowTest extends TestCase
         // (a) No manager at all, on an ordinary position — the employee form requires a
         // report-to for these, so this is broken data, not a valid shape.
         $orphan = Employee::create(['first_name' => 'Orphan', 'position_id' => $this->positionId('Staff/Officer')]);
-        $orphanUser = $this->makeUser('user', ['requests.submit'], $orphan);
+        $orphanUser = $this->makeUser('user', self::requestFiler(), $orphan);
 
         $this->actingAs($orphanUser)->postJson('/api/service-requests', $this->computerPayload())
             ->assertUnprocessable()
@@ -653,7 +655,7 @@ class RequestWorkflowTest extends TestCase
         // A requester with nobody above them is refused the same way: the workflow is
         // at fault, not the line.
         $md = Position::create(['code' => 'POS-MD', 'title' => 'Managing Director', 'allow_special_position' => true]);
-        $bossUser = $this->makeUser('user', ['requests.submit'], Employee::create(['first_name' => 'Md', 'position_id' => $md->id]));
+        $bossUser = $this->makeUser('user', self::requestFiler(), Employee::create(['first_name' => 'Md', 'position_id' => $md->id]));
         $this->actingAs($bossUser)->postJson('/api/service-requests', $this->computerPayload())
             ->assertUnprocessable()
             ->assertJsonPath('errors.requester.0', 'workflow_incomplete');
@@ -692,7 +694,7 @@ class RequestWorkflowTest extends TestCase
         // nobody above them (an MD). Their chain steps are skipped, as before.
         $md = Position::create(['code' => 'POS-MD', 'title' => 'Managing Director', 'allow_special_position' => true]);
         $boss = Employee::create(['first_name' => 'Md', 'position_id' => $md->id]);
-        $bossUser = $this->makeUser('user', ['requests.submit'], $boss);
+        $bossUser = $this->makeUser('user', self::requestFiler(), $boss);
 
         $response = $this->actingAs($bossUser)->postJson('/api/service-requests', $this->computerPayload())->assertCreated();
 
@@ -713,7 +715,7 @@ class RequestWorkflowTest extends TestCase
         $junior = Employee::create([
             'first_name' => 'Junior', 'manager_id' => $boss->id, 'position_id' => $this->positionId('Staff/Officer'),
         ]);
-        $juniorUser = $this->makeUser('user', ['requests.submit'], $junior);
+        $juniorUser = $this->makeUser('user', self::requestFiler(), $junior);
 
         $response = $this->actingAs($juniorUser)->postJson('/api/service-requests', $this->computerPayload())->assertCreated();
 

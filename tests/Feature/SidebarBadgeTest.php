@@ -139,6 +139,33 @@ class SidebarBadgeTest extends TestCase
         $this->assertSame(1, $badges['requests']);
     }
 
+    public function test_the_requests_badge_opens_on_the_module_key_not_the_right_to_file(): void
+    {
+        $approver = Employee::create(['first_name' => 'Module', 'last_name' => 'Only', 'status' => 'active']);
+        $asker = Employee::create(['first_name' => 'Asker', 'last_name' => 'Badge', 'status' => 'active']);
+        $request = ServiceRequest::create([
+            'type' => 'computer', 'employee_id' => $asker->id,
+            'requester_name' => 'Asker Badge', 'title' => 'Laptop', 'reason' => 'Testing', 'status' => 'pending',
+        ]);
+        $request->approvals()->create([
+            'position' => 1, 'actor_type' => 'chain', 'kind' => 'approval', 'label' => 'Manager',
+            'approver_employee_id' => $approver->id, 'approver_name' => 'Module Only', 'status' => 'current',
+        ]);
+        $userWith = function (string $key, string $permission) use ($approver): User {
+            $role = Role::create(['key' => $key, 'name' => $key, 'is_system' => false]);
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+
+            return User::factory()->create(['role_id' => $role->id, 'employee_id' => $approver->id]);
+        };
+
+        $moduleOnly = $userWith('sb_req_module', 'requests.module');
+        $this->assertSame(1, $this->actingAs($moduleOnly)->getJson('/api/sidebar-badges')->assertOk()->json('data.requests'));
+
+        $moduleOnly->delete();
+        $submitOnly = $userWith('sb_req_submit', 'requests.submit');
+        $this->assertSame(0, $this->actingAs($submitOnly)->getJson('/api/sidebar-badges')->assertOk()->json('data.requests'));
+    }
+
     public function test_counts_the_user_may_not_see_come_back_as_zero(): void
     {
         $this->seedWorkForEveryBadge();

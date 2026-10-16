@@ -25,6 +25,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use ReflectionObject;
 use RuntimeException;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -34,6 +35,7 @@ use Tests\TestCase;
  */
 class RequestAutoTicketTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private User $requester;
@@ -56,7 +58,9 @@ class RequestAutoTicketTest extends TestCase
         $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $boss->id]);
 
         $role = Role::firstOrCreate(['key' => 'user'], ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false]);
-        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'requests.submit'], ['allowed' => true]);
+        foreach (self::requestFiler() as $permission) {
+            RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => $permission], ['allowed' => true]);
+        }
         $this->requester = User::factory()->create(['role' => 'user', 'employee_id' => $staff->id]);
         $this->bossUser = User::factory()->create(['role' => 'user', 'employee_id' => $boss->id]);
     }

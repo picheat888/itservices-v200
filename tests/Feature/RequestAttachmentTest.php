@@ -18,6 +18,7 @@ use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -27,6 +28,7 @@ use Tests\TestCase;
  */
 class RequestAttachmentTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private Employee $mgr;
@@ -58,7 +60,7 @@ class RequestAttachmentTest extends TestCase
             'first_name' => 'Staff', 'manager_id' => $this->sup->id, 'position_id' => $this->positionId('Staff/Officer'),
         ]);
 
-        $this->requester = $this->makeUser('user', ['requests.submit'], $this->staff);
+        $this->requester = $this->makeUser('user', self::requestFiler(), $this->staff);
         $this->supUser = $this->makeUser('user', [], $this->sup);
     }
 
