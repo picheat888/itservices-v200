@@ -29,7 +29,7 @@ import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
@@ -1434,6 +1434,7 @@ function EditorDialog({
     const { data: settings } = useSettings();
     const brand = settings?.brand_name || SAMPLE_VARS['app.name'];
     // Kept through the close animation so the content doesn't blank.
+    const confirmEdit = useConfirmEdit();
     const { record: shown } = useRecordView(template?.id ?? null, template);
 
     const [name, setName] = useState('');
@@ -1533,6 +1534,11 @@ function EditorDialog({
                 ),
                 confirmText: t('email_var_unknown_confirm'),
             });
+            asking.current = false;
+            if (!proceed) return;
+        } else {
+            asking.current = true;
+            const proceed = await confirmEdit({ name: template.name, sub: template.code });
             asking.current = false;
             if (!proceed) return;
         }
