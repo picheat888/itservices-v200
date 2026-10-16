@@ -40,8 +40,7 @@ function toFormData(payload: Record<string, unknown>): FormData {
 export const accessApi = {
     summary: (period: OverviewPeriod) =>
         http.get<ApiEnvelope<AccessSummary>>('/access/dashboard', { params: overviewPeriodParams(period) }).then((r) => r.data.data),
-    // What the signed-in person may reach — the self-service half of My assets & access.
-    // Its own key (access.my), not the directory master. See MyAccessController.
+    // What the signed-in person may reach; needs only a linked employee. See MyAccessController.
     mine: () => http.get<ApiEnvelope<EmployeeAccess>>('/access/mine').then((r) => r.data.data),
     emailGroups: () => http.get<ApiEnvelope<EmailGroup[]>>('/email-groups').then((r) => r.data.data),
     fileShares: () => http.get<ApiEnvelope<FileShare[]>>('/file-shares').then((r) => r.data.data),

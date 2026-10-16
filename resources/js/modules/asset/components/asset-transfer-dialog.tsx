@@ -166,13 +166,7 @@ export function AssetTransferDialog({
                                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                                     <div className="flex-1">
                                         <div className="text-sm font-semibold">{t('transfer_cannot_accept_title')}</div>
-                                        <div className="mt-0.5 text-xs leading-relaxed">
-                                            {t(
-                                                cannotAccept === 'no_account'
-                                                    ? 'transfer_cannot_accept_no_account'
-                                                    : 'transfer_cannot_accept_no_permission',
-                                            )}
-                                        </div>
+                                        <div className="mt-0.5 text-xs leading-relaxed">{t('transfer_cannot_accept_no_account')}</div>
                                     </div>
                                 </div>
                             )}

@@ -27,11 +27,11 @@ import { useUiStore } from '@/stores/ui';
 import {
     ArrowLeftRight,
     Briefcase,
-    LayoutDashboard,
     Check,
     ChevronLeft,
     ChevronRight,
     Eye,
+    LayoutDashboard,
     Lock,
     LogIn,
     Pencil,
@@ -53,9 +53,9 @@ import { GroupRoleModal } from '../components/group-role-modal';
 import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
 import { NotificationPermissionTree } from '../components/notification-permission-tree';
 import { PermissionCardHeader } from '../components/permission-card-header';
+import { ProfilePermissionTree } from '../components/profile-permission-tree';
 import { RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleModal } from '../components/role-modal';
-import { SelfServicePermissionTree } from '../components/self-service-permission-tree';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { TicketPermissionTree } from '../components/ticket-permission-tree';
 import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
@@ -149,12 +149,9 @@ export default function PermissionsPage() {
 // Groups the permission modules under the same sections as the sidebar nav
 // (Workspace / Administration) so the matrix mirrors the app's mental model.
 // Dashboard (Overview) carries no permissions, so it isn't represented here.
-/** The rights an employee holds over their own kit and accounts — one card, no master. */
-const SELF_SERVICE_KEYS = ['assets.my', 'assets.return', 'access.my'];
-
 const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
     { label: 'nav_overview', icon: LayoutDashboard, modules: ['dashboard'] },
-    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access'] },
+    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access', 'profile'] },
     // `workflows` is listed under ADMIN_GROUPS, not here — the sidebar puts the screen
     // under Administration, and the matrix mirrors the sidebar.
     { label: 'nav_admin', icon: Shield, modules: ['system'] },
@@ -411,16 +408,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                             const groups =
                                 section.label === 'nav_admin'
                                     ? ADMIN_GROUPS
-                                    : [
-                                          ...section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) })),
-                                          // Self-service is a card, not a module: its keys belong to
-                                          // assets and access but answer to no master, so they are
-                                          // lifted out of both cards and shown together.
-                                          { module: 'self_service', keys: SELF_SERVICE_KEYS },
-                                      ];
-                            // Deduped: the self-service keys are counted by their own card, and are
-                            // already part of the assets/access catalogues the section lists.
-                            const sectionActions = [...new Set(groups.flatMap((g) => g.keys))];
+                                    : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
+                            const sectionActions = groups.flatMap((g) => g.keys);
                             const sectionOn = sectionActions.filter(isOn).length;
                             return (
                                 <div key={section.label}>
@@ -488,12 +477,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                                     />
                                                 );
                                             }
-                                            // Not a module — the self-service rights every
-                                            // employee holds over their own things, rendered
-                                            // beside the modules they used to hide inside.
-                                            if (group.module === 'self_service') {
+                                            if (group.module === 'profile') {
                                                 return (
-                                                    <SelfServicePermissionTree
+                                                    <ProfilePermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}

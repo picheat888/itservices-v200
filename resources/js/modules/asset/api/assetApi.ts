@@ -2,12 +2,8 @@ import { overviewPeriodParams, type OverviewPeriod } from '@/shared/components/o
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog, Contract, ContractLinkableAsset } from '@/shared/types';
 
-/**
- * Why an employee cannot press Accept on a hand-over, keyed by employee id — the exceptions
- * only, so an id missing from the map is somebody who can. `no_account` means they have no
- * login at all; `no_permission` means they have one but it cannot open My Assets.
- */
-export type RecipientReadiness = Record<number, 'no_account' | 'no_permission'>;
+/** Employees who cannot press Accept on a hand-over because they have no login, keyed by employee id. */
+export type RecipientReadiness = Record<number, 'no_account'>;
 /** Minimal contract row for the rented-asset form picker (from /assets/contract-options). */
 export interface AssetContractOption {
     id: number;
