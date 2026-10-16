@@ -8,7 +8,7 @@ import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
@@ -55,7 +55,7 @@ function itemToForm(item: StockItem): StockItemPayload {
  */
 export function StockItemModal({ open, item, onClose }: { open: boolean; item?: StockItem | null; onClose: () => void }) {
     const t = useT();
-    const confirm = useConfirm();
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useStockItemMutations();
     const { data: categories = [] } = useCategories();
     const { data: units = [] } = useUnits();
@@ -107,12 +107,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     const submit = async () => {
         if (saving || saved || !form.name.trim() || (item && !form.sku.trim())) return;
-        // Editing an existing item asks for confirmation before saving
-        if (item) {
-            if (!(await confirm({ variant: 'edit', title: t('stock_edit_item'), description: t('stock_edit_confirm') }))) {
-                return;
-            }
-        }
+        if (item && isDirty && !(await confirmEdit({ name: item.name, sub: item.sku }))) return;
         try {
             if (item) {
                 await update.mutateAsync({ id: item.id, payload: form });

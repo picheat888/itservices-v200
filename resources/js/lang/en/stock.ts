@@ -22,7 +22,6 @@ export const stock: Dict = {
     stock_track_serial_off: 'Tracked by quantity only (consumables / accessories).',
     stock_keep_serials_confirm: 'Every unit of this item will require its own serial number when received. Turn this on?',
     stock_enable: 'Turn on',
-    stock_edit_confirm: 'Save the changes to this item?',
     stock_view: 'View',
     stock_detail: 'Item details',
     stock_serial_list: 'Serial numbers',

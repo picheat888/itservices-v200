@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { editConfirmEntity, type EditConfirmTarget } from '@/shared/lib/edit-confirm';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -66,6 +67,31 @@ export function useConfirm(): ConfirmFn {
     const ctx = React.useContext(ConfirmContext);
     if (!ctx) throw new Error('useConfirm must be used within <ConfirmProvider>');
     return ctx;
+}
+
+/** Confirm before saving an edit: shared wording, the saved record named; a second call while one is open resolves false. */
+export function useConfirmEdit(): (target: EditConfirmTarget) => Promise<boolean> {
+    const t = useT();
+    const confirm = useConfirm();
+    const asking = React.useRef(false);
+    return React.useCallback(
+        async (target: EditConfirmTarget) => {
+            if (asking.current) return false;
+            asking.current = true;
+            try {
+                return await confirm({
+                    variant: 'edit',
+                    title: t('edit_confirm_title'),
+                    description: t('edit_confirm_desc'),
+                    confirmText: t('edit_confirm_save'),
+                    entity: editConfirmEntity(target),
+                });
+            } finally {
+                asking.current = false;
+            }
+        },
+        [confirm, t],
+    );
 }
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
