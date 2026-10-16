@@ -30,7 +30,7 @@ function ColumnHeader({ dateLabel }: { dateLabel: string }) {
             <div>{t('emp_v_col_device')}</div>
             <div className={WIDE_ONLY}>{t('emp_v_col_tag')}</div>
             <div className={WIDE_ONLY}>{t('emp_v_col_serial')}</div>
-            <div>{dateLabel}</div>
+            <div className="text-center">{dateLabel}</div>
             <div />
         </div>
     );
@@ -136,7 +136,9 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                                 </div>
                                 <TagCell tag={a.tag} />
                                 <SerialCell asset={a} />
-                                <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{fmt.dateTime(a.handed_over_at)}</div>
+                                <div className="text-center text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                                    {fmt.date(a.handed_over_at)}
+                                </div>
                                 <div className="flex justify-end">
                                     <Button
                                         size="sm"
@@ -184,7 +186,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                                 </div>
                                 <TagCell tag={a.tag} />
                                 <SerialCell asset={a} />
-                                <div className="text-muted-foreground text-xs font-semibold">{fmt.date(a.owned_since)}</div>
+                                <div className="text-muted-foreground text-center text-xs font-semibold">{fmt.date(a.owned_since)}</div>
                                 <div className="flex justify-end">
                                     {canReturn && a.status === 'deployed' && (
                                         <Button
