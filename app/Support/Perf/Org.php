@@ -263,7 +263,7 @@ class Org implements PerfStep
                 $this->ctx->sql->insert('users', $this->fill('users', [
                     'id' => $p['user_id'], 'name' => $p['first'].' '.$p['last'], 'email' => $p['email'],
                     'username' => strstr($p['email'], '@', true), 'password' => self::PASSWORD_HASH,
-                    'password_changed_at' => $joinedAt, 'must_change_password' => 0,
+                    'password_changed_at' => $this->ctx->clock->end()->subDays($rng->int(0, 14)), 'must_change_password' => 0,
                     'created_at' => $joinedAt, 'updated_at' => $joinedAt, 'employee_id' => $p['id'], 'role_id' => $roleId,
                 ]));
             }

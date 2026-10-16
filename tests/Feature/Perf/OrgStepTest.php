@@ -85,6 +85,14 @@ class OrgStepTest extends TestCase
         }
     }
 
+    public function test_passwords_are_recent_so_an_expiry_policy_cannot_lock_users_out(): void
+    {
+        [$ctx, $db] = PerfImport::run([Copy::class, Org::class]);
+
+        $stale = $db->table('users')->where('id', '!=', $ctx->reg->get('admin_user_id'))->where('password_changed_at', '<', '2026-09-15')->count();
+        $this->assertSame(0, $stale);
+    }
+
     public function test_emails_and_codes_are_unique(): void
     {
         [, $db] = PerfImport::run([Copy::class, Org::class]);

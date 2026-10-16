@@ -46,6 +46,18 @@ class SqlWriterTest extends TestCase
         $this->assertSame(2500, $w->counts()['t']);
     }
 
+    public function test_header_pins_sql_mode_and_json_keeps_thai_as_text(): void
+    {
+        $path = $this->tmp();
+        $w = new SqlWriter($path, 'mariadb');
+        $w->insert('t', ['data' => ['k' => 'ทดสอบ']]);
+        $w->close();
+        $sql = file_get_contents($path);
+        $this->assertStringContainsString("REPLACE(@@sql_mode,'NO_BACKSLASH_ESCAPES','')", $sql);
+        $this->assertStringContainsString('ทดสอบ', $sql);
+        $this->assertStringNotContainsString('u0e17', $sql);
+    }
+
     public function test_commits_every_twenty_chunks_on_mariadb_only(): void
     {
         $path = $this->tmp();
@@ -77,7 +89,7 @@ class SqlWriterTest extends TestCase
         $w->close();
         $sql = file_get_contents($path);
         $this->assertStringContainsString("'O''Brien \\\\ ทดสอบ'", $sql);
-        $this->assertStringContainsString("'{\"k\":\"\\\\u0e17\\\\u0e14\\\\u0e2a\\\\u0e2d\\\\u0e1a\"}'", $sql);
+        $this->assertStringContainsString("'{\"k\":\"ทดสอบ\"}'", $sql);
 
         $path2 = $this->tmp();
         $w2 = new SqlWriter($path2, 'sqlite');
@@ -85,7 +97,7 @@ class SqlWriterTest extends TestCase
         $w2->close();
         $sql2 = file_get_contents($path2);
         $this->assertStringContainsString("'O''Brien \ ทดสอบ'", $sql2);
-        $this->assertStringContainsString("'{\"k\":\"\u0e17\u0e14\u0e2a\u0e2d\u0e1a\"}'", $sql2);
+        $this->assertStringContainsString("'{\"k\":\"ทดสอบ\"}'", $sql2);
     }
 
     public function test_rejects_rows_with_different_columns(): void
