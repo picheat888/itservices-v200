@@ -29,4 +29,7 @@ export const profile: Dict = {
     profile_pending_assets_badge: '{n} รายการรอรับ',
     profile_assets_show_all: 'แสดงทั้งหมด อีก {n} รายการ',
     profile_assets_show_less: 'แสดงน้อยลง',
+    profile_assets_accept_all: 'รับมอบทั้งหมด',
+    profile_assets_accept_all_confirm: 'ยืนยันว่าได้รับทรัพย์สินทั้ง {n} รายการนี้ครบแล้ว',
+    profile_assets_accepted: 'รับมอบแล้ว',
 };

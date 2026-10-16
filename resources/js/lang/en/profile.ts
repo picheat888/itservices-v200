@@ -29,4 +29,7 @@ export const profile: Dict = {
     profile_pending_assets_badge: '{n} awaiting acceptance',
     profile_assets_show_all: 'Show all, {n} more',
     profile_assets_show_less: 'Show less',
+    profile_assets_accept_all: 'Accept all',
+    profile_assets_accept_all_confirm: 'Confirm you have received all {n} of these assets.',
+    profile_assets_accepted: 'Accepted',
 };
