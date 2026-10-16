@@ -4,6 +4,7 @@ namespace App\Models\Asset;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
+use App\Enums\Asset\AssetTransferKind;
 use App\Models\Concerns\RecordsActors;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -146,6 +148,15 @@ class Asset extends Model
     public function transfers(): HasMany
     {
         return $this->hasMany(AssetTransfer::class)->latest();
+    }
+
+    /** The most recent hand-over transfer row (when IT pressed transfer). */
+    public function latestHandover(): HasOne
+    {
+        return $this->hasOne(AssetTransfer::class)->ofMany(
+            ['created_at' => 'max', 'id' => 'max'],
+            fn ($query) => $query->where('kind', AssetTransferKind::Handover->value)
+        );
     }
 
     /** Repair/service tickets that reference this asset, most recent first. */

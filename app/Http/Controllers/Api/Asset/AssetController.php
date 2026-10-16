@@ -278,7 +278,7 @@ class AssetController extends Controller
         }
 
         $assets = Asset::query()
-            ->with(['contract.vendor', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department'])
+            ->with(['contract.vendor', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'latestHandover'])
             ->where('owner_employee_id', $employee->id)
             ->latest('id')
             ->get();
