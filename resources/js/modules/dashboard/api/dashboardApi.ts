@@ -6,6 +6,8 @@ export interface PendingAsset {
     asset_code: string;
     tag: string | null;
     model: string | null;
+    category: string | null;
+    category_th: string | null;
 }
 
 export interface MyTicketRow {

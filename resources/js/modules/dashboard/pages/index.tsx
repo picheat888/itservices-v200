@@ -25,6 +25,7 @@ import type {
     WaitingRequestRow,
 } from '../api/dashboardApi';
 import { useDashboardSummary } from '../hooks/use-dashboard';
+import { groupPendingAssets } from '../lib/pending-groups';
 
 /** Badge tone per ticket / request status — the same colours the module pages use. */
 const statusTone: Record<string, 'blue' | 'green' | 'amber' | 'gray' | 'red'> = {
@@ -724,6 +725,7 @@ export default function DashboardPage() {
 
     const mine = data?.mine;
     const toAccept = mine?.pending_acceptance ?? [];
+    const pendingGroups = groupPendingAssets(toAccept, lang);
 
     return (
         <div className="space-y-6">
@@ -732,35 +734,42 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground text-sm">{t('dash_welcome_sub')}</p>
             </div>
 
-            {/* The only block that asks for an action, so it sits above everything and is a
-                list rather than a count: each row is a device nobody owns until it is accepted. */}
+            {/* The only block that asks for an action: one strip, a count, the models waiting, one button */}
             {toAccept.length > 0 && (
-                <Card className="border-brand/40 bg-brand/5 p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                            <span className="bg-brand/15 text-brand flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-                                <PackageCheck className="h-[18px] w-[18px]" />
-                            </span>
-                            <div>
-                                <div className="font-semibold">{t('dash_accept_title')}</div>
-                                <div className="text-muted-foreground text-sm">{t('dash_accept_sub')}</div>
-                                <ul className="mt-2 space-y-1">
-                                    {toAccept.map((asset) => (
-                                        <li key={asset.id} className="text-sm">
-                                            <span className="font-mono">{asset.asset_code}</span>
-                                            {asset.model && <span className="text-muted-foreground ml-2">{asset.model}</span>}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                <Card className="border-brand/40 bg-brand/5 flex flex-wrap items-center gap-5 px-5 py-4">
+                    <div className="flex shrink-0 items-center gap-3">
+                        <span className="bg-brand text-brand-foreground flex h-11 w-11 items-center justify-center rounded-[10px]">
+                            <PackageCheck className="h-[22px] w-[22px]" aria-hidden />
+                        </span>
+                        <div className="text-brand flex min-w-[56px] flex-col items-center justify-center self-stretch text-center">
+                            <span className="text-[32px] leading-none font-extrabold">{toAccept.length}</span>
+                            <span className="text-[11px] leading-none font-semibold">{t('dash_accept_items')}</span>
                         </div>
-                        <Button asChild>
-                            <Link to={{ search: PROFILE_ASSETS_SEARCH }} state={dialogPushedState()}>
-                                <Check className="h-4 w-4" />
-                                {t('dash_accept_go')}
-                            </Link>
-                        </Button>
                     </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div>
+                            <div className="font-semibold">{t('dash_accept_title')}</div>
+                            <div className="text-muted-foreground text-xs">{t('dash_accept_sub')}</div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {pendingGroups.map((group) => (
+                                <span
+                                    key={group.key}
+                                    className="bg-card border-border inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium"
+                                >
+                                    {group.type && <span className="text-muted-foreground">{group.type}</span>}
+                                    {group.model}
+                                    <span className="text-brand font-bold">×{group.count}</span>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                    <Button asChild className="shrink-0">
+                        <Link to={{ search: PROFILE_ASSETS_SEARCH }} state={dialogPushedState()}>
+                            <Check className="h-4 w-4" />
+                            {t('dash_accept_go')}
+                        </Link>
+                    </Button>
                 </Card>
             )}
 
