@@ -109,6 +109,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     const entityId = React.useId();
     // Opened without a trigger: remember what had focus so closing returns there.
     const returnFocus = React.useRef<HTMLElement | null>(null);
+    const contentRef = React.useRef<HTMLDivElement>(null);
 
     const settle = React.useCallback((result: boolean) => {
         resolver.current?.(result);
@@ -179,11 +180,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 }}
             >
                 <DialogContent
+                    ref={contentRef}
                     className="max-w-md gap-4"
                     aria-describedby={opts?.entity ? `${descId} ${entityId}` : descId}
                     onCloseAutoFocus={(e) => {
                         e.preventDefault();
-                        returnFocus.current?.focus();
+                        const target = returnFocus.current;
+                        const active = document.activeElement;
+                        // Leave focus where the caller already put it (e.g. a field with a server error)
+                        const elsewhere = active && active !== document.body && !contentRef.current?.contains(active);
+                        if (elsewhere || !target?.isConnected) return;
+                        if (target.matches(':disabled')) (target.closest('[role="dialog"]') as HTMLElement | null)?.focus();
+                        else target.focus();
                     }}
                     onOpenAutoFocus={(e) => {
                         // Focus Cancel (not the destructive action) so a stray Enter is safe.
