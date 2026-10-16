@@ -248,7 +248,17 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
+            <DialogContent
+                className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0"
+                // Land on the open tab, not the first copy button in the rail
+                onOpenAutoFocus={(e) => {
+                    const activeTab = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(`#${CSS.escape(dialogTabId(panelId, tab))}`);
+                    if (activeTab) {
+                        e.preventDefault();
+                        activeTab.focus({ preventScroll: true });
+                    }
+                }}
+            >
                 <DialogTitle className="sr-only">{t('profile')}</DialogTitle>
                 <span role="status" aria-live="polite" className="sr-only">
                     {copied ? t('cred_copied') : ''}
