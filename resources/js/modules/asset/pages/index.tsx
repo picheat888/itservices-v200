@@ -87,7 +87,7 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
                     <Icon className="h-[18px] w-[18px]" />
                 </span>
             </div>
-            <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
+            <div className="mt-2 text-3xl font-bold">{value}</div>
             {hint && <div className="text-muted-foreground mt-1 text-xs">{hint}</div>}
         </Card>
     );
@@ -411,7 +411,7 @@ export default function AssetsPage() {
             header: t('asset_no'),
             render: (tr) => (
                 <div className="leading-tight">
-                    <span className="font-mono text-[11px] font-medium">{tr.asset_tag}</span>
+                    <span className="text-[11px] font-medium">{tr.asset_tag}</span>
                     <span className="text-muted-foreground block text-[11px]">{tr.asset_model || '—'}</span>
                 </div>
             ),
@@ -723,7 +723,7 @@ export default function AssetsPage() {
                                                     {TYPE_BUCKETS.filter((s) => b[s.key] > 0).map((s) => (
                                                         <span
                                                             key={s.key}
-                                                            className="flex shrink-0 justify-center font-mono text-xs leading-none font-semibold whitespace-nowrap"
+                                                            className="flex shrink-0 justify-center text-xs leading-none font-semibold whitespace-nowrap"
                                                             style={{
                                                                 width: `${(b[s.key] / Math.max(1, b.count)) * 100}%`,
                                                                 color: statusColors[s.status],
@@ -747,7 +747,7 @@ export default function AssetsPage() {
                                                     ))}
                                                 </span>
                                             </InfoPopover>
-                                            <span className="text-right font-mono text-sm leading-none font-semibold">{b.count}</span>
+                                            <span className="text-right text-sm leading-none font-semibold">{b.count}</span>
                                         </div>
                                     ))}
                                     {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
@@ -813,7 +813,7 @@ export default function AssetsPage() {
                                                             openAsset(a);
                                                         }}
                                                         aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
-                                                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded font-mono text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+                                                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
                                                     >
                                                         {a.asset_code}
                                                     </button>
@@ -823,7 +823,7 @@ export default function AssetsPage() {
                                                 <td className="px-3 py-2">
                                                     <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                 </td>
-                                                <td className="px-3 py-2 text-right font-mono font-semibold">{a.value_display}</td>
+                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{a.value_display}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1222,7 +1222,7 @@ export default function AssetsPage() {
                                                                 openAsset(a);
                                                             }}
                                                             aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
-                                                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded font-mono text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+                                                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
                                                         >
                                                             {a.asset_code}
                                                         </button>
@@ -1250,10 +1250,7 @@ export default function AssetsPage() {
                                                         </span>
                                                     </td>
                                                     {/* What IT reads off the sticker; the search already matches it. */}
-                                                    <td
-                                                        className="max-w-[10rem] truncate px-4 py-2.5 font-mono text-xs"
-                                                        title={a.serial ?? undefined}
-                                                    >
+                                                    <td className="max-w-[10rem] truncate px-4 py-2.5 text-xs" title={a.serial ?? undefined}>
                                                         {a.serial || <span className="text-muted-foreground">—</span>}
                                                     </td>
                                                     {/* Holder with their department under it (the department alone was a column
@@ -1280,16 +1277,16 @@ export default function AssetsPage() {
                                                     <td className="px-4 py-2.5 whitespace-nowrap">
                                                         <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                     </td>
-                                                    <td className="px-4 py-2.5 text-right font-mono text-xs whitespace-nowrap tabular-nums">
+                                                    <td className="px-4 py-2.5 text-right text-xs whitespace-nowrap tabular-nums">
                                                         {a.source === 'rented' ? (
                                                             // The contract's rent is for the whole contract — repeated on every unit it read as
                                                             // each one's value. A "Rented" badge with the contract code under it instead.
-                                                            <div className="flex flex-col items-end font-sans">
+                                                            <div className="flex flex-col items-end">
                                                                 <StatusBadge tone="violet" dot={false}>
                                                                     {t('asset_rented_badge')}
                                                                 </StatusBadge>
                                                                 {a.contract_code && (
-                                                                    <div className="text-muted-foreground font-mono text-xs">{a.contract_code}</div>
+                                                                    <div className="text-muted-foreground text-xs">{a.contract_code}</div>
                                                                 )}
                                                             </div>
                                                         ) : (

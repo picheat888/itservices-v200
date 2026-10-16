@@ -252,7 +252,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                         <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                             <span>{editing ? t('edit_asset') : t('register_asset')}</span>
                             {editing && (
-                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
+                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">
                                     {editing.asset_code}
                                 </span>
                             )}
@@ -339,12 +339,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                     />
                                 </Field>
                                 <Field label={t('asset_serial')} required error={err.serial} name="serial">
-                                    <Input
-                                        value={form.serial}
-                                        onChange={(e) => upd('serial', e.target.value)}
-                                        className="font-mono"
-                                        placeholder="SN-XXXXXXXX"
-                                    />
+                                    <Input value={form.serial} onChange={(e) => upd('serial', e.target.value)} placeholder="SN-XXXXXXXX" />
                                 </Field>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -394,7 +389,6 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                         <Field label={`${t('asset_purchase_price')} (${symbol})`} required error={err.value} name="value">
                                             <Input
                                                 inputMode="numeric"
-                                                className="font-mono"
                                                 value={form.value ? Number(form.value).toLocaleString() : ''}
                                                 onChange={(e) => upd('value', e.target.value.replace(/[^\d]/g, ''))}
                                                 placeholder="0"

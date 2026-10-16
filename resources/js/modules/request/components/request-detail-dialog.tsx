@@ -247,7 +247,7 @@ function RequestDetailBody({
                             {request.fields_display.map((row) => (
                                 <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
                                     <span className="text-muted-foreground shrink-0 text-xs">{lang === 'th' ? row.label_th : row.label_en}</span>
-                                    <span className={cn('text-right font-medium break-all', row.mono && 'font-mono')}>
+                                    <span className={'text-right font-medium break-all'}>
                                         {lang === 'th' ? row.value_th || row.value : row.value}
                                     </span>
                                 </div>
@@ -272,7 +272,7 @@ function RequestDetailBody({
                                     <TicketIcon className="h-4.5 w-4.5" />
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                    <span className="block font-mono text-sm font-bold">{request.ticket.ticket_no}</span>
+                                    <span className="block text-sm font-bold">{request.ticket.ticket_no}</span>
                                     <span className="text-muted-foreground block text-xs">{t('req_ticket_auto_hint')}</span>
                                 </span>
                             </Link>
@@ -377,7 +377,7 @@ function RequesterCard({ requester }: { requester: ServiceRequest['requester'] }
 
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3.5">
                 <KV label={t('req_requester_name')} value={requester.name} />
-                <KV label={t('req_emp_code')} value={requester.code || '—'} mono />
+                <KV label={t('req_emp_code')} value={requester.code || '—'} />
                 <KV label={t('position')} value={requester.position || '—'} />
                 <KV label={t('department')} value={requester.department ?? '—'} />
             </div>
@@ -386,13 +386,13 @@ function RequesterCard({ requester }: { requester: ServiceRequest['requester'] }
 }
 
 /** One labelled field: small uppercase label over its value. */
-function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function KV({ label, value }: { label: string; value: string }) {
     return (
         <div className="min-w-0">
             <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase [&:lang(th)]:tracking-normal [&:lang(th)]:normal-case">
                 {label}
             </div>
-            <div className={cn('mt-0.5 truncate text-sm font-medium', mono && 'font-mono text-sm')}>{value}</div>
+            <div className={'mt-0.5 truncate text-sm font-medium'}>{value}</div>
         </div>
     );
 }

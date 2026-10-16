@@ -53,7 +53,7 @@ function StatCard({ label, value, icon: Icon, to, state }: { label: string; valu
                         <Icon className="h-[18px] w-[18px]" />
                     </span>
                 </div>
-                <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
+                <div className="mt-2 text-3xl font-bold">{value}</div>
             </Link>
         </Card>
     );
@@ -189,7 +189,7 @@ function TicketsOverviewCard({ it }: { it: DashboardIt }) {
                 <span className="text-muted-foreground flex items-baseline gap-x-3 text-xs">
                     <span>{t('dash_last_days').replace('{n}', String(it.window_days))}</span>
                     <span>
-                        <b className="text-foreground font-mono font-semibold">{total}</b> {t('dash_cases')}
+                        <b className="text-foreground font-semibold">{total}</b> {t('dash_cases')}
                     </span>
                 </span>
             </div>
@@ -230,7 +230,7 @@ function TicketsOverviewCard({ it }: { it: DashboardIt }) {
                                 ))}
                             </svg>
                             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="font-mono text-[28px] leading-none font-bold">{total}</span>
+                                <span className="text-[28px] leading-none font-bold">{total}</span>
                                 <span className="text-muted-foreground mt-1 text-[11px]">{t('dash_cases')}</span>
                             </div>
                         </div>
@@ -243,8 +243,8 @@ function TicketsOverviewCard({ it }: { it: DashboardIt }) {
                                 <li key={key} className="flex items-baseline gap-2 text-sm">
                                     <span className={cn('h-2 w-2 shrink-0 translate-y-[-1px] rounded-full', STATUS_DOT[key])} />
                                     <span className="text-muted-foreground truncate">{t(`ticket_${key}`)}</span>
-                                    <span className="ml-auto font-mono font-semibold">{value}</span>
-                                    <span className="text-muted-foreground w-9 shrink-0 text-right font-mono text-xs">
+                                    <span className="ml-auto font-semibold">{value}</span>
+                                    <span className="text-muted-foreground w-9 shrink-0 text-right text-xs">
                                         {Math.round((value / total) * 100)}%
                                     </span>
                                 </li>
@@ -328,11 +328,7 @@ function VolumeChart({ it }: { it: DashboardIt }) {
             <div className="flex" style={{ height: CHART.height }}>
                 {/* The scale, in its own gutter. Three ticks is enough to read a value off the
                     line to within a bar's height; more would be a table drawn as a chart. */}
-                <div
-                    className="text-muted-foreground relative shrink-0 font-mono text-[10px] leading-none"
-                    style={{ width: CHART.gutter }}
-                    aria-hidden="true"
-                >
+                <div className="text-muted-foreground relative shrink-0 text-[10px] leading-none" style={{ width: CHART.gutter }} aria-hidden="true">
                     {ticks.map((tick) => (
                         <span key={tick} className="absolute right-1" style={{ top: y(tick), transform: 'translateY(-50%)' }}>
                             {tick}
@@ -397,7 +393,7 @@ function VolumeChart({ it }: { it: DashboardIt }) {
 
                 Day number only, except where the month turns (and on the first day), which is
                 the one place the number alone would be ambiguous. */}
-            <div className="text-muted-foreground mt-2 flex gap-[3px] font-mono text-[10px]" style={{ paddingLeft: CHART.gutter }}>
+            <div className="text-muted-foreground mt-2 flex gap-[3px] text-[10px]" style={{ paddingLeft: CHART.gutter }}>
                 {days.map((d, i) => {
                     const [, month, day] = d.date.split('-');
                     const turns = i === 0 || month !== days[i - 1].date.split('-')[1];
@@ -460,7 +456,7 @@ function WorkloadCard({ it }: { it: DashboardIt }) {
                         person's workload, but it is not something to stop reporting either. */}
                     {unassigned > 0 && (
                         <Link to="/tickets" className="text-muted-foreground hover:text-foreground text-xs">
-                            {t('dash_unassigned')} <b className="text-foreground font-mono">{unassigned}</b>
+                            {t('dash_unassigned')} <b className="text-foreground">{unassigned}</b>
                         </Link>
                     )}
                     <Link
@@ -480,10 +476,10 @@ function WorkloadCard({ it }: { it: DashboardIt }) {
                             <div className="flex items-baseline justify-between gap-3 text-sm">
                                 <span className="truncate">{row.name}</span>
                                 <span className="text-muted-foreground shrink-0 text-xs">
-                                    <b className="text-foreground font-mono">{row.open}</b> {t('dash_carrying')}
+                                    <b className="text-foreground">{row.open}</b> {t('dash_carrying')}
                                     {row.closed > 0 && (
                                         <span className="ml-3">
-                                            <span className="font-mono">{row.closed}</span> {t('dash_closed')}
+                                            <span>{row.closed}</span> {t('dash_closed')}
                                         </span>
                                     )}
                                 </span>
@@ -531,7 +527,7 @@ function RequestsOverviewCard({ requests }: { requests: DashboardRequests }) {
                 <span className="text-muted-foreground flex items-baseline gap-x-3 text-xs">
                     <span>{t('dash_last_days').replace('{n}', String(requests.window_days))}</span>
                     <span>
-                        <b className="text-foreground font-mono font-semibold">{total}</b> {t('dash_requests')}
+                        <b className="text-foreground font-semibold">{total}</b> {t('dash_requests')}
                     </span>
                 </span>
             </div>
@@ -545,8 +541,8 @@ function RequestsOverviewCard({ requests }: { requests: DashboardRequests }) {
                                 <li key={key} className="flex items-baseline gap-2 text-sm">
                                     <span className={cn('h-2 w-2 shrink-0 translate-y-[-1px] rounded-full', REQUEST_STATUS_DOT[key])} />
                                     <span className="text-muted-foreground truncate">{t(`req_status_${key}`)}</span>
-                                    <span className="ml-auto font-mono font-semibold">{requests.by_status[key]}</span>
-                                    <span className="text-muted-foreground w-9 shrink-0 text-right font-mono text-xs">
+                                    <span className="ml-auto font-semibold">{requests.by_status[key]}</span>
+                                    <span className="text-muted-foreground w-9 shrink-0 text-right text-xs">
                                         {Math.round((requests.by_status[key] / total) * 100)}%
                                     </span>
                                 </li>
@@ -560,7 +556,7 @@ function RequestsOverviewCard({ requests }: { requests: DashboardRequests }) {
                                     <li key={row.type}>
                                         <div className="flex items-baseline justify-between gap-3 text-sm">
                                             <span className="truncate">{t(`req_${row.type}`)}</span>
-                                            <span className="font-mono font-semibold">{row.count}</span>
+                                            <span className="font-semibold">{row.count}</span>
                                         </div>
                                         <div className="bg-secondary mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
                                             <span
@@ -599,7 +595,7 @@ function WaitingRequestsCard({ requests }: { requests: DashboardRequests }) {
                         lead={row.title}
                         sub={
                             <>
-                                <span className="font-mono">{row.reference}</span>
+                                <span>{row.reference}</span>
                                 {row.waiting_on && (
                                     <span className="ml-3">
                                         {t('dash_waiting_on')} {row.waiting_on}
@@ -608,7 +604,7 @@ function WaitingRequestsCard({ requests }: { requests: DashboardRequests }) {
                             </>
                         }
                         trailing={
-                            <span className="shrink-0 font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                            <span className="shrink-0 text-xs font-semibold text-amber-600 dark:text-amber-400">
                                 {t('dash_days').replace('{n}', String(row.days))}
                             </span>
                         }
@@ -655,7 +651,7 @@ function HrSection({ hr }: { hr: DashboardHr }) {
                                     </>
                                 ) : undefined
                             }
-                            trailing={<span className="text-muted-foreground font-mono text-xs">{fmt.date(hire.joined_at)}</span>}
+                            trailing={<span className="text-muted-foreground text-xs">{fmt.date(hire.joined_at)}</span>}
                         />
                     ))}
                 </ListCard>
@@ -670,7 +666,7 @@ function HrSection({ hr }: { hr: DashboardHr }) {
                             <li key={dept.id}>
                                 <div className="flex items-baseline justify-between gap-3 text-sm">
                                     <span className="truncate">{(lang === 'th' ? dept.name_th : null) ?? dept.name}</span>
-                                    <span className="font-mono font-semibold">{dept.count}</span>
+                                    <span className="font-semibold">{dept.count}</span>
                                 </div>
                                 <div className="bg-secondary mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
                                     <span className="bg-brand block h-full rounded-full" style={{ width: `${(dept.count / biggest) * 100}%` }} />
@@ -806,7 +802,7 @@ export default function DashboardPage() {
                             lead={tk.subject}
                             sub={
                                 <>
-                                    <span className="font-mono">{tk.ticket_no}</span>
+                                    <span>{tk.ticket_no}</span>
                                     {tk.assignee_name && <span className="ml-3">{tk.assignee_name}</span>}
                                 </>
                             }
@@ -823,7 +819,7 @@ export default function DashboardPage() {
                     rows={mine?.requests.length ?? 0}
                 >
                     {mine?.requests.map((rq: MyRequestRow) => (
-                        <Row key={rq.id} lead={rq.title} sub={<span className="font-mono">{rq.reference}</span>} status={rq.status} />
+                        <Row key={rq.id} lead={rq.title} sub={<span>{rq.reference}</span>} status={rq.status} />
                     ))}
                 </ListCard>
             </div>
@@ -843,7 +839,7 @@ export default function DashboardPage() {
                             lead={asset.model ?? asset.asset_code}
                             sub={
                                 <>
-                                    <span className="font-mono">{asset.asset_code}</span>
+                                    <span>{asset.asset_code}</span>
                                     {asset.category && <span className="ml-3">{asset.category}</span>}
                                 </>
                             }
@@ -862,7 +858,7 @@ export default function DashboardPage() {
                                     <FileText className="h-[18px] w-[18px]" />
                                 </span>
                             </div>
-                            <div className={cn('mt-2 font-mono text-3xl font-bold', (contracts?.expiring ?? 0) > 0 && 'text-destructive')}>
+                            <div className={cn('mt-2 text-3xl font-bold', (contracts?.expiring ?? 0) > 0 && 'text-destructive')}>
                                 {contracts?.expiring ?? '—'}
                             </div>
                             <div className="text-muted-foreground mt-1 text-xs">{lang === 'th' ? 'อยู่ในช่วงแจ้งเตือน' : 'in reminder window'}</div>

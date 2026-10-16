@@ -21,7 +21,7 @@ type Vendor = ContractOverviewBreakdown['vendors'][number];
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle whitespace-nowrap';
-const NUM = 'text-right font-mono tabular-nums';
+const NUM = 'text-right tabular-nums';
 const TRACK = 'dark:bg-muted block overflow-hidden rounded-full bg-slate-200';
 
 const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
@@ -100,7 +100,7 @@ function OverviewTiles({ tiles }: { tiles: ContractOverviewBreakdown['tiles'] })
                     top ? (
                         <span className="flex min-w-0 items-baseline gap-1.5" title={`${topName} ${contractMoney(top.yearly, lang)}`}>
                             <span className="truncate">{topName}</span>
-                            <b className="text-foreground shrink-0 font-mono font-semibold tabular-nums">{compactMoney(top.yearly)}</b>
+                            <b className="text-foreground shrink-0 font-semibold tabular-nums">{compactMoney(top.yearly)}</b>
                         </span>
                     ) : (
                         t('rep_cov_k_top_vendor_none')
@@ -187,7 +187,7 @@ function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
                         ) : (
                             <span className="text-muted-foreground">—</span>
                         )}
-                        <b className="text-right font-mono text-[13px] font-semibold tabular-nums" title={contractMoney(row.yearly, lang)}>
+                        <b className="text-right text-[13px] font-semibold tabular-nums" title={contractMoney(row.yearly, lang)}>
                             {compactMoney(row.yearly)}
                         </b>
                     </li>
@@ -198,7 +198,7 @@ function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
                 {data.cycles.map((row, i) => (
                     <li key={row.cycle} className={cn('flex min-w-0 flex-col gap-1', i > 0 && 'border-border/70 border-l pl-3.5', i < 2 && 'pr-3.5')}>
                         <span className="text-muted-foreground text-xs">{t(`contract_billing_${row.cycle}`)}</span>
-                        <b aria-hidden className="font-mono text-lg leading-tight font-semibold tabular-nums" title={contractMoney(row.yearly, lang)}>
+                        <b aria-hidden className="text-lg leading-tight font-semibold tabular-nums" title={contractMoney(row.yearly, lang)}>
                             {row.yearly > 0 ? compactMoney(row.yearly) : '—'}
                         </b>
                         <span aria-hidden className={cn(TRACK, 'h-1')}>
@@ -301,7 +301,7 @@ function VendorCard({ vendors, total, monthly }: { vendors: Vendor[]; total: num
                                                 <span aria-hidden className={cn(TRACK, 'h-2 flex-1')}>
                                                     <span className="bg-brand block h-full rounded-full" style={{ width: `${share(v.yearly)}%` }} />
                                                 </span>
-                                                <small className="text-muted-foreground w-14 text-right font-mono text-xs tabular-nums">
+                                                <small className="text-muted-foreground w-14 text-right text-xs tabular-nums">
                                                     {shareText(v.yearly)}
                                                 </small>
                                             </div>

@@ -29,11 +29,11 @@ const TYPE_ICON: Record<ContractType, LucideIcon> = {
 type TabId = 'overview' | 'notify' | 'assets' | 'attachments';
 
 /** A single label/value pair in the Overview particulars grid. */
-function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function KV({ label, value }: { label: string; value: React.ReactNode }) {
     return (
         <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">{label}</div>
-            <div className={mono ? 'font-mono text-sm' : 'text-sm'}>{value}</div>
+            <div className="text-sm">{value}</div>
         </div>
     );
 }
@@ -231,7 +231,7 @@ export function ContractDetailDrawer({
                                         <div className="sm:col-span-3">
                                             <KV label={t('contract_type')} value={t(`contract_type_${c.type}`)} />
                                         </div>
-                                        <KV label={t('contract_code')} value={c.code} mono />
+                                        <KV label={t('contract_code')} value={c.code} />
                                         <KV label={t('contract_vendor')} value={c.vendor} />
                                         <KV label={t('contract_name')} value={c.name} />
                                         <div className="sm:col-span-3">
@@ -250,8 +250,8 @@ export function ContractDetailDrawer({
                                 <div>
                                     <SectionLabel>{t('contract_section_term')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                        <KV label={t('contract_start')} value={fmt.date(c.start)} mono />
-                                        <KV label={t('contract_end')} value={fmt.date(c.end)} mono />
+                                        <KV label={t('contract_start')} value={fmt.date(c.start)} />
+                                        <KV label={t('contract_end')} value={fmt.date(c.end)} />
                                         <KV
                                             label={t('contract_duration')}
                                             value={(() => {
@@ -268,8 +268,8 @@ export function ContractDetailDrawer({
                                             })()}
                                         />
                                         <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
-                                        <KV label={t('contract_value_per_cycle')} value={c.value_display} mono />
-                                        <KV label={t('contract_total_value')} value={c.total_value_display || '—'} mono />
+                                        <KV label={t('contract_value_per_cycle')} value={c.value_display} />
+                                        <KV label={t('contract_total_value')} value={c.total_value_display || '—'} />
                                     </div>
                                 </div>
 
@@ -279,13 +279,13 @@ export function ContractDetailDrawer({
                                         <SectionLabel>{t('contract_section_closure')}</SectionLabel>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                             {cancelled && c.cancelled_at && (
-                                                <KV label={t('contract_cancelled_on')} value={fmt.date(c.cancelled_at)} mono />
+                                                <KV label={t('contract_cancelled_on')} value={fmt.date(c.cancelled_at)} />
                                             )}
                                             {cancelled && c.cancelled_by_name && (
                                                 <KV label={t('contract_cancelled_by')} value={c.cancelled_by_name} />
                                             )}
                                             {c.status === 'expired' && c.expired_at && (
-                                                <KV label={t('contract_expired_on')} value={fmt.date(c.expired_at)} mono />
+                                                <KV label={t('contract_expired_on')} value={fmt.date(c.expired_at)} />
                                             )}
                                             {cancelled && c.cancel_reason && (
                                                 <div className="sm:col-span-3">

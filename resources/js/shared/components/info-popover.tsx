@@ -173,7 +173,7 @@ export function InfoPopover({
                 onPointerLeave={hover(false)}
                 // The note is portalled, but React still bubbles its clicks to the row around the trigger
                 onClick={isolate ? (event) => event.stopPropagation() : undefined}
-                className={cn('w-auto max-w-xs px-3 py-2 text-left font-sans text-xs font-normal whitespace-normal', contentClassName)}
+                className={cn('w-auto max-w-xs px-3 py-2 text-left text-xs font-normal whitespace-normal', contentClassName)}
             >
                 {typeof content === 'function' ? content(() => setOpen(false)) : content}
             </PopoverContent>
@@ -189,7 +189,7 @@ export function NoteRow({ mark, text, value, muted }: { mark?: React.ReactNode; 
                 {mark}
                 <span className="truncate">{text}</span>
             </span>
-            <b className={cn('font-mono tabular-nums', muted && 'font-normal')}>{value}</b>
+            <b className={cn('tabular-nums', muted && 'font-normal')}>{value}</b>
         </div>
     );
 }

@@ -163,7 +163,7 @@ function StockBar({ item }: { item: StockItem }) {
                 <div className={cn('absolute inset-y-0 left-0 rounded-full', fill)} style={{ width: `${curPct}%` }} />
             </div>
             {/* Min / Max labels sit under the fixed gridlines → aligned across all rows. */}
-            <div className="relative mt-1 h-3 font-mono text-[10px]">
+            <div className="relative mt-1 h-3 text-[10px]">
                 <span className="absolute -translate-x-1/2 whitespace-nowrap text-amber-600 dark:text-amber-400" style={{ left: `${BAR_MIN_X}%` }}>
                     {min}
                 </span>
@@ -431,7 +431,7 @@ export default function StockPage() {
     const statusBadge = (s: StockItemStatus) => <StatusBadge tone={STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>;
 
     const columns: Column<StockItem>[] = [
-        { key: 'sku', header: 'SKU', render: (i) => <span className="font-mono text-xs">{i.sku}</span> },
+        { key: 'sku', header: 'SKU', render: (i) => <span className="text-xs">{i.sku}</span> },
         {
             key: 'name',
             header: t('stock_item'),
@@ -448,13 +448,13 @@ export default function StockPage() {
             key: 'current',
             header: t('stock_current'),
             align: 'right',
-            render: (i) => <span className="font-mono text-sm font-bold">{i.current_stock.toLocaleString()}</span>,
+            render: (i) => <span className="text-sm font-bold">{i.current_stock.toLocaleString()}</span>,
         },
         {
             key: 'value',
             header: t('stock_value'),
             align: 'right',
-            render: (i) => <span className="font-mono text-xs">{format(i.total_value)}</span>,
+            render: (i) => <span className="text-xs">{format(i.total_value)}</span>,
         },
         { key: 'status', header: t('status'), render: (i) => statusBadge(i.status) },
         {

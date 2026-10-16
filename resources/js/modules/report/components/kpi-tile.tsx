@@ -40,7 +40,7 @@ export function KpiTile({
                 </span>
                 {badge}
             </div>
-            <div className="font-mono text-2xl font-bold">
+            <div className="text-2xl font-bold">
                 {value}
                 {unit && <span className="text-muted-foreground ml-1 text-sm font-medium">{unit}</span>}
             </div>

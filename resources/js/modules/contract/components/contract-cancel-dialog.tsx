@@ -56,7 +56,7 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                     {contract && (
                         <DialogDescription className="flex flex-wrap gap-x-3">
                             <span>{contract.name}</span>
-                            <span className="font-mono">{contract.code}</span>
+                            <span>{contract.code}</span>
                         </DialogDescription>
                     )}
                 </DialogHeader>

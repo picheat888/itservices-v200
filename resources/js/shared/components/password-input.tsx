@@ -31,7 +31,7 @@ export function PasswordInput({
                 type={visible ? 'text' : 'password'}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="pr-10 font-mono"
+                className="pr-10"
                 placeholder={placeholder}
                 autoComplete={autoComplete}
                 autoFocus={autoFocus}

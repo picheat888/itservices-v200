@@ -51,12 +51,12 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                             i === selected ? 'border-brand bg-brand/5 shadow-[inset_0_0_0_1px_var(--brand)]' : 'border-border hover:bg-accent/50',
                         )}
                     >
-                        <span className="bg-destructive/10 dark:text-destructive flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[9px] font-extrabold text-red-700">
+                        <span className="bg-destructive/10 dark:text-destructive flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[9px] font-extrabold text-red-700">
                             PDF
                         </span>
                         <span className="min-w-0 flex-1">
                             <TruncName name={a.name} className="text-[13px] font-semibold" />
-                            <span className="text-muted-foreground block font-mono text-[11.5px]">{formatFileSize(a.size)}</span>
+                            <span className="text-muted-foreground block text-[11.5px]">{formatFileSize(a.size)}</span>
                         </span>
                     </button>
                 ))}

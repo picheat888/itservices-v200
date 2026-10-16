@@ -180,7 +180,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                 // A tiny chart at the footer's right, as the sparkline beside a trend note.
                 const chart = item.chart ? <TileChart chart={item.chart} title={t(item.label_key)} lineClass={lineTone(item)} /> : null;
                 const splitTotal = split.reduce((sum, part) => sum + part.value, 0);
-                // An hours tile splits into hours, the unit outside the monospace number; other splits are counts.
+                // An hours tile splits into hours, the unit outside the number; other splits are counts.
                 const partNumber = (value: number, counts = false) =>
                     item.format === 'hours' && !counts
                         ? value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -249,12 +249,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                                             <i aria-hidden className={cn('inline-block h-2 w-2 rounded-full', FILL[part.tone])} />
                                                             {t(part.label_key)}
                                                         </span>
-                                                        <b
-                                                            className={cn(
-                                                                'font-mono tabular-nums',
-                                                                part.value === 0 && 'text-muted-foreground font-normal',
-                                                            )}
-                                                        >
+                                                        <b className={cn('tabular-nums', part.value === 0 && 'text-muted-foreground font-normal')}>
                                                             {partText(part.value, part.counts)}
                                                         </b>
                                                     </div>
@@ -272,7 +267,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                                 <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', FILL[part.tone])} />
                                                 <span className="truncate">{t(part.short_key ?? part.label_key)}</span>
                                                 <span className="shrink-0">
-                                                    <b className="text-foreground font-mono font-semibold">{partNumber(part.value, part.counts)}</b>
+                                                    <b className="text-foreground font-semibold">{partNumber(part.value, part.counts)}</b>
                                                     {partUnit(part.counts) && ` ${partUnit(part.counts)}`}
                                                 </span>
                                             </span>

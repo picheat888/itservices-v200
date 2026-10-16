@@ -63,9 +63,9 @@ const ROWS_SHOWN = 10;
 
 export const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 export const TD = 'px-3 py-2.5 align-middle';
-export const NUM = 'text-right font-mono tabular-nums';
+export const NUM = 'text-right tabular-nums';
 export const CODE_LINK =
-    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
+    'text-brand focus-visible:ring-brand rounded-sm text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 const SEGMENT =
     'focus-visible:ring-brand focus-visible:ring-offset-background inline-flex items-center gap-1.5 rounded text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none';
 
@@ -127,7 +127,7 @@ export function Segments<T extends string | null>({
                     )}
                 >
                     {o.label}
-                    {o.count !== null && <span className="font-mono opacity-80">{count(o.count, lang)}</span>}
+                    {o.count !== null && <span>{count(o.count, lang)}</span>}
                 </button>
             ))}
         </div>
@@ -237,7 +237,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
                             <span key={k} className="inline-flex items-center gap-1.5">
                                 <FlowMark k={k} />
                                 {t(FLOW[k].label)}
-                                <b className="text-foreground font-mono font-semibold tabular-nums">{count(sum(k), lang)}</b>
+                                <b className="text-foreground font-semibold tabular-nums">{count(sum(k), lang)}</b>
                             </span>
                         ))}
                         {hasCurrent && (
@@ -274,7 +274,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
                                     <span
                                         key={at}
                                         className={cn(
-                                            'text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums',
+                                            'text-muted-foreground absolute right-0 translate-y-1/2 text-[10.5px] leading-none tabular-nums',
                                             at,
                                         )}
                                     >
@@ -301,7 +301,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
                                     <span
                                         key={at}
                                         className={cn(
-                                            'text-muted-foreground absolute right-0 -translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums',
+                                            'text-muted-foreground absolute right-0 -translate-y-1/2 text-[10.5px] leading-none tabular-nums',
                                             at,
                                         )}
                                     >
@@ -342,7 +342,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
                                                         {density.top && m.granted > 0 && (
                                                             <span
                                                                 className={cn(
-                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                                     m.month === thisMonth && 'text-brand',
                                                                 )}
                                                             >
@@ -387,7 +387,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
                                                         {density.top && back(m) > 0 && (
                                                             <span
                                                                 className={cn(
-                                                                    'absolute -bottom-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    'absolute -bottom-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                                     m.month === thisMonth && 'text-brand',
                                                                 )}
                                                             >
@@ -456,7 +456,7 @@ function FlowDetail({ month, partialNote }: { month: Month; partialNote: string 
                 {mark}
                 {text}
             </span>
-            <b className={cn('font-mono tabular-nums', value === 0 && 'text-muted-foreground font-normal')}>{count(value, lang)}</b>
+            <b className={cn('tabular-nums', value === 0 && 'text-muted-foreground font-normal')}>{count(value, lang)}</b>
         </div>
     );
 
@@ -482,7 +482,7 @@ export function DaysOut({ days }: { days: number | null }) {
     const lang = useUiStore((s) => s.lang);
     if (days === null) return <StatusBadge tone="red">{t('rep_ac_left_no_date')}</StatusBadge>;
     return (
-        <StatusBadge tone={days > 7 ? 'red' : 'gray'} className="font-mono tabular-nums">
+        <StatusBadge tone={days > 7 ? 'red' : 'gray'} className="tabular-nums">
             {t('rep_ac_left_days').replace('{n}', count(days, lang))}
         </StatusBadge>
     );
@@ -526,7 +526,7 @@ export function Group<T>({
                 )}
             >
                 {title}
-                <b className="text-foreground font-mono tabular-nums">{total}</b>
+                <b className="text-foreground tabular-nums">{total}</b>
             </h3>
             <ul className={cn(open && 'max-h-80 overflow-y-auto overscroll-contain')}>{shown.map(render)}</ul>
             {folds && (
@@ -601,7 +601,7 @@ export function ResourceHead({ r }: { r: Pick<AccessResource, 'type' | 'id' | 'c
                     {r.code}
                 </Link>
             ) : (
-                <span className="font-mono text-xs font-semibold" translate="no">
+                <span className="text-xs font-semibold" translate="no">
                     {r.code}
                 </span>
             )}
@@ -626,7 +626,7 @@ function PersonHead({ id, name, code }: { id: number; name: string; code: string
             ) : (
                 <span className="font-medium">{name}</span>
             )}
-            <span className="text-muted-foreground ml-2 font-mono text-xs">{code}</span>
+            <span className="text-muted-foreground ml-2 text-xs">{code}</span>
         </>
     );
 }
@@ -841,11 +841,11 @@ function DepartmentCard({
     const used = ACCESS_TYPES.filter((k) => totalByType[k] > 0);
     const flag = (v: number) =>
         v > 0 ? (
-            <StatusBadge tone="red" className="font-mono tabular-nums">
+            <StatusBadge tone="red" className="tabular-nums">
                 {count(v, lang)}
             </StatusBadge>
         ) : (
-            <span className="text-muted-foreground font-mono">0</span>
+            <span className="text-muted-foreground">0</span>
         );
 
     return (

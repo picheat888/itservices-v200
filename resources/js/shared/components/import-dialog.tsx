@@ -283,7 +283,7 @@ export function ImportDialog<Row>({
                             <div className="max-h-48 overflow-y-auto px-3 py-2">
                                 {errors.map((rowError) => (
                                     <div key={rowError.row} className="py-0.5 text-xs">
-                                        <span className="text-destructive font-mono font-semibold">
+                                        <span className="text-destructive font-semibold">
                                             {t('import_row')} {rowError.row}:
                                         </span>{' '}
                                         <span className="text-muted-foreground">{rowError.message}</span>

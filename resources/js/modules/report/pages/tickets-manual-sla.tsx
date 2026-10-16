@@ -30,7 +30,7 @@ function SlaPill({ value }: { value: unknown }) {
 /** Hours to fix in one decimal ("73.0"), as the grouped table and the summary tiles print them. */
 function FixHours({ value }: { value: unknown }) {
     const lang = useUiStore((s) => s.lang);
-    return <span className="font-mono">{typeof value === 'number' ? oneDecimal(value, lang) : '—'}</span>;
+    return <span>{typeof value === 'number' ? oneDecimal(value, lang) : '—'}</span>;
 }
 
 type Row = Record<string, unknown> & { _links?: Record<string, string> };
@@ -46,11 +46,11 @@ function SubjectCell({ row }: { row: Row }) {
                 {subject || '—'}
             </div>
             {href && canOpen(href) ? (
-                <Link to={href} className="text-brand font-mono text-xs font-medium hover:underline">
+                <Link to={href} className="text-brand text-xs font-medium hover:underline">
                     {String(row.ticket_no ?? '')}
                 </Link>
             ) : (
-                <span className="text-muted-foreground font-mono text-xs">{String(row.ticket_no ?? '')}</span>
+                <span className="text-muted-foreground text-xs">{String(row.ticket_no ?? '')}</span>
             )}
         </div>
     );

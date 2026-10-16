@@ -110,7 +110,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         {
             key: 'id',
             header: t('stock_request_no'),
-            render: (r) => <span className="font-mono text-xs font-semibold">{r.reference ?? `REQ-${String(r.id).padStart(4, '0')}`}</span>,
+            render: (r) => <span className="text-xs font-semibold">{r.reference ?? `REQ-${String(r.id).padStart(4, '0')}`}</span>,
         },
         { key: 'requester', header: t('stock_requester'), render: (r) => <span className="text-sm font-medium">{r.requester_name}</span> },
         {
@@ -118,12 +118,12 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             header: t('stock_item'),
             render: (r) => (
                 <div>
-                    <div className="font-mono text-xs">{r.sku}</div>
+                    <div className="text-xs">{r.sku}</div>
                     <div className="text-muted-foreground truncate text-xs">{r.item_name}</div>
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', render: (r) => <span className="font-mono font-bold">{r.qty}</span> },
+        { key: 'qty', header: t('stock_qty'), align: 'right', render: (r) => <span className="font-bold">{r.qty}</span> },
         { key: 'reason', header: t('stock_reason'), render: (r) => <span className="text-sm">{r.reason}</span> },
         {
             key: 'status',
@@ -228,7 +228,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             <div className="border-border rounded-lg border p-3">
                                 <div className="text-sm font-semibold">{fulfillReq.item_name}</div>
                                 <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
-                                    <span className="font-mono">{fulfillReq.sku}</span>
+                                    <span>{fulfillReq.sku}</span>
                                     <span>
                                         {t('stock_requester')}: {fulfillReq.requester_name}
                                     </span>
@@ -244,7 +244,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                         </span>
                                         <span
                                             className={cn(
-                                                'font-mono text-xs',
+                                                'text-xs',
                                                 fulfillReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
                                             )}
                                         >
@@ -260,7 +260,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                 className="border-border/60 flex items-center gap-3 border-b px-3 py-2 last:border-0"
                                             >
                                                 <span className="flex-1 text-sm">{b.warehouse}</span>
-                                                <span className="text-muted-foreground font-mono text-xs">
+                                                <span className="text-muted-foreground text-xs">
                                                     {b.qty} {fulfillItem?.unit}
                                                 </span>
                                                 <Input
@@ -269,7 +269,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                     max={b.qty}
                                                     value={alloc[b.warehouse] ?? 0}
                                                     onChange={(e) => setAllocFor(b.warehouse, b.qty, +e.target.value)}
-                                                    className="h-8 w-20 text-right font-mono"
+                                                    className="h-8 w-20 text-right"
                                                 />
                                             </div>
                                         ))
@@ -301,7 +301,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                             </button>
                                             <span
                                                 className={cn(
-                                                    'font-mono text-xs',
+                                                    'text-xs',
                                                     fulfillReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
                                                 )}
                                             >
@@ -325,7 +325,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                     )}
                                                 >
                                                     {wh === 'all' ? t('stock_all_warehouses') : (wh as string)}{' '}
-                                                    <span className="font-mono opacity-70">{n}</span>
+                                                    <span className="opacity-70">{n}</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -354,12 +354,10 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                         >
                                                             {checked && <Check className="h-3 w-3" />}
                                                         </span>
-                                                        <span className="flex-1 font-mono text-xs">{s.serial}</span>
+                                                        <span className="flex-1 text-xs">{s.serial}</span>
                                                         <span className="text-muted-foreground text-[11px]">{s.warehouse ?? '—'}</span>
                                                         {s.received_at && (
-                                                            <span className="text-muted-foreground font-mono text-[11px]">
-                                                                {fmt.date(s.received_at)}
-                                                            </span>
+                                                            <span className="text-muted-foreground text-[11px]">{fmt.date(s.received_at)}</span>
                                                         )}
                                                     </button>
                                                 );

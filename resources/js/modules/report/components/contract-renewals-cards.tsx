@@ -175,7 +175,7 @@ function BandTip({ band }: { band: Band }) {
             {typesOf(band).map((k) => (
                 <div key={k} className="flex items-center justify-between gap-4">
                     <Swatch fill={FILL[CONTRACT_TYPE_TONE[k]]}>{t(`contract_type_${k}`)}</Swatch>
-                    <b className="font-mono tabular-nums">{count(band.types[k], lang)}</b>
+                    <b className="tabular-nums">{count(band.types[k], lang)}</b>
                 </div>
             ))}
         </div>
@@ -204,7 +204,7 @@ function BandRowBody({ band, max }: { band: Band; max: number }) {
                     />
                 )}
             </span>
-            <b aria-hidden className={cn('min-w-8 text-right font-mono font-semibold tabular-nums', late && 'text-red-700 dark:text-red-400')}>
+            <b aria-hidden className={cn('min-w-8 text-right font-semibold tabular-nums', late && 'text-red-700 dark:text-red-400')}>
                 {band.total > 0 ? count(band.total, lang) : '—'}
             </b>
         </>
@@ -299,7 +299,7 @@ export function ContractRenewalsCards({ filters }: { filters: TabularFilters }) 
                     info={[t('rep_cren_month_info'), t('rep_cren_month_info_click')]}
                     months={data.months}
                     mode="count"
-                    rowValue={(item) => <span className="font-mono text-xs">{fmt.date(item.date)}</span>}
+                    rowValue={(item) => <span className="text-xs">{fmt.date(item.date)}</span>}
                     monthFoot={(month) =>
                         rich(t('rep_cren_month_foot'), {
                             n: count(month.items.length, lang),
@@ -546,11 +546,11 @@ function ClosedTable({ rows }: { rows: ContractClosedRow[] }) {
                                             {t(row.kind === 'cancelled' ? 'contract_cancelled' : 'contract_expired')}
                                         </StatusBadge>
                                     </td>
-                                    <td className={cn(TD, 'font-mono text-xs whitespace-nowrap')}>{fmt.date(row.closed_at)}</td>
+                                    <td className={cn(TD, 'text-xs whitespace-nowrap')}>{fmt.date(row.closed_at)}</td>
                                     <td className={TD}>
                                         <VersusEnd row={row} />
                                     </td>
-                                    <td className={cn(TD, 'text-right font-mono whitespace-nowrap tabular-nums')}>
+                                    <td className={cn(TD, 'text-right whitespace-nowrap tabular-nums')}>
                                         {row.unpaid > 0 ? contractMoney(row.unpaid, lang) : dash}
                                     </td>
                                     <td className={cn(TD, 'max-w-[18rem] min-w-[10rem] whitespace-normal')}>{row.reason ?? dash}</td>

@@ -78,7 +78,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                 title={lang === 'en' ? 'เปลี่ยนเป็นภาษาไทย' : 'Switch to English'}
             >
                 {lang === 'en' ? <FlagEN /> : <FlagTH />}
-                <span className="font-mono text-[11px] font-bold tracking-wide">{lang === 'en' ? 'EN' : 'TH'}</span>
+                <span className="text-[11px] font-bold tracking-wide">{lang === 'en' ? 'EN' : 'TH'}</span>
             </button>
 
             <button

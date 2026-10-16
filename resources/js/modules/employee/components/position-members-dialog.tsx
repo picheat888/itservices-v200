@@ -41,7 +41,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                 </div>
             ),
         },
-        { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.code}</span> },
+        { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground text-xs">{m.code}</span> },
         {
             key: 'department',
             header: t('department'),
@@ -71,7 +71,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                     <DialogTitle className="flex items-center gap-2">
                         <Briefcase className="text-muted-foreground h-4 w-4" />
                         {view?.title}
-                        {view?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{view.code}</span>}
+                        {view?.code && <span className="text-muted-foreground text-xs font-normal">{view.code}</span>}
                     </DialogTitle>
                     <DialogDescription aria-busy={isLoading || undefined}>
                         {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('dept_members')}

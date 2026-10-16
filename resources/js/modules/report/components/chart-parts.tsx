@@ -110,7 +110,7 @@ export function StackBar({ values, series, scale }: { values: Record<string, num
                         <span
                             key={s.key}
                             className={cn(
-                                'flex shrink-0 justify-center overflow-visible font-mono text-xs leading-none font-semibold whitespace-nowrap tabular-nums',
+                                'flex shrink-0 justify-center overflow-visible text-xs leading-none font-semibold whitespace-nowrap tabular-nums',
                                 TEXT[s.tone],
                             )}
                             style={{ width: width(value) }}
@@ -185,7 +185,7 @@ export const currentMonth = (): string => {
 
 /** A code that opens its record: the report lists' brand link, with a visible keyboard focus ring. */
 export const CODE_LINK =
-    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
+    'text-brand focus-visible:ring-brand rounded-sm text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
 /** The system date setting, bound to a language, for report helpers that run outside a hook. */
 export const reportDates = (lang: string) => bindDateFormat(useUiStore.getState().dateConfig, lang);
@@ -268,7 +268,7 @@ export function rich(template: string, bold: Record<string, React.ReactNode>, pl
         const slot = /^\{(\w+)\}$/.exec(part)?.[1];
         if (slot && slot in bold) {
             return (
-                <b key={i} className="text-foreground font-mono font-semibold tabular-nums">
+                <b key={i} className="text-foreground font-semibold tabular-nums">
                     {bold[slot]}
                 </b>
             );
@@ -318,7 +318,7 @@ export function CountBar({ pieces, scale }: { pieces: BarPiece[]; scale?: number
                     <span
                         key={p.key}
                         className={cn(
-                            'flex min-w-[26px] items-center justify-center overflow-hidden font-mono text-[11px] leading-none font-semibold whitespace-nowrap tabular-nums',
+                            'flex min-w-[26px] items-center justify-center overflow-hidden text-[11px] leading-none font-semibold whitespace-nowrap tabular-nums',
                             FILL[p.tone],
                             PIECE_INK,
                         )}
@@ -340,7 +340,7 @@ export function PieceDetail({ pieces }: { pieces: BarPiece[] }) {
             {pieces.map((p) => (
                 <div key={p.key} className="flex items-center justify-between gap-4">
                     <Swatch fill={FILL[p.tone]}>{p.label}</Swatch>
-                    <b className="font-mono tabular-nums">{pieceCount(p.value, lang)}</b>
+                    <b className="tabular-nums">{pieceCount(p.value, lang)}</b>
                 </div>
             ))}
         </div>

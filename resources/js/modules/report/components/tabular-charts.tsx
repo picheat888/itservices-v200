@@ -95,7 +95,7 @@ function StackRow({
                 {note && <span className="text-muted-foreground block truncate text-xs">{note}</span>}
             </span>
             <StackBar values={row.values} series={series} scale={scale} />
-            <span className="text-right font-mono font-semibold">{row.total.toLocaleString()}</span>
+            <span className="text-right font-semibold">{row.total.toLocaleString()}</span>
         </div>
     );
 }
@@ -183,7 +183,7 @@ function DonutCenter({ value, label }: { value: number; label: string }) {
     const twoLines = lines.length > 1;
     return (
         <>
-            <text x={85} y={twoLines ? 80 : 87} textAnchor="middle" className="fill-foreground font-mono text-[24px] font-bold">
+            <text x={85} y={twoLines ? 80 : 87} textAnchor="middle" className="fill-foreground text-[24px] font-bold">
                 {`${value}%`}
             </text>
             <text
@@ -250,10 +250,8 @@ function DonutSection({ chart }: { chart: Donut }) {
                             <div key={s.key} className="grid grid-cols-[12px_minmax(0,1fr)_auto_3rem] items-center gap-2">
                                 <i className={cn('h-2.5 w-2.5 rounded-sm', FILL[s.tone])} />
                                 <span className="truncate">{t(s.label_key)}</span>
-                                <b className="font-mono">{s.value.toLocaleString()}</b>
-                                <span className="text-muted-foreground text-right font-mono text-xs">
-                                    {`${((s.value / chart.total) * 100).toFixed(1)}%`}
-                                </span>
+                                <b>{s.value.toLocaleString()}</b>
+                                <span className="text-muted-foreground text-right text-xs">{`${((s.value / chart.total) * 100).toFixed(1)}%`}</span>
                             </div>
                         ))}
                     </div>

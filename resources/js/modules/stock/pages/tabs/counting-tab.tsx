@@ -223,13 +223,13 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             key: 'reference',
             header: t('stock_doc_no'),
             className: 'whitespace-nowrap',
-            render: (s) => <span className="font-mono text-xs font-semibold">{s.reference}</span>,
+            render: (s) => <span className="text-xs font-semibold">{s.reference}</span>,
         },
         {
             key: 'created_at',
             header: t('audit_time'),
             className: 'whitespace-nowrap',
-            render: (s) => <span className="text-muted-foreground font-mono text-xs">{fmt.date(s.created_at)}</span>,
+            render: (s) => <span className="text-muted-foreground text-xs">{fmt.date(s.created_at)}</span>,
         },
         {
             key: 'warehouse',
@@ -243,7 +243,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: t('stock_count_progress'),
             className: 'whitespace-nowrap',
             render: (s) => (
-                <span className="font-mono text-xs">
+                <span className="text-xs">
                     {s.counted_lines ?? 0}/{s.line_count ?? 0}
                 </span>
             ),
@@ -398,11 +398,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                     {checked && <Check className="h-3 w-3" />}
                                                 </span>
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="font-mono text-xs">{i.sku}</div>
+                                                    <div className="text-xs">{i.sku}</div>
                                                     <div className="text-muted-foreground truncate text-xs">{i.name}</div>
                                                 </div>
                                                 <span className="text-muted-foreground shrink-0 text-xs">{i.category ?? '—'}</span>
-                                                <span className="w-12 shrink-0 text-right font-mono text-sm font-semibold">{i.current_stock}</span>
+                                                <span className="w-12 shrink-0 text-right text-sm font-semibold">{i.current_stock}</span>
                                             </button>
                                         );
                                     })
@@ -445,7 +445,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                         )}
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-muted-foreground font-mono text-xs font-semibold">{session.reference}</span>
+                                        <span className="text-muted-foreground text-xs font-semibold">{session.reference}</span>
                                         <span className="text-muted-foreground text-xs font-normal">
                                             {session.warehouse || t('stock_count_all_wh')}
                                         </span>
@@ -459,7 +459,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                                         {t('stock_count_sum_progress')}
                                     </div>
-                                    <div className="mt-0.5 font-mono text-sm font-semibold">
+                                    <div className="mt-0.5 text-sm font-semibold">
                                         {countSummary.counted}
                                         <span className="text-muted-foreground">/{countSummary.total}</span>
                                     </div>
@@ -470,7 +470,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     </div>
                                     <div
                                         className={cn(
-                                            'mt-0.5 font-mono text-sm font-semibold',
+                                            'mt-0.5 text-sm font-semibold',
                                             countSummary.discrepancies > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
                                         )}
                                     >
@@ -483,7 +483,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     </div>
                                     <div
                                         className={cn(
-                                            'mt-0.5 font-mono text-sm font-semibold',
+                                            'mt-0.5 text-sm font-semibold',
                                             countSummary.net > 0
                                                 ? 'text-emerald-600 dark:text-emerald-400'
                                                 : countSummary.net < 0
@@ -542,12 +542,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                                 )}
                                                             />
                                                             <div className="min-w-0">
-                                                                <div className="font-mono text-xs font-medium">{l.sku}</div>
+                                                                <div className="text-xs font-medium">{l.sku}</div>
                                                                 <div className="text-muted-foreground truncate text-xs">{l.name}</div>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="text-muted-foreground px-3 py-2 text-right font-mono tabular-nums">
+                                                    <td className="text-muted-foreground px-3 py-2 text-right whitespace-nowrap tabular-nums">
                                                         {l.system_qty}
                                                     </td>
                                                     <td className="px-3 py-2 text-right">
@@ -560,12 +560,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                                     setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }))
                                                                 }
                                                                 className={cn(
-                                                                    'ml-auto h-8 w-20 text-right font-mono tabular-nums',
+                                                                    'ml-auto h-8 w-20 text-right tabular-nums',
                                                                     variance !== null && variance !== 0 && 'border-primary/50',
                                                                 )}
                                                             />
                                                         ) : (
-                                                            <span className="font-mono tabular-nums">{l.counted_qty ?? '—'}</span>
+                                                            <span className="tabular-nums">{l.counted_qty ?? '—'}</span>
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-2 text-right">
@@ -574,7 +574,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                         ) : (
                                                             <span
                                                                 className={cn(
-                                                                    'inline-flex min-w-[2.75rem] justify-center rounded-md px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums',
+                                                                    'inline-flex min-w-[2.75rem] justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums',
                                                                     variance > 0
                                                                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                                                                         : variance < 0
@@ -750,7 +750,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <div key={it.stock_item_id} className="border-border rounded-lg border p-3">
                                     <div className="mb-2 flex items-center justify-between gap-2">
                                         <div className="min-w-0">
-                                            <div className="font-mono text-xs font-medium">{it.sku}</div>
+                                            <div className="text-xs font-medium">{it.sku}</div>
                                             <div className="text-muted-foreground truncate text-xs">{it.name}</div>
                                         </div>
                                         <span
@@ -787,7 +787,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                     >
                                                         {checked && <Check className="h-3 w-3" />}
                                                     </span>
-                                                    <span className="font-mono">{s.serial}</span>
+                                                    <span>{s.serial}</span>
                                                 </button>
                                             );
                                         })}

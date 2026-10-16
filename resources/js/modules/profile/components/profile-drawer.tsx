@@ -317,11 +317,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            {emp?.code && (
-                                <IdChip icon={Hash} mono>
-                                    {emp.code}
-                                </IdChip>
-                            )}
+                            {emp?.code && <IdChip icon={Hash}>{emp.code}</IdChip>}
                             {emp?.position && <IdChip icon={Briefcase}>{emp.position}</IdChip>}
                             {department && <IdChip icon={Building2}>{department}</IdChip>}
                             <IdChip icon={Shield}>{user.group_name ?? user.role_label}</IdChip>
@@ -344,7 +340,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 icon={<Phone className="h-3.5 w-3.5" />}
                                 label={t('emp_phone')}
                                 value={phone}
-                                mono
                                 copied={copied === 'phone'}
                                 onCopy={(v) => copy(v, 'phone')}
                             />
@@ -354,7 +349,6 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 icon={<KeyRound className="h-3.5 w-3.5" />}
                                 label={t('emp_username')}
                                 value={user.username}
-                                mono
                                 copied={copied === 'user'}
                                 onCopy={(v) => copy(v, 'user')}
                             />

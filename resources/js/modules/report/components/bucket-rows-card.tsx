@@ -48,7 +48,7 @@ export function SplitLine({
                 <span className="truncate">{name}</span>
             </div>
             <StackBar values={values} series={series} scale={total} />
-            <span className="text-right font-mono text-sm leading-none font-semibold">{total.toLocaleString()}</span>
+            <span className="text-right text-sm leading-none font-semibold">{total.toLocaleString()}</span>
         </div>
     );
 }

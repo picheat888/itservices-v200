@@ -240,7 +240,6 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         clearError('phone');
                                     }}
                                     disabled={created}
-                                    className="font-mono"
                                     maxLength={60}
                                     placeholder="+66 81 234 5678 / ext. 1305"
                                 />

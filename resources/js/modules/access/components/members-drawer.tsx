@@ -288,7 +288,7 @@ export function MembersDrawer({
                         />
                         <span className="truncate text-sm font-medium">{m.employee ?? '—'}</span>
                         {emp?.status === 'resigned' && <StatusBadge tone="red">{t('resigned')}</StatusBadge>}
-                        {emp?.code && <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{emp.code}</span>}
+                        {emp?.code && <span className="text-muted-foreground shrink-0 text-[11px]">{emp.code}</span>}
                     </div>
                 );
             },
@@ -347,7 +347,7 @@ export function MembersDrawer({
                             subtitle={
                                 tgt.detail || (tgt.metaValue && kind !== 'email-groups') ? (
                                     <>
-                                        {tgt.detail && <span className="text-muted-foreground font-mono text-xs">{tgt.detail}</span>}
+                                        {tgt.detail && <span className="text-muted-foreground text-xs">{tgt.detail}</span>}
                                         {tgt.metaValue && kind !== 'email-groups' && (
                                             <span className="bg-accent text-muted-foreground rounded px-1.5 py-0.5 text-[10.5px] font-semibold">
                                                 {tgt.metaValue}

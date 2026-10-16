@@ -66,12 +66,12 @@ function rate(met: number, measured: number): number | null {
 
 /** "86.7%" — red under the SLA goal, "—" when nothing was measured. */
 function SlaRate({ value, goal }: { value: number | null; goal: number }) {
-    return <span className={cn('text-right font-mono', value !== null && value < goal && BAD)}>{value === null ? '—' : `${value}%`}</span>;
+    return <span className={cn('text-right', value !== null && value < goal && BAD)}>{value === null ? '—' : `${value}%`}</span>;
 }
 
 /** A count where zero reads as nothing to see. */
 function Count({ value, className }: { value: number; className?: string }) {
-    return <span className={cn('text-right font-mono', value === 0 && 'text-muted-foreground', className)}>{value}</span>;
+    return <span className={cn('text-right', value === 0 && 'text-muted-foreground', className)}>{value}</span>;
 }
 
 /** Name, category bar, Ticket, ทัน SLA, ยังไม่ปิด — header and rows share the columns. */
@@ -123,7 +123,7 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
                 {note && <span className="text-muted-foreground block truncate text-xs">{note}</span>}
             </span>
             <StackBar values={r.categories} series={series} scale={rowScale} />
-            <span className="text-right font-mono font-semibold">{r.count.toLocaleString()}</span>
+            <span className="text-right font-semibold">{r.count.toLocaleString()}</span>
             <SlaRate value={r.sla_rate} goal={slaGoal} />
             <Count value={r.open} />
         </div>
@@ -207,7 +207,7 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
             header: t('rep_col_total'),
             width: '80px',
             align: 'right',
-            render: (r) => <span className="font-mono font-semibold">{r.total}</span>,
+            render: (r) => <span className="font-semibold">{r.total}</span>,
         },
         {
             key: 'avg',
@@ -216,7 +216,7 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
             width: '150px',
             align: 'right',
             className: 'whitespace-nowrap',
-            render: (r) => <span className="font-mono">{r.avg_resolve_hours === null ? '—' : `${r.avg_resolve_hours} ${t('rep_hours')}`}</span>,
+            render: (r) => <span>{r.avg_resolve_hours === null ? '—' : `${r.avg_resolve_hours} ${t('rep_hours')}`}</span>,
         },
         {
             key: 'sla',

@@ -102,7 +102,7 @@ function PointNote({ point, title, unit }: { point: Point; title: string; unit: 
     const row = (label: string, value: React.ReactNode) => (
         <div className="flex items-baseline justify-between gap-4">
             <span className="text-muted-foreground">{label}</span>
-            <span className="font-mono tabular-nums">{value}</span>
+            <span className="tabular-nums">{value}</span>
         </div>
     );
     return (
@@ -198,11 +198,10 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
             </span>
             <span>
                 <b className="text-emerald-700 dark:text-emerald-400">+</b> {t('rep_eo_flow_in')}{' '}
-                <b className="text-foreground font-mono">{count(joinedTotal, lang)}</b>
+                <b className="text-foreground">{count(joinedTotal, lang)}</b>
             </span>
             <span>
-                <b className="text-red-700 dark:text-red-400">−</b> {t('rep_eo_flow_out')}{' '}
-                <b className="text-foreground font-mono">{count(leftTotal, lang)}</b>
+                <b className="text-red-700 dark:text-red-400">−</b> {t('rep_eo_flow_out')} <b className="text-foreground">{count(leftTotal, lang)}</b>
             </span>
         </span>
     );
@@ -294,7 +293,7 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
                             {ticks.map((v) => (
                                 <g key={v}>
                                     <path d={`M${ml} ${ys(v).toFixed(1)}H${W - mr}`} className="stroke-border" strokeDasharray="2 3" />
-                                    <text x={ml - 8} y={ys(v) + 3.5} textAnchor="end" className="fill-muted-foreground font-mono text-[11px]">
+                                    <text x={ml - 8} y={ys(v) + 3.5} textAnchor="end" className="fill-muted-foreground text-[11px]">
                                         {count(v, lang)}
                                     </text>
                                 </g>
@@ -356,7 +355,7 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
                                             y={l.vy}
                                             textAnchor={l.anchor}
                                             className={cn(
-                                                'font-mono text-[12px] font-semibold',
+                                                'text-[12px] font-semibold',
                                                 p.current ? 'fill-blue-700 dark:fill-blue-300' : 'fill-foreground',
                                             )}
                                         >
@@ -364,7 +363,7 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
                                             {count(p.headcount, lang)}
                                         </text>
                                         {l.moved && (
-                                            <text x={l.cx} y={l.my} textAnchor={l.anchor} className="font-mono text-[11px] font-semibold">
+                                            <text x={l.cx} y={l.my} textAnchor={l.anchor} className="text-[11px] font-semibold">
                                                 {p.joined > 0 && (
                                                     <tspan className="fill-emerald-700 dark:fill-emerald-400">+{count(p.joined, lang)}</tspan>
                                                 )}
@@ -436,7 +435,7 @@ function ShareCell({ v, total }: { v: number; total: number }) {
                 <span aria-hidden className="dark:bg-muted flex h-1.5 min-w-12 flex-1 overflow-hidden rounded-full bg-slate-200">
                     <span className={cn('bg-blue-600 dark:bg-blue-400', BASIS_PCT[pct(v, total)])} />
                 </span>
-                <small className="text-muted-foreground w-9 text-right font-mono tabular-nums">{total ? `${Math.round(share)}%` : '—'}</small>
+                <small className="text-muted-foreground w-9 text-right tabular-nums">{total ? `${Math.round(share)}%` : '—'}</small>
             </span>
         </td>
     );
@@ -741,7 +740,7 @@ function HoldingCard({
                             )}
                         >
                             {t('rep_eo_holding_group')}
-                            <b className="text-foreground font-mono tabular-nums">{t('rep_eo_people_n').replace('{n}', count(total, lang))}</b>
+                            <b className="text-foreground tabular-nums">{t('rep_eo_people_n').replace('{n}', count(total, lang))}</b>
                         </h3>
                         <div className={cn(fitting && 'relative flex min-h-0 flex-1 flex-col')}>
                             <ul ref={listRef} className={cn(fitting && 'relative min-h-0 flex-1 overflow-hidden')}>
@@ -764,8 +763,7 @@ function HoldingCard({
                                             }
                                             side={
                                                 <span className="text-muted-foreground text-xs">
-                                                    <b className="text-foreground font-mono">{count(r.grants.length, lang)}</b>{' '}
-                                                    {t('rep_eo_grants_word')}
+                                                    <b className="text-foreground">{count(r.grants.length, lang)}</b> {t('rep_eo_grants_word')}
                                                 </span>
                                             }
                                             sub={[
@@ -831,7 +829,7 @@ function PersonLink({ id, name, code }: { id: number; name: string; code: string
                     {name}
                 </span>
             )}
-            <span className="text-muted-foreground ml-2 font-mono text-xs">{code}</span>
+            <span className="text-muted-foreground ml-2 text-xs">{code}</span>
         </>
     );
 }
@@ -900,7 +898,7 @@ export function EmployeeCell({ row }: { row: Row }) {
                     {name}
                 </div>
             )}
-            <div className="text-muted-foreground font-mono text-xs">{str(row.employee_code)}</div>
+            <div className="text-muted-foreground text-xs">{str(row.employee_code)}</div>
         </div>
     );
 }
@@ -954,11 +952,11 @@ export function HeldCell({ row, column }: { row: Row; column: 'assets_held' | 'o
     const v = num(row[column]);
     if (row.movement_kind !== 'left' || v === null) return <Dash />;
     return v > 0 ? (
-        <StatusBadge tone="red" className="font-mono tabular-nums">
+        <StatusBadge tone="red" className="tabular-nums">
             {count(v, lang)}
         </StatusBadge>
     ) : (
-        <span className="text-muted-foreground font-mono">0</span>
+        <span className="text-muted-foreground">0</span>
     );
 }
 

@@ -28,7 +28,7 @@ const INNER = [
 const LONG_WAIT_HOURS = 7 * 24;
 
 const CODE_LINK =
-    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
+    'text-brand focus-visible:ring-brand rounded-sm text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
@@ -57,7 +57,7 @@ function AssetCell({ row, patch }: { row: Row; patch: Patch }) {
                         {code}
                     </Link>
                 ) : (
-                    <span className="font-mono text-xs font-semibold" translate="no">
+                    <span className="text-xs font-semibold" translate="no">
                         {code}
                     </span>
                 )}

@@ -29,7 +29,7 @@ function AssetCell({ row }: { row: Row }) {
                     {code}
                 </Link>
             ) : (
-                <span className="font-mono text-xs font-semibold">{code}</span>
+                <span className="text-xs font-semibold">{code}</span>
             )}
             {what && (
                 <div className="text-muted-foreground max-w-[16rem] truncate text-xs" title={what}>
@@ -64,7 +64,7 @@ function SourceCell({ row }: { row: Row }) {
                         {code}
                     </Link>
                 ) : (
-                    <span className="text-muted-foreground mt-0.5 font-mono text-xs">{code}</span>
+                    <span className="text-muted-foreground mt-0.5 text-xs">{code}</span>
                 ))}
         </div>
     );
@@ -105,7 +105,7 @@ function ReasonCell({ row }: { row: Row }) {
 function AgeCell({ years }: { years: number }) {
     const lang = useUiStore((s) => s.lang);
     return (
-        <span className="font-mono tabular-nums">
+        <span className="tabular-nums">
             <YearsTip years={years}>
                 {years.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
             </YearsTip>

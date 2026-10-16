@@ -572,12 +572,7 @@ export function ContractFormDrawer({
                                     {/* Left — contract info */}
                                     <div className="space-y-5">
                                         <Field label={t('contract_code')} help={t('contract_code_hint')} required error={err.code} name="code">
-                                            <Input
-                                                value={form.code}
-                                                onChange={(e) => upd('code', e.target.value)}
-                                                placeholder="CT-2026-001"
-                                                className="font-mono"
-                                            />
+                                            <Input value={form.code} onChange={(e) => upd('code', e.target.value)} placeholder="CT-2026-001" />
                                         </Field>
 
                                         <Field label={t('contract_details')} required error={err.details} name="details">
@@ -705,7 +700,6 @@ export function ContractFormDrawer({
                                         <Input
                                             type="text"
                                             inputMode="decimal"
-                                            className="font-mono"
                                             value={displayMoney(form.value)}
                                             onChange={(e) => upd('value', sanitizeMoney(e.target.value))}
                                             placeholder="0.00"
@@ -739,7 +733,6 @@ export function ContractFormDrawer({
                                                 {...control}
                                                 type="text"
                                                 inputMode="decimal"
-                                                className="font-mono"
                                                 value={displayMoney(form.total_value)}
                                                 onChange={(e) => upd('total_value', sanitizeMoney(e.target.value))}
                                                 placeholder="0.00"
@@ -751,7 +744,7 @@ export function ContractFormDrawer({
                                                     className="text-muted-foreground hover:text-brand mt-1 text-xs transition-colors"
                                                 >
                                                     {t('contract_estimate')} ≈{' '}
-                                                    <span className="text-foreground font-mono font-semibold">{format(totalValueEstimate)}</span>
+                                                    <span className="text-foreground font-semibold">{format(totalValueEstimate)}</span>
                                                     <span className="ml-3 underline-offset-2 hover:underline">{t('contract_estimate_use')}</span>
                                                 </button>
                                             )}
@@ -850,7 +843,7 @@ export function ContractFormDrawer({
                                                                     >
                                                                         {checked && <Check className="h-3 w-3" />}
                                                                     </span>
-                                                                    <span className="font-mono text-xs">{a.asset_code}</span>
+                                                                    <span className="text-xs">{a.asset_code}</span>
                                                                     <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
                                                                     <AssetStatusBadge status={a.status as AssetStatus} t={t} />
                                                                 </button>
@@ -890,7 +883,7 @@ export function ContractFormDrawer({
                                             <div className="text-muted-foreground mb-0.5 text-[10.5px] font-bold tracking-wide uppercase">
                                                 {t('contract_review_code')}
                                             </div>
-                                            <div className="font-mono text-sm font-bold">{form.code || '—'}</div>
+                                            <div className="text-sm font-bold">{form.code || '—'}</div>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-muted-foreground mb-0.5 text-[10.5px] font-bold tracking-wide uppercase">
@@ -904,14 +897,12 @@ export function ContractFormDrawer({
                                     <ReviewRow
                                         k={t('contract_review_term')}
                                         v={form.start_date && form.end_date ? `${fmt.date(form.start_date)} – ${fmt.date(form.end_date)}` : '—'}
-                                        mono
                                     />
                                     <ReviewRow
                                         k={t('contract_value_per_cycle')}
                                         v={`${format(Number(form.value) || 0)} (${t(`contract_billing_${form.billing_cycle}`)})`}
-                                        mono
                                     />
-                                    {form.total_value && <ReviewRow k={t('contract_total_value')} v={format(Number(form.total_value) || 0)} mono />}
+                                    {form.total_value && <ReviewRow k={t('contract_total_value')} v={format(Number(form.total_value) || 0)} />}
                                     <ReviewRow
                                         k={t('contract_notify')}
                                         v={selectedNotify.length ? t('contract_days_many').replace('{n}', selectedNotify.join(', ')) : '—'}
@@ -992,11 +983,11 @@ function StepHead({ num, title, sub }: { num: number; title: string; sub: string
 }
 
 /** A single label/value row inside the review card (zebra-striped). */
-function ReviewRow({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
+function ReviewRow({ k, v }: { k: string; v: string }) {
     return (
         <div className="odd:bg-muted/30 flex justify-between gap-3 px-4 py-2 text-sm">
             <span className="text-muted-foreground">{k}</span>
-            <span className={cn('text-right font-semibold', mono && 'font-mono')}>{v}</span>
+            <span className={'text-right font-semibold'}>{v}</span>
         </div>
     );
 }

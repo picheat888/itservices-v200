@@ -28,7 +28,7 @@ type ModelRow = ContractRentalsBreakdown['models'][number];
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
-const NUM = 'text-right font-mono tabular-nums';
+const NUM = 'text-right tabular-nums';
 
 /** Asset statuses in the order and colours of Settings → Assets, written off last. */
 const STATUSES: { key: RentalAssetStatus; label_key: string; tone: ChartTone }[] = [
@@ -176,7 +176,7 @@ function Tiles({ data }: { data: ContractRentalsBreakdown }) {
                             <span key={k.key} className="inline-flex items-center gap-1" title={k.label}>
                                 <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', FILL[CONTRACT_SOURCE_TONE[k.key]])} />
                                 {k.short}
-                                <b className="text-foreground font-mono font-semibold tabular-nums">{n(k.value)}</b>
+                                <b className="text-foreground font-semibold tabular-nums">{n(k.value)}</b>
                             </span>
                         ))}
                     </span>
@@ -247,7 +247,7 @@ function ContractLine({ row, scale }: { row: ContractRow; scale: number }) {
                         <div className="min-w-0 flex-1">
                             <StatusBar statuses={row.statuses} scale={scale} />
                         </div>
-                        <b className="min-w-6 text-right font-mono font-semibold tabular-nums">{count(row.units, lang)}</b>
+                        <b className="min-w-6 text-right font-semibold tabular-nums">{count(row.units, lang)}</b>
                     </div>
                 )}
             </td>
@@ -255,7 +255,7 @@ function ContractLine({ row, scale }: { row: ContractRow; scale: number }) {
                 {row.per_unit === null ? <span className="text-muted-foreground">—</span> : contractMoney(row.per_unit, lang)}
             </td>
             <td className={cn(TD, 'whitespace-nowrap')}>
-                <div className="font-mono text-xs">{fmt.date(row.end_date)}</div>
+                <div className="text-xs">{fmt.date(row.end_date)}</div>
                 <div className="mt-1">
                     <LeftPill state={row.state} days={row.days_left} />
                 </div>
@@ -373,7 +373,7 @@ function VersusBars({ row }: { row: ModelRow }) {
                     <span aria-hidden className="dark:bg-muted block h-2 overflow-hidden rounded-full bg-slate-200">
                         <span className={cn('block h-full rounded-full', b.fill)} style={{ width: `${(b.value / scale) * 100}%` }} />
                     </span>
-                    <b aria-hidden className="text-right font-mono text-xs font-semibold tabular-nums">
+                    <b aria-hidden className="text-right text-xs font-semibold tabular-nums">
                         {compactMoney(b.value)}
                     </b>
                 </Fragment>
@@ -434,7 +434,7 @@ function ModelsCard({ models }: { models: ModelRow[] }) {
                                         ) : (
                                             <>
                                                 <div>{contractMoney(m.avg_buy, lang)}</div>
-                                                <div className="text-muted-foreground font-sans text-xs">
+                                                <div className="text-muted-foreground text-xs">
                                                     {t('rep_crent_vs_from').replace('{n}', count(m.bought, lang))}
                                                 </div>
                                             </>

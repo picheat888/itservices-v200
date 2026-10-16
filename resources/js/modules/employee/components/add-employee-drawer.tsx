@@ -604,7 +604,6 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <Input
                                             type="tel"
                                             inputMode="tel"
-                                            className="font-mono placeholder:font-sans"
                                             value={form.phone}
                                             onChange={(e) => set('phone', e.target.value)}
                                             placeholder={t('emp_phone_ph')}
@@ -685,9 +684,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <DateInput value={form.joinedAt} onChange={(v) => set('joinedAt', v)} />
                                     </Field>
                                     <Field label={t('emp_employee_id')} help={t('emp_id_help')} name="code" error={errors.code}>
-                                        {/* Mono code, sans placeholder (the mono face has no Thai glyphs) */}
                                         <Input
-                                            className="font-mono placeholder:font-sans"
                                             value={form.code}
                                             onChange={(e) => set('code', e.target.value)}
                                             placeholder={t('emp_id_auto')}
@@ -913,9 +910,8 @@ function ServiceField({
                 <Input
                     type={field.input === 'email' ? 'email' : 'text'}
                     inputMode={field.input === 'email' ? 'email' : undefined}
-                    autoCapitalize={field.input === 'email' || field.mono ? 'none' : undefined}
-                    spellCheck={field.input === 'email' || field.mono ? false : undefined}
-                    className={cn(field.mono && 'font-mono')}
+                    autoCapitalize={field.input === 'email' ? 'none' : undefined}
+                    spellCheck={field.input === 'email' ? false : undefined}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={field.placeholder}

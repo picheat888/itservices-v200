@@ -121,7 +121,7 @@ export function AttachmentList({ count, max, progressPct, children }: { count: n
             <div className="text-brand mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold">
                 <Paperclip className="h-3.5 w-3.5" />
                 {t('attachment_count').replace('{n}', String(count)).replace('{max}', String(max))}
-                {progressPct != null && <span className="ml-auto font-mono">{progressPct}%</span>}
+                {progressPct != null && <span className="ml-auto">{progressPct}%</span>}
             </div>
             {/* One overall bar, outside the scroll area, so progress stays visible
                 however many files have scrolled off. */}
@@ -204,7 +204,7 @@ export function AttachmentRow({
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{name}</span>
             )}
 
-            <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{formatFileSize(size)}</span>
+            <span className="text-muted-foreground shrink-0 text-[11px]">{formatFileSize(size)}</span>
 
             {href && (
                 <a

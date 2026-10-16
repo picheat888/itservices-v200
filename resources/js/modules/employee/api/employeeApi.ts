@@ -145,7 +145,6 @@ export interface OnboardingServiceField {
     input: 'select' | 'email' | 'text' | 'number' | 'date';
     required?: boolean;
     placeholder?: string;
-    mono?: boolean;
     options?: { value: string; label_en: string; label_th: string }[];
 }
 

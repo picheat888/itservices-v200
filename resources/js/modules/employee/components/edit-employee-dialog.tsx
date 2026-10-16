@@ -417,7 +417,6 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 <Input
                     type="email"
                     inputMode="email"
-                    className="font-mono placeholder:font-sans"
                     value={form.email}
                     onChange={(e) => set('email', e.target.value)}
                     placeholder={t('emp_email_ph')}
@@ -430,7 +429,6 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 <Input
                     type="tel"
                     inputMode="tel"
-                    className="font-mono placeholder:font-sans"
                     value={form.phone}
                     onChange={(e) => set('phone', e.target.value)}
                     placeholder={t('emp_phone_ph')}
@@ -511,14 +509,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
     const codeField = (
         <Field label={t('emp_employee_id')} help={t('emp_id_help')} name="code" error={errors.code}>
-            {/* Mono code, sans placeholder (the mono face has no Thai glyphs) */}
-            <Input
-                className="font-mono placeholder:font-sans"
-                value={form.code}
-                onChange={(e) => set('code', e.target.value)}
-                placeholder={t('emp_id_auto')}
-                autoComplete="off"
-            />
+            <Input value={form.code} onChange={(e) => set('code', e.target.value)} placeholder={t('emp_id_auto')} autoComplete="off" />
         </Field>
     );
 

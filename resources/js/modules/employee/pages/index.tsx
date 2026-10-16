@@ -277,14 +277,14 @@ export default function EmployeesPage() {
     };
 
     const posColumns: Column<Position>[] = [
-        { key: 'code', header: t('pos_code'), render: (p) => <span className="text-muted-foreground font-mono text-xs">{p.code}</span> },
+        { key: 'code', header: t('pos_code'), render: (p) => <span className="text-muted-foreground text-xs">{p.code}</span> },
         { key: 'title', header: t('pos_title'), render: (p) => <span className="font-medium">{p.title}</span> },
         {
             key: 'members',
             header: t('dept_members'),
             align: 'right',
             render: (p) => (
-                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
                     {p.employees_count ?? 0}
                 </span>
@@ -399,8 +399,8 @@ export default function EmployeesPage() {
     };
 
     const deptColumns: Column<Department>[] = [
-        { key: 'code', header: t('section_code'), render: (d) => <span className="text-muted-foreground font-mono text-xs">{d.code}</span> },
-        { key: 'tag', header: t('dept_code'), render: (d) => <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{d.tag}</span> },
+        { key: 'code', header: t('section_code'), render: (d) => <span className="text-muted-foreground text-xs">{d.code}</span> },
+        { key: 'tag', header: t('dept_code'), render: (d) => <span className="bg-muted rounded-md px-2 py-0.5 text-xs">{d.tag}</span> },
         {
             key: 'name',
             header: t('department'),
@@ -411,7 +411,7 @@ export default function EmployeesPage() {
             header: t('sub_sections'),
             align: 'right',
             render: (d) => (
-                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Layers className="text-muted-foreground h-3.5 w-3.5" />
                     {d.sections_count ?? 0}
                 </span>
@@ -422,7 +422,7 @@ export default function EmployeesPage() {
             header: t('dept_members'),
             align: 'right',
             render: (d) => (
-                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
                     {d.count ?? 0}
                 </span>
@@ -733,11 +733,11 @@ function DirectoryTab({
                 </div>
             ),
         },
-        { key: 'code', header: t('tbl_emp_id'), render: (e) => <span className="font-mono text-xs">{e.code}</span> },
+        { key: 'code', header: t('tbl_emp_id'), render: (e) => <span className="text-xs">{e.code}</span> },
         { key: 'position', header: t('position'), render: (e) => e.position ?? '—' },
         { key: 'department', header: t('department'), render: (e) => (lang === 'th' ? (e.department_th ?? e.department) : e.department) ?? '—' },
-        { key: 'email', header: t('emp_email'), render: (e) => <span className="font-mono text-xs">{e.email ?? '—'}</span> },
-        { key: 'joined', header: t('joined'), render: (e) => <span className="font-mono text-xs">{fmt.date(e.joined_at)}</span> },
+        { key: 'email', header: t('emp_email'), render: (e) => <span className="text-xs">{e.email ?? '—'}</span> },
+        { key: 'joined', header: t('joined'), render: (e) => <span className="text-xs">{fmt.date(e.joined_at)}</span> },
         {
             key: 'status',
             header: t('status'),
@@ -1003,12 +1003,12 @@ function OverviewTab({
                             {t('emp_status_title')}
                         </span>
                         <span className="text-muted-foreground text-xs">
-                            <b className="text-foreground font-mono font-bold">{summary?.total ?? 0}</b> {t('emp_people')}
+                            <b className="text-foreground font-bold">{summary?.total ?? 0}</b> {t('emp_people')}
                         </span>
                     </div>
                     <div className="p-5">
                         <div className="flex items-baseline gap-2.5">
-                            <span className="font-mono text-[54px] leading-none font-bold">{summary?.active ?? 0}</span>
+                            <span className="text-[54px] leading-none font-bold">{summary?.active ?? 0}</span>
                             <span className="text-muted-foreground text-sm">
                                 {t('emp_status_caption').replace('{n}', String(summary?.total ?? 0))}
                             </span>
@@ -1027,15 +1027,15 @@ function OverviewTab({
                         <div className="flex gap-5">
                             <span className="text-muted-foreground flex items-center gap-2 text-[12.5px]">
                                 <i className="bg-brand h-2.5 w-2.5 rounded-full" />
-                                {t('emp_status_active')} <b className="text-foreground font-mono font-semibold">{summary?.active ?? 0}</b>
+                                {t('emp_status_active')} <b className="text-foreground font-semibold">{summary?.active ?? 0}</b>
                             </span>
                             <span className="text-muted-foreground flex items-center gap-2 text-[12.5px]">
                                 <i className="bg-destructive h-2.5 w-2.5 rounded-full" />
-                                {t('emp_status_resigned')} <b className="text-foreground font-mono font-semibold">{summary?.resigned ?? 0}</b>
+                                {t('emp_status_resigned')} <b className="text-foreground font-semibold">{summary?.resigned ?? 0}</b>
                             </span>
                         </div>
                         <div className="border-border mt-4 flex items-center gap-3 border-t border-dashed pt-3.5">
-                            <span className="text-destructive font-mono text-[32px] leading-none font-bold">{summary?.resigned_in_period ?? 0}</span>
+                            <span className="text-destructive text-[32px] leading-none font-bold">{summary?.resigned_in_period ?? 0}</span>
                             <span className="text-muted-foreground text-[12.5px]">{t('emp_resigned_period')}</span>
                         </div>
                     </div>
@@ -1063,7 +1063,7 @@ function OverviewTab({
                                             </span>
                                         </div>
                                     </div>
-                                    <span className="text-muted-foreground font-mono text-xs">{fmt.date(e.last_day)}</span>
+                                    <span className="text-muted-foreground text-xs">{fmt.date(e.last_day)}</span>
                                 </div>
                             ))
                         )}
@@ -1095,10 +1095,10 @@ function OverviewTab({
                             .map((d) => (
                                 <div key={d.id} className="flex items-center justify-between py-2.5">
                                     <div className="flex items-center gap-2.5">
-                                        <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-[11px]">{d.tag}</span>
+                                        <span className="bg-muted rounded-md px-2 py-0.5 text-[11px]">{d.tag}</span>
                                         <span className="text-sm">{lang === 'th' ? (d.name_th ?? d.name) : d.name}</span>
                                     </div>
-                                    <span className="font-mono text-sm font-semibold">{d.count ?? 0}</span>
+                                    <span className="text-sm font-semibold">{d.count ?? 0}</span>
                                 </div>
                             ))}
                     </div>
@@ -1124,7 +1124,7 @@ function OverviewTab({
                                             </span>
                                         </div>
                                     </div>
-                                    <span className="text-muted-foreground font-mono text-xs">{fmt.date(e.joined_at)}</span>
+                                    <span className="text-muted-foreground text-xs">{fmt.date(e.joined_at)}</span>
                                 </div>
                             ))
                         )}

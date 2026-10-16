@@ -22,7 +22,7 @@ function AgeCell({ days }: { days: number | null }) {
         days < 1
             ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(days * 24))))
             : t('rep_days_n').replace('{n}', String(Math.round(days)));
-    return <span className="font-mono">{text}</span>;
+    return <span>{text}</span>;
 }
 
 /** The table card names what it holds under the SLA segment pressed: all, over SLA, due within 24 h, not due yet. */

@@ -61,10 +61,10 @@ const WAITING_SHOWN = 3;
 
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle';
-const NUM = 'text-right font-mono tabular-nums';
+const NUM = 'text-right tabular-nums';
 
 const CODE_LINK =
-    'text-brand focus-visible:ring-brand rounded-sm font-mono text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
+    'text-brand focus-visible:ring-brand rounded-sm text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
 const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
 const label = (l: ChartLabel | null, lang: Lang) => (l ? (lang === 'th' && l.name_th) || l.name : null);
@@ -98,7 +98,7 @@ function FlowLegend({ months }: { months: Month[] }) {
                 <span key={f.key} className="inline-flex items-center gap-1.5">
                     <KindMark kind={f.key} />
                     {t(f.label_key)}
-                    <b className="text-foreground font-mono font-semibold tabular-nums">
+                    <b className="text-foreground font-semibold tabular-nums">
                         {count(
                             months.reduce((s, m) => s + m[f.key], 0),
                             lang,
@@ -199,7 +199,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                 {[up / 2, up].map((v) => (
                                     <span
                                         key={v}
-                                        className="text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        className="text-muted-foreground absolute right-0 translate-y-1/2 text-[10.5px] leading-none tabular-nums"
                                         style={upAt(v)}
                                     >
                                         {count(v, lang)}
@@ -221,7 +221,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                 {[down / 2, down].map((v) => (
                                     <span
                                         key={v}
-                                        className="text-muted-foreground absolute right-0 -translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums"
+                                        className="text-muted-foreground absolute right-0 -translate-y-1/2 text-[10.5px] leading-none tabular-nums"
                                         style={downAt(v)}
                                     >
                                         {count(v, lang)}
@@ -264,7 +264,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                         {density.top && m.handover > 0 && (
                                                             <span
                                                                 className={cn(
-                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                                     m.month === thisMonth && 'text-brand',
                                                                 )}
                                                             >
@@ -313,7 +313,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                         {density.top && back(m) > 0 && (
                                                             <span
                                                                 className={cn(
-                                                                    'absolute -bottom-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    'absolute -bottom-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                                     m.month === thisMonth && 'text-brand',
                                                                 )}
                                                             >
@@ -385,7 +385,7 @@ function FlowDetail({ month, partialNote }: { month: Month; partialNote: string 
                         <KindMark kind={k} />
                         {t(`asset_hist_kind_${k}`)}
                     </span>
-                    <b className={cn('font-mono tabular-nums', month[k] === 0 && 'text-muted-foreground font-normal')}>{count(month[k], lang)}</b>
+                    <b className={cn('tabular-nums', month[k] === 0 && 'text-muted-foreground font-normal')}>{count(month[k], lang)}</b>
                 </div>
             ))}
             {partialNote && <div className="text-muted-foreground border-border border-t pt-1">{partialNote}</div>}
@@ -450,7 +450,7 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
                                                         {r.code}
                                                     </Link>
                                                 ) : (
-                                                    <span className="font-mono text-xs font-semibold" translate="no">
+                                                    <span className="text-xs font-semibold" translate="no">
                                                         {r.code}
                                                     </span>
                                                 )}
@@ -512,12 +512,12 @@ function WaitingRow({ w }: { w: Waiting }) {
                         {w.code}
                     </Link>
                 ) : (
-                    <span className="font-mono text-xs font-semibold">{w.code}</span>
+                    <span className="text-xs font-semibold">{w.code}</span>
                 )}
                 {(w.brand || w.model) && <span className="text-muted-foreground ml-2 text-xs">{brandModel(w)}</span>}
             </span>
             <span className="row-span-2" title={late ? t('rep_th_wait_long') : undefined}>
-                <StatusBadge tone={late ? 'red' : 'gray'} className="font-mono tabular-nums">
+                <StatusBadge tone={late ? 'red' : 'gray'} className="tabular-nums">
                     {t('rep_days_n').replace('{n}', count(w.days, lang))}
                     {late && <span className="sr-only">{t('rep_th_wait_long')}</span>}
                 </StatusBadge>
@@ -553,7 +553,7 @@ function WaitingGroup({ title, rows, status, first }: { title: string; rows: Wai
                 )}
             >
                 {title}
-                <b className="text-foreground font-mono tabular-nums">{count(rows.length, lang)}</b>
+                <b className="text-foreground tabular-nums">{count(rows.length, lang)}</b>
             </h3>
             <ul className={cn(open && 'max-h-80 overflow-y-auto overscroll-contain')}>
                 {shown.map((w) => (
@@ -683,12 +683,7 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                                     tile.tint,
                                 )}
                             >
-                                <b
-                                    className={cn(
-                                        'font-mono text-xl font-bold tabular-nums',
-                                        values[tile.key] === 0 ? 'text-muted-foreground' : tile.ink,
-                                    )}
-                                >
+                                <b className={cn('text-xl font-bold tabular-nums', values[tile.key] === 0 ? 'text-muted-foreground' : tile.ink)}>
                                     {count(values[tile.key], lang)}
                                 </b>
                                 <span className="text-muted-foreground text-xs">{t(tile.label_key)}</span>
@@ -697,7 +692,7 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                     </ul>
                     <div className="flex flex-1 flex-col justify-center gap-2 px-5 pt-3 pb-4">
                         <div className="flex flex-wrap items-baseline gap-x-2">
-                            <b className="font-mono text-2xl font-bold tabular-nums">{pct(a.within_2_days, a.to_people)}%</b>
+                            <b className="text-2xl font-bold tabular-nums">{pct(a.within_2_days, a.to_people)}%</b>
                             <span className="text-sm font-medium">{t('rep_th_acc_within2')}</span>
                             <span className="text-muted-foreground text-xs">{n('rep_th_acc_within2_of', { n: a.to_people })}</span>
                         </div>
@@ -713,7 +708,7 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
                                         contentClassName="whitespace-nowrap"
                                         // Grows by its share but never narrower than its label
                                         className={cn(
-                                            'flex h-full min-w-[1.375rem] basis-0 cursor-pointer items-center justify-center rounded-none font-mono text-[10.5px] leading-none font-semibold whitespace-nowrap tabular-nums focus-visible:ring-inset',
+                                            'flex h-full min-w-[1.375rem] basis-0 cursor-pointer items-center justify-center rounded-none text-[10.5px] leading-none font-semibold whitespace-nowrap tabular-nums focus-visible:ring-inset',
                                             PIECE_INK,
                                             tile.fill,
                                         )}
@@ -802,11 +797,7 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                                         </div>
                                     </td>
                                     <td
-                                        className={cn(
-                                            TD,
-                                            'text-left font-mono font-semibold tabular-nums',
-                                            w.out === 0 && 'text-muted-foreground font-normal',
-                                        )}
+                                        className={cn(TD, 'text-left font-semibold tabular-nums', w.out === 0 && 'text-muted-foreground font-normal')}
                                     >
                                         {count(w.out, lang)}
                                     </td>
@@ -846,7 +837,7 @@ function BarList({ rows, apart }: { rows: BarRow[]; apart?: BarRow | null }) {
                     style={{ width: `${(r.value / max) * 100}%` }}
                 />
             </span>
-            <b className="text-right font-mono font-semibold tabular-nums">{count(r.value, lang)}</b>
+            <b className="text-right font-semibold tabular-nums">{count(r.value, lang)}</b>
         </li>
     );
 

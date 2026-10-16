@@ -77,7 +77,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
 
             <span
                 title={d.department ?? undefined}
-                className="absolute top-[11px] right-[11px] rounded-md px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide text-[var(--dept-ink)] dark:text-[var(--dept-ink-dark)]"
+                className="absolute top-[11px] right-[11px] rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide text-[var(--dept-ink)] dark:text-[var(--dept-ink-dark)]"
                 style={
                     {
                         '--dept-ink': ink.light,
@@ -99,7 +99,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                         e.stopPropagation();
                         d.onToggle(d.id);
                     }}
-                    className="nokey bg-brand/10 text-brand-ink hover:bg-brand/20 focus-visible:ring-brand absolute right-[11px] bottom-[11px] inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    className="nokey bg-brand/10 text-brand-ink hover:bg-brand/20 focus-visible:ring-brand absolute right-[11px] bottom-[11px] inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                     {d.collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                     {d.reports_count}

@@ -128,11 +128,11 @@ function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRa
             <span className="text-muted-foreground truncate text-xs" title={label}>
                 {label}
             </span>
-            <span className="flex items-baseline gap-1.5 font-mono text-[22px] leading-tight font-bold">
+            <span className="flex items-baseline gap-1.5 text-[22px] leading-tight font-bold">
                 {value}
                 {tile.unit === 'percent' && tile.value !== null && <small className="text-muted-foreground text-xs font-medium">%</small>}
                 {tile.total !== null && <small className="text-muted-foreground text-xs font-medium">/ {tile.total.toLocaleString()}</small>}
-                {beside && <small className={cn('truncate font-sans text-xs font-semibold', BAD)}>{beside}</small>}
+                {beside && <small className={cn('truncate text-xs font-semibold', BAD)}>{beside}</small>}
             </span>
             <span className="flex min-h-5 items-center justify-between gap-1.5 text-xs">
                 <Footer tile={tile} period={period} periodWords={periodWords} />

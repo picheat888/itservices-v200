@@ -1114,7 +1114,7 @@ export interface ServiceRequest {
     /** Point-in-time labels + resolved values, snapshotted at submit. */
     // value_th is absent on rows snapshotted before it existed, and null where the value
     // has no Thai form to freeze (free text, a share path) — read it through `value`.
-    fields_display: { key: string; label_en: string; label_th: string; value: string; value_th?: string | null; mono: boolean }[];
+    fields_display: { key: string; label_en: string; label_th: string; value: string; value_th?: string | null }[];
     status: ServiceRequestStatus;
     auto_ticket: boolean;
     /** The last movement on this request: `kind` is a code the SPA writes out, `by` the name frozen on the row that moved. */
@@ -1219,7 +1219,6 @@ export interface RequestFieldSchema {
     managed?: boolean;
     source?: 'email_groups' | 'file_shares' | 'social_platforms' | 'softwares' | 'locations';
     required?: boolean;
-    mono?: boolean;
     placeholder?: string;
     default?: string | number;
     min?: number;

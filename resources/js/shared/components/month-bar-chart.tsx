@@ -69,7 +69,7 @@ export function MonthBarChart({
                         >
                             <span
                                 className={cn(
-                                    'absolute -top-[18px] right-0 left-0 text-center font-mono text-[11px] font-semibold',
+                                    'absolute -top-[18px] right-0 left-0 text-center text-[11px] font-semibold',
                                     now ? 'text-brand' : 'text-muted-foreground',
                                 )}
                             >

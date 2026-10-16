@@ -18,7 +18,7 @@ function measureWidest(config: DateConfig, lang: string, fontClass: string): str
     return `calc(${Math.ceil(widest)}px + 2 * var(--row-px))`;
 }
 
-export function useDateColumnWidth(fontClass = 'font-mono text-xs'): string {
+export function useDateColumnWidth(fontClass = 'text-xs'): string {
     const config = useUiStore((s) => s.dateConfig);
     const lang = useUiStore((s) => s.lang);
     const [width, setWidth] = useState('9rem');

@@ -194,7 +194,7 @@ function templateAudience(t: (key: string) => string, key: string): { when: stri
 function TemplateAudienceLine({ templateKey }: { templateKey: string }) {
     const t = useT();
     const audience = templateAudience(t, templateKey);
-    if (!audience) return <span className="text-muted-foreground font-mono text-xs">{templateKey}</span>;
+    if (!audience) return <span className="text-muted-foreground text-xs">{templateKey}</span>;
 
     return (
         <span title={templateKey} className="text-muted-foreground inline-flex flex-wrap gap-x-5 text-xs">
@@ -220,19 +220,7 @@ function unknownVariables(tokens: string[], variables: string[] | null): string[
 
 /** A warning sentence with its <tags> in code type, the rest in the normal font. */
 function TagText({ text }: { text: string }) {
-    return (
-        <>
-            {text.split(/(<\/?[a-zA-Z0-9]+>)/).map((part, i) =>
-                i % 2 === 1 ? (
-                    <code key={i} className="font-mono">
-                        {part}
-                    </code>
-                ) : (
-                    part
-                ),
-            )}
-        </>
-    );
+    return <>{text.split(/(<\/?[a-zA-Z0-9]+>)/).map((part, i) => (i % 2 === 1 ? <code key={i}>{part}</code> : part))}</>;
 }
 
 /** One fixed-height line under the body editor: HTML sound or not; the full list opens on click. */
@@ -482,7 +470,7 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
         <div
             ref={layerRef}
             aria-hidden="true"
-            className="text-foreground pointer-events-none absolute inset-0 overflow-hidden py-2 pr-3 font-mono text-xs break-words whitespace-pre-wrap [scrollbar-gutter:stable]"
+            className="text-foreground pointer-events-none absolute inset-0 overflow-hidden py-2 pr-3 text-xs break-words whitespace-pre-wrap [scrollbar-gutter:stable]"
         >
             {rows.map((row) => {
                 const lineIssues = marks.filter((mark) => mark.line === row.number);
@@ -501,7 +489,7 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
                             {lineIssues.length > 0 && (
                                 <span
                                     role="tooltip"
-                                    className="bg-foreground text-background invisible absolute top-0 left-full z-10 ml-2 w-max max-w-xs space-y-0.5 rounded-md px-2 py-1 text-left font-sans text-xs leading-snug whitespace-normal shadow-md group-hover:visible"
+                                    className="bg-foreground text-background invisible absolute top-0 left-full z-10 ml-2 w-max max-w-xs space-y-0.5 rounded-md px-2 py-1 text-left text-xs leading-snug whitespace-normal shadow-md group-hover:visible"
                                 >
                                     {lineIssues.map((issue, i) => (
                                         <span key={i} className="block">
@@ -1001,7 +989,7 @@ function BodyEditor({
                             }
                         }}
                         spellCheck={false}
-                        className="caret-foreground absolute inset-y-0 right-0 left-9 block h-full resize-none overflow-auto bg-transparent py-2 pr-3 pl-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none [scrollbar-gutter:stable]"
+                        className="caret-foreground absolute inset-y-0 right-0 left-9 block h-full resize-none overflow-auto bg-transparent py-2 pr-3 pl-2 text-xs break-words whitespace-pre-wrap text-transparent outline-none [scrollbar-gutter:stable]"
                     />
                 </div>
                 <HtmlStatusBar issues={htmlIssues} lineCount={value.split('\n').length} />
@@ -1021,7 +1009,7 @@ function BodyEditor({
                                     onClick={() => insertVar(tk)}
                                     title={unknown ? t('email_var_unknown') : t('email_insert_var')}
                                     className={cn(
-                                        'focus-visible:ring-brand/40 inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors focus-visible:ring-2 focus-visible:outline-hidden',
+                                        'focus-visible:ring-brand/40 inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-hidden',
                                         unknown
                                             ? 'bg-red-50 text-red-700 ring-1 ring-red-300 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800'
                                             : 'bg-muted hover:bg-accent',
@@ -1029,7 +1017,7 @@ function BodyEditor({
                                 >
                                     {unknown && <AlertTriangle className="h-3 w-3" aria-hidden />}
                                     {`{{${tk}}}`}
-                                    {VAR_NOTE[tk] && <span className="text-muted-foreground ml-1 font-sans text-xs">{t(VAR_NOTE[tk])}</span>}
+                                    {VAR_NOTE[tk] && <span className="text-muted-foreground ml-1 text-xs">{t(VAR_NOTE[tk])}</span>}
                                 </button>
                             );
                         })}
@@ -1532,7 +1520,7 @@ function EditorDialog({
                         {unknown.length > 0 && (
                             <div>
                                 <p>{t('email_var_unknown_text')}</p>
-                                <p className="font-mono">{unknown.map((tk) => `{{${tk}}}`).join(', ')}</p>
+                                <p>{unknown.map((tk) => `{{${tk}}}`).join(', ')}</p>
                             </div>
                         )}
                         {htmlIssues.length > 0 && (

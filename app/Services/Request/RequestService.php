@@ -644,7 +644,7 @@ class RequestService
      * plus resolved values (managed/source ids → names, select values → labels).
      *
      * @param  array<string, mixed>  $fields
-     * @return list<array{key: string, label_en: string, label_th: string, value: string, value_th: string|null, mono: bool}>
+     * @return list<array{key: string, label_en: string, label_th: string, value: string, value_th: string|null}>
      */
     private function buildDisplayRows(RequestType $type, array $fields): array
     {
@@ -663,7 +663,6 @@ class RequestService
                 'label_th' => $field['label_th'],
                 'value' => $value,
                 'value_th' => $valueTh,
-                'mono' => (bool) ($field['mono'] ?? false),
             ];
         }
 

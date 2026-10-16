@@ -32,13 +32,13 @@ export function ImportPreviewTable({ rows }: { rows: ImportPreviewRow[] }) {
                         return (
                             <Fragment key={row.row}>
                                 <tr className={failed ? 'bg-destructive/5' : undefined}>
-                                    <td className="text-muted-foreground px-2 py-1 font-mono">{row.row}</td>
-                                    <td className="px-2 py-1 font-mono">{row.employee_code ?? '—'}</td>
+                                    <td className="text-muted-foreground px-2 py-1 whitespace-nowrap">{row.row}</td>
+                                    <td className="px-2 py-1 whitespace-nowrap">{row.employee_code ?? '—'}</td>
                                     <td className="px-2 py-1 font-medium">{row.name || '—'}</td>
                                     <td className="px-2 py-1">{row.department ?? '—'}</td>
                                     <td className="px-2 py-1">{row.section ?? '—'}</td>
                                     <td className="px-2 py-1">{row.position ?? '—'}</td>
-                                    <td className="px-2 py-1 font-mono">{row.report_to ?? '—'}</td>
+                                    <td className="px-2 py-1 whitespace-nowrap">{row.report_to ?? '—'}</td>
                                 </tr>
                                 {failed && (
                                     <tr className="bg-destructive/5">

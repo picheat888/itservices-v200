@@ -235,7 +235,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                                                 {s.code}
                                                             </Link>
                                                         ) : (
-                                                            <span className="font-mono text-xs font-semibold">{s.code}</span>
+                                                            <span className="text-xs font-semibold">{s.code}</span>
                                                         )}
                                                         <span className="truncate font-medium">{s.name}</span>
                                                     </div>
@@ -243,7 +243,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                                 </div>
                                             </td>
                                             <td className={TD}>{s.license_type ? t(`access_lic_${s.license_type}`) : '—'}</td>
-                                            <td className={cn(TD, 'text-right font-mono whitespace-nowrap tabular-nums')}>
+                                            <td className={cn(TD, 'text-right whitespace-nowrap tabular-nums')}>
                                                 <b>{count(s.used, lang)}</b>{' '}
                                                 <span className="text-muted-foreground">/ {s.seats === null ? '∞' : count(s.seats, lang)}</span>
                                                 {s.pct !== null && (
@@ -266,11 +266,11 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                             </td>
                                             <td className={cn(TD, 'text-right')}>
                                                 {s.requests > 0 ? (
-                                                    <StatusBadge tone="amber" className="font-mono tabular-nums">
+                                                    <StatusBadge tone="amber" className="tabular-nums">
                                                         {count(s.requests, lang)}
                                                     </StatusBadge>
                                                 ) : (
-                                                    <span className="text-muted-foreground font-mono">0</span>
+                                                    <span className="text-muted-foreground">0</span>
                                                 )}
                                             </td>
                                             <td className={TD}>
@@ -284,7 +284,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                                                         label={t('rep_sl_pick_aria').replace('{name}', s.name).replace('{n}', count(s.used, lang))}
                                                     />
                                                 ) : (
-                                                    <span className="text-muted-foreground font-mono">0</span>
+                                                    <span className="text-muted-foreground">0</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -347,7 +347,7 @@ function LeaversCard({
                                     ) : (
                                         <span className="font-medium">{p.name}</span>
                                     )}
-                                    <span className="text-muted-foreground ml-2 font-mono text-xs">{p.code}</span>
+                                    <span className="text-muted-foreground ml-2 text-xs">{p.code}</span>
                                 </>
                             }
                             side={<DaysOut days={p.days} />}
@@ -404,13 +404,13 @@ function RequestsCard({
                                 {r.reference}
                             </Link>
                         ) : (
-                            <span className="font-mono text-xs font-semibold">{r.reference}</span>
+                            <span className="text-xs font-semibold">{r.reference}</span>
                         )}
                         <span className="ml-2">{r.software.name}</span>
                     </>
                 }
                 side={
-                    <StatusBadge tone={r.days > LONG_WAIT_DAYS ? 'red' : 'gray'} className="font-mono tabular-nums">
+                    <StatusBadge tone={r.days > LONG_WAIT_DAYS ? 'red' : 'gray'} className="tabular-nums">
                         {t('rep_sl_waiting_days').replace('{n}', count(r.days, lang))}
                     </StatusBadge>
                 }

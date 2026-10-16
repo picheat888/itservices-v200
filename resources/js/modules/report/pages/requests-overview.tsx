@@ -34,7 +34,7 @@ function RequesterCell({ row }: { row: Row }) {
                 {row.requester as string}
             </span>
             <span className="text-muted-foreground flex gap-2.5 text-xs whitespace-nowrap">
-                {row.employee_code ? <span className="font-mono">{row.employee_code as string}</span> : null}
+                {row.employee_code ? <span>{row.employee_code as string}</span> : null}
                 {department && <span className="truncate">{deptName(department, lang)}</span>}
             </span>
         </span>
@@ -54,7 +54,7 @@ function DaysCell({ row }: { row: Row }) {
     if (typeof row.total_days === 'number') {
         return (
             <span className="whitespace-nowrap">
-                <b className="font-mono font-semibold tabular-nums">{count(row.total_days, lang)}</b> {t('rep_days')}
+                <b className="font-semibold tabular-nums">{count(row.total_days, lang)}</b> {t('rep_days')}
             </span>
         );
     }

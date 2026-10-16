@@ -78,7 +78,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {section ? t('edit_section') : t('add_section')}
-                        {section?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{section.code}</span>}
+                        {section?.code && <span className="text-muted-foreground text-xs font-normal">{section.code}</span>}
                     </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={submit} className="contents">

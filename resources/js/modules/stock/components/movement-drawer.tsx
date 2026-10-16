@@ -386,10 +386,10 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                                 <ArrowDownToLine className="h-6 w-6" />
                             </span>
-                            <div className="mt-1 font-mono text-3xl font-bold text-emerald-600 dark:text-emerald-400">+{done.qty}</div>
+                            <div className="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">+{done.qty}</div>
                             <div className="text-sm font-medium">{done.item.name}</div>
                             <div className="text-muted-foreground text-xs">
-                                {t('stock_new_onhand')} <b className="font-mono">{done.prevStock + done.qty}</b>
+                                {t('stock_new_onhand')} <b>{done.prevStock + done.qty}</b>
                             </div>
                         </div>
 
@@ -397,7 +397,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             <div>
                                 <div className="mb-2 flex items-center justify-between">
                                     <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                                        {t('stock_captured_serials')} <span className="font-mono">{done.serials.length}</span>
+                                        {t('stock_captured_serials')} <span>{done.serials.length}</span>
                                     </span>
                                     <Button size="sm" onClick={() => window.open(`/pdf/stock-movements/${done.movementId}/labels`, '_blank')}>
                                         <Printer className="h-3.5 w-3.5" />
@@ -406,7 +406,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                 </div>
                                 <div className="flex max-h-40 flex-wrap gap-1.5 overflow-auto">
                                     {done.serials.map((s, i) => (
-                                        <span key={i} className="bg-accent inline-flex items-center gap-1 rounded-md px-2 py-1 font-mono text-xs">
+                                        <span key={i} className="bg-accent inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs">
                                             <span className="text-muted-foreground">{i + 1}</span>
                                             {s}
                                         </span>
@@ -469,7 +469,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         <div className="space-y-3">
                             {/* Auto doc-no hint chip */}
                             <div className="flex items-center gap-1.5">
-                                <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs">
+                                <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs">
                                     <MoveRight className="h-3 w-3" />
                                     TRF-XXXXXX - {t('stock_mv_doc_auto')}
                                 </span>
@@ -539,7 +539,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                     </span>
                                     <span
                                         className={cn(
-                                            'font-mono text-sm font-semibold',
+                                            'text-sm font-semibold',
                                             sourceBalance === 0
                                                 ? 'text-destructive'
                                                 : sourceBalance <= (selected.min_stock ?? 0)
@@ -562,7 +562,6 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                         value={qty}
                                         disabled={sourceBalance === 0}
                                         onChange={(e) => setQty(Math.max(1, Math.min(sourceBalance, +e.target.value)))}
-                                        className="font-mono"
                                     />
                                     {qty > sourceBalance && sourceBalance > 0 && (
                                         <p className="text-destructive mt-1 text-xs">{t('stock_mv_qty_over_source')}</p>
@@ -625,7 +624,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                                                 });
                                                             }}
                                                         />
-                                                        <span className="font-mono text-sm">{s.serial}</span>
+                                                        <span className="text-sm">{s.serial}</span>
                                                         {checked && <Check className="text-brand ml-auto h-3.5 w-3.5" />}
                                                     </label>
                                                 );
@@ -650,8 +649,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                             </div>
                                             <div className="mt-1.5 flex items-center gap-x-3 text-xs">
                                                 <span>
-                                                    <b className="font-mono">{transferSerialIds.size}</b>/{availableTransferSerials.length}{' '}
-                                                    {t('stock_mv_selected')}
+                                                    <b>{transferSerialIds.size}</b>/{availableTransferSerials.length} {t('stock_mv_selected')}
                                                 </span>
                                                 {transferSerialIds.size > 0 && (
                                                     <span className="text-brand flex items-center gap-1">
@@ -698,12 +696,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     {!isTransfer && !isReturn && (
                         <div className="grid grid-cols-2 gap-3">
                             <Field label={t('stock_reference')} required={isReceive}>
-                                <Input
-                                    value={reference}
-                                    onChange={(e) => setReference(e.target.value)}
-                                    placeholder="PO-2026-118 / REQ-12"
-                                    className="font-mono"
-                                />
+                                <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="PO-2026-118 / REQ-12" />
                             </Field>
                             <Field label={k === 'receive' ? t('stock_supplier') : t('stock_from')} required={isReceive}>
                                 {locationField(fromType, from, setFrom, k === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
@@ -742,7 +735,6 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                 // Normalise to two decimals on blur (e.g. "1234.5" → "1,234.50").
                                 onBlur={() => unitCost !== '' && setUnitCost((Number(unitCost) || 0).toFixed(2))}
                                 placeholder="0.00"
-                                className="font-mono"
                             />
                         </Field>
                     )}
@@ -750,7 +742,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     {/* Quantity-only capture — receive/return/issue only */}
                     {selected && !isSerial && !isTransfer && !returnIsSerial && (
                         <Field label={isReceive ? t('stock_qty_received') : t('stock_qty')} required>
-                            <Input type="number" min={1} value={qty} onChange={(e) => setQty(+e.target.value)} className="font-mono" />
+                            <Input type="number" min={1} value={qty} onChange={(e) => setQty(+e.target.value)} />
                         </Field>
                     )}
 
@@ -806,7 +798,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                                         });
                                                     }}
                                                 />
-                                                <span className="font-mono text-sm">{s.serial}</span>
+                                                <span className="text-sm">{s.serial}</span>
                                                 {checked && <Check className="text-brand ml-auto h-3.5 w-3.5" />}
                                             </label>
                                         );
@@ -870,7 +862,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                             min={1}
                                             value={serials.length}
                                             onChange={(e) => setSerialCount(+e.target.value)}
-                                            className="h-7 w-16 text-center font-mono"
+                                            className="h-7 w-16 text-center"
                                         />
                                         <button
                                             type="button"
@@ -898,7 +890,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                             }
                                         }}
                                         placeholder={t('stock_scan_ph')}
-                                        className="h-8 border-0 bg-transparent font-mono shadow-none focus-visible:ring-0"
+                                        className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-0"
                                     />
                                     <Button size="sm" variant="outline" onClick={pushScan} disabled={!scan.trim()}>
                                         {t('stock_scan_add')}
@@ -914,13 +906,13 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                         const bad = st === 'dup-system' || st === 'dup-batch';
                                         return (
                                             <div key={i} className="flex items-center gap-2">
-                                                <span className="text-muted-foreground w-5 shrink-0 text-right font-mono text-xs">{i + 1}</span>
+                                                <span className="text-muted-foreground w-5 shrink-0 text-right text-xs">{i + 1}</span>
                                                 <Input
                                                     value={s}
                                                     onChange={(e) => updSerial(i, e.target.value)}
                                                     placeholder={`${t('stock_serial_n')}${i + 1}`}
                                                     className={cn(
-                                                        'h-8 font-mono',
+                                                        'h-8',
                                                         // Match the shared Field error look: red border stays on focus,
                                                         // with a soft red glow instead of a solid red ring.
                                                         bad &&
@@ -971,12 +963,12 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                 </div>
                                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
                                     <span>
-                                        <b className="font-mono">{okCount}</b>/{serials.length} {t('stock_serials_valid')}
+                                        <b>{okCount}</b>/{serials.length} {t('stock_serials_valid')}
                                     </span>
                                     {dupCount > 0 && (
                                         <span className="text-destructive flex items-center gap-1">
                                             <AlertTriangle className="h-3 w-3" />
-                                            <b className="font-mono">{dupCount}</b> {t('stock_serial_dup')}
+                                            <b>{dupCount}</b> {t('stock_serial_dup')}
                                         </span>
                                     )}
                                     {emptyCount > 0 && (

@@ -38,10 +38,10 @@ class RefreshDisplaySnapshotsTest extends TestCase
             'fields' => [
                 '_display' => [
                     // Yesterday's wording, and no Thai value at all.
-                    ['key' => 'device_id', 'label_en' => 'Device type', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'value' => 'Tablet', 'mono' => false],
-                    ['key' => 'sim', 'label_en' => 'SIM', 'label_th' => 'ซิม', 'value' => 'Yes', 'mono' => false],
+                    ['key' => 'device_id', 'label_en' => 'Device type', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'value' => 'Tablet'],
+                    ['key' => 'sim', 'label_en' => 'SIM', 'label_th' => 'ซิม', 'value' => 'Yes'],
                     // A field the schema no longer has: the snapshot is the only record of it.
-                    ['key' => 'retired_field', 'label_en' => 'Old thing', 'label_th' => 'ของเก่า', 'value' => 'Whatever', 'mono' => false],
+                    ['key' => 'retired_field', 'label_en' => 'Old thing', 'label_th' => 'ของเก่า', 'value' => 'Whatever'],
                 ],
             ],
         ]);
@@ -84,7 +84,7 @@ class RefreshDisplaySnapshotsTest extends TestCase
         // Nothing to refresh it from, and the snapshot is the only record that this was
         // ever asked — so it keeps its own words, including having no value_th key.
         $this->assertSame(
-            ['key' => 'retired_field', 'label_en' => 'Old thing', 'label_th' => 'ของเก่า', 'value' => 'Whatever', 'mono' => false],
+            ['key' => 'retired_field', 'label_en' => 'Old thing', 'label_th' => 'ของเก่า', 'value' => 'Whatever'],
             $this->rows($request)['retired_field'],
         );
     }

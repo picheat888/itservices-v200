@@ -260,9 +260,7 @@ export function ScheduleReportDialog({
                                         onClick={() => setFormat(f)}
                                         className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left"
                                     >
-                                        <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase ${formatChoices[f].tone}`}>
-                                            {f}
-                                        </span>
+                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${formatChoices[f].tone}`}>{f}</span>
                                         <span className="text-sm font-semibold">{formatChoices[f].title}</span>
                                     </ChoiceCard>
                                 ))}
@@ -273,7 +271,7 @@ export function ScheduleReportDialog({
                     <div className="space-y-2">
                         <div className="text-muted-foreground flex items-baseline justify-between text-xs font-semibold">
                             <label htmlFor={recipientsInputId}>{t('rep_schedule_recipients')}</label>
-                            <span className="font-mono normal-case">
+                            <span className="normal-case">
                                 {recipients.length}/{MAX_RECIPIENTS}
                             </span>
                         </div>

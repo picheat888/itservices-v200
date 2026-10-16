@@ -21,11 +21,11 @@ import { ContractPeekDialog } from './contract-peek-dialog';
 type TabId = 'overview' | 'tickets' | 'history';
 
 /** A single label/value pair in the Overview meta grids. */
-function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function KV({ label, value }: { label: string; value: React.ReactNode }) {
     return (
         <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">{label}</div>
-            <div className={mono ? 'font-mono text-sm' : 'text-sm'}>{value || '—'}</div>
+            <div className="text-sm">{value || '—'}</div>
         </div>
     );
 }
@@ -201,9 +201,7 @@ export function AssetDetailDrawer({
                             </div>
                             <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                                 <span className="truncate">{a.model}</span>
-                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
-                                    {a.asset_code}
-                                </span>
+                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">{a.asset_code}</span>
                                 {a.tag && (
                                     <span className="bg-accent text-foreground inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
                                         <Tag className="h-3 w-3 opacity-60" />
@@ -284,7 +282,7 @@ export function AssetDetailDrawer({
                                 <div>
                                     <SectionLabel>{t('asset_general')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                        <KV label={t('asset_no')} value={a.asset_code} mono />
+                                        <KV label={t('asset_no')} value={a.asset_code} />
                                         <KV label={t('asset_tag_name')} value={a.tag} />
                                         <KV label={t('asset_warehouse')} value={a.warehouse} />
                                         <KV
@@ -306,7 +304,7 @@ export function AssetDetailDrawer({
                                             <div className="space-y-0.5">
                                                 <div className="text-muted-foreground text-xs">{t('asset_linked_contract')}</div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-mono text-sm">{a.contract_code ?? `#${a.contract_id}`}</span>
+                                                    <span className="text-sm">{a.contract_code ?? `#${a.contract_id}`}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPeekAssetId(a.id)}
@@ -331,14 +329,14 @@ export function AssetDetailDrawer({
                                         </div>
                                         <KV label={t('asset_brand')} value={a.brand} />
                                         <KV label={t('asset_model')} value={a.model} />
-                                        <KV label={t('asset_serial')} value={a.serial} mono />
+                                        <KV label={t('asset_serial')} value={a.serial} />
                                         {/* Purchase date, supplier, value & warranty are owned-only. For leased assets
                                         these belong to the contract — open Contract Details to view them. */}
                                         {!rented && (
                                             <>
-                                                <KV label={t('asset_purchase_date')} value={fmt.date(a.purchase_date)} mono />
+                                                <KV label={t('asset_purchase_date')} value={fmt.date(a.purchase_date)} />
                                                 <KV label={t('asset_supplier')} value={a.supplier} />
-                                                <KV label={t('asset_value')} value={a.value_display} mono />
+                                                <KV label={t('asset_value')} value={a.value_display} />
                                                 <KV
                                                     label={t('asset_warranty_end')}
                                                     value={
@@ -351,7 +349,6 @@ export function AssetDetailDrawer({
                                                             fmt.date(a.warranty_end)
                                                         )
                                                     }
-                                                    mono={!lifetime}
                                                 />
                                             </>
                                         )}
@@ -368,12 +365,12 @@ export function AssetDetailDrawer({
                                 <div>
                                     <SectionLabel>{t('asset_ownership')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                        <KV label={t('asset_employee_id')} value={a.owner} mono />
+                                        <KV label={t('asset_employee_id')} value={a.owner} />
                                         <KV label={t('asset_owner_name')} value={a.owner_name} />
                                         <KV label={t('asset_position')} value={a.owner_position} />
                                         <KV label={t('asset_dept')} value={a.department} />
                                         <KV label={t('asset_location')} value={a.location} />
-                                        <KV label={t('asset_owned_since')} value={fmt.date(a.owned_since)} mono />
+                                        <KV label={t('asset_owned_since')} value={fmt.date(a.owned_since)} />
                                     </div>
                                 </div>
                             </div>

@@ -80,7 +80,6 @@ export function WorkflowViewDialog({
                         <InfoCell
                             label={t('wf_cell_decision').replace('{days}', String(measureDays))}
                             value={wf.measured ? `${wf.measured.avg_days}${t('wf_days_suffix')}` : '—'}
-                            mono
                         />
                     </div>
 
@@ -98,7 +97,7 @@ export function WorkflowViewDialog({
                                 <div key={i} className="border-border flex items-center gap-3 rounded-xl border px-3.5 py-2.5">
                                     <span
                                         className={cn(
-                                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold',
+                                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
                                             s.kind === 'completion'
                                                 ? 'bg-brand/10 text-brand'
                                                 : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
@@ -149,13 +148,13 @@ export function WorkflowViewDialog({
     );
 }
 
-function InfoCell({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function InfoCell({ label, value }: { label: string; value: string }) {
     return (
         <div>
             <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase [&:lang(th)]:tracking-normal [&:lang(th)]:normal-case">
                 {label}
             </div>
-            <div className={cn('mt-0.5 text-sm font-semibold', mono && 'font-mono')}>{value}</div>
+            <div className={'mt-0.5 text-sm font-semibold'}>{value}</div>
         </div>
     );
 }

@@ -62,7 +62,7 @@ export function OrgChartToolbar({
 
     const stat = (num: number, label: string) => (
         <div className="flex flex-col items-center justify-center px-4">
-            <span className="text-foreground font-mono text-lg leading-none font-extrabold tracking-tight">{num}</span>
+            <span className="text-foreground text-lg leading-none font-extrabold tracking-tight">{num}</span>
             <span className="text-muted-foreground mt-0.5 text-[11px]">{label}</span>
         </div>
     );
@@ -148,7 +148,7 @@ export function OrgChartToolbar({
                                                 </div>
                                             )}
                                         </div>
-                                        <span className="text-muted-foreground shrink-0 self-center font-mono text-[11px]">{p.code}</span>
+                                        <span className="text-muted-foreground shrink-0 self-center text-[11px]">{p.code}</span>
                                     </button>
                                 </li>
                             ))}

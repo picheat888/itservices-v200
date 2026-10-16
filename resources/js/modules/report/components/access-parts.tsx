@@ -67,7 +67,7 @@ export function PieceBar({
                         key={p.key}
                         title={`${p.label}: ${p.text ?? count(p.value, lang)}`}
                         className={cn(
-                            'flex min-w-6 items-center justify-center font-mono text-[10.5px] font-semibold whitespace-nowrap tabular-nums',
+                            'flex min-w-6 items-center justify-center text-[10.5px] font-semibold whitespace-nowrap tabular-nums',
                             PIECE_INK,
                             W_PCT[pct(p.value, total)],
                             p.fill,

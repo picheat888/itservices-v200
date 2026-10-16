@@ -3,7 +3,7 @@
 /** The axis text size, in chart units, and the smallest it may shrink to on a dense chart. */
 export const AXIS_FONT = 10.5;
 const MIN_AXIS_FONT = 8;
-/** Rough advance of one character of the monospaced axis text, per unit of font size. */
+/** Rough advance of one character of the axis text, per unit of font size. */
 const CHAR_PER_FONT = 6.4 / AXIS_FONT;
 /** Breathing room between two neighbouring labels, in chart units. */
 const GAP = 6;

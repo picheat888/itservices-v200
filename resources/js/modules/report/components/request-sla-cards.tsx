@@ -68,7 +68,7 @@ export function CountCells({ tally }: { tally: RequestSlaTally }) {
     return (
         <>
             {[tally.total, tally.completed, tally.canceled, tally.open].map((value, i) => (
-                <td key={i} className={cn(TD, 'text-right font-mono', i === 0 && GROUP, value === 0 && 'text-muted-foreground/60')}>
+                <td key={i} className={cn(TD, 'text-right whitespace-nowrap', i === 0 && GROUP, value === 0 && 'text-muted-foreground/60')}>
                     {value.toLocaleString()}
                 </td>
             ))}
@@ -93,11 +93,11 @@ export function SlaCells({ met, n, goal, label }: { met: number; n: number; goal
                     )}
                 </span>
             </td>
-            <td className={cn(TD, 'text-muted-foreground px-1.5 text-right font-mono text-xs')}>{pct === null ? '—' : `${met}/${n}`}</td>
+            <td className={cn(TD, 'text-muted-foreground px-1.5 text-right text-xs whitespace-nowrap')}>{pct === null ? '—' : `${met}/${n}`}</td>
             <td
                 className={cn(
                     TD,
-                    'min-w-14 pl-1 text-right font-mono font-bold',
+                    'min-w-14 pl-1 text-right font-bold',
                     pct === null ? 'text-muted-foreground' : ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
                 )}
             >
@@ -266,11 +266,11 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
                             >
                                 <span className="truncate">
                                     {canOpen(href) ? (
-                                        <Link to={href} className="font-mono text-xs font-bold hover:underline">
+                                        <Link to={href} className="text-xs font-bold hover:underline">
                                             {o.ticket_no}
                                         </Link>
                                     ) : (
-                                        <span className="font-mono text-xs font-bold">{o.ticket_no}</span>
+                                        <span className="text-xs font-bold">{o.ticket_no}</span>
                                     )}
                                     {o.request_type && <span className="text-muted-foreground ml-2">{t(`req_${o.request_type}`)}</span>}
                                 </span>

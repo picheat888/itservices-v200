@@ -57,7 +57,7 @@ export function OverviewTab({
                                     <Icon className="h-[18px] w-[18px]" />
                                 </span>
                             </div>
-                            <div className="mt-2 font-mono text-3xl font-bold">
+                            <div className="mt-2 text-3xl font-bold">
                                 {summary ? k.value : <div className="bg-muted h-8 w-16 animate-pulse rounded" />}
                             </div>
                             <div className="text-muted-foreground mt-1 text-xs">{k.sub}</div>
@@ -105,7 +105,7 @@ export function OverviewTab({
                                     <span className="text-sm font-semibold">{t('stock_action_queue')}</span>
                                 </div>
                                 {reorderItems.length > 0 && (
-                                    <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 font-mono text-[11px] font-bold text-red-700">
+                                    <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-[11px] font-bold text-red-700">
                                         {reorderItems.length}
                                     </span>
                                 )}
@@ -124,7 +124,7 @@ export function OverviewTab({
                                                 <span className={cn('w-1 shrink-0 rounded-full', out ? 'bg-destructive sc-led' : 'bg-amber-500')} />
                                                 <div className="min-w-0 flex-1 py-0.5">
                                                     <div className="truncate text-sm font-medium">{it.name}</div>
-                                                    <div className="text-muted-foreground flex flex-wrap gap-x-3 font-mono text-[11px]">
+                                                    <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
                                                         <span>{it.sku}</span>
                                                         <span>
                                                             {(it.balances ?? [])
@@ -135,10 +135,10 @@ export function OverviewTab({
                                                     </div>
                                                 </div>
                                                 <div className="shrink-0 text-right">
-                                                    <div className="text-muted-foreground font-mono text-[11px]">
+                                                    <div className="text-muted-foreground text-[11px]">
                                                         {it.current_stock}/{it.min_stock}
                                                     </div>
-                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                                         +{Math.max(0, it.max_stock - it.current_stock)}
                                                     </span>
                                                 </div>
@@ -160,7 +160,7 @@ export function OverviewTab({
                                         </span>
                                         <span className="text-sm font-semibold">{t('stock_recent_moves')}</span>
                                     </div>
-                                    <span className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">live</span>
+                                    <span className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">live</span>
                                 </div>
                                 {movements.length === 0 ? (
                                     <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">
@@ -184,7 +184,7 @@ export function OverviewTab({
                                                     </span>
                                                     <div className="min-w-0 flex-1">
                                                         <div className="truncate text-sm font-medium">{m.item_name}</div>
-                                                        <div className="text-muted-foreground flex flex-wrap gap-x-3 font-mono text-[11px]">
+                                                        <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
                                                             <span>{m.sku}</span>
                                                             <span>{t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}</span>
                                                         </div>
@@ -192,14 +192,14 @@ export function OverviewTab({
                                                     <div className="shrink-0 text-right">
                                                         <div
                                                             className={cn(
-                                                                'font-mono text-sm font-bold',
+                                                                'text-sm font-bold',
                                                                 inbound ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive',
                                                             )}
                                                         >
                                                             {inbound ? '+' : '−'}
                                                             {m.qty}
                                                         </div>
-                                                        <div className="text-muted-foreground font-mono text-[10px]">{fmt.dateTime(m.moved_at)}</div>
+                                                        <div className="text-muted-foreground text-[10px]">{fmt.dateTime(m.moved_at)}</div>
                                                     </div>
                                                 </div>
                                             );
@@ -232,7 +232,7 @@ export function OverviewTab({
                                                 {w.warehouse}
                                             </span>
                                         </div>
-                                        <div className="flex shrink-0 gap-4 text-right font-mono text-sm">
+                                        <div className="flex shrink-0 gap-4 text-right text-sm">
                                             <div className="w-12">
                                                 <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
                                                 {w.skus}
@@ -264,7 +264,7 @@ export function OverviewTab({
                                     >
                                         <div className="mb-1.5 flex items-center justify-between text-sm">
                                             <span className="group-hover:text-brand font-medium transition-colors">{c.category}</span>
-                                            <span className="text-muted-foreground font-mono text-xs">{c.units}</span>
+                                            <span className="text-muted-foreground text-xs">{c.units}</span>
                                         </div>
                                         <div className="bg-muted h-2 overflow-hidden rounded-full">
                                             <span

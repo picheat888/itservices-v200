@@ -50,7 +50,7 @@ function RequestLink({ id, reference }: { id: number; reference: string }) {
             {reference}
         </Link>
     ) : (
-        <span className="font-mono text-xs font-semibold" translate="no">
+        <span className="text-xs font-semibold" translate="no">
             {reference}
         </span>
     );
@@ -77,7 +77,7 @@ function WaitPill({ days, band }: { days: number; band: RequestAgeBand }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     return (
-        <StatusBadge tone={BAND_TONE[band]} className="font-mono tabular-nums">
+        <StatusBadge tone={BAND_TONE[band]} className="tabular-nums">
             {days === 0 ? t('rep_rqa_wait_today') : t('rep_rqa_wait').replace('{n}', count(days, lang))}
         </StatusBadge>
     );
@@ -141,7 +141,7 @@ function StuckColumn({
                     {t(`rep_rqa_stuck_${group}`)}
                     {hint && <InfoMark info={hint} />}
                 </span>
-                <b className="text-foreground font-mono tabular-nums">{t('rep_rqa_n_requests').replace('{n}', count(rows.length, lang))}</b>
+                <b className="text-foreground tabular-nums">{t('rep_rqa_n_requests').replace('{n}', count(rows.length, lang))}</b>
             </h3>
             {rows.length === 0 ? (
                 <p className="text-muted-foreground px-5 py-3 text-sm">{t(`rep_rqa_stuck_empty_${group}`)}</p>
@@ -256,11 +256,7 @@ function ApproverCell({ row }: { row: RequestApproverRow }) {
                 {row.name}
             </span>
             <span className="text-muted-foreground flex flex-wrap gap-x-2 text-xs font-normal">
-                {row.code && (
-                    <span className="font-mono" translate="no">
-                        {row.code}
-                    </span>
-                )}
+                {row.code && <span translate="no">{row.code}</span>}
                 {department && <span>{department}</span>}
                 {row.left && <span className="font-semibold text-red-700 dark:text-red-300">{t('rep_rqa_flag_left')}</span>}
                 {!row.left && row.no_account && (
@@ -284,11 +280,11 @@ function ApproverRowCells({ row, scale, total = false }: { row: RequestApproverS
             </td>
             <td className={cn(TD, 'text-right')}>
                 {row.waiting > 0 && !total ? (
-                    <StatusBadge tone={oldestBand ? BAND_TONE[oldestBand] : 'gray'} className="font-mono tabular-nums">
+                    <StatusBadge tone={oldestBand ? BAND_TONE[oldestBand] : 'gray'} className="tabular-nums">
                         {count(row.waiting, lang)}
                     </StatusBadge>
                 ) : (
-                    <span className={cn('font-mono', !total && 'text-muted-foreground')}>{count(row.waiting, lang)}</span>
+                    <span className={cn(!total && 'text-muted-foreground')}>{count(row.waiting, lang)}</span>
                 )}
             </td>
             <td className={cn(TD, NUM)}>{days(row.avg_days, lang, 1)}</td>
@@ -338,7 +334,7 @@ function ApproversCard({ approvers, filtered }: { approvers: RequestApprovalsBre
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {OUTCOME_PIECES.map((p) => (
                             <Swatch key={p.key} fill={FILL[p.tone as ChartTone]}>
-                                {t(p.label)} <b className="text-foreground font-mono font-semibold">{count(approvers.total[p.key], lang)}</b>
+                                {t(p.label)} <b className="text-foreground font-semibold">{count(approvers.total[p.key], lang)}</b>
                             </Swatch>
                         ))}
                     </span>
@@ -523,7 +519,7 @@ function EndingsCard({ endings }: { endings: RequestApprovalsBreakdown['endings'
                         <span className="text-muted-foreground col-start-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                             {pieces.map((p) => (
                                 <Swatch key={p.key} fill={p.fill}>
-                                    {p.label} <b className="text-foreground font-mono font-semibold">{count(p.value, lang)}</b>
+                                    {p.label} <b className="text-foreground font-semibold">{count(p.value, lang)}</b>
                                 </Swatch>
                             ))}
                         </span>
@@ -607,7 +603,7 @@ function SkipsCard({ skips }: { skips: RequestSkipReasonRow[] }) {
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {labels.map((l) => (
                             <Swatch key={l} fill={FILL[toneOf(l)]}>
-                                {l} <b className="text-foreground font-mono font-semibold">{count(totals[l], lang)}</b>
+                                {l} <b className="text-foreground font-semibold">{count(totals[l], lang)}</b>
                             </Swatch>
                         ))}
                     </span>
@@ -713,11 +709,7 @@ function ApproverRowCell({ row }: { row: Record<string, unknown> }) {
             <span className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
                 {kind === 'person' ? (
                     <>
-                        {str(row.approver_code) && (
-                            <span className="font-mono" translate="no">
-                                {str(row.approver_code)}
-                            </span>
-                        )}
+                        {str(row.approver_code) && <span translate="no">{str(row.approver_code)}</span>}
                         {department && <span>{department}</span>}
                     </>
                 ) : (

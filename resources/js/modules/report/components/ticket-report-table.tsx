@@ -42,11 +42,11 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
                         {r.subject}
                     </div>
                     {canOpenTickets ? (
-                        <Link to={`/tickets?view=${r.id}`} className="text-brand font-mono text-xs font-medium hover:underline">
+                        <Link to={`/tickets?view=${r.id}`} className="text-brand text-xs font-medium hover:underline">
                             {r.ticket_no}
                         </Link>
                     ) : (
-                        <span className="text-muted-foreground font-mono text-xs">{r.ticket_no}</span>
+                        <span className="text-muted-foreground text-xs">{r.ticket_no}</span>
                     )}
                 </div>
             ),
@@ -110,7 +110,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             header: t('rep_col_resolve'),
             width: '100px',
             align: 'right',
-            render: (r) => <span className="font-mono">{r.resolve_hours === null ? '—' : `${r.resolve_hours} ${t('rep_hours')}`}</span>,
+            render: (r) => <span>{r.resolve_hours === null ? '—' : `${r.resolve_hours} ${t('rep_hours')}`}</span>,
         },
         {
             key: 'sla',

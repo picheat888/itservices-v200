@@ -48,7 +48,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                 </div>
             ),
         },
-        { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.code}</span> },
+        { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground text-xs">{m.code}</span> },
         { key: 'position', header: t('position'), render: (m) => <span className="text-muted-foreground text-sm">{m.position ?? '—'}</span> },
         {
             key: 'status',
@@ -67,7 +67,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                     <DialogTitle className="flex items-center gap-2">
                         <Users className="text-muted-foreground h-4 w-4" />
                         {sectionName}
-                        {view?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{view.code}</span>}
+                        {view?.code && <span className="text-muted-foreground text-xs font-normal">{view.code}</span>}
                     </DialogTitle>
                     <DialogDescription className="flex flex-wrap gap-x-3" aria-busy={isLoading || undefined}>
                         {deptName && <span>{deptName}</span>}

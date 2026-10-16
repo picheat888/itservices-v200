@@ -231,7 +231,6 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                         setUsername(e.target.value.toLowerCase());
                                         clearError('username');
                                     }}
-                                    className="font-mono placeholder:font-sans"
                                     placeholder={t('cred_username_ph')}
                                     autoComplete="off"
                                     autoCapitalize="none"
@@ -314,7 +313,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                             <div key={row.key} className="border-border bg-muted/40 flex items-center gap-3 rounded-lg border px-3 py-2">
                                 <div className="min-w-0 flex-1">
                                     <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">{row.label}</div>
-                                    <div className="truncate font-mono text-sm font-semibold">{row.value}</div>
+                                    <div className="truncate text-sm font-semibold">{row.value}</div>
                                 </div>
                                 <button
                                     type="button"

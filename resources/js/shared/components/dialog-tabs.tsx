@@ -94,7 +94,7 @@ export function DialogTabs<T extends string>({
                         {((tb.count != null && tb.count > 0) || tb.dot) && (
                             <span
                                 className={cn(
-                                    'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[11px]',
+                                    'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px]',
                                     selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
                                 )}
                             >

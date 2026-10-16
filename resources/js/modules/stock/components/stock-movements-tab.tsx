@@ -43,12 +43,12 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
         {
             key: 'moved_at',
             header: lang === 'th' ? 'วันที่' : 'Date',
-            render: (m) => <span className="text-muted-foreground font-mono text-xs">{fmt.date(m.moved_at)}</span>,
+            render: (m) => <span className="text-muted-foreground text-xs">{fmt.date(m.moved_at)}</span>,
         },
         {
             key: 'doc_no',
             header: lang === 'th' ? 'เลขที่เอกสาร' : 'Doc No',
-            render: (m) => <span className="font-mono text-xs">{m.doc_no ?? '—'}</span>,
+            render: (m) => <span className="text-xs">{m.doc_no ?? '—'}</span>,
         },
         {
             key: 'type',
@@ -64,7 +64,7 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
                 return (
                     <span
                         className={cn(
-                            'font-mono font-semibold',
+                            'font-semibold',
                             meta.sign === '+' ? 'text-emerald-600 dark:text-emerald-400' : meta.sign === '-' ? 'text-red-600 dark:text-red-400' : '',
                         )}
                     >

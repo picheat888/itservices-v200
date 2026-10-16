@@ -57,7 +57,7 @@ function PersonCell({ person, note }: { person: OpenItemsPerson; note?: string }
                     {name}
                 </div>
             )}
-            <div translate="no" className="text-muted-foreground font-mono text-xs">
+            <div translate="no" className="text-muted-foreground text-xs">
                 {person.code}
             </div>
             {note && <div className="text-muted-foreground mt-0.5 text-xs">{note}</div>}
@@ -120,7 +120,7 @@ function TopicCard({
     );
 }
 
-/** "3 คน" with the number in the mono face. */
+/** "3 คน" with the number and its unit. */
 function CountLabel({ n, unit }: { n: number; unit: 'people' | 'accounts' }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -129,7 +129,7 @@ function CountLabel({ n, unit }: { n: number; unit: 'people' | 'accounts' }) {
     return (
         <span>
             {before}
-            <b className="text-foreground font-mono tabular-nums">{count(n, lang)}</b>
+            <b className="text-foreground tabular-nums">{count(n, lang)}</b>
             {after}
         </span>
     );
@@ -209,12 +209,12 @@ export function AssetCard({ group, narrowed }: { group: EmployeeOpenItemsBreakdo
                         <Link
                             to={`/assets?view=${a.id}`}
                             translate="no"
-                            className="text-brand-ink focus-visible:ring-brand rounded-sm font-mono text-[12.5px] font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                            className="text-brand-ink focus-visible:ring-brand rounded-sm text-[12.5px] font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
                         >
                             {a.code}
                         </Link>
                     ) : (
-                        <span translate="no" className="font-mono text-[12.5px] font-semibold">
+                        <span translate="no" className="text-[12.5px] font-semibold">
                             {a.code}
                         </span>
                     ),
@@ -338,7 +338,7 @@ export function AccountCard({ group, narrowed }: { group: NonNullable<EmployeeOp
             header: t('rep_ef_col_account'),
             className: TOP,
             render: (r) => (
-                <span translate="no" className="font-mono text-[13px] font-medium">
+                <span translate="no" className="text-[13px] font-medium">
                     {r.username}
                 </span>
             ),

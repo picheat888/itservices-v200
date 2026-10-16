@@ -29,7 +29,6 @@ use Illuminate\Validation\Rule;
  *  source      — options endpoint dataset for `source`: email_groups |
  *                file_shares | social_platforms | softwares | locations
  *  required    — enforced server-side (and starred in the UI)
- *  mono        — render with the mono font (codes, paths, emails)
  *  allow_other — on a `source` field: the sibling key that holds a typed-in
  *                value when the wanted item is not on the list. Exactly one of
  *                the two must be filled.
@@ -70,13 +69,13 @@ class RequestSchemas
                 ]],
             ],
             RequestType::Email->value => [
-                ['key' => 'address', 'label_en' => 'Address', 'label_th' => 'อีเมล', 'input' => 'email', 'required' => true, 'mono' => true, 'placeholder' => 'john.doe@example.com'],
+                ['key' => 'address', 'label_en' => 'Address', 'label_th' => 'อีเมล', 'input' => 'email', 'required' => true, 'placeholder' => 'john.doe@example.com'],
             ],
             RequestType::Social->value => [
                 ['key' => 'social_platform_id', 'label_en' => 'Platform', 'label_th' => 'แพลตฟอร์ม', 'input' => 'source', 'source' => 'social_platforms', 'required' => true],
             ],
             RequestType::Fileshare->value => [
-                ['key' => 'file_share_id', 'label_en' => 'Share path', 'label_th' => 'โฟลเดอร์ที่ต้องเข้าถึง', 'input' => 'source', 'source' => 'file_shares', 'required' => true, 'mono' => true],
+                ['key' => 'file_share_id', 'label_en' => 'Share path', 'label_th' => 'โฟลเดอร์ที่ต้องเข้าถึง', 'input' => 'source', 'source' => 'file_shares', 'required' => true],
                 // Read / Read-write only — Access Directory grants no "full control".
                 ['key' => 'access_level', 'label_en' => 'Access level', 'label_th' => 'ระดับสิทธิ์', 'input' => 'select', 'required' => true, 'options' => [
                     ['value' => 'read', 'label_en' => 'Read', 'label_th' => 'อ่านอย่างเดียว'],
@@ -84,7 +83,7 @@ class RequestSchemas
                 ]],
             ],
             RequestType::Mailgroup->value => [
-                ['key' => 'email_group_id', 'label_en' => 'Mail group', 'label_th' => 'กลุ่มเมล', 'input' => 'source', 'source' => 'email_groups', 'required' => true, 'mono' => true],
+                ['key' => 'email_group_id', 'label_en' => 'Mail group', 'label_th' => 'กลุ่มเมล', 'input' => 'source', 'source' => 'email_groups', 'required' => true],
             ],
             RequestType::Software->value => [
                 // The catalogue comes from Access Directory (brand + name). Anything

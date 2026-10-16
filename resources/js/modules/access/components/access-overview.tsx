@@ -94,7 +94,7 @@ function StatusRow({
             {isAlert ? (
                 <span
                     className={cn(
-                        'rounded-full px-2 py-px font-mono text-xs font-bold',
+                        'rounded-full px-2 py-px text-xs font-bold',
                         tone === 'red'
                             ? 'bg-destructive/10 dark:text-destructive text-red-700'
                             : 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
@@ -103,7 +103,7 @@ function StatusRow({
                     {value}
                 </span>
             ) : (
-                <span className={cn('font-mono text-sm font-semibold', toneClass)}>{value}</span>
+                <span className={cn('text-sm font-semibold', toneClass)}>{value}</span>
             )}
             {onClick && <ChevronRight className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />}
         </>
@@ -161,9 +161,7 @@ function IssueSection({
             <div className={cn(CARD_HEADING, 'border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5')}>
                 <Icon className={cn('h-4 w-4 shrink-0', toneText)} />
                 <span className="text-sm font-semibold">{title}</span>
-                <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-bold">
-                    {items.length}
-                </span>
+                <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold">{items.length}</span>
             </div>
             <div className="divide-border/60 divide-y p-1.5">
                 {items.map((item, i) => {
@@ -280,7 +278,7 @@ function IssuesDrawer({
                     <SheetTitle className="flex items-center gap-2">
                         <ShieldCheck className="text-muted-foreground h-5 w-5" />
                         {t('access_issues_title')}
-                        <span className="bg-brand/10 text-brand ml-1 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold">
+                        <span className="bg-brand/10 text-brand ml-1 rounded-full px-2.5 py-0.5 text-xs font-bold">
                             {total} {t('access_issues_total')}
                         </span>
                     </SheetTitle>
@@ -406,7 +404,7 @@ export function AccessOverview({
                                     <Icon className="h-[18px] w-[18px]" />
                                 </span>
                             </div>
-                            <div className="mt-2 font-mono text-3xl font-bold">{stat.resources}</div>
+                            <div className="mt-2 text-3xl font-bold">{stat.resources}</div>
                             <div className={cn('mt-1 text-xs', deltaTone)}>{t(deltaKey).replace('{n}', String(Math.abs(net)))}</div>
                         </Card>
                     );
@@ -423,7 +421,7 @@ export function AccessOverview({
                             <span className="text-sm font-semibold">{t('access_dash_distribution_title')}</span>
                         </div>
                         <span className="text-muted-foreground text-xs">
-                            <b className="text-foreground font-mono font-bold">{total.toLocaleString()}</b> {t('access_dash_grants_total')}
+                            <b className="text-foreground font-bold">{total.toLocaleString()}</b> {t('access_dash_grants_total')}
                         </span>
                     </div>
                     <div className="space-y-4 p-5">
@@ -439,7 +437,7 @@ export function AccessOverview({
                                     <div className="bg-secondary h-2 flex-1 overflow-hidden rounded-full">
                                         <div className="bg-brand h-full rounded-full" style={{ width: `${(grants / maxGrants) * 100}%` }} />
                                     </div>
-                                    <span className="w-16 shrink-0 text-right font-mono text-sm font-semibold whitespace-nowrap">
+                                    <span className="w-16 shrink-0 text-right text-sm font-semibold whitespace-nowrap">
                                         {grants} <span className="text-muted-foreground text-[11px] font-medium">{pct}%</span>
                                     </span>
                                 </div>
@@ -637,9 +635,7 @@ export function AccessOverview({
                                                         {r.name}
                                                     </button>
                                                     {r.detail && (
-                                                        <div className="text-muted-foreground max-w-[260px] truncate font-mono text-[11px]">
-                                                            {r.detail}
-                                                        </div>
+                                                        <div className="text-muted-foreground max-w-[260px] truncate text-[11px]">{r.detail}</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -654,7 +650,7 @@ export function AccessOverview({
                                                 <div className="bg-secondary hidden h-1.5 w-24 overflow-hidden rounded-full sm:block">
                                                     <div className="bg-brand h-full rounded-full" style={{ width }} />
                                                 </div>
-                                                <span className="w-5 text-right font-mono font-semibold">{r.grants}</span>
+                                                <span className="w-5 text-right font-semibold">{r.grants}</span>
                                             </div>
                                         </td>
                                     </tr>

@@ -8,22 +8,24 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
-import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { useUiStore } from '@/stores/ui';
+import { buttonVariants } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { ArrowRight, Filter, Printer } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
 
 // Types offered by the filter (and accepted from ?type=).
 const MOVEMENT_TYPES: StockMovementType[] = ['receive', 'issue', 'return', 'transfer'];
 
+// Small section heading inside the detail dialog.
+const EYEBROW = 'text-muted-foreground text-xs font-semibold';
+
 export function MovementsTab() {
     const fmt = useDateFormat();
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { format } = useCurrency();
+    const typeFilterId = useId();
     // Type filter, page and rows-per-page live in the URL (?type, ?page, ?per).
     const list = useListParams();
     const { page, perPage } = list;
@@ -37,8 +39,7 @@ export function MovementsTab() {
     } = useStockMovements({ type: type === 'all' ? undefined : type, page, per_page: perPage });
     const movements = movementsPage?.data ?? [];
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
-    // Open state is separate from the data so the detail content stays mounted while the
-    // dialog animates closed (Radix only plays the exit animation if content isn't unmounted).
+    // Open state is separate from the data so the detail stays mounted during the close animation.
     const [moveOpen, setMoveOpen] = useState(false);
     // Serial codes for the movement being viewed (fetched on demand for the detail dialog).
     const { data: moveSerials = [] } = useMovementSerials(viewMove?.id ?? null);
@@ -47,9 +48,9 @@ export function MovementsTab() {
         {
             key: 'doc_no',
             header: t('stock_doc_no'),
-            render: (m) => <span className="font-mono text-xs font-semibold">{m.doc_no ?? '—'}</span>,
+            render: (m) => <span className="text-xs font-semibold">{m.doc_no ?? '—'}</span>,
         },
-        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="font-mono text-xs">{fmt.dateTime(m.moved_at)}</span> },
+        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="text-xs">{fmt.dateTime(m.moved_at)}</span> },
         {
             key: 'type',
             header: t('stock_mv_type'),
@@ -58,7 +59,7 @@ export function MovementsTab() {
                 const Icon = meta.icon;
                 return (
                     <StatusBadge tone={meta.tone} dot={false}>
-                        <Icon className="h-3 w-3" />
+                        <Icon className="h-3 w-3" aria-hidden />
                         {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
                     </StatusBadge>
                 );
@@ -69,18 +70,18 @@ export function MovementsTab() {
             header: t('stock_item'),
             render: (m) => (
                 <div>
-                    <div className="font-mono text-xs">{m.sku}</div>
+                    <div className="text-xs">{m.sku}</div>
                     <div className="text-muted-foreground truncate text-xs">{m.item_name}</div>
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', render: (m) => <span className="font-mono font-bold">{m.qty}</span> },
+        { key: 'qty', header: t('stock_qty'), align: 'right', render: (m) => <span className="font-bold tabular-nums">{m.qty}</span> },
         { key: 'from', header: t('stock_events_from'), render: (m) => <span className="text-sm">{m.from || '—'}</span> },
         { key: 'to', header: t('stock_events_to'), render: (m) => <span className="text-sm">{m.to || '—'}</span> },
         {
             key: 'reference',
             header: t('stock_reference'),
-            render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.reference || '—'}</span>,
+            render: (m) => <span className="text-muted-foreground text-xs">{m.reference || '—'}</span>,
         },
         { key: 'recorded_by', header: t('stock_by'), render: (m) => <span className="text-sm">{m.recorded_by || '—'}</span> },
     ];
@@ -89,10 +90,13 @@ export function MovementsTab() {
         <div className="space-y-3">
             {/* Inline type filter: icon + label + dropdown (no popover). */}
             <div className="flex flex-wrap items-center gap-1.5">
-                <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                <span className="text-muted-foreground shrink-0 text-sm font-medium">{lang === 'th' ? 'ประเภท:' : 'Filter:'}</span>
+                <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
+                <label htmlFor={typeFilterId} className="text-muted-foreground shrink-0 text-sm font-medium">
+                    {t('stock_mv_type')}
+                </label>
                 <div className="w-44">
                     <SearchableSelect
+                        id={typeFilterId}
                         value={type}
                         onChange={setType}
                         options={[
@@ -129,50 +133,49 @@ export function MovementsTab() {
                             return (
                                 <>
                                     <DialogHeader>
-                                        <DialogTitle className="flex items-start gap-3 pt-4 text-left">
+                                        <div className="flex items-start gap-3 pt-4 text-left">
                                             {/* Type icon — tinted by movement tone. */}
                                             <span
                                                 className={cn(
                                                     'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
                                                     MV_TONE_BG[meta.tone],
                                                 )}
+                                                aria-hidden
                                             >
                                                 <Icon className="h-6 w-6" />
                                             </span>
-                                            {/* Action label + timestamp, with the document number (and optional
-                                                external reference) as the audit record's identity beneath. */}
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-start justify-between gap-2">
-                                                    <span className="truncate text-base leading-tight font-semibold">
+                                                    <DialogTitle className="min-w-0 truncate text-base leading-tight font-semibold">
                                                         {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}
-                                                    </span>
-                                                    <span className="text-muted-foreground shrink-0 font-mono text-[11px] font-normal">
-                                                        {fmt.dateTime(viewMove.moved_at)}
-                                                    </span>
+                                                    </DialogTitle>
+                                                    <span className="text-muted-foreground shrink-0 text-[11px]">{fmt.dateTime(viewMove.moved_at)}</span>
                                                 </div>
-                                                <div className="text-muted-foreground mt-0.5 font-mono text-[11px] font-normal">
-                                                    {t('stock_doc_no')} : {viewMove.doc_no ?? '—'}
-                                                </div>
+                                                <DialogDescription className="mt-0.5 text-[11px]">
+                                                    {t('stock_doc_no')}: {viewMove.doc_no ?? '—'}
+                                                </DialogDescription>
                                                 {viewMove.reference && (
-                                                    <div className="text-muted-foreground font-mono text-[11px] font-normal">
-                                                        {t('stock_reference')} : {viewMove.reference}
+                                                    <div className="text-muted-foreground text-[11px]">
+                                                        {t('stock_reference')}: {viewMove.reference}
                                                     </div>
                                                 )}
                                             </div>
-                                        </DialogTitle>
+                                        </div>
                                     </DialogHeader>
 
-                                    <div className="max-h-[72vh] space-y-4 overflow-auto">
+                                    <div className="max-h-[72vh] space-y-4 overflow-auto overscroll-contain">
                                         {/* Item + signed quantity */}
                                         <div className="border-border flex items-center justify-between gap-3 rounded-xl border p-3.5">
                                             <div className="min-w-0">
                                                 <div className="truncate text-sm font-semibold">{viewMove.item_name}</div>
-                                                <div className="text-muted-foreground font-mono text-xs">SKU : {viewMove.sku}</div>
+                                                <div className="text-muted-foreground text-xs">
+                                                    {t('stock_sku')}: {viewMove.sku}
+                                                </div>
                                             </div>
                                             <div
                                                 className={cn(
-                                                    'shrink-0 font-mono text-2xl font-bold',
-                                                    inbound ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive',
+                                                    'shrink-0 text-2xl font-bold tabular-nums',
+                                                    inbound ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive',
                                                 )}
                                             >
                                                 {inbound ? '+' : '−'}
@@ -180,58 +183,42 @@ export function MovementsTab() {
                                             </div>
                                         </div>
 
-                                        {/* Source → destination. A return has no source, so it shows just the
-                                            destination warehouse; movements with a source use the From → To flow.
-                                            Adjustments have neither, so nothing renders. */}
+                                        {/* Source → destination (a return has no source; adjustments have neither). */}
                                         {!viewMove.from && viewMove.to ? (
                                             <div className="border-border rounded-xl border p-3">
-                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                                                    {viewMove.type === 'return' ? t('stock_to_warehouse') : t('stock_to')}
-                                                </div>
+                                                <div className={EYEBROW}>{viewMove.type === 'return' ? t('stock_to_warehouse') : t('stock_to')}</div>
                                                 <div className="truncate text-sm">{viewMove.to}</div>
                                             </div>
                                         ) : viewMove.from || viewMove.to ? (
                                             <div className="border-border grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl border p-3">
                                                 <div className="min-w-0">
-                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                                                        {viewMove.type === 'receive' ? t('stock_supplier') : t('stock_from')}
-                                                    </div>
+                                                    <div className={EYEBROW}>{viewMove.type === 'receive' ? t('stock_supplier') : t('stock_from')}</div>
                                                     <div className="truncate text-sm">{viewMove.from || '—'}</div>
                                                 </div>
-                                                <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
                                                 <div className="min-w-0 text-right">
-                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                                                        {viewMove.type === 'receive' ? t('stock_warehouse') : t('stock_to')}
-                                                    </div>
+                                                    <div className={EYEBROW}>{viewMove.type === 'receive' ? t('stock_warehouse') : t('stock_to')}</div>
                                                     <div className="truncate text-sm">{viewMove.to || '—'}</div>
                                                 </div>
                                             </div>
                                         ) : null}
 
-                                        {/* Value: unit cost · qty · total (receive lots only) */}
+                                        {/* Value: unit cost, qty, total (receive lots only) */}
                                         {viewMove.unit_cost != null && (
                                             <div>
-                                                <div className="text-muted-foreground mb-1 text-[10px] tracking-wide uppercase">
-                                                    {t('stock_value')}
-                                                </div>
+                                                <div className={cn(EYEBROW, 'mb-1')}>{t('stock_value')}</div>
                                                 <div className="border-border grid grid-cols-3 overflow-hidden rounded-lg border text-center text-sm">
                                                     <div className="bg-card px-2 py-2">
-                                                        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                                                            {t('stock_unit_cost')}
-                                                        </div>
-                                                        <div className="mt-0.5 font-mono">{format(viewMove.unit_cost)}</div>
+                                                        <div className={EYEBROW}>{t('stock_unit_cost')}</div>
+                                                        <div className="mt-0.5 tabular-nums">{format(viewMove.unit_cost)}</div>
                                                     </div>
                                                     <div className="border-border bg-card border-l px-2 py-2">
-                                                        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                                                            {t('stock_qty')}
-                                                        </div>
-                                                        <div className="mt-0.5 font-mono">{viewMove.qty}</div>
+                                                        <div className={EYEBROW}>{t('stock_qty')}</div>
+                                                        <div className="mt-0.5 tabular-nums">{viewMove.qty}</div>
                                                     </div>
                                                     <div className="border-border bg-card border-l px-2 py-2">
-                                                        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                                                            {t('stock_mv_total')}
-                                                        </div>
-                                                        <div className="mt-0.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                        <div className={EYEBROW}>{t('stock_mv_total')}</div>
+                                                        <div className="mt-0.5 font-bold text-emerald-700 tabular-nums dark:text-emerald-400">
                                                             {format(viewMove.qty * viewMove.unit_cost)}
                                                         </div>
                                                     </div>
@@ -243,31 +230,36 @@ export function MovementsTab() {
                                         {moveSerials.length > 0 && (
                                             <div>
                                                 <div className="mb-1 flex items-center justify-between gap-2">
-                                                    <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                                                        {t('stock_serial_list')}
-                                                    </span>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => window.open(`/pdf/stock-movements/${viewMove.id}/labels`, '_blank')}
+                                                    <span className={EYEBROW}>{t('stock_serial_list')}</span>
+                                                    <a
+                                                        href={`/pdf/stock-movements/${viewMove.id}/labels`}
+                                                        target="_blank"
+                                                        rel="noopener"
+                                                        className={buttonVariants({ variant: 'outline', size: 'sm' })}
                                                     >
-                                                        <Printer className="h-3.5 w-3.5" />
+                                                        <Printer className="h-3.5 w-3.5" aria-hidden />
                                                         {t('stock_print')}
-                                                    </Button>
+                                                    </a>
                                                 </div>
-                                                <div className="border-border max-h-48 overflow-auto rounded-lg border">
+                                                <div className="border-border max-h-48 overflow-auto overscroll-contain rounded-lg border">
                                                     <table className="w-full text-sm">
                                                         <thead className={cn(TABLE_HEAD, 'sticky top-0')}>
-                                                            <tr className="text-muted-foreground text-left text-[10px] tracking-wide uppercase">
-                                                                <th className="w-10 px-3 py-1.5">#</th>
-                                                                <th className="px-3 py-1.5">{t('stock_hist_serial')}</th>
+                                                            <tr className="text-muted-foreground text-left text-xs font-semibold">
+                                                                <th scope="col" className="w-10 px-3 py-1.5">
+                                                                    #
+                                                                </th>
+                                                                <th scope="col" className="px-3 py-1.5">
+                                                                    {t('stock_hist_serial')}
+                                                                </th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {moveSerials.map((s, i) => (
                                                                 <tr key={s} className="border-border/60 border-t">
-                                                                    <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{i + 1}</td>
-                                                                    <td className="px-3 py-1.5 font-mono text-xs">{s}</td>
+                                                                    <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap tabular-nums">
+                                                                        {i + 1}
+                                                                    </td>
+                                                                    <td className="px-3 py-1.5 text-xs whitespace-nowrap">{s}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
@@ -279,16 +271,14 @@ export function MovementsTab() {
                                         {/* Notes */}
                                         {viewMove.notes && (
                                             <div>
-                                                <div className="text-muted-foreground mb-1 text-[10px] tracking-wide uppercase">
-                                                    {t('stock_notes')}
-                                                </div>
+                                                <div className={cn(EYEBROW, 'mb-1')}>{t('stock_notes')}</div>
                                                 <div className="bg-muted/40 rounded-lg p-3 text-sm">{viewMove.notes}</div>
                                             </div>
                                         )}
 
                                         {/* Recorded by (type-aware label) */}
                                         <div>
-                                            <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                                            <div className={EYEBROW}>
                                                 {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])} {t('stock_by')}
                                             </div>
                                             <div className="text-sm">{viewMove.recorded_by || '—'}</div>

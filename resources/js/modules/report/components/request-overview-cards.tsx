@@ -157,7 +157,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                             <span key={k} className="inline-flex items-center gap-1.5">
                                 <FlowMark k={k} />
                                 {t(FLOW[k].label)}
-                                <b className="text-foreground font-mono font-semibold tabular-nums">{count(sum(k), lang)}</b>
+                                <b className="text-foreground font-semibold tabular-nums">{count(sum(k), lang)}</b>
                             </span>
                         ))}
                         {hasCurrent && (
@@ -195,7 +195,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                     <span
                                         key={at}
                                         className={cn(
-                                            'text-muted-foreground absolute right-0 translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums',
+                                            'text-muted-foreground absolute right-0 translate-y-1/2 text-[10.5px] leading-none tabular-nums',
                                             at,
                                         )}
                                     >
@@ -216,7 +216,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                     </span>
                                 </span>
                                 {/* Only the lower axis's top: its middle label would sit under the key. */}
-                                <span className="text-muted-foreground absolute top-full right-0 -translate-y-1/2 font-mono text-[10.5px] leading-none tabular-nums">
+                                <span className="text-muted-foreground absolute top-full right-0 -translate-y-1/2 text-[10.5px] leading-none tabular-nums">
                                     {count(down, lang)}
                                 </span>
                             </div>
@@ -253,7 +253,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                         {density.top && m.submitted > 0 && (
                                                             <span
                                                                 className={cn(
-                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    'absolute -top-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                                     m.month === thisMonth && 'text-brand',
                                                                 )}
                                                             >
@@ -287,7 +287,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                                                         {density.top && m.completed > 0 && (
                                                             <span
                                                                 className={cn(
-                                                                    'absolute -bottom-[18px] left-1/2 -translate-x-1/2 text-center font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums',
+                                                                    'absolute -bottom-[18px] left-1/2 -translate-x-1/2 text-center text-[11px] font-semibold whitespace-nowrap tabular-nums',
                                                                     m.month === thisMonth && 'text-brand',
                                                                 )}
                                                             >
@@ -366,7 +366,7 @@ function FlowDetail({ month, partialNote }: { month: Month; partialNote: string 
                         <FlowMark k={k} />
                         {t(FLOW[k].label)}
                     </span>
-                    <b className={cn('font-mono tabular-nums', month[k] === 0 && 'text-muted-foreground font-normal')}>{count(month[k], lang)}</b>
+                    <b className={cn('tabular-nums', month[k] === 0 && 'text-muted-foreground font-normal')}>{count(month[k], lang)}</b>
                 </div>
             ))}
             {partialNote && <div className="text-muted-foreground border-border border-t pt-1">{partialNote}</div>}
@@ -536,8 +536,7 @@ function DeliveryCard({ delivery }: { delivery: Breakdown['delivery'] }) {
                 <DeliveryBar row={row} scale={scale} />
             </td>
             <td className={cn(TD, NUM)}>
-                {row.total === null ? '—' : days(row.total, lang)}{' '}
-                <span className="text-muted-foreground font-sans text-xs font-normal">{t('rep_days')}</span>
+                {row.total === null ? '—' : days(row.total, lang)} <span className="text-muted-foreground text-xs font-normal">{t('rep_days')}</span>
             </td>
             <td className={cn(TD, NUM)}>{count(row.count, lang)}</td>
         </tr>
@@ -689,7 +688,7 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
                                         )}
                                     />
                                 </span>
-                                <b className="text-right font-mono font-semibold tabular-nums">{count(i.count, lang)}</b>
+                                <b className="text-right font-semibold tabular-nums">{count(i.count, lang)}</b>
                             </li>
                         ))}
                     </ul>

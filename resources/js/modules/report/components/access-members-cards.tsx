@@ -157,11 +157,11 @@ function StorageCards({ resources }: { resources: Resource[] }) {
     const pct = (gb: number) => `${(Math.round((gb / total) * 1000) / 10).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US')}%`;
     const flag = (v: number) =>
         v > 0 ? (
-            <StatusBadge tone="gray" className="font-mono tabular-nums">
+            <StatusBadge tone="gray" className="tabular-nums">
                 {count(v, lang)}
             </StatusBadge>
         ) : (
-            <span className="text-muted-foreground font-mono">0</span>
+            <span className="text-muted-foreground">0</span>
         );
     const shareRow = (r: Resource) => (
         <GroupRow
@@ -169,7 +169,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
             head={<ResourceHead r={r} />}
             side={
                 gbOf(r) > 0 ? (
-                    <b className="font-mono text-sm tabular-nums">{sizeText(t, lang, r.size)}</b>
+                    <b className="text-sm tabular-nums">{sizeText(t, lang, r.size)}</b>
                 ) : (
                     <StatusBadge tone="gray">{t('rep_ar_size_unlimited')}</StatusBadge>
                 )
@@ -287,7 +287,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                     ].map(([k, v]) => (
                         <div key={k} className="min-w-0 text-center">
                             <dt className="text-muted-foreground text-xs">{k}</dt>
-                            <dd className="font-mono text-xl font-bold tabular-nums">{v}</dd>
+                            <dd className="text-xl font-bold tabular-nums">{v}</dd>
                         </div>
                     ))}
                 </dl>
@@ -353,10 +353,10 @@ function OwnerCell({ r }: { r: Resource }) {
     return (
         <div className="min-w-0">
             <div className="max-w-[12rem] truncate">{r.owner.name}</div>
-            <div className="text-muted-foreground font-mono text-xs">
+            <div className="text-muted-foreground text-xs">
                 {r.owner.code}
                 {r.owner_issue === 'gone' && (
-                    <span className="ml-2 font-sans text-red-700 dark:text-red-300">
+                    <span className="ml-2 text-red-700 dark:text-red-300">
                         {t('rep_ar_owner_left_on').replace('{date}', r.owner.last_day ? shortDate(r.owner.last_day, lang) : '—')}
                     </span>
                 )}
@@ -487,7 +487,7 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                                             .replace('{n}', count(r.members, lang))}
                                                     />
                                                 ) : (
-                                                    <span className="text-muted-foreground font-mono">0</span>
+                                                    <span className="text-muted-foreground">0</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -523,7 +523,7 @@ function OwnerWords({ sheet }: { sheet: Sheet }) {
         <span className="inline-flex flex-wrap items-center gap-x-1.5">
             {sheet.type === 'email_group' ? t('rep_ar_owner_approver') : t('rep_c_ar_owner')}
             <b className="text-foreground font-semibold">{sheet.owner.name}</b>
-            <span className="font-mono">{sheet.owner.code}</span>
+            <span>{sheet.owner.code}</span>
             {deptName(sheet.owner.department, lang)}
             {sheet.owner_issue === 'gone' && <StatusBadge tone="red">{t('rep_ar_owner_left')}</StatusBadge>}
         </span>
@@ -548,7 +548,7 @@ export function PickedResourceHead({ filters, patch }: { filters: TabularFilters
             <div className="min-w-0 flex-1">
                 <h2 className="flex flex-wrap items-baseline gap-x-2 text-[15px] font-semibold">
                     {t('rep_ar_head_title').replace('{name}', sheet.name ?? '')}
-                    <span className="text-muted-foreground font-mono text-xs font-normal">{sheet.code}</span>
+                    <span className="text-muted-foreground text-xs font-normal">{sheet.code}</span>
                 </h2>
                 <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs">
                     <span>{t(`rep_ac_type_${sheet.type}`)}</span>
@@ -604,7 +604,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                     <h3 className="text-lg font-bold">{t('rep_ar_sheet_title')}</h3>
                     <p className="text-xs text-slate-500">{t('rep_ar_sheet_asof').replace('{date}', today)}</p>
                 </div>
-                <span className="font-mono font-semibold">{sheet.code}</span>
+                <span className="font-semibold">{sheet.code}</span>
             </header>
             <dl className="mb-3 grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1">
                 <dt className="text-slate-500">{t('rep_ar_col_resource')}</dt>
@@ -643,7 +643,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                         <tr key={m.employee_id} className={cn(m.kind === 'gone' && 'bg-red-50')}>
                             <td className={cn(cell, 'text-right')}>{i + 1}</td>
                             <td className={cell}>
-                                <b>{m.name}</b> <span className="font-mono text-[11.5px] text-slate-500">{m.code}</span>
+                                <b>{m.name}</b> <span className="text-[11.5px] text-slate-500">{m.code}</span>
                             </td>
                             <td className={cell}>{deptName(m.department, lang) ?? '—'}</td>
                             {isFile && <td className={cell}>{t(`rep_ac_level_${m.level.toLowerCase()}`)}</td>}
