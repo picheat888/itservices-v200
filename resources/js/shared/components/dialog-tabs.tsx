@@ -7,6 +7,8 @@ export interface DialogTab<T extends string> {
     label: string;
     /** Optional count pill after the label — hidden when null/0. */
     count?: number | null;
+    /** Green dot in the count pill: something on this tab waits for the reader. */
+    dot?: boolean;
     /**
      * Optional leading icon. A bar whose tabs hold different kinds of thing reads faster with
      * one; a bar whose tabs are all the same kind (three sets of fields, say) reads slower,
@@ -89,14 +91,15 @@ export function DialogTabs<T extends string>({
                         {/* Icons show from lg up */}
                         {tb.icon && <tb.icon className="hidden h-4 w-4 shrink-0 lg:block" aria-hidden="true" />}
                         {tb.label}
-                        {tb.count != null && tb.count > 0 && (
+                        {((tb.count != null && tb.count > 0) || tb.dot) && (
                             <span
                                 className={cn(
-                                    'bg-accent rounded-full px-1.5 py-0.5 font-mono text-[11px]',
+                                    'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[11px]',
                                     selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
                                 )}
                             >
-                                {tb.count}
+                                {tb.count != null && tb.count > 0 && tb.count}
+                                {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
                             </span>
                         )}
                         {/* Underline inside the scrolling bar */}
