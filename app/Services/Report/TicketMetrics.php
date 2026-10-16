@@ -96,6 +96,26 @@ final class TicketMetrics
             : $ticket->sla_resolve_due_at;
     }
 
+    /** Hours before a deadline that count as "due soon" — the backlog report's and the Dashboard's. */
+    public const SOON_HOURS = 24;
+
+    /** A live case against the deadline it runs on now: 'over_sla', 'due_soon', 'on_track', or 'no_due'. */
+    public static function liveSlaState(Ticket $ticket, CarbonInterface $now): string
+    {
+        $due = self::activeDue($ticket);
+        if ($due === null) {
+            return 'no_due';
+        }
+
+        $hours = round($now->diffInMinutes($due, false) / 60, 1);
+
+        return match (true) {
+            $hours < 0 => 'over_sla',
+            $hours <= self::SOON_HOURS => 'due_soon',
+            default => 'on_track',
+        };
+    }
+
     /** 'met' | 'over_sla' | null (no deadline to measure against, or canceled). */
     public static function slaState(Ticket $ticket, CarbonInterface $now): ?string
     {

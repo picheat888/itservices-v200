@@ -178,6 +178,22 @@ class TicketOverviewReportService
     }
 
     /**
+     * The overview's SLA rate and mean resolve time over every ticket opened in [from, to],
+     * whoever asks — the Dashboard's figures, counted the report's way.
+     *
+     * @return array{sla_measured: int, sla_met: int, sla_rate: ?float, avg_resolve_hours: ?float}
+     */
+    public function kpisForAll(CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $completed = Ticket::query()
+            ->whereBetween('created_at', [$from, $to])
+            ->where('status', TicketStatus::Completed->value)
+            ->get(['id', 'created_at', 'resolved_at', 'sla_resolve_due_at']);
+
+        return [...$this->slaCounts($completed), 'avg_resolve_hours' => $this->average($this->sortedHours($completed))];
+    }
+
+    /**
      * @param  Collection<int, Ticket>  $completed
      * @return array{sla_measured: int, sla_met: int, sla_rate: ?float}
      */
