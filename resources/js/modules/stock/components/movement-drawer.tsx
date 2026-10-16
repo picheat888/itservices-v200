@@ -37,16 +37,19 @@ function primaryWarehouse(item?: StockItem): string {
 }
 
 /**
- * MovementDrawer — records a stock movement (receive / issue / return / transfer).
+ * MovementDrawer — records a stock movement (receive / return / transfer).
+ * Issuing stock happens only through a request (request → approve → fulfil), never here.
  * Receiving a serialized SKU captures one serial per unit (typed or scanned) and ends on a printable receipt.
  */
-export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | null; onClose: () => void }) {
+export type MovementKind = Extract<StockMovementType, 'receive' | 'return' | 'transfer'>;
+
+export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const numberFormat = useMemo(() => new Intl.NumberFormat(lang === 'th' ? 'th-TH' : 'en-US'), [lang]);
     const open = kind !== null;
     // Last non-null kind keeps the body mounted through the close animation
-    const [shownKind, setShownKind] = useState<StockMovementType | null>(null);
+    const [shownKind, setShownKind] = useState<MovementKind | null>(null);
     useEffect(() => {
         if (kind) setShownKind(kind);
     }, [kind]);
@@ -176,7 +179,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
 
     // Which master-data source backs the from/to fields for this movement kind
     const fromType: 'warehouse' | 'vendor' | 'text' = k === 'receive' ? 'vendor' : k === 'return' ? 'text' : 'warehouse';
-    const toType: 'warehouse' | 'vendor' | 'text' = k === 'issue' ? 'text' : 'warehouse';
+    const toType = 'warehouse' as const;
 
     // Serial slot management
     const setSerialCount = (n: number) => {
@@ -628,7 +631,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         </div>
                     )}
 
-                    {/* Receive / return / issue */}
+                    {/* Receive / return */}
 
                     {/* Tracking badge — receive only */}
                     {selected && isReceive && (
@@ -652,7 +655,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         </div>
                     )}
 
-                    {/* Reference + From — receive/issue only */}
+                    {/* Reference + From — receive only */}
                     {!isTransfer && !isReturn && (
                         <div className="grid grid-cols-2 gap-3">
                             <Field label={t('stock_reference')} required={isReceive}>
@@ -673,7 +676,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     {/* Destination — every non-transfer movement */}
                     {!isTransfer && (
                         <Field label={t('stock_to')} required={isReceive}>
-                            {locationField(toType, 'to_label', to, setTo, k === 'issue' ? t('stock_issue_to_ph') : t('stock_warehouse'))}
+                            {locationField(toType, 'to_label', to, setTo, t('stock_warehouse'))}
                         </Field>
                     )}
 
@@ -706,7 +709,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         </Field>
                     )}
 
-                    {/* Quantity-only capture — receive/return/issue */}
+                    {/* Quantity-only capture — receive/return */}
                     {selected && !isSerial && !isTransfer && !returnIsSerial && (
                         <Field label={isReceive ? t('stock_qty_received') : t('stock_qty')} required>
                             <Input type="number" name="qty" inputMode="numeric" min={1} value={qty} onChange={(e) => setQty(+e.target.value)} />

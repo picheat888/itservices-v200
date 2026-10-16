@@ -141,7 +141,6 @@ export const stock: Dict = {
     stock_new_count_desc: 'เลือกคลัง หมวดหมู่ และ SKU ที่จะนับ',
     stock_opens_new_tab: 'เปิดในแท็บใหม่',
     stock_reference_ph: 'เช่น PO-2026-118 หรือ REQ-12',
-    stock_issue_to_ph: 'รหัสพนักงาน เช่น EMP-1234',
     stock_serial_rows: 'จำนวนแถว Serial',
     stock_serial_rows_fewer: 'ลดแถว Serial',
     stock_serial_rows_more: 'เพิ่มแถว Serial',
