@@ -5,6 +5,7 @@ import {
     Box,
     FileText,
     Inbox,
+    LayoutDashboard,
     LineChart,
     type LucideIcon,
     Mail,
@@ -25,6 +26,7 @@ import { moduleLabel } from '../lib/permission-labels';
  * Administration cards included, which map to sidebar entries rather than permission modules.
  */
 const MODULE_ICON: Record<string, LucideIcon> = {
+    dashboard: LayoutDashboard,
     tickets: Wrench,
     requests: Inbox,
     assets: Box,
