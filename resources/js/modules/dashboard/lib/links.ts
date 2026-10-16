@@ -30,7 +30,8 @@ export function dashLinks(can: Can, linkedEmployee: boolean) {
         request: (id: number) => (requests ? `/requests?view=${id}` : null),
         ticketsHome: tickets ? '/tickets' : null,
         ticketsAll: desk ? '/tickets?tab=all' : null,
-        ticketsOverview: can('tickets.view_dashboard') ? '/tickets?tab=overview' : null,
+        // The overview report on the window the SLA tiles count (the report needs both rights)
+        slaReport: (from: string, to: string) => (desk && can('tickets.resolve') ? `/reports/tickets-overview?from=${from}&to=${to}` : null),
         requestsHome: requests ? '/requests' : null,
         requestsAll: oversee ? '/requests?tab=all' : null,
         requestsStatus: (status: string) => (oversee ? `/requests?tab=all&status=${status}` : null),

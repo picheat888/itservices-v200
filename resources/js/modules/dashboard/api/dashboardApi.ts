@@ -75,7 +75,8 @@ export interface DashboardIt {
     backlog: { open: number; in_progress: number; over_sla: number; delta_14d: number; series: number[] };
     opened: SeriesFigure;
     closed: SeriesFigure;
-    sla: { rate: number | null; measured: number; goal: number };
+    /** from/to: the 30-day window the rate and the average cover. */
+    sla: { rate: number | null; measured: number; goal: number; from: string; to: string };
     avg_resolve_hours: number | null;
     volume: DailyCount[];
     unassigned: number;

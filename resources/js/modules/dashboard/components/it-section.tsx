@@ -66,7 +66,7 @@ export function ItSection({ it }: { it: DashboardIt }) {
                     footer={<SparkFooter text={peak(it.closed.peak)} values={it.closed.series} className="text-emerald-500" />}
                 />
                 <DashTile
-                    to={links.ticketsOverview}
+                    to={links.slaReport(it.sla.from, it.sla.to)}
                     icon={Target}
                     label={t('dash_sla_30d')}
                     value={rate === null ? '—' : rate}
@@ -85,7 +85,7 @@ export function ItSection({ it }: { it: DashboardIt }) {
                     }
                 />
                 <DashTile
-                    to={links.ticketsOverview}
+                    to={links.slaReport(it.sla.from, it.sla.to)}
                     icon={Timer}
                     label={t('rep_kpi_avg')}
                     value={it.avg_resolve_hours ?? '—'}

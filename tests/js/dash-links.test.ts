@@ -52,3 +52,13 @@ test('my requests open the profile drawer list, never every request in the syste
     assert.equal(links.myTickets, '/tickets?tab=my');
     assert.equal(links.auditLog, '/permissions?tab=logs');
 });
+
+test('the SLA tiles open the overview report on the same 30 days', () => {
+    const desk = new Set(['tickets.view_all', 'tickets.resolve']);
+    assert.equal(
+        dashLinks((p) => desk.has(p), false).slaReport('2026-09-18', '2026-10-17'),
+        '/reports/tickets-overview?from=2026-09-18&to=2026-10-17',
+    );
+    // The report needs both rights.
+    assert.equal(dashLinks((p) => p === 'tickets.view_all', false).slaReport('2026-09-18', '2026-10-17'), null);
+});
