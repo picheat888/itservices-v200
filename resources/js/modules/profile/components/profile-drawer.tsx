@@ -86,7 +86,13 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         access: can('access.my'),
     };
     const allowed = PROFILE_SECTIONS.filter((s) => sees[s]);
-    const [tab, setTab] = useProfileSection(allowed);
+    const [urlTab, setTab] = useProfileSection(allowed);
+    // Closing drops ?section= at once; the last open tab stays on screen through the exit animation
+    const lastTab = useRef<ProfileSection>(urlTab);
+    useEffect(() => {
+        if (open) lastTab.current = urlTab;
+    }, [open, urlTab]);
+    const tab = open ? urlTab : lastTab.current;
 
     const { data: myAssets = [], isLoading: assetsLoading } = useMyAssets(open && sees.assets);
     const { data: myAccess, isLoading: accessLoading } = useMyAccess(open && sees.access);
