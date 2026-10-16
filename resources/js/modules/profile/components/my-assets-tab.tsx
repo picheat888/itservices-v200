@@ -12,10 +12,12 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useUiStore } from '@/stores/ui';
 import { useMutationState } from '@tanstack/react-query';
 import { Check, CheckCheck, ChevronDown, ChevronUp, Inbox, Laptop, Link2Off, Loader2, Undo2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Rows shown before "show all"
 const PAGE = 5;
+// Accepted rows hold their place this long after the last accept finishes
+const SETTLE_MS = 3000;
 
 // Column template shared by both tables; Tag and Serial columns from lg up
 const ROW_GRID =
@@ -93,6 +95,15 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
         filters: { mutationKey: ACCEPT_KEY, status: 'pending' },
         select: (mutation) => mutation.state.variables as number,
     });
+
+    // Once no accept is in flight for a moment, the held rows move to the table below
+    const hasSettled = settledIds.size > 0;
+    const accepting = acceptingIds.length > 0;
+    useEffect(() => {
+        if (!hasSettled || accepting) return;
+        const timer = window.setTimeout(() => setSettledIds(new Set()), SETTLE_MS);
+        return () => window.clearTimeout(timer);
+    }, [hasSettled, accepting]);
 
     const acceptOne = (id: number) => {
         setSettledIds((prev) => new Set(prev).add(id));
