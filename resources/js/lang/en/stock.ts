@@ -120,6 +120,7 @@ export const stock: Dict = {
     stock_kpi_alerts_sub: 'SKUs with an alert',
     stock_kpi_requests: 'Requests',
     stock_kpi_requests_pending: 'pending',
+    stock_kpi_requests_no_right: 'no right to view requests',
     stock_minmax_alerts: 'Stock Alerts',
     stock_alert_out: 'Out of stock',
     stock_alert_low: 'Below min',
