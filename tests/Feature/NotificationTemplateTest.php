@@ -51,7 +51,7 @@ class NotificationTemplateTest extends TestCase
     public function test_switching_a_bell_off_stops_it_being_sent(): void
     {
         Notification::fake();
-        $recipient = $this->userWith(['assets.my']);
+        $recipient = $this->userWith([]);
         $asset = Asset::factory()->create();
 
         NotificationTemplate::create([
@@ -68,7 +68,7 @@ class NotificationTemplateTest extends TestCase
     public function test_a_bell_left_on_still_rings(): void
     {
         Notification::fake();
-        $recipient = $this->userWith(['assets.my']);
+        $recipient = $this->userWith([]);
         $asset = Asset::factory()->create();
 
         NotificationTemplate::create([
@@ -84,7 +84,7 @@ class NotificationTemplateTest extends TestCase
     public function test_a_bell_with_no_row_yet_rings_rather_than_going_silent(): void
     {
         Notification::fake();
-        $recipient = $this->userWith(['assets.my']);
+        $recipient = $this->userWith([]);
 
         // Nothing seeded: a notification added in code but not yet in the table must not disappear.
         $recipient->notify(new AssetAssignedNotification(Asset::factory()->create(), 'IT Store'));
@@ -162,7 +162,7 @@ class NotificationTemplateTest extends TestCase
         ]);
 
         // No configure permission: rendering your own bells must not need admin rights.
-        $this->actingAs($this->userWith(['assets.my']));
+        $this->actingAs($this->userWith([]));
         $this->getJson('/api/notification-messages')
             ->assertOk()
             ->assertJsonPath('data.notif_asset_assigned.en', 'Yours now')
@@ -187,7 +187,7 @@ class NotificationTemplateTest extends TestCase
 
     public function test_ringing_a_bell_stamps_when_it_last_rang(): void
     {
-        $recipient = $this->userWith(['assets.my']);
+        $recipient = $this->userWith([]);
         NotificationTemplate::create([
             'key' => 'notif_asset_assigned', 'message_en' => 'x', 'message_th' => 'x', 'enabled' => true,
         ]);
@@ -204,7 +204,7 @@ class NotificationTemplateTest extends TestCase
 
     public function test_a_bell_that_is_off_is_not_stamped_as_having_rung(): void
     {
-        $recipient = $this->userWith(['assets.my']);
+        $recipient = $this->userWith([]);
         NotificationTemplate::create([
             'key' => 'notif_asset_assigned', 'message_en' => 'x', 'message_th' => 'x', 'enabled' => false,
         ]);
@@ -320,7 +320,7 @@ class NotificationTemplateTest extends TestCase
 
     public function test_testing_needs_the_notification_administrator_permission(): void
     {
-        $this->actingAs($this->userWith(['assets.my']));
+        $this->actingAs($this->userWith([]));
         $this->postJson('/api/notification-templates/notif_asset_assigned/test')->assertForbidden();
     }
 }

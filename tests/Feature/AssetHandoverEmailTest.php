@@ -6,7 +6,6 @@ use App\Jobs\SendTemplatedEmail;
 use App\Models\Asset\Asset;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
-use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Services\Asset\AssetService;
 use App\Support\EmailTemplates;
@@ -34,14 +33,13 @@ class AssetHandoverEmailTest extends TestCase
         $this->seed(EmailTemplateSeeder::class);
     }
 
-    /** A holder with a login that may see My Assets — the gate the sender checks. */
+    /** A holder with a login account and no permissions — an account is all the sender checks. */
     private function holder(): Employee
     {
         $employee = Employee::create([
             'code' => 'EMP-1042', 'first_name' => 'Somchai', 'last_name' => 'Suksawat', 'status' => 'active',
         ]);
-        $roleId = Role::firstOrCreate(['key' => 'staff'], ['name' => 'Staff', 'is_system' => false])->id;
-        RolePermission::firstOrCreate(['role_id' => $roleId, 'permission' => 'assets.my'], ['allowed' => true]);
+        Role::firstOrCreate(['key' => 'staff'], ['name' => 'Staff', 'is_system' => false]);
         User::factory()->create([
             'role' => 'staff', 'employee_id' => $employee->id,
             'email' => 'somchai@inaba.co.th', 'name' => 'Somchai Suksawat',
@@ -110,6 +108,21 @@ class AssetHandoverEmailTest extends TestCase
         $this->assertStringNotContainsString('{{', $mail['html']);
         $this->assertSame('Accept the hand-over', $mail['label']);
         $this->assertStringEndsWith('/?dialog=profile&section=assets', $mail['url']);
+    }
+
+    public function test_a_holder_with_no_permissions_gets_the_bell_and_the_mail(): void
+    {
+        Bus::fake();
+        $employee = $this->holder();
+        $user = User::where('employee_id', $employee->id)->firstOrFail();
+        $asset = Asset::factory()->create(['owner_employee_id' => null, 'owner' => 'Store IT']);
+
+        $this->handOver($asset, $employee);
+
+        $this->assertSame([], $user->permissions());
+        $this->assertSame(1, $user->notifications()->count());
+        $this->assertSame('asset_assigned', $user->notifications()->first()->data['type']);
+        $this->assertNotNull($this->mail('asset.assigned'));
     }
 
     public function test_the_recall_notice_links_to_the_profile_drawer(): void

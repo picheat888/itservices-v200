@@ -307,11 +307,7 @@ class AssetService
         return $asset->fresh(['location']);
     }
 
-    /**
-     * Bell alert to the recipient when an asset is handed over — resolved through the
-     * owner_employee_id FK. Only fires if the employee has a login account that can use
-     * My Assets (permission gates the bell).
-     */
+    /** Bell + mail to the recipient of a hand-over, whenever the employee has a login account. */
     private function notifyRecipient(Asset $asset, ?string $from, ?string $fromLabel = null): void
     {
         $employee = $asset->ownerEmployee;
@@ -320,17 +316,15 @@ class AssetService
         }
 
         $user = User::where('employee_id', $employee->id)->first();
-        if ($user && $user->hasPermission('assets.my')) {
+        if ($user) {
             $user->notify(new AssetAssignedNotification($asset, $from));
-            // Same person by mail: a hand-over nobody accepts sits in limbo, and the people
-            // most likely to miss the bell are the ones who rarely open the portal.
             $this->emailEach([$user], 'asset.assigned', $this->assetVars($asset) + [
                 'asset.from' => (string) ($fromLabel ?: $from ?: '-'),
             ], '/?dialog=profile&section=assets', 'Accept the hand-over');
         }
     }
 
-    /** Bell alert to the employee an asset was pulled back from, gated by assets.my (the bell opens the profile drawer's Assets tab). */
+    /** Bell + mail to the employee an asset was pulled back from, whenever they have a login account. */
     private function notifyRecalledHolder(?Employee $holder, Asset $asset, string $subtype): void
     {
         if (! $holder) {
@@ -338,7 +332,7 @@ class AssetService
         }
 
         $user = User::where('employee_id', $holder->id)->first();
-        if ($user && $user->hasPermission('assets.my')) {
+        if ($user) {
             $user->notify(new AssetRecalledNotification($asset, $subtype));
             // One template for both subtypes — see asset.recalled in EmailTemplates.
             $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/?dialog=profile&section=assets', 'View my assets');

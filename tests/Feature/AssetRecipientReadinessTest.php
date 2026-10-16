@@ -12,9 +12,7 @@ use Tests\TestCase;
 /**
  * The hand-over dialog asks who cannot confirm receipt themselves, so IT knows before it
  * picks a recipient that the asset will sit in pending acceptance with nobody able to clear it.
- *
- * Two separate causes, and the dialog words them differently: no login account at all, or an
- * account that cannot open My Assets (the only page with an Accept button).
+ * The only cause is no login account: any linked account can accept.
  */
 class AssetRecipientReadinessTest extends TestCase
 {
@@ -47,20 +45,21 @@ class AssetRecipientReadinessTest extends TestCase
         return $this->getJson('/api/assets/recipient-readiness')->assertOk()->json('data') ?? [];
     }
 
-    public function test_it_names_both_reasons_and_leaves_out_whoever_can_accept(): void
+    public function test_only_a_missing_account_blocks_acceptance(): void
     {
         $ready = $this->employee('EMP-8001');
-        $noPermission = $this->employee('EMP-8002');
+        $readyWithoutPermissions = $this->employee('EMP-8002');
         $noAccount = $this->employee('EMP-8003');
-        $this->userWith(['assets.my'], $ready);
-        $this->userWith(['tickets.view'], $noPermission);
+        $this->userWith(['tickets.view'], $ready);
+        $this->userWith([], $readyWithoutPermissions);
 
         $this->actingAs(User::factory()->create(['role' => 'super']));
         $readiness = $this->readiness();
 
         $this->assertArrayNotHasKey($ready->id, $readiness);
-        $this->assertSame('no_permission', $readiness[$noPermission->id]);
+        $this->assertArrayNotHasKey($readyWithoutPermissions->id, $readiness);
         $this->assertSame('no_account', $readiness[$noAccount->id]);
+        $this->assertNotContains('no_permission', $readiness);
     }
 
     public function test_resigned_staff_are_left_out_because_they_are_not_offered_as_recipients(): void

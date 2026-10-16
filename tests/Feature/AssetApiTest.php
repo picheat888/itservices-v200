@@ -515,7 +515,6 @@ class AssetApiTest extends TestCase
         $employee = Employee::create(['code' => 'EMP-7001', 'first_name' => 'Me', 'last_name' => 'User']);
         $other = Employee::create(['code' => 'EMP-9999', 'first_name' => 'Not', 'last_name' => 'Me']);
         $user = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.my', 'allowed' => true]);
         Asset::factory()->create(['owner' => 'EMP-7001', 'owner_employee_id' => $employee->id]);
         Asset::factory()->create(['owner' => 'EMP-7001', 'owner_employee_id' => $employee->id]);
         Asset::factory()->create(['owner' => 'EMP-9999', 'owner_employee_id' => $other->id]);
@@ -524,11 +523,31 @@ class AssetApiTest extends TestCase
         $this->getJson('/api/assets/mine')->assertOk()->assertJsonCount(2, 'data');
     }
 
+    /** A linked employee needs no permission at all to see what they hold. */
+    public function test_my_assets_needs_no_permission_for_a_linked_employee(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-7002', 'first_name' => 'No', 'last_name' => 'Perm']);
+        $user = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        Asset::factory()->create(['owner' => 'EMP-7002', 'owner_employee_id' => $employee->id]);
+
+        $this->assertSame(0, RolePermission::where('role_id', $user->role_id)->count());
+        $this->actingAs($user);
+        $this->getJson('/api/assets/mine')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_my_assets_is_empty_for_an_account_with_no_employee(): void
+    {
+        $user = User::factory()->create(['role' => 'user', 'employee_id' => null]);
+        Asset::factory()->create(['owner' => 'EMP-7003']);
+
+        $this->actingAs($user);
+        $this->getJson('/api/assets/mine')->assertOk()->assertExactJson(['data' => []]);
+    }
+
     public function test_mine_carries_the_hand_over_time_of_a_pending_asset(): void
     {
         $employee = Employee::create(['code' => 'EMP-7101', 'first_name' => 'Me', 'last_name' => 'User']);
         $user = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.my', 'allowed' => true]);
         $pending = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-7101', 'owner_employee_id' => $employee->id]);
         $legacy = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-7101', 'owner_employee_id' => $employee->id]);
         AssetTransfer::forceCreate(['asset_id' => $pending->id, 'asset_tag' => $pending->asset_code, 'asset_model' => 'M', 'kind' => 'relocate', 'from_owner' => 'A', 'to_owner' => 'B', 'created_at' => '2026-10-01 09:00:00']);
@@ -624,7 +643,6 @@ class AssetApiTest extends TestCase
     {
         $employee = Employee::create(['code' => 'EMP-8001', 'first_name' => 'New', 'last_name' => 'Owner']);
         $recipient = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        RolePermission::create(['role_id' => $recipient->role_id, 'permission' => 'assets.my', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
         $location = Location::create(['name' => 'HQ']);
 
@@ -650,7 +668,7 @@ class AssetApiTest extends TestCase
     {
         $employee = Employee::create(['code' => 'EMP-6001', 'first_name' => 'Hold', 'last_name' => 'Er']);
         $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        RolePermission::create(['role_id' => $holder->role_id, 'permission' => 'assets.return', 'allowed' => true]);
+        RolePermission::create(['role_id' => $holder->role_id, 'permission' => 'profile.return_assets', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6001', 'owner_employee_id' => $employee->id]);
 
         // Anyone who is not the holder cannot request its return.
@@ -665,11 +683,13 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.owner', 'EMP-6001');
     }
 
-    /** Requesting a return is gated by assets.return — the holder without it is forbidden. */
+    /** Requesting a return is gated by profile.return_assets — the holder without it is forbidden. */
     public function test_request_return_requires_the_return_permission(): void
     {
         $employee = Employee::create(['code' => 'EMP-6002', 'first_name' => 'No', 'last_name' => 'Perm']);
         $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        // The retired key opens nothing.
+        RolePermission::create(['role_id' => $holder->role_id, 'permission' => 'assets.return', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6002', 'owner_employee_id' => $employee->id]);
 
         $this->actingAs($holder);
@@ -682,7 +702,7 @@ class AssetApiTest extends TestCase
         $it = $this->super(); // super holds assets.transfer → an IT receiver
         $employee = Employee::create(['code' => 'EMP-6100', 'first_name' => 'H', 'last_name' => 'R']);
         $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        RolePermission::create(['role_id' => $holder->role_id, 'permission' => 'assets.return', 'allowed' => true]);
+        RolePermission::create(['role_id' => $holder->role_id, 'permission' => 'profile.return_assets', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6100', 'owner_employee_id' => $employee->id]);
 
         $this->actingAs($holder);
@@ -1071,7 +1091,6 @@ class AssetApiTest extends TestCase
         // the consumer paths must trust the FK, not the display string.
         $me = Employee::create(['code' => 'EMP-FK-1', 'first_name' => 'Fk', 'last_name' => 'Me']);
         $user = User::factory()->create(['role' => 'user', 'employee_id' => $me->id]);
-        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.my', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-STALE-STRING', 'owner_employee_id' => $me->id]);
 
         $this->actingAs($user);

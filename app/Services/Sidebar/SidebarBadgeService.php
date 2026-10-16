@@ -49,7 +49,7 @@ class SidebarBadgeService
             'tickets' => $this->gated($user, ['tickets.create'], fn () => $this->ticketsNeedingAttention($user)),
             // Mirrors assets/summary: its own gate (assets.view) plus the nav item's (assets.receive).
             'assets' => $this->gated($user, ['assets.view', 'assets.receive'], fn () => $this->assetsPendingReturn()),
-            'my_assets' => $this->gated($user, ['assets.my'], fn () => $this->myAssetsPendingAcceptance($user)),
+            'my_assets' => $this->myAssetsPendingAcceptance($user),
             'contracts' => $this->gated($user, ['contracts.view'], fn () => $this->contractsNeedingRenewal()),
             'stock' => $this->gated($user, ['stock.view'], fn () => $this->stockNeedingAttention($user)),
         ];

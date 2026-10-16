@@ -300,7 +300,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('assets/contract-options', [AssetController::class, 'contractOptions'])->name('api.assets.contract-options');
     Route::get('assets/transfers', [AssetController::class, 'transfers'])->name('api.assets.transfers');
     Route::get('assets/mine', [AssetController::class, 'mine'])->name('api.assets.mine');
-    // The profile drawer's Access tab, under its own key (access.my) — see MyAccessController.
+    // The profile drawer's Access tab: a linked employee needs no permission — see MyAccessController.
     Route::get('access/mine', [MyAccessController::class, 'index'])->name('api.access.mine');
     Route::get('assets/recipient-readiness', [AssetController::class, 'recipientReadiness'])->name('api.assets.recipient-readiness');
     Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');

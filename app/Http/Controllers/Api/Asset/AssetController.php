@@ -230,34 +230,27 @@ class AssetController extends Controller
         return ['unit' => $unit, 'data' => $data];
     }
 
-    /** Employees who cannot accept a hand-over in the profile drawer's Assets tab (no linked account or no assets.my), as id → reason. */
+    /** Active employees who cannot accept a hand-over because they have no linked account, as id → 'no_account'. */
     public function recipientReadiness(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
 
-        // Every account, resolved once: hasPermission() walks the role's permission rows, so
-        // asking per employee would re-read them for each of them.
-        $accepting = User::whereNotNull('employee_id')->get()
-            ->filter(fn (User $user) => $user->hasPermission('assets.my'))
-            ->pluck('employee_id')
-            ->all();
         $accounted = User::whereNotNull('employee_id')->pluck('employee_id')->all();
 
         $blocked = Employee::where('status', EmployeeStatus::Active->value)
             ->pluck('id')
-            ->reject(fn (int $id) => in_array($id, $accepting, true))
-            ->mapWithKeys(fn (int $id) => [$id => in_array($id, $accounted, true) ? 'no_permission' : 'no_account']);
+            ->reject(fn (int $id) => in_array($id, $accounted, true))
+            ->mapWithKeys(fn (int $id) => [$id => 'no_account']);
 
         return response()->json(['data' => $blocked]);
     }
 
     /**
      * Assets assigned to the authenticated user (matched by owner_employee_id).
-     * Employee self-service — no assets.view needed, only a linked employee record.
+     * Employee self-service — no permission needed, only a linked employee record.
      */
     public function mine(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.my'), 403);
         $employee = $request->user()?->linkedEmployee();
         if ($employee === null) {
             return response()->json(['data' => []]);
@@ -450,8 +443,8 @@ class AssetController extends Controller
      */
     public function requestReturn(Request $request, Asset $asset): JsonResponse
     {
-        // Returning one's own asset is gated by assets.return, apart from assets.my (the profile drawer's Assets tab).
-        abort_unless((bool) $request->user()?->hasPermission('assets.return'), 403);
+        // Returning one's own asset is the My Profile right profile.return_assets.
+        abort_unless((bool) $request->user()?->hasPermission('profile.return_assets'), 403);
         $employeeId = $request->user()?->linkedEmployee()?->id;
         abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id && $asset->status === AssetStatus::Deployed, 403);
         $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);

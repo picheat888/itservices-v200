@@ -68,7 +68,7 @@ class AssetRecallNoticeTest extends TestCase
     public function test_cancelling_a_hand_over_tells_the_person_it_was_meant_for(): void
     {
         $employee = $this->holder();
-        $recipient = $this->userWith(['assets.my'], $employee);
+        $recipient = $this->userWith([], $employee);
         $asset = $this->assetFor($employee, 'pending_acceptance');
 
         $this->recall($asset, User::factory()->create(['role' => 'super']))->assertOk();
@@ -85,7 +85,7 @@ class AssetRecallNoticeTest extends TestCase
     public function test_force_recalling_a_held_asset_says_it_was_taken_back(): void
     {
         $employee = $this->holder();
-        $recipient = $this->userWith(['assets.my'], $employee);
+        $recipient = $this->userWith([], $employee);
         $asset = $this->assetFor($employee, 'deployed');
 
         // Only force recall reaches an asset an employee is actually holding.
@@ -99,7 +99,7 @@ class AssetRecallNoticeTest extends TestCase
     public function test_a_shared_asset_has_nobody_to_tell(): void
     {
         $employee = $this->holder();
-        $this->userWith(['assets.my'], $employee);
+        $this->userWith([], $employee);
         // Common-use kit is labelled, not held: owner_employee_id is null.
         $asset = Asset::factory()->create([
             'status' => 'common', 'owner' => 'Meeting Room 2', 'owner_employee_id' => null,
@@ -110,16 +110,16 @@ class AssetRecallNoticeTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_a_holder_who_cannot_open_my_assets_is_not_belled(): void
+    public function test_a_holder_with_an_unrelated_permission_is_still_belled(): void
     {
         $employee = $this->holder();
-        // Same gate as the hand-over bell: the alert opens My Assets, which this reader lacks.
-        $this->userWith(['tickets.view'], $employee);
+        // A linked account is the only gate: no asset key is needed to see your own kit.
+        $recipient = $this->userWith(['tickets.view'], $employee);
         $asset = $this->assetFor($employee, 'pending_acceptance');
 
         $this->recall($asset, User::factory()->create(['role' => 'super']))->assertOk();
 
-        Notification::assertNothingSent();
+        Notification::assertSentTo($recipient, AssetRecalledNotification::class);
     }
 
     public function test_a_holder_with_no_login_account_does_not_break_the_recall(): void
@@ -137,8 +137,8 @@ class AssetRecallNoticeTest extends TestCase
     {
         $first = $this->holder('EMP-7101');
         $second = $this->holder('EMP-7102');
-        $firstUser = $this->userWith(['assets.my'], $first);
-        $secondUser = $this->userWith(['assets.my'], $second);
+        $firstUser = $this->userWith([], $first);
+        $secondUser = $this->userWith([], $second);
         $assets = [
             $this->assetFor($first, 'pending_acceptance'),
             $this->assetFor($second, 'pending_acceptance'),

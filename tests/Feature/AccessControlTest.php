@@ -64,9 +64,10 @@ class AccessControlTest extends TestCase
         $this->assertNotContains('access.manage', Permissions::all());
         $this->assertContains('access.module', Permissions::defaults()['admin']);
         $this->assertContains('access.email_edit', Permissions::defaults()['admin']);
-        // HR sees only their own access (the 2026-09-26 templates); deleting a registry entry is the IT leads'.
+        // HR sees only their own access, which needs no key; deleting a registry entry is the IT leads'.
         $this->assertNotContains('access.module', Permissions::defaults()['hr']);
-        $this->assertContains('access.my', Permissions::defaults()['hr']);
+        $this->assertNotContains('access.my', Permissions::all());
+        $this->assertContains('profile.return_assets', Permissions::defaults()['hr']);
         $this->assertNotContains('access.email_delete', Permissions::defaults()['admin']);
         $this->assertContains('access.email_delete', Permissions::defaults()['it_supervisorleader']);
     }

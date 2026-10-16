@@ -160,4 +160,20 @@ class SidebarBadgeTest extends TestCase
         // tickets.create is granted, but this user filed nothing and may not take cases.
         $this->assertSame(0, $badges['tickets']);
     }
+
+    public function test_my_assets_counts_for_a_linked_employee_with_no_permissions(): void
+    {
+        $employee = Employee::create(['code' => 'SB-0100', 'first_name' => 'Plain', 'last_name' => 'Staff', 'status' => 'active']);
+        $role = Role::create(['key' => 'sb_plain', 'name' => 'Plain', 'is_system' => false]);
+        $plain = User::factory()->create(['role_id' => $role->id, 'employee_id' => $employee->id]);
+        Asset::create([
+            'asset_code' => 'SB-AS-10', 'type' => 'laptop', 'status' => 'pending_acceptance',
+            'owner_employee_id' => $employee->id,
+        ]);
+
+        $badges = $this->actingAs($plain)->getJson('/api/sidebar-badges')->assertOk()->json('data');
+
+        $this->assertSame(1, $badges['my_assets']);
+        $this->assertSame(0, $badges['assets']);
+    }
 }
