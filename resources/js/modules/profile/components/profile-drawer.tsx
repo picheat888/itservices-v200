@@ -3,7 +3,7 @@ import { useT } from '@/lang';
 import { useMyAccess } from '@/modules/access';
 import { useMyAssets } from '@/modules/asset';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
-import { AccessPane, IdChip, PhotoCropDialog, RAIL_HEADING, RailRow, RequestsPane, TicketsPane, useEmployee } from '@/modules/employee';
+import { AccessPane, IdChip, PhotoCropDialog, RAIL_HEADING, RailRow, useEmployee } from '@/modules/employee';
 import { useRequests } from '@/modules/request';
 import { useTickets } from '@/modules/ticket';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
@@ -11,7 +11,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { cn, focusFirstError } from '@/shared/lib/utils';
+import { focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
@@ -22,6 +22,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useProfileSection } from '../hooks/use-profile-section';
 import { PROFILE_SECTIONS, type ProfileSection } from '../types';
 import { MyAssetsTab } from './my-assets-tab';
+import { MyRequestsTab } from './my-requests-tab';
+import { MyTicketsTab } from './my-tickets-tab';
 import { ProfileDetailsTab, type ProfileFormKey } from './profile-details-tab';
 
 // Names are stored as one space-joined string: the first word is the given name, the rest the surname
@@ -241,7 +243,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const tabs: DialogTab<ProfileSection>[] = allowed.map((id) => ({ id, ...tabMeta[id] }));
 
     const seeAll = (to: string) => (
-        <Link to={to} onClick={leaveTo(to)} className="text-brand mt-3 inline-block shrink-0 self-start text-sm font-medium hover:underline">
+        <Link to={to} onClick={leaveTo(to)} className="text-muted-foreground hover:text-foreground text-xs font-semibold hover:underline">
             {t('profile_see_all')}
         </Link>
     );
@@ -374,7 +376,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             id={panelId}
                             aria-labelledby={dialogTabId(panelId, tab)}
                             // Table tabs size their rows to the pane (fillHeight), like the Employee viewer
-                            className={cn('min-h-0 flex-1 p-4 xl:p-5', tab === 'tickets' || tab === 'requests' ? 'flex flex-col' : 'overflow-y-auto')}
+                            className="min-h-0 flex-1 overflow-y-auto p-4 xl:p-5"
                         >
                             {tab === 'profile' && (
                                 <ProfileDetailsTab
@@ -397,16 +399,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 />
                             )}
                             {tab === 'tickets' && (
-                                <>
-                                    <TicketsPane tickets={myTickets?.data ?? []} loading={ticketsLoading} emptyText={t('profile_no_tickets')} />
-                                    {(myTickets?.data.length ?? 0) > 0 && seeAll('/tickets?tab=my')}
-                                </>
+                                <MyTicketsTab tickets={myTickets?.data ?? []} loading={ticketsLoading} seeAll={seeAll('/tickets?tab=my')} />
                             )}
                             {tab === 'requests' && (
-                                <>
-                                    <RequestsPane requests={myRequests?.data ?? []} loading={requestsLoading} emptyText={t('profile_no_requests')} />
-                                    {(myRequests?.data.length ?? 0) > 0 && seeAll('/requests?tab=all')}
-                                </>
+                                <MyRequestsTab requests={myRequests?.data ?? []} loading={requestsLoading} seeAll={seeAll('/requests?tab=all')} />
                             )}
                             {tab === 'access' && <AccessPane access={myAccess} loading={accessLoading} emptyText={t('profile_no_access')} />}
                         </div>

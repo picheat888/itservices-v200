@@ -32,4 +32,7 @@ export const profile: Dict = {
     profile_assets_accept_all: 'รับมอบทั้งหมด',
     profile_assets_accept_all_confirm: 'ยืนยันว่าได้รับทรัพย์สินทั้ง {n} รายการนี้ครบแล้ว',
     profile_assets_accepted: 'รับมอบแล้ว',
+    // my-tickets-tab.tsx / my-requests-tab.tsx — แท็บ Ticket และคำขอ
+    profile_tickets_heading: 'Ticket ของฉัน',
+    profile_requests_heading: 'คำขอของฉัน',
 };

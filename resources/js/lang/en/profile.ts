@@ -32,4 +32,7 @@ export const profile: Dict = {
     profile_assets_accept_all: 'Accept all',
     profile_assets_accept_all_confirm: 'Confirm you have received all {n} of these assets.',
     profile_assets_accepted: 'Accepted',
+    // my-tickets-tab.tsx / my-requests-tab.tsx — Tickets and Requests tabs
+    profile_tickets_heading: 'My tickets',
+    profile_requests_heading: 'My requests',
 };
