@@ -3,11 +3,25 @@
 namespace Tests\Feature\Perf;
 
 use App\Support\Perf\Targets;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\EmployeeDepartmentSeeder;
+use Database\Seeders\EmployeePositionSeeder;
+use Database\Seeders\EmployeeSectionSeeder;
+use Database\Seeders\MasterDataSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 // Feature tests for the perf:generate command skeleton and its targets
 class PerfGenerateCommandTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed([EmployeeDepartmentSeeder::class, EmployeePositionSeeder::class, EmployeeSectionSeeder::class, MasterDataSeeder::class, DatabaseSeeder::class]);
+    }
+
     public function test_command_writes_a_file_and_reports_counts(): void
     {
         $out = sys_get_temp_dir().DIRECTORY_SEPARATOR.'perf_cmd_'.uniqid().'.sql';
