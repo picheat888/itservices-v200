@@ -64,6 +64,27 @@ class ItBlockTest extends TestCase
         $this->assertSame(-1, $it['backlog']['delta_14d']);
     }
 
+    /** "เทียบ 14 วันก่อน" compares with the level before the window opened, not the end of its first day. */
+    public function test_the_backlog_change_is_measured_from_before_the_first_day(): void
+    {
+        Ticket::factory()->create(['status' => 'open', 'created_at' => now()->subDays(30)]);
+        Ticket::factory()->create(['status' => 'open', 'created_at' => now()->subDays(13)]);
+
+        $backlog = $this->it()['backlog'];
+
+        $this->assertSame(2, $backlog['series'][0]);
+        $this->assertSame(2, $backlog['series'][13]);
+        $this->assertSame(1, $backlog['delta_14d']);
+    }
+
+    public function test_the_sla_figures_carry_the_window_they_cover(): void
+    {
+        $sla = $this->it()['sla'];
+
+        $this->assertSame(now()->subDays(29)->toDateString(), $sla['from']);
+        $this->assertSame(now()->toDateString(), $sla['to']);
+    }
+
     public function test_sla_rate_and_resolve_time_match_the_ticket_overview_report(): void
     {
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);

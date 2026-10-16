@@ -36,10 +36,11 @@ class ItBlock
 
         $opened = DailySeries::count(Ticket::query(), 'created_at', self::SERIES_DAYS);
         $closed = DailySeries::values(DailySeries::count(Ticket::where('status', TicketStatus::Completed->value), 'resolved_at', self::SERIES_DAYS));
-        $backlog = $this->backlogSeries(DailySeries::values($opened));
+        [$openingLevel, $backlog] = $this->backlogSeries(DailySeries::values($opened));
 
         $to = CarbonImmutable::now()->endOfDay();
-        $kpis = $this->overview->kpisForAll($to->subDays(self::WINDOW_DAYS - 1)->startOfDay(), $to);
+        $from = $to->subDays(self::WINDOW_DAYS - 1)->startOfDay();
+        $kpis = $this->overview->kpisForAll($from, $to);
 
         return [
             'waiting' => ['count' => $open->count(), 'oldest_days' => $this->daysSince($open->min('created_at'), $now)],
@@ -47,12 +48,19 @@ class ItBlock
                 'open' => $open->count(),
                 'in_progress' => $inProgress->count(),
                 'over_sla' => $live->filter(fn (Ticket $t) => TicketMetrics::liveSlaState($t, $now) === 'over_sla')->count(),
-                'delta_14d' => $backlog[count($backlog) - 1] - $backlog[0],
+                'delta_14d' => $backlog[count($backlog) - 1] - $openingLevel,
                 'series' => $backlog,
             ],
             'opened' => $this->figure(DailySeries::values($opened)),
             'closed' => $this->figure($closed),
-            'sla' => ['rate' => $kpis['sla_rate'], 'measured' => $kpis['sla_measured'], 'goal' => TicketSla::goalPercent()],
+            // from/to: the window, so the tiles can open the overview report on the same days.
+            'sla' => [
+                'rate' => $kpis['sla_rate'],
+                'measured' => $kpis['sla_measured'],
+                'goal' => TicketSla::goalPercent(),
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ],
             'avg_resolve_hours' => $kpis['avg_resolve_hours'],
             'volume' => $opened,
             'unassigned' => $open->count(),
@@ -70,10 +78,10 @@ class ItBlock
     }
 
     /**
-     * What was still open at the end of each day: the level before the window, walked forward day by day.
+     * The level before the window opened, and what was still open at the end of each day after it.
      *
      * @param  list<int>  $opened
-     * @return list<int>
+     * @return array{0: int, 1: list<int>}
      */
     private function backlogSeries(array $opened): array
     {
@@ -83,13 +91,14 @@ class ItBlock
             ->where(fn ($q) => $q->whereNull('resolved_at')->orWhere('resolved_at', '>=', $start))
             ->count();
 
+        $opening = $level;
         $series = [];
         foreach ($opened as $i => $arrived) {
             $level += $arrived - $resolved[$i];
             $series[] = max(0, $level);
         }
 
-        return $series;
+        return [$opening, $series];
     }
 
     /**
