@@ -194,7 +194,10 @@ class Copy implements PerfStep
         $reg->remember('admin_user_id', $adminId);
         $reg->remember('admin_employee_id', $adminEmployeeId);
 
-        $reg->remember('department_ids', array_values(array_merge($this->db->table('departments')->pluck('id')->all(), array_keys($this->added['departments']))));
+        $departments = $this->db->table('departments')->pluck('name', 'id')->all() + $this->added['departments'];
+        $reg->remember('department_ids', array_map('intval', array_keys($departments)));
+        $reg->remember('department_names', $departments);
+        $reg->remember('department_ids_by_tag', array_map('intval', $this->db->table('departments')->pluck('id', 'tag')->all()));
         $positions = $this->db->table('positions')->pluck('title', 'id')->all() + $this->added['positions'];
         $reg->remember('position_by_title', array_flip($positions));
 
