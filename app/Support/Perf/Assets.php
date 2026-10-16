@@ -87,6 +87,7 @@ class Assets implements PerfStep
         $stamp = $this->stamp();
 
         $vendorIds = [];
+        $vendorNames = [];
         for ($i = 0; $i < $this->ctx->targets->of('vendors'); $i++) {
             $id = $reg->nextId('vendors');
             $name = $rng->pick(self::VENDOR_PREFIX).' '.$rng->pick(self::VENDOR_SUFFIX);
@@ -98,6 +99,7 @@ class Assets implements PerfStep
                 'created_at' => $stamp, 'updated_at' => $stamp,
             ]));
             $vendorIds[] = $id;
+            $vendorNames[$id] = $i < 10 ? $name : $name.' '.$i;
         }
 
         $brandIds = [];
@@ -118,6 +120,7 @@ class Assets implements PerfStep
         }
 
         $reg->remember('vendor_ids', $vendorIds);
+        $reg->remember('vendor_names', $vendorNames);
         $reg->remember('brand_ids', array_keys($brandIds));
         $reg->remember('model_ids', array_keys($models));
         $this->models = $models;
@@ -170,6 +173,7 @@ class Assets implements PerfStep
             $c['code'] = sprintf('CT-%d-%03d', $c['start']->year, $c['id']);
             $createdAt = $c['start']->subDays($rng->int(0, 14))->setTime(9, $rng->int(0, 59));
             $label = $rng->pick(self::CONTRACT_NAMES[$c['type']]);
+            $c['name'] = $label.' '.$c['code'];
             $this->ctx->sql->insert('contracts', $this->fill('contracts', [
                 'id' => $c['id'], 'code' => $c['code'], 'vendor_id' => $c['vendor_id'], 'name' => $label.' '.$c['code'],
                 'details' => $label, 'type' => $c['type'], 'start_date' => $c['start']->toDateString(), 'end_date' => $c['end_date']->toDateString(),
@@ -211,7 +215,7 @@ class Assets implements PerfStep
                 return;
             }
             $this->ctx->sql->insert('contract_alert_logs', ['id' => $reg->nextId('contract_alert_logs'), 'contract_id' => $c['id'], 'threshold' => $threshold, 'alerted_at' => $at]);
-            $reg->event('contract.alert', ['contract_id' => $c['id'], 'code' => $c['code'], 'threshold' => $threshold, 'at' => $at]);
+            $reg->event('contract.alert', ['contract_id' => $c['id'], 'code' => $c['code'], 'name' => $c['name'], 'vendor_id' => $c['vendor_id'], 'threshold' => $threshold, 'at' => $at]);
         };
         foreach (self::THRESHOLDS as $threshold) {
             if ($c['notify'][$threshold]) {
