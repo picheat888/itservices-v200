@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\Request\RequestType;
 use App\Enums\Ticket\TicketCategory;
 use App\Models\User;
 
@@ -28,7 +29,12 @@ class Permissions
                 'my', 'jobs',
             ],
             // notify_* gate who hears about a request, apart from who may act on it.
-            'requests' => ['module', 'submit', 'view_all', 'complete', 'notify_approved', 'notify_stalled'],
+            'requests' => [
+                'module',
+                'submit', ...self::requestTypeKeys(),
+                'view_all', 'cancel_any',
+                'complete', 'notify_approved', 'notify_stalled',
+            ],
             // The master opens the screen; `manage` is the right to change a chain.
             'workflows' => ['module', 'manage'],
             'assets' => [
@@ -113,6 +119,29 @@ class Permissions
     }
 
     /**
+     * Request types the user may file, from their requests.submit_<type> grants.
+     *
+     * @return list<string>
+     */
+    public static function requestTypesFor(?User $user): array
+    {
+        return array_values(array_filter(
+            array_column(RequestType::cases(), 'value'),
+            fn (string $type) => (bool) $user?->hasPermission("requests.submit_{$type}"),
+        ));
+    }
+
+    /**
+     * Catalog action names of the per-type submit keys, one per RequestType case.
+     *
+     * @return list<string>
+     */
+    private static function requestTypeKeys(): array
+    {
+        return array_map(fn (RequestType $type) => "submit_{$type->value}", RequestType::cases());
+    }
+
+    /**
      * Default permission grants per Role Template (super omitted = all) — the templates
      * as the company set them up on 2026-09-26. DatabaseSeeder writes them with
      * firstOrCreate, so a change here reaches fresh installs, never an existing one.
@@ -121,7 +150,7 @@ class Permissions
      */
     public static function defaults(): array
     {
-        return [
+        $roles = [
             // IT Support — day-to-day tickets, requests, assets and access
             'admin' => [
                 'access.email_add', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_edit', 'access.file_view', 'access.module', 'access.overview', 'access.social_add', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_edit', 'access.software_view',
@@ -177,6 +206,19 @@ class Permissions
                 'tickets.create', 'tickets.my',
             ],
         ];
+
+        // Every submitter files every type; cancel_any is for the IT leads only.
+        $typeKeys = array_map(fn (string $action) => "requests.{$action}", self::requestTypeKeys());
+        foreach ($roles as $role => $keys) {
+            if (in_array('requests.submit', $keys, true)) {
+                $roles[$role] = [...$keys, ...$typeKeys];
+            }
+        }
+        foreach (['admin', 'it_supervisorleader'] as $role) {
+            $roles[$role][] = 'requests.cancel_any';
+        }
+
+        return $roles;
     }
 
     /**
@@ -494,14 +536,11 @@ class Permissions
     }
 
     /**
-     * Request permission tree. The master gates the module and its sidebar entry; everything
-     * else sits flat beneath it.
+     * Request permission tree. The master gates the module and its sidebar entry; `submit`
+     * gates the 13 per-type submit keys and `view_all` gates `cancel_any`.
      *
-     * The two notify_* keys deliberately do NOT hang off `complete`. They answer "who hears
-     * that a request reached the queue", which is a different question from "who may work
-     * that queue" — a manager can want to follow it without closing anything, and the rota
-     * that does the closing changes. RequestNotificationService gates on notify_approved
-     * alone for the same reason.
+     * The two notify_* keys deliberately do NOT hang off `complete`: who hears that a request
+     * reached the queue is a different question from who may work that queue.
      *
      * @return array{master: string, groups: array<string, list<string>>}
      */
@@ -510,8 +549,8 @@ class Permissions
         return [
             'master' => 'requests.module',
             'groups' => [
-                'requests.submit' => [],
-                'requests.view_all' => [],
+                'requests.submit' => array_map(fn (string $action) => "requests.{$action}", self::requestTypeKeys()),
+                'requests.view_all' => ['requests.cancel_any'],
                 'requests.complete' => [],
                 'requests.notify_approved' => [],
                 'requests.notify_stalled' => [],
@@ -520,8 +559,7 @@ class Permissions
     }
 
     /**
-     * Enforce the request gate: without the master, every request key is dropped. Nothing
-     * else cascades — see requestHierarchy() on why the notification keys stand alone.
+     * Enforce the request hierarchy: a child requires its group key; every request key requires the master.
      * Non-request keys pass through untouched. Returns the normalized list.
      *
      * @param  list<string>  $granted
@@ -529,11 +567,23 @@ class Permissions
      */
     public static function normalizeRequests(array $granted): array
     {
-        if (in_array(self::requestHierarchy()['master'], $granted, true)) {
-            return $granted;
+        $set = array_flip($granted);
+        $hierarchy = self::requestHierarchy();
+
+        if (! isset($set[$hierarchy['master']])) {
+            return array_values(array_filter(array_keys($set), fn ($key) => ! str_starts_with($key, 'requests.')));
         }
 
-        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'requests.')));
+        // Master on: a child requires its group key.
+        foreach ($hierarchy['groups'] as $groupKey => $children) {
+            if (! isset($set[$groupKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
     }
 
     /**
