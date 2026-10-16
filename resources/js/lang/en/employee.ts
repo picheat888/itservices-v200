@@ -339,7 +339,7 @@ export const employee: Dict = {
     emp_v_no_requests: 'This employee has no requests yet',
     emp_v_col_device: 'Device',
     emp_v_col_received: 'Received',
-    emp_v_st_deployed: 'Deployed',
+    emp_v_st_deployed: 'In use',
     emp_v_st_pending_acceptance: 'Pending acceptance',
     emp_v_st_pending_return: 'Pending return',
     emp_v_st_ready: 'Ready to deploy',

@@ -574,7 +574,7 @@ export const report: Dict = {
     rep_c_hours_left: 'Time left',
     rep_c_st_ready: 'Ready',
     rep_c_st_pending_acceptance: 'Pending acceptance',
-    rep_c_st_deployed: 'Deployed',
+    rep_c_st_deployed: 'In use',
     rep_c_st_common: 'Common',
     rep_c_st_pending_return: 'Pending return',
     rep_c_st_writeoff: 'Written off',
