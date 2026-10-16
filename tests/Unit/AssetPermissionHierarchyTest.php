@@ -13,13 +13,12 @@ class AssetPermissionHierarchyTest extends TestCase
             'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit', 'assets.delete',
             'assets.manage', 'assets.transfer', 'assets.receive', 'assets.retire',
             'assets.special', 'assets.force_recall', 'assets.cancel_writeoff',
-            'assets.my', 'assets.return',
         ];
         foreach ($expected as $key) {
             $this->assertContains($key, Permissions::all(), "missing {$key}");
         }
         $assetKeys = array_filter(Permissions::all(), fn ($k) => str_starts_with($k, 'assets.'));
-        $this->assertCount(15, $assetKeys);
+        $this->assertCount(13, $assetKeys);
     }
 
     public function test_normalize_drops_child_when_its_group_is_off(): void
@@ -31,30 +30,11 @@ class AssetPermissionHierarchyTest extends TestCase
         $this->assertNotContains('assets.transfer', $out);
     }
 
-    public function test_normalize_drops_gated_assets_when_master_is_off_but_keeps_self_service(): void
+    public function test_normalize_drops_every_asset_key_when_master_is_off(): void
     {
-        $in = ['assets.view', 'assets.register', 'assets.transfer', 'assets.my', 'assets.return', 'tickets.create'];
+        $in = ['assets.view', 'assets.register', 'assets.transfer', 'tickets.create'];
         $out = Permissions::normalizeAssets($in);
-        $this->assertNotContains('assets.view', $out);
-        $this->assertNotContains('assets.register', $out);
-        $this->assertNotContains('assets.transfer', $out);
-        // Self-service survives the master being off.
-        $this->assertContains('assets.my', $out);
-        $this->assertContains('assets.return', $out);
-        // Non-asset keys untouched.
-        $this->assertContains('tickets.create', $out);
-    }
-
-    public function test_normalize_drops_return_when_my_is_off(): void
-    {
-        // `return` requires `my` even though both are master-independent.
-        $in = ['assets.return'];
-        $out = Permissions::normalizeAssets($in);
-        $this->assertNotContains('assets.return', $out);
-
-        $in2 = ['assets.my', 'assets.return'];
-        $out2 = Permissions::normalizeAssets($in2);
-        $this->assertContains('assets.return', $out2);
+        $this->assertSame(['tickets.create'], $out);
     }
 
     public function test_default_grants_are_asset_hierarchy_consistent(): void
