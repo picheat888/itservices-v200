@@ -47,7 +47,7 @@ export function AppShell() {
 
     return (
         <div className="bg-background flex h-screen overflow-hidden" data-density={density}>
-            <Sidebar onProfile={() => setShellDialog('profile')} />
+            <Sidebar onProfile={(section) => setShellDialog('profile', section ? { with: { section } } : undefined)} />
 
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="relative">

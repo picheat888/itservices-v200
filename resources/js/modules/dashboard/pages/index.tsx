@@ -5,13 +5,14 @@ import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { relativeTime } from '@/shared/lib/datetime';
+import { PROFILE_ASSETS_SEARCH } from '@/shared/lib/dialog-search';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { Box, Building2, Check, FileText, History, Inbox, type LucideIcon, PackageCheck, Ticket, UserMinus, UserPlus, Users } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, type To } from 'react-router-dom';
 import type {
     ActivityRow,
     DashboardHr,
@@ -40,7 +41,7 @@ const statusTone: Record<string, 'blue' | 'green' | 'amber' | 'gray' | 'red'> = 
 };
 
 /** One headline number. `to` makes the whole card a link to the page behind it. */
-function StatCard({ label, value, icon: Icon, to }: { label: string; value: number; icon: LucideIcon; to: string }) {
+function StatCard({ label, value, icon: Icon, to }: { label: string; value: number; icon: LucideIcon; to: To }) {
     return (
         <Card className="hover:border-brand/40 p-5 transition-colors">
             <Link to={to} className="block">
@@ -67,7 +68,7 @@ function ListCard({
 }: {
     title: string;
     icon: LucideIcon;
-    to: string;
+    to: To;
     empty: string;
     children: React.ReactNode;
     rows: number;
@@ -750,7 +751,7 @@ export default function DashboardPage() {
                             </div>
                         </div>
                         <Button asChild>
-                            <Link to="/my-assets-access">
+                            <Link to={{ search: PROFILE_ASSETS_SEARCH }}>
                                 <Check className="h-4 w-4" />
                                 {t('dash_accept_go')}
                             </Link>
@@ -772,7 +773,7 @@ export default function DashboardPage() {
                     <>
                         <StatCard label={t('dash_kpi_my_open')} value={mine?.kpi.open_tickets ?? 0} icon={Ticket} to="/tickets" />
                         <StatCard label={t('dash_kpi_my_requests')} value={mine?.kpi.pending_requests ?? 0} icon={Inbox} to="/requests" />
-                        <StatCard label={t('dash_kpi_my_assets')} value={mine?.kpi.assets ?? 0} icon={Box} to="/my-assets-access" />
+                        <StatCard label={t('dash_kpi_my_assets')} value={mine?.kpi.assets ?? 0} icon={Box} to={{ search: PROFILE_ASSETS_SEARCH }} />
                         <StatCard label={t('dash_kpi_my_closed')} value={mine?.kpi.resolved_this_month ?? 0} icon={Check} to="/tickets" />
                     </>
                 )}
@@ -812,7 +813,7 @@ export default function DashboardPage() {
                 <ListCard
                     title={t('dash_my_assets')}
                     icon={Box}
-                    to="/my-assets-access"
+                    to={{ search: PROFILE_ASSETS_SEARCH }}
                     empty={t('dash_empty_assets')}
                     rows={mine?.assets.length ?? 0}
                 >

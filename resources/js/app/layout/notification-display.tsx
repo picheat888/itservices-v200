@@ -1,4 +1,5 @@
 import type { AppNotification } from '@/modules/notification';
+import { PROFILE_ASSETS_SEARCH } from '@/shared/lib/dialog-search';
 import { requestTitle } from '@/shared/lib/request-meta';
 import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
 import {
@@ -310,17 +311,17 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     return t('notif_cred_required');
 }
 
-/** SPA route a notification should open when clicked. */
+/** SPA route, or a `?…` query opened over the current page, a notification should open when clicked. */
 export function notificationTarget(n: AppNotification): string {
     // Every ticket notification opens the case's detail drawer directly.
     // Straight back to the tab it was sent from.
     if (n.data.type === 'test') return '/email-notifications?tab=notification';
     if (n.data.type?.startsWith('ticket_')) return `/tickets?view=${n.data.ticket_id}`;
-    // Asset hand-overs go to the employee-facing My Assets page; return requests go to the IT module.
-    if (n.data.type === 'asset_assigned') return '/my-assets-access';
+    // Asset hand-overs open the profile drawer's Assets tab; return requests go to the IT module.
+    if (n.data.type === 'asset_assigned') return PROFILE_ASSETS_SEARCH;
     if (n.data.type === 'asset_return_requested') return '/assets';
-    // Nothing to act on, but the reader's own list is what changed — open it there.
-    if (n.data.type === 'asset_recalled') return '/my-assets-access';
+    // The reader's own asset list changed — open the profile drawer's Assets tab.
+    if (n.data.type === 'asset_recalled') return PROFILE_ASSETS_SEARCH;
     if (n.data.type === 'asset_offboarding') return '/assets';
     if (n.data.type === 'access_offboarding') return '/access';
     // The file waits in "ไฟล์ส่งออกของฉัน" on the Report Center.

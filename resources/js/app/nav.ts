@@ -7,7 +7,6 @@ import {
     LineChart,
     Mail,
     MonitorCog,
-    PackageCheck,
     Settings,
     Shield,
     Users,
@@ -20,11 +19,7 @@ import {
 export const navGroups: NavGroup[] = [
     {
         label: 'nav_overview',
-        items: [
-            { id: 'overall', label: 'overall', to: '/', icon: LayoutDashboard },
-            // Employee self-service — gated by the My Assets permission.
-            { id: 'my-assets', label: 'mya_nav', to: '/my-assets-access', icon: PackageCheck, anyOf: ['assets.my', 'access.my'] },
-        ],
+        items: [{ id: 'overall', label: 'overall', to: '/', icon: LayoutDashboard }],
     },
     {
         label: 'nav_workspace',

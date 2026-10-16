@@ -2,10 +2,11 @@ import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from '@/modules/report';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { iconMeta, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
 
 /** Asset query keys refreshed the instant an asset notification arrives, so the
@@ -45,6 +46,7 @@ export function useNotificationToasts(openChangePassword: () => void): void {
     // bundled string for every other key, so this still serves the surrounding UI text.
     const t = useNotificationText();
     const navigate = useNavigate();
+    const location = useLocation();
     const markRead = useMarkRead();
     const { data } = useNotifications();
     const qc = useQueryClient();
@@ -72,6 +74,8 @@ export function useNotificationToasts(openChangePassword: () => void): void {
     // navigate with a stale router.
     const navigateRef = useRef(navigate);
     navigateRef.current = navigate;
+    const searchRef = useRef(location.search);
+    searchRef.current = location.search;
     const openChangePasswordRef = useRef(openChangePassword);
     openChangePasswordRef.current = openChangePassword;
     const markReadRef = useRef(markRead);
@@ -127,7 +131,7 @@ export function useNotificationToasts(openChangePassword: () => void): void {
                     if (n.data.type === 'password_expiring') {
                         openChangePasswordRef.current();
                     } else {
-                        navigateRef.current(target);
+                        navigateRef.current(resolveNotificationTarget(target, searchRef.current));
                     }
                 },
             });
