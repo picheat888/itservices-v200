@@ -42,7 +42,7 @@ class RequestListQueryCountTest extends TestCase
         ]);
 
         $role = Role::firstOrCreate(['key' => 'viewer'], ['name' => 'viewer', 'color' => '#64748b', 'is_system' => false]);
-        foreach (['requests.submit', 'requests.view_all', 'requests.complete'] as $permission) {
+        foreach (['requests.module', 'requests.submit', 'requests.view_all', 'requests.complete'] as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
         }
         $this->viewer = User::factory()->create(['role' => 'viewer', 'employee_id' => $this->viewerEmployee->id]);

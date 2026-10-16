@@ -49,11 +49,7 @@ class RequestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        abort_unless((bool) $user && (
-            $user->hasPermission('requests.submit')
-            || $user->hasPermission('requests.view_all')
-            || $user->hasPermission('requests.complete')
-        ), 403);
+        abort_unless((bool) $user?->hasPermission('requests.module'), 403);
 
         $seesAll = $user->isSuper() || $user->hasPermission('requests.view_all');
         $canComplete = (bool) $user->hasPermission('requests.complete');
@@ -211,13 +207,17 @@ class RequestController extends Controller
         return $this->detail($serviceRequest);
     }
 
-    /** Requester withdraws their own pending request. */
+    /** Owner, on-behalf filer or a requests.cancel_any holder withdraws a pending request. */
     public function cancel(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
     {
         $data = $request->validate(['reason' => ['required', 'string', 'max:2000']]);
-        $serviceRequest = $this->service->cancel($serviceRequest, $request->user(), trim($data['reason']));
+        $actor = $request->user();
+        $serviceRequest = $this->service->cancel($serviceRequest, $actor, trim($data['reason']));
 
-        AuditLog::record('Cancelled service request', $serviceRequest->reference, subject: $serviceRequest);
+        $target = $serviceRequest->isOwnedOrFiledBy($actor)
+            ? $serviceRequest->reference
+            : "{$serviceRequest->reference} (for the owner)";
+        AuditLog::record('Cancelled service request', $target, subject: $serviceRequest);
 
         return $this->detail($serviceRequest);
     }

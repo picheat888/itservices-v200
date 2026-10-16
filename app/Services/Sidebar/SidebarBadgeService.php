@@ -44,7 +44,7 @@ class SidebarBadgeService
     {
         return [
             'employees' => $this->gated($user, ['employees.view_dashboard'], fn () => $this->employeesWithoutAccount()),
-            'requests' => $this->gated($user, ['requests.submit'], fn () => $this->requestsNeedingAttention($user)),
+            'requests' => $this->gated($user, ['requests.module'], fn () => $this->requestsNeedingAttention($user)),
             'access' => $this->gated($user, ['access.module', 'access.overview'], fn () => $this->accessAnomalies()),
             'tickets' => $this->gated($user, ['tickets.create'], fn () => $this->ticketsNeedingAttention($user)),
             // Mirrors assets/summary: its own gate (assets.view) plus the nav item's (assets.receive).

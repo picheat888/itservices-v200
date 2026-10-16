@@ -15,6 +15,7 @@ use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ use Tests\TestCase;
  */
 class RequestCanonicalTitleTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private User $requester;
@@ -55,7 +57,7 @@ class RequestCanonicalTitleTest extends TestCase
             'first_name' => 'Staff', 'manager_id' => $sup->id, 'position_id' => $this->positionId('Staff/Officer'),
         ]);
 
-        $this->requester = $this->makeUser('user', ['requests.submit'], $this->staff);
+        $this->requester = $this->makeUser('user', self::requestFiler(), $this->staff);
         $this->supUser = $this->makeUser('user', [], $sup);
         $this->mgrUser = $this->makeUser('user', [], $mgr);
     }

@@ -17,6 +17,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ use Tests\TestCase;
  */
 class RequestTicketFileBridgeTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private User $requester;
@@ -55,7 +57,7 @@ class RequestTicketFileBridgeTest extends TestCase
         ]);
         $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $boss->id]);
 
-        $this->requester = $this->makeUser('user', ['requests.submit'], $staff);
+        $this->requester = $this->makeUser('user', self::requestFiler(), $staff);
         $this->bossUser = $this->makeUser('user', [], $boss);
         // Deliberately holds no requests.* permission: the point of reading a request's
         // file through the ticket is that the ticket's own permission is enough.

@@ -11,6 +11,7 @@ use App\Models\Access\Software;
 use App\Models\Settings\Location;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\RequestAttachmentService;
+use App\Support\Permissions;
 use App\Support\RequestSchemas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,9 @@ class RequestOptionsController extends Controller
 
         $workflows = Workflow::with('steps')->get()->keyBy(fn (Workflow $w) => $w->request_type->value);
 
-        $types = collect(RequestType::cases())->map(function (RequestType $type) use ($workflows) {
+        // Only the types this user may file (requests.submit_<type>), in catalog order.
+        $types = collect(Permissions::requestTypesFor($request->user()))->map(function (string $value) use ($workflows) {
+            $type = RequestType::from($value);
             $workflow = $workflows->get($type->value);
 
             return [

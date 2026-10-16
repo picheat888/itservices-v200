@@ -19,6 +19,7 @@ use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ use Tests\TestCase;
  */
 class RequestDepartmentStepTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private Employee $requester;
@@ -63,7 +65,7 @@ class RequestDepartmentStepTest extends TestCase
             'first_name' => 'Asker', 'manager_id' => $this->sup->id, 'position_id' => $this->positionId('Staff/Officer'),
         ]);
 
-        $this->requesterUser = $this->userFor($this->requester, ['requests.submit']);
+        $this->requesterUser = $this->userFor($this->requester, self::requestFiler());
     }
 
     private function positionId(string $title): int
@@ -163,7 +165,7 @@ class RequestDepartmentStepTest extends TestCase
         $qcManager = $this->staffIn($this->qc, 'Manager', 'QcMgr');
         // staffIn already gave them a login; the Request module needs one permission on it.
         RolePermission::updateOrCreate(
-            ['role_id' => Role::where('key', 'r'.$qcManager->id)->firstOrFail()->id, 'permission' => 'requests.submit'],
+            ['role_id' => Role::where('key', 'r'.$qcManager->id)->firstOrFail()->id, 'permission' => 'requests.module'],
             ['allowed' => true],
         );
         $this->staffIn($this->safety, 'Supervisor', 'SeSup');

@@ -199,4 +199,10 @@ class ServiceRequest extends Model
             || $user->hasPermission('requests.view_all')
             || $user->hasPermission('requests.complete');
     }
+
+    /** The owner, or whoever filed it on the owner's behalf (onboarding). */
+    public function isOwnedOrFiledBy(User $user): bool
+    {
+        return $user->id === $this->user_id || $user->id === $this->submitted_by_user_id;
+    }
 }

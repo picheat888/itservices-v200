@@ -410,12 +410,7 @@ class RequestService
 
     public function cancel(ServiceRequest $request, User $actor, string $reason): ServiceRequest
     {
-        // The owner withdraws their own request; for one filed on somebody's behalf
-        // the filer may too, since the owner has no login to withdraw it with.
-        abort_unless(
-            $request->user_id === $actor->id || $request->submitted_by_user_id === $actor->id,
-            403,
-        );
+        abort_unless($request->isOwnedOrFiledBy($actor) || $actor->hasPermission('requests.cancel_any'), 403);
 
         [$request, $wasCurrent] = DB::transaction(function () use ($request, $actor, $reason) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);

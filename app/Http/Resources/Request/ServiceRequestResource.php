@@ -100,10 +100,8 @@ class ServiceRequestResource extends JsonResource
                 'current_label' => $current?->label,
             ],
             'can_approve' => $canApprove,
-            // The owner may withdraw their own; the filer may withdraw one they sent
-            // for somebody who cannot (a new employee without a login).
             'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending
-                && ($this->user_id === $viewer->id || $this->submitted_by_user_id === $viewer->id),
+                && ($this->resource->isOwnedOrFiledBy($viewer) || $this->viewerMayCancelAny($request)),
             // Held back while a linked case is still in flight: closing that case is what
             // completes the request, so the button would only ever return the 422 that
             // RequestService::complete answers with.
@@ -175,6 +173,17 @@ class ServiceRequestResource extends JsonResource
         $key = 'service_request_resource.may_complete';
         if (! $request->attributes->has($key)) {
             $request->attributes->set($key, (bool) $request->user()?->hasPermission('requests.complete'));
+        }
+
+        return $request->attributes->get($key);
+    }
+
+    /** requests.cancel_any for the viewer, asked once per HTTP request. */
+    private function viewerMayCancelAny(Request $request): bool
+    {
+        $key = 'service_request_resource.may_cancel_any';
+        if (! $request->attributes->has($key)) {
+            $request->attributes->set($key, (bool) $request->user()?->hasPermission('requests.cancel_any'));
         }
 
         return $request->attributes->get($key);

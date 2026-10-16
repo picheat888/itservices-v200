@@ -20,6 +20,7 @@ use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
 /**
@@ -37,6 +38,7 @@ use Tests\TestCase;
  */
 class RequestNamedApproversTest extends TestCase
 {
+    use GrantsRequestFiling;
     use RefreshDatabase;
 
     private Employee $requester;
@@ -63,7 +65,7 @@ class RequestNamedApproversTest extends TestCase
         $this->requester = Employee::create([
             'first_name' => 'Asker', 'manager_id' => $this->sup->id, 'position_id' => $this->positionId('Staff/Officer'),
         ]);
-        $this->requesterUser = $this->userFor($this->requester, ['requests.submit']);
+        $this->requesterUser = $this->userFor($this->requester, self::requestFiler());
 
         // The CCTV route's third step asks Safety; staffed so it behaves like the real one
         // rather than skipping, which would change what comes after the QC step.
@@ -93,7 +95,7 @@ class RequestNamedApproversTest extends TestCase
         $employee = Employee::create([
             'first_name' => $name, 'department_id' => $department->id, 'position_id' => $this->positionId($title),
         ]);
-        $this->userFor($employee, ['requests.submit']);
+        $this->userFor($employee, self::requestFiler());
 
         return $employee;
     }

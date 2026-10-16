@@ -17,7 +17,15 @@ class StoreServiceRequestRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->hasPermission('requests.submit');
+        $user = $this->user();
+        if (! $user?->hasPermission('requests.submit')) {
+            return false;
+        }
+
+        // An unknown or missing type is left to rules(), so it answers 422 rather than 403.
+        $type = RequestType::tryFrom((string) $this->input('type'));
+
+        return $type === null || $user->hasPermission("requests.submit_{$type->value}");
     }
 
     /**
