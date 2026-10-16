@@ -105,6 +105,10 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     const [error, setError] = React.useState<React.ReactNode>(null);
     const resolver = React.useRef<((v: boolean) => void) | null>(null);
     const cancelRef = React.useRef<HTMLButtonElement>(null);
+    const descId = React.useId();
+    const entityId = React.useId();
+    // Opened without a trigger: remember what had focus so closing returns there.
+    const returnFocus = React.useRef<HTMLElement | null>(null);
 
     const settle = React.useCallback((result: boolean) => {
         resolver.current?.(result);
@@ -113,6 +117,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const confirm = React.useCallback<ConfirmFn>((options) => {
+        returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setOpts(options);
         setError(null);
         setLoading(false);
@@ -175,6 +180,11 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             >
                 <DialogContent
                     className="max-w-md gap-4"
+                    aria-describedby={opts?.entity ? `${descId} ${entityId}` : descId}
+                    onCloseAutoFocus={(e) => {
+                        e.preventDefault();
+                        returnFocus.current?.focus();
+                    }}
                     onOpenAutoFocus={(e) => {
                         // Focus Cancel (not the destructive action) so a stray Enter is safe.
                         if (variant === 'danger') {
@@ -185,26 +195,26 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 >
                     <div className="flex items-start gap-3.5">
                         <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg', v.tint, v.fg)}>
-                            <Icon className="h-5 w-5" />
+                            <Icon className="h-5 w-5" aria-hidden />
                         </span>
                         <div className="min-w-0 flex-1 space-y-1.5 pt-0.5 text-left">
                             <DialogTitle className="text-lg">{opts?.title ?? defaults.title}</DialogTitle>
-                            <DialogDescription className="leading-relaxed whitespace-pre-line">
+                            <DialogDescription id={descId} className="leading-relaxed whitespace-pre-line">
                                 {opts?.description ?? defaults.description}
                             </DialogDescription>
                         </div>
                     </div>
 
                     {opts?.entity && (
-                        <div className="bg-muted/50 rounded-lg border px-3.5 py-2.5">
+                        <div id={entityId} className="bg-muted/50 rounded-lg border px-3.5 py-2.5">
                             <p className="text-foreground truncate text-sm font-medium">{opts.entity.name}</p>
                             {opts.entity.sub && <p className="text-muted-foreground mt-0.5 truncate text-xs">{opts.entity.sub}</p>}
                         </div>
                     )}
 
                     {error && (
-                        <p className="text-destructive flex items-center gap-1.5 text-sm">
-                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <p role="alert" className="text-destructive flex items-center gap-1.5 text-sm">
+                            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
                             {error}
                         </p>
                     )}
