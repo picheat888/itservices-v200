@@ -61,7 +61,7 @@ export interface AuditMeta {
 }
 
 export interface AuditFilters {
-    q?: string;
+    search?: string;
     category?: string;
     user?: string;
 }
@@ -107,7 +107,7 @@ export const permissionApi = {
                 params: {
                     page,
                     per_page: perPage,
-                    q: filters.q || undefined,
+                    search: filters.search || undefined,
                     category: filters.category && filters.category !== 'all' ? filters.category : undefined,
                     user: filters.user && filters.user !== 'all' ? filters.user : undefined,
                 },

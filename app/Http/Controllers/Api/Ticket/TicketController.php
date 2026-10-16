@@ -21,6 +21,7 @@ use App\Services\Request\RequestService;
 use App\Services\Sidebar\SidebarBadgeService;
 use App\Services\Ticket\TicketService;
 use App\Support\Permissions;
+use App\Support\SearchTerms;
 use App\Support\TicketSla;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -148,12 +149,10 @@ class TicketController extends Controller
             $query->whereIn('category', self::levelsFor($request->user()));
         }
 
-        if ($request->filled('search')) {
-            $q = '%'.$request->query('search').'%';
-            $query->where(function ($w) use ($q) {
-                $w->where('ticket_no', 'like', $q)->orWhere('subject', 'like', $q);
-            });
-        }
+        SearchTerms::apply($query, $request->query('search'), [
+            'ticket_no', 'subject',
+            SearchTerms::related('requester', SearchTerms::personName()),
+        ]);
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
         }

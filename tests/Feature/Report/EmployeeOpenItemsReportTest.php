@@ -227,6 +227,19 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->assertSame([$leaver->code], array_column($this->breakdown('?search=PF2ABC12')['asset']['rows'], 'code'));
     }
 
+    public function test_search_finds_a_leaver_by_first_and_last_name_typed_together(): void
+    {
+        $leaver = $this->employee('Somchai', [
+            'last_name' => 'Jaidee', 'first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี', 'status' => 'resigned', 'last_day' => '2026-09-30',
+        ]);
+        $other = $this->employee('Somying', ['last_name' => 'Jaidee', 'status' => 'resigned', 'last_day' => '2026-09-30']);
+        Asset::factory()->create(['owner_employee_id' => $leaver->id, 'owner' => null]);
+        Asset::factory()->create(['owner_employee_id' => $other->id, 'owner' => null]);
+
+        $this->assertSame([$leaver->code], array_column($this->breakdown('?search='.urlencode('สมชายใจดี'))['asset']['rows'], 'code'));
+        $this->assertSame([$leaver->code], array_column($this->breakdown('?search=SomchaiJaidee')['asset']['rows'], 'code'));
+    }
+
     public function test_department_and_search_narrow_everything_and_search_is_literal(): void
     {
         $it = Department::create(['code' => 'IT', 'name' => 'IT']);

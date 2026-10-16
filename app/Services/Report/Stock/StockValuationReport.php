@@ -11,6 +11,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
@@ -66,10 +67,7 @@ class StockValuationReport extends TabularReport
             ])
             ->whereRaw('stock_items.current_stock - ('.$movedAfter->toSql().') > 0', $movedAfter->getBindings())
             ->when($filters['category_id'], fn (Builder $q, $id) => $q->where('category_id', (int) $id))
-            ->when($filters['search'], function (Builder $q, string $search) {
-                $like = '%'.$search.'%';
-                $q->where(fn (Builder $w) => $w->where('sku', 'like', $like)->orWhere('name', 'like', $like));
-            })
+            ->when($filters['search'], fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['sku', 'name']))
             ->orderBy('sku');
     }
 

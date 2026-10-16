@@ -10,6 +10,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
@@ -274,6 +275,7 @@ export default function AssetsPage() {
     const list = useListParams();
     const setListParams = list.setParams;
     const search = searchParams.get('search') ?? '';
+    const sentSearch = useDebouncedSearch(search);
     const typeFilter = (searchParams.get('type') ?? '') as AssetType | '';
     const sourceFilter = searchParams.get('source') ?? '';
     const statusParam = searchParams.get('status');
@@ -381,7 +383,7 @@ export default function AssetsPage() {
         // ?search and ?page belong to the Transfers log while that tab is open
         page: tab === 'transfers' ? 1 : page,
         per_page: perPage,
-        search: tab === 'transfers' ? '' : search,
+        search: tab === 'transfers' ? '' : sentSearch,
         type: typeFilter || undefined,
         source: sourceFilter || undefined,
         status: statusFilter || undefined,

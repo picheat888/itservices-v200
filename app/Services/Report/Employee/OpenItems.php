@@ -9,6 +9,7 @@ use App\Models\Employee\Employee;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Report\Access\AccessFacts;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -56,8 +57,8 @@ final class OpenItems
      */
     public static function query(User $viewer, ?int $departmentId, ?string $search, ?string $group = null): Builder
     {
-        $match = $search !== null && $search !== '' ? self::matchingEmployees($search, self::canSeeAccounts($viewer)) : null;
-        $like = $match !== null ? self::like($search) : null;
+        $match = SearchTerms::normalize($search) !== '' ? self::matchingEmployees($search, self::canSeeAccounts($viewer)) : null;
+        $like = $match !== null ? SearchTerms::like(SearchTerms::normalize($search)) : null;
 
         $selects = [];
         foreach (self::groupsFor($viewer) as $name) {
@@ -423,33 +424,21 @@ final class OpenItems
      */
     private static function matchingEmployees(string $search, bool $withUsernames): Builder
     {
-        $words = preg_split('/\s+/u', trim($search), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        $whole = self::like($search);
-        $nameFields = ['employees.code', 'employees.first_name', 'employees.last_name', 'employees.first_name_th', 'employees.last_name_th'];
+        $whole = SearchTerms::like(SearchTerms::normalize($search));
+        $nameFields = ['employees.code', ...SearchTerms::personName('employees.')];
 
-        $query = Employee::query()->select('employees.id')->where(function (Builder $w) use ($words, $nameFields, $whole, $withUsernames) {
-            $w->where(function (Builder $names) use ($words, $nameFields) {
-                foreach ($words as $word) {
-                    $like = self::like($word);
-                    $names->where(function (Builder $any) use ($nameFields, $like) {
-                        foreach ($nameFields as $field) {
-                            $any->orWhereRaw("{$field} like ? escape '!'", [$like]);
-                        }
-                    });
-                }
-            })->orWhereIn('employees.id', Asset::query()->select('owner_employee_id')->whereNotNull('owner_employee_id')
-                ->where(fn ($q) => $q->whereRaw("asset_code like ? escape '!'", [$whole])->orWhereRaw("serial like ? escape '!'", [$whole])));
+        $query = Employee::query()->select('employees.id')->where(function (Builder $w) use ($search, $nameFields, $whole, $withUsernames) {
+            $w->where(fn (Builder $names) => SearchTerms::apply($names, $search, $nameFields))
+                ->orWhereIn('employees.id', SearchTerms::anyLike(
+                    Asset::query()->select('owner_employee_id')->whereNotNull('owner_employee_id'), ['asset_code', 'serial'], $whole,
+                ));
             if ($withUsernames) {
-                $w->orWhereIn('employees.id', User::query()->select('employee_id')->whereNotNull('employee_id')
-                    ->whereRaw("username like ? escape '!'", [$whole]));
+                $w->orWhereIn('employees.id', SearchTerms::anyLike(
+                    User::query()->select('employee_id')->whereNotNull('employee_id'), ['username'], $whole,
+                ));
             }
         });
 
         return $query;
-    }
-
-    private static function like(string $text): string
-    {
-        return '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], trim($text)).'%';
     }
 }

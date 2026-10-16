@@ -13,6 +13,7 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\DateDisplay;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -139,11 +140,11 @@ class SoftwareLicenseReport extends TabularReport
             ->with(['brand:id,name', 'memberships' => fn ($m) => $m->whereNull('revoked_at')->with('employee:id,code,first_name,last_name,status,last_day')])
             ->when($filters['license_type'] ?? null, fn (Builder $q, string $type) => $q->where('license_type', $type))
             ->when($filters['brand_id'] ?? null, fn (Builder $q, $id) => $q->where('brand_id', (int) $id))
-            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
-                $like = '%'.$search.'%';
-                $q->where(fn (Builder $w) => $w->where('name', 'like', $like)->orWhere('code', 'like', $like)
-                    ->orWhereHas('memberships', fn (Builder $m) => $m->whereNull('revoked_at')->whereHas('employee', fn (Builder $e) => self::holderLike($e, 'employees', $like))));
-            })
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
+                'name', 'code',
+                fn (Builder $w, string $like) => $w->orWhereHas('memberships', fn (Builder $m) => $m->whereNull('revoked_at')
+                    ->whereHas('employee', fn (Builder $e) => self::holderLike($e, 'employees', $like))),
+            ]))
             ->orderBy('name')->get()
             ->map(function (Software $s) use ($requests) {
                 $used = $s->memberships->count();
@@ -186,20 +187,16 @@ class SoftwareLicenseReport extends TabularReport
             ->whereIn('access_memberships.resource_id', $this->softwares($filters)->pluck('id')->all() ?: [0])
             ->when($filters['software_id'] ?? null, fn (Builder $q, $id) => $q->where('access_memberships.resource_id', (int) $id))
             // A software found by its own name keeps all its holders; one found through a holder keeps that holder.
-            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
-                $like = '%'.$search.'%';
-                $q->where(fn (Builder $w) => $w
-                    ->whereIn('access_memberships.resource_id', Software::query()->select('id')->where(fn (Builder $s) => $s->where('name', 'like', $like)->orWhere('code', 'like', $like)))
-                    ->orWhere(fn (Builder $e) => self::holderLike($e, 'employees', $like)));
-            });
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
+                fn (Builder $w, string $like) => $w->orWhereIn('access_memberships.resource_id', SearchTerms::anyLike(Software::query()->select('id'), ['name', 'code'], $like)),
+                fn (Builder $w, string $like) => $w->orWhere(fn (Builder $e) => self::holderLike($e, 'employees', $like)),
+            ]));
     }
 
     /** A holder whose code, name or Thai name contains the search. */
     private static function holderLike(Builder $q, string $table, string $like): Builder
     {
-        return $q->where(fn (Builder $w) => $w->where("{$table}.code", 'like', $like)
-            ->orWhereRaw("CONCAT_WS(' ', {$table}.first_name, {$table}.last_name) LIKE ?", [$like])
-            ->orWhereRaw("CONCAT_WS(' ', {$table}.first_name_th, {$table}.last_name_th) LIKE ?", [$like]));
+        return SearchTerms::anyLike($q, ["{$table}.code", ...SearchTerms::personName("{$table}.")], $like);
     }
 
     public function query(User $viewer, array $filters): Builder

@@ -56,7 +56,7 @@ class AuditDetailTest extends TestCase
             ->assertJsonPath('data.0.action', 'Created brand');
 
         // Free-text search on target.
-        $this->getJson('/api/audit-logs?q=Other')
+        $this->getJson('/api/audit-logs?search=Other')
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.action', 'Deleted vendor');

@@ -103,7 +103,7 @@ export const common: Dict = {
     assigned_assets: 'อุปกรณ์ที่ได้รับมอบหมาย',
     no_assigned_assets: 'ยังไม่มีอุปกรณ์ (รอโมดูล Assets)',
     confirm_delete: 'ลบรายการนี้?',
-    search_name_id: 'ค้นหาด้วยชื่อ หรือรหัสพนักงาน',
+    search_name_id: 'ค้นหาด้วยชื่อ รหัสพนักงาน username หรืออีเมล',
     back: 'ย้อนกลับ',
     next: 'ถัดไป',
     coming_soon_tag: 'เร็ว ๆ นี้',

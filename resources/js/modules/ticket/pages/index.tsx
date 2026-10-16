@@ -10,6 +10,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
@@ -158,6 +159,7 @@ export default function TicketsPage() {
     const list = useListParams();
     const { page, perPage } = list;
     const search = list.get('search');
+    const sentSearch = useDebouncedSearch(search);
     const statusFilter = pickAllowed(list.get('status'), TICKET_STATUSES);
     const catFilter = pickAllowed(list.get('category'), TICKET_CATEGORIES);
     const priFilter = pickAllowed(list.get('priority'), TICKET_PRIORITIES);
@@ -264,7 +266,7 @@ export default function TicketsPage() {
     } = useTickets({
         page,
         per_page: perPage,
-        search,
+        search: sentSearch,
         status: statusFilter || undefined,
         category: catFilter || undefined,
         priority: priFilter || undefined,

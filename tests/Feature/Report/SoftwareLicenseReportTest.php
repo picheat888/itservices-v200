@@ -198,6 +198,8 @@ class SoftwareLicenseReportTest extends TestCase
     {
         $rows = $this->rows('?search=Holder1+Test');
         $this->assertSame(['EMP-001'], array_column($rows, 'employee_code'));
+        $this->assertSame(['EMP-001'], array_column($this->rows('?search=Holder1Test'), 'employee_code'));
+        $this->assertSame(['EMP-001'], array_column($this->rows('?search=Adobe+Holder1Test'), 'employee_code'));
 
         // A software found by its own name keeps all its holders.
         $this->assertCount(3, $this->rows('?search=Adobe'));

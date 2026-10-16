@@ -11,6 +11,7 @@ use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Services\Report\TicketLabels;
 use App\Services\Report\TicketMetrics;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -86,10 +87,7 @@ class TicketBacklogReport extends TabularReport
                 'due_soon' => $q->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} <= {$soon}"),
                 default => $q->whereRaw('NOT '.self::overSlaSql())->whereRaw("({$due} IS NULL OR {$due} > {$soon})"),
             })
-            ->when($filters['search'], function (Builder $q, string $search) {
-                $like = '%'.$search.'%';
-                $q->where(fn (Builder $w) => $w->where('ticket_no', 'like', $like)->orWhere('subject', 'like', $like));
-            })
+            ->when($filters['search'], fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['ticket_no', 'subject']))
             // Most overdue first; a ticket with no deadline at all goes last.
             ->orderByRaw("CASE WHEN {$due} IS NULL THEN 1 ELSE 0 END")
             ->orderByRaw($due)

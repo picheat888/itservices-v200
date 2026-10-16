@@ -11,6 +11,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -128,10 +129,7 @@ class AccessResourceMembersReport extends TabularReport
             $model::query()
                 ->with([...($ownable ? ['department', 'owner.department'] : []), 'memberships' => fn ($m) => $m->whereNull('revoked_at')->with('employee.department')])
                 ->when($filters['department_id'] ?? null, fn (Builder $q, $id) => $q->where('department_id', (int) $id))
-                ->when($filters['search'] ?? null, function (Builder $q, string $search) use ($type) {
-                    $like = '%'.$search.'%';
-                    $q->where(fn (Builder $w) => $w->where('code', 'like', $like)->orWhere('name', 'like', $like)->orWhere(self::DETAIL_COLUMNS[$type], 'like', $like));
-                })
+                ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['code', 'name', self::DETAIL_COLUMNS[$type]]))
                 ->orderBy('code')->get()
                 ->each(fn (Model $r) => $rows->push($this->figuresOf($r, $type)));
         }

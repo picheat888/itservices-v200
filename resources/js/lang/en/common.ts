@@ -103,7 +103,7 @@ export const common: Dict = {
     assigned_assets: 'Assigned assets',
     no_assigned_assets: 'No assigned assets (Assets module pending)',
     confirm_delete: 'Delete this item?',
-    search_name_id: 'Search by Name or ID',
+    search_name_id: 'Search by name, ID, username or email',
     back: 'Back',
     next: 'Next',
     coming_soon_tag: 'Coming soon',
