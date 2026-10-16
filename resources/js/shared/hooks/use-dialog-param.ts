@@ -19,6 +19,11 @@ interface DialogState {
     dialogUnder?: string;
 }
 
+/** History state for a link or navigate() that opens a dialog, so closing it steps Back. */
+export function dialogPushedState(): { dialogPushed: true } {
+    return { dialogPushed: true };
+}
+
 /** The current history entry's state, for a replace write that must not drop an open dialog's stack. */
 export function keepDialogState(): unknown {
     return (window.history.state as { usr?: unknown } | null)?.usr;

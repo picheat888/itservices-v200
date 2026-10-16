@@ -13,12 +13,14 @@ import { useUiStore } from '@/stores/ui';
 import { useMutationState } from '@tanstack/react-query';
 import { Check, Inbox, Laptop, Link2Off, Loader2, Undo2 } from 'lucide-react';
 
-// Column template shared by both tables
-const ROW_GRID = 'grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)_120px] items-center gap-3 px-4';
+// Column template shared by both tables; Tag and Serial columns from lg up
+const ROW_GRID =
+    'grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_104px] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)_120px] items-center gap-3 px-4';
+const WIDE_ONLY = 'hidden lg:block';
 
 /** A small dot separator between condensed metadata items. */
-function Sep() {
-    return <span className="bg-muted-foreground/50 h-[3px] w-[3px] shrink-0 rounded-full" />;
+function Sep({ className }: { className?: string }) {
+    return <span className={cn('bg-muted-foreground/50 h-[3px] w-[3px] shrink-0 rounded-full', className)} />;
 }
 
 function ColumnHeader({ dateLabel }: { dateLabel: string }) {
@@ -26,8 +28,8 @@ function ColumnHeader({ dateLabel }: { dateLabel: string }) {
     return (
         <div className={cn(ROW_GRID, 'bg-muted border-border text-muted-foreground border-b py-2 text-[11px] font-bold tracking-wide uppercase')}>
             <div>{t('emp_v_col_device')}</div>
-            <div>{t('emp_v_col_tag')}</div>
-            <div>{t('emp_v_col_serial')}</div>
+            <div className={WIDE_ONLY}>{t('emp_v_col_tag')}</div>
+            <div className={WIDE_ONLY}>{t('emp_v_col_serial')}</div>
             <div>{dateLabel}</div>
             <div />
         </div>
@@ -35,11 +37,23 @@ function ColumnHeader({ dateLabel }: { dateLabel: string }) {
 }
 
 function TagCell({ tag }: { tag: string | null }) {
-    return <div className="min-w-0">{tag ? <AssetTagBadge tag={tag} /> : <span className="text-muted-foreground text-xs">—</span>}</div>;
+    return (
+        <div className={cn('min-w-0', WIDE_ONLY)}>{tag ? <AssetTagBadge tag={tag} /> : <span className="text-muted-foreground text-xs">—</span>}</div>
+    );
 }
 
 function SerialCell({ asset }: { asset: Asset }) {
-    return <div className="truncate font-mono text-xs">{asset.serial ?? asset.asset_code}</div>;
+    return <div className={cn('truncate font-mono text-xs', WIDE_ONLY)}>{asset.serial ?? asset.asset_code}</div>;
+}
+
+// Serial on the device cell's second line below lg
+function InlineSerial({ asset }: { asset: Asset }) {
+    return (
+        <>
+            <Sep className="lg:hidden" />
+            <span className="truncate font-mono lg:hidden">{asset.serial ?? asset.asset_code}</span>
+        </>
+    );
 }
 
 export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: Asset[]; loading: boolean; linked: boolean; canReturn: boolean }) {
@@ -110,6 +124,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                                         </div>
                                         <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px] font-medium">
                                             <span className="shrink-0">{typeLabel(a)}</span>
+                                            <InlineSerial asset={a} />
                                             {a.last_reason && (
                                                 <>
                                                     <Sep />
@@ -163,6 +178,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                                             <span className="truncate">{typeLabel(a)}</span>
                                             <span className={cn('ml-1 h-1.5 w-1.5 shrink-0 rounded-full', meta?.dot ?? 'bg-muted-foreground')} />
                                             <span className="shrink-0">{meta ? t(meta.key) : a.status}</span>
+                                            <InlineSerial asset={a} />
                                         </div>
                                     </div>
                                 </div>

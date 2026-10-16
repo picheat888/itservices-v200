@@ -4,6 +4,7 @@ import { useContractSummary } from '@/modules/contract';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { relativeTime } from '@/shared/lib/datetime';
 import { PROFILE_ASSETS_SEARCH } from '@/shared/lib/dialog-search';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -41,10 +42,10 @@ const statusTone: Record<string, 'blue' | 'green' | 'amber' | 'gray' | 'red'> = 
 };
 
 /** One headline number. `to` makes the whole card a link to the page behind it. */
-function StatCard({ label, value, icon: Icon, to }: { label: string; value: number; icon: LucideIcon; to: To }) {
+function StatCard({ label, value, icon: Icon, to, state }: { label: string; value: number; icon: LucideIcon; to: To; state?: unknown }) {
     return (
         <Card className="hover:border-brand/40 p-5 transition-colors">
-            <Link to={to} className="block">
+            <Link to={to} state={state} className="block">
                 <div className="flex items-start justify-between">
                     <div className="text-muted-foreground text-sm">{label}</div>
                     <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
@@ -62,6 +63,7 @@ function ListCard({
     title,
     icon: Icon,
     to,
+    state,
     empty,
     children,
     rows,
@@ -69,6 +71,7 @@ function ListCard({
     title: string;
     icon: LucideIcon;
     to: To;
+    state?: unknown;
     empty: string;
     children: React.ReactNode;
     rows: number;
@@ -83,6 +86,7 @@ function ListCard({
                 </div>
                 <Link
                     to={to}
+                    state={state}
                     className="text-muted-foreground hover:text-foreground text-xs font-medium [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
                 >
                     {t('view_all')} →
@@ -751,7 +755,7 @@ export default function DashboardPage() {
                             </div>
                         </div>
                         <Button asChild>
-                            <Link to={{ search: PROFILE_ASSETS_SEARCH }}>
+                            <Link to={{ search: PROFILE_ASSETS_SEARCH }} state={dialogPushedState()}>
                                 <Check className="h-4 w-4" />
                                 {t('dash_accept_go')}
                             </Link>
@@ -773,7 +777,13 @@ export default function DashboardPage() {
                     <>
                         <StatCard label={t('dash_kpi_my_open')} value={mine?.kpi.open_tickets ?? 0} icon={Ticket} to="/tickets" />
                         <StatCard label={t('dash_kpi_my_requests')} value={mine?.kpi.pending_requests ?? 0} icon={Inbox} to="/requests" />
-                        <StatCard label={t('dash_kpi_my_assets')} value={mine?.kpi.assets ?? 0} icon={Box} to={{ search: PROFILE_ASSETS_SEARCH }} />
+                        <StatCard
+                            label={t('dash_kpi_my_assets')}
+                            value={mine?.kpi.assets ?? 0}
+                            icon={Box}
+                            to={{ search: PROFILE_ASSETS_SEARCH }}
+                            state={dialogPushedState()}
+                        />
                         <StatCard label={t('dash_kpi_my_closed')} value={mine?.kpi.resolved_this_month ?? 0} icon={Check} to="/tickets" />
                     </>
                 )}
@@ -814,6 +824,7 @@ export default function DashboardPage() {
                     title={t('dash_my_assets')}
                     icon={Box}
                     to={{ search: PROFILE_ASSETS_SEARCH }}
+                    state={dialogPushedState()}
                     empty={t('dash_empty_assets')}
                     rows={mine?.assets.length ?? 0}
                 >

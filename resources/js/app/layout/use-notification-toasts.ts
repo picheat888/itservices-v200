@@ -1,6 +1,7 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from '@/modules/report';
+import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { useToastStore, type ToastTone } from '@/stores/toast';
@@ -131,7 +132,9 @@ export function useNotificationToasts(openChangePassword: () => void): void {
                     if (n.data.type === 'password_expiring') {
                         openChangePasswordRef.current();
                     } else {
-                        navigateRef.current(resolveNotificationTarget(target, searchRef.current));
+                        const resolved = resolveNotificationTarget(target, searchRef.current);
+                        if (typeof resolved === 'string') navigateRef.current(resolved);
+                        else navigateRef.current(resolved, { state: dialogPushedState() });
                     }
                 },
             });
