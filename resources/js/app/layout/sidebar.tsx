@@ -1,6 +1,7 @@
 import { navGroups } from '@/app/nav';
 import { useT } from '@/lang';
 import { useAuth, useLogout } from '@/modules/auth';
+import type { ProfileSection } from '@/modules/profile';
 import { useSettings } from '@/modules/settings';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useSidebarBadges } from '@/shared/hooks/use-sidebar-badges';
@@ -11,7 +12,21 @@ import { Loader2, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useSidebarStyle } from './use-sidebar-style';
 
-export function Sidebar({ onProfile }: { onProfile: () => void }) {
+/** Count of hand-overs waiting for the user's acceptance, pinned to the avatar. */
+function PendingAssetsPill({ count }: { count: number }) {
+    const t = useT();
+    if (count <= 0) return null;
+    return (
+        <span
+            aria-label={t('profile_pending_assets_badge').replace('{n}', String(count))}
+            className="ring-sidebar absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white ring-2"
+        >
+            {count}
+        </span>
+    );
+}
+
+export function Sidebar({ onProfile }: { onProfile: (section?: ProfileSection) => void }) {
     const t = useT();
     const { user } = useAuth();
     const logout = useLogout();
@@ -36,13 +51,14 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const badges: Record<string, number> = {
         stock: counts.stock,
         contracts: counts.contracts,
-        'my-assets': counts.my_assets,
         assets: counts.assets,
         access: counts.access,
         tickets: counts.tickets,
         employees: counts.employees,
         requests: counts.requests,
     };
+    // Kit waiting for acceptance opens the profile straight on its Assets tab.
+    const openProfile = () => onProfile(counts.my_assets > 0 ? 'assets' : undefined);
     const canSee = (i: (typeof navGroups)[number]['items'][number]) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));
         if (i.permission) return perms.includes(i.permission);
@@ -124,11 +140,14 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
             {iconsOnly ? (
                 <div className="border-sidebar-border flex flex-col items-center gap-1 border-t px-2 py-3">
                     <button
-                        onClick={onProfile}
+                        onClick={openProfile}
                         title={t('profile')}
                         className="hover:bg-sidebar-accent flex h-10 w-10 items-center justify-center rounded-md transition-colors"
                     >
-                        <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-8 w-8 shrink-0" textClassName="text-xs" />
+                        <span className="relative shrink-0">
+                            <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-8 w-8 shrink-0" textClassName="text-xs" />
+                            <PendingAssetsPill count={counts.my_assets} />
+                        </span>
                     </button>
                     <button
                         onClick={() => logout.mutate()}
@@ -143,11 +162,14 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
             ) : (
                 <div className="border-sidebar-border flex items-center gap-2 border-t p-3">
                     <button
-                        onClick={onProfile}
+                        onClick={openProfile}
                         title={t('profile')}
                         className="hover:bg-sidebar-accent flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors"
                     >
-                        <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-9 w-9 shrink-0" textClassName="text-xs" />
+                        <span className="relative shrink-0">
+                            <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-9 w-9 shrink-0" textClassName="text-xs" />
+                            <PendingAssetsPill count={counts.my_assets} />
+                        </span>
                         <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{displayName}</div>
                             <div className="text-muted-foreground truncate text-xs">{user?.group_name ?? user?.role_label}</div>

@@ -8,11 +8,12 @@ import {
     useNotifications,
     useNotificationText,
 } from '@/modules/notification';
+import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { cn } from '@/shared/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { Loader2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
 
 // "All", then the catalogue's groups; a module tab shows once it has something in it.
@@ -25,6 +26,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
     // Prefers the wording an administrator set on the Bell tab, else the bundled string.
     const t = useNotificationText();
     const navigate = useNavigate();
+    const location = useLocation();
     const ref = useRef<HTMLDivElement>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
     const { data } = useNotifications();
@@ -111,7 +113,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
         if (n.data.type === 'password_expiring') {
             onChangePassword();
         } else {
-            navigate(notificationTarget(n));
+            navigate(resolveNotificationTarget(notificationTarget(n), location.search));
         }
         onClose();
     };
