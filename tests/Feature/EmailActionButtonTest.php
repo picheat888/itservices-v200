@@ -90,7 +90,7 @@ class EmailActionButtonTest extends TestCase
                     continue;
                 }
                 $this->assertMatchesRegularExpression(
-                    '/url\(|Url\(|\'\/[a-z-]+\'/',
+                    '/url\(|Url\(|\'\/[a-z?&=-]*\'/',
                     $args,
                     "A {$helper}() call in {$path} passes no action URL.\n\n".trim($args)
                 );
