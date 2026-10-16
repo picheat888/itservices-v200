@@ -1,7 +1,6 @@
 import type { Dict } from '@/lang/types';
 
 export const auth: Dict = {
-    profile_signout: 'Sign out',
     login_title: 'Sign in',
     login_sub: 'Welcome to the IT Service Desk',
     login_field: 'Username',
@@ -32,17 +31,4 @@ export const auth: Dict = {
     session_time_left: '{time} remaining',
     session_one_minute: '1 minute',
     session_one_second: '1 second',
-    profile_name: 'Name',
-    profile_change_photo: 'Change photo',
-    profile_name_required: 'Please enter your first name',
-    profile_last_name_required: 'Please enter your last name',
-    profile_save_failed: "Couldn't save your profile. Please try again.",
-    profile_details: 'Employee details',
-    profile_account: 'Login account',
-    profile_contact: 'Contact',
-    profile_tab_details: 'Personal info',
-    profile_see_all: 'Open the full page',
-    profile_no_tickets: "You haven't reported any tickets yet.",
-    profile_no_access: "You don't have any access yet.",
-    profile_no_requests: "You haven't submitted any requests yet.",
 };

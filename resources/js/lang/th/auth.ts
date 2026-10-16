@@ -1,7 +1,6 @@
 import type { Dict } from '@/lang/types';
 
 export const auth: Dict = {
-    profile_signout: 'ออกจากระบบ',
     login_title: 'เข้าสู่ระบบ',
     login_sub: 'ยินดีต้อนรับสู่ระบบ IT Service Desk',
     login_field: 'ชื่อผู้ใช้',
@@ -32,17 +31,4 @@ export const auth: Dict = {
     session_time_left: 'เหลือเวลาอีก {time}',
     session_one_minute: '1 นาที',
     session_one_second: '1 วินาที',
-    profile_name: 'ชื่อ',
-    profile_change_photo: 'เปลี่ยนรูป',
-    profile_name_required: 'กรุณากรอกชื่อ',
-    profile_last_name_required: 'กรุณากรอกนามสกุล',
-    profile_save_failed: 'บันทึกโปรไฟล์ไม่สำเร็จ กรุณาลองใหม่',
-    profile_details: 'ข้อมูลพนักงาน',
-    profile_account: 'บัญชีเข้าใช้งาน',
-    profile_contact: 'ข้อมูลติดต่อ',
-    profile_tab_details: 'ข้อมูลส่วนตัว',
-    profile_see_all: 'เปิดหน้าเต็ม',
-    profile_no_tickets: 'คุณยังไม่เคยแจ้ง Ticket',
-    profile_no_access: 'คุณยังไม่มีสิทธิ์เข้าถึง',
-    profile_no_requests: 'คุณยังไม่เคยยื่นคำขอ',
 };

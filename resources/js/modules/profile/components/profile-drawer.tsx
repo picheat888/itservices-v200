@@ -3,18 +3,7 @@ import { useT } from '@/lang';
 import { useMyAccess } from '@/modules/access';
 import { useMyAssets } from '@/modules/asset';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
-import {
-    AccessPane,
-    AssetsPane,
-    IdChip,
-    PhotoCropDialog,
-    RAIL_HEADING,
-    RailRow,
-    RequestsPane,
-    TicketsPane,
-    useEmployee,
-    type EmployeeHeldAsset,
-} from '@/modules/employee';
+import { AccessPane, IdChip, PhotoCropDialog, RAIL_HEADING, RailRow, RequestsPane, TicketsPane, useEmployee } from '@/modules/employee';
 import { useRequests } from '@/modules/request';
 import { useTickets } from '@/modules/ticket';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
@@ -23,7 +12,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError } from '@/shared/lib/utils';
-import type { Asset, User } from '@/shared/types';
+import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
@@ -32,6 +21,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useProfileSection } from '../hooks/use-profile-section';
 import { PROFILE_SECTIONS, type ProfileSection } from '../types';
+import { MyAssetsTab } from './my-assets-tab';
 import { ProfileDetailsTab, type ProfileFormKey } from './profile-details-tab';
 
 // Names are stored as one space-joined string: the first word is the given name, the rest the surname
@@ -74,20 +64,7 @@ function RailSection({ title, children }: { title: string; children: React.React
     );
 }
 
-/** Asset from /assets/mine in the row shape the shared Assets tab reads. */
-const heldAsset = (a: Asset): EmployeeHeldAsset => ({
-    id: a.id,
-    asset_code: a.asset_code,
-    tag: a.tag,
-    model: a.model,
-    type: a.type,
-    type_th: a.type_th ?? null,
-    serial: a.serial,
-    status: a.status,
-    owned_since: a.owned_since,
-});
-
-/** How many of your own tickets / requests the tabs hold; "see all" opens the page for the rest. */
+/** How many of your own tickets / requests the tabs hold. */
 const TAB_ROWS = 50;
 
 export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boolean; onClose: () => void; onChangePassword: () => void }) {
@@ -256,7 +233,15 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const tabs: DialogTab<ProfileSection>[] = [
         { id: 'profile', label: t('profile_tab_details'), icon: UserRound },
         ...(seesAssets
-            ? [{ id: 'assets' as const, label: t('emp_v_tab_assets'), icon: Box, count: assetsLoading ? undefined : myAssets.length }]
+            ? [
+                  {
+                      id: 'assets' as const,
+                      label: t('emp_v_tab_assets'),
+                      icon: Box,
+                      count: assetsLoading ? undefined : myAssets.length,
+                      dot: myAssets.some((a) => a.status === 'pending_acceptance'),
+                  },
+              ]
             : []),
         ...(seesTickets
             ? [{ id: 'tickets' as const, label: t('emp_v_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : myTickets?.meta?.total }]
@@ -407,10 +392,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             id={panelId}
                             aria-labelledby={dialogTabId(panelId, tab)}
                             // Table tabs size their rows to the pane (fillHeight), like the Employee viewer
-                            className={cn(
-                                'min-h-0 flex-1 p-4 xl:p-5',
-                                tab === 'assets' || tab === 'tickets' || tab === 'requests' ? 'flex flex-col' : 'overflow-y-auto',
-                            )}
+                            className={cn('min-h-0 flex-1 p-4 xl:p-5', tab === 'tickets' || tab === 'requests' ? 'flex flex-col' : 'overflow-y-auto')}
                         >
                             {tab === 'profile' && (
                                 <ProfileDetailsTab
@@ -425,15 +407,12 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             )}
 
                             {tab === 'assets' && (
-                                <>
-                                    <AssetsPane
-                                        assets={myAssets.map(heldAsset)}
-                                        lang={lang}
-                                        loading={assetsLoading}
-                                        emptyText={t('my_assets_empty')}
-                                    />
-                                    {myAssets.length > 0 && seeAll('/my-assets-access')}
-                                </>
+                                <MyAssetsTab
+                                    assets={myAssets}
+                                    loading={assetsLoading}
+                                    linked={!!user.employee_code}
+                                    canReturn={can('assets.return')}
+                                />
                             )}
                             {tab === 'tickets' && (
                                 <>
@@ -447,12 +426,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                     {(myRequests?.data.length ?? 0) > 0 && seeAll('/requests?tab=all')}
                                 </>
                             )}
-                            {tab === 'access' && (
-                                <>
-                                    <AccessPane access={myAccess} loading={accessLoading} emptyText={t('profile_no_access')} />
-                                    {!!accessCount && seeAll('/my-assets-access')}
-                                </>
-                            )}
+                            {tab === 'access' && <AccessPane access={myAccess} loading={accessLoading} emptyText={t('profile_no_access')} />}
                         </div>
                     </div>
                 </div>

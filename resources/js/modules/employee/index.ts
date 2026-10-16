@@ -20,4 +20,5 @@ export {
 export { useLocationMutations, useLocations } from './hooks/use-locations';
 export { usePositionMembers, usePositionMutations, usePositions } from './hooks/use-positions';
 export { useSectionMembers, useSectionMutations, useSections } from './hooks/use-sections';
+export { HELD_STATUS_META } from './lib/held-assets';
 export { default as EmployeesPage } from './pages';
