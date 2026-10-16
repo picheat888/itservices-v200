@@ -392,9 +392,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 />
                             )}
 
-                            {tab === 'assets' && (
-                                <MyAssetsTab assets={myAssets} loading={assetsLoading} linked={linked} canReturn={can('profile.return_assets')} />
-                            )}
+                            {tab === 'assets' && <MyAssetsTab assets={myAssets} loading={assetsLoading} canReturn={can('profile.return_assets')} />}
                             {tab === 'tickets' && (
                                 <TicketsPane tickets={myTickets?.data ?? []} loading={ticketsLoading} emptyText={t('profile_no_tickets')} />
                             )}

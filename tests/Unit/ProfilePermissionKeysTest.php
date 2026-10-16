@@ -31,7 +31,7 @@ class ProfilePermissionKeysTest extends TestCase
 
     public function test_hierarchies_have_no_standalone_pairs(): void
     {
-        $this->assertSame([], Permissions::employeeHierarchy()['standalone']);
+        $this->assertArrayNotHasKey('standalone', Permissions::employeeHierarchy());
         $this->assertArrayNotHasKey('standalone', Permissions::assetHierarchy());
         $this->assertArrayNotHasKey('standalone', Permissions::accessHierarchy());
     }

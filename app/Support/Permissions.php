@@ -229,13 +229,12 @@ class Permissions
     /**
      * Employee permission tree used for client cascade and server normalization.
      *
-     * @return array{master: string, standalone: list<string>, groups: array<string, list<string>>}
+     * @return array{master: string, groups: array<string, list<string>>}
      */
     public static function employeeHierarchy(): array
     {
         return [
             'master' => 'employees.module',
-            'standalone' => [],
             'groups' => [
                 'employees.view_dashboard' => [],
                 'employees.view' => [
@@ -260,13 +259,9 @@ class Permissions
     {
         $set = array_flip($granted);
         $hierarchy = self::employeeHierarchy();
-        $standalone = array_flip($hierarchy['standalone']);
 
         if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter(
-                $granted,
-                fn ($key) => ! str_starts_with($key, 'employees.') || isset($standalone[$key]),
-            ));
+            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'employees.')));
         }
 
         foreach ($hierarchy['groups'] as $viewKey => $children) {
@@ -300,9 +295,7 @@ class Permissions
     }
 
     /**
-     * Enforce the access hierarchy on a granted set: a management child requires its
-     * registry's view key; every view key requires the master. Non-access keys pass
-     * through untouched. Returns the normalized list.
+     * Enforce the access hierarchy: a management child requires its registry's view key; every view key requires the master.
      *
      * @param  list<string>  $granted
      * @return list<string>

@@ -221,10 +221,16 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const roles = data?.roles ?? [];
     const role: RoleRow | undefined = roles.find((r) => r.value === selected) ?? roles[0];
 
+    // Retired keys a role still holds stay out of the draft so the save passes server validation
+    const catalogKeys = useMemo(
+        () => new Set(Object.entries(data?.catalog ?? {}).flatMap(([module, actions]) => actions.map((action) => `${module}.${action}`))),
+        [data],
+    );
+
     useEffect(() => {
         if (role) {
             setSelected(role.value);
-            setDraft(new Set(role.permissions));
+            setDraft(new Set(role.permissions.filter((p) => catalogKeys.has(p))));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [role?.value, data]);
@@ -261,11 +267,11 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
     const dirty = useMemo(() => {
         if (!role) return false;
-        const orig = new Set(role.permissions);
+        const orig = new Set(role.permissions.filter((p) => catalogKeys.has(p)));
         if (orig.size !== draft.size) return true;
         for (const p of draft) if (!orig.has(p)) return true;
         return false;
-    }, [draft, role]);
+    }, [draft, role, catalogKeys]);
     const guardRoleSwitch = useDiscardGuard(dirty);
     useEffect(() => {
         onDirtyChange(dirty);
@@ -421,16 +427,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                         </span>
                                     </div>
 
-                                    {/* Columns, not a grid: these cards range from one row (Workflows)
-                                        to eighteen (Employees), and a grid stretches every card in a
-                                        row to the tallest one — leaving a short card with a large
-                                        empty area inside its own border, which reads as missing
-                                        content rather than as a small module. Columns let each card
-                                        be exactly as tall as what it holds and pack the rest against
-                                        it. Reading order stays source order, top of one column then
-                                        the next. `[&>*]` targets each card's root: mb for the vertical
-                                        rhythm (gap only spaces columns) and break-inside so no card is
-                                        ever split down the middle. */}
+                                    {/* Columns, not a grid, so each card keeps its own height */}
                                     <div className="columns-1 gap-4 md:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
                                         {groups.map((group) => {
                                             if (group.module === 'stock') {
@@ -481,6 +478,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                                 return (
                                                     <ProfilePermissionTree
                                                         key={group.module}
+                                                        keys={group.keys}
                                                         draft={draft}
                                                         setDraft={setDraft}
                                                         isSuper={role.is_super}

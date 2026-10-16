@@ -11,7 +11,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useUiStore } from '@/stores/ui';
 import { useMutationState } from '@tanstack/react-query';
-import { Check, CheckCheck, Inbox, Laptop, Link2Off, Loader2, Undo2 } from 'lucide-react';
+import { Check, CheckCheck, Inbox, Laptop, Loader2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { HeadRow, LoadingRows, PAGE, SectionHeading, ShowAllRow, TableCard } from './profile-table';
 
@@ -61,7 +61,7 @@ function InlineSerial({ asset }: { asset: Asset }) {
     );
 }
 
-export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: Asset[]; loading: boolean; linked: boolean; canReturn: boolean }) {
+export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; loading: boolean; canReturn: boolean }) {
     const t = useT();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
@@ -97,8 +97,6 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
             }),
         );
     };
-
-    if (!linked) return <EmptyPane icon={Link2Off} text={t('my_assets_no_link')} />;
 
     if (loading) return <LoadingRows />;
 

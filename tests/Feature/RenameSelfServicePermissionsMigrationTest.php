@@ -35,6 +35,13 @@ class RenameSelfServicePermissionsMigrationTest extends TestCase
         }
     }
 
+    private function allowed(Role $role, string $key): ?bool
+    {
+        $row = RolePermission::where('role_id', $role->id)->where('permission', $key)->first();
+
+        return $row === null ? null : (bool) $row->allowed;
+    }
+
     public function test_up_and_down_move_the_rows_and_dedupe(): void
     {
         $a = Role::firstOrCreate(['key' => 'mig_a'], ['name' => 'A']);
@@ -54,6 +61,41 @@ class RenameSelfServicePermissionsMigrationTest extends TestCase
         $this->assertSame(['access.my', 'assets.my', 'assets.return', 'employees.edit_own'], $this->keysOf($a));
         $this->assertSame(['access.my', 'assets.my', 'employees.edit_own'], $this->keysOf($b));
         $this->assertSame(0, RolePermission::where('permission', 'like', 'profile.%')->count());
+
+        // Both roles held an allowed profile key, so every restored row is allowed
+        foreach (['access.my', 'assets.my', 'assets.return', 'employees.edit_own'] as $key) {
+            $this->assertTrue($this->allowed($a, $key), "A {$key}");
+        }
+        foreach (['access.my', 'assets.my', 'employees.edit_own'] as $key) {
+            $this->assertTrue($this->allowed($b, $key), "B {$key}");
+        }
+    }
+
+    public function test_down_restores_self_service_rows_denied_when_no_profile_key_is_allowed(): void
+    {
+        $role = Role::firstOrCreate(['key' => 'mig_mixed'], ['name' => 'Mixed']);
+        RolePermission::create(['role_id' => $role->id, 'permission' => 'profile.edit', 'allowed' => false]);
+        RolePermission::create(['role_id' => $role->id, 'permission' => 'profile.return_assets', 'allowed' => false]);
+
+        $this->migration()->down();
+
+        $this->assertSame(['access.my', 'assets.my', 'assets.return', 'employees.edit_own'], $this->keysOf($role));
+        $this->assertFalse($this->allowed($role, 'assets.my'));
+        $this->assertFalse($this->allowed($role, 'access.my'));
+    }
+
+    public function test_up_keeps_the_stronger_grant_when_both_keys_exist(): void
+    {
+        $role = Role::firstOrCreate(['key' => 'mig_merge'], ['name' => 'Merge']);
+        RolePermission::create(['role_id' => $role->id, 'permission' => 'employees.edit_own', 'allowed' => true]);
+        RolePermission::create(['role_id' => $role->id, 'permission' => 'profile.edit', 'allowed' => false]);
+
+        $this->migration()->up();
+
+        $rows = RolePermission::where('role_id', $role->id)->where('permission', 'profile.edit')->get();
+        $this->assertCount(1, $rows);
+        $this->assertTrue((bool) $rows->first()->allowed);
+        $this->assertSame(['profile.edit'], $this->keysOf($role));
     }
 
     public function test_denied_rows_stay_denied_through_up_and_down(): void
@@ -74,5 +116,9 @@ class RenameSelfServicePermissionsMigrationTest extends TestCase
         $row = RolePermission::where('role_id', $role->id)->where('permission', 'employees.edit_own')->first();
         $this->assertNotNull($row);
         $this->assertFalse((bool) $row->allowed);
+
+        $this->assertFalse($this->allowed($role, 'assets.my'));
+        $this->assertFalse($this->allowed($role, 'access.my'));
+        $this->assertSame(3, RolePermission::where('role_id', $role->id)->count());
     }
 }
