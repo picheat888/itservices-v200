@@ -60,7 +60,7 @@ class AssetHandoverEmailTest extends TestCase
         ]);
     }
 
-    /** @return array{html: string, to: string, label: string}|null */
+    /** @return array{html: string, to: string, label: string, url: string}|null */
     private function mail(string $key): ?array
     {
         $job = collect(Bus::dispatched(SendTemplatedEmail::class))
@@ -70,6 +70,7 @@ class AssetHandoverEmailTest extends TestCase
             'html' => $this->prop($job, 'html'),
             'to' => $this->prop($job, 'toEmail'),
             'label' => $this->prop($job, 'actionLabel'),
+            'url' => $this->prop($job, 'actionUrl'),
         ];
     }
 
@@ -108,6 +109,24 @@ class AssetHandoverEmailTest extends TestCase
         $this->assertStringContainsString('IT-042', $mail['html']);
         $this->assertStringNotContainsString('{{', $mail['html']);
         $this->assertSame('Accept the hand-over', $mail['label']);
+        $this->assertStringEndsWith('/?dialog=profile&section=assets', $mail['url']);
+    }
+
+    public function test_the_recall_notice_links_to_the_profile_drawer(): void
+    {
+        Bus::fake();
+        $employee = $this->holder();
+        $asset = Asset::factory()->create([
+            'status' => 'pending_acceptance',
+            'owner' => $employee->code,
+            'owner_employee_id' => $employee->id,
+        ]);
+
+        app(AssetService::class)->recall($asset, 'Admin', 'IT Store', 'Wrong person');
+
+        $mail = $this->mail('asset.recalled');
+        $this->assertNotNull($mail, 'A recall told the holder nothing.');
+        $this->assertStringEndsWith('/?dialog=profile&section=assets', $mail['url']);
     }
 
     public function test_it_does_not_tell_the_recipient_where_the_asset_came_from(): void
