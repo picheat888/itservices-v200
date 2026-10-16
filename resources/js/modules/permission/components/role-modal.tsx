@@ -9,7 +9,7 @@ import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { Check, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { RoleRow } from '../api/permissionApi';
 import { useRoleMutations } from '../hooks/use-permissions';
 
@@ -36,23 +36,24 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
     const isDirty = name !== (role?.label ?? '') || color.toLowerCase() !== (role?.color ?? COLORS[0]).toLowerCase();
     const guardClose = useDiscardGuard(open && isDirty && !saved);
 
+    // Set before the first await, so a second click in the same frame is ignored
+    const submitting = useRef(false);
     const submit = async () => {
-        if (!name.trim()) return;
-
-        if (role) {
-            if (isDirty && !(await confirmEdit({ name: role.label }))) return;
-            try {
+        if (submitting.current || saved || !name.trim()) return;
+        submitting.current = true;
+        try {
+            if (role) {
+                if (isDirty && !(await confirmEdit({ name: role.label }))) return;
                 await update.mutateAsync({ key: role.value, name, color });
-                setSaved(true);
-                setTimeout(onClose, 900);
-            } catch {
-                useToastStore.getState().push(t('cd_error'), 'error');
+            } else {
+                await create.mutateAsync({ name, color });
             }
-        } else {
-            await create.mutateAsync({ name, color });
             setSaved(true);
-            // Let the green check land for a moment before the dialog closes.
             setTimeout(onClose, 900);
+        } catch {
+            useToastStore.getState().push(t('cd_error'), 'error');
+        } finally {
+            submitting.current = false;
         }
     };
 
@@ -111,7 +112,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving || saved}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={!name.trim() || saving || saved}>
+                    <Button onClick={submit} disabled={!name.trim() || (role !== null && !isDirty) || saving || saved}>
                         {saveButtonLabel()}
                     </Button>
                 </DialogFooter>
