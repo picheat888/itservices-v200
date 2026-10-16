@@ -115,7 +115,7 @@ class ProductionSeedTest extends TestCase
         // The templates as the company set them up (2026-09-26): how many keys each grants.
         $granted = fn (string $key) => RolePermission::where('role_id', Role::where('key', $key)->value('id'))->where('allowed', true)->count();
         $this->assertSame(
-            ['admin' => 71, 'hr' => 17, 'user' => 6, 'it_supervisorleader' => 127, 'it_stock' => 44],
+            ['admin' => 85, 'hr' => 30, 'user' => 19, 'it_supervisorleader' => 141, 'it_stock' => 57],
             collect(['admin', 'hr', 'user', 'it_supervisorleader', 'it_stock'])->mapWithKeys(fn ($key) => [$key => $granted($key)])->all(),
         );
 
