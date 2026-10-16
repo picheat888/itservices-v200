@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Perf\Assets;
 use App\Support\Perf\Clock;
 use App\Support\Perf\Copy;
 use App\Support\Perf\Org;
@@ -23,7 +24,7 @@ class PerfGenerate extends Command
     protected $description = 'Generate the 3-year performance dataset as a .sql file';
 
     /** @var list<class-string<PerfStep>> */
-    public const STEPS = [Copy::class, Org::class];
+    public const STEPS = [Copy::class, Org::class, Assets::class];
 
     public function handle(): int
     {

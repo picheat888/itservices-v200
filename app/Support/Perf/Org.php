@@ -3,11 +3,12 @@
 namespace App\Support\Perf;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Schema;
 
 /** Perf step 2: sections, locations, warehouses, the employee tree, login users and role groups. */
 class Org implements PerfStep
 {
+    use FillsRows;
+
     // bcrypt cost 12 of 'Password1!'
     public const PASSWORD_HASH = '$2y$12$8pHK3DTvkrVJHAzumM2Au.JKKSuLDLt1mv7RKUyI7i.IhP3EjCNTu';
 
@@ -34,11 +35,6 @@ class Org implements PerfStep
 
     private const RESIGN_REASONS = ['Better opportunity', 'Personal reasons', 'Relocation', 'Further study', 'End of contract'];
 
-    private PerfContext $ctx;
-
-    /** @var array<string, list<string>> */
-    private array $columnCache = [];
-
     /** @var array<string, true> */
     private array $emails = [];
 
@@ -63,19 +59,6 @@ class Org implements PerfStep
         $reg->remember('it_user_ids', array_values(array_map(fn (array $p): int => $p['user_id'], array_filter($people, fn (array $p): bool => $p['kind'] === 'it'))));
         $reg->remember('user_by_employee', array_column(array_filter($people, fn (array $p): bool => $p['user_id'] !== null), 'user_id', 'id'));
         $reg->remember('vp_employee_id', $people[0]['id']);
-    }
-
-    /** @return array<string, mixed> every column of the table, in the table's own order */
-    private function fill(string $table, array $data): array
-    {
-        $this->columnCache[$table] ??= Schema::connection($this->ctx->sourceConnection)->getColumnListing($table);
-
-        return array_replace(array_fill_keys($this->columnCache[$table], null), $data);
-    }
-
-    private function stamp(): string
-    {
-        return $this->ctx->clock->start()->format('Y-m-d H:i:s');
     }
 
     /** @return array<int, list<int>> section ids by department id */
@@ -116,6 +99,7 @@ class Org implements PerfStep
             $this->ctx->sql->insert('warehouses', $this->fill('warehouses', ['id' => $id, 'name' => $name, 'description' => $name, 'created_at' => $this->stamp(), 'updated_at' => $this->stamp()]));
         }
         $this->ctx->reg->remember('location_ids', $locationIds);
+        $this->ctx->reg->remember('location_names', array_combine($locationIds, self::LOCATIONS));
         $this->ctx->reg->remember('warehouse_names', self::WAREHOUSES);
     }
 
@@ -199,11 +183,6 @@ class Org implements PerfStep
         }
 
         return $people;
-    }
-
-    private function dateBetween(CarbonImmutable $from, CarbonImmutable $to): CarbonImmutable
-    {
-        return $from->addDays($this->ctx->rng->int(0, max(0, (int) floor($from->diffInDays($to)))))->startOfDay();
     }
 
     /** @param list<array<string, mixed>> $people */
