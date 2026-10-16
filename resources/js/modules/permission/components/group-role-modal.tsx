@@ -5,6 +5,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -32,6 +33,7 @@ interface MoveRow {
 
 export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClose: () => void; group: GroupRole | null }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useGroupRoleMutations();
     const { data: matrix } = usePermissionMatrix();
@@ -147,14 +149,15 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     };
 
     /** On save: if any selected employee is moving groups, review first; else commit. */
-    const submit = () => {
+    const submit = async () => {
         if (!name.trim()) return;
         const moves = computeMoves();
         if (moves.length > 0) {
             setPendingMoves(moves);
             return;
         }
-        void persist();
+        if (group && isDirty && !(await confirmEdit({ name: group.name }))) return;
+        await persist();
     };
 
     const saving = create.isPending || update.isPending;

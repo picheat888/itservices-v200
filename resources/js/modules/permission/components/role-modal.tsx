@@ -3,9 +3,10 @@ import { Field } from '@/shared/components/field';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -17,7 +18,7 @@ const COLORS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed'
 export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () => void; role: RoleRow | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const confirm = useConfirm();
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useRoleMutations();
     const [name, setName] = useState('');
     const [color, setColor] = useState(COLORS[0]);
@@ -39,18 +40,14 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
         if (!name.trim()) return;
 
         if (role) {
-            // Capture values before closing to avoid a Radix focus-trap conflict
-            const capturedName = name;
-            const capturedColor = color;
-
-            onClose();
-
-            await confirm({
-                variant: 'edit',
-                title: t('perm_change_props'),
-                entity: { name: capturedName },
-                action: () => update.mutateAsync({ key: role.value, name: capturedName, color: capturedColor }),
-            });
+            if (isDirty && !(await confirmEdit({ name: role.label }))) return;
+            try {
+                await update.mutateAsync({ key: role.value, name, color });
+                setSaved(true);
+                setTimeout(onClose, 900);
+            } catch {
+                useToastStore.getState().push(t('cd_error'), 'error');
+            }
         } else {
             await create.mutateAsync({ name, color });
             setSaved(true);
