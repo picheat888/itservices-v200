@@ -39,6 +39,7 @@ import { RequestCreateDialog } from '../components/request-create-dialog';
 import { RequestDetailDialog } from '../components/request-detail-dialog';
 import { WorkflowMini } from '../components/workflow-mini';
 import { useRequests } from '../hooks/use-requests';
+import { canFileAnyRequest } from '../lib/submit-types';
 
 /** What last happened to a request, as a sentence ("Approved by X"); the event alone when nobody is attached. */
 function activityLine(request: ServiceRequest, t: (key: string) => string): string {
@@ -87,7 +88,7 @@ export default function RequestsPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { can } = useAuth();
-    const canSubmit = can('requests.submit');
+    const canSubmit = canFileAnyRequest(can);
 
     const [searchParams, setSearchParams] = useSearchParams();
 

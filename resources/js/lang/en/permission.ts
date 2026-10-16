@@ -136,8 +136,24 @@ export const permission: Dict = {
     'perm_act_requests.submit': 'Submit requests',
     'perm_desc_requests.submit':
         'Open the request form and file a request. Approving is never a permission - a step goes to the person the workflow resolves, and only they can decide it.',
+    'perm_act_requests.submit_computer': 'Computer',
+    'perm_act_requests.submit_hardware': 'Hardware / peripheral',
+    'perm_act_requests.submit_mobile': 'Mobile device',
+    'perm_act_requests.submit_email': 'Email account',
+    'perm_act_requests.submit_social': 'Social media access',
+    'perm_act_requests.submit_fileshare': 'File share access',
+    'perm_act_requests.submit_software': 'Software install',
+    'perm_act_requests.submit_recovery': 'Data recovery',
+    'perm_act_requests.submit_mailgroup': 'Mail group',
+    'perm_act_requests.submit_telephone': 'Telephone',
+    'perm_act_requests.submit_network': 'Network',
+    'perm_act_requests.submit_cctv': 'CCTV',
+    'perm_act_requests.submit_other': 'Other request',
     'perm_act_requests.view_all': 'View all requests',
     'perm_desc_requests.view_all': 'See every request in the organization, not only their own and the ones waiting on them.',
+    'perm_act_requests.cancel_any': "Cancel others' requests",
+    'perm_desc_requests.cancel_any':
+        "Cancel someone else's pending request, e.g. the requester has left or filed it by mistake. A reason is required.",
     'perm_act_requests.complete': 'Complete requests',
     'perm_desc_requests.complete':
         'Close a request that has cleared every approval, and see the queue waiting for it. A request type set to open a ticket automatically still needs this step - the ticket covers the work, this marks the request delivered.',
@@ -333,6 +349,8 @@ export const permission: Dict = {
         'These employees will be moved into “{name}” and their permission role will change - an employee may belong to only one group:',
     perm_ui_request_notify_hint:
         'Who hears about the completion queue - separate from who may work it, so a manager can follow it without closing anything.',
+    perm_ui_request_types: 'Types they can file',
+    perm_ui_request_types_hint: 'Which request types this role may file. The new-request form lists only the types switched on.',
     perm_ui_tickets_level_hint: 'Scopes which categories this role may see, take and be alerted about - none ticked = no cases at all.',
     perm_ui_permissions_card_sub: 'Gates the Permissions module and its sidebar entry',
     perm_ui_settings_card_sub: 'Gates the Settings module and its sidebar entry',

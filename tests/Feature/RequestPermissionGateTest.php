@@ -90,18 +90,15 @@ class RequestPermissionGateTest extends TestCase
         $this->assertNotContains('requests.complete', $stored);
     }
 
-    public function test_a_role_granted_before_the_master_existed_keeps_the_menu(): void
+    public function test_the_menu_and_the_route_open_on_the_master_alone(): void
     {
-        // nav.ts and App.tsx both accept the master OR the older keys, because normalisation
-        // only forces the master when permissions are SAVED — rows written before it existed
-        // still hold submit on its own, and must not lose the module.
         foreach (['resources/js/app/nav.ts', 'resources/js/app/App.tsx'] as $path) {
-            $source = file_get_contents(base_path($path));
+            $source = (string) file_get_contents(base_path($path));
             $line = collect(explode("\n", $source))
-                ->first(fn (string $l) => str_contains($l, 'requests.submit'));
+                ->first(fn (string $l) => str_contains($l, 'anyOf') && str_contains($l, "'requests.module'"));
 
-            $this->assertNotNull($line, "{$path} no longer gates Requests on requests.submit");
-            $this->assertStringContainsString('requests.module', $line, "{$path} gates Requests without accepting the master");
+            $this->assertNotNull($line, "{$path} no longer gates Requests on requests.module");
+            $this->assertStringContainsString("['requests.module']", $line, "{$path} gates Requests on more than the master");
         }
     }
 }
