@@ -18,7 +18,7 @@ import { cn, isEmail } from '@/shared/lib/utils';
 import type { AssetModel, Brand, Category, LocationItem, Vendor, Warehouse } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -171,6 +171,7 @@ function FormSkeleton({ rows = 3 }: { rows?: number }) {
 
 export default function SettingsPage() {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const { can } = useAuth();
     // Active section in ?tab= (no ?tab= = Company); each press is a history entry.
     const [section, changeSection] = useTabParam(isSection, 'company');
@@ -204,7 +205,8 @@ export default function SettingsPage() {
     const set = <K extends keyof SettingsForm>(k: K, v: SettingsForm[K]) => setForm((f) => ({ ...f, [k]: v }));
     const takeSaved = (saved: SettingsForm, keys: readonly (keyof SettingsForm)[]) => setForm((f) => ({ ...f, ...fieldsOf(saved, keys) }));
 
-    const saveCompany = () => {
+    const saveCompany = async () => {
+        if (companyDirty && !(await confirmEdit({ name: t('set_company_title') }))) return;
         const payload: CompanyPayload = fieldsOf(form, COMPANY_KEYS);
         update.mutate(payload, { onSuccess: (saved) => takeSaved(saved, COMPANY_KEYS) });
     };
@@ -904,6 +906,7 @@ const MAIL_KEY = ['mail-settings'] as const;
 /** SMTP server settings (mail_settings) — host/port/credentials/from + test send. */
 function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const qc = useQueryClient();
     const { data, isLoading } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail });
     const formRef = useRef<HTMLDivElement>(null);
@@ -971,7 +974,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     };
 
     // Password is required only until one is stored; blank then keeps it
-    const handleSave = () => {
+    const handleSave = async () => {
         const next: Partial<Record<MailErrorKey, string>> = {};
         if (!form.host?.trim()) next.host = t('set_err_required');
         if (form.port == null || `${form.port}`.trim() === '') {
@@ -993,6 +996,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
             focusFirstError(formRef.current, next);
             return;
         }
+        if (dirty && !(await confirmEdit({ name: t('set_email') }))) return;
         update.mutate(form);
     };
 
@@ -1708,6 +1712,7 @@ function SystemTab({
     onDirtyChange: OnDirtyChange;
 }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const [brandStatus, setBrandStatus] = useState<SectionStatus>(IDLE_SECTION);
     const [dateStatus, setDateStatus] = useState<SectionStatus>(IDLE_SECTION);
     const brandSaver = useRef<SectionSaver>(null);
@@ -1727,6 +1732,7 @@ function SystemTab({
 
     // Saves only the sections with edits; the tick shows when every one went through.
     const save = async () => {
+        if (brandStatus.dirty && !(await confirmEdit({ name: t('set_branding') }))) return;
         setSaving(true);
         setSaved(false);
         const results: boolean[] = [];

@@ -6,9 +6,11 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useVendorMutations } from '../hooks/use-master-data';
 
@@ -32,6 +34,8 @@ function fromVendor(vendor?: Vendor | null): typeof emptyForm {
 /** VendorModal — add or edit a vendor (English and Thai names plus contact details); Save shows a spinner, then a tick, then the dialog closes. */
 export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?: Vendor | null; onClose: () => void }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useVendorMutations();
     const [form, setForm] = useState(emptyForm);
     const [errors, setErrors] = useState<VendorErrors>({});
@@ -80,6 +84,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
             return;
         }
         setErrors({});
+        if (vendor && isDirty && !(await confirmEdit({ name: lang === 'th' ? (vendor.name_th ?? vendor.name) : vendor.name }))) return;
         const payload = {
             name: form.name.trim(),
             name_th: form.name_th.trim(),

@@ -6,6 +6,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Brand } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
@@ -15,6 +16,7 @@ import { useBrandMutations } from '../hooks/use-master-data';
 /** BrandModal — add or edit a brand; Save shows a spinner, then a tick, then the dialog closes. */
 export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Brand | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useBrandMutations();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -47,6 +49,7 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
             return;
         }
         setNameError(undefined);
+        if (brand && isDirty && !(await confirmEdit({ name: brand.name }))) return;
         const payload = { name: name.trim(), description: description.trim() || null };
         try {
             if (brand) {

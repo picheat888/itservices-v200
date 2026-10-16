@@ -6,6 +6,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Warehouse } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
@@ -15,6 +16,7 @@ import { useWarehouseMutations } from '../hooks/use-master-data';
 /** WarehouseModal — add or edit a stock warehouse; Save shows a spinner, then a tick, then the dialog closes. */
 export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; warehouse?: Warehouse | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useWarehouseMutations();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -47,6 +49,7 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
             return;
         }
         setNameError(undefined);
+        if (warehouse && isDirty && !(await confirmEdit({ name: warehouse.name }))) return;
         const payload = { name: name.trim(), description: description.trim() || null };
         try {
             if (warehouse) {
