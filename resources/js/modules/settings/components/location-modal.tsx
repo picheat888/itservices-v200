@@ -7,6 +7,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { LocationItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
@@ -15,6 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 /** LocationModal — add or edit a location; Save shows a spinner, then a tick, then the dialog closes. */
 export function LocationModal({ open, location, onClose }: { open: boolean; location?: LocationItem | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useLocationMutations();
     const [name, setName] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
@@ -45,6 +47,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
             return;
         }
         setNameError(undefined);
+        if (location && isDirty && !(await confirmEdit({ name: location.name }))) return;
         try {
             if (location) {
                 await update.mutateAsync({ id: location.id, name: name.trim() });

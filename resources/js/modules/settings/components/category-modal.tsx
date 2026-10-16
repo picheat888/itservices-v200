@@ -7,15 +7,19 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Category } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useCategoryMutations } from '../hooks/use-master-data';
 
 /** CategoryModal — add or edit a category; Save shows a spinner, then a tick, then the dialog closes. */
 export function CategoryModal({ open, category, onClose }: { open: boolean; category?: Category | null; onClose: () => void }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useCategoryMutations();
     const [name, setName] = useState('');
     const [nameTh, setNameTh] = useState('');
@@ -57,6 +61,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             return;
         }
         setNameError(undefined);
+        if (category && isDirty && !(await confirmEdit({ name: lang === 'th' ? (category.name_th ?? category.name) : category.name }))) return;
         const payload = {
             name: name.trim(),
             name_th: nameTh.trim() || null,

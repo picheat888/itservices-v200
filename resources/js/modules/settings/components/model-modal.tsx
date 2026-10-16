@@ -6,6 +6,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
 import type { AssetModel, Brand } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -19,6 +20,7 @@ const NO_BRAND = '__none__';
 /** ModelModal — add or edit an asset model with an optional brand; Save shows a spinner, then a tick, then the dialog closes. */
 export function ModelModal({ open, model, onClose }: { open: boolean; model?: AssetModel | null; onClose: () => void }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useAssetModelMutations();
     const { data: brands = [] } = useBrands();
     const [name, setName] = useState('');
@@ -52,6 +54,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
             return;
         }
         setNameError(undefined);
+        if (model && isDirty && !(await confirmEdit({ name: model.name, sub: model.brand?.name }))) return;
         const payload = { name: name.trim(), brand_id: brandId === NO_BRAND ? null : Number(brandId) };
         try {
             if (model) {
