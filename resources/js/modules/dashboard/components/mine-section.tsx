@@ -1,7 +1,5 @@
 // Dashboard "ของฉัน": the reader's own tickets, requests, assets and access, plus their two latest lists.
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
-import { PROFILE_ASSETS_SEARCH, PROFILE_SECTION_PARAM } from '@/modules/profile';
 import { CardEmpty, CardTitle, CODE_LINK, FILL } from '@/modules/report';
 import { TICKET_STATUS_META } from '@/modules/ticket';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -11,8 +9,8 @@ import { Card } from '@/shared/ui/card';
 import { Box, CircleCheck, Inbox, MonitorCog, Ticket, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { DashboardMine } from '../api/dashboardApi';
+import { useDashLinks } from '../hooks/use-dash-links';
 import { sharePieces } from '../lib/dash-math';
-import { dashLinks } from '../lib/links';
 import { CardLink, DashTile, LegendFooter, LIST_LIMIT, NARROW, PAIR_GRID, rowDelay, SectionHeading, TILE_GRID, WIDE } from './dash-parts';
 
 const ACCESS_TYPES = [
@@ -22,12 +20,9 @@ const ACCESS_TYPES = [
     { key: 'software', label: 'rep_ac_type_software', fill: 'access-software' },
 ] as const;
 
-const profileSection = (section: string) => ({ search: `?dialog=profile&${PROFILE_SECTION_PARAM}=${section}` });
-
 export function MineSection({ mine }: { mine: DashboardMine }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
     const k = mine.kpi;
 
     return (
@@ -76,8 +71,7 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
                     }
                 />
                 <DashTile
-                    to={{ search: PROFILE_ASSETS_SEARCH }}
-                    state={dialogPushedState()}
+                    to={links.profileAssets}
                     icon={Box}
                     label={t('dash_kpi_my_assets')}
                     value={k.assets}
@@ -86,8 +80,7 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
                     }
                 />
                 <DashTile
-                    to={profileSection('access')}
-                    state={dialogPushedState()}
+                    to={links.profileAccess}
                     icon={MonitorCog}
                     label={t('dash_kpi_access')}
                     value={k.access_total}
@@ -121,8 +114,7 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
 
 function MyTicketsCard({ mine }: { mine: DashboardMine }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
 
     return (
         <Card className={WIDE}>
@@ -174,8 +166,7 @@ function MyTicketsCard({ mine }: { mine: DashboardMine }) {
 
 function MyRequestsCard({ mine }: { mine: DashboardMine }) {
     const t = useT();
-    const { can } = useAuth();
-    const links = dashLinks(can);
+    const links = useDashLinks();
 
     return (
         <Card className={NARROW}>

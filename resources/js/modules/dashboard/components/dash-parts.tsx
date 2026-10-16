@@ -1,6 +1,7 @@
 // Dashboard building blocks: section heading, linked tile, tile footers, card link, horizontal bar row and row animation.
 import { useT } from '@/lang';
 import { KpiTile, Sparkline } from '@/modules/report';
+import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { Link, type To } from 'react-router-dom';
@@ -16,6 +17,9 @@ export const DASH_STYLES = `
 .dash-row { animation: dash-row-in .3s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .dash-row { animation: none; } }
 `;
+
+/** A link that opens a dialog ("?dialog=…") pushes history, so Back closes it instead of leaving the page. */
+const stateFor = (to: To) => (typeof to === 'string' && to.startsWith('?') ? dialogPushedState() : undefined);
 
 /** Staggered fade-in delay for the i-th row (40 ms apart). */
 export const rowDelay = (i: number) => ({ animationDelay: `${i * 40}ms` });
@@ -64,7 +68,11 @@ export function DashTile({ to, state, className, ...tile }: TileProps) {
     if (!to) return <KpiTile {...tile} className={cn('h-full', className)} />;
 
     return (
-        <Link to={to} state={state} className="group focus-visible:ring-ring block h-full rounded-lg focus-visible:ring-2 focus-visible:outline-none">
+        <Link
+            to={to}
+            state={state ?? stateFor(to)}
+            className="group focus-visible:ring-ring block h-full rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+        >
             <KpiTile {...tile} className={cn('group-hover:border-brand/40 h-full transition-colors', className)} />
         </Link>
     );
@@ -122,6 +130,7 @@ export function CardLink({ to, total, shown, label }: { to: To; total: number; s
     return (
         <Link
             to={to}
+            state={stateFor(to)}
             className="border-border/60 text-brand hover:bg-accent focus-visible:ring-ring mt-auto flex items-center justify-between gap-2 border-t border-dashed px-5 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
             {label ?? (total > shown ? t('dash_view_all_n').replace('{n}', String(total)) : t('dash_view_all'))}
