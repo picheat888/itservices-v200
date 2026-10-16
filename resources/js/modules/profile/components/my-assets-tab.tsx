@@ -11,7 +11,11 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useUiStore } from '@/stores/ui';
 import { useMutationState } from '@tanstack/react-query';
-import { Check, Inbox, Laptop, Link2Off, Loader2, Undo2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Inbox, Laptop, Link2Off, Loader2, Undo2 } from 'lucide-react';
+import { useState } from 'react';
+
+// Rows shown before "show all"
+const PAGE = 5;
 
 // Column template shared by both tables; Tag and Serial columns from lg up
 const ROW_GRID =
@@ -33,6 +37,22 @@ function ColumnHeader({ dateLabel }: { dateLabel: string }) {
             <div className="text-center">{dateLabel}</div>
             <div />
         </div>
+    );
+}
+
+function ShowAllRow({ total, expanded, onToggle }: { total: number; expanded: boolean; onToggle: () => void }) {
+    const t = useT();
+    if (total <= PAGE) return null;
+    const Icon = expanded ? ChevronUp : ChevronDown;
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            className="border-border/60 bg-muted/40 text-brand hover:bg-muted flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-semibold transition-colors"
+        >
+            <Icon className="h-3.5 w-3.5" aria-hidden />
+            {expanded ? t('profile_assets_show_less') : t('profile_assets_show_all').replace('{n}', String(total - PAGE))}
+        </button>
     );
 }
 
@@ -62,6 +82,8 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const { accept, requestReturn } = useAssetMutations();
+    const [showAllPending, setShowAllPending] = useState(false);
+    const [showAllHeld, setShowAllHeld] = useState(false);
 
     // Ids with an accept in flight, read from the mutation cache
     const acceptingIds = useMutationState({
@@ -83,6 +105,8 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
 
     const pending = assets.filter((a) => a.status === 'pending_acceptance');
     const held = assets.filter((a) => a.status !== 'pending_acceptance');
+    const pendingShown = showAllPending ? pending : pending.slice(0, PAGE);
+    const heldShown = showAllHeld ? held : held.slice(0, PAGE);
     const typeLabel = (a: Asset) => (lang === 'th' ? (a.type_th ?? a.type) : a.type);
 
     const onReturn = (a: Asset) =>
@@ -106,7 +130,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                         <span className="font-mono font-bold">{pending.length}</span>
                     </div>
                     <ColumnHeader dateLabel={t('profile_assets_col_handed_over')} />
-                    {pending.map((a, i) => {
+                    {pendingShown.map((a, i) => {
                         const accepting = acceptingIds.includes(a.id);
                         return (
                             <div key={a.id} className={cn(ROW_GRID, 'min-h-[52px] bg-emerald-500/[0.04] py-2', i > 0 && 'border-border/60 border-t')}>
@@ -153,6 +177,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                             </div>
                         );
                     })}
+                    <ShowAllRow total={pending.length} expanded={showAllPending} onToggle={() => setShowAllPending((v) => !v)} />
                 </div>
             )}
 
@@ -166,7 +191,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
             ) : (
                 <div className="bg-card border-border overflow-hidden rounded-xl border shadow-xs">
                     <ColumnHeader dateLabel={t('emp_v_col_received')} />
-                    {held.map((a, i) => {
+                    {heldShown.map((a, i) => {
                         const meta = HELD_STATUS_META[a.status] ?? null;
                         return (
                             <div key={a.id} className={cn(ROW_GRID, 'min-h-12 py-2', i > 0 && 'border-border/60 border-t')}>
@@ -203,6 +228,7 @@ export function MyAssetsTab({ assets, loading, linked, canReturn }: { assets: As
                             </div>
                         );
                     })}
+                    <ShowAllRow total={held.length} expanded={showAllHeld} onToggle={() => setShowAllHeld((v) => !v)} />
                 </div>
             )}
         </div>

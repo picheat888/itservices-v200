@@ -27,4 +27,6 @@ export const profile: Dict = {
     profile_assets_held_heading: 'My assets',
     profile_assets_col_handed_over: 'Handed over',
     profile_pending_assets_badge: '{n} awaiting acceptance',
+    profile_assets_show_all: 'Show all, {n} more',
+    profile_assets_show_less: 'Show less',
 };
