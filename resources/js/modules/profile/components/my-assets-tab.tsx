@@ -48,7 +48,8 @@ function ShowAllRow({ total, expanded, onToggle }: { total: number; expanded: bo
         <button
             type="button"
             onClick={onToggle}
-            className="border-border/60 bg-muted/40 text-brand hover:bg-muted flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-semibold transition-colors"
+            aria-expanded={expanded}
+            className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-semibold transition-colors"
         >
             <Icon className="h-3.5 w-3.5" aria-hidden />
             {expanded ? t('profile_assets_show_less') : t('profile_assets_show_all').replace('{n}', String(total - PAGE))}
