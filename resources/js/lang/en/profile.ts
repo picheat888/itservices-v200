@@ -21,7 +21,6 @@ export const profile: Dict = {
     my_assets_new: 'New',
     my_assets_return_confirm: 'Send this asset back to IT? It will show as pending return until IT confirms receipt.',
     my_assets_empty: "You don't hold any assets yet.",
-    my_assets_no_link: "Your account isn't linked to an employee record yet.",
     profile_assets_pending_caption: 'Awaiting your acceptance',
     profile_assets_held_heading: 'My assets',
     profile_assets_col_handed_over: 'Handed over',

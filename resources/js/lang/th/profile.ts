@@ -21,7 +21,6 @@ export const profile: Dict = {
     my_assets_new: 'ใหม่',
     my_assets_return_confirm: 'ส่งทรัพย์สินนี้คืน IT? จะขึ้นสถานะรอรับคืนจนกว่า IT จะยืนยันรับ',
     my_assets_empty: 'คุณยังไม่มีทรัพย์สินที่ถือครอง',
-    my_assets_no_link: 'บัญชีของคุณยังไม่ได้ผูกกับข้อมูลพนักงาน',
     profile_assets_pending_caption: 'รอให้คุณกดรับ',
     profile_assets_held_heading: 'ทรัพย์สินของฉัน',
     profile_assets_col_handed_over: 'มอบหมายเมื่อ',

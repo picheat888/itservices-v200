@@ -235,11 +235,9 @@ class AssetController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
 
-        $accounted = User::whereNotNull('employee_id')->pluck('employee_id')->all();
-
         $blocked = Employee::where('status', EmployeeStatus::Active->value)
+            ->whereNotIn('id', User::whereNotNull('employee_id')->select('employee_id'))
             ->pluck('id')
-            ->reject(fn (int $id) => in_array($id, $accounted, true))
             ->mapWithKeys(fn (int $id) => [$id => 'no_account']);
 
         return response()->json(['data' => $blocked]);

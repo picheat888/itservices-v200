@@ -1,3 +1,5 @@
+// My Profile permission card: independent switches (no master) for what a person may do in their own profile drawer.
+
 import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
@@ -5,12 +7,6 @@ import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { PermissionCardHeader } from './permission-card-header';
-
-/**
- * The My Profile card: what a person may do with their own details and kit in the profile drawer.
- * Two independent switches, no master. Mirrors App\Support\Permissions::catalog()['profile'].
- */
-const PROFILE_KEYS = ['profile.edit', 'profile.return_assets'];
 
 const label = (key: string, lang: Lang) => {
     const [module, action] = key.split('.');
@@ -49,11 +45,13 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
 }
 
 export function ProfilePermissionTree({
+    keys,
     draft,
     setDraft,
     isSuper,
     lang,
 }: {
+    keys: string[];
     draft: Set<string>;
     setDraft: React.Dispatch<React.SetStateAction<Set<string>>>;
     isSuper: boolean;
@@ -76,18 +74,18 @@ export function ProfilePermissionTree({
         });
     };
 
-    const activeCount = PROFILE_KEYS.filter(has).length;
+    const activeCount = keys.filter(has).length;
 
     return (
         <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="profile" on={activeCount} total={PROFILE_KEYS.length} lang={lang} />
+            <PermissionCardHeader module="profile" on={activeCount} total={keys.length} lang={lang} />
 
             <div className="bg-brand/5 border-border border-b px-3.5 py-2">
                 <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_service_all')}</div>
             </div>
 
             <div className="px-3.5 py-1">
-                {PROFILE_KEYS.map((key) => {
+                {keys.map((key) => {
                     const description = info(key, lang);
                     return (
                         <div key={key} className="flex min-h-[34px] items-center gap-2">

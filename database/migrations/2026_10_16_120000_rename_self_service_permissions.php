@@ -28,17 +28,21 @@ return new class extends Migration
     public function down(): void
     {
         DB::transaction(function (): void {
-            $roleIds = DB::table('role_permissions')
-                ->whereIn('permission', array_values(self::RENAMES))
-                ->pluck('role_id')
-                ->unique();
+            $profileKeys = array_values(self::RENAMES);
+
+            // role_id => whether any profile key is allowed, read before the keys are renamed back
+            $grantByRole = DB::table('role_permissions')
+                ->whereIn('permission', $profileKeys)
+                ->get(['role_id', 'allowed'])
+                ->groupBy('role_id')
+                ->map(fn ($rows): bool => $rows->contains(fn ($row): bool => (bool) $row->allowed));
 
             foreach (self::RENAMES as $old => $new) {
                 $this->rename($new, $old);
             }
 
             foreach (self::DROPPED as $key) {
-                foreach ($roleIds as $roleId) {
+                foreach ($grantByRole as $roleId => $allowed) {
                     $exists = DB::table('role_permissions')
                         ->where('role_id', $roleId)
                         ->where('permission', $key)
@@ -48,7 +52,7 @@ return new class extends Migration
                         DB::table('role_permissions')->insert([
                             'role_id' => $roleId,
                             'permission' => $key,
-                            'allowed' => true,
+                            'allowed' => $allowed,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
@@ -58,15 +62,34 @@ return new class extends Migration
         });
     }
 
-    // Roles that already hold the target key lose the source row; the rest get it renamed.
+    // A role holding both keys keeps the target row with the stronger grant; the rest are renamed in place.
     private function rename(string $from, string $to): void
     {
-        $hasTarget = DB::table('role_permissions')->where('permission', $to)->pluck('role_id');
-
-        DB::table('role_permissions')
+        $sourceRows = DB::table('role_permissions')
             ->where('permission', $from)
-            ->whereIn('role_id', $hasTarget)
-            ->delete();
+            ->get(['role_id', 'allowed']);
+
+        foreach ($sourceRows as $source) {
+            $target = DB::table('role_permissions')
+                ->where('role_id', $source->role_id)
+                ->where('permission', $to)
+                ->first(['id', 'allowed']);
+
+            if ($target === null) {
+                continue;
+            }
+
+            if ((bool) $source->allowed && ! (bool) $target->allowed) {
+                DB::table('role_permissions')
+                    ->where('id', $target->id)
+                    ->update(['allowed' => true, 'updated_at' => now()]);
+            }
+
+            DB::table('role_permissions')
+                ->where('role_id', $source->role_id)
+                ->where('permission', $from)
+                ->delete();
+        }
 
         DB::table('role_permissions')
             ->where('permission', $from)
