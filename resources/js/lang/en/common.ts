@@ -39,6 +39,7 @@ export const common: Dict = {
     close: 'Close',
     got_it: 'Got it',
     profile: 'My Profile',
+    toggle_sidebar: 'Toggle sidebar',
     light_mode: 'Switch to light',
     dark_mode: 'Switch to dark',
     tweaks_title: 'Display settings',

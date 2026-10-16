@@ -5666,3 +5666,8 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ยังไม่ได้ทำ: หน้า Asset มี pattern รีเซ็ตหน้าทุกคีย์เหมือนกัน (`asset/pages/index.tsx` ~851); การ์ด KPI "คำขอ" ยังแสดง 0 ให้คนไม่มีสิทธิ์ `stock.view_request`; `SerialToggle` ของ shared ยังใช้ track `/30`
 - ตรวจด้วยตาที่ 768px (iframe จำลอง iPad mini บนเครื่อง demo) ทั้งโหมดสว่าง/มืด แล้วแก้เพิ่ม: ตาราง Stock items / Events / Requests กำหนด `width` ต่อคอลัมน์ + `whitespace-nowrap` ที่ SKU/เลขเอกสาร/เวลา และ `hideBelow: 'lg'` ที่หมวด/อ้างอิง/ผู้บันทึก จึงเลื่อนแนวนอนแทนการบีบจนตัดบรรทัด; `DataTable` (shared) ซ่อน `<col>` ของคอลัมน์ `hideBelow` ด้วย (`hidden lg:table-column`) ไม่เช่นนั้น `table-fixed` ยังนับความกว้างของคอลัมน์ที่ซ่อนและเลื่อนความกว้างไปทั้งแถว; การ์ดความเคลื่อนไหวล่าสุดใน Overview แสดงวันที่อย่างเดียวใต้ `lg` ชื่อสินค้าจึงไม่ถูกตัดเหลือ 10 ตัวอักษร; `stock_minmax_alerts` ไทย = "แจ้งเตือนสต็อก" (เดิมเป็นอังกฤษในหน้าไทย)
 - การ์ด KPI "คำขอ" บน Overview: ผู้ใช้ที่ไม่มีสิทธิ์ `stock.view_request` เห็น "—" กับข้อความ "ไม่มีสิทธิ์ดูคำขอ" แทนเลข 0 (การ์ดยังครบ 4 ใบ ไม่ซ่อน เพราะ grid จะเว้นช่อง)
+
+### Topbar aria-label, Asset ค้นหายิงครั้งเดียว, SerialToggle ผ่าน 3:1 — 2026-10-16
+- ปุ่มเมนูด้านข้าง / ภาษา / ธีม / กระดิ่งใน `topbar.tsx` มี `aria-label` (กระดิ่งบอกจำนวนที่ยังไม่อ่าน) ไอคอนและป้ายตัวเลขเป็น `aria-hidden`; เพิ่มคีย์ `toggle_sidebar` ใน common
+- หน้า Asset: พิมพ์ค้นหาเขียนแค่ `?search` แล้วรีเซ็ตหน้าเมื่อคำค้นถูกส่งหลัง debounce (pattern เดียวกับ Stock) วัดจริง: พิมพ์ 4 ตัวอักษรจากหน้า 2 ยิง `/api/assets` 1 ครั้ง
+- `SerialToggle` ใช้ track เดียวกับ shared `Switch` (`bg-muted-foreground/80 dark:/60`) ผ่าน contrast 3:1 และ thumb เลื่อนด้วย `translate-x` แทน `left`

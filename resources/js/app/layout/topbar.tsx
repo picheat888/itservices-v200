@@ -28,15 +28,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const crumbTail = useUiStore((s) => s.crumbTail);
     const current = findNavItem(pathname);
     const here = current ? t(current.label) : t('overall');
-    /**
-     * The sidebar section this page sits in — the same heading the user walked past to get
-     * here, so the trail names a place.
-     *
-     * It used to be the viewer's Role Template name, which answers "who am I" in a spot
-     * that asks "where am I" (and "Template" is our word for a permission preset, not
-     * anything a manager is looking at). Their role and group are on the account card at
-     * the foot of the sidebar, where the rest of "who am I" lives.
-     */
+    // Breadcrumb: the sidebar section this page sits in
     const section = current ? navGroups.find((g) => g.items.includes(current)) : undefined;
 
     return (
@@ -44,9 +36,10 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             <button
                 onClick={toggleSidebar}
                 className="text-muted-foreground hover:bg-accent flex h-9 w-9 items-center justify-center rounded-md"
-                title="Toggle sidebar"
+                title={t('toggle_sidebar')}
+                aria-label={t('toggle_sidebar')}
             >
-                <Menu className="h-[18px] w-[18px]" />
+                <Menu className="h-[18px] w-[18px]" aria-hidden />
             </button>
 
             <div className="flex items-center gap-2 text-sm">
@@ -76,8 +69,9 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                 onClick={toggleLang}
                 className="text-muted-foreground hover:bg-accent flex h-9 items-center gap-2 rounded-md px-2.5"
                 title={lang === 'en' ? 'เปลี่ยนเป็นภาษาไทย' : 'Switch to English'}
+                aria-label={lang === 'en' ? 'เปลี่ยนเป็นภาษาไทย' : 'Switch to English'}
             >
-                {lang === 'en' ? <FlagEN /> : <FlagTH />}
+                <span aria-hidden>{lang === 'en' ? <FlagEN /> : <FlagTH />}</span>
                 <span className="text-[11px] font-bold tracking-wide">{lang === 'en' ? 'EN' : 'TH'}</span>
             </button>
 
@@ -85,12 +79,12 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                 onClick={toggleDark}
                 className="text-muted-foreground hover:bg-accent flex h-9 w-9 items-center justify-center rounded-md"
                 title={dark ? t('light_mode') : t('dark_mode')}
+                aria-label={dark ? t('light_mode') : t('dark_mode')}
             >
-                {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+                {dark ? <Sun className="h-[18px] w-[18px]" aria-hidden /> : <Moon className="h-[18px] w-[18px]" aria-hidden />}
             </button>
 
-            {/* Stays visibly "on" while its panel is open, so the panel reads as
-                belonging to this button instead of floating on its own. */}
+            {/* Bell: lit while its panel is open */}
             <button
                 data-notif-btn
                 onClick={onToggleNotif}
@@ -101,10 +95,14 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                     notifOpen ? 'bg-accent text-brand' : 'text-muted-foreground hover:bg-accent',
                 )}
                 title={t('notif_title')}
+                aria-label={unreadCount > 0 ? `${t('notif_title')} (${unreadCount})` : t('notif_title')}
             >
-                <Bell className="h-[18px] w-[18px]" />
+                <Bell className="h-[18px] w-[18px]" aria-hidden />
                 {unreadCount > 0 && (
-                    <span className="bg-destructive text-destructive-foreground absolute top-px right-px flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold">
+                    <span
+                        aria-hidden
+                        className="bg-destructive text-destructive-foreground absolute top-px right-px flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold"
+                    >
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}

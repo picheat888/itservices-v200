@@ -282,7 +282,18 @@ export default function AssetsPage() {
     const statusFilter: AssetStatus | '' = statusParam && statusParam in ASSET_STATUS_META ? (statusParam as AssetStatus) : '';
     const warehouseFilter = searchParams.get('warehouse') ?? '';
     const { page, perPage } = list;
+    // Typing only writes ?search; the page returns to 1 when the debounced search is sent.
     const setSearch = (value: string) => setListParams({ search: value });
+    const pageSearch = useRef(sentSearch);
+    const searchChanged = sentSearch !== pageSearch.current;
+    useEffect(() => {
+        if (!searchChanged) return;
+        if (page > 1) {
+            setListParams({ page: null });
+            return;
+        }
+        pageSearch.current = sentSearch;
+    }, [searchChanged, sentSearch, page]); // eslint-disable-line react-hooks/exhaustive-deps
     const setTypeFilter = (value: AssetType | '') => setListParams({ type: value });
     const setSourceFilter = (value: string) => setListParams({ source: value });
     const setStatusFilter = (value: AssetStatus | '') => setListParams({ status: value });
@@ -381,7 +392,7 @@ export default function AssetsPage() {
         isFetching,
     } = useAssets({
         // ?search and ?page belong to the Transfers log while that tab is open
-        page: tab === 'transfers' ? 1 : page,
+        page: tab === 'transfers' || searchChanged ? 1 : page,
         per_page: perPage,
         search: tab === 'transfers' ? '' : sentSearch,
         type: typeFilter || undefined,
@@ -846,10 +857,7 @@ export default function AssetsPage() {
                                     type="search"
                                     aria-label={t('asset_search_label')}
                                     value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setPage(1);
-                                    }}
+                                    onChange={(e) => setSearch(e.target.value)}
                                     placeholder={t('asset_search')}
                                     className="pl-9"
                                 />

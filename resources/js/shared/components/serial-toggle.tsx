@@ -61,8 +61,18 @@ export function SerialToggle({
                 <span className="block text-sm font-semibold">{t('stock_track_serial_title')}</span>
                 <span className="text-muted-foreground mt-0.5 block text-xs">{value ? t('stock_track_serial_on') : t('stock_track_serial_off')}</span>
             </span>
-            <span className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', value ? 'bg-brand' : 'bg-muted-foreground/30')}>
-                <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all', value ? 'left-[18px]' : 'left-0.5')} />
+            <span
+                className={cn(
+                    'relative h-5 w-9 shrink-0 rounded-full transition-colors',
+                    value ? 'bg-brand' : 'bg-muted-foreground/80 dark:bg-muted-foreground/60',
+                )}
+            >
+                <span
+                    className={cn(
+                        'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform motion-reduce:transition-none',
+                        value ? 'translate-x-[18px]' : 'translate-x-0.5',
+                    )}
+                />
             </span>
         </button>
     );
