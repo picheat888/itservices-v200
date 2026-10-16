@@ -4,8 +4,10 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { fieldError, refusalText } from '@/shared/lib/api-errors';
 import type { Department } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { useUiStore } from '@/stores/ui';
 import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useDepartmentMutations } from '../hooks/use-departments';
@@ -16,6 +18,8 @@ type FieldErrors = Partial<Record<keyof typeof empty, string>>;
 
 export function DepartmentModal({ open, onClose, department }: { open: boolean; onClose: () => void; department: Department | null }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const confirmEdit = useConfirmEdit();
     const { create, update } = useDepartmentMutations();
     const [form, setForm] = useState(empty);
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -50,6 +54,11 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
     const submit = async (e: FormEvent) => {
         e.preventDefault();
         if (!canSave) return;
+        if (
+            department &&
+            !(await confirmEdit({ name: lang === 'th' ? (department.name_th ?? department.name) : department.name, sub: department.code }))
+        )
+            return;
         setFieldErrors({});
         setError('');
         // Blank code → omit it so the backend auto-generates one; a typed code is sent through as a custom badge.

@@ -5,6 +5,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
@@ -17,6 +18,7 @@ const empty = { department_id: '', name: '', name_th: '' };
 
 export function SectionModal({ open, onClose, section }: { open: boolean; onClose: () => void; section: Section | null }) {
     const t = useT();
+    const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { create, update } = useSectionMutations();
@@ -60,6 +62,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     const submit = async (e: FormEvent) => {
         e.preventDefault();
         if (!canSave) return;
+        if (section && !(await confirmEdit({ name: lang === 'th' ? (section.name_th ?? section.name) : section.name, sub: section.code }))) return;
         setError('');
         const payload = { department_id: Number(form.department_id), name: form.name.trim(), name_th: form.name_th.trim() || null };
         try {
