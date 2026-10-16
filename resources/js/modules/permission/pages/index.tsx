@@ -348,22 +348,28 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                             {!r.is_system && (
                                 <div className="pointer-events-none flex gap-0.5 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100">
                                     <button
+                                        type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setRoleModal({ open: true, role: r });
                                         }}
+                                        title={`${t('edit')} ${r.label}`}
+                                        aria-label={`${t('edit')} ${r.label}`}
                                         className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
                                     >
-                                        <Pencil className="h-3.5 w-3.5" />
+                                        <Pencil className="h-3.5 w-3.5" aria-hidden />
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDeleteRole(r);
                                         }}
+                                        title={`${t('delete')} ${r.label}`}
+                                        aria-label={`${t('delete')} ${r.label}`}
                                         className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
                                     >
-                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
                                     </button>
                                 </div>
                             )}
