@@ -138,7 +138,7 @@ function WaitingCard({ requests, className }: { requests: Requests; className?: 
     const fmt = useDateFormat();
     const [open, setOpen] = useState(false);
     const list = useRef<HTMLUListElement>(null);
-    const { folds, shown } = fold(requests.rows, WAITING_SHOWN, open, 0);
+    const { folds, shown } = fold(requests.rows, WAITING_SHOWN, open);
     const toggle = () => {
         if (open && list.current) list.current.scrollTop = 0;
         setOpen((v) => !v);
@@ -346,7 +346,7 @@ function CountsCard({ counts }: { counts: Counts }) {
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
     const [open, setOpen] = useState(false);
-    const { folds, shown } = fold(counts, COUNTS_SHOWN, open, 0);
+    const { folds, shown } = fold(counts, COUNTS_SHOWN, open);
     const sum = (pick: (c: Counts[number]) => number) => counts.reduce((s, c) => s + pick(c), 0);
     const headings: { key: string; right?: boolean }[] = [
         { key: 'rep_smv_cnt_col_ref' },
@@ -441,26 +441,27 @@ function CardsSkeleton() {
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <Card className="overflow-hidden lg:col-span-2 xl:col-span-3">
                     <CardHeadingSkeleton />
-                    <ChartSkeleton />
+                    {/* Heights follow the loaded cards (flow chart + axis, 11 two-line ranks, 10 count rounds). */}
+                    <ChartSkeleton className="h-[25rem]" />
                 </Card>
                 <Card className="overflow-hidden xl:col-span-2">
                     <CardHeadingSkeleton />
-                    <BarRowsSkeleton rows={5} />
+                    <BarRowsSkeleton rows={12} />
                 </Card>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">
                 <Card className="overflow-hidden">
                     <CardHeadingSkeleton />
-                    <BarRowsSkeleton rows={6} />
+                    <BarRowsSkeleton rows={16} />
                 </Card>
                 <Card className="overflow-hidden">
                     <CardHeadingSkeleton />
-                    <BarRowsSkeleton rows={6} />
+                    <BarRowsSkeleton rows={16} />
                 </Card>
             </div>
             <Card className="overflow-hidden">
                 <CardHeadingSkeleton />
-                <TableRowsSkeleton rows={4} />
+                <TableRowsSkeleton rows={11} />
             </Card>
         </div>
     );

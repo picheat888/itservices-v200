@@ -110,11 +110,14 @@ export function ChartHeading({ title, sub, className }: { title: React.ReactNode
 /** A card's title with how many it counts beside it ("ตัดจำหน่าย 3 รายการ"). */
 export function TitleWithCount({ title, count }: { title: string; count: number }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
 
     return (
         <span className="flex items-baseline gap-2">
             {title}
-            <span className="text-muted-foreground text-xs font-normal">{t('rep_chart_items').replace('{n}', count.toLocaleString())}</span>
+            <span className="text-muted-foreground text-xs font-normal">
+                {t('rep_chart_items').replace('{n}', count.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US'))}
+            </span>
         </span>
     );
 }

@@ -38,9 +38,11 @@ function ItemCell({ row }: { row: Row }) {
     const category = row.category as { name?: string | null; name_th?: string | null } | null;
 
     return (
-        <span className="block max-w-72 min-w-48 whitespace-normal">
+        <span className="block max-w-72 min-w-48 break-words whitespace-normal">
             <span className="block leading-snug font-medium">{text(row.item_name) || '—'}</span>
-            <small className="text-muted-foreground mt-0.5 block text-xs">{text(row.sku)}</small>
+            <small className="text-muted-foreground mt-0.5 block text-xs" translate="no">
+                {text(row.sku)}
+            </small>
             <small className="text-muted-foreground block text-xs">
                 {localPair(category?.name, category?.name_th, lang) ?? t('rep_wo_no_category')}
             </small>

@@ -211,7 +211,10 @@ export function StockFlowCard({ months, to, className }: { months: StockFlowMont
                                                                 m[k] > 0 ? (
                                                                     <span
                                                                         key={k}
-                                                                        className={cn('block min-h-px w-full basis-0', FILL[MV_TONE[k]])}
+                                                                        className={cn(
+                                                                            'block min-h-px w-full basis-0 ring-1 ring-black/15 ring-inset dark:ring-white/10',
+                                                                            FILL[MV_TONE[k]],
+                                                                        )}
                                                                         style={{ flexGrow: m[k] }}
                                                                     />
                                                                 ) : null,

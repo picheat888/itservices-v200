@@ -120,14 +120,14 @@ interface ShareRow {
 }
 
 /** A share of the card's total: brand bar and the percent beside it. */
-function ShareBar({ value, total, name }: { value: number; total: number; name: string }) {
+function ShareBar({ value, total }: { value: number; total: number }) {
     const lang = useUiStore((s) => s.lang);
     const percent = total > 0 ? (value / total) * 100 : 0;
     const label = `${percent.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
     return (
         <span className="flex min-w-32 items-center gap-2">
-            <span role="img" aria-label={`${name} ${label}`} className="dark:bg-muted block h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+            <span aria-hidden className="dark:bg-muted block h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200">
                 <span className="bg-brand block h-full rounded-full" style={{ width: `${Math.min(100, Math.max(1, percent))}%` }} />
             </span>
             <small className="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">{label}</small>
@@ -199,7 +199,7 @@ function ShareCard({
                                         <td className={cn(TD, NUM)}>{stockCount(r.qty, lang)}</td>
                                         <td className={cn(TD, NUM, 'font-semibold')}>{stockMoney(r.value, lang)}</td>
                                         <td className={TD}>
-                                            <ShareBar value={r.value} total={value} name={r.name} />
+                                            <ShareBar value={r.value} total={value} />
                                         </td>
                                     </tr>
                                 ))}
@@ -313,7 +313,7 @@ function DeadCard({ dead }: { dead: Dead }) {
     const [days, setDays] = useState<DeadDays>(90);
     const [open, setOpen] = useState(false);
     const rows = dead.filter((d) => d.days > days);
-    const { folds, shown } = fold(rows, DEAD_SHOWN, open, 0);
+    const { folds, shown } = fold(rows, DEAD_SHOWN, open);
     const pick = (next: DeadDays) => {
         setDays(next);
         setOpen(false);
@@ -356,11 +356,14 @@ function DeadCard({ dead }: { dead: Dead }) {
                                             <span className="block truncate" title={d.name}>
                                                 {d.name}
                                             </span>
-                                            <small className="text-muted-foreground block truncate text-xs">{d.sku}</small>
+                                            <small className="text-muted-foreground block truncate text-xs" translate="no">
+                                                {d.sku}
+                                            </small>
                                         </th>
                                         <td className={TD}>{localPair(d.category, d.category_th, lang) ?? t('rep_wo_no_category')}</td>
                                         <td className={cn(TD, NUM)}>
-                                            {stockCount(d.qty, lang)} {d.unit ?? ''}
+                                            {stockCount(d.qty, lang)}
+                                            {d.unit ? `\u00a0${d.unit}` : ''}
                                         </td>
                                         <td className={cn(TD, NUM, 'font-semibold')}>{stockMoney(d.value, lang)}</td>
                                         <td className={TD}>
