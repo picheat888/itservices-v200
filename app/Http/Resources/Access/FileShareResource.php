@@ -10,6 +10,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /** @mixin FileShare */
 class FileShareResource extends JsonResource
 {
+    /** Members previewed per row on the list (the avatar stack shows this many). */
+    public const PREVIEW_MEMBERS = 5;
+
     public function toArray(Request $request): array
     {
         return [
@@ -32,7 +35,7 @@ class FileShareResource extends JsonResource
                 'photo_url' => $m->employee?->photo_url,
                 'access_level' => $m->access_level,
             ])->values()),
-            'members_count' => $this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count(),
+            'members_count' => $this->resource->getAttributes()['members_count'] ?? ($this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count()),
             // When and by whom it was added / last changed (names when the index loaded creator/updater).
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),

@@ -10,12 +10,12 @@ export type AvatarStackMember = { id?: number; name: string | null; photo_url?: 
  * initials fallback otherwise. Shows up to `max` avatars (each ringed against
  * the card so the overlap reads cleanly) plus a "+N" bubble when there are more.
  */
-export function AvatarStack({ members, max = 5 }: { members: AvatarStackMember[]; max?: number }) {
+export function AvatarStack({ members, max = 5, total }: { members: AvatarStackMember[]; max?: number; total?: number }) {
     if (!members || members.length === 0) {
         return <span className="text-muted-foreground text-sm">—</span>;
     }
     const shown = members.slice(0, max);
-    const more = members.length - shown.length;
+    const more = (total ?? members.length) - shown.length;
 
     return (
         <div className="flex items-center">
