@@ -22,7 +22,7 @@ export function AccountSwitchedDialog({ user }: { user: User }) {
                 <DialogTitle className="mb-1 text-center text-base leading-normal font-semibold tracking-normal">
                     {t('session_switched_title')}
                 </DialogTitle>
-                <DialogDescription className="text-muted-foreground mb-5 text-center text-sm text-pretty">
+                <DialogDescription className="text-muted-foreground mb-5 text-center text-sm whitespace-pre-line">
                     {t('session_switched').replace('{name}', name)}
                 </DialogDescription>
 

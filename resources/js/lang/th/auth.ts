@@ -32,7 +32,7 @@ export const auth: Dict = {
     session_time_left: 'เหลือเวลาอีก {time}',
     session_one_minute: '1 นาที',
     session_switched_title: 'เปลี่ยนบัญชีแล้ว',
-    session_switched: 'เปลี่ยนเป็นบัญชี {name} แล้ว เพราะมีการเข้าสู่ระบบในแท็บอื่น',
+    session_switched: 'เปลี่ยนเป็นบัญชี {name} แล้ว\nเพราะมีการเข้าสู่ระบบในแท็บอื่น',
     session_reload: 'โหลดหน้าใหม่',
     session_one_second: '1 วินาที',
 
