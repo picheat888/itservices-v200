@@ -103,7 +103,9 @@ export interface OrgChartNode {
     name_th: string | null;
     title: string | null;
     section: string | null;
+    section_th: string | null;
     department: string | null;
+    department_th: string | null;
     department_code: string | null;
     photo_url: string | null;
     manager_id: number | null;
