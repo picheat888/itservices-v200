@@ -66,23 +66,37 @@ class EmployeeService
     }
 
     /**
-     * Slim rows for pickers and lookups, in directory order, optionally narrowed by a
-     * multi-word search over names, code and department.
+     * Slim rows for pickers and lookups, in directory order. `ids` returns exactly those
+     * people; otherwise a multi-word search over names, code and department (or position
+     * title with match=position), optional status / exclude, and one page of `limit` rows.
      *
+     * @param  array{search?: ?string, limit?: int, ids?: array<int, int>, exclude?: array<int, int>, status?: ?string, match?: ?string}  $params
      * @return Collection<int, Employee>
      */
-    public function pickerList(?string $search = null): Collection
+    public function pickerList(array $params = []): Collection
     {
         $query = Employee::query()
             ->select(['id', 'code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'photo_path', 'department_id', 'position_id', 'status'])
             ->with(['department:id,name,name_th', 'position:id,title']);
 
-        SearchTerms::apply($query, $search, [
+        if (isset($params['ids'])) {
+            return $this->inDirectoryOrder($query->whereIn('id', $params['ids']))->get();
+        }
+
+        $byPosition = ($params['match'] ?? null) === 'position';
+        SearchTerms::apply($query, $params['search'] ?? null, [
             ...SearchTerms::personName(), 'code',
-            SearchTerms::related('department', ['name', 'name_th']),
+            $byPosition ? SearchTerms::related('position', ['title']) : SearchTerms::related('department', ['name', 'name_th']),
         ]);
 
-        return $this->inDirectoryOrder($query)->get();
+        if (! empty($params['exclude'])) {
+            $query->whereNotIn('id', $params['exclude']);
+        }
+        if (! empty($params['status'])) {
+            $query->where('status', $params['status']);
+        }
+
+        return $this->inDirectoryOrder($query)->limit(min(100, max(1, $params['limit'] ?? 20)))->get();
     }
 
     /**
