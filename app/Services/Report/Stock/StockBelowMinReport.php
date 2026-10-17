@@ -88,12 +88,12 @@ class StockBelowMinReport extends TabularReport
         return [
             ...$this->itemColumns(fn (StockItem $i) => $i),
             ReportColumn::enum('status', 'สถานะ', fn (StockItem $i) => $i->status(), self::STATUS_KEYS, self::STATUS_TH),
-            ReportColumn::number('qty_on_hand', 'คงเหลือ', fn (StockItem $i) => $i->current_stock),
+            ReportColumn::number('qty_on_hand', 'คงเหลือ', fn (StockItem $i) => $i->current_stock)->labelKey('rep_slv_c_level'),
             ReportColumn::number('min_stock', 'Min', fn (StockItem $i) => $i->min_stock),
             ReportColumn::number('max_stock', 'Max', fn (StockItem $i) => $i->max_stock),
             ReportColumn::number('gap', 'ขาด / เกิน', fn (StockItem $i) => self::figures($i)['gap']),
             ReportColumn::number('reorder_qty', 'ควรสั่ง', fn (StockItem $i) => self::figures($i)['reorder_qty']),
-            ReportColumn::money('unit_cost', 'ราคาต่อหน่วย', fn (StockItem $i) => self::rounded(self::figures($i)['unit_cost'])),
+            ReportColumn::money('unit_cost', 'ราคาต่อหน่วย', fn (StockItem $i) => self::rounded(self::figures($i)['unit_cost']))->labelKey('rep_slv_c_price'),
             ReportColumn::enum('unit_cost_basis', 'ที่มาของราคา', fn (StockItem $i) => self::figures($i)['basis'], self::BASIS_KEYS, self::BASIS_TH)
                 ->hiddenByDefault(),
             ReportColumn::money('value', 'มูลค่า', fn (StockItem $i) => self::rounded(self::figures($i)['value'])),
