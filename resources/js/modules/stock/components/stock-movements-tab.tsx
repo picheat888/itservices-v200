@@ -9,6 +9,7 @@ import { type StockMovementType } from '@/shared/types';
 import { History } from 'lucide-react';
 import { useStockItemHistory } from '../hooks/use-stock';
 import { MV_META } from '../pages/shared';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** One movement row as returned by the item-history endpoint. */
 type Move = {
@@ -26,6 +27,7 @@ type Move = {
 /** Movements tab: a fill-height table of the item's stock movements (date, doc, type, qty, route, by). */
 export function StockMovementsTab({ itemId }: { itemId: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const pairOf = useLocalPair();
     const { data: history, isLoading } = useStockItemHistory(itemId);
@@ -62,7 +64,7 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
                         )}
                     >
                         {sign > 0 ? '+' : sign < 0 ? '−' : ''}
-                        {m.qty}
+                        {fmtN(m.qty)}
                     </span>
                 );
             },

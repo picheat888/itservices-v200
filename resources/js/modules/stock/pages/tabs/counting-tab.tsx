@@ -23,6 +23,7 @@ import { AlertTriangle, Ban, Check, ClipboardList, FileText, Loader2, Lock, Sear
 import { useEffect, useId, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Small section heading inside the count dialogs.
 const EYEBROW = 'text-muted-foreground text-xs font-semibold';
@@ -31,6 +32,7 @@ const EYEBROW = 'text-muted-foreground text-xs font-semibold';
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const whFieldId = useId();
@@ -157,7 +159,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const inWarehouse = (i: StockItem, w: string) => (i.balances ?? []).some((b) => b.warehouse === w && b.qty > 0);
     const itemsInWh = wh === 'all' ? allItems : allItems.filter((i) => inWarehouse(i, wh));
     const warehouseOptions = [
-        { value: 'all', label: `${t('stock_count_all_wh')} (${allItems.length})`, search: t('stock_count_all_wh') },
+        { value: 'all', label: `${t('stock_count_all_wh')} (${fmtN(allItems.length)})`, search: t('stock_count_all_wh') },
         ...warehouses.map((w) => ({
             value: w.name,
             label: `${w.name} (${allItems.filter((i) => inWarehouse(i, w.name)).length})`,
@@ -173,7 +175,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const catTh = new Map(itemsInWh.map((i) => [i.category ?? '—', i.category_th] as const));
     const catLabel = (c: string) => localPair(c, catTh.get(c), lang) ?? c;
     const categoryOptions = [
-        { value: 'all', label: `${t('stock_count_all_cat')} (${itemsInWh.length})`, search: t('stock_count_all_cat') },
+        { value: 'all', label: `${t('stock_count_all_cat')} (${fmtN(itemsInWh.length)})`, search: t('stock_count_all_cat') },
         ...Object.entries(catCounts).map(([c, n]) => ({ value: c, label: `${catLabel(c)} (${n})`, search: `${c} ${catTh.get(c) ?? ''}` })),
     ];
     const skuList = (cat === 'all' ? itemsInWh : itemsInWh.filter((i) => (i.category ?? '—') === cat)).filter((i) =>
@@ -282,7 +284,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             className: 'whitespace-nowrap',
             render: (s) => (
                 <span className="text-xs tabular-nums">
-                    {s.counted_lines ?? 0}/{s.line_count ?? 0}
+                    {fmtN(s.counted_lines ?? 0)}/{fmtN(s.line_count ?? 0)}
                 </span>
             ),
         },
@@ -407,7 +409,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     {t('stock_select_all')}
                                 </label>
                                 <span className="text-muted-foreground text-xs tabular-nums">
-                                    {selectedSkus.length} {t('stock_count_selected')}
+                                    {fmtN(selectedSkus.length)} {t('stock_count_selected')}
                                 </span>
                                 <div className="relative ml-auto w-44">
                                     <Search
@@ -448,7 +450,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                 <span className="text-muted-foreground shrink-0 text-xs">
                                                     {localPair(i.category, i.category_th, lang) ?? '—'}
                                                 </span>
-                                                <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums">{i.current_stock}</span>
+                                                <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums">{fmtN(i.current_stock)}</span>
                                             </label>
                                         );
                                     })
@@ -462,7 +464,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                         </Button>
                         <Button onClick={start} disabled={open.isPending || selectedSkus.length === 0}>
                             {t('stock_count_start')}
-                            {selectedSkus.length > 0 && ` (${selectedSkus.length})`}
+                            {selectedSkus.length > 0 && ` (${fmtN(selectedSkus.length)})`}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -501,8 +503,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <div className="bg-card px-3 py-2 text-center">
                                     <div className={EYEBROW}>{t('stock_count_sum_progress')}</div>
                                     <div className="mt-0.5 text-sm font-semibold tabular-nums">
-                                        {countSummary.counted}
-                                        <span className="text-muted-foreground">/{countSummary.total}</span>
+                                        {fmtN(countSummary.counted)}
+                                        <span className="text-muted-foreground">/{fmtN(countSummary.total)}</span>
                                     </div>
                                 </div>
                                 <div className="bg-card px-3 py-2 text-center">
@@ -513,7 +515,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                             countSummary.discrepancies > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
                                         )}
                                     >
-                                        {countSummary.discrepancies}
+                                        {fmtN(countSummary.discrepancies)}
                                     </div>
                                 </div>
                                 <div className="bg-card px-3 py-2 text-center">
@@ -528,7 +530,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                   : 'text-muted-foreground',
                                         )}
                                     >
-                                        {countSummary.net > 0 ? `+${countSummary.net}` : countSummary.net}
+                                        {countSummary.net > 0 ? `+${fmtN(countSummary.net)}` : fmtN(countSummary.net)}
                                     </div>
                                 </div>
                             </div>
@@ -594,7 +596,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                         </div>
                                                     </td>
                                                     <td className="text-muted-foreground px-3 py-2 text-right whitespace-nowrap tabular-nums">
-                                                        {l.system_qty}
+                                                        {fmtN(l.system_qty)}
                                                     </td>
                                                     <td className="px-3 py-2 text-right">
                                                         {isDraft ? (
@@ -613,7 +615,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                                 )}
                                                             />
                                                         ) : (
-                                                            <span className="tabular-nums">{l.counted_qty ?? '—'}</span>
+                                                            <span className="tabular-nums">{l.counted_qty === null ? '—' : fmtN(l.counted_qty)}</span>
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-2 text-right">
@@ -630,7 +632,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                                           : 'text-muted-foreground bg-muted',
                                                                 )}
                                                             >
-                                                                {variance > 0 ? `+${variance}` : variance}
+                                                                {variance > 0 ? `+${fmtN(variance)}` : fmtN(variance)}
                                                             </span>
                                                         )}
                                                     </td>
@@ -645,7 +647,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     {isDraft && (
                                         <p className="text-muted-foreground flex items-start gap-2 text-xs leading-snug">
                                             <Lock className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-                                            <span>{t('stock_count_freeze_note').replace('{n}', String(session?.lines?.length ?? 0))}</span>
+                                            <span>{t('stock_count_freeze_note').replace('{n}', fmtN(session?.lines?.length ?? 0))}</span>
                                         </p>
                                     )}
                                     {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
@@ -813,7 +815,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                 ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400',
                                             )}
                                         >
-                                            {t('stock_count_serial_tick_n').replace('{n}', String(it.need))} ({ticked.length}/{it.need})
+                                            {t('stock_count_serial_tick_n').replace('{n}', fmtN(it.need))} ({fmtN(ticked.length)}/{fmtN(it.need)})
                                         </span>
                                     </div>
                                     <div className="space-y-1">

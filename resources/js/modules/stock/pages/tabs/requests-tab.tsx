@@ -22,6 +22,7 @@ import { useEffect, useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { stockRefusalText } from '../../lib/refusal';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
     pending: 'amber',
@@ -47,6 +48,7 @@ const allocKey = (a: Record<string, number>) =>
 export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const pairOf = useLocalPair();
     const confirm = useConfirm();
     // Page and rows-per-page live in the URL (?page, ?per).
@@ -101,7 +103,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
 
     // Request identity shown inside the confirm dialogs.
     const reqEntity = (r: (typeof requests)[number]) => ({
-        name: `${r.sku ?? ''} ${r.item_name ?? ''} ×${r.qty}`,
+        name: `${r.sku ?? ''} ${r.item_name ?? ''} ×${fmtN(r.qty)}`,
         sub: `${t('stock_requester')}: ${pairOf(r.requester_name, r.requester_name_th)}`,
     });
 
@@ -160,7 +162,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', width: '72px', render: (r) => <span className="font-bold tabular-nums">{r.qty}</span> },
+        { key: 'qty', header: t('stock_qty'), align: 'right', width: '72px', render: (r) => <span className="font-bold tabular-nums">{fmtN(r.qty)}</span> },
         {
             key: 'unit',
             header: t('stock_unit'),
@@ -364,7 +366,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                 fulfillReady ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
                                             )}
                                         >
-                                            {allocTotal}/{fulfillReq.qty}
+                                            {fmtN(allocTotal)}/{fmtN(fulfillReq.qty)}
                                         </span>
                                     </div>
                                     {fulfillBalances.length === 0 ? (
@@ -377,7 +379,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                             >
                                                 <span className="flex-1 text-sm">{b.warehouse}</span>
                                                 <span className="text-muted-foreground text-xs tabular-nums">
-                                                    {b.qty} {fulfillItem?.unit}
+                                                    {fmtN(b.qty)} {fulfillItem?.unit}
                                                 </span>
                                                 <Input
                                                     type="number"
@@ -396,7 +398,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                 </div>
                             )}
 
-                            {totalAvailable < fulfillReq.qty && <FormErrorBanner message={`${t('stock_insufficient')} (${totalAvailable})`} />}
+                            {totalAvailable < fulfillReq.qty && <FormErrorBanner message={`${t('stock_insufficient')} (${fmtN(totalAvailable)})`} />}
 
                             {/* Serialized: pick exactly the units (serials) that go out — across any warehouse. */}
                             {fulfillSerialized && (
@@ -409,7 +411,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                 onClick={pickFifo}
                                                 className="text-brand hover:text-brand/80 inline-flex min-h-6 items-center px-1 text-xs font-medium transition-colors"
                                             >
-                                                {t('stock_pick_fifo')} ({fulfillReq.qty})
+                                                {t('stock_pick_fifo')} ({fmtN(fulfillReq.qty)})
                                             </button>
                                             <span
                                                 aria-live="polite"
@@ -418,7 +420,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                     fulfillReady ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
                                                 )}
                                             >
-                                                {issueSerialIds.length}/{fulfillReq.qty}
+                                                {fmtN(issueSerialIds.length)}/{fmtN(fulfillReq.qty)}
                                             </span>
                                         </div>
                                     </div>
@@ -439,7 +441,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                     )}
                                                 >
                                                     {wh === 'all' ? t('stock_all_warehouses') : (wh as string)}{' '}
-                                                    <span className="opacity-70">{n}</span>
+                                                    <span className="opacity-70">{fmtN(n)}</span>
                                                 </button>
                                             ))}
                                         </div>

@@ -20,6 +20,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 import { countLockFor } from '../lib/count-lock';
 import { stockRefusalText } from '../lib/refusal';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type SerialStatus = 'ok' | 'empty' | 'dup-system' | 'dup-batch';
 
@@ -48,6 +49,7 @@ export type MovementKind = Extract<StockMovementType, 'receive' | 'return' | 'tr
 
 export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const open = kind !== null;
     // Last non-null kind keeps the body mounted through the close animation
@@ -271,13 +273,13 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     // Action label always carries the movement name; serial modes append the count
     const actionLabel = (() => {
         if (isSerial) {
-            return `${t('stock_mv_receive')} (${okCount})`;
+            return `${t('stock_mv_receive')} (${fmtN(okCount)})`;
         }
         if (isTransfer) {
-            return transferIsSerial && transferSerialIds.size > 0 ? `${t('stock_mv_transfer')} (${transferSerialIds.size})` : t('stock_mv_transfer');
+            return transferIsSerial && transferSerialIds.size > 0 ? `${t('stock_mv_transfer')} (${fmtN(transferSerialIds.size)})` : t('stock_mv_transfer');
         }
         if (returnIsSerial) {
-            return returnSerialIds.size > 0 ? `${t('stock_mv_return')} (${returnSerialIds.size})` : t('stock_mv_return');
+            return returnSerialIds.size > 0 ? `${t('stock_mv_return')} (${fmtN(returnSerialIds.size)})` : t('stock_mv_return');
         }
         return k ? t(`stock_mv_${k}` as Parameters<typeof t>[0]) : t('save');
     })();
@@ -377,7 +379,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
         value: String(i.id),
         label: i.name,
         sub: i.sku,
-        hint: `${t('stock_stock')} ${i.current_stock} ${i.unit ?? ''}`.trim(),
+        hint: `${t('stock_stock')} ${fmtN(i.current_stock)} ${i.unit ?? ''}`.trim(),
         search: `${i.sku} ${i.name}`,
     }));
 
@@ -398,10 +400,10 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                                 <ArrowDownToLine className="h-6 w-6" aria-hidden />
                             </span>
-                            <div className="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">+{done.qty}</div>
+                            <div className="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">+{fmtN(done.qty)}</div>
                             <div className="text-sm font-medium">{done.item.name}</div>
                             <div className="text-muted-foreground text-xs">
-                                {t('stock_new_onhand')} <b>{done.prevStock + done.qty}</b>
+                                {t('stock_new_onhand')} <b>{fmtN(done.prevStock + done.qty)}</b>
                             </div>
                         </div>
 
@@ -409,7 +411,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             <div>
                                 <div className="mb-2 flex items-center justify-between">
                                     <span className="text-muted-foreground text-xs font-semibold">
-                                        {t('stock_captured_serials')} <span>{done.serials.length}</span>
+                                        {t('stock_captured_serials')} <span>{fmtN(done.serials.length)}</span>
                                     </span>
                                     <a
                                         href={`/pdf/stock-movements/${done.movementId}/labels`}
@@ -521,7 +523,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                                   : 'text-emerald-700 dark:text-emerald-400',
                                         )}
                                     >
-                                        {sourceBalance}
+                                        {fmtN(sourceBalance)}
                                     </span>
                                 </div>
                             )}
@@ -534,7 +536,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                         name="qty"
                                         inputMode="numeric"
                                         min={1}
-                                        max={sourceBalance}
+                                        max={fmtN(sourceBalance)}
                                         value={qty}
                                         disabled={sourceBalance === 0}
                                         onChange={(e) => setQty(Math.max(1, Math.min(sourceBalance, +e.target.value)))}
@@ -621,7 +623,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                             </div>
                                             <div className="mt-1.5 flex items-center gap-x-3 text-xs">
                                                 <span>
-                                                    <b>{transferSerialIds.size}</b>/{availableTransferSerials.length} {t('stock_mv_selected')}
+                                                    <b>{fmtN(transferSerialIds.size)}</b>/{fmtN(availableTransferSerials.length)} {t('stock_mv_selected')}
                                                 </span>
                                                 {transferSerialIds.size > 0 && (
                                                     <span className="text-brand flex items-center gap-1">
@@ -957,17 +959,17 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                 </div>
                                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
                                     <span>
-                                        <b>{okCount}</b>/{serials.length} {t('stock_serials_valid')}
+                                        <b>{fmtN(okCount)}</b>/{fmtN(serials.length)} {t('stock_serials_valid')}
                                     </span>
                                     {dupCount > 0 && (
                                         <span className="text-destructive flex items-center gap-1">
                                             <AlertTriangle className="h-3 w-3" aria-hidden />
-                                            <b>{dupCount}</b> {t('stock_serial_dup')}
+                                            <b>{fmtN(dupCount)}</b> {t('stock_serial_dup')}
                                         </span>
                                     )}
                                     {emptyCount > 0 && (
                                         <span className="text-muted-foreground">
-                                            {emptyCount} {t('stock_serial_empty')}
+                                            {fmtN(emptyCount)} {t('stock_serial_empty')}
                                         </span>
                                     )}
                                     {serialValid && (
