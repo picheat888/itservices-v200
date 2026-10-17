@@ -32,4 +32,7 @@ export const auth: Dict = {
     session_time_left: '{time} remaining',
     session_one_minute: '1 minute',
     session_one_second: '1 second',
+
+    // require-permission.tsx — labels moved from the component
+    auth_redirecting_to_dashboard: 'Redirecting to dashboard',
 };

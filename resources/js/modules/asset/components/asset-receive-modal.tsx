@@ -6,7 +6,6 @@ import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
-import { useUiStore } from '@/stores/ui';
 import { Check, Loader2, RotateCcw, Warehouse } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
@@ -33,7 +32,6 @@ export function AssetReceiveModal({
     mode?: 'receive' | 'recall';
 }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { receive, recall, bulkRecall, bulkReceive } = useAssetMutations();
     const { data: warehouses = [] } = useWarehouses();
     const [warehouse, setWarehouse] = useState('');
@@ -127,7 +125,7 @@ export function AssetReceiveModal({
                                     <span>{shownAsset.asset_code}</span>
                                     {shownAsset.warehouse && (
                                         <span>
-                                            {lang === 'th' ? 'เดิมอยู่' : 'from'}: {shownAsset.warehouse}
+                                            {t('asset_from')}: {shownAsset.warehouse}
                                         </span>
                                     )}
                                 </div>
@@ -141,7 +139,7 @@ export function AssetReceiveModal({
                             onChange={setWarehouse}
                             options={options}
                             preferDown
-                            placeholder={lang === 'th' ? 'เลือกคลังปลายทาง' : 'Select destination warehouse'}
+                            placeholder={t('asset_select_destination_warehouse')}
                         />
                     </Field>
                     <p className="text-muted-foreground text-xs">{t(isRecall ? 'asset_recall_hint' : 'asset_receive_hint')}</p>

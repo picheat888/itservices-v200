@@ -185,7 +185,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
 
     const submit = async () => {
         const e: Record<string, string> = {};
-        const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
+        const required = t('asset_err_required');
         // Everything is required except Notes.
         if (!form.category_id) e.type = required;
         if (!form.brand_id) e.brand = required;
@@ -235,7 +235,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                 onClose();
             }, 600);
         } catch {
-            setErr({ model: lang === 'th' ? 'บันทึกไม่สำเร็จ' : 'Could not save' });
+            setErr({ model: t('asset_could_not_save') });
         }
     };
 
@@ -253,9 +253,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                         <PackagePlus className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                        <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">
-                            {lang === 'th' ? 'ทรัพย์สิน' : 'Asset'}
-                        </div>
+                        <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{t('asset_label')}</div>
                         <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                             <span>{editing ? t('edit_asset') : t('register_asset')}</span>
                             {editing && (
@@ -315,7 +313,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                         value={form.category_id}
                                         onChange={(v) => upd('category_id', v)}
                                         options={typeOptions}
-                                        placeholder={lang === 'th' ? 'เลือกประเภท' : 'Select type'}
+                                        placeholder={t('asset_select_type')}
                                     />
                                 </Field>
                                 <Field label={t('asset_brand')} required error={err.brand} name="brand">
@@ -332,7 +330,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                             });
                                         }}
                                         options={brandOptions}
-                                        placeholder={lang === 'th' ? 'เลือกยี่ห้อ' : 'Select brand'}
+                                        placeholder={t('asset_select_brand')}
                                     />
                                 </Field>
                             </div>
@@ -342,7 +340,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                         value={form.model_id}
                                         onChange={(v) => upd('model_id', v)}
                                         options={modelOptions}
-                                        placeholder={lang === 'th' ? 'เลือกรุ่น' : 'Select model'}
+                                        placeholder={t('asset_select_model')}
                                     />
                                 </Field>
                                 <Field label={t('asset_serial')} required error={err.serial} name="serial">
@@ -356,7 +354,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                             value={form.warehouse_id}
                                             onChange={(v) => upd('warehouse_id', v)}
                                             options={warehouseOptions}
-                                            placeholder={lang === 'th' ? 'เลือกคลัง' : 'Select warehouse'}
+                                            placeholder={t('asset_select_warehouse')}
                                             clearable
                                         />
                                     </Field>
@@ -369,11 +367,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                     </Field>
                                 )}
                                 <Field label={t('asset_nickname')} help={t('asset_nickname_help')}>
-                                    <Input
-                                        value={form.tag}
-                                        onChange={(e) => upd('tag', e.target.value)}
-                                        placeholder={lang === 'th' ? 'เช่น เครื่องพี่สมชาย' : 'e.g. Reception PC'}
-                                    />
+                                    <Input value={form.tag} onChange={(e) => upd('tag', e.target.value)} placeholder={t('asset_nickname_ph')} />
                                 </Field>
                             </div>
 
@@ -385,7 +379,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                             value={form.contract_id}
                                             onChange={(v) => upd('contract_id', v)}
                                             options={contractOptions}
-                                            placeholder={lang === 'th' ? 'เลือกสัญญาเช่า' : 'Select lease contract'}
+                                            placeholder={t('asset_select_lease_contract')}
                                         />
                                     </Field>
                                     <p className="text-muted-foreground text-xs leading-relaxed">{t('asset_rented_from_contract')}</p>
@@ -406,7 +400,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                 value={form.vendor_id}
                                                 onChange={(v) => upd('vendor_id', v)}
                                                 options={vendorOptions}
-                                                placeholder={lang === 'th' ? 'เลือกผู้ขาย' : 'Select supplier'}
+                                                placeholder={t('asset_select_supplier')}
                                             />
                                         </Field>
                                     </div>
@@ -474,24 +468,14 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                 {/* Footer */}
                 <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
                     <span className="text-muted-foreground mr-auto text-xs">
-                        <span className="text-destructive">*</span> {lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required'}
+                        <span className="text-destructive">*</span> {t('asset_err_required')}
                     </span>
                     <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={saving || saveState === 'done' || (!!editing && !isDirty)}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        {saving
-                            ? lang === 'th'
-                                ? 'กำลังบันทึก…'
-                                : 'Saving…'
-                            : saveState === 'done'
-                              ? lang === 'th'
-                                  ? 'บันทึกแล้ว'
-                                  : 'Saved!'
-                              : editing
-                                ? t('save')
-                                : t('register')}
+                        {saving ? t('saving') : saveState === 'done' ? t('asset_saved') : editing ? t('save') : t('register')}
                     </Button>
                 </div>
             </DialogContent>

@@ -182,9 +182,9 @@ export function AssetDetailDrawer({
     const isRecipient = a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode;
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: lang === 'th' ? 'ภาพรวม' : 'Overview' },
+        { id: 'overview', label: t('asset_overview') },
         { id: 'tickets', label: t('asset_tab_tickets'), count: enriched ? tickets.length : undefined },
-        { id: 'history', label: lang === 'th' ? 'ประวัติ' : 'History', count: enriched ? transfers.length : undefined },
+        { id: 'history', label: t('asset_history'), count: enriched ? transfers.length : undefined },
     ];
 
     return (
@@ -197,9 +197,7 @@ export function AssetDetailDrawer({
                             <AssetTypeIcon type={a.type} className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                            <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">
-                                {lang === 'th' ? 'ทรัพย์สิน' : 'Asset'}
-                            </div>
+                            <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{t('asset_label')}</div>
                             <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                                 <span className="truncate">{a.model}</span>
                                 <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">{a.asset_code}</span>

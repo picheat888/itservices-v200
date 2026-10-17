@@ -184,4 +184,18 @@ export const common: Dict = {
     time_hour: 'Hour',
     time_minute: 'Minute',
     time_clear: 'Clear time',
+
+    // data-table.tsx — labels moved from the component
+    cmn_no_data: 'No data',
+    cmn_rows_per_page: 'Rows per page',
+    cmn_of: 'of',
+
+    // datetime.ts — labels moved from the component
+
+    // sidebar.tsx — labels moved from the component
+    cmn_sign_out: 'Sign out',
+
+    // placeholder.tsx — labels moved from the component
+    cmn_placeholder_later: 'This module ships in a later phase',
+    cmn_placeholder_ready: 'The foundation (shell, theme, i18n, role-aware access) is ready.',
 };

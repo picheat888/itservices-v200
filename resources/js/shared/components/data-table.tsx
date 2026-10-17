@@ -5,7 +5,6 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useUiStore } from '@/stores/ui';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -138,7 +137,6 @@ export function DataTable<T>({
     search,
 }: DataTableProps<T>) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     // The box keeps its own text (a URL-backed value lands a tick late and would jump the caret).
     const [query, setOwnQuery] = useState(search?.value ?? '');
     useEffect(() => {
@@ -366,7 +364,7 @@ export function DataTable<T>({
                         {!loading && pageRows.length === 0 && (
                             <tr>
                                 <td colSpan={columns.length} className="text-muted-foreground px-4 py-10 text-center">
-                                    {emptyState ?? (lang === 'th' ? 'ไม่พบข้อมูล' : 'No data')}
+                                    {emptyState ?? t('cmn_no_data')}
                                 </td>
                             </tr>
                         )}
@@ -431,7 +429,7 @@ export function DataTable<T>({
                     <div className="flex items-center gap-3">
                         {!(fillHeight || fixedPageSize) && (
                             <div className="flex items-center gap-2">
-                                <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                                <span>{t('cmn_rows_per_page')}</span>
                                 <Select
                                     value={String(pageSize)}
                                     onValueChange={(v) => {
@@ -457,7 +455,7 @@ export function DataTable<T>({
                     {/* Right: range summary sits next to the page navigation. */}
                     <div className="flex items-center gap-3">
                         <span>
-                            {total === 0 ? 0 : start + 1}–{Math.min(start + pageSize, total)} {lang === 'th' ? 'จาก' : 'of'} {total}
+                            {total === 0 ? 0 : start + 1}–{Math.min(start + pageSize, total)} {t('cmn_of')} {total}
                         </span>
                         <div className="flex items-center gap-1">
                             <button

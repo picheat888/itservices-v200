@@ -184,4 +184,18 @@ export const common: Dict = {
     time_hour: 'ชั่วโมง',
     time_minute: 'นาที',
     time_clear: 'ล้างเวลา',
+
+    // data-table.tsx — labels moved from the component
+    cmn_no_data: 'ไม่พบข้อมูล',
+    cmn_rows_per_page: 'แสดง',
+    cmn_of: 'จาก',
+
+    // datetime.ts — labels moved from the component
+
+    // sidebar.tsx — labels moved from the component
+    cmn_sign_out: 'ออกจากระบบ',
+
+    // placeholder.tsx — labels moved from the component
+    cmn_placeholder_later: 'โมดูลนี้จะพัฒนาในเฟสถัดไป',
+    cmn_placeholder_ready: 'รากฐานของระบบ (โครง ธีม ภาษา สิทธิ์ตาม role) พร้อมแล้ว',
 };

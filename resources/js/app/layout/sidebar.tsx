@@ -152,7 +152,7 @@ export function Sidebar({ onProfile }: { onProfile: (section?: ProfileSection) =
                         disabled={logout.isPending}
                         title={t('profile_signout')}
                         className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex h-10 w-10 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-60"
-                        aria-label={lang === 'th' ? 'ออกจากระบบ' : 'Sign out'}
+                        aria-label={t('cmn_sign_out')}
                     >
                         {logout.isPending ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <LogOut className="h-[18px] w-[18px]" />}
                     </button>
@@ -178,7 +178,7 @@ export function Sidebar({ onProfile }: { onProfile: (section?: ProfileSection) =
                         disabled={logout.isPending}
                         title={t('profile_signout')}
                         className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-60"
-                        aria-label={lang === 'th' ? 'ออกจากระบบ' : 'Sign out'}
+                        aria-label={t('cmn_sign_out')}
                     >
                         {logout.isPending ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <LogOut className="h-[18px] w-[18px]" />}
                     </button>
