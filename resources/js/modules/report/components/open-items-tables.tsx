@@ -47,13 +47,13 @@ function PersonCell({ person, note }: { person: OpenItemsPerson; note?: string }
                 <Link
                     to={href}
                     translate="no"
-                    title={person.name}
+                    title={localName(person, lang) ?? undefined}
                     className="text-brand-ink focus-visible:ring-brand line-clamp-2 block max-w-[15rem] rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
                 >
                     {name}
                 </Link>
             ) : (
-                <div translate="no" title={person.name} className="max-w-[15rem] truncate font-medium">
+                <div translate="no" title={localName(person, lang) ?? undefined} className="max-w-[15rem] truncate font-medium">
                     {name}
                 </div>
             )}

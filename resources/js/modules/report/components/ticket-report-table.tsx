@@ -8,6 +8,7 @@ import { type Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { localPair } from '@/shared/lib/local-name';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -57,9 +58,9 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             header: t('rep_col_requester'),
             width: '190px',
             render: (r) => {
-                const name = (lang === 'th' && r.requester_name_th) || r.requester_name;
+                const name = localPair(r.requester_name, r.requester_name_th, lang);
                 if (!name) return <span className="text-muted-foreground">—</span>;
-                const sub = [r.requester_code, (lang === 'th' && r.department_name_th) || r.department_name].filter((s): s is string => Boolean(s));
+                const sub = [r.requester_code, localPair(r.department_name, r.department_name_th, lang)].filter((s): s is string => Boolean(s));
                 return (
                     <div className="min-w-0">
                         <div className="truncate font-medium" title={name}>
@@ -103,7 +104,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             header: t('rep_col_assignee'),
             width: '170px',
             className: 'truncate whitespace-nowrap',
-            render: (r) => r.assignee_name ?? '—',
+            render: (r) => localPair(r.assignee_name, r.assignee_name_th, lang) ?? '—',
         },
         {
             key: 'hours',

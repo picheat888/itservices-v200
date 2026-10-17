@@ -781,7 +781,7 @@ function TicketTable({
                             </td>
                             {!compact && (
                                 <td className="text-muted-foreground px-4 py-2.5 text-xs whitespace-nowrap">
-                                    {tk.requester_code ?? tk.requester_name}
+                                    {tk.requester_code ?? pairOf(tk.requester_name, tk.requester_name_th)}
                                 </td>
                             )}
                             <td className="max-w-[170px] truncate px-4 py-2.5">

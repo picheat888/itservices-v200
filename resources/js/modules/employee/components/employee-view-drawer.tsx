@@ -5,7 +5,7 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
-import { localName, localPair } from '@/shared/lib/local-name';
+import { localName, localPair, otherName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
@@ -135,7 +135,7 @@ export function EmployeeViewDrawer({
     // The id check stops a previous employee's record from drawing under this name
     const emp = liveEmp && liveEmp.id === shown.id ? liveEmp : shown;
     const name = localName(emp, lang);
-    const altName = lang === 'th' ? emp.name : emp.name_th;
+    const altName = otherName(emp, lang);
     const resigned = emp.status === 'resigned';
     // Un-deletable until the single-employee fetch brings the blockers
     const blockers = emp.delete_blockers;
@@ -668,7 +668,7 @@ function OrgPane({
                                 <div className="text-muted-foreground truncate text-[12px]">{focusNode.title || '—'}</div>
                                 {focusNode.department && (
                                     <div className="text-muted-foreground truncate text-[11px]">
-                                        {localName({ name: focusNode.department, name_th: focusNode.department_th }, lang)}
+                                        {localPair(focusNode.department, focusNode.department_th, lang)}
                                     </div>
                                 )}
                             </div>
