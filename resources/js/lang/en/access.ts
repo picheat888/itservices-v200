@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const access: Dict = {
-    access_title: 'Access Directory',
+    access_title: 'Access',
     access_email_groups: 'Email Groups',
     access_file_shares: 'File Shares',
     access_social: 'Social / Internet',

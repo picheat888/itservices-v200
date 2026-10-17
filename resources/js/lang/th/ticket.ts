@@ -107,7 +107,7 @@ export const ticket: Dict = {
     ticket_tab_details: 'ปัญหา',
     ticket_open_by: 'ผู้แจ้ง',
     ticket_request_at: 'วันที่แจ้ง',
-    ticket_col_no: 'Ticket no.',
+    ticket_col_no: 'เลข Ticket',
     ticket_full_name: 'ชื่อ-นามสกุล',
     ticket_responsible_by: 'ผู้รับผิดชอบ',
     ticket_case_status: 'สถานะเคส',

@@ -7,7 +7,7 @@ import type { Dict } from '@/lang/types';
  * คงเป็นภาษาอังกฤษทุก locale ตามที่ตกลงไว้ — ไม่ต้องแปล
  */
 export const access: Dict = {
-    access_title: 'การเข้าถึง',
+    access_title: 'สิทธิ์การเข้าถึง',
     access_email_groups: 'Email Groups',
     access_file_shares: 'File Shares',
     access_social: 'Social / Internet',
