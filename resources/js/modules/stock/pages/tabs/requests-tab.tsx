@@ -198,10 +198,10 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         },
         {
             key: 'actions',
-
             header: t('actions'),
             align: 'right',
-            width: '190px',
+            // Room for the buttons only when this page has a request the reader can approve or fulfill
+            width: requests.some((r) => r.can_decide || (can('fulfill') && r.status === 'approved')) ? '190px' : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">
                     {r.can_decide && (

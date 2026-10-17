@@ -310,7 +310,6 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         },
         {
             key: 'actions',
-
             header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
             width: '60px',

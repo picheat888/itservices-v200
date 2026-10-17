@@ -446,7 +446,6 @@ export default function StockPage() {
         },
         {
             key: 'actions',
-
             header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
             width: '80px',
