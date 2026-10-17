@@ -11,6 +11,7 @@ import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { toastDeleteError } from '@/shared/lib/api-errors';
+import { localLabel } from '@/shared/lib/local-name';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { RequestOption, RequestOptionList } from '@/shared/types';
@@ -74,7 +75,7 @@ export function RequestDataSection() {
         useToastStore.getState().push(errorMessage(e, t('md_save_failed')), 'error', t('cd_error_title'));
     };
 
-    const rowLabel = (o: RequestOption) => (lang === 'th' ? o.label_th : o.label_en) || o.label_en;
+    const rowLabel = (o: RequestOption) => localLabel(o, lang);
 
     // Local order while dragging; server order otherwise
     const [order, setOrder] = useState<number[]>([]);
@@ -376,7 +377,7 @@ function OptionModal({
                     {list && (
                         <DialogDescription className="flex flex-wrap gap-x-3">
                             <span>{t(REQUEST_TYPE_META[list.request_type].labelKey)}</span>
-                            <span>{lang === 'th' ? list.label_th : list.label_en}</span>
+                            <span>{localLabel(list, lang)}</span>
                         </DialogDescription>
                     )}
                 </DialogHeader>

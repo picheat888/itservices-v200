@@ -11,7 +11,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -155,10 +155,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     // The header tracks what is being typed; in Thai the Thai pair wins once it is filled in
     const nameEn = `${firstName} ${lastName}`.trim() || user.name;
     const nameTh = `${firstNameTh} ${lastNameTh}`.trim();
-    const displayName = lang === 'th' ? nameTh || nameEn : nameEn;
-    const department = lang === 'th' ? (emp?.department_th ?? emp?.department) : emp?.department;
-    const section = lang === 'th' ? (emp?.section_th ?? emp?.section) : emp?.section;
-    const manager = lang === 'th' ? (emp?.manager_name_th ?? emp?.manager_name) : emp?.manager_name;
+    const displayName = localPair(nameEn, nameTh, lang) ?? nameEn;
+    const department = localPair(emp?.department, emp?.department_th, lang);
+    const section = localPair(emp?.section, emp?.section_th, lang);
+    const manager = localPair(emp?.manager_name, emp?.manager_name_th, lang);
 
     const accessCount = myAccess
         ? myAccess.email_groups.length + myAccess.file_shares.length + myAccess.social.length + myAccess.software.length

@@ -12,6 +12,7 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { toastDeleteError } from '@/shared/lib/api-errors';
 import { resolveBrand } from '@/shared/lib/brand-color';
+import { localPair } from '@/shared/lib/local-name';
 import { countryOptions, currencyOptions } from '@/shared/lib/locale-data';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';
 import { cn, isEmail } from '@/shared/lib/utils';
@@ -561,7 +562,7 @@ function CategoriesList() {
     const [editCategory, setEditCategory] = useState<Category | null>(null);
 
     // Display the category name in the active UI language (Thai falls back to the English name).
-    const displayName = (c: Category) => (lang === 'th' ? c.name_th || c.name : c.name) || '—';
+    const displayName = (c: Category) => localPair(c.name, c.name_th, lang) || '—';
 
     const columns: Column<Category>[] = [
         {
@@ -644,7 +645,7 @@ function VendorsList() {
     const [editVendor, setEditVendor] = useState<Vendor | null>(null);
 
     // Display the vendor name in the active UI language (Thai falls back to the English name).
-    const displayName = (v: Vendor) => (lang === 'th' ? v.name_th || v.name : v.name) || '—';
+    const displayName = (v: Vendor) => localPair(v.name, v.name_th, lang) || '—';
 
     const columns: Column<Vendor>[] = [
         {

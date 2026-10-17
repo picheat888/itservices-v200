@@ -494,7 +494,7 @@ export function TicketDetailDrawer({
                                                             <AssetTypeIcon type={view.related_asset_type ?? ''} className="h-4 w-4" />
                                                         </span>
                                                         <span className="text-sm font-semibold">
-                                                            {(lang === 'th' ? view.related_asset_type_th : null) ?? view.related_asset_type ?? '—'}
+                                                            {localPair(view.related_asset_type, view.related_asset_type_th, lang) ?? '—'}
                                                         </span>
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">

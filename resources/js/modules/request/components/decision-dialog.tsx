@@ -3,7 +3,7 @@ import { Field } from '@/shared/components/field';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { serverMessage } from '@/shared/lib/api-errors';
-import { localName, localPair } from '@/shared/lib/local-name';
+import { localLabel, localName, localPair } from '@/shared/lib/local-name';
 import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_ONBOARDING_BADGE, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
@@ -138,8 +138,8 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
 
                         <dl className="grid grid-cols-[minmax(96px,max-content)_1fr] gap-x-3 gap-y-1.5">
                             {ctx.request.fields_display.map((row) => (
-                                <SlipRow key={row.key} label={lang === 'th' ? row.label_th : row.label_en}>
-                                    <span>{lang === 'th' ? row.value_th || row.value : row.value}</span>
+                                <SlipRow key={row.key} label={localLabel(row, lang)}>
+                                    <span>{localPair(row.value, row.value_th, lang)}</span>
                                 </SlipRow>
                             ))}
                             <SlipRow label={t('req_requester')}>{localName(ctx.request.requester, lang)}</SlipRow>

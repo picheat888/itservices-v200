@@ -7,6 +7,7 @@ import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { EmptyPane } from '@/shared/components/empty-pane';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { isOnBehalfRequest, REQUEST_ONBOARDING_BADGE, REQUEST_STATUS_META, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { EmployeeAccess, EmployeeAccessRow } from '@/shared/types';
@@ -230,7 +231,7 @@ export function AssetsPane({
             header: t('emp_v_col_device'),
             render: (a) => {
                 const meta = HELD_STATUS_META[a.status] ?? null;
-                const type = (lang === 'th' ? (a.type_th ?? a.type) : a.type) ?? '—';
+                const type = localPair(a.type, a.type_th, lang) ?? '—';
                 return (
                     <div className="flex min-w-0 items-center gap-2.5">
                         <div className="bg-accent text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
