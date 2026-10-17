@@ -98,4 +98,10 @@ export const workflow: Dict = {
     wf_owner_preview: 'รู้ว่าเป็นใครเมื่อผู้ขอเลือก Resource',
     wf_queue_preview: 'เข้าคิวทีม IT และเปิด Ticket อัตโนมัติ',
     wf_save_error_steps: 'บันทึกไม่สำเร็จ ตรวจรายการขั้นตอนอีกครั้ง',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    wf_empty_list: 'ยังไม่มี Workflow',
+    wf_empty_list_hint: 'Workflow มาตรฐานสร้างตอนติดตั้งระบบ',
+    wf_empty_list_search: 'ไม่พบ Workflow ที่ตรงกับคำค้น',
+    wf_empty_list_search_hint: 'ลองค้นด้วยคำอื่น',
 };

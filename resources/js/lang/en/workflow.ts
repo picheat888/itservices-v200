@@ -95,4 +95,10 @@ export const workflow: Dict = {
     wf_owner_preview: 'Known once the requester picks a resource',
     wf_queue_preview: 'Goes to the IT queue, which opens a ticket automatically',
     wf_save_error_steps: 'Could not save. Check the steps.',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    wf_empty_list: 'No workflows yet',
+    wf_empty_list_hint: 'Standard workflows are created at install.',
+    wf_empty_list_search: 'No workflow matches',
+    wf_empty_list_search_hint: 'Try other words.',
 };

@@ -378,4 +378,16 @@ export const permission: Dict = {
     perm_ui_group_workflows: 'Workflows',
     perm_ui_minutes_short: '{n}m',
     perm_ui_hours_short: '{n}h',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    perm_empty_no_tabs: 'You have no access to this page yet',
+    perm_empty_no_tabs_hint: 'Ask an administrator for role, group or audit log rights.',
+    perm_empty_groups: 'No role groups yet',
+    perm_empty_groups_hint: 'Press "{button}" to create the first one.',
+    perm_empty_audit: 'No activity yet',
+    perm_empty_audit_hint: 'Adds, edits and deletes are logged here.',
+    perm_empty_audit_search: 'No activity matches',
+    perm_empty_audit_search_hint: 'Try other words or clear the filters.',
+    perm_empty_group_modal_dept_members: 'No employees in this department',
+    perm_empty_group_modal_dept_members_hint: 'Pick another department above.',
 };

@@ -217,4 +217,18 @@ export const common: Dict = {
     // calendar.tsx — month navigation
     cal_prev: 'ก่อนหน้า',
     cal_next: 'ถัดไป',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    cmn_empty_bell_empty: 'ไม่มีการแจ้งเตือน',
+    cmn_empty_bell_empty_hint: 'เรื่องที่ต้องรู้หรือต้องทำจะแจ้งที่นี่',
+    cmn_empty_no_access: 'ไม่มีสิทธิ์เข้าถึง',
+    cmn_empty_no_access_hint: 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ หากคิดว่าเป็นข้อผิดพลาดโปรดติดต่อผู้ดูแลระบบ',
+    cmn_empty_record_missing: 'ไม่พบข้อมูลนี้',
+    cmn_empty_record_missing_hint: 'ข้อมูลอาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง',
+    cmn_empty_search_select: 'ไม่พบรายการ',
+    cmn_empty_search_select_hint: 'ลองค้นด้วยคำอื่น',
+    cmn_empty_searchable_select: 'ไม่พบรายการ',
+    cmn_empty_searchable_select_hint: 'ลองค้นด้วยคำอื่น',
+    cmn_empty_icon_picker: 'ไม่พบไอคอน',
+    cmn_empty_icon_picker_hint: 'ลองค้นด้วยคำภาษาอังกฤษ เช่น laptop',
 };

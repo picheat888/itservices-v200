@@ -371,4 +371,16 @@ export const permission: Dict = {
     perm_ui_group_workflows: 'Workflow',
     perm_ui_minutes_short: '{n} น.',
     perm_ui_hours_short: '{n} ชม.',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    perm_empty_no_tabs: 'คุณยังไม่มีสิทธิ์ใช้งานส่วนใดในหน้านี้',
+    perm_empty_no_tabs_hint: 'ติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์ดูบทบาท กลุ่มบทบาท หรือบันทึกการตรวจสอบ',
+    perm_empty_groups: 'ยังไม่มีกลุ่มบทบาท',
+    perm_empty_groups_hint: 'กด "{button}" เพื่อสร้างกลุ่มแรก',
+    perm_empty_audit: 'ยังไม่มีกิจกรรม',
+    perm_empty_audit_hint: 'การเพิ่ม แก้ไข หรือลบข้อมูลจะบันทึกไว้ที่นี่',
+    perm_empty_audit_search: 'ไม่พบกิจกรรมที่ตรงกับคำค้นหรือตัวกรอง',
+    perm_empty_audit_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
+    perm_empty_group_modal_dept_members: 'ไม่มีพนักงานในแผนกนี้',
+    perm_empty_group_modal_dept_members_hint: 'เลือกแผนกอื่นด้านบน',
 };

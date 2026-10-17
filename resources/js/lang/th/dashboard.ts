@@ -107,4 +107,22 @@ export const dashboard: Dict = {
     dash_today_n: 'วันนี้ {n} รายการ',
     dash_view_audit: 'ดูทั้งหมดในบันทึกการตรวจสอบ',
     dash_empty_staff: 'ยังไม่มีพนักงานที่ใช้งาน',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    dash_empty_mine_tickets: 'ไม่มี Ticket ค้าง',
+    dash_empty_mine_tickets_hint: 'Ticket ที่คุณแจ้งปิดครบแล้ว',
+    dash_empty_mine_requests: 'ไม่มีคำขอค้าง',
+    dash_empty_mine_requests_hint: 'คำขอของคุณเสร็จหรือปิดไปแล้วทั้งหมด',
+    dash_empty_it_opened_per_day: 'ไม่มี Ticket เปิดใหม่ใน 14 วันล่าสุด',
+    dash_empty_it_opened_per_day_hint: 'กราฟนี้นับ 14 วันล่าสุดเสมอ',
+    dash_empty_it_workload: 'ตอนนี้ไม่มีใครถือเคสอยู่',
+    dash_empty_it_workload_hint: 'เคสที่รับแล้วจะแสดงตามผู้รับผิดชอบ',
+    dash_empty_people_by_department: 'ยังไม่มีพนักงานที่ทำงานอยู่',
+    dash_empty_people_by_department_hint: 'เพิ่มพนักงานได้ที่หน้าพนักงาน',
+    dash_empty_people_activity: 'ยังไม่มีความเคลื่อนไหว',
+    dash_empty_people_activity_hint: 'การเพิ่ม แก้ไข หรือลบข้อมูลจะแสดงที่นี่',
+    dash_empty_requests_waiting: 'ไม่มีคำขอค้างเกิน {n} วัน',
+    dash_empty_requests_waiting_hint: 'คำขอที่รอนานกว่านี้จะแสดงที่นี่',
+    dash_empty_requests_by_type: 'ยังไม่มีคำขอใน 30 วันล่าสุด',
+    dash_empty_requests_by_type_hint: 'กราฟนี้นับ 30 วันล่าสุดเสมอ',
 };

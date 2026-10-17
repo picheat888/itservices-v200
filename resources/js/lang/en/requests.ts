@@ -196,4 +196,20 @@ export const requests: Dict = {
     req_cancel_reason_ph: 'e.g. No longer needed, or filed under the wrong type',
     req_cancel_reason_required: 'Enter why you are cancelling',
     req_cancel_keep: 'Keep request',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    req_empty_overview_queue: 'Nothing waiting for you',
+    req_empty_overview_queue_hint: "You've decided every request sent to you.",
+    req_empty_overview_recent: 'No requests yet',
+    req_empty_overview_recent_hint: 'Press "{button}" to start.',
+    req_empty_list_all: 'No requests yet',
+    req_empty_list_all_hint: 'Press "{button}" to start.',
+    req_empty_list_all_search: 'No request matches',
+    req_empty_list_all_search_hint: 'Try other words or clear the filters.',
+    req_empty_list_approvals: 'Nothing waiting for you',
+    req_empty_list_approvals_hint: 'Requests that reach your step show here.',
+    req_empty_list_queue: 'Nothing waiting for IT',
+    req_empty_list_queue_hint: 'Fully approved requests land here.',
+    req_empty_detail_attachments: 'No attachments',
+    req_empty_detail_attachments_hint: 'The requester attached no files.',
 };

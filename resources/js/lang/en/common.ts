@@ -217,4 +217,18 @@ export const common: Dict = {
     // calendar.tsx — month navigation
     cal_prev: 'Previous',
     cal_next: 'Next',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    cmn_empty_bell_empty: 'No notifications',
+    cmn_empty_bell_empty_hint: 'Things you need to know or do show here.',
+    cmn_empty_no_access: 'No access',
+    cmn_empty_no_access_hint: "You don't have permission to view this section. Contact an administrator if you think this is a mistake.",
+    cmn_empty_record_missing: 'Record not found',
+    cmn_empty_record_missing_hint: 'It may have been deleted, or the link is wrong.',
+    cmn_empty_search_select: 'No match',
+    cmn_empty_search_select_hint: 'Try other words.',
+    cmn_empty_searchable_select: 'No match',
+    cmn_empty_searchable_select_hint: 'Try other words.',
+    cmn_empty_icon_picker: 'No icon found',
+    cmn_empty_icon_picker_hint: 'Try an English word, e.g. laptop.',
 };

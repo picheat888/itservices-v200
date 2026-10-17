@@ -187,4 +187,16 @@ export const email: Dict = {
     email_html_issue_open_inside: 'เจอ </{tag}> แต่ <{inner}> บรรทัด {n} ยังไม่ปิด',
     email_html_issue_not_allowed: 'ใส่ <{tag}> ไว้ใน <{parent}> ไม่ได้',
     email_html_issue_unsupported: 'โปรแกรมอีเมลบางตัวไม่รองรับ <{tag}>',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    email_empty_templates_filtered: 'ไม่พบเทมเพลตที่ตรงกับคำค้น',
+    email_empty_templates_filtered_hint: 'ลองค้นด้วยคำอื่น หรือเลือกโมดูลทั้งหมด',
+    email_empty_templates_none: 'ยังไม่มีเทมเพลตอีเมล',
+    email_empty_templates_none_hint: 'เทมเพลตมาตรฐานสร้างตอนติดตั้งระบบ',
+    email_empty_logs_filtered: 'ไม่พบประวัติที่ตรงกับคำค้นหรือตัวกรอง',
+    email_empty_logs_filtered_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
+    email_empty_logs_none: 'ยังไม่มีประวัติการส่ง',
+    email_empty_logs_none_hint: 'อีเมลที่ระบบส่งจะบันทึกไว้ที่นี่',
+    email_empty_log_detail_content: 'ไม่ได้เก็บเนื้อหาอีเมลนี้',
+    email_empty_log_detail_content_hint: 'รายการที่ส่งก่อนเริ่มบันทึกเนื้อหาจะไม่มีเนื้อหา',
 };

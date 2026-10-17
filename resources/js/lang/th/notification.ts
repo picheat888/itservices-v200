@@ -268,4 +268,10 @@ export const notification: Dict = {
     notification_name_report_schedule_failed: 'ส่งรายงานตามเวลาไม่สำเร็จ',
     notification_when_report_schedule_failed: 'รายงานที่ตั้งส่งอัตโนมัติสร้างหรือส่งอีเมลไม่สำเร็จ',
     notification_who_report_schedule_failed: 'ผู้ที่ตั้งเวลาส่ง',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    notification_empty_settings_filtered: 'ไม่พบการแจ้งเตือนที่ตรงกับคำค้น',
+    notification_empty_settings_filtered_hint: 'ลองค้นด้วยคำอื่น หรือเลือกโมดูลทั้งหมด',
+    notification_empty_settings_none: 'ยังไม่มีการแจ้งเตือน',
+    notification_empty_settings_none_hint: 'ชนิดการแจ้งเตือนสร้างตอนติดตั้งระบบ',
 };

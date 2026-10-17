@@ -203,4 +203,20 @@ export const ticket: Dict = {
     ticket_refusal_forbidden: 'You are not allowed to do this on this case.',
     ticket_refusal_invalid: 'This could not be done: the details are not valid or the case has changed. Close it and open it again.',
     ticket_refusal_failed: 'Could not save. Please try again.',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    ticket_empty_overview_latest: 'No tickets yet',
+    ticket_empty_overview_latest_hint: 'New tickets show here.',
+    ticket_empty_list_all: 'No tickets yet',
+    ticket_empty_list_all_hint: 'Tickets users file show here.',
+    ticket_empty_list_mine: 'No jobs for you yet',
+    ticket_empty_list_mine_hint: 'Cases you take or are assigned show here.',
+    ticket_empty_list_my: 'You have not filed a ticket',
+    ticket_empty_list_my_hint: 'Press "{button}" to report an IT problem.',
+    ticket_empty_list_search: 'No ticket matches',
+    ticket_empty_list_search_hint: 'Try other words or clear the filters.',
+    ticket_empty_drawer_progress: 'No progress yet',
+    ticket_empty_drawer_progress_hint: 'This case is waiting to be taken.',
+    ticket_empty_drawer_files: 'No attachments',
+    ticket_empty_drawer_files_hint: 'The requester attached no files.',
 };
