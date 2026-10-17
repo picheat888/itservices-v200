@@ -180,6 +180,7 @@ class TicketSla
         self::$responseMemo = null;
         self::$hoursMemo = null;
         self::$rulesMemo = null;
+        self::$planMemo = null;
     }
 
     /** Resolution target (hours) for a priority, falling back to the medium default. */
@@ -380,6 +381,12 @@ class TicketSla
      */
     public static function addBusinessMinutes(Carbon $from, int $minutes): Carbon
     {
+        return self::addBusinessMinutesFast($from, $minutes) ?? self::addBusinessMinutesWalk($from, $minutes);
+    }
+
+    /** Reference walk over Carbon copies; the fast path must agree with it. */
+    private static function addBusinessMinutesWalk(Carbon $from, int $minutes): Carbon
+    {
         $cursor = self::nextWorkOpen($from);
         $remaining = max(0, $minutes);
 
@@ -395,6 +402,97 @@ class TicketSla
         }
 
         return $cursor;
+    }
+
+    /** @var array{days: array<int, true>, windows: list<array{0: int, 1: int}>}|null */
+    private static ?array $planMemo = null;
+
+    /** @var array<string, bool> */
+    private static array $fixedOffsetZones = [];
+
+    /** True when the zone has no clock changes from 2000 to 2100, so wall time and elapsed time agree. */
+    private static function hasFixedOffset(\DateTimeZone $zone): bool
+    {
+        $name = $zone->getName();
+
+        return self::$fixedOffsetZones[$name] ??= count($zone->getTransitions(946684800, 4102444800)) === 1;
+    }
+
+    /** The working window as seconds-of-day pairs, for the arithmetic walk. */
+    private static function businessPlan(): array
+    {
+        if (self::$planMemo !== null) {
+            return self::$planMemo;
+        }
+
+        $hours = self::hours();
+        $secs = fn (string $time): int => (int) substr($time, 0, 2) * 3600 + (int) substr($time, 3, 2) * 60;
+        $windows = ($hours['break_start'] ?? null) === null || ($hours['break_end'] ?? null) === null
+            ? [[$secs($hours['start']), $secs($hours['end'])]]
+            : [[$secs($hours['start']), $secs($hours['break_start'])], [$secs($hours['break_end']), $secs($hours['end'])]];
+
+        return self::$planMemo = ['days' => array_fill_keys($hours['days'], true), 'windows' => $windows];
+    }
+
+    /** Local-clock seconds of the first working instant at or after $at (mirrors nextWorkOpen). */
+    private static function openAtOrAfter(int $at, array $plan): int
+    {
+        $cursor = $at;
+        for ($i = 0; $i < 8; $i++) {
+            $day = intdiv($cursor, 86400);
+            $secondOfDay = $cursor - $day * 86400;
+            if (isset($plan['days'][($day + 3) % 7 + 1])) {
+                foreach ($plan['windows'] as [$start, $end]) {
+                    if ($secondOfDay < $end) {
+                        return $day * 86400 + max($secondOfDay, $start);
+                    }
+                }
+            }
+            $cursor = ($day + 1) * 86400;
+        }
+
+        return $cursor;
+    }
+
+    /** Local-clock seconds where the window holding $at ends (mirrors currentWindowEnd). */
+    private static function windowEndAt(int $at, array $plan): int
+    {
+        $day = intdiv($at, 86400);
+        $secondOfDay = $at - $day * 86400;
+        foreach ($plan['windows'] as [$start, $end]) {
+            if ($secondOfDay >= $start && $secondOfDay < $end) {
+                return $day * 86400 + $end;
+            }
+        }
+
+        return $at;
+    }
+
+    /** addBusinessMinutes() on integer seconds; null when the input needs the Carbon walk instead. */
+    private static function addBusinessMinutesFast(Carbon $from, int $minutes): ?Carbon
+    {
+        $offset = $from->getOffset();
+        $local = $from->getTimestamp() + $offset;
+        if ($from->micro !== 0 || $local < 0 || ! self::hasFixedOffset($from->getTimezone())) {
+            return null;
+        }
+
+        $plan = self::businessPlan();
+        $cursor = self::openAtOrAfter($local, $plan);
+        $remaining = max(0, $minutes);
+
+        for ($i = 0; $i < 1460 && $remaining > 0; $i++) {
+            $end = self::windowEndAt($cursor, $plan);
+            $available = intdiv($end - $cursor, 60);
+            if ($remaining <= $available) {
+                $cursor += $remaining * 60;
+                break;
+            }
+            $remaining -= $available;
+            $cursor = self::openAtOrAfter($end, $plan);
+        }
+
+        return $from->copy()->setTimestamp($cursor - $offset);
     }
 
     /** Working minutes elapsed between two instants (0 when $to precedes $from). */
