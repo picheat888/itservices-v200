@@ -512,13 +512,15 @@ export default function AccessControlPage() {
     const actionsCol = <T extends AnyResource>(open: (r: T) => void): Column<T> => ({
         key: 'actions',
         header: <span className="sr-only">{t('actions')}</span>,
-        width: '60px',
+        width: 'clamp(60px, calc(60px + (100vw - 1180px) * 0.72), 132px)',
         align: 'right',
         render: (r) => (
             <div className="flex items-center justify-end gap-1.5">
                 <Button
                     variant="outline"
                     aria-label={t('access_manage_members')}
+                    title={t('access_manage_members')}
+                    className="px-2 xl:px-3"
                     size="sm"
                     onClick={(e) => {
                         e.stopPropagation();
@@ -594,7 +596,12 @@ export default function AccessControlPage() {
             render: (s) => <NameCell icon={Package} color="#f59e0b" name={s.name} logoUrl={s.logo_url} />,
         },
         { key: 'publisher', header: t('access_publisher'), width: '160px', render: (s) => <TruncText text={s.publisher} /> },
-        { key: 'license_type', header: t('access_license_type'), width: '130px', render: (s) => t(`access_lic_${s.license_type}`) },
+        {
+            key: 'license_type',
+            header: t('access_license_type'),
+            width: '130px',
+            render: (s) => <span className="whitespace-nowrap">{t(`access_lic_${s.license_type}`)}</span>,
+        },
         {
             key: 'seats',
             header: t('access_seats'),
@@ -604,7 +611,7 @@ export default function AccessControlPage() {
                 const used = s.seats_used ?? s.members?.length ?? 0;
                 const over = s.seats != null && used > s.seats;
                 return (
-                    <span className={cn('inline-flex items-center text-[12.5px]', over && 'text-destructive font-semibold')}>
+                    <span className={cn('inline-flex items-center text-[12.5px] whitespace-nowrap', over && 'text-destructive font-semibold')}>
                         {fmtN(used)}/
                         {s.seats != null ? (
                             fmtN(s.seats)
