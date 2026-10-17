@@ -206,7 +206,12 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                         subtitle={t(`notification_when_${suffix(bell.key)}`)}
                         headerRight={
                             bell.updated_by_name && (
-                                <RecordStamps className="text-right" updatedAt={bell.updated_at} updatedBy={bell.updated_by_name} />
+                                <RecordStamps
+                                    className="text-right"
+                                    updatedAt={bell.updated_at}
+                                    updatedBy={bell.updated_by_name}
+                                    updatedByTh={bell.updated_by_name_th}
+                                />
                             )
                         }
                     />

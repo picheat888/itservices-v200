@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockBalance;
@@ -184,6 +185,22 @@ class StockWorkflowTest extends TestCase
         $this->assertSame($super->name, $row['fulfilled_by']);
         $this->assertNotNull($row['approved_at']);
         $this->assertNotNull($row['fulfilled_at']);
+    }
+
+    public function test_movement_and_request_lists_carry_the_thai_name_of_the_account(): void
+    {
+        $item = $this->item(0);
+        $super = $this->superUser();
+        $super->update(['employee_id' => Employee::create(['first_name' => 'Keeper', 'first_name_th' => 'ผู้ดูแล', 'status' => 'active'])->id]);
+        $this->actingAs($super)->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5])->assertCreated();
+
+        $asker = $this->userWith(['stock.view', 'stock.request']);
+        $asker->update(['employee_id' => Employee::create(['first_name' => 'Asker', 'first_name_th' => 'ผู้ขอเบิก', 'status' => 'active'])->id]);
+        $id = $this->actingAs($asker)->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 1, 'reason' => 'Spare'])->json('data.id');
+
+        $this->assertSame('ผู้ดูแล', $this->actingAs($super)->getJson('/api/stock-movements')->assertOk()->json('data.0.recorded_by_th'));
+        $row = collect($this->actingAs($super)->getJson('/api/stock-requests')->assertOk()->json('data'))->firstWhere('id', $id);
+        $this->assertSame('ผู้ขอเบิก', $row['requester_name_th']);
     }
 
     public function test_request_list_filters_by_status_but_keeps_the_totals(): void

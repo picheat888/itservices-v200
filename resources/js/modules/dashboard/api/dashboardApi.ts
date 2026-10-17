@@ -17,6 +17,7 @@ export interface MyTicketRow {
     subject: string;
     status: string;
     assignee_name: string | null;
+    assignee_name_th?: string | null;
 }
 
 export interface MyRequestRow {

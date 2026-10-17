@@ -29,6 +29,7 @@ class EmailTemplateResource extends JsonResource
             // Who reworded it last (null while nobody has) — the name when the index loaded the updater.
             'updated_at' => SystemTime::date($this->updated_at),
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
+            'updated_by_name_th' => $this->whenLoaded('updater', fn () => $this->updater?->name_th),
             // Whether this key has a standard definition (drives the Reset action),
             // and whether the current row differs from it (drives the "modified" badge).
             'is_standard' => EmailTemplates::has($this->key),

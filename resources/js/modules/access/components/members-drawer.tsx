@@ -46,7 +46,14 @@ export type MemberTarget = {
     /** Software seat count (null = unlimited); adding stops once it is reached. */
     seats?: number | null;
     /** When and by whom the resource was added / last changed. */
-    stamps?: { createdAt?: string | null; createdBy?: string | null; updatedAt?: string | null; updatedBy?: string | null };
+    stamps?: {
+        createdAt?: string | null;
+        createdBy?: string | null;
+        createdByTh?: string | null;
+        updatedAt?: string | null;
+        updatedBy?: string | null;
+        updatedByTh?: string | null;
+    };
 };
 
 // Access levels offered per kind; only file shares grade access. Email-group owner

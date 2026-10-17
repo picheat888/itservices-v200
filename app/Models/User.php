@@ -286,6 +286,12 @@ class User extends Authenticatable
         return $changedAt === null || $changedAt->addDays($days)->isPast();
     }
 
+    /** Thai name of the linked employee, or null; load `employee` with the user when listing. */
+    public function getNameThAttribute(): ?string
+    {
+        return $this->employee?->name_th;
+    }
+
     /** The employee this login account belongs to (null for system-only accounts). */
     public function employee(): BelongsTo
     {

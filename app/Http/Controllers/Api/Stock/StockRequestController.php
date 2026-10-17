@@ -37,7 +37,7 @@ class StockRequestController extends Controller
         abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
         // Actionable first (await approval → await fulfillment → done), newest within each group.
-        $query = StockRequest::with('item.unit')
+        $query = StockRequest::with(['item.unit', 'user.employee'])
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
             ->latest();
 

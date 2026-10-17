@@ -215,8 +215,10 @@ export function StockItemDetailModal({
                                         className="text-right"
                                         createdAt={item.created_at}
                                         createdBy={item.created_by_name}
+                                        createdByTh={item.created_by_name_th}
                                         updatedAt={item.updated_at}
                                         updatedBy={item.updated_by_name}
+                                        updatedByTh={item.updated_by_name_th}
                                     />
                                 </div>
                             }

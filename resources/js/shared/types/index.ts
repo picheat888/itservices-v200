@@ -163,7 +163,9 @@ export interface Employee {
     updated_at?: string | null;
     /** Who added / last changed it — only on the single-employee endpoint. */
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
 }
 
 export type ContractType = 'software' | 'hardware' | 'service' | 'connectivity' | 'other';
@@ -241,7 +243,9 @@ export interface Contract {
     updated_at: string | null;
     // Who added / last changed / cancelled it — on the single-contract responses only.
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
     cancelled_by_name?: string | null;
 }
 
@@ -330,11 +334,15 @@ export interface Asset {
     updated_at: string | null;
     // Present only on the single-asset endpoint (GET /assets/{id}).
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
     written_off_by_name?: string | null;
+    written_off_by_name_th?: string | null;
     /** Set when a rented asset went back to its lessor (a kind of write-off); null otherwise. */
     returned_to_vendor_at?: string | null;
     returned_to_vendor_by_name?: string | null;
+    returned_to_vendor_by_name_th?: string | null;
     transfers?: AssetTransferEntry[];
     tickets?: AssetTicket[];
 }
@@ -363,6 +371,7 @@ export interface AssetTicket {
     priority: TicketPriority | null;
     status: TicketStatus;
     assignee_name: string | null;
+    assignee_name_th?: string | null;
     created_at: string | null;
     resolved_at: string | null;
 }
@@ -477,6 +486,7 @@ export interface Ticket {
     requester_name_th?: string | null;
     assignee_id: number | null;
     assignee_name?: string | null;
+    assignee_name_th?: string | null;
     callback_phone: string | null;
     related_asset_id: number | null;
     related_asset_tag?: string | null;
@@ -693,6 +703,7 @@ export interface StockLot {
     warehouse?: string | null;
     supplier?: string | null;
     recorded_by?: string | null;
+    recorded_by_th?: string | null;
     notes?: string | null;
 }
 
@@ -727,7 +738,9 @@ export interface StockItem {
     updated_at?: string | null;
     /** Who added / last changed it — only on the single-item (show) response. */
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
     /** Per-unit serials — only present on the single-item (show) response. */
     serials?: StockItemSerial[];
     /** FIFO cost lots — only present on the single-item (show) response. */
@@ -744,6 +757,7 @@ export interface SerialEvent {
     doc_no: string | null;
     reference: string | null;
     recorded_by: string | null;
+    recorded_by_th?: string | null;
     from_label: string | null;
     to_label: string | null;
 }
@@ -760,6 +774,7 @@ export interface StockItemHistory {
         to_label: string | null;
         reference: string | null;
         recorded_by: string | null;
+        recorded_by_th?: string | null;
         notes: string | null;
         moved_at: string | null;
     }[];
@@ -811,6 +826,7 @@ export interface StockMovement {
     to: string | null;
     reference: string | null;
     recorded_by: string | null;
+    recorded_by_th?: string | null;
     notes: string | null;
     moved_at: string | null;
 }
@@ -824,6 +840,7 @@ export interface StockRequest {
     sku: string | null;
     item_name: string | null;
     requester_name: string;
+    requester_name_th?: string | null;
     unit?: string | null;
     qty: number;
     reason: string;
@@ -878,7 +895,9 @@ export interface EmailGroup {
     created_at?: string | null;
     updated_at?: string | null;
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
 }
 
 export interface FileShare {
@@ -903,7 +922,9 @@ export interface FileShare {
     created_at?: string | null;
     updated_at?: string | null;
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
 }
 
 export interface SocialPlatform {
@@ -921,7 +942,9 @@ export interface SocialPlatform {
     created_at?: string | null;
     updated_at?: string | null;
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
 }
 
 export type SoftwareLicenseType = 'perpetual' | 'subscription' | 'free' | 'open_source';
@@ -947,7 +970,9 @@ export interface Software {
     created_at?: string | null;
     updated_at?: string | null;
     created_by_name?: string | null;
+    created_by_name_th?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
 }
 
 /** Lightweight member preview returned inline on the index endpoints. */
@@ -1248,6 +1273,7 @@ export interface Workflow {
     updated_at: string | null;
     /** Who saved it last; null while nobody has. */
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
 }
 
 /** One dynamic field definition of the New Request dialog (from RequestSchemas). */

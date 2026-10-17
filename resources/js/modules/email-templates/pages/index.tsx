@@ -1739,7 +1739,12 @@ function EditorDialog({
                                     </div>
                                     {/* Only once a person has reworded it */}
                                     {shown.updated_by_name && (
-                                        <RecordStamps className="text-right" updatedAt={shown.updated_at} updatedBy={shown.updated_by_name} />
+                                        <RecordStamps
+                                            className="text-right"
+                                            updatedAt={shown.updated_at}
+                                            updatedBy={shown.updated_by_name}
+                                            updatedByTh={shown.updated_by_name_th}
+                                        />
                                     )}
                                 </div>
                             }

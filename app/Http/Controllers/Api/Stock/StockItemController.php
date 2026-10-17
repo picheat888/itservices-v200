@@ -209,8 +209,8 @@ class StockItemController extends Controller
             'brand',
             'model',
             'category',
-            'creator',
-            'updater',
+            'creator.employee',
+            'updater.employee',
         ]);
 
         return (new StockItemResource($this->withReserved($stockItem)))->response();

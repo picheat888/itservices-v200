@@ -50,6 +50,7 @@ export interface NotificationData {
     step_label?: string | null;
     /** Who the request is for — the bell writes an on-behalf headline the way the list does. */
     requester_name?: string | null;
+    requester_name_th?: string | null;
     actor_name?: string | null;
     remark?: string | null;
     /** Only on `stalled`: whole days the step has been waiting. */
@@ -149,6 +150,7 @@ export interface NotificationTemplate {
     /** Who reworded or switched it last; null while nobody has. */
     updated_at?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
     /** False once the wording has been changed from the standard. */
     is_standard: boolean;
     /** The catalogue's on/off state, which Reset also restores. */

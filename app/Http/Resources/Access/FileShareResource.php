@@ -42,7 +42,9 @@ class FileShareResource extends JsonResource
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'created_by_name_th' => $this->whenLoaded('creator', fn () => $this->creator?->name_th),
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
+            'updated_by_name_th' => $this->whenLoaded('updater', fn () => $this->updater?->name_th),
         ];
     }
 }

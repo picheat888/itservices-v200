@@ -6,6 +6,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
@@ -25,6 +26,7 @@ const EYEBROW = 'text-muted-foreground text-xs font-semibold';
 export function MovementsTab() {
     const fmt = useDateFormat();
     const t = useT();
+    const pairOf = useLocalPair();
     const { format } = useCurrency();
     const typeFilterId = useId();
     // Type filter, page and rows-per-page live in the URL (?type, ?page, ?per).
@@ -117,7 +119,7 @@ export function MovementsTab() {
             key: 'recorded_by',
             header: t('stock_by'),
             width: '150px',
-            render: (m) => <TruncText text={m.recorded_by} className="text-sm" />,
+            render: (m) => <TruncText text={pairOf(m.recorded_by, m.recorded_by_th)} className="text-sm" />,
         },
         {
             key: 'notes',
@@ -328,7 +330,7 @@ export function MovementsTab() {
                                             <div className={EYEBROW}>
                                                 {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])} {t('stock_by')}
                                             </div>
-                                            <div className="text-sm">{viewMove.recorded_by || '—'}</div>
+                                            <div className="text-sm">{pairOf(viewMove.recorded_by, viewMove.recorded_by_th) || '—'}</div>
                                         </div>
                                     </div>
                                 </>

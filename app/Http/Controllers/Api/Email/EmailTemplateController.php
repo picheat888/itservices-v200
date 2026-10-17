@@ -50,7 +50,7 @@ class EmailTemplateController extends Controller
     {
         $this->gate($request);
 
-        $templates = EmailTemplate::with('updater')->orderBy('id')->get();
+        $templates = EmailTemplate::with('updater.employee')->orderBy('id')->get();
 
         $sentTotal = EmailLog::where('status', 'sent')->count();
         $failedTotal = EmailLog::where('status', 'failed')->count();

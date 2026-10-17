@@ -50,7 +50,7 @@ class WorkflowController extends Controller
         // of an internal key, which tells a reader nothing. Sorted in PHP because the list is
         // one row per request type, so there is nothing to gain from doing it in SQL.
         $order = array_flip(array_column(RequestType::cases(), 'value'));
-        $workflows = Workflow::with(['steps.positions', 'steps.approvers', 'updater'])->get()
+        $workflows = Workflow::with(['steps.positions', 'steps.approvers', 'updater.employee'])->get()
             ->sortBy(fn (Workflow $workflow) => $order[$workflow->request_type->value] ?? PHP_INT_MAX)
             ->values();
 
@@ -132,7 +132,7 @@ class WorkflowController extends Controller
             'steps' => count($data['steps']),
         ], subject: $workflow);
 
-        return new WorkflowResource($workflow->refresh()->load(['steps.positions', 'steps.approvers', 'updater']));
+        return new WorkflowResource($workflow->refresh()->load(['steps.positions', 'steps.approvers', 'updater.employee']));
     }
 
     /**

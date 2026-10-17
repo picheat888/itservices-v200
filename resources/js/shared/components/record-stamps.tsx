@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { cn } from '@/shared/lib/utils';
 
 /**
@@ -14,16 +15,21 @@ export function RecordStamps({
     createdBy,
     updatedAt,
     updatedBy,
+    createdByTh,
+    updatedByTh,
     className,
 }: {
     createdAt?: string | null;
     createdBy?: string | null;
     updatedAt?: string | null;
     updatedBy?: string | null;
+    createdByTh?: string | null;
+    updatedByTh?: string | null;
     className?: string;
 }) {
     const t = useT();
     const fmt = useDateFormat();
+    const pairOf = useLocalPair();
     const line = (label: string, date?: string | null, by?: string | null) => (
         <div>
             {label} {fmt.date(date)}
@@ -33,8 +39,8 @@ export function RecordStamps({
 
     return (
         <div className={cn('text-muted-foreground text-[10.5px] leading-tight', className)}>
-            {(createdAt !== undefined || createdBy !== undefined) && line(t('record_added'), createdAt, createdBy)}
-            {line(t('record_updated'), updatedAt, updatedBy)}
+            {(createdAt !== undefined || createdBy !== undefined) && line(t('record_added'), createdAt, pairOf(createdBy, createdByTh))}
+            {line(t('record_updated'), updatedAt, pairOf(updatedBy, updatedByTh))}
         </div>
     );
 }

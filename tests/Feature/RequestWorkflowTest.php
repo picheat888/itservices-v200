@@ -724,12 +724,8 @@ class RequestWorkflowTest extends TestCase
         $this->assertSame($boss->id, $current->approver_employee_id);
     }
 
-    /**
-     * The detail view draws a requester card (code / position / photo) off the live
-     * employee record, so the detail payload has to carry it — and the list, which
-     * draws no card, has to stay out of that join.
-     */
-    public function test_detail_carries_the_requester_identity_and_the_list_does_not(): void
+    /** The detail card and the list's requester column both read the live employee record. */
+    public function test_detail_and_list_carry_the_requester_identity(): void
     {
         $request = $this->submitComputer();
 
@@ -744,8 +740,7 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($this->requester)->getJson('/api/service-requests')
             ->assertOk()
             ->assertJsonPath('data.0.requester.name', $this->staff->name)
-            ->assertJsonMissingPath('data.0.requester.code')
-            ->assertJsonMissingPath('data.0.requester.position');
+            ->assertJsonPath('data.0.requester.position', 'Staff/Officer');
     }
 
     /** The standard computer payload, so the guard tests read as one line each. */

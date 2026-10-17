@@ -220,7 +220,7 @@ interface ProgressEntry {
  * backfilled as rows, so one fact stays in one place and every case closed before progress notes
  * shipped still reads as a complete story instead of starting halfway through.
  */
-function progressEntries(ticket: Ticket, t: (key: string) => string): ProgressEntry[] {
+function progressEntries(ticket: Ticket, t: (key: string) => string, lang: string): ProgressEntry[] {
     const entries: ProgressEntry[] = [];
 
     // A case canceled before anybody took it never reached this step.
@@ -228,7 +228,7 @@ function progressEntries(ticket: Ticket, t: (key: string) => string): ProgressEn
         entries.push({
             key: 'taken',
             kind: 'taken',
-            title: `${t('ticket_taken_by')} ${ticket.assignee_name ?? ''}`.trim(),
+            title: `${t('ticket_taken_by')} ${localPair(ticket.assignee_name, ticket.assignee_name_th, lang) ?? ''}`.trim(),
             when: ticket.responded_at,
             body: ticket.take_note,
         });
@@ -353,7 +353,7 @@ export function TicketDetailDrawer({
     // order) — a button that would come back 403 is a button that should not have been drawn.
     const isMine = view.assignee_id != null && view.assignee_id === meId;
     const isWorking = view.status === 'in_progress';
-    const progress = progressEntries(view, t);
+    const progress = progressEntries(view, t, lang);
     const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
     // Anti case-pumping: the person who filed a case can never take it (backend enforces too).
     const isMyOwnRequest = meEmployeeId != null && view.requester_id === meEmployeeId;
@@ -664,7 +664,7 @@ export function TicketDetailDrawer({
                                     index={2}
                                     title={
                                         view.status !== 'open' && wasTaken
-                                            ? `${t('ticket_taken_by')} ${view.assignee_name ?? ''}`
+                                            ? `${t('ticket_taken_by')} ${localPair(view.assignee_name, view.assignee_name_th, lang) ?? ''}`
                                             : t('ticket_waiting')
                                     }
                                     when={fmtWhen(view.responded_at)}
@@ -710,7 +710,9 @@ export function TicketDetailDrawer({
                             <div className="bg-border/60 my-3 h-px" />
                             <SectionLabel>{t('ticket_responsible_by')}</SectionLabel>
                             <div className="pl-1 text-sm">
-                                {view.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>}
+                                {localPair(view.assignee_name, view.assignee_name_th, lang) ?? (
+                                    <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
+                                )}
                             </div>
 
                             {/* For the person waiting, not the desk: one date answering "when will
