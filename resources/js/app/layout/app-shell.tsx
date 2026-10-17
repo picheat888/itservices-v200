@@ -1,4 +1,5 @@
 import {
+    AccountSwitchedDialog,
     ChangePasswordDialog,
     SessionTimeoutModal,
     SetPasswordDialog,
@@ -28,7 +29,7 @@ export function AppShell() {
     useUserPreferences();
     const density = useUiStore((s) => s.density);
     const { user } = useAuth();
-    useAccountSync(user);
+    const switchedTo = useAccountSync(user);
 
     // Same query key as SecurityTab.
     const { data: security } = useQuery({
@@ -76,6 +77,7 @@ export function AppShell() {
                 onChangePassword={() => setShellDialog('password', { over: true })}
             />
 
+            {switchedTo && <AccountSwitchedDialog user={switchedTo} />}
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} warnSeconds={warnSeconds} onStay={extendSession} onLogout={doLogout} />}
             {/* Forced password changes first; the voluntary one is dismissable */}
             {user?.must_change_password ? (
