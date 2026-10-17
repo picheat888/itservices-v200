@@ -193,7 +193,7 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertEquals(['qty' => 1, 'value' => 150, 'times' => 1], $tiles['adjust_down']);
     }
 
-    public function test_months_end_with_the_range_and_count_whole_months(): void
+    public function test_months_cover_the_range_only(): void
     {
         $this->seedStock();
 
@@ -202,24 +202,23 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertCount(12, $months);
         $this->assertSame('2025-10', $months[0]['month']);
         $this->assertSame('2026-09', $months[11]['month']);
-        $this->assertTrue(collect($months)->every(fn (array $m) => $m['in_range']));
         $this->assertEquals([
-            'month' => '2026-09', 'in_range' => true, 'receive' => 20, 'return' => 1, 'issue' => 6, 'transfer' => 3,
+            'month' => '2026-09', 'receive' => 20, 'return' => 1, 'issue' => 6, 'transfer' => 3,
             'receive_value' => 3000, 'issue_value' => 700, 'adjust_net' => 1,
         ], $months[11]);
         $this->assertSame(1, $months[10]['issue']);
         $this->assertEquals(100, $months[10]['issue_value']);
         $this->assertSame(5, $months[9]['issue']);
 
-        // A short range: tiles keep to it, the chart keeps 12 whole months and dims the rest.
+        // A short range: the chart shows its months only and counts what the tiles count
         $short = $this->breakdown('from=2026-08-01&to=2026-09-15');
         $this->assertSame(10, $short['tiles']['receive']['qty']);
         $this->assertSame(5, $short['tiles']['issue']['qty']);
         $this->assertSame(0, $short['tiles']['return']['qty']);
-        $this->assertSame(['2026-08', '2026-09'], collect($short['months'])->where('in_range', true)->pluck('month')->all());
-        $this->assertSame(20, $short['months'][11]['receive']);
-        $this->assertSame(5, $short['months'][9]['issue']);
-        $this->assertFalse($short['months'][9]['in_range']);
+        $this->assertSame(['2026-08', '2026-09'], array_column($short['months'], 'month'));
+        $this->assertSame(10, array_sum(array_column($short['months'], 'receive')));
+        $this->assertSame(5, array_sum(array_column($short['months'], 'issue')));
+        $this->assertSame(0, array_sum(array_column($short['months'], 'return')));
     }
 
     public function test_warehouse_and_category_narrow_the_breakdown_but_type_does_not(): void

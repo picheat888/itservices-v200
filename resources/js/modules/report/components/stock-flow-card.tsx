@@ -81,7 +81,6 @@ export function StockFlowCard({ months, className }: { months: StockFlowMonth[];
         [
             monthLabel(m.month, lang, false, true),
             ...CHARTED.map((k) => `${t(`stock_mv_${k}`)} ${stockCount(m[k], lang)}`),
-            m.in_range ? null : t('rep_smv_flow_outside'),
             m.month === thisMonth ? partialNote : null,
         ]
             .filter(Boolean)
@@ -186,13 +185,7 @@ export function StockFlowCard({ months, className }: { months: StockFlowMonth[];
                                         </div>
                                         <div aria-hidden className={cn('absolute inset-0 flex items-end', density.gap)}>
                                             {months.map((m) => (
-                                                <div
-                                                    key={m.month}
-                                                    className={cn(
-                                                        'flex h-full min-w-0 flex-1 flex-col items-center justify-end',
-                                                        !m.in_range && 'opacity-30',
-                                                    )}
-                                                >
+                                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
                                                     <div
                                                         ref={(el) => {
                                                             if (el) bars.current.set(m.month, el);
@@ -235,10 +228,7 @@ export function StockFlowCard({ months, className }: { months: StockFlowMonth[];
                                         </div>
                                         <div aria-hidden className={cn('absolute inset-0 flex items-start', density.gap)}>
                                             {months.map((m) => (
-                                                <div
-                                                    key={m.month}
-                                                    className={cn('flex h-full min-w-0 flex-1 flex-col items-center', !m.in_range && 'opacity-30')}
-                                                >
+                                                <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
                                                     <div className={cn('relative w-full', density.bar)} style={{ height: barHeight(m.issue, down) }}>
                                                         {m.month === thisMonth && m.issue > 0 && (
                                                             <span className="border-brand pointer-events-none absolute -inset-x-[3px] top-0 -bottom-[3px] rounded-b-md border-2 border-t-0 border-dashed" />
@@ -279,11 +269,7 @@ export function StockFlowCard({ months, className }: { months: StockFlowMonth[];
                                                     <b
                                                         className={cn(
                                                             'block',
-                                                            m.month === thisMonth
-                                                                ? 'text-brand font-semibold'
-                                                                : m.in_range
-                                                                  ? 'text-foreground font-semibold'
-                                                                  : 'text-muted-foreground font-medium',
+                                                            m.month === thisMonth ? 'text-brand font-semibold' : 'text-foreground font-semibold',
                                                         )}
                                                     >
                                                         {monthLabel(m.month, lang, false)}
@@ -322,7 +308,6 @@ function FlowDetail({ month, partialNote }: { month: StockFlowMonth; partialNote
                 <div>{t('rep_smv_pop_receive_value').replace('{amount}', stockMoney(month.receive_value, lang))}</div>
                 <div>{t('rep_smv_pop_issue_value').replace('{amount}', stockMoney(month.issue_value, lang))}</div>
                 {month.adjust_net !== 0 && <div>{t('rep_smv_pop_adjust').replace('{n}', signedCount(month.adjust_net, lang))}</div>}
-                {!month.in_range && <div>{t('rep_smv_flow_outside')}</div>}
                 {partialNote && <div>{partialNote}</div>}
             </div>
         </div>

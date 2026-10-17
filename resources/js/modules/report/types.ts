@@ -1327,10 +1327,9 @@ export interface EmployeeOpenItemsBreakdown {
     };
 }
 
-/** One of the 12 months of the stock in & out chart; `in_range` false = drawn faded. */
+/** One month of the stock in & out chart, every month of the chosen range. */
 export interface StockFlowMonth {
     month: string;
-    in_range: boolean;
     receive: number;
     return: number;
     issue: number;
