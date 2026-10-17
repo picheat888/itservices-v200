@@ -292,6 +292,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     // Ticket module
     Route::get('tickets/summary', [TicketController::class, 'summary'])->name('api.tickets.summary');
     Route::get('tickets/staff', [TicketController::class, 'staff'])->name('api.tickets.staff');
+    Route::get('tickets/asset-options', [TicketController::class, 'assetOptions'])->name('api.tickets.asset-options');
     Route::get('tickets/badge', [TicketController::class, 'badge'])->name('api.tickets.badge');
     Route::get('tickets/{ticket}/requester-assets', [TicketController::class, 'requesterAssets'])->name('api.tickets.requester-assets');
     Route::post('tickets/{ticket}/take', [TicketController::class, 'take'])->name('api.tickets.take');

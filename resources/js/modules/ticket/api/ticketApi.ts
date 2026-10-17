@@ -68,6 +68,10 @@ export const ticketApi = {
     badge: () => http.get<{ count: number }>('/tickets/badge').then((r) => r.data.count),
     requesterAssets: (id: number) =>
         http.get<{ data: { id: number; asset_code: string; model: string | null }[] }>(`/tickets/${id}/requester-assets`).then((r) => r.data.data),
+    assetOptions: (search: string) =>
+        http
+            .get<{ data: { id: number; asset_code: string; model: string | null }[] }>('/tickets/asset-options', { params: { search } })
+            .then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Ticket>>(`/tickets/${id}`).then((r) => r.data.data),
     create: (payload: CreateTicketPayload) => mutate<Ticket>('post', '/tickets', payload),
     update: (id: number, payload: UpdateTicketPayload) => mutate<Ticket>('put', `/tickets/${id}`, payload),

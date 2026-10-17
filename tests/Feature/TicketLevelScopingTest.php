@@ -49,6 +49,22 @@ class TicketLevelScopingTest extends TestCase
         $this->getJson("/api/tickets/{$ticket->id}/requester-assets")->assertForbidden();
     }
 
+    public function test_a_taker_finds_any_asset_by_typing_even_without_asset_rights(): void
+    {
+        $old = Asset::factory()->create(['asset_code' => 'INK-OLD-0001', 'serial' => 'SN-FIND-ME', 'status' => 'deployed']);
+        Asset::factory()->count(60)->create(['status' => 'ready']);
+
+        $this->actingAs($this->staffWith([...self::BASE, 'tickets.level_hardware']));
+        $rows = $this->getJson('/api/tickets/asset-options?search=SN-FIND-ME')->assertOk()->json('data');
+        $this->assertSame([$old->id], array_column($rows, 'id'));
+        $this->assertSame('INK-OLD-0001', $rows[0]['asset_code']);
+
+        $this->assertCount(20, $this->getJson('/api/tickets/asset-options')->assertOk()->json('data'));
+
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $this->getJson('/api/tickets/asset-options?search=SN-FIND-ME')->assertForbidden();
+    }
+
     public function test_the_all_tab_shows_only_categories_the_level_grants(): void
     {
         Ticket::factory()->create(['category' => 'network', 'subject' => 'VPN tunnel drops constantly']);
