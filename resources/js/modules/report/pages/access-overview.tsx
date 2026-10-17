@@ -24,6 +24,7 @@ export default function AccessOverviewReportPage() {
                 // The type filter sits at the head of the bar as segments; active / revoked narrows only the register.
                 hiddenFilters: ['type', 'state'],
                 innerColumns: INNER,
+                rowsOnlyFilters: ['search'],
                 filterLead: ({ filters, patch }) => <AccessTypeSegments filters={filters} patch={patch} />,
                 rowsLead: ({ filters, patch }) => <AccessStateSegments filters={filters} patch={patch} />,
                 beforeTable: ({ filters }) => <AccessOverviewCards filters={filters} />,

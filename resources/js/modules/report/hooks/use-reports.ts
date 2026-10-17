@@ -7,6 +7,7 @@ import { downloadBlob } from '@/shared/lib/utils';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { reportApi } from '../api/reportApi';
+import { withoutFilters } from '../lib/filter-scope';
 import type { ExportFormat, ReportDefinition, ReportExportItem, ScheduleInput, SnapshotRange, TabularFilters, TicketReportFilters } from '../types';
 
 /**
@@ -174,14 +175,9 @@ export const useContractRentalsBreakdown = (filters: TabularFilters) =>
         retry: noRetryOn4xx,
     });
 
-/** Filters without the ones that narrow only the rows table, so typing a search does not refetch the cards. */
-function cardFilters(filters: TabularFilters, rowsOnly: string[]): TabularFilters {
-    return Object.fromEntries(Object.entries(filters).filter(([key]) => !rowsOnly.includes(key)));
-}
-
 /** "รับเข้าและเบิกจ่าย" — keyed without the type and search filters, which narrow only the rows. */
 export const useStockMovementsBreakdown = (filters: TabularFilters) => {
-    const scope = cardFilters(filters, ['type', 'search', 'people_by', 'dept_by']);
+    const scope = withoutFilters(filters, ['type', 'search', 'people_by', 'dept_by']);
     return useQuery({
         queryKey: ['reports', 'tabular', 'stock.movements', 'breakdown', scope],
         queryFn: () => reportApi.stockMovementsBreakdown(scope),
@@ -192,7 +188,7 @@ export const useStockMovementsBreakdown = (filters: TabularFilters) => {
 
 /** "มูลค่าคงคลัง" — keyed without the search, which narrows only the rows. */
 export const useStockValuationBreakdown = (filters: TabularFilters) => {
-    const scope = cardFilters(filters, ['search', 'dead_days']);
+    const scope = withoutFilters(filters, ['search', 'dead_days']);
     return useQuery({
         queryKey: ['reports', 'tabular', 'stock.valuation', 'breakdown', scope],
         queryFn: () => reportApi.stockValuationBreakdown(scope),
@@ -203,7 +199,7 @@ export const useStockValuationBreakdown = (filters: TabularFilters) => {
 
 /** "ต่ำกว่าขั้นต่ำและเกินขั้นสูง" — keyed without the status and search filters, which narrow only the rows. */
 export const useStockLevelsBreakdown = (filters: TabularFilters) => {
-    const scope = cardFilters(filters, ['status', 'search']);
+    const scope = withoutFilters(filters, ['status', 'search']);
     return useQuery({
         queryKey: ['reports', 'tabular', 'stock.below_min', 'breakdown', scope],
         queryFn: () => reportApi.stockLevelsBreakdown(scope),
@@ -212,22 +208,23 @@ export const useStockLevelsBreakdown = (filters: TabularFilters) => {
     });
 };
 
-/** "ภาพรวมคำขอ" — every filter of the page shapes its cards. */
-export const useRequestOverviewBreakdown = (filters: TabularFilters) =>
-    useQuery({
-        queryKey: ['reports', 'tabular', 'requests.overview', 'breakdown', filters],
-        queryFn: () => reportApi.requestOverviewBreakdown(filters),
+/** "ภาพรวมคำขอ" — keyed without the search, which narrows only the rows. */
+export const useRequestOverviewBreakdown = (filters: TabularFilters) => {
+    const scope = withoutFilters(filters, ['search']);
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'requests.overview', 'breakdown', scope],
+        queryFn: () => reportApi.requestOverviewBreakdown(scope),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
     });
+};
 
-/** "ภาพรวมสิทธิ์การเข้าถึง" — keyed without the active / revoked segment, which narrows only the list. */
+/** "ภาพรวมสิทธิ์การเข้าถึง" — keyed without the active / revoked segment and the search, which narrow only the list. */
 export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
-    const { state: _state, ...rest } = filters;
-    void _state;
+    const scope = withoutFilters(filters, ['state', 'search']);
     return useQuery({
-        queryKey: ['reports', 'tabular', 'access.overview', 'breakdown', rest],
-        queryFn: () => reportApi.accessOverviewBreakdown(rest),
+        queryKey: ['reports', 'tabular', 'access.overview', 'breakdown', scope],
+        queryFn: () => reportApi.accessOverviewBreakdown(scope),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
     });

@@ -3,5 +3,5 @@
 import { TabularReportView } from '../components/tabular-report-view';
 
 export default function AssetsOverviewReportPage() {
-    return <TabularReportView reportKey="assets.overview" extras={{ rowsTitle: 'rep_ov_rows_title' }} />;
+    return <TabularReportView reportKey="assets.overview" extras={{ rowsTitle: 'rep_ov_rows_title', rowsOnlyFilters: ['search'] }} />;
 }

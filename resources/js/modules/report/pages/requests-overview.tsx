@@ -84,6 +84,7 @@ export default function RequestsOverviewReportPage() {
             extras={{
                 tiles: 5,
                 innerColumns: INNER,
+                rowsOnlyFilters: ['search'],
                 beforeTable: ({ filters }) => <RequestOverviewCards filters={filters} />,
                 rowsTitle: 'rep_rqo_rows_title',
                 rowClassName: (row) => (row.origin === 'onboarding' ? REQUEST_ONBOARDING_ROW : undefined),
