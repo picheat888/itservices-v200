@@ -474,6 +474,7 @@ export interface Ticket {
     requester_id: number;
     requester_code?: string | null;
     requester_name?: string | null;
+    requester_name_th?: string | null;
     assignee_id: number | null;
     assignee_name?: string | null;
     callback_phone: string | null;

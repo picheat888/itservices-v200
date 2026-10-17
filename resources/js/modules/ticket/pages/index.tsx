@@ -13,12 +13,14 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
+import { useUiStore } from '@/stores/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpDown, ChevronRight, CircleDot, Flag, Gauge, History, LayoutGrid, Plus, Search, Tag, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -126,6 +128,7 @@ function TicketOverviewBodySkeleton() {
 export default function TicketsPage() {
     const dateWidth = useDateColumnWidth();
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     // System-timezone formatter (Settings -> Company) — the API emits UTC timestamps.
     const { user, can: has } = useAuth();
     const isIT = has('tickets.view_all');
@@ -335,7 +338,10 @@ export default function TicketsPage() {
             header: t('ticket_open_by'),
             className: 'truncate',
             width: '150px',
-            render: (tk) => <span title={tk.requester_name ?? undefined}>{tk.requester_name ?? tk.requester_code}</span>,
+            render: (tk) => {
+                const name = localPair(tk.requester_name, tk.requester_name_th, lang);
+                return <span title={name ?? undefined}>{name ?? tk.requester_code}</span>;
+            },
         },
         {
             key: 'category',

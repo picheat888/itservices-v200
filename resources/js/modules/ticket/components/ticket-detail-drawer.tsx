@@ -7,6 +7,7 @@ import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus, TicketWorkClass } from '@/shared/types';
@@ -655,7 +656,7 @@ export function TicketDetailDrawer({
                                     tone={s1}
                                     index={1}
                                     title={t('ticket_created_event')}
-                                    meta={view.requester_name ?? view.requester_code}
+                                    meta={localPair(view.requester_name, view.requester_name_th, lang) ?? view.requester_code}
                                     when={fmtWhen(view.created_at)}
                                 />
                                 <SpineStep
@@ -686,7 +687,10 @@ export function TicketDetailDrawer({
                             <div className="bg-border/60 my-3 h-px" />
                             <SectionLabel>{t('ticket_open_by')}</SectionLabel>
                             <div className="space-y-3 pl-1">
-                                <KV label={t('ticket_full_name')} value={view.requester_name ?? view.requester_code} />
+                                <KV
+                                    label={t('ticket_full_name')}
+                                    value={localPair(view.requester_name, view.requester_name_th, lang) ?? view.requester_code}
+                                />
                                 <KV
                                     label={t('ticket_callback_phone')}
                                     value={
