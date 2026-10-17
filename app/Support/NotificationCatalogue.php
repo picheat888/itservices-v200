@@ -37,7 +37,7 @@ class NotificationCatalogue
                 'trigger' => 'An employee record is created without a login account',
                 'audience' => 'Whoever can set credentials',
                 'message_en' => 'No login account yet. Set a username and password.',
-                'message_th' => 'ยังไม่มีบัญชีเข้าใช้งาน ตั้ง Username และ Password ให้',
+                'message_th' => 'ยังไม่มีบัญชีเข้าใช้งาน ตั้งชื่อผู้ใช้และรหัสผ่านให้',
                 'enabled' => true,
             ],
             [
