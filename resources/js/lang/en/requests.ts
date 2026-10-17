@@ -65,7 +65,7 @@ export const requests: Dict = {
     req_col_workflow: 'Approvals',
     req_col_waiting: 'Waiting for',
     req_col_status: 'Status',
-    req_search_ph: 'Search number, type or requester…',
+    req_search_ph: 'Search number, type, requester or department…',
     req_filter_status: 'Status',
     req_filter_type: 'Service',
     req_age_today: 'today',

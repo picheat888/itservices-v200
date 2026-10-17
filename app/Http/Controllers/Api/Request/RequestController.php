@@ -115,7 +115,8 @@ class RequestController extends Controller
         $this->applyFiledFilter($query, $request);
         // Each word also matches the service name in either language through the TYPE (the stored title is English only).
         SearchTerms::apply($query, $request->query('search'), [
-            'reference', 'title', 'requester_name',
+            'reference', 'title', 'requester_name', 'department_name',
+            SearchTerms::related('employee', ['code', ...SearchTerms::personName(), SearchTerms::related('department', ['name', 'name_th'])]),
             function ($q, string $like, string $word) {
                 if ($types = RequestType::matching($word)) {
                     $q->orWhereIn('type', $types);
