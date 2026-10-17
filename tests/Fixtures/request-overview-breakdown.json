@@ -1,0 +1,2916 @@
+{
+    "all": {
+        "months": [
+            {
+                "month": "2026-01",
+                "submitted": 15,
+                "completed": 5
+            },
+            {
+                "month": "2026-02",
+                "submitted": 12,
+                "completed": 2
+            },
+            {
+                "month": "2026-03",
+                "submitted": 14,
+                "completed": 5
+            },
+            {
+                "month": "2026-04",
+                "submitted": 11,
+                "completed": 5
+            },
+            {
+                "month": "2026-05",
+                "submitted": 15,
+                "completed": 3
+            },
+            {
+                "month": "2026-06",
+                "submitted": 12,
+                "completed": 4
+            },
+            {
+                "month": "2026-07",
+                "submitted": 13,
+                "completed": 5
+            },
+            {
+                "month": "2026-08",
+                "submitted": 15,
+                "completed": 3
+            },
+            {
+                "month": "2026-09",
+                "submitted": 11,
+                "completed": 5
+            }
+        ],
+        "types": [
+            {
+                "type": "computer",
+                "total": 10,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 2,
+                    "cancelled": 1
+                },
+                "approved": 5,
+                "rejected": 2
+            },
+            {
+                "type": "hardware",
+                "total": 10,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 2,
+                    "cancelled": 2
+                },
+                "approved": 5,
+                "rejected": 2
+            },
+            {
+                "type": "mobile",
+                "total": 9,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 3,
+                    "rejected": 2,
+                    "cancelled": 2
+                },
+                "approved": 4,
+                "rejected": 2
+            },
+            {
+                "type": "social",
+                "total": 9,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 1,
+                    "completed": 3,
+                    "rejected": 1,
+                    "cancelled": 2
+                },
+                "approved": 4,
+                "rejected": 1
+            },
+            {
+                "type": "fileshare",
+                "total": 9,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 4,
+                "rejected": 1
+            },
+            {
+                "type": "software",
+                "total": 9,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 4,
+                "rejected": 1
+            },
+            {
+                "type": "recovery",
+                "total": 9,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 2,
+                    "cancelled": 1
+                },
+                "approved": 5,
+                "rejected": 2
+            },
+            {
+                "type": "mailgroup",
+                "total": 9,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 3,
+                    "rejected": 2,
+                    "cancelled": 2
+                },
+                "approved": 4,
+                "rejected": 2
+            },
+            {
+                "type": "telephone",
+                "total": 9,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 3,
+                    "rejected": 2,
+                    "cancelled": 2
+                },
+                "approved": 4,
+                "rejected": 2
+            },
+            {
+                "type": "network",
+                "total": 9,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 1,
+                    "completed": 3,
+                    "rejected": 1,
+                    "cancelled": 2
+                },
+                "approved": 4,
+                "rejected": 1
+            },
+            {
+                "type": "cctv",
+                "total": 9,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 4,
+                "rejected": 1
+            },
+            {
+                "type": "other",
+                "total": 9,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 4,
+                "rejected": 1
+            },
+            {
+                "type": "email",
+                "total": 8,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 3,
+                    "rejected": 1,
+                    "cancelled": 2
+                },
+                "approved": 3,
+                "rejected": 1
+            }
+        ],
+        "delivery": {
+            "types": [
+                {
+                    "type": "fileshare",
+                    "count": 2,
+                    "approval": 1.5,
+                    "it": 5.5,
+                    "total": 7
+                },
+                {
+                    "type": "other",
+                    "count": 2,
+                    "approval": 3,
+                    "it": 3.5,
+                    "total": 6.5
+                },
+                {
+                    "type": "email",
+                    "count": 3,
+                    "approval": 3,
+                    "it": 2,
+                    "total": 6
+                },
+                {
+                    "type": "recovery",
+                    "count": 3,
+                    "approval": 4,
+                    "it": 3,
+                    "total": 6
+                },
+                {
+                    "type": "cctv",
+                    "count": 2,
+                    "approval": 2,
+                    "it": 3.5,
+                    "total": 5.5
+                },
+                {
+                    "type": "mobile",
+                    "count": 3,
+                    "approval": 1,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "social",
+                    "count": 3,
+                    "approval": 1,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "software",
+                    "count": 2,
+                    "approval": 2,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "mailgroup",
+                    "count": 3,
+                    "approval": 2,
+                    "it": 2,
+                    "total": 5
+                },
+                {
+                    "type": "network",
+                    "count": 3,
+                    "approval": 2,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "hardware",
+                    "count": 3,
+                    "approval": 4,
+                    "it": 1,
+                    "total": 4
+                },
+                {
+                    "type": "telephone",
+                    "count": 3,
+                    "approval": 3,
+                    "it": 1,
+                    "total": 4
+                }
+            ],
+            "all": {
+                "count": 32,
+                "approval": 3,
+                "it": 3,
+                "total": 5
+            }
+        },
+        "items": {
+            "origins": {
+                "all": 118,
+                "direct": 79,
+                "onboarding": 39
+            },
+            "people": 5,
+            "picked": {
+                "all": 110,
+                "direct": 73,
+                "onboarding": 37
+            },
+            "list": [
+                {
+                    "origin": "direct",
+                    "type": "social",
+                    "kind": "social_platform",
+                    "id": 1,
+                    "name": "Facebook",
+                    "name_th": null,
+                    "count": 6
+                },
+                {
+                    "origin": "direct",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 1,
+                    "name": "All staff",
+                    "name_th": null,
+                    "count": 4
+                },
+                {
+                    "origin": "direct",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 4
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 12,
+                    "name": "cctv B",
+                    "name_th": null,
+                    "count": 4
+                },
+                {
+                    "origin": "direct",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 3,
+                    "name": "hardware A",
+                    "name_th": "hardware เอ",
+                    "count": 4
+                },
+                {
+                    "origin": "direct",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 1,
+                    "name": "AutoCAD",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "social",
+                    "kind": "social_platform",
+                    "id": 1,
+                    "name": "Facebook",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 2,
+                    "name": "Office",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 2,
+                    "name": "computer B",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 4,
+                    "name": "hardware B",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 5,
+                    "name": "mobile A",
+                    "name_th": "mobile เอ",
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 6,
+                    "name": "mobile B",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 9,
+                    "name": "network A",
+                    "name_th": "network เอ",
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 10,
+                    "name": "network B",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 13,
+                    "name": "other A",
+                    "name_th": "other เอ",
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 14,
+                    "name": "other B",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 7,
+                    "name": "telephone A",
+                    "name_th": "telephone เอ",
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 8,
+                    "name": "telephone B",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 1,
+                    "name": "AutoCAD",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 2,
+                    "name": "Plant",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 2,
+                    "name": "Plant",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 11,
+                    "name": "cctv A",
+                    "name_th": "cctv เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 11,
+                    "name": "cctv A",
+                    "name_th": "cctv เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 2,
+                    "name": "computer B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 4,
+                    "name": "hardware B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 6,
+                    "name": "mobile B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 9,
+                    "name": "network A",
+                    "name_th": "network เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 13,
+                    "name": "other A",
+                    "name_th": "other เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 8,
+                    "name": "telephone B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 1,
+                    "name": "All staff",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 2,
+                    "name": "Office",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 12,
+                    "name": "cctv B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 3,
+                    "name": "hardware A",
+                    "name_th": "hardware เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 5,
+                    "name": "mobile A",
+                    "name_th": "mobile เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 10,
+                    "name": "network B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 14,
+                    "name": "other B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 7,
+                    "name": "telephone A",
+                    "name_th": "telephone เอ",
+                    "count": 1
+                }
+            ]
+        },
+        "departments": [
+            {
+                "department_id": 1,
+                "name": "Production",
+                "name_th": "ฝ่ายผลิต",
+                "total": 44,
+                "by_category": {
+                    "hardware": 9,
+                    "software": 12,
+                    "network": 7,
+                    "cctv": 5,
+                    "telephone": 3,
+                    "other": 8
+                },
+                "top_type": {
+                    "type": "cctv",
+                    "count": 5,
+                    "ties": 0
+                },
+                "onboarding": 15
+            },
+            {
+                "department_id": 2,
+                "name": "Quality",
+                "name_th": "ฝ่ายควบคุมคุณภาพ",
+                "total": 26,
+                "by_category": {
+                    "hardware": 7,
+                    "software": 7,
+                    "network": 4,
+                    "cctv": 2,
+                    "telephone": 2,
+                    "other": 4
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 3,
+                    "ties": 1
+                },
+                "onboarding": 8
+            },
+            {
+                "department_id": null,
+                "name": null,
+                "name_th": null,
+                "total": 24,
+                "by_category": {
+                    "hardware": 7,
+                    "software": 7,
+                    "network": 3,
+                    "cctv": 2,
+                    "telephone": 2,
+                    "other": 3
+                },
+                "top_type": {
+                    "type": "mobile",
+                    "count": 3,
+                    "ties": 1
+                },
+                "onboarding": 8
+            },
+            {
+                "department_id": 3,
+                "name": "HR",
+                "name_th": null,
+                "total": 18,
+                "by_category": {
+                    "hardware": 4,
+                    "software": 8,
+                    "network": 2,
+                    "cctv": 0,
+                    "telephone": 1,
+                    "other": 3
+                },
+                "top_type": {
+                    "type": "hardware",
+                    "count": 2,
+                    "ties": 5
+                },
+                "onboarding": 6
+            },
+            {
+                "department_id": null,
+                "name": "Unknown Dept",
+                "name_th": null,
+                "total": 6,
+                "by_category": {
+                    "hardware": 2,
+                    "software": 1,
+                    "network": 2,
+                    "cctv": 0,
+                    "telephone": 1,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 1,
+                    "ties": 5
+                },
+                "onboarding": 2
+            }
+        ]
+    },
+    "type": {
+        "months": [
+            {
+                "month": "2026-01",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-02",
+                "submitted": 2,
+                "completed": 0
+            },
+            {
+                "month": "2026-03",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-04",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-05",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-06",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-07",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-08",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-09",
+                "submitted": 1,
+                "completed": 0
+            }
+        ],
+        "types": [
+            {
+                "type": "computer",
+                "total": 10,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 2,
+                    "completed": 3,
+                    "rejected": 2,
+                    "cancelled": 1
+                },
+                "approved": 5,
+                "rejected": 2
+            }
+        ],
+        "delivery": {
+            "types": [],
+            "all": {
+                "count": 0,
+                "approval": null,
+                "it": null,
+                "total": null
+            }
+        },
+        "items": {
+            "origins": {
+                "all": 10,
+                "direct": 6,
+                "onboarding": 4
+            },
+            "people": 3,
+            "picked": {
+                "all": 10,
+                "direct": 6,
+                "onboarding": 4
+            },
+            "list": [
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 2,
+                    "name": "computer B",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 2,
+                    "name": "computer B",
+                    "name_th": null,
+                    "count": 2
+                }
+            ]
+        },
+        "departments": [
+            {
+                "department_id": 1,
+                "name": "Production",
+                "name_th": "ฝ่ายผลิต",
+                "total": 3,
+                "by_category": {
+                    "hardware": 3,
+                    "software": 0,
+                    "network": 0,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 3,
+                    "ties": 0
+                },
+                "onboarding": 2
+            },
+            {
+                "department_id": 2,
+                "name": "Quality",
+                "name_th": "ฝ่ายควบคุมคุณภาพ",
+                "total": 3,
+                "by_category": {
+                    "hardware": 3,
+                    "software": 0,
+                    "network": 0,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 3,
+                    "ties": 0
+                },
+                "onboarding": 0
+            },
+            {
+                "department_id": null,
+                "name": null,
+                "name_th": null,
+                "total": 2,
+                "by_category": {
+                    "hardware": 2,
+                    "software": 0,
+                    "network": 0,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 2,
+                    "ties": 0
+                },
+                "onboarding": 1
+            },
+            {
+                "department_id": 3,
+                "name": "HR",
+                "name_th": null,
+                "total": 1,
+                "by_category": {
+                    "hardware": 1,
+                    "software": 0,
+                    "network": 0,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 1,
+                    "ties": 0
+                },
+                "onboarding": 1
+            },
+            {
+                "department_id": null,
+                "name": "Unknown Dept",
+                "name_th": null,
+                "total": 1,
+                "by_category": {
+                    "hardware": 1,
+                    "software": 0,
+                    "network": 0,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 1,
+                    "ties": 0
+                },
+                "onboarding": 0
+            }
+        ]
+    },
+    "status": {
+        "months": [
+            {
+                "month": "2026-01",
+                "submitted": 5,
+                "completed": 5
+            },
+            {
+                "month": "2026-02",
+                "submitted": 3,
+                "completed": 2
+            },
+            {
+                "month": "2026-03",
+                "submitted": 5,
+                "completed": 5
+            },
+            {
+                "month": "2026-04",
+                "submitted": 4,
+                "completed": 5
+            },
+            {
+                "month": "2026-05",
+                "submitted": 5,
+                "completed": 3
+            },
+            {
+                "month": "2026-06",
+                "submitted": 4,
+                "completed": 4
+            },
+            {
+                "month": "2026-07",
+                "submitted": 4,
+                "completed": 5
+            },
+            {
+                "month": "2026-08",
+                "submitted": 5,
+                "completed": 3
+            },
+            {
+                "month": "2026-09",
+                "submitted": 4,
+                "completed": 5
+            }
+        ],
+        "types": [
+            {
+                "type": "computer",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "hardware",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "mobile",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "email",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "social",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "fileshare",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "software",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "recovery",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "mailgroup",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "telephone",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "network",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 3,
+                "rejected": 0
+            },
+            {
+                "type": "cctv",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "other",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 3,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            }
+        ],
+        "delivery": {
+            "types": [
+                {
+                    "type": "fileshare",
+                    "count": 2,
+                    "approval": 1.5,
+                    "it": 5.5,
+                    "total": 7
+                },
+                {
+                    "type": "other",
+                    "count": 2,
+                    "approval": 3,
+                    "it": 3.5,
+                    "total": 6.5
+                },
+                {
+                    "type": "email",
+                    "count": 3,
+                    "approval": 3,
+                    "it": 2,
+                    "total": 6
+                },
+                {
+                    "type": "recovery",
+                    "count": 3,
+                    "approval": 4,
+                    "it": 3,
+                    "total": 6
+                },
+                {
+                    "type": "cctv",
+                    "count": 2,
+                    "approval": 2,
+                    "it": 3.5,
+                    "total": 5.5
+                },
+                {
+                    "type": "mobile",
+                    "count": 3,
+                    "approval": 1,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "social",
+                    "count": 3,
+                    "approval": 1,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "software",
+                    "count": 2,
+                    "approval": 2,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "mailgroup",
+                    "count": 3,
+                    "approval": 2,
+                    "it": 2,
+                    "total": 5
+                },
+                {
+                    "type": "network",
+                    "count": 3,
+                    "approval": 2,
+                    "it": 3,
+                    "total": 5
+                },
+                {
+                    "type": "hardware",
+                    "count": 3,
+                    "approval": 4,
+                    "it": 1,
+                    "total": 4
+                },
+                {
+                    "type": "telephone",
+                    "count": 3,
+                    "approval": 3,
+                    "it": 1,
+                    "total": 4
+                }
+            ],
+            "all": {
+                "count": 32,
+                "approval": 3,
+                "it": 3,
+                "total": 5
+            }
+        },
+        "items": {
+            "origins": {
+                "all": 39,
+                "direct": 39,
+                "onboarding": 0
+            },
+            "people": 0,
+            "picked": {
+                "all": 36,
+                "direct": 36,
+                "onboarding": 0
+            },
+            "list": [
+                {
+                    "origin": "direct",
+                    "type": "social",
+                    "kind": "social_platform",
+                    "id": 1,
+                    "name": "Facebook",
+                    "name_th": null,
+                    "count": 3
+                },
+                {
+                    "origin": "direct",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 1,
+                    "name": "All staff",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 1,
+                    "name": "AutoCAD",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 12,
+                    "name": "cctv B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 3,
+                    "name": "hardware A",
+                    "name_th": "hardware เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 6,
+                    "name": "mobile B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 10,
+                    "name": "network B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 13,
+                    "name": "other A",
+                    "name_th": "other เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 8,
+                    "name": "telephone B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 2,
+                    "name": "Office",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 2,
+                    "name": "Plant",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 11,
+                    "name": "cctv A",
+                    "name_th": "cctv เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 2,
+                    "name": "computer B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 4,
+                    "name": "hardware B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 5,
+                    "name": "mobile A",
+                    "name_th": "mobile เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 9,
+                    "name": "network A",
+                    "name_th": "network เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 14,
+                    "name": "other B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 7,
+                    "name": "telephone A",
+                    "name_th": "telephone เอ",
+                    "count": 1
+                }
+            ]
+        },
+        "departments": [
+            {
+                "department_id": 1,
+                "name": "Production",
+                "name_th": "ฝ่ายผลิต",
+                "total": 15,
+                "by_category": {
+                    "hardware": 4,
+                    "software": 4,
+                    "network": 2,
+                    "cctv": 2,
+                    "telephone": 1,
+                    "other": 2
+                },
+                "top_type": {
+                    "type": "mobile",
+                    "count": 2,
+                    "ties": 4
+                },
+                "onboarding": 0
+            },
+            {
+                "department_id": null,
+                "name": null,
+                "name_th": null,
+                "total": 8,
+                "by_category": {
+                    "hardware": 0,
+                    "software": 4,
+                    "network": 2,
+                    "cctv": 0,
+                    "telephone": 1,
+                    "other": 1
+                },
+                "top_type": {
+                    "type": "recovery",
+                    "count": 2,
+                    "ties": 0
+                },
+                "onboarding": 0
+            },
+            {
+                "department_id": 2,
+                "name": "Quality",
+                "name_th": "ฝ่ายควบคุมคุณภาพ",
+                "total": 8,
+                "by_category": {
+                    "hardware": 2,
+                    "software": 1,
+                    "network": 1,
+                    "cctv": 1,
+                    "telephone": 1,
+                    "other": 2
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 1,
+                    "ties": 7
+                },
+                "onboarding": 0
+            },
+            {
+                "department_id": 3,
+                "name": "HR",
+                "name_th": null,
+                "total": 6,
+                "by_category": {
+                    "hardware": 1,
+                    "software": 3,
+                    "network": 1,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 1
+                },
+                "top_type": {
+                    "type": "hardware",
+                    "count": 1,
+                    "ties": 5
+                },
+                "onboarding": 0
+            },
+            {
+                "department_id": null,
+                "name": "Unknown Dept",
+                "name_th": null,
+                "total": 2,
+                "by_category": {
+                    "hardware": 2,
+                    "software": 0,
+                    "network": 0,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 1,
+                    "ties": 1
+                },
+                "onboarding": 0
+            }
+        ]
+    },
+    "range": {
+        "months": [
+            {
+                "month": "2026-03",
+                "submitted": 14,
+                "completed": 5
+            },
+            {
+                "month": "2026-04",
+                "submitted": 11,
+                "completed": 5
+            },
+            {
+                "month": "2026-05",
+                "submitted": 15,
+                "completed": 3
+            }
+        ],
+        "types": [
+            {
+                "type": "mobile",
+                "total": 4,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 1,
+                "rejected": 1
+            },
+            {
+                "type": "mailgroup",
+                "total": 4,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 1,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 1
+            },
+            {
+                "type": "telephone",
+                "total": 4,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 2,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 2,
+                "rejected": 1
+            },
+            {
+                "type": "computer",
+                "total": 3,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "hardware",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 1,
+                "rejected": 1
+            },
+            {
+                "type": "email",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 1,
+                    "completed": 2,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "social",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 1,
+                "rejected": 1
+            },
+            {
+                "type": "recovery",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 1,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 1
+            },
+            {
+                "type": "network",
+                "total": 3,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 1
+                },
+                "approved": 1,
+                "rejected": 0
+            },
+            {
+                "type": "cctv",
+                "total": 3,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "other",
+                "total": 3,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 1
+                },
+                "approved": 1,
+                "rejected": 0
+            },
+            {
+                "type": "fileshare",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "software",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 1,
+                    "completed": 0,
+                    "rejected": 1,
+                    "cancelled": 0
+                },
+                "approved": 1,
+                "rejected": 1
+            }
+        ],
+        "delivery": {
+            "types": [
+                {
+                    "type": "fileshare",
+                    "count": 1,
+                    "approval": 3,
+                    "it": 6,
+                    "total": 9
+                },
+                {
+                    "type": "recovery",
+                    "count": 1,
+                    "approval": 5,
+                    "it": 3,
+                    "total": 8
+                },
+                {
+                    "type": "mobile",
+                    "count": 1,
+                    "approval": 1,
+                    "it": 6,
+                    "total": 7
+                },
+                {
+                    "type": "email",
+                    "count": 2,
+                    "approval": 3,
+                    "it": 3.5,
+                    "total": 6.5
+                },
+                {
+                    "type": "social",
+                    "count": 1,
+                    "approval": 3,
+                    "it": 3,
+                    "total": 6
+                },
+                {
+                    "type": "other",
+                    "count": 1,
+                    "approval": 2,
+                    "it": 4,
+                    "total": 6
+                },
+                {
+                    "type": "mailgroup",
+                    "count": 1,
+                    "approval": 4,
+                    "it": 1,
+                    "total": 5
+                },
+                {
+                    "type": "telephone",
+                    "count": 2,
+                    "approval": 2.5,
+                    "it": 2,
+                    "total": 4.5
+                },
+                {
+                    "type": "network",
+                    "count": 1,
+                    "approval": 1,
+                    "it": 3,
+                    "total": 4
+                },
+                {
+                    "type": "hardware",
+                    "count": 1,
+                    "approval": 2,
+                    "it": 1,
+                    "total": 3
+                },
+                {
+                    "type": "cctv",
+                    "count": 1,
+                    "approval": 0,
+                    "it": 2,
+                    "total": 2
+                }
+            ],
+            "all": {
+                "count": 13,
+                "approval": 3,
+                "it": 3,
+                "total": 6
+            }
+        },
+        "items": {
+            "origins": {
+                "all": 40,
+                "direct": 27,
+                "onboarding": 13
+            },
+            "people": 4,
+            "picked": {
+                "all": 37,
+                "direct": 24,
+                "onboarding": 13
+            },
+            "list": [
+                {
+                    "origin": "direct",
+                    "type": "social",
+                    "kind": "social_platform",
+                    "id": 1,
+                    "name": "Facebook",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 3,
+                    "name": "hardware A",
+                    "name_th": "hardware เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 13,
+                    "name": "other A",
+                    "name_th": "other เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 7,
+                    "name": "telephone A",
+                    "name_th": "telephone เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 1,
+                    "name": "All staff",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 1,
+                    "name": "All staff",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "social",
+                    "kind": "social_platform",
+                    "id": 1,
+                    "name": "Facebook",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 2,
+                    "name": "Office",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 2,
+                    "name": "Office",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 2,
+                    "name": "Plant",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 2,
+                    "name": "Plant",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 11,
+                    "name": "cctv A",
+                    "name_th": "cctv เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 11,
+                    "name": "cctv A",
+                    "name_th": "cctv เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 12,
+                    "name": "cctv B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 2,
+                    "name": "computer B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 4,
+                    "name": "hardware B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 5,
+                    "name": "mobile A",
+                    "name_th": "mobile เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 5,
+                    "name": "mobile A",
+                    "name_th": "mobile เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 6,
+                    "name": "mobile B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 6,
+                    "name": "mobile B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 9,
+                    "name": "network A",
+                    "name_th": "network เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 9,
+                    "name": "network A",
+                    "name_th": "network เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 10,
+                    "name": "network B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 13,
+                    "name": "other A",
+                    "name_th": "other เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 8,
+                    "name": "telephone B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 8,
+                    "name": "telephone B",
+                    "name_th": null,
+                    "count": 1
+                }
+            ]
+        },
+        "departments": [
+            {
+                "department_id": 1,
+                "name": "Production",
+                "name_th": "ฝ่ายผลิต",
+                "total": 12,
+                "by_category": {
+                    "hardware": 1,
+                    "software": 5,
+                    "network": 0,
+                    "cctv": 3,
+                    "telephone": 1,
+                    "other": 2
+                },
+                "top_type": {
+                    "type": "cctv",
+                    "count": 3,
+                    "ties": 0
+                },
+                "onboarding": 3
+            },
+            {
+                "department_id": 2,
+                "name": "Quality",
+                "name_th": "ฝ่ายควบคุมคุณภาพ",
+                "total": 10,
+                "by_category": {
+                    "hardware": 3,
+                    "software": 2,
+                    "network": 2,
+                    "cctv": 0,
+                    "telephone": 1,
+                    "other": 2
+                },
+                "top_type": {
+                    "type": "mobile",
+                    "count": 2,
+                    "ties": 0
+                },
+                "onboarding": 3
+            },
+            {
+                "department_id": null,
+                "name": null,
+                "name_th": null,
+                "total": 8,
+                "by_category": {
+                    "hardware": 4,
+                    "software": 2,
+                    "network": 2,
+                    "cctv": 0,
+                    "telephone": 0,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 2,
+                    "ties": 2
+                },
+                "onboarding": 3
+            },
+            {
+                "department_id": 3,
+                "name": "HR",
+                "name_th": null,
+                "total": 8,
+                "by_category": {
+                    "hardware": 2,
+                    "software": 3,
+                    "network": 0,
+                    "cctv": 0,
+                    "telephone": 1,
+                    "other": 2
+                },
+                "top_type": {
+                    "type": "hardware",
+                    "count": 2,
+                    "ties": 0
+                },
+                "onboarding": 2
+            },
+            {
+                "department_id": null,
+                "name": "Unknown Dept",
+                "name_th": null,
+                "total": 2,
+                "by_category": {
+                    "hardware": 0,
+                    "software": 0,
+                    "network": 1,
+                    "cctv": 0,
+                    "telephone": 1,
+                    "other": 0
+                },
+                "top_type": {
+                    "type": "telephone",
+                    "count": 1,
+                    "ties": 1
+                },
+                "onboarding": 2
+            }
+        ]
+    },
+    "empty": {
+        "months": [
+            {
+                "month": "2024-01",
+                "submitted": 0,
+                "completed": 0
+            }
+        ],
+        "types": [],
+        "delivery": {
+            "types": [],
+            "all": {
+                "count": 0,
+                "approval": null,
+                "it": null,
+                "total": null
+            }
+        },
+        "items": {
+            "origins": {
+                "all": 0,
+                "direct": 0,
+                "onboarding": 0
+            },
+            "people": 0,
+            "picked": {
+                "all": 0,
+                "direct": 0,
+                "onboarding": 0
+            },
+            "list": []
+        },
+        "departments": []
+    },
+    "department": {
+        "months": [
+            {
+                "month": "2026-01",
+                "submitted": 3,
+                "completed": 1
+            },
+            {
+                "month": "2026-02",
+                "submitted": 2,
+                "completed": 0
+            },
+            {
+                "month": "2026-03",
+                "submitted": 3,
+                "completed": 1
+            },
+            {
+                "month": "2026-04",
+                "submitted": 2,
+                "completed": 1
+            },
+            {
+                "month": "2026-05",
+                "submitted": 5,
+                "completed": 2
+            },
+            {
+                "month": "2026-06",
+                "submitted": 4,
+                "completed": 0
+            },
+            {
+                "month": "2026-07",
+                "submitted": 3,
+                "completed": 2
+            },
+            {
+                "month": "2026-08",
+                "submitted": 1,
+                "completed": 0
+            },
+            {
+                "month": "2026-09",
+                "submitted": 3,
+                "completed": 0
+            }
+        ],
+        "types": [
+            {
+                "type": "computer",
+                "total": 3,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 1
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "fileshare",
+                "total": 3,
+                "by_status": {
+                    "pending": 2,
+                    "approved": 1,
+                    "completed": 0,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 1,
+                "rejected": 0
+            },
+            {
+                "type": "hardware",
+                "total": 2,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 1,
+                    "completed": 0,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 1,
+                "rejected": 0
+            },
+            {
+                "type": "mobile",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 1
+                },
+                "approved": 1,
+                "rejected": 0
+            },
+            {
+                "type": "email",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 0,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 0,
+                "rejected": 1
+            },
+            {
+                "type": "social",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 1,
+                    "cancelled": 0
+                },
+                "approved": 1,
+                "rejected": 1
+            },
+            {
+                "type": "recovery",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 0,
+                    "rejected": 1,
+                    "cancelled": 1
+                },
+                "approved": 0,
+                "rejected": 1
+            },
+            {
+                "type": "mailgroup",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 1,
+                    "cancelled": 0
+                },
+                "approved": 1,
+                "rejected": 1
+            },
+            {
+                "type": "telephone",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "cctv",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 1
+                },
+                "approved": 0,
+                "rejected": 0
+            },
+            {
+                "type": "other",
+                "total": 2,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 1,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 2,
+                "rejected": 0
+            },
+            {
+                "type": "software",
+                "total": 1,
+                "by_status": {
+                    "pending": 1,
+                    "approved": 0,
+                    "completed": 0,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 0,
+                "rejected": 0
+            },
+            {
+                "type": "network",
+                "total": 1,
+                "by_status": {
+                    "pending": 0,
+                    "approved": 0,
+                    "completed": 1,
+                    "rejected": 0,
+                    "cancelled": 0
+                },
+                "approved": 1,
+                "rejected": 0
+            }
+        ],
+        "delivery": {
+            "types": [
+                {
+                    "type": "mobile",
+                    "count": 1,
+                    "approval": 1,
+                    "it": 6,
+                    "total": 7
+                },
+                {
+                    "type": "other",
+                    "count": 1,
+                    "approval": 2,
+                    "it": 4,
+                    "total": 6
+                },
+                {
+                    "type": "mailgroup",
+                    "count": 1,
+                    "approval": 2,
+                    "it": 2,
+                    "total": 4
+                },
+                {
+                    "type": "network",
+                    "count": 1,
+                    "approval": 1,
+                    "it": 3,
+                    "total": 4
+                },
+                {
+                    "type": "social",
+                    "count": 1,
+                    "approval": 1,
+                    "it": 0,
+                    "total": 1
+                },
+                {
+                    "type": "telephone",
+                    "count": 1,
+                    "approval": 0,
+                    "it": 0,
+                    "total": 0
+                }
+            ],
+            "all": {
+                "count": 6,
+                "approval": 1,
+                "it": 2.5,
+                "total": 4
+            }
+        },
+        "items": {
+            "origins": {
+                "all": 26,
+                "direct": 18,
+                "onboarding": 8
+            },
+            "people": 1,
+            "picked": {
+                "all": 24,
+                "direct": 17,
+                "onboarding": 7
+            },
+            "list": [
+                {
+                    "origin": "onboarding",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 1,
+                    "name": "computer A",
+                    "name_th": "computer เอ",
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "telephone",
+                    "kind": "option",
+                    "id": 8,
+                    "name": "telephone B",
+                    "name_th": null,
+                    "count": 2
+                },
+                {
+                    "origin": "direct",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 1,
+                    "name": "All staff",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "software",
+                    "kind": "software",
+                    "id": 1,
+                    "name": "AutoCAD",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "social",
+                    "kind": "social_platform",
+                    "id": 1,
+                    "name": "Facebook",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "social",
+                    "kind": "social_platform",
+                    "id": 1,
+                    "name": "Facebook",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "fileshare",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 2,
+                    "name": "PD Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "mailgroup",
+                    "kind": "email_group",
+                    "id": 2,
+                    "name": "Plant",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "recovery",
+                    "kind": "file_share",
+                    "id": 1,
+                    "name": "QC Docs",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 11,
+                    "name": "cctv A",
+                    "name_th": "cctv เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "cctv",
+                    "kind": "option",
+                    "id": 12,
+                    "name": "cctv B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "computer",
+                    "kind": "option",
+                    "id": 2,
+                    "name": "computer B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "onboarding",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 3,
+                    "name": "hardware A",
+                    "name_th": "hardware เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "hardware",
+                    "kind": "option",
+                    "id": 4,
+                    "name": "hardware B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 5,
+                    "name": "mobile A",
+                    "name_th": "mobile เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "mobile",
+                    "kind": "option",
+                    "id": 6,
+                    "name": "mobile B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "network",
+                    "kind": "option",
+                    "id": 10,
+                    "name": "network B",
+                    "name_th": null,
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 13,
+                    "name": "other A",
+                    "name_th": "other เอ",
+                    "count": 1
+                },
+                {
+                    "origin": "direct",
+                    "type": "other",
+                    "kind": "option",
+                    "id": 14,
+                    "name": "other B",
+                    "name_th": null,
+                    "count": 1
+                }
+            ]
+        },
+        "departments": [
+            {
+                "department_id": 2,
+                "name": "Quality",
+                "name_th": "ฝ่ายควบคุมคุณภาพ",
+                "total": 26,
+                "by_category": {
+                    "hardware": 7,
+                    "software": 7,
+                    "network": 4,
+                    "cctv": 2,
+                    "telephone": 2,
+                    "other": 4
+                },
+                "top_type": {
+                    "type": "computer",
+                    "count": 3,
+                    "ties": 1
+                },
+                "onboarding": 8
+            }
+        ]
+    }
+}

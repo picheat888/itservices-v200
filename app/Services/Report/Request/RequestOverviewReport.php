@@ -3,9 +3,15 @@
 namespace App\Services\Report\Request;
 
 use App\Enums\Request\RequestType;
+use App\Models\Access\EmailGroup;
+use App\Models\Access\FileShare;
+use App\Models\Access\SocialPlatform;
+use App\Models\Access\Software;
 use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
@@ -15,6 +21,7 @@ use App\Services\Report\Tabular\TabularReport;
 use App\Support\DateDisplay;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -33,6 +40,12 @@ class RequestOverviewReport extends TabularReport
     private const CATEGORY_TH = [
         'hardware' => 'ฮาร์ดแวร์', 'software' => 'ซอฟต์แวร์', 'network' => 'เครือข่าย',
         'cctv' => 'กล้องวงจรปิด', 'telephone' => 'โทรศัพท์', 'other' => 'อื่น ๆ',
+    ];
+
+    // The request columns the breakdown cards read
+    private const CARD_COLUMNS = [
+        'type', 'origin', 'status', 'employee_id', 'department_name', 'created_at', 'approved_at', 'completed_at',
+        'request_option_id', 'software_id', 'file_share_id', 'email_group_id', 'social_platform_id',
     ];
 
     /** Weeks the pending tile's line looks back over. */
@@ -194,17 +207,45 @@ class RequestOverviewReport extends TabularReport
     }
 
     /**
-     * Requests submitted between two moments under the filters, with what the cards read.
+     * Requests submitted between two moments under the filters, as plain rows holding only what the
+     * cards read (days as day numbers, the picked item and the requester's department resolved).
      *
      * @param  array<string, mixed>  $filters
-     * @return Collection<int, ServiceRequest>
+     * @return Collection<int, array{type: string, origin: string, status: string, employee_id: ?int, department_name: ?string, department_id: ?int, month: string, created: int, approved: ?int, completed: ?int, item: ?array{kind: string, id: int, name: string, name_th: ?string}}>
      */
     private function submitted(array $filters, CarbonInterface $from, CarbonInterface $to): Collection
     {
-        return $this->scoped($filters)
-            ->with(['employee.department', 'requestOption', 'software', 'fileShare', 'emailGroup', 'socialPlatform'])
-            ->whereBetween('created_at', [$from, $to])
-            ->get();
+        $raw = $this->scoped($filters)->whereBetween('created_at', [$from, $to])->orderBy('id')->toBase()->get(self::CARD_COLUMNS);
+        $idsOf = fn (string $column) => $raw->pluck($column)->filter()->unique()->values();
+        $departmentOf = Employee::query()->whereIn('id', $idsOf('employee_id'))->pluck('department_id', 'id');
+        $options = RequestOption::query()->whereIn('id', $idsOf('request_option_id'))->get(['id', 'label_en', 'label_th'])->keyBy('id');
+        $software = Software::query()->whereIn('id', $idsOf('software_id'))->get(['id', 'name'])->keyBy('id');
+        $shares = FileShare::query()->whereIn('id', $idsOf('file_share_id'))->get(['id', 'name'])->keyBy('id');
+        $groups = EmailGroup::query()->whereIn('id', $idsOf('email_group_id'))->get(['id', 'name'])->keyBy('id');
+        $platforms = SocialPlatform::query()->whereIn('id', $idsOf('social_platform_id'))->get(['id', 'name'])->keyBy('id');
+        $named = fn (string $kind, Model $m) => ['kind' => $kind, 'id' => $m->id, 'name' => $m->name, 'name_th' => null];
+
+        // Same order as item(): software, file share, mail group, social platform, then the device option
+        return $raw->map(fn (object $r) => [
+            'type' => $r->type,
+            'origin' => $r->origin,
+            'status' => $r->status,
+            'employee_id' => $r->employee_id,
+            'department_name' => $r->department_name,
+            'department_id' => $departmentOf->get($r->employee_id),
+            'month' => substr($r->created_at, 0, 7),
+            'created' => self::dayOf($r->created_at),
+            'approved' => $r->approved_at === null ? null : self::dayOf($r->approved_at),
+            'completed' => $r->completed_at === null ? null : self::dayOf($r->completed_at),
+            'item' => match (true) {
+                ($m = $software->get($r->software_id)) !== null => $named('software', $m),
+                ($m = $shares->get($r->file_share_id)) !== null => $named('file_share', $m),
+                ($m = $groups->get($r->email_group_id)) !== null => $named('email_group', $m),
+                ($m = $platforms->get($r->social_platform_id)) !== null => $named('social_platform', $m),
+                ($m = $options->get($r->request_option_id)) !== null => ['kind' => 'option', 'id' => $m->id, 'name' => $m->label_en, 'name_th' => $m->label_th],
+                default => null,
+            },
+        ]);
     }
 
     /** @param Collection<int, ServiceRequest> $requests */
@@ -338,15 +379,16 @@ class RequestOverviewReport extends TabularReport
      * Every month of the range, oldest first: requests submitted in it, and requests completed in
      * it whatever their submit date (same type, department and status filters).
      *
-     * @param  Collection<int, ServiceRequest>  $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      * @param  array<string, mixed>  $filters
      * @return list<array{month: string, submitted: int, completed: int}>
      */
     private function months(Collection $rows, array $filters, Carbon $from, Carbon $to): array
     {
-        $submitted = $rows->countBy(fn (ServiceRequest $r) => $r->created_at->format('Y-m'));
-        $completed = $this->scoped($filters)->whereBetween('completed_at', [$from, $to])->get(['id', 'completed_at'])
-            ->countBy(fn (ServiceRequest $r) => $r->completed_at->format('Y-m'));
+        $submitted = $rows->countBy('month');
+        $completed = $this->scoped($filters)->whereBetween('completed_at', [$from, $to])
+            ->selectRaw('substr(completed_at, 1, 7) as month, count(*) as total')->groupByRaw('substr(completed_at, 1, 7)')
+            ->toBase()->pluck('total', 'month');
 
         return array_map(fn (Carbon $m) => [
             'month' => $m->format('Y-m'),
@@ -359,32 +401,32 @@ class RequestOverviewReport extends TabularReport
      * One row per request type, most requests first: the count in each status, and how many got
      * through approval against how many were turned down (the approval rate's two halves).
      *
-     * @param  Collection<int, ServiceRequest>  $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      * @return list<array{type: string, total: int, by_status: array<string, int>, approved: int, rejected: int}>
      */
     private function types(Collection $rows): array
     {
         $order = array_flip(array_map(fn (RequestType $t) => $t->value, RequestType::cases()));
 
-        return $rows->groupBy(fn (ServiceRequest $r) => $r->type->value)
+        return $rows->groupBy('type')
             ->map(fn (Collection $list, string $type) => [
                 'type' => $type,
                 'total' => $list->count(),
                 'by_status' => self::byStatus($list),
-                'approved' => $list->filter(fn (ServiceRequest $r) => $r->approved_at !== null)->count(),
-                'rejected' => $list->filter(fn (ServiceRequest $r) => $r->status->value === 'rejected')->count(),
+                'approved' => $list->filter(fn (array $r) => $r['approved'] !== null)->count(),
+                'rejected' => $list->filter(fn (array $r) => $r['status'] === 'rejected')->count(),
             ])
             ->sortBy([['total', 'desc'], fn (array $a, array $b) => $order[$a['type']] <=> $order[$b['type']]])
             ->values()->all();
     }
 
     /**
-     * @param  Collection<int, ServiceRequest>  $list
+     * @param  Collection<int, array<string, mixed>>  $list
      * @return array<string, int>
      */
     private static function byStatus(Collection $list): array
     {
-        $count = $list->countBy(fn (ServiceRequest $r) => $r->status->value);
+        $count = $list->countBy('status');
 
         return collect(array_keys(self::STATUS_KEYS))->mapWithKeys(fn (string $s) => [$s => (int) $count->get($s, 0)])->all();
     }
@@ -394,22 +436,22 @@ class RequestOverviewReport extends TabularReport
      * (submitted → approved), the IT part (approved → completed) and the whole (submitted →
      * completed), plus the same over every type.
      *
-     * @param  Collection<int, ServiceRequest>  $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      * @return array{types: list<array{type: string, count: int, approval: int|float|null, it: int|float|null, total: int|float|null}>, all: array{count: int, approval: int|float|null, it: int|float|null, total: int|float|null}}
      */
     private function delivery(Collection $rows): array
     {
-        $done = $rows->filter(fn (ServiceRequest $r) => $r->status->value === 'completed' && $r->approved_at && $r->completed_at);
+        $done = $rows->filter(fn (array $r) => $r['status'] === 'completed' && $r['approved'] !== null && $r['completed'] !== null);
         $order = array_flip(array_map(fn (RequestType $t) => $t->value, RequestType::cases()));
         $medians = fn (Collection $list) => [
             'count' => $list->count(),
-            'approval' => self::median($list->map(fn (ServiceRequest $r) => self::wholeDays($r->created_at, $r->approved_at))->values()->all()),
-            'it' => self::median($list->map(fn (ServiceRequest $r) => self::wholeDays($r->approved_at, $r->completed_at))->values()->all()),
-            'total' => self::median($list->map(fn (ServiceRequest $r) => self::wholeDays($r->created_at, $r->completed_at))->values()->all()),
+            'approval' => self::median($list->map(fn (array $r) => $r['approved'] - $r['created'])->values()->all()),
+            'it' => self::median($list->map(fn (array $r) => $r['completed'] - $r['approved'])->values()->all()),
+            'total' => self::median($list->map(fn (array $r) => $r['completed'] - $r['created'])->values()->all()),
         ];
 
         return [
-            'types' => $done->groupBy(fn (ServiceRequest $r) => $r->type->value)
+            'types' => $done->groupBy('type')
                 ->map(fn (Collection $list, string $type) => ['type' => $type] + $medians($list))
                 ->sortBy([['total', 'desc'], fn (array $a, array $b) => $order[$a['type']] <=> $order[$b['type']]])
                 ->values()->all(),
@@ -421,13 +463,13 @@ class RequestOverviewReport extends TabularReport
      * What the requests picked, most asked for first, per origin (the page's segments add them up
      * for "ทั้งหมด"); the request count of each origin, and how many new employees HR filed for.
      *
-     * @param  Collection<int, ServiceRequest>  $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      * @return array{origins: array{all: int, direct: int, onboarding: int}, people: int, picked: array{all: int, direct: int, onboarding: int}, list: list<array{origin: string, type: string, kind: string, id: int, name: string, name_th: ?string, count: int}>}
      */
     private function items(Collection $rows): array
     {
-        $origin = fn (string $o) => $rows->filter(fn (ServiceRequest $r) => $r->origin->value === $o);
-        $list = $rows->map(fn (ServiceRequest $r) => ($item = self::item($r)) === null ? null : $item + ['origin' => $r->origin->value, 'type' => $r->type->value])
+        $origin = fn (string $o) => $rows->filter(fn (array $r) => $r['origin'] === $o);
+        $list = $rows->map(fn (array $r) => $r['item'] === null ? null : $r['item'] + ['origin' => $r['origin'], 'type' => $r['type']])
             ->filter()
             ->groupBy(fn (array $i) => "{$i['origin']}|{$i['type']}|{$i['kind']}|{$i['id']}")
             ->map(fn (Collection $group) => [
@@ -454,30 +496,32 @@ class RequestOverviewReport extends TabularReport
      * ticket category of the request type, the type asked for most (and how many types tie with
      * it), and how many HR filed for new employees.
      *
-     * @param  Collection<int, ServiceRequest>  $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      * @return list<array{department_id: ?int, name: ?string, name_th: ?string, total: int, by_category: array<string, int>, top_type: array{type: string, count: int, ties: int}, onboarding: int}>
      */
     private function departments(Collection $rows): array
     {
         $order = array_flip(array_map(fn (RequestType $t) => $t->value, RequestType::cases()));
+        $every = Department::query()->get(['id', 'name', 'name_th']);
         // A request whose employee row is gone joins the department its written name matches.
-        $byName = Department::query()->get(['id', 'name', 'name_th'])
-            ->flatMap(fn (Department $d) => array_filter([$d->name => $d, $d->name_th => $d], fn ($v, $k) => $k !== '', ARRAY_FILTER_USE_BOTH));
-        $group = function (ServiceRequest $r) use ($byName): string {
-            $id = $r->employee?->department_id ?? $byName->get((string) $r->department_name)?->id;
+        $byName = $every->flatMap(fn (Department $d) => array_filter([$d->name => $d, $d->name_th => $d], fn ($v, $k) => $k !== '', ARRAY_FILTER_USE_BOTH));
+        $group = function (array $r) use ($byName): string {
+            $id = $r['department_id'] ?? $byName->get((string) $r['department_name'])?->id;
 
-            return $id ? "id:{$id}" : 'name:'.$r->department_name;
+            return $id ? "id:{$id}" : 'name:'.$r['department_name'];
         };
         $departments = $byName->keyBy('id');
+        $employeeDepartments = $every->keyBy('id');
+        $category = fn (string $type) => RequestType::from($type)->ticketCategory()->value;
 
         return $rows->groupBy($group)
-            ->map(function (Collection $list, string $group) use ($order, $departments) {
+            ->map(function (Collection $list, string $group) use ($order, $departments, $employeeDepartments, $category) {
                 $department = str_starts_with($group, 'id:') ? $departments->get((int) substr($group, 3)) : null;
-                $named = $department ? ['name' => $department->name, 'name_th' => $department->name_th] : self::department($list->first());
-                $byType = $list->countBy(fn (ServiceRequest $r) => $r->type->value)->all();
+                $named = $department ? ['name' => $department->name, 'name_th' => $department->name_th] : self::rowDepartment($list->first(), $employeeDepartments);
+                $byType = $list->countBy('type')->all();
                 uksort($byType, fn (string $a, string $b) => ($byType[$b] <=> $byType[$a]) ?: ($order[$a] <=> $order[$b]));
                 $top = array_key_first($byType);
-                $categories = $list->countBy(fn (ServiceRequest $r) => $r->type->ticketCategory()->value);
+                $categories = $list->countBy(fn (array $r) => $category($r['type']));
 
                 return [
                     'department_id' => str_starts_with($group, 'id:') ? (int) substr($group, 3) : null,
@@ -486,11 +530,28 @@ class RequestOverviewReport extends TabularReport
                     'total' => $list->count(),
                     'by_category' => collect(array_keys(self::CATEGORY_TH))->mapWithKeys(fn (string $c) => [$c => (int) $categories->get($c, 0)])->all(),
                     'top_type' => ['type' => $top, 'count' => $byType[$top], 'ties' => count(array_filter($byType, fn (int $n) => $n === $byType[$top])) - 1],
-                    'onboarding' => $list->filter(fn (ServiceRequest $r) => $r->origin->value === 'onboarding')->count(),
+                    'onboarding' => $list->filter(fn (array $r) => $r['origin'] === 'onboarding')->count(),
                 ];
             })
             ->sortBy([['total', 'desc'], ['name', 'asc']])
             ->values()->all();
+    }
+
+    /**
+     * The requester's department of a card row, else the department written on the request.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  Collection<int, Department>  $departments
+     * @return array{name: string, name_th: ?string}|null
+     */
+    private static function rowDepartment(array $row, Collection $departments): ?array
+    {
+        $department = $row['department_id'] === null ? null : $departments->get($row['department_id']);
+        if ($department) {
+            return ['name' => $department->name, 'name_th' => $department->name_th];
+        }
+
+        return $row['department_name'] ? ['name' => $row['department_name'], 'name_th' => null] : null;
     }
 
     /**
