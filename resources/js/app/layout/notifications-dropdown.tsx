@@ -397,6 +397,7 @@ function NotificationRow({
     const { Icon, color, bg } = iconMeta(n);
     const title = notificationTitle(n, t);
     const fmt = useDateFormat();
+    const fmtN = useNumberFormat();
 
     // Only a title that is actually cut opens the tooltip.
     const openTip = (next: boolean) => {
@@ -457,7 +458,7 @@ function NotificationRow({
                     title={n.created_at_iso ? fmt.dateTime(n.created_at_iso) : undefined}
                     className="text-muted-foreground text-xs"
                 >
-                    {n.created_at_iso ? relativeTime(n.created_at_iso, t, '') : n.created_at}
+                    {n.created_at_iso ? relativeTime(n.created_at_iso, t, '', fmtN) : n.created_at}
                 </time>
                 <button
                     ref={dismissRef}

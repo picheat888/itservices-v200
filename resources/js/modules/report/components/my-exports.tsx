@@ -51,6 +51,7 @@ function formatSize(bytes: number | null): string | null {
 function ExportRow({ item }: { item: ReportExportItem }) {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const download = useDownloadExport();
@@ -187,7 +188,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                     )}
                 </div>
                 {item.status === 'ready' && (
-                    <span className="text-muted-foreground mr-1 text-xs whitespace-nowrap">{relativeTime(madeAt, t, '')}</span>
+                    <span className="text-muted-foreground mr-1 text-xs whitespace-nowrap">{relativeTime(madeAt, t, '', fmtN)}</span>
                 )}
             </div>
         </div>

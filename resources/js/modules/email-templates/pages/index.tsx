@@ -541,6 +541,7 @@ function ToolBtn({ title, onClick, children }: { title: string; onClick: () => v
 
 export default function EmailTemplatesPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const { data, isLoading } = useEmailTemplates();
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
@@ -649,7 +650,9 @@ export default function EmailTemplatesPage() {
             className: 'w-[13%]',
             hideBelow: 'lg',
             render: (tp) => (
-                <span className="text-muted-foreground text-xs whitespace-nowrap">{relativeTime(tp.last_sent_at, t, t('email_never_sent'))}</span>
+                <span className="text-muted-foreground text-xs whitespace-nowrap">
+                    {relativeTime(tp.last_sent_at, t, t('email_never_sent'), fmtN)}
+                </span>
             ),
         },
         {

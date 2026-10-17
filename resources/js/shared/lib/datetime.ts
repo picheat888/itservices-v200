@@ -182,10 +182,10 @@ export function dateWidthSamples(config: LooseConfig, lang: string): { dates: st
     };
 }
 
-/** "5 hours ago" for lists that answer "is this in use", not "exactly when". `t` is the caller's translator. */
-export function relativeTime(iso: string | null, t: (key: string) => string, neverLabel: string): string {
+/** "5 hours ago" for lists that answer "is this in use", not "exactly when". `t` and `count` are the caller's translator and number format. */
+export function relativeTime(iso: string | null, t: (key: string) => string, neverLabel: string, count: (n: number) => string): string {
     if (!iso) return neverLabel;
-    const fill = (key: string, n: number) => t(key).replace('{n}', String(n));
+    const fill = (key: string, n: number) => t(key).replace('{n}', count(n));
     const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
     if (mins < 1) return t('rel_just_now');
     if (mins < 60) return fill('rel_minutes', mins);
