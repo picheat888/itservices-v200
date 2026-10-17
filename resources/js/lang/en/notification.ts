@@ -8,6 +8,7 @@ export const notification: Dict = {
     notif_clear_all: 'Clear all',
     notif_empty: 'No notifications',
     notif_dismiss: 'Dismiss',
+    notif_dismiss_failed: 'Could not dismiss this notification. Try again.',
     notif_unread: 'unread',
     notif_load_more: 'Load more',
     notif_group_system: 'Other',

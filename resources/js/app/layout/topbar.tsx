@@ -88,8 +88,9 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             <button
                 data-notif-btn
                 onClick={onToggleNotif}
-                aria-haspopup="true"
+                aria-haspopup="dialog"
                 aria-expanded={notifOpen}
+                aria-controls={notifOpen ? 'notif-tray' : undefined}
                 className={cn(
                     'relative flex h-9 w-9 items-center justify-center rounded-md transition-colors',
                     notifOpen ? 'bg-accent text-brand' : 'text-muted-foreground hover:bg-accent',
