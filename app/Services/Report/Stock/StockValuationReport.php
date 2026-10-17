@@ -14,6 +14,7 @@ use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\DateDisplay;
 use App\Support\SearchTerms;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -202,23 +203,29 @@ class StockValuationReport extends TabularReport
     public function exportSections(User $viewer, array $filters): array
     {
         $data = $this->breakdown($viewer, $filters);
-        $total = (float) $data['tiles']['value'];
-        $share = fn (float $value) => $total > 0 ? round($value / $total * 100, 1) : 0.0;
+        // Each sheet's share is of its own total, as on the page.
+        $shareOf = function (array $rows): Closure {
+            $total = (float) array_sum(array_column($rows, 'value'));
+
+            return fn (float $value) => $total > 0 ? round($value / $total * 100, 1) : 0.0;
+        };
+        $categoryShare = $shareOf($data['categories']);
 
         $sections = [[
             'title' => 'มูลค่าตามหมวด',
             'headings' => ['หมวด', 'รายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
             'rows' => array_map(fn (array $c) => [
-                ($c['name_th'] ?: $c['name']) ?? '—', $c['items'], $c['qty'], $c['value'], $share($c['value']),
+                ($c['name_th'] ?: $c['name']) ?? '—', $c['items'], $c['qty'], $c['value'], $categoryShare($c['value']),
             ], $data['categories']),
         ]];
 
         if ($data['warehouses'] !== null) {
+            $warehouseShare = $shareOf($data['warehouses']);
             $sections[] = [
                 'title' => 'มูลค่าตามคลัง',
                 'headings' => ['คลัง', 'รายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
                 'rows' => array_map(fn (array $w) => [
-                    $w['name'] ?? self::NO_WAREHOUSE_TH, $w['items'], $w['qty'], $w['value'], $share($w['value']),
+                    $w['name'] ?? self::NO_WAREHOUSE_TH, $w['items'], $w['qty'], $w['value'], $warehouseShare($w['value']),
                 ], $data['warehouses']),
             ];
         }

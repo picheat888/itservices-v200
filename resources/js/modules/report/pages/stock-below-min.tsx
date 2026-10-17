@@ -2,12 +2,11 @@
 import { useT } from '@/lang';
 import { STOCK_STATUS_TONE, StockLevelBar } from '@/modules/stock';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localPair } from '@/shared/lib/local-name';
 import type { StockItemStatus } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import { StockLevelsCategoryCard, StockLevelsLegend, StockLevelsTiles } from '../components/stock-levels-cards';
-import { stockCount, stockMoney } from '../components/stock-parts';
+import { LastMoveCell, stockCount, stockMoney } from '../components/stock-parts';
 import { TabularReportView } from '../components/tabular-report-view';
 
 type Row = Record<string, unknown>;
@@ -16,8 +15,6 @@ type Row = Record<string, unknown>;
 const INNER = ['sku', 'category', 'unit', 'min_stock', 'max_stock', 'unit_cost_basis', 'value_kind'];
 
 const STATUSES: StockItemStatus[] = ['ok', 'low', 'out', 'over', 'dead'];
-
-const DAY_MS = 86_400_000;
 
 const num = (v: unknown) => (typeof v === 'number' ? v : 0);
 const text = (v: unknown) => (typeof v === 'string' ? v : '');
@@ -44,7 +41,9 @@ function ItemCell({ row }: { row: Row }) {
         <span className="block max-w-72 min-w-48 whitespace-normal">
             <span className="block leading-snug font-medium">{text(row.item_name) || '—'}</span>
             <small className="text-muted-foreground mt-0.5 block text-xs">{text(row.sku)}</small>
-            <small className="text-muted-foreground block text-xs">{localPair(category?.name, category?.name_th, lang) ?? t('rep_slv_no_cat')}</small>
+            <small className="text-muted-foreground block text-xs">
+                {localPair(category?.name, category?.name_th, lang) ?? t('rep_wo_no_category')}
+            </small>
         </span>
     );
 }
@@ -80,6 +79,7 @@ function GapCell({ row }: { row: Row }) {
             .replace('{n}', stockCount(num(row.gap), lang))
             .replace('{unit}', text(row.unit));
     if (row.status === 'over') return <Figure main={fill('rep_slv_gap_over')} sub={t('rep_slv_gap_over_sub')} />;
+    if (num(row.min_stock) <= 0) return <Figure main={<Dash />} sub={t('rep_slv_gap_no_min')} />;
     return (
         <Figure
             main={fill('rep_slv_gap_short')}
@@ -116,23 +116,6 @@ function ValueCell({ row }: { row: Row }) {
             sub={t(row.value_kind === 'excess' ? 'rep_slv_value_excess' : 'rep_opt_value_reorder')}
             className="font-semibold tabular-nums"
         />
-    );
-}
-
-/** The last move's date and how many days ago. */
-function LastMoveCell({ value }: { value: unknown }) {
-    const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const fmt = useDateFormat();
-    if (typeof value !== 'string' || value === '') return <Dash />;
-    const [y, m, d] = value.slice(0, 10).split('-').map(Number);
-    const days = Math.max(0, Math.round((new Date().setHours(0, 0, 0, 0) - new Date(y, m - 1, d).getTime()) / DAY_MS));
-
-    return (
-        <span>
-            <span className="block text-xs">{fmt.date(value)}</span>
-            <small className="text-muted-foreground block text-xs">{t('rep_slv_days_ago').replace('{n}', stockCount(days, lang))}</small>
-        </span>
     );
 }
 

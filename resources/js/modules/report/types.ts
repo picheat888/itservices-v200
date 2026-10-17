@@ -1349,6 +1349,7 @@ export interface StockWaitingRequest {
     qty: number;
     unit: string | null;
     requester: string;
+    requester_th: string | null;
     status: 'pending' | 'approved';
     created_at: string | null;
 }
@@ -1358,13 +1359,14 @@ export interface StockMovementsBreakdown {
     tiles: Record<import('@/shared/types').StockMovementType, { qty: number; value: number; times: number }>;
     /** 12 months ending with the range's end month. */
     months: StockFlowMonth[];
-    /** As of today, oldest first; needs stock.view_request. `rows` stop at 500, the counts do not. */
+    /** As of today, oldest first; needs stock.view_request and stock.approve or stock.fulfill. `rows` stop at 500, the counts do not. */
     requests: { pending: number; approved: number; rows: StockWaitingRequest[] } | null;
     /** Fulfilled requests in the range per requester, unsorted; needs stock.view_request. */
     people:
         | {
               user_id: number | null;
               name: string;
+              name_th: string | null;
               department_id: number | null;
               department: string | null;
               department_th: string | null;

@@ -1,5 +1,6 @@
 // Stock in & out report cards: tiles, monthly flow, waiting requests, top requesters and departments, count variance (data: useStockMovementsBreakdown).
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localName } from '@/shared/lib/local-name';
@@ -10,12 +11,12 @@ import { useUiStore } from '@/stores/ui';
 import { useRef, useState } from 'react';
 import { useStockMovementsBreakdown } from '../hooks/use-reports';
 import type { StockMovementsBreakdown, StockWaitingRequest, TabularFilters } from '../types';
-import { CardEmpty, CardTitle, fold, FoldToggle, rich } from './chart-parts';
+import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { StockFlowCard } from './stock-flow-card';
-import { MV_TONE, SIGN_INK, signedCount, signedMoney, stockCount, stockMoney } from './stock-parts';
+import { daysBetween, MV_TONE, SIGN_INK, signedCount, signedMoney, stockCount, stockMoney, TileFoot } from './stock-parts';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
@@ -35,8 +36,6 @@ const RANKS_SHOWN = 10;
 /** Count rows listed before the rest fold. */
 const COUNTS_SHOWN = 10;
 
-const DAY_MS = 86_400_000;
-
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle whitespace-nowrap';
 const NUM = 'text-right tabular-nums';
@@ -51,7 +50,7 @@ function MovementTiles({ tiles }: { tiles: Tiles }) {
     const n = (v: number) => stockCount(v, lang);
     const money = (v: number) => stockMoney(v, lang);
     const adjust = tiles.adjust_up.qty - tiles.adjust_down.qty;
-    const foot = (template: string, bold: Record<string, string>) => <span className="block truncate">{rich(t(template), bold)}</span>;
+    const foot = (template: string, bold: Record<string, string>) => <TileFoot template={template} bold={bold} />;
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
@@ -96,23 +95,16 @@ function MovementTiles({ tiles }: { tiles: Tiles }) {
 
 /* ─────────────────────────── waiting requests ─────────────────────────── */
 
-/** Whole days from the request's day to today. */
-function daysWaiting(createdAt: string | null): number {
-    if (!createdAt) return 0;
-    const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    return Math.max(0, Math.round((start(new Date()) - start(new Date(createdAt))) / DAY_MS));
-}
-
 function WaitingRow({ request }: { request: StockWaitingRequest }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const days = daysWaiting(request.created_at);
+    const days = request.created_at ? daysBetween(request.created_at) : 0;
     const tone = days > 7 ? 'red' : days >= 3 ? 'amber' : 'gray';
     const line = t('rep_smv_wait_line')
         .replace('{item}', request.item_name ?? '—')
         .replace('{qty}', stockCount(request.qty, lang))
-        .replace('{unit}', request.unit ?? '')
-        .replace('{who}', request.requester || '—');
+        .replace(' {unit}', request.unit ? ` ${request.unit}` : '')
+        .replace('{who}', localName({ name: request.requester, name_th: request.requester_th }, lang) || '—');
 
     return (
         <li className="border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-t px-5 py-2.5">
@@ -300,7 +292,7 @@ function RankCards({ people, departments }: { people: People; departments: Depar
     const noDept = t('rep_smv_no_dept');
     const peopleRows: RankRow[] = people.map((p, i) => ({
         key: `${p.user_id ?? 'name'}-${p.name}-${i}`,
-        name: p.name || '—',
+        name: localName({ name: p.name, name_th: p.name_th }, lang) || '—',
         sub: p.department_id === null ? noDept : localName({ name: p.department ?? '', name_th: p.department_th }, lang) || noDept,
         value: p.value,
         qty: p.qty,
@@ -437,34 +429,48 @@ function CountsCard({ counts }: { counts: Counts }) {
 
 /* ─────────────────────────── the page's cards ─────────────────────────── */
 
+/** Which cards this viewer gets, by the same permissions as StockMovementReport::breakdown(). */
+function useCardAccess() {
+    const { can } = useAuth();
+    const ranks = can('stock.view_request');
+    return { requests: ranks && (can('stock.approve') || can('stock.fulfill')), ranks, counts: can('stock.view_count') };
+}
+
 function CardsSkeleton() {
+    const access = useCardAccess();
     return (
         <div className="space-y-4" aria-hidden>
             <KpiRowSkeleton count={5} className={summaryColumns(5)} />
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <Card className="overflow-hidden lg:col-span-2 xl:col-span-3">
+                <Card className={cn('overflow-hidden', access.requests ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-3 xl:col-span-5')}>
                     <CardHeadingSkeleton />
                     <ChartSkeleton />
                 </Card>
-                <Card className="overflow-hidden xl:col-span-2">
-                    <CardHeadingSkeleton />
-                    <BarRowsSkeleton rows={5} />
-                </Card>
+                {access.requests && (
+                    <Card className="overflow-hidden xl:col-span-2">
+                        <CardHeadingSkeleton />
+                        <BarRowsSkeleton rows={5} />
+                    </Card>
+                )}
             </div>
-            <div className="grid gap-3 lg:grid-cols-2">
+            {access.ranks && (
+                <div className="grid gap-3 lg:grid-cols-2">
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <BarRowsSkeleton rows={6} />
+                    </Card>
+                    <Card className="overflow-hidden">
+                        <CardHeadingSkeleton />
+                        <BarRowsSkeleton rows={6} />
+                    </Card>
+                </div>
+            )}
+            {access.counts && (
                 <Card className="overflow-hidden">
                     <CardHeadingSkeleton />
-                    <BarRowsSkeleton rows={6} />
+                    <TableRowsSkeleton rows={4} />
                 </Card>
-                <Card className="overflow-hidden">
-                    <CardHeadingSkeleton />
-                    <BarRowsSkeleton rows={6} />
-                </Card>
-            </div>
-            <Card className="overflow-hidden">
-                <CardHeadingSkeleton />
-                <TableRowsSkeleton rows={4} />
-            </Card>
+            )}
         </div>
     );
 }
