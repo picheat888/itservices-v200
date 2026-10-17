@@ -744,7 +744,7 @@ function OrgPane({
                             )}
                         </>
                     ) : (
-                        <EmptyState title={t('emp_empty_drawer_reports')} hint={t('emp_empty_drawer_reports_hint')} />
+                        <EmptyState title={t('emp_empty_drawer_reports')} hint={t('emp_empty_drawer_reports_hint')} className="min-h-0 py-4" />
                     )}
                 </div>
             </div>

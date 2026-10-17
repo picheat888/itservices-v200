@@ -833,6 +833,7 @@ export function ContractFormDrawer({
                                                                 ? 'contract_empty_form_link_assets_search_hint'
                                                                 : 'contract_empty_form_link_assets_hint',
                                                         )}
+                                                        className="min-h-0 py-4"
                                                     />
                                                 ) : (
                                                     filteredAssets.map((a) => {
