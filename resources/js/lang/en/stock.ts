@@ -241,7 +241,7 @@ export const stock: Dict = {
     stock_to: 'To',
     stock_to_warehouse: 'To warehouse',
     stock_events_from: 'From (Warehouse/Supplier)',
-    stock_events_to: 'To (Warehouse/Requestor)',
+    stock_events_to: 'To (Warehouse/Requester)',
     stock_notes: 'Notes',
     stock_unit_cost_short: 'Unit cost',
     stock_approver: 'Approver',
