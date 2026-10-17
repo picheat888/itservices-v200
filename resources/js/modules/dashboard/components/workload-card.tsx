@@ -7,6 +7,7 @@ import { useUiStore } from '@/stores/ui';
 import type { DashboardIt } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
 import { HBarRow, NARROW } from './dash-parts';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const WORKLOAD_TOP = 10;
 
@@ -24,6 +25,7 @@ export function WorkloadCard({
     heldHeight: number | null;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const links = useDashLinks();
     const total = it.backlog.open + it.backlog.in_progress;
@@ -40,7 +42,7 @@ export function WorkloadCard({
                         <Swatch fill={FILL.blue}>{t('dash_legend_open')}</Swatch>
                         <Swatch fill={FILL.violet}>{t('ticket_in_progress')}</Swatch>
                         <span aria-hidden className="bg-border h-3 w-px" />
-                        <span className="text-foreground font-semibold">{t('dash_backlog_total').replace('{n}', String(total))}</span>
+                        <span className="text-foreground font-semibold">{t('dash_backlog_total').replace('{n}', fmtN(total))}</span>
                     </span>
                 }
             />

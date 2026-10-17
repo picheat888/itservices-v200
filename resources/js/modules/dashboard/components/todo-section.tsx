@@ -8,16 +8,18 @@ import { useDashLinks } from '../hooks/use-dash-links';
 import { sharePieces } from '../lib/dash-math';
 import { groupPendingAssets } from '../lib/pending-groups';
 import { DashTile, LegendFooter, SectionHeading, TILE_GRID } from './dash-parts';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export function TodoSection({ data }: { data: DashboardSummary }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const links = useDashLinks();
     const { my_jobs: jobs, approvals, pending_acceptance: toAccept } = data.mine.todo;
     const waiting = data.it?.waiting;
     const awaitingIt = data.requests?.awaiting_it;
     const expiring = data.contracts?.expiring;
-    const oldest = (days: number) => t('dash_oldest_days').replace('{n}', String(days));
+    const oldest = (days: number) => t('dash_oldest_days').replace('{n}', fmtN(days));
     const groups = groupPendingAssets(toAccept, lang);
 
     const tiles = [
@@ -129,7 +131,7 @@ export function TodoSection({ data }: { data: DashboardSummary }) {
                     groups.length > 1
                         ? t('dash_accept_more')
                               .replace('{model}', groups[0].model)
-                              .replace('{n}', String(groups.length - 1))
+                              .replace('{n}', fmtN(groups.length - 1))
                         : groups[0]?.model
                 }
             />
