@@ -98,7 +98,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                             : { kind: 'empty', title: t('emp_empty_position_members'), hint: t('emp_empty_position_members_hint') }
                     }
                     searchPlaceholder={t('emp_search_by_department')}
-                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.section ?? ''}`}
+                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.department_th ?? ''} ${m.section ?? ''} ${m.section_th ?? ''}`}
                 />
             </DialogContent>
         </Dialog>

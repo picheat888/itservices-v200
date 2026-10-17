@@ -901,6 +901,7 @@ export interface EmailGroup {
     owner_employee_id: number | null;
     owner?: string | null;
     owner_th?: string | null;
+    owner_code?: string | null;
     owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
@@ -928,6 +929,7 @@ export interface FileShare {
     owner_employee_id: number | null;
     owner?: string | null;
     owner_th?: string | null;
+    owner_code?: string | null;
     owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;

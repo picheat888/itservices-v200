@@ -660,7 +660,7 @@ export default function AccessControlPage() {
                             rows={egFiltered}
                             rowKey={(g) => g.id}
                             searchPlaceholder={t('access_email_search')}
-                            searchable={(g) => `${g.name} ${g.email} ${g.department ?? ''} ${g.department_th ?? ''}`}
+                            searchable={(g) => `${g.name} ${g.email} ${g.department ?? ''} ${g.department_th ?? ''} ${g.owner ?? ''} ${g.owner_th ?? ''} ${g.owner_code ?? ''}`}
                             onRowClick={openEmailGroup}
                             loading={emailGroups.isLoading}
                             filters={emailFilter}
@@ -676,7 +676,7 @@ export default function AccessControlPage() {
                             rows={fsFiltered}
                             rowKey={(s) => s.id}
                             searchPlaceholder={t('access_share_search')}
-                            searchable={(s) => `${s.name} ${s.path} ${s.department ?? ''} ${s.department_th ?? ''}`}
+                            searchable={(s) => `${s.name} ${s.path} ${s.department ?? ''} ${s.department_th ?? ''} ${s.owner ?? ''} ${s.owner_th ?? ''} ${s.owner_code ?? ''}`}
                             onRowClick={openFileShare}
                             loading={fileShares.isLoading}
                             filters={fileFilter}
