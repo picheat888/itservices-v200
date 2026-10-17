@@ -139,7 +139,7 @@ export const asset: Dict = {
     asset_hist_kind_return: 'รับคืน',
     asset_hist_kind_recall: 'เรียกคืน',
     asset_hist_kind_relocate: 'ย้ายที่ตั้ง',
-    asset_search: 'ค้นหารหัส, Tag, Serial หรือผู้ถือครอง…',
+    asset_search: 'ค้นหารหัส, Tag, Serial, ยี่ห้อ, ผู้ถือครอง หรือสถานที่…',
     asset_transfer_search: 'ค้นหารหัสทรัพย์สิน, รุ่น หรือชื่อพนักงาน…',
     asset_tickets_search: 'ค้นหาเลขที่ Ticket หรือหัวข้อ…',
     asset_contract_assets_search: 'ค้นหารหัส, ชื่อ หรือ Serial…',

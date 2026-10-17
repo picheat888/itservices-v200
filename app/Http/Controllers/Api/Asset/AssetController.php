@@ -123,7 +123,10 @@ class AssetController extends Controller
             SearchTerms::related('model', ['name']),
             // Owner is a shared label on the asset, or the holding employee.
             'owner',
-            SearchTerms::related('ownerEmployee', ['code', ...SearchTerms::personName()]),
+            SearchTerms::related('brand', ['name']),
+            SearchTerms::related('location', ['name']),
+            SearchTerms::related('contract', ['code']),
+            SearchTerms::related('ownerEmployee', ['code', ...SearchTerms::personName(), SearchTerms::related('department', ['name', 'name_th'])]),
         ]);
         if ($request->filled('type')) {
             // The filter still sends the category name; match it through the relation.
