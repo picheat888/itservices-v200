@@ -5730,3 +5730,11 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - เหตุผลการตัดจำหน่าย 6 รายการมาตรฐานย้ายจาก migration ไป `WriteoffReasonSeeder` (เรียกจาก `DatabaseSeeder`, firstOrCreate) test ที่ใช้เหตุผลเหล่านี้ seed ใน `setUp`
 - ลบ test ที่ทดสอบ migration ข้อมูลโดยตรง (BackfillRequestTypePermissions, NotificationWording, RenameSelfServicePermissions และ 2 test backfill ใน DashboardPermissionsTest)
 - ตรวจแล้ว: สร้าง DB ทดลองจาก baseline ใหม่ → `mariadb-dump --no-data` ตรงกับ DB จริงทุกบรรทัด, `db:seed` ได้เหตุผล 6 รายการ, `migrate:rollback` ได้ครบ; test ทั้งชุด 2146 ผ่าน; ตาราง `migrations` ของ DB จริงลบ 16 แถวของไฟล์ที่ถูกรวม เหลือ 18 แถว `migrate` = Nothing to migrate (ไม่แตะข้อมูลอื่น)
+
+### กระดิ่งแจ้งเตือน: รีวิว UX/UI, WCAG, Tablet, code และ security แล้วแก้ — 2026-10-17
+- รีวิวด้วย 4 agent (frontend-design + WCAG/Tablet ใน Chrome, web-design-guidelines + ความสม่ำเสมอ, code-review, security-review) Security ผ่าน (ไม่มี IDOR/XSS/open redirect, CSRF ครบ)
+- WCAG: ถาดเป็น `role=dialog` มีชื่อ, กระดิ่ง `aria-haspopup=dialog` + `aria-controls`, แถวเป็น `<button>` เต็มแถว (::after) และปุ่มปิดอยู่ข้าง ๆ ไม่ซ้อนกัน, วงโฟกัสสีแบรนด์เต็ม (เดิม 40% ≈ 1.8:1), Esc/ปุ่มปิด/เปิดแถว คืนโฟกัสให้กระดิ่ง, ลบแถวแล้วโฟกัสไปแถวถัดไป, ตัวเลขยังไม่อ่านเป็น `role=status`, แถวยังไม่อ่านบอก screen reader, ลูกศรขึ้น/ลงเลื่อนระหว่างแถว, ชิปโมดูลเป็น tablist
+- บัค: ลบไม่สำเร็จแถวไม่หายค้าง (แสดงกลับ + toast), โหลดไม่สำเร็จแสดง `LoadFailed` แทน "ไม่มีการแจ้งเตือน", poll เบื้องหลังได้ 5xx ไม่เด้งหน้าจอ error เต็มจอ (`quietServerError`), ตัวแปรในข้อความแทนทุกตำแหน่งและไม่เพี้ยนเมื่อมี `$`
+- Tablet: ปิดถาดเมื่อโฟกัสออกไปข้างหลัง, ปุ่มสูงขึ้นบนจอสัมผัส, "อ่านแล้วทั้งหมด" ห่างจากปุ่มปิด, รายการสูงถึง min(60vh, 560px), ไม่ลากหน้าเลื่อนตาม
+- ความสม่ำเสมอ: ใช้ `Button` / `Skeleton` / `EmptyPane` / `relativeTime` กลาง, ผิวถาดเหมือน popover อื่น, ตารางสีโทนเดียวของกระดิ่งและ toast
+- ความเร็ว: คอลัมน์ `notifications.kind` ("type|module", ตั้งตอนสร้างผ่าน `DatabaseNotification::creating` + migration backfill) + index → นับและแบ่งหน้าใน SQL เรียง created_at แล้ว id; "อ่านแล้วทั้งหมด" เป็น UPDATE เดียว; ส่งแจ้งเตือนไม่เปลี่ยนเวลา "แก้ไขล่าสุด" ของ template; ผู้ใช้ที่มี 20,574 แถวใน itservices_perf: โหลดอย่างเดียวเดิม 183 ms → ทั้ง endpoint ใหม่ 51 ms
