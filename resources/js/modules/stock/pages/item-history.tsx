@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
+import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
@@ -11,12 +13,19 @@ import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer,
 import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useStockItemHistory } from '../hooks/use-stock';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type View = 'issue' | 'receive' | 'adjust' | 'transfer';
 type Movement = StockItemHistory['movements'][number];
 type Translate = ReturnType<typeof useT>;
 type FormatDateTime = ReturnType<typeof useDateFormat>['dateTime'];
+
+// Words of each view's empty table
+const VIEW_EMPTY: Record<View, { title: string; hint: string }> = {
+    issue: { title: 'stock_empty_history_issue', hint: 'stock_empty_history_issue_hint' },
+    receive: { title: 'stock_empty_history_receive', hint: 'stock_empty_history_receive_hint' },
+    adjust: { title: 'stock_empty_history_adjust', hint: 'stock_empty_history_adjust_hint' },
+    transfer: { title: 'stock_empty_history_transfer', hint: 'stock_empty_history_transfer_hint' },
+};
 
 const VIEW_META: Record<View, { titleKey: string; icon: typeof ArrowDownToLine; tone: string; bg: string }> = {
     issue: { titleKey: 'stock_hist_issue', icon: ArrowUpFromLine, tone: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950/40' },
@@ -182,7 +191,7 @@ function Hub({ data, onOpen, t, fmt }: { data: StockItemHistory; onOpen: (v: Vie
                         const recv = s.events.find((e) => e.event === 'received');
                         return [String(i + 1), <span>{s.serial}</span>, fmt(recv?.occurred_at ?? null), recv?.doc_no ?? '—'];
                     })}
-                    emptyText={t('stock_history_no_events')}
+                    empty={{ title: t('stock_empty_history_serials'), hint: t('stock_empty_history_serials_hint') }}
                 />
             )}
         </>
@@ -335,7 +344,12 @@ function CategoryView({
                 <h2 className="text-base font-semibold">{t(meta.titleKey as Parameters<typeof t>[0])}</h2>
                 <span className="text-muted-foreground text-sm tabular-nums">({fmtN(movements.length)})</span>
             </div>
-            <Table headers={headers} rows={rows} wrapColumns={wrapColumns} emptyText={t('stock_history_no_events')} />
+            <Table
+                headers={headers}
+                rows={rows}
+                wrapColumns={wrapColumns}
+                empty={{ title: t(VIEW_EMPTY[view].title), hint: t(VIEW_EMPTY[view].hint) }}
+            />
         </>
     );
 }
@@ -345,12 +359,12 @@ function Table({
     headers,
     rows,
     wrapColumns = [],
-    emptyText,
+    empty,
 }: {
     headers: string[];
     rows: ReactNode[][];
     wrapColumns?: number[];
-    emptyText: string;
+    empty: EmptyStateProps;
 }) {
     return (
         <div className="border-border overflow-x-auto rounded-xl border">
@@ -382,8 +396,8 @@ function Table({
                     ))}
                     {rows.length === 0 && (
                         <tr>
-                            <td colSpan={headers.length} className="text-muted-foreground px-3 py-8 text-center">
-                                {emptyText}
+                            <td colSpan={headers.length}>
+                                <EmptyState {...empty} />
                             </td>
                         </tr>
                     )}

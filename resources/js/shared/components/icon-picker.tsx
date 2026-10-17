@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { ICON_OPTIONS, getLucideIcon } from '@/shared/lib/lucide-icons';
 import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
@@ -101,7 +102,12 @@ export function IconPicker({
                                 </button>
                             ))}
                             {filtered.length === 0 && (
-                                <div className="text-muted-foreground col-span-8 py-4 text-center text-xs">{t('icon_none_found')}</div>
+                                <EmptyState
+                                    kind="search"
+                                    title={t('cmn_empty_icon_picker')}
+                                    hint={t('cmn_empty_icon_picker_hint')}
+                                    className="col-span-8 min-h-0 py-4"
+                                />
                             )}
                         </div>
                     </div>

@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
+import { EmptyState } from '@/shared/components/empty-state';
 import { FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
@@ -9,6 +10,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';
@@ -22,7 +24,6 @@ import { useEffect, useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { stockRefusalText } from '../../lib/refusal';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
     pending: 'amber',
@@ -162,7 +163,13 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', width: '72px', render: (r) => <span className="font-bold tabular-nums">{fmtN(r.qty)}</span> },
+        {
+            key: 'qty',
+            header: t('stock_qty'),
+            align: 'right',
+            width: '72px',
+            render: (r) => <span className="font-bold tabular-nums">{fmtN(r.qty)}</span>,
+        },
         {
             key: 'unit',
             header: t('stock_unit'),
@@ -330,6 +337,11 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 rowKey={(r) => r.id}
                 loading={requestsLoading || requestsFetching}
                 server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
+                empty={
+                    status !== 'all'
+                        ? { kind: 'search', title: t('stock_empty_requests_search'), hint: t('stock_empty_requests_search_hint') }
+                        : { title: t('stock_empty_requests'), hint: t('stock_empty_requests_hint') }
+                }
             />
 
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
@@ -370,7 +382,11 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                         </span>
                                     </div>
                                     {fulfillBalances.length === 0 ? (
-                                        <div className="text-muted-foreground py-6 text-center text-xs">{t('stock_no_stock')}</div>
+                                        <EmptyState
+                                            title={t('stock_empty_requests_fulfil_balances')}
+                                            hint={t('stock_empty_requests_fulfil_balances_hint')}
+                                            className="min-h-0 py-4"
+                                        />
                                     ) : (
                                         fulfillBalances.map((b) => (
                                             <div
@@ -448,7 +464,12 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                     )}
                                     <div className="max-h-48 overflow-auto overscroll-contain">
                                         {visibleSerials.length === 0 ? (
-                                            <div className="text-muted-foreground py-6 text-center text-xs">{t('stock_no_serials')}</div>
+                                            <EmptyState
+                                                kind="pick"
+                                                title={t('stock_empty_requests_fulfil_serials')}
+                                                hint={t('stock_empty_requests_fulfil_serials_hint')}
+                                                className="min-h-0 py-4"
+                                            />
                                         ) : (
                                             visibleSerials.map((s) => {
                                                 const checked = issueSerialIds.includes(s.id);

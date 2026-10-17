@@ -1,10 +1,8 @@
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
-import { EmptyPane } from '@/shared/components/empty-pane';
 import { Field } from '@/shared/components/field';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { RecordStamps } from '@/shared/components/record-stamps';
@@ -14,6 +12,7 @@ import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { relativeTime } from '@/shared/lib/datetime';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
@@ -559,7 +558,11 @@ export function NotificationSettingsPane() {
                 rowHeight={58}
                 onRowClick={openEditor}
                 paging={list.table.paging}
-                emptyState={<EmptyPane icon={Bell} text={isFiltered ? t('notification_empty') : t('notification_empty_none')} />}
+                empty={
+                    isFiltered
+                        ? { kind: 'search', title: t('notification_empty_settings_filtered'), hint: t('notification_empty_settings_filtered_hint') }
+                        : { title: t('notification_empty_settings_none'), hint: t('notification_empty_settings_none_hint') }
+                }
             />
 
             <NotificationEditDialog open={editId !== null} bell={editing} onClose={() => setEditParam(null)} />

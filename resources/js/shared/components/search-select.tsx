@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import type { SelectOption } from '@/shared/lib/locale-data';
 import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
@@ -224,7 +225,12 @@ export function SearchSelect({ value, onChange, options, placeholder, className,
                         {/* Options list */}
                         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">
                             {filtered.length === 0 ? (
-                                <div className="text-muted-foreground px-3 py-2 text-sm">{t('search_no_results')}</div>
+                                <EmptyState
+                                    kind="search"
+                                    title={t('cmn_empty_search_select')}
+                                    hint={t('cmn_empty_search_select_hint')}
+                                    className="min-h-0 py-3"
+                                />
                             ) : (
                                 filtered.map((opt) => (
                                     <button

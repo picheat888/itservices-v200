@@ -6,7 +6,6 @@ export const notification: Dict = {
     notif_all: 'ทั้งหมด',
     notif_mark_all: 'อ่านแล้วทั้งหมด',
     notif_clear_all: 'ลบทั้งหมด',
-    notif_empty: 'ไม่มีการแจ้งเตือน',
     notif_dismiss: 'ปิดรายการนี้',
     notif_dismiss_failed: 'ปิดรายการนี้ไม่สำเร็จ ลองอีกครั้ง',
     notif_keys_hint: 'ใช้ลูกศรขึ้นลงเลื่อนระหว่างรายการ ลูกศรขวาไปที่ปุ่มปิด กด Delete เพื่อปิดรายการ',
@@ -78,7 +77,6 @@ export const notification: Dict = {
     notification_test_sent: 'ส่งแล้ว - ดูที่กระดิ่งมุมขวาบน',
     notification_test_failed: 'ส่งทดสอบไม่สำเร็จ',
     notif_test_prefix: '[ทดสอบ]',
-    notification_empty: 'ไม่พบการแจ้งเตือนตามเงื่อนไขนี้',
     notification_col_trigger: 'ทำงานเมื่อ',
     notification_col_last_sent: 'ส่งล่าสุด',
     notification_col_on: 'เปิด',
@@ -115,7 +113,6 @@ export const notification: Dict = {
     notification_col_id: 'รหัส',
     notification_lang_en: 'EN',
     notification_lang_th: 'TH',
-    notification_empty_none: 'ยังไม่มีการแจ้งเตือน',
 
     // notification-settings-pane.tsx — name / trigger / audience per notification
     notification_name_cred_required: 'ต้องตั้งบัญชีเข้าใช้งาน',

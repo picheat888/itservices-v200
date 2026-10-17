@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { EmptyState } from '@/shared/components/empty-state';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
@@ -431,9 +432,11 @@ export function StockItemDetailModal({
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="text-muted-foreground rounded-lg border border-dashed py-5 text-center text-xs">
-                                            {t('stock_no_lots')}
-                                        </div>
+                                        <EmptyState
+                                            title={t('stock_empty_item_modal_lots')}
+                                            hint={t('stock_empty_item_modal_lots_hint')}
+                                            className="min-h-0 rounded-lg border border-dashed py-5"
+                                        />
                                     )}
                                 </div>
                             )}
@@ -499,9 +502,11 @@ export function StockItemDetailModal({
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-xs">
-                                            {t('stock_no_serials')}
-                                        </div>
+                                        <EmptyState
+                                            title={t('stock_empty_item_modal_serials')}
+                                            hint={t('stock_empty_item_modal_serials_hint')}
+                                            className="min-h-0 rounded-lg border border-dashed py-5"
+                                        />
                                     )}
                                 </div>
                             )}

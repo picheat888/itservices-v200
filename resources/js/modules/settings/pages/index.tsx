@@ -53,7 +53,7 @@ import { CategoryModal } from '../components/category-modal';
 import { DateTimeSection } from '../components/datetime-section';
 import { FIELD_ROW, FORM_STACK, FORM_WIDTH } from '../components/form-layout';
 import { LocationModal } from '../components/location-modal';
-import { LookupSection } from '../components/lookup-section';
+import { LookupSection, masterDataEmpty } from '../components/lookup-section';
 import { ModelModal } from '../components/model-modal';
 import { RequestDataSection } from '../components/request-data-section';
 import { SEGMENT_LEGEND } from '../components/segmented-radio';
@@ -236,7 +236,7 @@ export default function SettingsPage() {
         navRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }, [section]);
 
-    if (nav.length === 0) return <NoAccess />;
+    if (nav.length === 0) return <NoAccess title={t('set_empty_no_access')} hint={t('set_empty_no_access_hint')} />;
 
     // If ?tab= points at a section the user can't see, fall back to the first visible one.
     const activeSection = nav.some((n) => n.id === section) ? section : nav[0].id;
@@ -450,6 +450,7 @@ function BrandsList() {
                 paging={list.table.paging}
                 searchPlaceholder={t('set_search_name_desc')}
                 searchable={(b) => `${b.name} ${b.description ?? ''}`}
+                empty={masterDataEmpty(t, 'brands', list.table.search.value.trim() !== '', t('md_add_brand'))}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
@@ -533,6 +534,7 @@ function ModelsList() {
                 paging={list.table.paging}
                 searchPlaceholder={t('set_search_models')}
                 searchable={(m) => `${m.name} ${m.brand?.name ?? ''}`}
+                empty={masterDataEmpty(t, 'models', list.table.search.value.trim() !== '', t('md_add_model'))}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
@@ -617,6 +619,7 @@ function CategoriesList() {
                 paging={list.table.paging}
                 searchPlaceholder={t('set_search_name_desc')}
                 searchable={(c) => `${c.name} ${c.name_th ?? ''} ${c.description ?? ''}`}
+                empty={masterDataEmpty(t, 'categories', list.table.search.value.trim() !== '', t('md_add_category'))}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
@@ -708,6 +711,7 @@ function VendorsList() {
                 paging={list.table.paging}
                 searchPlaceholder={t('set_search_vendors')}
                 searchable={(v) => `${v.name} ${v.name_th ?? ''} ${v.contact ?? ''} ${v.email ?? ''} ${v.phone ?? ''}`}
+                empty={masterDataEmpty(t, 'vendors', list.table.search.value.trim() !== '', t('md_add_vendor'))}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
@@ -780,6 +784,7 @@ function WarehousesList() {
                 paging={list.table.paging}
                 searchPlaceholder={t('set_search_name_desc')}
                 searchable={(w) => `${w.name} ${w.description ?? ''}`}
+                empty={masterDataEmpty(t, 'warehouses', list.table.search.value.trim() !== '', t('md_add_warehouse'))}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
@@ -853,6 +858,7 @@ function LocationsList() {
                 paging={list.table.paging}
                 searchPlaceholder={t('set_search_locations')}
                 searchable={(loc) => loc.name}
+                empty={masterDataEmpty(t, 'locations', list.table.search.value.trim() !== '', t('add_location'))}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
@@ -886,6 +892,7 @@ function UnitsList() {
             editLabel={t('md_edit_unit')}
             nameLabel={t('md_unit_name')}
             addButtonLabel={t('md_add_unit')}
+            emptyName="units"
         />
     );
 }
@@ -904,6 +911,7 @@ function WarrantyTypesList() {
             editLabel={t('md_edit_warranty_type')}
             nameLabel={t('md_warranty_type_name')}
             addButtonLabel={t('md_add_warranty_type')}
+            emptyName="warranty_types"
         />
     );
 }
@@ -1553,6 +1561,7 @@ function WriteoffReasonsSection() {
                 editLabel={t('set_wo_reason_edit')}
                 nameLabel={t('set_wo_reason_name')}
                 addButtonLabel={t('set_wo_reason_add')}
+                emptyName="writeoff_reasons"
             />
         </div>
     );

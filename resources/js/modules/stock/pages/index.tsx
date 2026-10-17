@@ -14,6 +14,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalName } from '@/shared/hooks/use-local-name';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair, nameSearch } from '@/shared/lib/local-name';
@@ -58,7 +59,6 @@ import { AuditTab } from './tabs/counting-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { OverviewTab } from './tabs/overview-tab';
 import { RequestsTab } from './tabs/requests-tab';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // The page's tabs, mirrored in the URL (?tab=).
 const STOCK_TABS = ['overview', 'items', 'movements', 'requests', 'audit'] as const;
@@ -498,7 +498,12 @@ export default function StockPage() {
 
     const viewAlerts = () => openItems({ status: 'alerts' });
     const kpis = [
-        { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${fmtN(summary?.total_units ?? 0)} ${t('stock_units_total')}`, icon: Archive },
+        {
+            label: t('stock_kpi_skus'),
+            value: summary?.skus ?? '—',
+            sub: `${fmtN(summary?.total_units ?? 0)} ${t('stock_units_total')}`,
+            icon: Archive,
+        },
         {
             label: t('stock_kpi_alerts_sub'),
             value: summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : '—',
@@ -793,6 +798,14 @@ export default function StockPage() {
                                 loading={itemsLoading || itemsFetching}
                                 caption={t('stock_items_tab')}
                                 server={{ ...list.table.paging, total: itemsTotal }}
+                                empty={
+                                    search.trim() !== '' || activeItemFilterCount > 0
+                                        ? { kind: 'search', title: t('stock_empty_items_search'), hint: t('stock_empty_items_search_hint') }
+                                        : {
+                                              title: t('stock_empty_items'),
+                                              hint: canManage ? t('stock_empty_items_hint').replace('{button}', t('stock_new_sku')) : null,
+                                          }
+                                }
                             />
                         </div>
                     )}

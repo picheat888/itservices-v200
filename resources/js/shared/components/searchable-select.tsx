@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
@@ -329,7 +330,17 @@ export function SearchableSelect({
                         ))}
                     </div>
                 )}
-                {!(isAsync && loading) && filtered.length === 0 && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
+                {!(isAsync && loading) && filtered.length === 0 && q !== '' && (
+                    <EmptyState
+                        kind="search"
+                        title={t('cmn_empty_searchable_select')}
+                        hint={t('cmn_empty_searchable_select_hint')}
+                        className="min-h-0 py-3"
+                    />
+                )}
+                {!(isAsync && loading) && filtered.length === 0 && q === '' && (
+                    <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>
+                )}
                 {filtered.map((o, index) => (
                     <button
                         key={o.value}

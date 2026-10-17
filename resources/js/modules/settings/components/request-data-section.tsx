@@ -1,7 +1,7 @@
 // Settings → Request data: the choice lists behind the request form's managed selects.
 // One tab per list (?list=), rows reordered by drag or the arrow buttons, edited in OptionModal.
 import { useT } from '@/lang';
-import { EmptyPane } from '@/shared/components/empty-pane';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Field } from '@/shared/components/field';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SaveButton } from '@/shared/components/save-button';
@@ -22,7 +22,7 @@ import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { ArrowDown, ArrowUp, GripVertical, ListChecks, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRequestOptionLists, useRequestOptionMutations } from '../hooks/use-master-data';
 
@@ -159,7 +159,7 @@ export function RequestDataSection() {
                 {isLoading ? (
                     <ListSkeleton rows={3} />
                 ) : ordered.length === 0 ? (
-                    <EmptyPane icon={ListChecks} text={t('rd_empty')} />
+                    <EmptyState title={t('set_empty_request_data')} hint={t('set_empty_request_data_hint').replace('{button}', t('rd_add'))} />
                 ) : (
                     <ul>
                         {ordered.map((o, i) => {

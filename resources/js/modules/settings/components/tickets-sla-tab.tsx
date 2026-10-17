@@ -2,7 +2,7 @@
 // A summary card jumps to each section; one Save button at the end saves the tab.
 import { useT } from '@/lang';
 import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge } from '@/modules/ticket';
-import { EmptyPane } from '@/shared/components/empty-pane';
+import { EmptyState } from '@/shared/components/empty-state';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { REQUEST_TYPE_META, REQUEST_TYPES } from '@/shared/lib/request-meta';
@@ -10,7 +10,7 @@ import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, TicketCategory, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { TimeInput } from '@/shared/ui/time-input';
-import { Plus, Trash2, Wrench } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     type TicketSlaClock,
@@ -529,13 +529,16 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                     />
                     {workTargets.length === 0 ? (
                         <div className={TABLE}>
-                            <EmptyPane icon={Wrench} text={t('set_sla_work_empty')} />
-                            <div className="-mt-8 flex justify-center pb-6">
+                            <EmptyState
+                                title={t('set_empty_sla_repair_targets')}
+                                hint={t('set_empty_sla_repair_targets_hint')}
+                                className="min-h-[220px]"
+                            >
                                 <Button type="button" variant="outline" onClick={addWorkTarget}>
                                     <Plus className="h-4 w-4" />
                                     {t('set_sla_work_add')}
                                 </Button>
-                            </div>
+                            </EmptyState>
                         </div>
                     ) : (
                         <div role="table" aria-labelledby="sla-h-rep" className={TABLE}>

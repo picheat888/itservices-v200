@@ -1,12 +1,14 @@
 import { useT } from '@/lang';
 import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { EmptyState } from '@/shared/components/empty-state';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
@@ -23,7 +25,6 @@ import { AlertTriangle, Ban, Check, ClipboardList, FileText, Loader2, Lock, Sear
 import { useEffect, useId, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Small section heading inside the count dialogs.
 const EYEBROW = 'text-muted-foreground text-xs font-semibold';
@@ -365,6 +366,10 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 }}
                 loading={sessionsLoading || sessionsFetching}
                 server={{ ...list.table.paging, total: sessionsPage?.meta.total ?? 0 }}
+                empty={{
+                    title: t('stock_empty_audit'),
+                    hint: can('view_count') ? t('stock_empty_audit_hint').replace('{button}', t('stock_count_start_new')) : null,
+                }}
             />
 
             {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}
@@ -430,7 +435,21 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             </div>
                             <div className="max-h-72 overflow-auto overscroll-contain">
                                 {skuList.length === 0 ? (
-                                    <div className="text-muted-foreground py-10 text-center text-sm">{t('stock_count_empty_scope')}</div>
+                                    skuSearch.trim() !== '' ? (
+                                        <EmptyState
+                                            kind="search"
+                                            title={t('stock_empty_audit_new_count_skus_search')}
+                                            hint={t('stock_empty_audit_new_count_skus_search_hint')}
+                                            className="min-h-0 py-6"
+                                        />
+                                    ) : (
+                                        <EmptyState
+                                            kind="pick"
+                                            title={t('stock_empty_audit_new_count_skus')}
+                                            hint={t('stock_empty_audit_new_count_skus_hint')}
+                                            className="min-h-0 py-6"
+                                        />
+                                    )
                                 ) : (
                                     skuList.map((i) => {
                                         const checked = selectedSkus.includes(i.id);
@@ -450,7 +469,9 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                 <span className="text-muted-foreground shrink-0 text-xs">
                                                     {localPair(i.category, i.category_th, lang) ?? '—'}
                                                 </span>
-                                                <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums">{fmtN(i.current_stock)}</span>
+                                                <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums">
+                                                    {fmtN(i.current_stock)}
+                                                </span>
                                             </label>
                                         );
                                     })

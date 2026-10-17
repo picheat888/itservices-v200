@@ -9,7 +9,7 @@ import { DataTable, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
-import { EmptyPane } from '@/shared/components/empty-pane';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner, type FieldControlProps } from '@/shared/components/field';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { PageTabs } from '@/shared/components/page-tabs';
@@ -22,6 +22,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { bindDateFormat, relativeTime, type DateFormatter } from '@/shared/lib/datetime';
@@ -60,7 +61,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Sample values for {{variables}} in the preview; mirrors EmailTemplateController::sampleVars().
 const SAMPLE_VARS: Record<string, string> = {
@@ -799,7 +799,11 @@ export default function EmailTemplatesPage() {
                             onRowClick={setEditing}
                             paging={list.table.paging}
                             caption={t('email_templates')}
-                            emptyState={<EmptyPane icon={Mail} text={search || module ? t('email_empty_filtered') : t('email_empty')} />}
+                            empty={
+                                search || module
+                                    ? { kind: 'search', title: t('email_empty_templates_filtered'), hint: t('email_empty_templates_filtered_hint') }
+                                    : { title: t('email_empty_templates_none'), hint: t('email_empty_templates_none_hint') }
+                            }
                         />
                     </div>
                 )}
@@ -1158,9 +1162,11 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
                                 {log.preview_html ? (
                                     <SentEmailFrame html={log.preview_html} title={t('email_log_content')} />
                                 ) : (
-                                    <div className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-10 text-center text-sm">
-                                        {t('email_log_no_content')}
-                                    </div>
+                                    <EmptyState
+                                        title={t('email_empty_log_detail_content')}
+                                        hint={t('email_empty_log_detail_content_hint')}
+                                        className="border-border min-h-0 rounded-xl border border-dashed py-8"
+                                    />
                                 )}
                             </div>
                         </>
@@ -1345,9 +1351,12 @@ function DeliveryLogPane() {
                         <div className="py-10 text-center">
                             <LoadFailed onRetry={() => refetch()} />
                         </div>
-                    ) : (
-                        <EmptyPane icon={History} text={query || status ? t('email_log_empty_filtered') : t('email_log_empty')} />
-                    )
+                    ) : undefined
+                }
+                empty={
+                    query || status
+                        ? { kind: 'search', title: t('email_empty_logs_filtered'), hint: t('email_empty_logs_filtered_hint') }
+                        : { title: t('email_empty_logs_none'), hint: t('email_empty_logs_none_hint') }
                 }
             />
 
