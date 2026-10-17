@@ -444,7 +444,7 @@ function NotificationRow({
                             {!n.read && <span className="sr-only">{t('notif_unread')}: </span>}
                             {title}
                         </div>
-                        <div className="text-muted-foreground mt-0.5 line-clamp-2 text-xs leading-relaxed">{notificationMessage(n, t)}</div>
+                        <div className="text-muted-foreground mt-0.5 line-clamp-2 text-[13px] leading-relaxed">{notificationMessage(n, t)}</div>
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" align="start" sideOffset={-6} className="max-w-[340px] text-xs leading-relaxed">
