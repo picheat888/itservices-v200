@@ -9,6 +9,7 @@ export interface AssetContractOption {
     id: number;
     code: string;
     vendor: string | null;
+    vendor_th?: string | null;
     details: string | null;
 }
 
