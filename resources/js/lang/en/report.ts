@@ -1486,7 +1486,6 @@ export const report: Dict = {
     rep_ef_resigned: 'Resigned',
     rep_ef_mgr_last: '(last day {date})',
     rep_ef_bad_dates: 'Started {start}, last day {last}',
-    rep_ef_empty_filtered: 'Nothing here under these filters',
 
     // pages/employees-overview.tsx · components/employee-overview-cards.tsx — ภาพรวมพนักงาน
     rep_k_eo_working: 'Working',

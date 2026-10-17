@@ -328,8 +328,6 @@ export const stock: Dict = {
     stock_empty_requests_fulfil_serials_hint: 'Pick another warehouse above.',
     stock_empty_audit: 'No stock counts yet',
     stock_empty_audit_hint: 'Press "{button}" to start the first one.',
-    stock_empty_audit_search: 'No count matches these filters',
-    stock_empty_audit_search_hint: 'Try clearing some filters.',
     stock_empty_audit_new_count_skus: 'Nothing in this warehouse or category',
     stock_empty_audit_new_count_skus_hint: 'Pick another warehouse or category.',
     stock_empty_audit_new_count_skus_search: 'No item matches',

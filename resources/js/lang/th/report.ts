@@ -1478,7 +1478,6 @@ export const report: Dict = {
     rep_ef_resigned: 'ลาออก',
     rep_ef_mgr_last: '(วันสุดท้าย {date})',
     rep_ef_bad_dates: 'เริ่ม {start} วันสุดท้าย {last}',
-    rep_ef_empty_filtered: 'ไม่มีเรื่องนี้ตามตัวกรอง',
 
     // pages/employees-overview.tsx · components/employee-overview-cards.tsx — ภาพรวมพนักงาน
     rep_k_eo_working: 'ทำงานอยู่',
