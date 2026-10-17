@@ -151,6 +151,8 @@ export interface NotificationTemplate {
     updated_by_name?: string | null;
     /** False once the wording has been changed from the standard. */
     is_standard: boolean;
+    /** The catalogue's on/off state, which Reset also restores. */
+    standard_enabled: boolean;
     /**
      * True when the same event also sends an email. A bell WITHOUT one is the only channel
      * its event has, so switching it off means nobody hears about that event at all.
