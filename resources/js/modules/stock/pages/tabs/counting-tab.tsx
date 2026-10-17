@@ -233,18 +233,21 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'reference',
             header: t('stock_doc_no'),
+            width: '130px',
             className: 'whitespace-nowrap',
             render: (s) => <span className="text-xs font-semibold">{s.reference}</span>,
         },
         {
             key: 'created_at',
             header: t('audit_time'),
+            width: '120px',
             className: 'whitespace-nowrap',
             render: (s) => <span className="text-muted-foreground text-xs">{fmt.date(s.created_at)}</span>,
         },
         {
             key: 'warehouse',
             header: t('stock_warehouse'),
+            width: '160px',
             className: 'whitespace-nowrap',
             // No specific warehouse = the count spanned every warehouse.
             render: (s) => <span className="text-sm">{s.warehouse || t('stock_count_all_wh')}</span>,
@@ -252,6 +255,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'category',
             header: t('stock_category'),
+            width: '140px',
             className: 'whitespace-nowrap',
             hideBelow: 'lg',
             render: (s) => <span className="text-sm">{s.category || '—'}</span>,
@@ -259,6 +263,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'counted_by',
             header: t('stock_counted_by'),
+            minWidth: '11rem',
             className: 'whitespace-nowrap',
             hideBelow: 'lg',
             render: (s) => <span className="text-sm">{s.counted_by || '—'}</span>,
@@ -266,13 +271,15 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'note',
             header: t('stock_notes'),
-            className: 'max-w-64',
+            minWidth: '12rem',
             hideBelow: 'xl',
             render: (s) => <span className="text-muted-foreground line-clamp-2 text-xs">{s.note || '—'}</span>,
         },
         {
             key: 'progress',
             header: t('stock_count_progress'),
+            align: 'right',
+            width: '100px',
             className: 'whitespace-nowrap',
             render: (s) => (
                 <span className="text-xs tabular-nums">
@@ -280,17 +287,17 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 </span>
             ),
         },
-        // Empty spacer soaks up the slack: left group stays tight, right group hugs the edge.
-        { key: 'spacer', header: '', className: 'w-full', render: () => null },
         {
             key: 'status',
             header: t('status'),
+            width: '130px',
             className: 'whitespace-nowrap',
             render: (s) => <StatusBadge tone={statusTone(s.status)}>{t(`stock_count_${s.status}` as Parameters<typeof t>[0])}</StatusBadge>,
         },
         {
             key: 'adjust_mode',
             header: t('stock_count_adjust_by'),
+            width: '120px',
             className: 'whitespace-nowrap',
             // Only committed counts carry a mode; drafts/canceled show nothing yet.
             render: (s) =>
@@ -307,6 +314,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             key: 'actions',
             header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
+            width: '60px',
             render: (s) =>
                 s.status === 'draft' && can('view_count') ? (
                     <button
