@@ -133,7 +133,7 @@ export default function TicketOverviewReportPage() {
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));
     // 90% closed within … hours: the average tile's footer when there is no earlier figure, its hover text otherwise
-    const p90 = data?.kpi.p90_resolve_hours == null ? undefined : t('rep_kpi_p90').replace('{n}', fmtN(data.kpi.p90_resolve_hours));
+    const p90 = data?.kpi.p90_resolve_hours == null ? undefined : t('rep_kpi_p90').replace('{n}', fmtN(data.kpi.p90_resolve_hours, { maxDecimals: 1 }));
 
     // Client-side range check runs before any request; server errors (403/422/other) are
     // reported once the request comes back. Either way the skeleton never spins forever.
@@ -244,7 +244,7 @@ export default function TicketOverviewReportPage() {
                             alert={data.kpi.sla_rate === null ? false : SLA_ALERT[slaLevel(data.kpi.sla_rate, data.sla_goal)]}
                             meter={data.kpi.sla_rate === null ? undefined : { value: data.kpi.sla_rate, goal: data.sla_goal }}
                             footer={
-                                data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', fmtN(data.previous.sla_rate))
+                                data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', fmtN(data.previous.sla_rate, { maxDecimals: 1 }))
                             }
                         />
                         <KpiTile

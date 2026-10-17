@@ -536,7 +536,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                         name="qty"
                                         inputMode="numeric"
                                         min={1}
-                                        max={fmtN(sourceBalance)}
+                                        max={sourceBalance}
                                         value={qty}
                                         disabled={sourceBalance === 0}
                                         onChange={(e) => setQty(Math.max(1, Math.min(sourceBalance, +e.target.value)))}
