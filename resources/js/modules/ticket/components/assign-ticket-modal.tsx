@@ -81,7 +81,6 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                     icon={UserPlus}
                     eyebrow={view?.ticket_no}
                     title={t('ticket_assign')}
-                    code={view?.ticket_no}
                     srDescription={t('ticket_assign')}
                 />
 

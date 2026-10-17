@@ -147,7 +147,6 @@ export function TicketUpdateModal({
                     icon={MessageSquarePlus}
                     eyebrow={view?.ticket_no}
                     title={t('ticket_update_title')}
-                    code={view?.ticket_no}
                     srDescription={t('ticket_update_title')}
                 />
 
