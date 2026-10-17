@@ -30,7 +30,11 @@ return new class extends Migration
             $table->text('product_key')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->foreign('brand_id')->references('id')->on('brands')->restrictOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('email_groups', function (Blueprint $table) {
@@ -42,8 +46,12 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->unsignedBigInteger('owner_employee_id')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->foreign('department_id')->references('id')->on('departments')->nullOnDelete();
             $table->foreign('owner_employee_id')->references('id')->on('employees')->nullOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('file_shares', function (Blueprint $table) {
@@ -59,8 +67,12 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->unsignedBigInteger('owner_employee_id')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->foreign('department_id')->references('id')->on('departments')->nullOnDelete();
             $table->foreign('owner_employee_id')->references('id')->on('employees')->nullOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('access_memberships', function (Blueprint $table) {
@@ -70,9 +82,10 @@ return new class extends Migration
             $table->unsignedBigInteger('employee_id');
             $table->string('access_level')->nullable();
             $table->string('purpose')->nullable();
-            $table->date('granted_at');
+            $table->dateTime('granted_at');
             $table->unsignedBigInteger('granted_by')->nullable();
-            $table->date('revoked_at')->nullable();
+            $table->dateTime('revoked_at')->nullable();
+            $table->unsignedBigInteger('revoked_by')->nullable();
             $table->timestamps();
             $table->index(['employee_id', 'revoked_at']);
             $table->index(['resource_type', 'resource_id']);
@@ -81,6 +94,7 @@ return new class extends Migration
             // reason by EmployeeService::deletionBlockers(); this is the net under it.
             $table->foreign('employee_id')->references('id')->on('employees')->restrictOnDelete();
             $table->foreign('granted_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('revoked_by')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('group_roles', function (Blueprint $table) {

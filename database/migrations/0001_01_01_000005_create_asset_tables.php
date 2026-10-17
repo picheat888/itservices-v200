@@ -44,7 +44,15 @@ return new class extends Migration
             $table->date('owned_since')->nullable();
             $table->text('notes')->nullable();
             $table->string('last_reason')->nullable();
+            $table->unsignedBigInteger('writeoff_reason_id')->nullable();
+            $table->timestamp('written_off_at')->nullable();
+            $table->unsignedBigInteger('written_off_by')->nullable();
+            // A rented asset handed back to its lessor (not a write-off).
+            $table->timestamp('returned_to_vendor_at')->nullable();
+            $table->unsignedBigInteger('returned_to_vendor_by')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             // Keeps the index name the column used to carry, from when the code
             // lived in `tag` — renaming it would be churn for no gain.
             $table->unique(['asset_code'], 'assets_tag_unique');
@@ -56,6 +64,12 @@ return new class extends Migration
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->restrictOnDelete();
             $table->foreign('vendor_id')->references('id')->on('vendors')->restrictOnDelete();
             $table->foreign('contract_id')->references('id')->on('contracts')->nullOnDelete();
+            $table->index('written_off_at');
+            $table->foreign('written_off_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('writeoff_reason_id')->references('id')->on('writeoff_reasons')->restrictOnDelete();
+            $table->foreign('returned_to_vendor_by')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('asset_transfers', function (Blueprint $table) {

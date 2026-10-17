@@ -32,6 +32,7 @@ return new class extends Migration
             $table->boolean('active')->default(true);
             $table->boolean('auto_ticket')->default(false);
             $table->timestamps();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('workflow_steps', function (Blueprint $table) {
@@ -97,10 +98,13 @@ return new class extends Migration
             $table->dateTime('rejected_at')->nullable();
             $table->dateTime('completed_at')->nullable();
             $table->dateTime('cancelled_at')->nullable();
+            $table->text('cancel_reason')->nullable();
+            $table->unsignedBigInteger('cancelled_by_user_id')->nullable();
+            $table->string('cancelled_by_name')->nullable();
             // When this request last MOVED. updated_at bumps on any write at all and a
             // rung signed mid-chain touches no column here, so the activity feed orders
             // on a column of its own.
-            $table->dateTime('last_activity_at')->nullable()->index();
+            $table->dateTime('last_activity_at')->nullable();
             $table->timestamps();
             $table->index('type');
             $table->index('origin');
@@ -118,6 +122,8 @@ return new class extends Migration
             $table->foreign('file_share_id')->references('id')->on('file_shares')->nullOnDelete();
             $table->foreign('request_option_id')->references('id')->on('request_options')->restrictOnDelete();
             $table->foreign('ticket_id')->references('id')->on('tickets')->nullOnDelete();
+            $table->index('last_activity_at');
+            $table->foreign('cancelled_by_user_id')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('request_approvals', function (Blueprint $table) {

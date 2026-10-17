@@ -8,6 +8,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\WriteoffReason;
 use App\Models\User;
+use Database\Seeders\WriteoffReasonSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,6 +20,13 @@ use Tests\TestCase;
 class WriteoffReasonTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // The standard write-off reasons (a fresh install gets them from DatabaseSeeder).
+        $this->seed(WriteoffReasonSeeder::class);
+    }
 
     /** @param list<string> $permissions */
     private function userWith(array $permissions): User
@@ -36,7 +44,7 @@ class WriteoffReasonTest extends TestCase
         $this->actingAs($this->userWith([]))
             ->getJson('/api/writeoff-reasons')
             ->assertOk()
-            // Six: "คืนผู้ให้เช่า" left the list for the Return to lessor action (2026_10_06_090155).
+            // Six: "คืนผู้ให้เช่า" is not a reason; a rented asset goes back through Return to lessor.
             ->assertJsonCount(6, 'data')
             ->assertJsonPath('data.0.name', 'ชำรุด ซ่อมไม่คุ้ม')
             ->assertJsonPath('data.5.name', 'อื่น ๆ');

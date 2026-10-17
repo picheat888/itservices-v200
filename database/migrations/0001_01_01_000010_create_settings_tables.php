@@ -52,6 +52,7 @@ return new class extends Migration
             $table->string('cadence', 16)->default('realtime');
             $table->timestamp('last_sent_at')->nullable();
             $table->timestamps();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('email_logs', function (Blueprint $table) {

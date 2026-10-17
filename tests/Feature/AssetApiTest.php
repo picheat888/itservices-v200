@@ -17,6 +17,7 @@ use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use Database\Seeders\WriteoffReasonSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -24,6 +25,13 @@ use Tests\TestCase;
 class AssetApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // The standard write-off reasons (a fresh install gets them from DatabaseSeeder).
+        $this->seed(WriteoffReasonSeeder::class);
+    }
 
     private function super(): User
     {

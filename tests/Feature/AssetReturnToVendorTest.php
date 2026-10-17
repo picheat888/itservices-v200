@@ -10,6 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Settings\WriteoffReason;
 use App\Models\User;
 use App\Services\Contract\ContractService;
+use Database\Seeders\WriteoffReasonSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -27,6 +28,8 @@ class AssetReturnToVendorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The standard write-off reasons (a fresh install gets them from DatabaseSeeder).
+        $this->seed(WriteoffReasonSeeder::class);
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
         $this->travelTo('2026-10-06 10:00:00');
     }

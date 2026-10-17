@@ -36,11 +36,15 @@ return new class extends Migration
             $table->unsignedBigInteger('warranty_type_id')->nullable();
             $table->date('last_move_at')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->foreign('category_id')->references('id')->on('categories')->restrictOnDelete();
             $table->foreign('brand_id')->references('id')->on('brands')->restrictOnDelete();
             $table->foreign('model_id')->references('id')->on('asset_models')->restrictOnDelete();
             $table->foreign('unit_id')->references('id')->on('units')->restrictOnDelete();
             $table->foreign('warranty_type_id')->references('id')->on('warranty_types')->restrictOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
         });
 
         // The ledger. stock_item_id is restrictOnDelete: once a SKU has moved even once,

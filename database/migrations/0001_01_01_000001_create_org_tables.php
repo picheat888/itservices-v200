@@ -23,6 +23,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('name_th')->nullable();
             $table->timestamps();
+            // created_by / updated_by: foreign keys added in the users baseline (000002), which comes after this file.
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
         });
 
         Schema::create('positions', function (Blueprint $table) {
@@ -31,6 +34,9 @@ return new class extends Migration
             $table->string('title');
             $table->boolean('allow_special_position')->default(false);
             $table->timestamps();
+            // created_by / updated_by: foreign keys added in the users baseline (000002), which comes after this file.
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
         });
 
         Schema::create('sections', function (Blueprint $table) {
@@ -40,6 +46,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('name_th')->nullable();
             $table->timestamps();
+            // created_by / updated_by: foreign keys added in the users baseline (000002), which comes after this file.
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->foreign('department_id')->references('id')->on('departments')->cascadeOnDelete();
         });
 
@@ -68,6 +77,9 @@ return new class extends Migration
             $table->string('resign_reason')->nullable();
             $table->date('last_day')->nullable();
             $table->timestamps();
+            // created_by / updated_by: foreign keys added in the users baseline (000002), which comes after this file.
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->index(['first_name', 'last_name'], 'emp_name_idx');
             $table->index(['status'], 'emp_status_idx');
             $table->foreign('department_id')->references('id')->on('departments')->nullOnDelete();

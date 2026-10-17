@@ -30,6 +30,7 @@ return new class extends Migration
             $table->boolean('enabled')->default(true);
             $table->timestamp('last_sent_at')->nullable();
             $table->timestamps();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
     }
 
