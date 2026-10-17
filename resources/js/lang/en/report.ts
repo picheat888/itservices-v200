@@ -1888,8 +1888,6 @@ export const report: Dict = {
     rep_sva_k_qty_foot: 'Across {n} items in stock as of {date}',
     rep_sva_k_held: 'Items in stock',
     rep_sva_k_held_of: 'of {n}',
-    rep_sva_k_held_foot: '{n} items out of stock',
-    rep_sva_k_all_held: 'Every item in stock',
     rep_sva_k_dead: 'Dead stock over 90 days',
     rep_sva_k_dead_share: '{pct}% of value',
     rep_sva_k_others: 'Others',
