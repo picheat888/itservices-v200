@@ -1,5 +1,6 @@
 // Shared report card pieces: list folding, card pager, card headings, title with count, master-data label, stacked bar, month label, swatch.
 import { useT } from '@/lang';
+import { EmptyState, type EmptyKind } from '@/shared/components/empty-state';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { bindDateFormat } from '@/shared/lib/datetime';
@@ -318,8 +319,12 @@ export function rich(template: string, bold: Record<string, React.ReactNode>, pl
 }
 
 /** A card body with nothing to draw. */
-export function CardEmpty({ children }: { children: React.ReactNode }) {
-    return <div className="text-muted-foreground flex flex-1 items-center justify-center px-5 py-10 text-center text-sm">{children}</div>;
+export function CardEmpty({ kind, title, hint, children }: { kind?: EmptyKind; title?: string; hint?: string | null; children?: React.ReactNode }) {
+    // Non-text children keep the old plain body until their caller migrates
+    if (title === undefined && children !== undefined && typeof children !== 'string') {
+        return <div className="text-muted-foreground flex flex-1 items-center justify-center px-5 py-10 text-center text-sm">{children}</div>;
+    }
+    return <EmptyState kind={kind} title={title ?? (typeof children === 'string' ? children : '')} hint={hint} />;
 }
 
 /** One piece of a counted bar: what it is, its colour and its count. */
