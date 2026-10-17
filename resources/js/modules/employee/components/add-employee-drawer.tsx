@@ -39,6 +39,7 @@ import { useOnboardingServices } from '../hooks/use-onboarding-services';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
 import { PhotoCropDialog } from './photo-crop-dialog';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const empty = {
     firstName: '',
@@ -108,6 +109,7 @@ const STEP_OF_FIELD: Record<string, number> = {
 /** Focus Dialog wizard for adding a new employee: personal info, work info, access. */
 export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
@@ -274,7 +276,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         if (s === LAST_STEP) {
             // Same 500 cap as the API, caught next to the box
             if (form.onboardingNote.trim().length > NOTE_MAX) {
-                e.onboardingNote = t('emp_err_note_long').replace('{n}', String(NOTE_MAX));
+                e.onboardingNote = t('emp_err_note_long').replace('{n}', fmtN(NOTE_MAX));
             }
             // Ticked services must fill their fields (checked here so the message is localised)
             for (const service of form.services) {
@@ -362,7 +364,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                 pushToast(`${services}: ${reasons}`, 'error', t('emp_onboarding_failed'));
             } else if (onboarding?.created.length) {
                 // Heading on top, count on its own line below it.
-                pushToast(t('emp_onboarding_filed_count').replace('{n}', String(onboarding.created.length)), 'success', t('emp_onboarding_filed'));
+                pushToast(t('emp_onboarding_filed_count').replace('{n}', fmtN(onboarding.created.length)), 'success', t('emp_onboarding_filed'));
             }
             onClose();
         } catch (err) {
@@ -518,7 +520,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 
                         <StepHead
                             ref={stepHeadingRef}
-                            eyebrow={t('emp_step_n').replace('{n}', String(step))}
+                            eyebrow={t('emp_step_n').replace('{n}', fmtN(step))}
                             title={t(STEPS[step - 1].titleKey)}
                             sub={t(STEPS[step - 1].subKey)}
                         />

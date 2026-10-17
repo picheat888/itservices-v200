@@ -1,5 +1,6 @@
 import { Button } from '@/shared/ui/button';
 import { Undo2 } from 'lucide-react';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * One-line notice above the asset tabs: N assets their holders sent back, waiting for IT to
@@ -26,18 +27,19 @@ export function PendingReturnStrip({
     onToggle: () => void;
     t: (key: string) => string;
 }) {
+    const fmtN = useNumberFormat();
     if (!count) return null;
 
     return (
         <section
-            aria-label={t('asset_pending_return_strip').replace('{count}', String(count))}
+            aria-label={t('asset_pending_return_strip').replace('{count}', fmtN(count))}
             className="flex h-12 items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4"
         >
             <Undo2 className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden="true" />
             {/* Read as one sentence: what happened, then the count in bold. */}
             <p className="min-w-0 truncate text-sm">
                 {t('asset_pending_return_strip_hint')}{' '}
-                <strong className="font-bold">{t('asset_pending_return_strip').replace('{count}', String(count))}</strong>
+                <strong className="font-bold">{t('asset_pending_return_strip').replace('{count}', fmtN(count))}</strong>
             </p>
             <Button size="sm" variant="outline" className="ml-auto shrink-0" aria-pressed={active} onClick={onToggle}>
                 {active ? t('asset_pending_return_show_all') : t('asset_pending_return_show')}

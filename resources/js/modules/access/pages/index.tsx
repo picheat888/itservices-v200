@@ -22,6 +22,7 @@ import { AccessOverview } from '../components/access-overview';
 import { MembersDrawer, type MemberTarget } from '../components/members-drawer';
 import { ResourceModal } from '../components/resource-modal';
 import { useEmailGroups, useFileShares, useSocialPlatforms, useSoftware } from '../hooks/use-access';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** The overview tab plus the four resource registries. */
 type Tab = 'overview' | AccessKind;
@@ -88,6 +89,7 @@ function NameCell({
  */
 export default function AccessControlPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     // Department / owner in the UI language (stored English name stays the filter key).
     type Located = { department?: string | null; department_th?: string | null; owner?: string | null; owner_th?: string | null };
@@ -562,9 +564,9 @@ export default function AccessControlPage() {
                 const over = s.seats != null && used > s.seats;
                 return (
                     <span className={cn('inline-flex items-center text-[12.5px]', over && 'text-destructive font-semibold')}>
-                        {used}/
+                        {fmtN(used)}/
                         {s.seats != null ? (
-                            s.seats
+                            fmtN(s.seats)
                         ) : (
                             <span title={t('access_seats_unlimited')} role="img" aria-label={t('access_seats_unlimited')} className="inline-flex">
                                 <InfinityIcon className="h-3.5 w-3.5" aria-hidden />

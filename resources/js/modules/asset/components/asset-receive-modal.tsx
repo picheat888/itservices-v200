@@ -9,6 +9,7 @@ import { useToastStore } from '@/stores/toast';
 import { Check, Loader2, RotateCcw, Warehouse } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Put assets back into the pool via a destination-warehouse picker. Serves both the
@@ -32,6 +33,7 @@ export function AssetReceiveModal({
     mode?: 'receive' | 'recall';
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { receive, recall, bulkRecall, bulkReceive } = useAssetMutations();
     const { data: warehouses = [] } = useWarehouses();
     const [warehouse, setWarehouse] = useState('');
@@ -91,7 +93,7 @@ export function AssetReceiveModal({
           ? t('asset_recall_title')
           : t('asset_receive_title');
     const sub = isBulk
-        ? t('asset_bulk_count').replace('{count}', String(ids?.length ?? 0))
+        ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0))
         : isRecall
           ? t('asset_recall_sub')
           : t('asset_receive_sub');

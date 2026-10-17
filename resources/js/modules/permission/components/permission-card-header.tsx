@@ -1,3 +1,4 @@
+import { formatNumber } from '@/shared/lib/number';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
@@ -60,7 +61,7 @@ export function PermissionCardHeader({ module, on, total, lang }: { module: stri
                 <span className="truncate">{moduleLabel(module, lang)}</span>
             </span>
             <span className={cn('shrink-0 text-[10.5px] font-bold', on === 0 ? 'text-muted-foreground' : 'text-brand')}>
-                {on}/{total}
+                {formatNumber(on, lang)}/{formatNumber(total, lang)}
             </span>
         </div>
     );

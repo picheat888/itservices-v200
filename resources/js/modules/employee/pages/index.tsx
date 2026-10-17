@@ -88,6 +88,7 @@ type TabItem = PageTab<Tab>;
 
 export default function EmployeesPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     const { can, isSuper } = useAuth();
@@ -268,7 +269,7 @@ export default function EmployeesPage() {
                 hideCancel: true,
                 title: t('pos_del_blocked_title'),
                 description: t('pos_del_blocked_desc'),
-                entity: { name: p.title, sub: `${members} ${t('dept_members')}` },
+                entity: { name: p.title, sub: `${fmtN(members)} ${t('dept_members')}` },
                 confirmText: t('got_it'),
             });
             return;
@@ -290,7 +291,7 @@ export default function EmployeesPage() {
             render: (p) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
-                    {p.employees_count ?? 0}
+                    {fmtN(p.employees_count ?? 0)}
                 </span>
             ),
         },
@@ -389,7 +390,7 @@ export default function EmployeesPage() {
                 description: t('dept_del_blocked_desc'),
                 entity: {
                     name: deptName(d),
-                    sub: `${members} ${t('dept_members')}, ${sections} ${t('sub_sections')}`,
+                    sub: `${fmtN(members)} ${t('dept_members')}, ${fmtN(sections)} ${t('sub_sections')}`,
                 },
                 confirmText: t('got_it'),
             });
@@ -417,7 +418,7 @@ export default function EmployeesPage() {
             render: (d) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Layers className="text-muted-foreground h-3.5 w-3.5" />
-                    {d.sections_count ?? 0}
+                    {fmtN(d.sections_count ?? 0)}
                 </span>
             ),
         },
@@ -428,7 +429,7 @@ export default function EmployeesPage() {
             render: (d) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
-                    {d.count ?? 0}
+                    {fmtN(d.count ?? 0)}
                 </span>
             ),
         },
@@ -891,6 +892,7 @@ function DirectoryTab({
 }
 
 import type { EmployeeSummary } from '../api/employeeApi';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const DASH_DEPT_LIMIT = 8;
 
@@ -954,6 +956,7 @@ function OverviewTab({
     onViewDepartments: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
 
@@ -964,19 +967,19 @@ function OverviewTab({
             label: t('total_employees'),
             value: String(summary?.total ?? '—'),
             icon: Users,
-            sub: t('emp_kpi_total_sub').replace('{n}', String(summary?.active ?? 0)),
+            sub: t('emp_kpi_total_sub').replace('{n}', fmtN(summary?.active ?? 0)),
         },
         {
             label: t('departments_count'),
             value: String(departments.length),
             icon: Building2,
-            sub: t('emp_kpi_depts_sub').replace('{n}', String(sectionTotal)),
+            sub: t('emp_kpi_depts_sub').replace('{n}', fmtN(sectionTotal)),
         },
         {
             label: t('active_positions'),
             value: String(positions.length),
             icon: Briefcase,
-            sub: t('emp_kpi_positions_sub').replace('{n}', String(filledPositions)),
+            sub: t('emp_kpi_positions_sub').replace('{n}', fmtN(filledPositions)),
         },
         { label: t('new_hires'), value: String(summary?.new_hires ?? '—'), icon: UserPlus, sub: t('emp_kpi_hires_sub') },
     ];
@@ -1013,15 +1016,15 @@ function OverviewTab({
                         <div className="flex items-baseline gap-2.5">
                             <span className="text-[54px] leading-none font-bold">{summary?.active ?? 0}</span>
                             <span className="text-muted-foreground text-sm">
-                                {t('emp_status_caption').replace('{n}', String(summary?.total ?? 0))}
+                                {t('emp_status_caption').replace('{n}', fmtN(summary?.total ?? 0))}
                             </span>
                         </div>
                         <div
                             role="img"
                             aria-label={t('emp_status_bar_sr')
-                                .replace('{active}', String(summary?.active ?? 0))
-                                .replace('{resigned}', String(summary?.resigned ?? 0))
-                                .replace('{total}', String(total))}
+                                .replace('{active}', fmtN(summary?.active ?? 0))
+                                .replace('{resigned}', fmtN(summary?.resigned ?? 0))
+                                .replace('{total}', fmtN(total))}
                             className="bg-secondary my-4 flex h-3 w-full overflow-hidden rounded-full"
                         >
                             <span className="block h-full bg-emerald-500" style={{ width: `${statusPct.active}%` }} />
@@ -1099,7 +1102,7 @@ function OverviewTab({
                                         <span className="bg-muted rounded-md px-2 py-0.5 text-[11px]">{d.tag}</span>
                                         <span className="text-sm">{localName(d, lang)}</span>
                                     </div>
-                                    <span className="text-sm font-semibold">{d.count ?? 0}</span>
+                                    <span className="text-sm font-semibold">{fmtN(d.count ?? 0)}</span>
                                 </div>
                             ))}
                     </div>

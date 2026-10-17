@@ -1,3 +1,4 @@
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { useId, useRef, type KeyboardEvent } from 'react';
@@ -42,6 +43,7 @@ export function DialogTabs<T extends string>({
     /** Id of the element holding the active tab's content; tabs point at it (aria-controls). */
     panelId?: string;
 }) {
+    const fmtN = useNumberFormat();
     const fallbackId = useId();
     const base = panelId ?? fallbackId;
     const listRef = useRef<HTMLDivElement>(null);
@@ -98,7 +100,7 @@ export function DialogTabs<T extends string>({
                                     selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
                                 )}
                             >
-                                {tb.count != null && tb.count > 0 && tb.count}
+                                {tb.count != null && tb.count > 0 && fmtN(tb.count)}
                                 {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
                             </span>
                         )}

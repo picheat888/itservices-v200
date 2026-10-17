@@ -11,6 +11,7 @@ import { useUiStore } from '@/stores/ui';
 import { Clock, Cog, FileText, Laptop, Loader2, type LucideIcon, Package, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetContract } from '../hooks/use-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Icon per contract type — mirrors the Contract detail drawer. */
 const TYPE_ICON: Record<ContractType, LucideIcon> = {
@@ -65,6 +66,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  */
 export function ContractPeekDialog({ assetId, onClose }: { assetId: number | null; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     const [tab, setTab] = useState<TabId>('overview');
@@ -123,10 +125,10 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
             >
                 <Clock className="h-3 w-3" />
                 {days <= 0
-                    ? t('contract_days_overdue').replace('{n}', String(-days))
+                    ? t('contract_days_overdue').replace('{n}', fmtN(-days))
                     : c.in_reminder
-                      ? t('contract_expires_in').replace('{n}', String(days))
-                      : t('contract_days_left').replace('{n}', String(days))}
+                      ? t('contract_expires_in').replace('{n}', fmtN(days))
+                      : t('contract_days_left').replace('{n}', fmtN(days))}
             </span>
         );
 

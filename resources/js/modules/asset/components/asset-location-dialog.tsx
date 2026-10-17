@@ -10,6 +10,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { Loader2, MapPin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Correct where in-use assets physically sit — the holder moved desk and took the kit along.
@@ -34,6 +35,7 @@ export function AssetLocationDialog({
     onDone?: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { updateLocation } = useAssetMutations();
     const { data: locations = [] } = useLocations();
 
@@ -82,7 +84,7 @@ export function AssetLocationDialog({
     };
 
     const description = isBulk
-        ? t('asset_bulk_count').replace('{count}', String(ids?.length ?? 0))
+        ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0))
         : view
           ? `${view.asset_code} - ${view.model ?? ''}`
           : '';

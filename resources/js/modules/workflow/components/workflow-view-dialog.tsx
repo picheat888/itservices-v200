@@ -11,6 +11,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Flag, Pencil, Workflow as WorkflowIcon, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { WorkflowStrip } from './workflow-strip';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Read-only focus dialog for one workflow: route strip and per-step detail, with a shortcut
@@ -30,6 +31,7 @@ export function WorkflowViewDialog({
     onEdit: (w: Workflow) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
 
     // Keep the last shown workflow so content doesn't blank during the exit animation.
     const [shown, setShown] = useState<Workflow | null>(null);
@@ -85,7 +87,7 @@ export function WorkflowViewDialog({
                             because the value is already in days: two day-figures side by side
                             would read as "takes 30 days", which is the opposite of the answer. */}
                         <InfoCell
-                            label={t('wf_cell_decision').replace('{days}', String(measureDays))}
+                            label={t('wf_cell_decision').replace('{days}', fmtN(measureDays))}
                             value={wf.measured ? `${wf.measured.avg_days}${t('wf_days_suffix')}` : '—'}
                         />
                     </div>

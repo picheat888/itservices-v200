@@ -14,6 +14,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Loader2, Share2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations, useRecipientReadiness } from '../hooks/use-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Mode = 'employee' | 'shared';
 
@@ -36,6 +37,7 @@ export function AssetTransferDialog({
     onDone?: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { transfer, bulkTransfer } = useAssetMutations();
     const { data: locations = [] } = useLocations();
@@ -119,7 +121,7 @@ export function AssetTransferDialog({
     };
 
     const description = isBulk
-        ? t('asset_bulk_count').replace('{count}', String(ids?.length ?? 0))
+        ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0))
         : shownAsset
           ? `${shownAsset.asset_code} - ${shownAsset.model ?? ''}`
           : '';

@@ -22,6 +22,7 @@ import { Folder, Globe, Package, Pencil, Plus, SquarePen, Trash2, TriangleAlert,
 import { useEffect, useMemo, useState } from 'react';
 import { useAccessMutations, useResourceMembers, useSetEmailGroupOwner, useSetFileShareOwner } from '../hooks/use-access';
 import { AccessBadge } from './access-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** The resource a member dialog is bound to, with enough detail for the header. */
 export type MemberTarget = {
@@ -108,6 +109,7 @@ export function MembersDrawer({
     onEdit?: (target: MemberTarget) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const nameOf = useLocalName();
     const confirm = useConfirm();
     // Retain the last granted flags while the dialog animates closed (the parent passes
@@ -435,7 +437,7 @@ export function MembersDrawer({
                         {/* Members — the one part that scrolls */}
                         <div className="border-border min-h-0 flex-1 overflow-y-auto border-t px-6 py-4">
                             <SectionLabel>
-                                {t('access_members')} ({members.length})
+                                {t('access_members')} ({fmtN(members.length)})
                             </SectionLabel>
                             <div>
                                 <DataTable
@@ -459,8 +461,8 @@ export function MembersDrawer({
                                             <p className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-400">
                                                 <TriangleAlert className="h-4 w-4 shrink-0" />
                                                 {t('access_seats_full')
-                                                    .replace('{used}', String(members.length))
-                                                    .replace('{seats}', String(tgt.seats))}
+                                                    .replace('{used}', fmtN(members.length))
+                                                    .replace('{seats}', fmtN(tgt.seats ?? 0))}
                                             </p>
                                         ) : mayEdit ? (
                                             <div className="flex items-center gap-2">

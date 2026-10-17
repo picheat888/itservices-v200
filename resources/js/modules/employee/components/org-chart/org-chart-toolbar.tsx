@@ -6,6 +6,7 @@ import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { OrgDir } from '../../lib/org-tree';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 interface OrgStats {
     total: number;
@@ -49,6 +50,7 @@ export function OrgChartToolbar({
     onFit: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     // Keyboard-highlighted suggestion
     const [activeIndex, setActiveIndex] = useState(0);
@@ -64,7 +66,7 @@ export function OrgChartToolbar({
 
     const stat = (num: number, label: string) => (
         <div className="flex flex-col items-center justify-center px-4">
-            <span className="text-foreground text-lg leading-none font-extrabold tracking-tight">{num}</span>
+            <span className="text-foreground text-lg leading-none font-extrabold tracking-tight">{fmtN(num)}</span>
             <span className="text-muted-foreground mt-0.5 text-[11px]">{label}</span>
         </div>
     );

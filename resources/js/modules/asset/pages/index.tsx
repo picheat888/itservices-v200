@@ -78,6 +78,7 @@ import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { PendingReturnStrip } from '../components/pending-return-strip';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -205,12 +206,13 @@ const PINNED_CELL = 'bg-card group-hover/row:bg-accent group-data-[selected=true
 /** Warranty end for an owned asset, lease end for a rented one: a date, or how close it is when that matters. */
 function AssetCoverCell({ asset }: { asset: Asset }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     if (asset.source !== 'rented' && asset.warranty_lifetime) return <span className="text-xs">{t('asset_warranty_lifetime')}</span>;
     if (!asset.cover_end) return <span className="text-muted-foreground">—</span>;
     const days = Math.ceil((Date.parse(asset.cover_end) - Date.now()) / 86_400_000);
     if (days < 0) return <StatusBadge tone="gray">{t('asset_cover_ended')}</StatusBadge>;
-    if (days <= 90) return <StatusBadge tone="amber">{t('asset_cover_days_left').replace('{n}', String(days))}</StatusBadge>;
+    if (days <= 90) return <StatusBadge tone="amber">{t('asset_cover_days_left').replace('{n}', fmtN(days))}</StatusBadge>;
     return <span className="text-xs">{fmt.date(asset.cover_end)}</span>;
 }
 
@@ -245,6 +247,7 @@ function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) 
 
 export default function AssetsPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
     const { user, can } = useAuth();
@@ -620,7 +623,7 @@ export default function AssetsPage() {
     };
     // Spoken/hover description of a bar — the row's counts are marked by color alone, so the
     // written-out split is what a screen reader and a hover both get.
-    const typeLabel = (b: TypeBar) => (b.type === OTHER_TYPES ? t('asset_type_others').replace('{n}', String(b.folded ?? 0)) : catLabel(b.type));
+    const typeLabel = (b: TypeBar) => (b.type === OTHER_TYPES ? t('asset_type_others').replace('{n}', fmtN(b.folded ?? 0)) : catLabel(b.type));
     const typeBarTitle = (b: TypeBar) => `${typeLabel(b)}: ${TYPE_BUCKETS.map((s) => `${b[s.key]} ${t(s.labelKey)}`).join(', ')}`;
 
     return (
@@ -781,7 +784,7 @@ export default function AssetsPage() {
                                                     ))}
                                                 </span>
                                             </InfoPopover>
-                                            <span className="text-right text-sm leading-none font-semibold">{b.count}</span>
+                                            <span className="text-right text-sm leading-none font-semibold">{fmtN(b.count)}</span>
                                         </div>
                                     ))}
                                     {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
@@ -794,7 +797,7 @@ export default function AssetsPage() {
                                         >
                                             {showAllTypes
                                                 ? t('asset_types_show_less')
-                                                : t('asset_types_show_all').replace('{n}', String(allTypeBars.length))}
+                                                : t('asset_types_show_all').replace('{n}', fmtN(allTypeBars.length))}
                                             <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showAllTypes && 'rotate-180')} />
                                         </button>
                                     )}

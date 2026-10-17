@@ -15,6 +15,7 @@ import { useDepartments } from '../hooks/use-departments';
 import { useSectionMutations, useSections } from '../hooks/use-sections';
 import { SectionMembersDialog } from './section-members-dialog';
 import { SectionModal } from './section-modal';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const SORT_KEYS = ['dept', 'name', 'members', 'code'] as const;
 type SortKey = (typeof SORT_KEYS)[number];
@@ -27,6 +28,7 @@ const ICON_BTN =
 
 export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     const { data: sections = [], isLoading } = useSections();
@@ -84,7 +86,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                 hideCancel: true,
                 title: t('section_del_blocked_title'),
                 description: t('section_del_blocked_desc'),
-                entity: { name, sub: `${count} ${t('section_members')}` },
+                entity: { name, sub: `${fmtN(count)} ${t('section_members')}` },
                 confirmText: t('got_it'),
             });
             return;
@@ -107,7 +109,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
             render: (s) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
-                    {s.members_count ?? 0}
+                    {fmtN(s.members_count ?? 0)}
                 </span>
             ),
         },
