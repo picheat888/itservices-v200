@@ -7,7 +7,6 @@
 import { useT } from '@/lang';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -37,11 +36,9 @@ import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
 import { TicketReportTable } from '../components/ticket-report-table';
 import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
-import { useReportRights } from '../hooks/use-report-rights';
+import { useReportDialog } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
-
-const REPORT_DIALOGS = ['export', 'schedule'] as const;
 
 // The page's soft palette: today's hues one step lighter (Tailwind 400), the same meanings.
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-400', high: 'bg-amber-400', medium: 'bg-emerald-400', low: 'bg-emerald-400' };
@@ -119,11 +116,10 @@ export default function TicketOverviewReportPage() {
     const { filters, patch, reset } = useTicketReportFilters();
     const { data, isLoading, isError, error } = useTicketOverview(filters);
     // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
-    const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
-    const { canExport, canSchedule } = useReportRights();
-    const exportOpen = dialog === 'export' && canExport;
+    const { dialog, setDialog, canExport, canSchedule } = useReportDialog();
+    const exportOpen = dialog === 'export';
     const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
-    const scheduleOpen = dialog === 'schedule' && canSchedule;
+    const scheduleOpen = dialog === 'schedule';
     const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
     const exportMut = useExportTicketOverview();
     const scheduleMut = useCreateSchedule();
