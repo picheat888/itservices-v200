@@ -12,9 +12,11 @@
  * their own text, so switching the period shows exactly what moved.
  */
 import { useT } from '@/lang';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { useReportCatalogue, useReportSnapshot } from '../hooks/use-reports';
 import type { SnapshotPeriod, SnapshotRange, SnapshotTile } from '../types';
@@ -80,10 +82,13 @@ function Pill({ tone, children }: { tone: 'amber' | 'red'; children: React.React
 }
 
 function Footer({ tile, period, periodWords }: { tile: SnapshotTile; period: SnapshotPeriod; periodWords: string }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     const sub = tile.secondary;
     const subText =
-        sub && sub.value !== null ? t(`rep_snap_sub_${sub.key}`).replace('{n}', sub.value.toLocaleString()).replace('{period}', periodWords) : null;
+        sub && sub.value !== null
+            ? t(`rep_snap_sub_${sub.key}`).replace('{n}', formatNumber(sub.value, lang)).replace('{period}', periodWords)
+            : null;
 
     switch (tile.key) {
         case 'tickets_open':
@@ -108,15 +113,16 @@ function Footer({ tile, period, periodWords }: { tile: SnapshotTile; period: Sna
 }
 
 function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRange; hasRange: boolean }) {
+    const lang = useUiStore((s) => s.lang);
     const period = range.period;
     const t = useT();
-    const value = tile.value === null ? '—' : tile.unit === 'percent' ? tile.value.toLocaleString() : tile.value.toLocaleString();
+    const value = tile.value === null ? '—' : formatNumber(tile.value, lang, { maxDecimals: 3 });
     const periodWords = t(`rep_period_in_${period}`);
     const label = PERIOD_TILES.has(tile.key) ? `${t(`rep_snap_${tile.key}`)} ${periodWords}` : t(`rep_snap_${tile.key}`);
     // The open-ticket cell's footer is its trend, so its "past SLA" count sits beside the number.
     const beside =
         tile.key === 'tickets_open' && tile.secondary?.value
-            ? t(`rep_snap_sub_${tile.secondary.key}`).replace('{n}', tile.secondary.value.toLocaleString())
+            ? t(`rep_snap_sub_${tile.secondary.key}`).replace('{n}', formatNumber(tile.secondary.value, lang))
             : null;
 
     return (
@@ -131,7 +137,7 @@ function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRa
             <span className="flex items-baseline gap-1.5 text-[22px] leading-tight font-bold">
                 {value}
                 {tile.unit === 'percent' && tile.value !== null && <small className="text-muted-foreground text-xs font-medium">%</small>}
-                {tile.total !== null && <small className="text-muted-foreground text-xs font-medium">/ {tile.total.toLocaleString()}</small>}
+                {tile.total !== null && <small className="text-muted-foreground text-xs font-medium">/ {formatNumber(tile.total, lang)}</small>}
                 {beside && <small className={cn('truncate text-xs font-semibold', BAD)}>{beside}</small>}
             </span>
             <span className="flex min-h-5 items-center justify-between gap-1.5 text-xs">

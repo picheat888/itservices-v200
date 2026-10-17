@@ -4,6 +4,7 @@ import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localName } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
@@ -37,7 +38,10 @@ function noteText(t: (key: string) => string, lang: string, note: NonNullable<Su
         (s, [name, value]) => s.replaceAll(`{${name}}`, typeof value === 'string' ? value : localName(value, lang)),
         t(note.label_key),
     );
-    text = Object.entries(note.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), text);
+    text = Object.entries(note.values ?? {}).reduce(
+        (s, [name, value]) => s.replaceAll(`{${name}}`, formatNumber(value, lang, { maxDecimals: 3 })),
+        text,
+    );
     if (note.hours !== undefined) text = text.replace('{n}', note.hours === null ? '—' : duration(t, note.hours));
     return text.replace('{at}', note.at ? shortMoment(note.at, lang) : '—');
 }
@@ -57,8 +61,11 @@ const lineTone = (item: SummaryItem) =>
         ? TREND[item.chart.tone === 'bad' ? 'down' : 'up'].line
         : TREND[item.note?.trend?.direction ?? 'even'].line;
 
-const trendText = (t: (key: string) => string, trend: NonNullable<Note['trend']>) =>
-    Object.entries(trend.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), t(trend.label_key));
+const trendText = (t: (key: string) => string, lang: string, trend: NonNullable<Note['trend']>) =>
+    Object.entries(trend.values ?? {}).reduce(
+        (s, [name, value]) => s.replaceAll(`{${name}}`, formatNumber(value, lang, { maxDecimals: 3 })),
+        t(trend.label_key),
+    );
 
 /** The note's words, then its trend (when it has one) in the trend's colour. */
 function NoteLine({ note }: { note: Note }) {
@@ -71,14 +78,14 @@ function NoteLine({ note }: { note: Note }) {
             {noteText(t, lang, note)}{' '}
             <span className={cn('font-semibold whitespace-nowrap', ink)}>
                 <span aria-hidden>{mark}</span>
-                {trendText(t, note.trend)}
+                {trendText(t, lang, note.trend)}
             </span>
         </>
     );
 }
 
 const noteTitle = (t: (key: string) => string, lang: string, note: Note) =>
-    note.trend ? `${noteText(t, lang, note)} ${trendText(t, note.trend)}` : noteText(t, lang, note);
+    note.trend ? `${noteText(t, lang, note)} ${trendText(t, lang, note.trend)}` : noteText(t, lang, note);
 
 /** A request trend as the snapshot strip draws it: "▲ 3 จากช่วงก่อนหน้า" left, the line right, both in the same good / bad colour. */
 function DeltaFooter({
@@ -101,7 +108,7 @@ function DeltaFooter({
     const good = neutral ? null : (trend.direction === 'up') === trend.up_is_good;
     const shade = good === null ? TREND.even : good ? TREND.up : TREND.down;
     const places = trend.decimals ?? decimals;
-    const size = delta?.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: places, maximumFractionDigits: places });
+    const size = delta === undefined ? undefined : formatNumber(delta, lang, { decimals: places });
     const change =
         delta === undefined ? (
             <span className="text-muted-foreground">{t(trend.label_key)}</span>
@@ -149,15 +156,14 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(items.length))}>
             {items.map((item) => {
-                const locale = lang === 'th' ? 'th-TH' : 'en-US';
                 const value =
                     item.value === null
                         ? '—'
                         : item.format === 'money'
-                          ? item.value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          ? formatNumber(item.value, lang, { decimals: 2 })
                           : item.format === 'hours' || item.format === 'years' || item.format === 'days'
-                            ? item.value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-                            : item.value.toLocaleString(locale);
+                            ? formatNumber(item.value, lang, { decimals: 1 })
+                            : formatNumber(item.value, lang, { maxDecimals: 3 });
                 const unit =
                     item.value === null
                         ? undefined
@@ -183,9 +189,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                 const splitTotal = split.reduce((sum, part) => sum + part.value, 0);
                 // An hours tile splits into hours, the unit outside the number; other splits are counts.
                 const partNumber = (value: number, counts = false) =>
-                    item.format === 'hours' && !counts
-                        ? value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-                        : value.toLocaleString(locale);
+                    item.format === 'hours' && !counts ? formatNumber(value, lang, { decimals: 1 }) : formatNumber(value, lang, { maxDecimals: 3 });
                 const partUnit = (counts = false) => (item.format === 'hours' && !counts ? t('rep_hours') : null);
                 const partText = (value: number, counts = false) =>
                     partUnit(counts) ? `${partNumber(value, counts)} ${partUnit(counts)}` : partNumber(value, counts);

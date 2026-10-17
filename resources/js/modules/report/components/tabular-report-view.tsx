@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -150,7 +151,7 @@ function TabularReportRows({
                         <div className="flex shrink-0 items-center gap-3">
                             {data && (
                                 <span className="text-muted-foreground text-xs tabular-nums">
-                                    {t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US'))}
+                                    {t('rep_rows_count').replace('{n}', formatNumber(data.meta.total, lang))}
                                 </span>
                             )}
                             <span aria-hidden className="bg-border h-5 w-px" />

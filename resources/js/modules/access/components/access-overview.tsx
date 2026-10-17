@@ -4,6 +4,7 @@ import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -360,6 +361,7 @@ export function AccessOverview({
     /** Per-registry edit permission, so the triage drawer only offers an action the API will accept. */
     canEdit: Record<AccessKind, boolean>;
 }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     const [period, setPeriod] = useOverviewPeriod();
     const { data, isLoading, isError, refetch } = useAccessSummary(period);
@@ -424,7 +426,7 @@ export function AccessOverview({
                             <span className="text-sm font-semibold">{t('access_dash_distribution_title')}</span>
                         </div>
                         <span className="text-muted-foreground text-xs">
-                            <b className="text-foreground font-bold">{total.toLocaleString()}</b> {t('access_dash_grants_total')}
+                            <b className="text-foreground font-bold">{formatNumber(total, lang)}</b> {t('access_dash_grants_total')}
                         </span>
                     </div>
                     <div className="space-y-4 p-5">

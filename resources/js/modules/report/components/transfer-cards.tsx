@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -67,7 +68,7 @@ const NUM = 'text-right tabular-nums';
 const CODE_LINK =
     'text-brand focus-visible:ring-brand rounded-sm text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
-const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+const count = (n: number, lang: Lang) => formatNumber(n, lang);
 const label = (l: ChartLabel | null, lang: Lang) => (l ? localPair(l.name, l.name_th, lang) : null);
 
 /** "2026-09-23 09:00" → the date in the system date setting. */

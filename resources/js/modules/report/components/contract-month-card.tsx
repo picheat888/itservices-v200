@@ -3,6 +3,7 @@
  * type, a tooltip listing every type on hover/focus, and the month's contracts on click.
  */
 import { useT } from '@/lang';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
@@ -53,10 +54,8 @@ export interface ContractMonthCardProps {
 
 type Lang = 'th' | 'en';
 
-const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
-
 /** Money with 2 decimals, as tiles and tables show it. */
-export const contractMoney = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const contractMoney = (n: number, lang: Lang) => formatNumber(n, lang, { decimals: 2 });
 
 /** Money for chart axes and short labels: 950, 12K, 1.25M, 12.5M. */
 export function compactMoney(n: number): string {
@@ -67,7 +66,7 @@ export function compactMoney(n: number): string {
     return String(Math.round(n));
 }
 
-const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
+const count = (n: number, lang: Lang) => formatNumber(n, lang);
 
 /** Axis top for money: the next 1 / 1.2 / 1.6 / 2 / 2.4 / 3 / 4 / 5 / 6 / 8 / 10 step at or above the peak. */
 function niceMoney(value: number): number {

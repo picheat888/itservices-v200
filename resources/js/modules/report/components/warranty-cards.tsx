@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -43,7 +44,7 @@ const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking
 const TD = 'px-3 py-2.5 align-middle';
 const NUM = 'text-right tabular-nums';
 
-const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+const count = (n: number, lang: Lang) => formatNumber(n, lang);
 
 /** "90 วัน" / "1 ปี" — the "ภายใน" window as its option reads. */
 const windowText = (t: T, within: number) => t(`rep_opt_${within}d`);

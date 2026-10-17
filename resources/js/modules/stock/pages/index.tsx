@@ -17,6 +17,7 @@ import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair, nameSearch } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus } from '@/shared/types';
@@ -396,7 +397,7 @@ export default function StockPage() {
             className: 'whitespace-nowrap',
             render: (i) => (
                 <div>
-                    <span className="text-sm font-bold tabular-nums">{i.current_stock.toLocaleString()}</span>
+                    <span className="text-sm font-bold tabular-nums">{formatNumber(i.current_stock, lang)}</span>
                     {!!i.reserved && (
                         <InfoPopover
                             label={t('stock_reserved_n').replace('{n}', String(i.reserved))}

@@ -25,6 +25,7 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { bindDateFormat, relativeTime, type DateFormatter } from '@/shared/lib/datetime';
+import { formatNumber } from '@/shared/lib/number';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -403,6 +404,7 @@ const SEARCH_INPUT_PROPS = { type: 'search', autoComplete: 'off', spellCheck: fa
 
 /** A filter chip with its count; aria-pressed carries the selection, not colour alone. */
 function FilterChip({ label, count, selected, onClick }: { label: string; count?: number; selected: boolean; onClick: () => void }) {
+    const lang = useUiStore((s) => s.lang);
     return (
         <button
             type="button"
@@ -414,7 +416,7 @@ function FilterChip({ label, count, selected, onClick }: { label: string; count?
             )}
         >
             {label}
-            {count != null && <span className="font-semibold tabular-nums">{count.toLocaleString('en-US')}</span>}
+            {count != null && <span className="font-semibold tabular-nums">{formatNumber(count, lang)}</span>}
         </button>
     );
 }

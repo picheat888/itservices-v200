@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -47,7 +48,7 @@ const KIND_LABEL: Record<ContractRentalKind, string> = { rent: 'rep_src_rented',
 const FOLD_LINKED = 10;
 const FOLD_UNLINKED = 3;
 
-const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+const count = (n: number, lang: Lang) => formatNumber(n, lang);
 
 /** The page's filters without the list segment, which narrows only the rows. */
 function cardFilters(filters: TabularFilters): TabularFilters {
@@ -444,13 +445,7 @@ function ModelsCard({ models }: { models: ModelRow[] }) {
                                     <td className={cn(TD, NUM, 'whitespace-nowrap')}>
                                         {m.break_even_months === null
                                             ? dash
-                                            : t('rep_crent_vs_months').replace(
-                                                  '{n}',
-                                                  m.break_even_months.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', {
-                                                      minimumFractionDigits: 1,
-                                                      maximumFractionDigits: 1,
-                                                  }),
-                                              )}
+                                            : t('rep_crent_vs_months').replace('{n}', formatNumber(m.break_even_months, lang, { decimals: 1 }))}
                                     </td>
                                     <td className={cn(TD, 'w-1/4')}>
                                         <VersusBars row={m} />

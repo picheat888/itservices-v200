@@ -16,9 +16,11 @@
  * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
  */
 import { useT } from '@/lang';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { TabularChart } from '../types';
@@ -84,6 +86,7 @@ function StackRow({
     muted?: boolean;
     note?: string;
 }) {
+    const lang = useUiStore((s) => s.lang);
     const label = useLabel();
 
     return (
@@ -95,7 +98,7 @@ function StackRow({
                 {note && <span className="text-muted-foreground block truncate text-xs">{note}</span>}
             </span>
             <StackBar values={row.values} series={series} scale={scale} />
-            <span className="text-right font-semibold">{row.total.toLocaleString()}</span>
+            <span className="text-right font-semibold">{formatNumber(row.total, lang)}</span>
         </div>
     );
 }
@@ -207,13 +210,14 @@ const STROKE_WIDTH = 20;
 const C = 2 * Math.PI * R;
 
 function DonutSection({ chart }: { chart: Donut }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     const segments = chart.segments.filter((s) => s.value > 0);
     let offset = 0;
 
     return (
         <>
-            <Heading title={t(chart.title_key)} sub={t('rep_chart_items').replace('{n}', chart.total.toLocaleString())} />
+            <Heading title={t(chart.title_key)} sub={t('rep_chart_items').replace('{n}', formatNumber(chart.total, lang))} />
             {chart.total === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
             ) : (
@@ -250,7 +254,7 @@ function DonutSection({ chart }: { chart: Donut }) {
                             <div key={s.key} className="grid grid-cols-[12px_minmax(0,1fr)_auto_3rem] items-center gap-2">
                                 <i className={cn('h-2.5 w-2.5 rounded-sm', FILL[s.tone])} />
                                 <span className="truncate">{t(s.label_key)}</span>
-                                <b>{s.value.toLocaleString()}</b>
+                                <b>{formatNumber(s.value, lang)}</b>
                                 <span className="text-muted-foreground text-right text-xs">{`${((s.value / chart.total) * 100).toFixed(1)}%`}</span>
                             </div>
                         ))}

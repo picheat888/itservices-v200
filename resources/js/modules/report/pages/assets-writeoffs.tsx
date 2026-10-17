@@ -1,6 +1,7 @@
 // "การตัดจำหน่ายทรัพย์สิน" report page (/reports/assets-writeoffs): shared tabular body + WriteoffCards + its own list cells.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { formatNumber } from '@/shared/lib/number';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { CODE_LINK } from '../components/chart-parts';
@@ -106,9 +107,7 @@ function AgeCell({ years }: { years: number }) {
     const lang = useUiStore((s) => s.lang);
     return (
         <span className="tabular-nums">
-            <YearsTip years={years}>
-                {years.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-            </YearsTip>
+            <YearsTip years={years}>{formatNumber(years, lang, { decimals: 1 })}</YearsTip>
         </span>
     );
 }

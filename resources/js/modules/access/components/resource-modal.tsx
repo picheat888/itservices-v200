@@ -8,6 +8,7 @@ import { SearchableSelect, type SearchOption } from '@/shared/components/searcha
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, EmployeeOption, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -688,7 +689,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                     label={t('access_notes')}
                                     action={
                                         <span className="text-muted-foreground text-[11.5px] tabular-nums">
-                                            {form.notes.length.toLocaleString()} / 2,000
+                                            {formatNumber(form.notes.length, lang)} / 2,000
                                         </span>
                                     }
                                 >

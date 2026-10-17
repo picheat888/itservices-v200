@@ -9,6 +9,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { localName } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
@@ -78,10 +79,10 @@ function sanitizeMoney(raw: string): string {
 }
 
 /** Group the integer part with commas while preserving a typed dot / decimals. */
-function displayMoney(s: string): string {
+function displayMoney(s: string, lang: string): string {
     if (!s) return '';
     const [intPart, decPart] = s.split('.');
-    const intFmt = intPart ? Number(intPart).toLocaleString('en-US') : '';
+    const intFmt = intPart ? formatNumber(Number(intPart), lang) : '';
     return s.includes('.') ? `${intFmt}.${decPart ?? ''}` : intFmt;
 }
 
@@ -703,7 +704,7 @@ export function ContractFormDrawer({
                                         <Input
                                             type="text"
                                             inputMode="decimal"
-                                            value={displayMoney(form.value)}
+                                            value={displayMoney(form.value, lang)}
                                             onChange={(e) => upd('value', sanitizeMoney(e.target.value))}
                                             placeholder="0.00"
                                         />
@@ -736,7 +737,7 @@ export function ContractFormDrawer({
                                                 {...control}
                                                 type="text"
                                                 inputMode="decimal"
-                                                value={displayMoney(form.total_value)}
+                                                value={displayMoney(form.total_value, lang)}
                                                 onChange={(e) => upd('total_value', sanitizeMoney(e.target.value))}
                                                 placeholder="0.00"
                                             />

@@ -16,8 +16,10 @@
  * Drawn by tabular-charts.tsx across the page — ready stock by warehouse, then shared use by location.
  */
 import { useT } from '@/lang';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import { useUiStore } from '@/stores/ui';
 import type { ChartSeries, TabularChart } from '../types';
 import { SplitLegend } from './bucket-rows-card';
 import { ChartHeading, fold, FoldToggle, useChartLabel } from './chart-parts';
@@ -39,6 +41,7 @@ const COLUMN_MAX = 85;
  * place's name under the axis. A place not recorded is the last column, faded.
  */
 function CountColumns({ rows, tone, max }: { rows: PlaceRow[]; tone: string; max: number }) {
+    const lang = useUiStore((s) => s.lang);
     const label = useChartLabel();
 
     return (
@@ -46,7 +49,7 @@ function CountColumns({ rows, tone, max }: { rows: PlaceRow[]; tone: string; max
             <div className="border-border flex h-40 items-end gap-3 border-b">
                 {rows.map((row, i) => (
                     <div key={i} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
-                        <span className={cn('text-xs font-semibold', row.apart && 'text-muted-foreground')}>{row.total.toLocaleString()}</span>
+                        <span className={cn('text-xs font-semibold', row.apart && 'text-muted-foreground')}>{formatNumber(row.total, lang)}</span>
                         <span
                             role="img"
                             aria-label={`${label(row.label)}: ${row.total}`}
@@ -74,6 +77,7 @@ function CountColumns({ rows, tone, max }: { rows: PlaceRow[]; tone: string; max
 
 /** One place's count as a horizontal bar against the fullest place — the opened list's line. */
 function CountLine({ row, tone, max }: { row: PlaceRow; tone: string; max: number }) {
+    const lang = useUiStore((s) => s.lang);
     const label = useChartLabel();
 
     return (
@@ -84,7 +88,7 @@ function CountLine({ row, tone, max }: { row: PlaceRow; tone: string; max: numbe
             <div className="dark:bg-muted h-2.5 overflow-hidden rounded-full bg-slate-200">
                 <span className={cn('block h-full rounded-full', tone, row.apart && 'opacity-50')} style={{ width: `${(row.total / max) * 100}%` }} />
             </div>
-            <span className="w-8 text-right font-semibold">{row.total.toLocaleString()}</span>
+            <span className="w-8 text-right font-semibold">{formatNumber(row.total, lang)}</span>
         </div>
     );
 }
@@ -114,6 +118,7 @@ function CountList({ rows, apart, tone, max }: { rows: PlaceRow[]; apart: PlaceR
  * its piece, and the place's total after it — the opened list's line.
  */
 function ShareLine({ row, series }: { row: PlaceRow; series: ChartSeries[] }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     const label = useChartLabel();
     const title = `${label(row.label)}: ${series.map((s) => `${row.values[s.key] ?? 0} ${t(s.label_key)}`).join(', ')}`;
@@ -143,7 +148,7 @@ function ShareLine({ row, series }: { row: PlaceRow; series: ChartSeries[] }) {
                     ))}
                 </div>
             </div>
-            <span className="w-8 self-end text-right font-semibold">{row.total.toLocaleString()}</span>
+            <span className="w-8 self-end text-right font-semibold">{formatNumber(row.total, lang)}</span>
         </div>
     );
 }
@@ -246,6 +251,7 @@ function ShareRing({ row, series, centerKey }: { row: PlaceRow; series: ChartSer
 }
 
 export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expanded: boolean; onToggle: () => void }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     const places = chart.rows.filter((r) => !r.apart);
     const apart = chart.rows.filter((r) => r.apart);
@@ -267,8 +273,8 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                 sub={
                     // "746 รายการ | 53 คลัง" — the places named, not the row for those with none recorded.
                     <span className="flex items-center gap-3">
-                        {t('rep_chart_items').replace('{n}', chart.total.toLocaleString())}
-                        <span className="border-border border-l pl-3">{t(chart.count_key).replace('{n}', places.length.toLocaleString())}</span>
+                        {t('rep_chart_items').replace('{n}', formatNumber(chart.total, lang))}
+                        <span className="border-border border-l pl-3">{t(chart.count_key).replace('{n}', formatNumber(places.length, lang))}</span>
                     </span>
                 }
             />

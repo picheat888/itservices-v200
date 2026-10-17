@@ -309,9 +309,8 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
 }
 
 /** "จันทร์–ศุกร์" for a run of days, else each day named — ISO weekdays (1 = Monday). */
-function daysText(days: number[], lang: 'th' | 'en'): string {
-    // eslint-disable-next-line no-restricted-syntax -- weekday names, no date shown
-    const name = (d: number) => new Intl.DateTimeFormat(lang === 'th' ? 'th-TH' : 'en-GB', { weekday: 'long' }).format(new Date(2024, 0, d)); // 1 Jan 2024 was a Monday
+function daysText(days: number[], t: T): string {
+    const name = (d: number) => t(`set_sla_day_full_${d}`);
     const sorted = [...days].sort((a, b) => a - b);
     const run = sorted.length > 2 && sorted.every((d, i) => i === 0 || d === sorted[i - 1] + 1);
     return run ? `${name(sorted[0])}–${name(sorted[sorted.length - 1])}` : sorted.map(name).join(', ');
@@ -320,7 +319,6 @@ function daysText(days: number[], lang: 'th' | 'en'): string {
 function RulesCard({ rules }: { rules: ManualSlaBreakdown['rules'] }) {
     const t = useT();
     const canOpen = useCanOpen();
-    const lang = useUiStore((s) => s.lang);
     const minutes = rules.response_minutes;
     const response =
         minutes % 60 === 0
@@ -328,7 +326,7 @@ function RulesCard({ rules }: { rules: ManualSlaBreakdown['rules'] }) {
             : t('rep_rs_minutes_business').replace('{n}', String(minutes));
     const hours = rules.hours;
     const window = t(hours.break_start && hours.break_end ? 'rep_ms_rule_hours_break' : 'rep_ms_rule_hours_plain')
-        .replace('{days}', daysText(hours.days, lang))
+        .replace('{days}', daysText(hours.days, t))
         .replace('{start}', hours.start)
         .replace('{end}', hours.end)
         .replace('{break_start}', hours.break_start ?? '')

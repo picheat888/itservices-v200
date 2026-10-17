@@ -4,6 +4,7 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -390,7 +391,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                         <Field label={`${t('asset_purchase_price')} (${symbol})`} required error={err.value} name="value">
                                             <Input
                                                 inputMode="numeric"
-                                                value={form.value ? Number(form.value).toLocaleString() : ''}
+                                                value={form.value ? formatNumber(Number(form.value), lang) : ''}
                                                 onChange={(e) => upd('value', e.target.value.replace(/[^\d]/g, ''))}
                                                 placeholder="0"
                                             />

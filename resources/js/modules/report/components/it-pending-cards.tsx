@@ -5,6 +5,7 @@ import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localName, localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -66,8 +67,8 @@ function useFormat() {
     const fmt = useDateFormat();
     return {
         lang,
-        number: (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US'),
-        decimal: (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+        number: (n: number) => formatNumber(n, lang),
+        decimal: (n: number) => formatNumber(n, lang, { decimals: 1 }),
         date: (iso: string) => fmt.date(iso),
         moment: (at: number) => fmt.dateTime(new Date(at)),
     };

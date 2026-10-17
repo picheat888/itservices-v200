@@ -14,6 +14,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import {
     isOnBehalfRequest,
     onboardingRowClass,
@@ -614,7 +615,7 @@ export default function RequestsPage() {
                                         )}
                                     >
                                         {label}
-                                        {count != null && count > 0 && <span className="ml-1.5">{count.toLocaleString()}</span>}
+                                        {count != null && count > 0 && <span className="ml-1.5">{formatNumber(count, lang)}</span>}
                                     </button>
                                 ))}
                             </div>

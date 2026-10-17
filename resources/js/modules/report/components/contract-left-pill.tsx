@@ -4,6 +4,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { formatNumber } from '@/shared/lib/number';
 import { useUiStore } from '@/stores/ui';
 
 export function ContractLeftPill({
@@ -17,7 +18,7 @@ export function ContractLeftPill({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const count = (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+    const count = (n: number) => formatNumber(n, lang);
 
     if (closed === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (closed === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;

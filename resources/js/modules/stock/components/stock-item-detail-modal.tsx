@@ -10,6 +10,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
@@ -242,7 +243,7 @@ export function StockItemDetailModal({
                                     <div className="border-border bg-muted/20 divide-border/70 grid grid-cols-3 divide-x rounded-xl border">
                                         <Stat
                                             label={t('stock_current')}
-                                            value={item.current_stock.toLocaleString()}
+                                            value={formatNumber(item.current_stock, lang)}
                                             sub={
                                                 item.reserved != null && item.reserved > 0 ? (
                                                     <span className="flex flex-wrap gap-x-3">
@@ -259,10 +260,7 @@ export function StockItemDetailModal({
                                             value={
                                                 <>
                                                     <span className="text-muted-foreground text-sm">{symbol}</span>
-                                                    {item.total_value.toLocaleString(undefined, {
-                                                        minimumFractionDigits: 2,
-                                                        maximumFractionDigits: 2,
-                                                    })}
+                                                    {formatNumber(item.total_value, lang, { decimals: 2 })}
                                                 </>
                                             }
                                         />
@@ -271,7 +269,7 @@ export function StockItemDetailModal({
                                             value={
                                                 <>
                                                     <span className="text-muted-foreground text-sm">{symbol}</span>
-                                                    {item.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {formatNumber(item.cost, lang, { decimals: 2 })}
                                                 </>
                                             }
                                         />

@@ -14,6 +14,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -37,7 +38,7 @@ const percent = (met: number, n: number) => (n === 0 ? null : Math.round((met / 
 
 /** One decimal in the reader's locale ("10.1"), the way every time on this page reads. */
 export function oneDecimal(value: number, lang: 'th' | 'en'): string {
-    return new Intl.NumberFormat(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
+    return formatNumber(value, lang, { decimals: 1 });
 }
 
 /** "9.7 ชม." / "20 นาที" — an average time under an hour reads in minutes. */
@@ -65,11 +66,12 @@ export const GROUP = 'border-border border-l';
 
 /** The ticket count, split — one cell each; a zero reads faint. */
 export function CountCells({ tally }: { tally: RequestSlaTally }) {
+    const lang = useUiStore((s) => s.lang);
     return (
         <>
             {[tally.total, tally.completed, tally.canceled, tally.open].map((value, i) => (
                 <td key={i} className={cn(TD, 'text-right whitespace-nowrap', i === 0 && GROUP, value === 0 && 'text-muted-foreground/60')}>
-                    {value.toLocaleString()}
+                    {formatNumber(value, lang)}
                 </td>
             ))}
         </>

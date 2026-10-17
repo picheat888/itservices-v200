@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { MV_META } from '@/modules/stock';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
@@ -11,15 +12,13 @@ import { rich, Swatch } from './chart-parts';
 
 export type Lang = 'th' | 'en';
 
-const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
-
 const DAY_MS = 86_400_000;
 
 /** A count with thousands separators. */
-export const stockCount = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
+export const stockCount = (n: number, lang: Lang) => formatNumber(n, lang);
 
 /** Money with 2 decimals and no ฿. */
-export const stockMoney = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const stockMoney = (n: number, lang: Lang) => formatNumber(n, lang, { decimals: 2 });
 
 /** Money with "−" in front when below zero. */
 export const signedMoney = (n: number, lang: Lang) => `${n < 0 ? '−' : ''}${stockMoney(Math.abs(n), lang)}`;

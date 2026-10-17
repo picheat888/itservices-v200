@@ -22,6 +22,7 @@ import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { localName, localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
@@ -60,7 +61,7 @@ import {
     Warehouse,
     X,
 } from 'lucide-react';
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { assetApi } from '../api/assetApi';
 import { AssetActivityCard } from '../components/asset-activity-card';
@@ -573,8 +574,7 @@ export default function AssetsPage() {
         warehouse: `${filterIdBase}-warehouse`,
     };
     const perPageLabelId = `${filterIdBase}-per-page`;
-    const numberFormat = useMemo(() => new Intl.NumberFormat(lang === 'th' ? 'th-TH' : 'en-US'), [lang]);
-    const formatCount = (n: number) => numberFormat.format(n);
+    const formatCount = (n: number) => formatNumber(n, lang);
     const selectionCountText = t('asset_selected_count').replace('{n}', formatCount(selectedIds.length));
 
     // True when any inventory list control differs from its default — drives the quick "Clear filters" pill.

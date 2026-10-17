@@ -1,6 +1,7 @@
 // Tiny charts at the right of a summary tile's footer: seats by month (line), a count per group (columns).
 import { useT } from '@/lang';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryChart } from '../types';
@@ -31,7 +32,7 @@ function LineChart({ chart, title, className }: { chart: Line; title: string; cl
     const y = (v: number) => H - 3 - ((v - lo) / (hi - lo || 1)) * (H - 6);
     const line = points.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
     const last = points.length - 1;
-    const count = (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+    const count = (n: number) => formatNumber(n, lang);
 
     return (
         <InfoPopover
@@ -66,7 +67,7 @@ function ColumnChart({ chart, title }: { chart: Columns; title: string }) {
     const lang = useUiStore((s) => s.lang);
     const { items } = chart;
     const max = Math.max(1, ...items.map((c) => c.value));
-    const count = (n: number) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+    const count = (n: number) => formatNumber(n, lang);
 
     return (
         <InfoPopover

@@ -11,6 +11,7 @@ import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { refusalText } from '@/shared/lib/api-errors';
 import { relativeTime } from '@/shared/lib/datetime';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -110,7 +111,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                 <div className="text-foreground/75 mt-0.5 truncate text-xs">
                     {reportScope(item.filters, item.columns_count, t, lang)}
                     {item.rows_count != null && (
-                        <span className="ml-3">{t('rep_my_exports_rows').replace('{n}', item.rows_count.toLocaleString())}</span>
+                        <span className="ml-3">{t('rep_my_exports_rows').replace('{n}', formatNumber(item.rows_count, lang))}</span>
                     )}
                 </div>
                 {/* 3 — when it was made and how long ago; or where it stands while it is not ready */}

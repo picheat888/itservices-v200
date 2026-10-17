@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair, otherName } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -25,7 +26,7 @@ const TD = 'px-3 py-2.5 align-middle whitespace-nowrap';
 const NUM = 'text-right tabular-nums';
 const TRACK = 'dark:bg-muted block overflow-hidden rounded-full bg-slate-200';
 
-const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+const count = (n: number, lang: Lang) => formatNumber(n, lang);
 
 /** A vendor's name in the reader's language first, the other one under it. */
 function vendorNames(t: (key: string) => string, lang: Lang, v: Pick<Vendor, 'vendor_id' | 'name' | 'name_th'>) {
@@ -234,8 +235,7 @@ function VendorCard({ vendors, total, monthly }: { vendors: Vendor[]; total: num
     const lang = useUiStore((s) => s.lang);
     const sum = (pick: (v: Vendor) => number) => vendors.reduce((s, v) => s + pick(v), 0);
     const share = (v: number) => (total > 0 ? (v / total) * 100 : 0);
-    const shareText = (v: number) =>
-        `${share(v).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+    const shareText = (v: number) => `${formatNumber(share(v), lang, { decimals: 1 })}%`;
     const ending = (n: number) =>
         n > 0 ? (
             <StatusBadge tone="amber">{t('rep_cmc_contracts').replace('{n}', count(n, lang))}</StatusBadge>

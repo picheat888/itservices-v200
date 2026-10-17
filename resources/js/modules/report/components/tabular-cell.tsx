@@ -12,6 +12,7 @@ import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
@@ -66,10 +67,7 @@ function CellValue({ column, value }: { column: TabularColumnDef; value: unknown
         }
         case 'money': {
             if (value === null || value === undefined) return <>—</>;
-            const formatted = Number(value).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            });
+            const formatted = formatNumber(Number(value), lang, { decimals: 2 });
             return <span className={cn(Number(value) === 0 && ZERO)}>{formatted}</span>;
         }
         case 'number':

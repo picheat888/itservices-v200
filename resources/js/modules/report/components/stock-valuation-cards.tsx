@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -125,7 +126,7 @@ interface ShareRow {
 function ShareBar({ value, total }: { value: number; total: number }) {
     const lang = useUiStore((s) => s.lang);
     const percent = total > 0 ? (value / total) * 100 : 0;
-    const label = `${percent.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+    const label = `${formatNumber(percent, lang, { decimals: 1 })}%`;
 
     return (
         <span className="flex min-w-32 items-center gap-2">
