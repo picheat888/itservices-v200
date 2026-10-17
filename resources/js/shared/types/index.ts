@@ -749,6 +749,8 @@ export interface StockItem {
     lots?: StockLot[];
     /** Per-warehouse balances — only present on the single-item (show) response. */
     balances?: StockBalance[];
+    /** Draft stock counts holding the item: no movement on that warehouse (every one when null) until it closes. */
+    counting?: { reference: string; warehouse: string | null }[];
 }
 
 export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer' | 'adjust_up' | 'adjust_down';

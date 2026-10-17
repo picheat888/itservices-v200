@@ -65,6 +65,11 @@ class StockItemResource extends JsonResource
                 'reference' => $s->reference,
                 'received_at' => $s->received_at?->toDateTimeString(),
             ])),
+            // Draft counts holding the item: no movement on that warehouse (all of them when null) until it closes.
+            'counting' => $this->whenLoaded('draftCountLines', fn () => $this->draftCountLines->map(fn ($line) => [
+                'reference' => $line->count?->reference,
+                'warehouse' => $line->count?->warehouse,
+            ])->values()),
             // Per-warehouse balances (eager-loaded on show). Used in the detail modal.
             'balances' => $this->whenLoaded('balances', fn () => $this->balances->map(fn ($b) => [
                 'warehouse' => $b->warehouse?->name ?? 'Unassigned',

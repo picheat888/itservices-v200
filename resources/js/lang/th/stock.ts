@@ -179,6 +179,8 @@ export const stock: Dict = {
     stock_count_mode_auto: 'อัตโนมัติ - ปรับสต็อกทันที',
     stock_count_mode_manual: 'แมนนวล - บันทึกเป็นรายงาน',
     stock_count_mode_auto_hint: 'นำยอดที่นับได้ไปปรับสต็อกทันที',
+    stock_count_freeze_note:
+        'ระหว่างที่รอบนับนี้ยังเป็นร่าง {n} รายการในรอบนี้จะรับเข้า เบิก ย้าย หรือจ่ายตามคำขอในคลังที่นับไม่ได้ จนกว่าจะยืนยันหรือยกเลิกรอบนับ',
     stock_count_mode_manual_hint: 'บันทึกการนับเป็นรายงาน ไม่ปรับสต็อก',
     stock_count_mode_badge_auto: 'Auto',
     stock_count_mode_badge_manual: 'Manual',
@@ -300,6 +302,7 @@ export const stock: Dict = {
     stock_refusal_request_wrong_status: 'คำขอนี้ต้องอยู่ในสถานะ {expected} (ตอนนี้เป็น {current})',
     stock_refusal_count_not_editable: 'รอบนับนี้แก้ไขไม่ได้แล้ว',
     stock_refusal_count_closed: 'รอบนับนี้ปิดไปแล้ว',
+    stock_refusal_count_in_progress: 'รายการนี้อยู่ระหว่างนับสต็อก {reference} รับเข้า เบิก หรือย้ายในคลังนี้ได้หลังปิดรอบนับ',
     stock_refusal_count_serial_needs_auto: 'รอบนับที่มีรายการเก็บ Serial ต้องยืนยันด้วยโหมด Auto',
     stock_refusal_count_serial_over: 'จำนวนที่นับของ {sku} มากกว่า Serial ที่มีในระบบ',
     stock_refusal_count_needs_warehouse: '{sku} มีของอยู่หลายคลัง ระบบไม่รู้ว่าควรปรับยอดที่คลังไหน กรุณาเปิดรอบนับแยกตามคลัง',

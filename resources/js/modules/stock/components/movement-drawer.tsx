@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useVendors, useWarehouses } from '@/modules/settings';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -16,6 +17,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
+import { countLockFor } from '../lib/count-lock';
 import { stockRefusalText } from '../lib/refusal';
 
 type SerialStatus = 'ok' | 'empty' | 'dup-system' | 'dup-batch';
@@ -253,6 +255,10 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
           ? returnSerialValid
           : !!selected && (isSerial ? serialValid : qty >= 1) && receiveValid;
 
+    // Count freeze: the warehouse sides this movement touches (receive/return arrive, transfer leaves and arrives).
+    const countedBy = countLockFor(selected, isTransfer ? [from, to] : [to]);
+    const countedReason = countedBy ? t('stock_refusal_count_in_progress').replace('{reference}', countedBy) : null;
+
     const snapshot = JSON.stringify([sku, qty, unitCost, from, to, reference, notes, serials, scan, [...transferSerialIds], [...returnSerialIds]]);
     useEffect(() => {
         if (open && baseline === null) {
@@ -291,7 +297,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     };
 
     const send = async () => {
-        if (!selected || !canSubmit) {
+        if (!selected || !canSubmit || countedBy !== null) {
             return;
         }
 
@@ -983,9 +989,16 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={record.isPending}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton loading={record.isPending} success={saved} onClick={submit} disabled={!saved && !canSubmit}>
-                        {actionLabel}
-                    </SaveButton>
+                    <DisabledReason reason={saved ? null : countedReason} label={actionLabel}>
+                        <SaveButton
+                            loading={record.isPending}
+                            success={saved}
+                            onClick={submit}
+                            disabled={!saved && (!canSubmit || countedBy !== null)}
+                        >
+                            {actionLabel}
+                        </SaveButton>
+                    </DisabledReason>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -10,6 +10,7 @@ use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
 use App\Services\Stock\StockBalanceService;
+use App\Services\Stock\StockCountLock;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockSerialService;
@@ -25,6 +26,7 @@ class StockRequestController extends Controller
         private readonly StockSerialService $serialService,
         private readonly StockLotService $lotService,
         private readonly StockBalanceService $balances,
+        private readonly StockCountLock $countLock,
     ) {}
 
     /**
@@ -209,6 +211,8 @@ class StockRequestController extends Controller
             if ((int) $allocation->sum() !== $stockRequest->qty) {
                 Refusal::fail('allocation_mismatch', ['qty' => $stockRequest->qty], 'allocations');
             }
+
+            $this->countLock->assertFree($item->id, $allocation->keys()->all());
 
             $reference = $stockRequest->reference ?? "REQ-{$stockRequest->id}";
 

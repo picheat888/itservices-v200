@@ -2,6 +2,7 @@
 
 namespace App\Models\Stock;
 
+use App\Enums\Stock\StockCountStatus;
 use App\Models\Concerns\RecordsActors;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
@@ -113,6 +114,16 @@ class StockItem extends Model
     public function balances(): HasMany
     {
         return $this->hasMany(StockBalance::class);
+    }
+
+    /**
+     * Lines of the draft stock counts holding this item (StockCountLock refuses movements on that shelf).
+     *
+     * @return HasMany<StockCountLine, $this>
+     */
+    public function draftCountLines(): HasMany
+    {
+        return $this->hasMany(StockCountLine::class)->whereHas('count', fn (Builder $count) => $count->where('status', StockCountStatus::Draft->value));
     }
 
     /** FIFO stock value: Σ(qty_remaining × unit_cost) across open lots. */
