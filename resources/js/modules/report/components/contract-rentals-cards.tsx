@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -386,7 +387,7 @@ function ModelsCard({ models }: { models: ModelRow[] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const label = (m: ModelRow) => (m.name ? [m.brand, m.name].filter(Boolean).join(' ') : t('rep_crent_vs_no_model'));
-    const category = (m: ModelRow) => (lang === 'th' && m.category.name_th) || m.category.name || t('rep_no_data');
+    const category = (m: ModelRow) => localPair(m.category.name, m.category.name_th, lang) || t('rep_no_data');
     const heads: { key: string; right: boolean }[] = [
         { key: 'rep_crent_col_model', right: false },
         { key: 'rep_crent_col_rented', right: true },

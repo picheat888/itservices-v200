@@ -1,10 +1,11 @@
 // "ภาพรวมคำขอ" report page (/reports/requests-overview): shared tabular body + RequestOverviewCards + the request list cells.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localName } from '@/shared/lib/local-name';
 import { REQUEST_ONBOARDING_BADGE, REQUEST_ONBOARDING_ROW, REQUEST_STATUS_META } from '@/shared/lib/request-meta';
 import type { ServiceRequestStatus } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
-import { count, deptName } from '../components/access-parts';
+import { count } from '../components/access-parts';
 import { RequestOverviewCards } from '../components/request-overview-cards';
 import { TabularReportView } from '../components/tabular-report-view';
 
@@ -35,7 +36,7 @@ function RequesterCell({ row }: { row: Row }) {
             </span>
             <span className="text-muted-foreground flex gap-2.5 text-xs whitespace-nowrap">
                 {row.employee_code ? <span>{row.employee_code as string}</span> : null}
-                {department && <span className="truncate">{deptName(department, lang)}</span>}
+                {department && <span className="truncate">{localName(department, lang)}</span>}
             </span>
         </span>
     );

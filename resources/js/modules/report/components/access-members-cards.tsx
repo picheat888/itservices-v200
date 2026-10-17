@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localName } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -30,7 +31,7 @@ import {
     TypeLabel,
     useFoldRow,
 } from './access-overview-cards';
-import { count, deptName, type Lang, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
+import { count, type Lang, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CARD_HEADING_TINT } from './card-heading';
 import { CardEmpty, CardTitle, fold, FoldToggle, reportDates } from './chart-parts';
 import { FILL } from './chart-tones';
@@ -147,7 +148,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
     const total = capped.reduce((s, r) => s + gbOf(r), 0);
     const byDept = new Map<string, { name: string; muted: boolean; count: number; gb: number; unlimited: number }>();
     for (const r of shares) {
-        const name = deptName(r.department, lang) ?? t('rep_ac_no_department');
+        const name = localName(r.department, lang) ?? t('rep_ac_no_department');
         const row = byDept.get(name) ?? { name, muted: r.department === null, count: 0, gb: 0, unlimited: 0 };
         row.count += 1;
         row.gb += gbOf(r);
@@ -176,7 +177,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
                     <StatusBadge tone="gray">{t('rep_ar_size_unlimited')}</StatusBadge>
                 )
             }
-            sub={[r.detail, deptName(r.department, lang), gbOf(r) > 0 && total > 0 ? pct(gbOf(r)) : null]}
+            sub={[r.detail, localName(r.department, lang), gbOf(r) > 0 && total > 0 ? pct(gbOf(r)) : null]}
         />
     );
     if (shares.length === 0) return null;
@@ -461,7 +462,7 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                                                 <TypeLabel type={r.type} />
                                             </td>
                                             <td className={cn(TD, !r.department && 'text-muted-foreground')}>
-                                                {deptName(r.department, lang) ?? '—'}
+                                                {localName(r.department, lang) ?? '—'}
                                             </td>
                                             <td className={TD}>
                                                 <OwnerCell r={r} />
@@ -526,7 +527,7 @@ function OwnerWords({ sheet }: { sheet: Sheet }) {
             {sheet.type === 'email_group' ? t('rep_ar_owner_approver') : t('rep_c_ar_owner')}
             <b className="text-foreground font-semibold">{sheet.owner.name}</b>
             <span>{sheet.owner.code}</span>
-            {deptName(sheet.owner.department, lang)}
+            {localName(sheet.owner.department, lang)}
             {sheet.owner_issue === 'gone' && <StatusBadge tone="red">{t('rep_ar_owner_left')}</StatusBadge>}
         </span>
     );
@@ -555,7 +556,7 @@ export function PickedResourceHead({ filters, patch }: { filters: TabularFilters
                 <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs">
                     <span>{t(`rep_ac_type_${sheet.type}`)}</span>
                     {sheet.detail && <span translate="no">{sheet.detail}</span>}
-                    <span>{deptName(sheet.department, lang) ?? t('rep_ar_no_department')}</span>
+                    <span>{localName(sheet.department, lang) ?? t('rep_ar_no_department')}</span>
                     <OwnerWords sheet={sheet} />
                 </p>
                 {(sheet.mix.gone > 0 || sheet.mix.cross > 0) && (
@@ -616,13 +617,13 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                 <dt className="text-slate-500">{t(`rep_ar_sheet_address_${sheet.type}`)}</dt>
                 <dd translate="no">{sheet.detail ?? '—'}</dd>
                 <dt className="text-slate-500">{t('rep_ac_dept_col_name')}</dt>
-                <dd>{ownable ? (deptName(sheet.department, lang) ?? '—') : t('rep_ar_no_department')}</dd>
+                <dd>{ownable ? (localName(sheet.department, lang) ?? '—') : t('rep_ar_no_department')}</dd>
                 <dt className="text-slate-500">{t('rep_c_ar_owner')}</dt>
                 <dd>
                     {!ownable
                         ? t('rep_ar_sheet_no_owner')
                         : sheet.owner
-                          ? `${sheet.owner.name} (${sheet.owner.code}), ${deptName(sheet.owner.department, lang) ?? '—'}${sheet.owner_issue === 'gone' ? `, ${t('rep_ar_owner_left')}` : ''}`
+                          ? `${sheet.owner.name} (${sheet.owner.code}), ${localName(sheet.owner.department, lang) ?? '—'}${sheet.owner_issue === 'gone' ? `, ${t('rep_ar_owner_left')}` : ''}`
                           : t('rep_ar_owner_none')}
                 </dd>
             </dl>
@@ -647,7 +648,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                             <td className={cell}>
                                 <b>{m.name}</b> <span className="text-[11.5px] text-slate-500">{m.code}</span>
                             </td>
-                            <td className={cell}>{deptName(m.department, lang) ?? '—'}</td>
+                            <td className={cell}>{localName(m.department, lang) ?? '—'}</td>
                             {isFile && <td className={cell}>{t(`rep_ac_level_${m.level.toLowerCase()}`)}</td>}
                             <td className={cell}>{reportDates(lang).dateTime(m.granted_at)}</td>
                             <td className={cell}>

@@ -11,6 +11,7 @@
  * Used by pages/tickets-overview.tsx, components/tabular-report-view.tsx and scheduled-reports.tsx.
  */
 import { bindDateFormat } from '@/shared/lib/datetime';
+import { localLabel, localPair } from '@/shared/lib/local-name';
 import { useUiStore } from '@/stores/ui';
 import type { TabularDefinition, TicketOverviewSummary } from '../types';
 import { compactRange } from './report-scope';
@@ -26,7 +27,7 @@ export interface FilterChip {
 const isSet = (value: unknown) => value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
 
 /** A localized master-data name: the Thai one when reading Thai and there is one. */
-const named = (lang: string, item: { name?: string | null; name_th?: string | null }) => (lang === 'th' && item.name_th) || item.name || '';
+const named = (lang: string, item: { name?: string | null; name_th?: string | null }) => localPair(item.name, item.name_th, lang) || '';
 
 /** "ช่วงวันที่: 1 ส.ค. – 2 ต.ค. 2026" from a from/to pair, or the lone date under its own label. */
 function dateChips(filters: Record<string, unknown>, t: Translate, lang: string, asOfLabel?: string): FilterChip[] {
@@ -62,7 +63,7 @@ function narrowing(definition: TabularDefinition, filters: Record<string, unknow
                 const value = option
                     ? option.label_key
                         ? t(option.label_key)
-                        : (lang === 'th' && option.label_th) || option.label || String(raw)
+                        : localLabel({ label_en: option.label ?? '', label_th: option.label_th }, lang) || String(raw)
                     : String(raw);
                 return { label: t(f.label_key), value };
             })

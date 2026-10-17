@@ -4,6 +4,7 @@ import { AssetStatusBadge } from '@/modules/asset';
 import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { AssetStatus } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
@@ -12,7 +13,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import type { AccessType, DataIssueKey, EmployeeOpenItemsBreakdown, OpenItemsGroup, OpenItemsPerson } from '../types';
 import { TYPE_TONE } from './access-overview-cards';
-import { count, deptName, localName } from './access-parts';
+import { count } from './access-parts';
 import { CardTitle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { shortDate } from './transfer-cards';
@@ -68,12 +69,12 @@ function PersonCell({ person, note }: { person: OpenItemsPerson; note?: string }
 /** Department with the section under it. */
 function DeptCell({ person }: { person: OpenItemsPerson }) {
     const lang = useUiStore((s) => s.lang);
-    const dept = deptName(person.department, lang);
+    const dept = localName(person.department, lang);
     if (!dept) return NONE;
     return (
         <div className="max-w-40 min-w-26">
             <div>{dept}</div>
-            {person.section && <div className="text-muted-foreground mt-0.5 text-xs">{deptName(person.section, lang)}</div>}
+            {person.section && <div className="text-muted-foreground mt-0.5 text-xs">{localName(person.section, lang)}</div>}
         </div>
     );
 }

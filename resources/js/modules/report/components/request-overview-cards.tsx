@@ -1,6 +1,7 @@
 // "ภาพรวมคำขอ" report cards: submitted and completed by month, types by status, days to delivery, items asked for, departments (data: useRequestOverviewBreakdown).
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -18,7 +19,7 @@ import type {
     TabularFilters,
 } from '../types';
 import { Cols, NUM, Segments, TD, TH } from './access-overview-cards';
-import { count, deptName, PieceBar, type Lang } from './access-parts';
+import { count, PieceBar, type Lang } from './access-parts';
 import {
     barTop,
     CardEmpty,
@@ -606,7 +607,7 @@ function itemsFor(list: Item[], origin: Origin, lang: Lang): Item[] {
         const seen = merged.get(key);
         merged.set(key, seen ? { ...seen, count: seen.count + i.count } : { ...i });
     }
-    const name = (i: Item) => (lang === 'th' && i.name_th) || i.name;
+    const name = (i: Item) => localName(i, lang);
     return [...merged.values()].sort((a, b) => b.count - a.count || name(a).localeCompare(name(b)));
 }
 
@@ -675,7 +676,7 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
                             >
                                 <span className="min-w-0">
                                     <b translate="no" className="block truncate font-medium">
-                                        {(lang === 'th' && i.name_th) || i.name}
+                                        {localName(i, lang)}
                                     </b>
                                     <span className="text-muted-foreground block truncate text-xs">{t(`req_${i.type}`)}</span>
                                 </span>
@@ -732,8 +733,7 @@ function DepartmentCard({ departments }: { departments: Breakdown['departments']
     const used = CATEGORY_ORDER.filter((k) => totalByCategory[k] > 0);
     const total = departments.reduce((s, d) => s + d.total, 0);
     const onboarding = departments.reduce((s, d) => s + d.onboarding, 0);
-    const name = (d: Breakdown['departments'][number]) =>
-        deptName(d.name === null ? null : { name: d.name, name_th: d.name_th }, lang) ?? t('rep_rqo_no_department');
+    const name = (d: Breakdown['departments'][number]) => localPair(d.name, d.name_th, lang) ?? t('rep_rqo_no_department');
     const top = (d: Breakdown['departments'][number]) => (
         <span className="block min-w-0">
             <span className="block truncate">{t(`req_${d.top_type.type}`)}</span>

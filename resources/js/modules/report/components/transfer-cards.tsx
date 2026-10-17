@@ -68,7 +68,7 @@ const CODE_LINK =
     'text-brand focus-visible:ring-brand rounded-sm text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none';
 
 const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
-const label = (l: ChartLabel | null, lang: Lang) => (l ? (lang === 'th' && l.name_th) || l.name : null);
+const label = (l: ChartLabel | null, lang: Lang) => (l ? localPair(l.name, l.name_th, lang) : null);
 
 /** "2026-09-23 09:00" → the date in the system date setting. */
 export function shortDate(value: string, lang: Lang): string {

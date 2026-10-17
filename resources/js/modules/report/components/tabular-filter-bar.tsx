@@ -8,6 +8,7 @@
  */
 import { useT } from '@/lang';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { localLabel } from '@/shared/lib/local-name';
 import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { DateInput } from '@/shared/ui/date-input';
@@ -26,7 +27,7 @@ function optionLabel(
     option: { label?: string; label_th?: string | null; label_key?: string },
 ): string {
     if (option.label_key) return t(option.label_key);
-    return (lang === 'th' && option.label_th) || option.label || '';
+    return localLabel({ label_en: option.label ?? '', label_th: option.label_th }, lang);
 }
 
 /** null, '' and undefined all mean "not set". */

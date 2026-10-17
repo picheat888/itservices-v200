@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -12,7 +13,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAccessOverviewBreakdown } from '../hooks/use-reports';
 import type { AccessOverviewBreakdown, AccessResource, AccessType, ChartTone, TabularFilters } from '../types';
-import { count, deptName, PieceBar } from './access-parts';
+import { count, PieceBar } from './access-parts';
 import {
     barTop,
     CardEmpty,
@@ -675,7 +676,7 @@ function LeaversCard({
                                 head={<PersonHead id={p.employee_id} name={p.name} code={p.code} />}
                                 side={<DaysOut days={p.days} />}
                                 sub={[
-                                    deptName(p.department, lang),
+                                    localName(p.department, lang),
                                     p.last_day ? t('rep_ac_last_day').replace('{date}', shortDate(p.last_day, lang)) : null,
                                     t('rep_ac_grants_n').replace('{n}', count(p.grants.length, lang)),
                                 ]}
@@ -734,7 +735,7 @@ function CareCard({
             key={`${r.type}-${r.id}`}
             head={<ResourceHead r={r} />}
             side={<TypeLabel type={r.type} />}
-            sub={[r.detail, deptName(r.department, lang), note]}
+            sub={[r.detail, localName(r.department, lang), note]}
         />
     );
 
@@ -896,11 +897,9 @@ function DepartmentCard({
                                             'max-w-[12rem] truncate text-left font-medium',
                                             d.name === null && 'text-muted-foreground font-normal',
                                         )}
-                                        title={
-                                            deptName(d.name === null ? null : { name: d.name, name_th: d.name_th }, lang) ?? t('rep_ac_no_department')
-                                        }
+                                        title={localPair(d.name, d.name_th, lang) ?? t('rep_ac_no_department')}
                                     >
-                                        {deptName(d.name === null ? null : { name: d.name, name_th: d.name_th }, lang) ?? t('rep_ac_no_department')}
+                                        {localPair(d.name, d.name_th, lang) ?? t('rep_ac_no_department')}
                                     </th>
                                     <td className={cn(TD, NUM)}>
                                         {count(d.holders, lang)} <span className="text-muted-foreground">/ {count(d.staff, lang)}</span>

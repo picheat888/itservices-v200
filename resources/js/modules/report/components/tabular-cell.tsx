@@ -11,6 +11,7 @@ import { useT } from '@/lang';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
@@ -60,7 +61,7 @@ function CellValue({ column, value }: { column: TabularColumnDef; value: unknown
     switch (column.type) {
         case 'localized': {
             const v = value as { name?: string | null; name_th?: string | null } | null;
-            const label = (lang === 'th' && v?.name_th) || v?.name;
+            const label = localPair(v?.name, v?.name_th, lang);
             return <>{label || '—'}</>;
         }
         case 'money': {

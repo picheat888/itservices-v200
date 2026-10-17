@@ -18,6 +18,7 @@
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -112,7 +113,7 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
     }
     // Widths against the largest row on show; the apart row is drawn on its own scale.
     const scale = Math.max(1, ...shown.map((r) => r.count));
-    const name = (r: DepartmentRow) => (lang === 'th' && r.name_th) || r.name || t('rep_no_department');
+    const name = (r: DepartmentRow) => localPair(r.name, r.name_th, lang) || t('rep_no_department');
 
     const row = (r: DepartmentRow, rowScale: number, muted: boolean, note?: string) => (
         <div className={cn(DEPT_GRID, 'py-2.5 text-sm')}>

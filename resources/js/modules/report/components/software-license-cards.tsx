@@ -1,6 +1,7 @@
 // Software licence report cards: usage segments, seats per software, leavers to take seats back from, requests waiting (data: useSoftwareLicenseBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localName } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -352,7 +353,7 @@ function LeaversCard({
                             }
                             side={<DaysOut days={p.days} />}
                             sub={[
-                                p.department ? (lang === 'th' && p.department.name_th) || p.department.name : null,
+                                p.department ? localName(p.department, lang) : null,
                                 p.last_day ? t('rep_ac_last_day').replace('{date}', shortDate(p.last_day, lang)) : null,
                                 t('rep_sl_seats_n').replace('{n}', count(p.grants.length, lang)),
                             ]}
@@ -393,7 +394,7 @@ function RequestsCard({
     const canOpen = useCanOpen();
     const row = (r: Request) => {
         const href = `/requests?view=${r.id}`;
-        const dept = r.requester.department ? (lang === 'th' && r.requester.department.name_th) || r.requester.department.name : null;
+        const dept = r.requester.department ? localName(r.requester.department, lang) : null;
         return (
             <GroupRow
                 key={r.id}

@@ -13,7 +13,7 @@ export function groupPendingAssets(rows: PendingAsset[], lang: string): PendingG
     for (const row of rows) {
         const model = row.model ?? row.asset_code;
         // Kept inline: this file is loaded by node tests, which cannot resolve the @/ alias
-        const type = lang === 'th' ? (row.category_th ?? row.category) : row.category;
+        const type = (lang === 'th' && row.category_th) || row.category;
         const found = groups.get(model);
         if (found) {
             found.count += 1;
