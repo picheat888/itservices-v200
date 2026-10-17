@@ -146,6 +146,7 @@ class TicketSlaBreakdownParityTest extends TestCase
     #[DataProvider('nows')]
     public function test_breakdown_summary_and_sheet_match_the_captured_output(string $now): void
     {
+        $this->travelTo(Carbon::parse(self::NOW));
         $this->seedTickets();
         $this->travelTo(Carbon::parse($now));
 
