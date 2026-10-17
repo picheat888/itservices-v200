@@ -114,6 +114,9 @@ class ReportHubTest extends TestCase
         Asset::factory()->create(['status' => 'ready']);
         Asset::factory()->create(['status' => 'writeoff']);
         StockItem::create(['sku' => 'SKU-0000001', 'name' => 'Toner', 'current_stock' => 0, 'min_stock' => 5, 'max_stock' => 10]);
+        StockItem::create(['sku' => 'SKU-0000002', 'name' => 'Paper', 'current_stock' => 3, 'min_stock' => 5, 'max_stock' => 10]);
+        // Over max: listed by the report, not counted as below min.
+        StockItem::create(['sku' => 'SKU-0000003', 'name' => 'Cable', 'current_stock' => 50, 'min_stock' => 5, 'max_stock' => 10]);
 
         $body = $this->actingAs($user)->getJson('/api/reports/snapshot')->assertOk()->json('data');
 
@@ -133,7 +136,8 @@ class ReportHubTest extends TestCase
         $this->assertSame(1, $tiles['assets_in_use']['value']);
         $this->assertSame(2, $tiles['assets_in_use']['total']);
         $this->assertSame(50, $tiles['assets_in_use']['secondary']['value']);
-        $this->assertSame(1, $tiles['stock_below_min']['value']);
+        $this->assertSame(2, $tiles['stock_below_min']['value']);
+        $this->assertSame(['key' => 'out', 'value' => 1], $tiles['stock_below_min']['secondary']);
     }
 
     /** The open-ticket tile carries how the open count moved over the period (the mockup's sparkline). */

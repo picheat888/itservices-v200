@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\Report\RequestApprovalsBreakdownController;
 use App\Http\Controllers\Api\Report\RequestItPendingBreakdownController;
 use App\Http\Controllers\Api\Report\RequestOverviewBreakdownController;
 use App\Http\Controllers\Api\Report\SoftwareLicenseBreakdownController;
+use App\Http\Controllers\Api\Report\StockLevelsBreakdownController;
 use App\Http\Controllers\Api\Report\StockMovementsBreakdownController;
 use App\Http\Controllers\Api\Report\StockValuationBreakdownController;
 use App\Http\Controllers\Api\Report\TabularReportController;
@@ -156,6 +157,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/stock/movements/breakdown', StockMovementsBreakdownController::class)->defaults('key', 'stock.movements')->name('api.reports.stock.movements.breakdown');
     // "มูลค่าคงคลัง" — tiles, value by category and by warehouse, dead stock above its rows.
     Route::get('reports/stock/valuation/breakdown', StockValuationBreakdownController::class)->defaults('key', 'stock.valuation')->name('api.reports.stock.valuation.breakdown');
+    // "ต่ำกว่าขั้นต่ำและเกินขั้นสูง" — tiles and out / low / over counts by category around its rows.
+    Route::get('reports/stock/below-min/breakdown', StockLevelsBreakdownController::class)->defaults('key', 'stock.below_min')->name('api.reports.stock.below_min.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/tabular/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');

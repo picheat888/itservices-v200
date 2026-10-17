@@ -20,7 +20,7 @@ use Tests\TestCase;
 
 /**
  * The three stock tabular reports — "รับเข้าและเบิกจ่าย" (stock.movements),
- * "อะไหล่ต่ำกว่าขั้นต่ำ" (stock.below_min) and "มูลค่าคงคลัง" (stock.valuation) — through the
+ * "ต่ำกว่าขั้นต่ำและเกินขั้นสูง" (stock.below_min) and "มูลค่าคงคลัง" (stock.valuation) — through the
  * generic /reports/tabular/{key} endpoints.
  */
 class StockReportsTest extends TestCase
@@ -137,38 +137,48 @@ class StockReportsTest extends TestCase
 
     // ── stock.below_min ─────────────────────────────────────────────────────────────
 
-    public function test_below_min_lists_the_reorder_list_biggest_shortfall_first(): void
+    public function test_below_min_lists_out_then_low_then_over_max(): void
     {
         $out = $this->item(['name' => 'Toner', 'current_stock' => 0, 'min_stock' => 5, 'max_stock' => 20]);
         $low = $this->item(['name' => 'Mouse', 'current_stock' => 2, 'min_stock' => 5, 'max_stock' => 10]);
         $this->item(['name' => 'Cable', 'current_stock' => 6, 'min_stock' => 5]);
-        $this->item(['name' => 'No minimum', 'current_stock' => 0, 'min_stock' => 0]);
+        $noMin = $this->item(['name' => 'No minimum', 'current_stock' => 0, 'min_stock' => 0]);
+        $over = $this->item(['name' => 'Toner box', 'current_stock' => 130, 'min_stock' => 5, 'max_stock' => 100, 'cost' => 2]);
         $this->movement($low, 'receive', 1, '2026-09-01 09:00:00', ['unit_cost' => 40]);
         $this->movement($low, 'receive', 1, '2026-09-03 09:00:00', ['unit_cost' => 50]);
 
         $body = $this->actingAs($this->userWith(['stock.view']))
             ->getJson('/api/reports/tabular/stock.below_min/rows')->assertOk()->json();
 
-        $this->assertSame([$out->id, $low->id], array_column($body['data'], 'id'));
-        [$outRow, $lowRow] = $body['data'];
+        // Out of stock counts with or without a Min, like StockItem::status().
+        $this->assertSame([$out->id, $noMin->id, $low->id, $over->id], array_column($body['data'], 'id'));
+        [$outRow, , $lowRow, $overRow] = $body['data'];
         $this->assertSame('out', $outRow['status']);
-        $this->assertEquals(5, $outRow['shortfall']);
+        $this->assertEquals(5, $outRow['gap']);
         $this->assertEquals(20, $outRow['reorder_qty']);
-        $this->assertNull($outRow['reorder_value']);
+        $this->assertNull($outRow['value']);
         $this->assertSame('low', $lowRow['status']);
         $this->assertEquals(8, $lowRow['reorder_qty']);
         $this->assertEqualsWithDelta(50.0, $lowRow['unit_cost'], 0.001);
-        $this->assertEqualsWithDelta(400.0, $lowRow['reorder_value'], 0.001);
+        $this->assertEqualsWithDelta(400.0, $lowRow['value'], 0.001);
+        $this->assertSame('over', $overRow['status']);
+        $this->assertEquals(30, $overRow['gap']);
+        $this->assertEqualsWithDelta(60.0, $overRow['value'], 0.001);
 
         $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(2, $summary['total']['value']);
-        $this->assertSame(1, $summary['out_of_stock']['value']);
+        $this->assertSame(2, $summary['out_of_stock']['value']);
         $this->assertSame(1, $summary['below_min']['value']);
+        $this->assertSame(1, $summary['over_max']['value']);
         $this->assertEqualsWithDelta(400.0, $summary['reorder_value']['value'], 0.001);
+        $this->assertEqualsWithDelta(60.0, $summary['excess_value']['value'], 0.001);
 
         $onlyOut = $this->actingAs($this->userWith(['stock.view']))
             ->getJson('/api/reports/tabular/stock.below_min/rows?status=out')->assertOk()->json('data');
-        $this->assertSame([$out->id], array_column($onlyOut, 'id'));
+        $this->assertSame([$out->id, $noMin->id], array_column($onlyOut, 'id'));
+
+        $onlyOver = $this->actingAs($this->userWith(['stock.view']))
+            ->getJson('/api/reports/tabular/stock.below_min/rows?status=over')->assertOk()->json('data');
+        $this->assertSame([$over->id], array_column($onlyOver, 'id'));
     }
 
     // ── stock.valuation ─────────────────────────────────────────────────────────────
