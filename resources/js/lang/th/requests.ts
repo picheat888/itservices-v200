@@ -40,9 +40,6 @@ export const requests: Dict = {
 
     // pages/index.tsx — แท็บภาพรวม
     req_queue_title: 'รอคุณพิจารณา',
-    req_queue_empty: 'ตอนนี้ไม่มีคำขอค้างอยู่',
-    req_queue_empty_sub: 'คุณพิจารณาคำขอที่ส่งถึงคุณครบแล้ว',
-    req_recent_empty: 'ยังไม่มีคำขอ กดปุ่ม "คำขอใหม่" เพื่อเริ่ม',
     req_view_all: 'ดูทั้งหมด',
     req_catalog_approval_one: 'ขั้นอนุมัติ',
     req_catalog_approval_many: 'ขั้นอนุมัติ',

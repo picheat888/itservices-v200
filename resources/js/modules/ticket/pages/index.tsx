@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { OverviewHeader, useOverviewPeriod, type PeriodOptions } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
@@ -318,6 +319,17 @@ export default function TicketsPage() {
     const activeFilterCount =
         (statusFilter ? 1 : 0) + (catFilter ? 1 : 0) + (priFilter ? 1 : 0) + (slaFilter ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
     const resetFilters = () => list.setParams({ status: null, category: null, priority: null, sla: null, sort: null, page: null });
+    const hasSearchOrFilter = search !== '' || activeFilterCount > 0;
+    const listEmpty: EmptyStateProps = hasSearchOrFilter
+        ? { kind: 'search', title: t('ticket_empty_list_search'), hint: t('ticket_empty_list_search_hint') }
+        : tab === 'mine'
+          ? { title: t('ticket_empty_list_mine'), hint: t('ticket_empty_list_mine_hint') }
+          : tab === 'my'
+            ? {
+                  title: t('ticket_empty_list_my'),
+                  hint: canCreate ? t('ticket_empty_list_my_hint').replace('{button}', t('new_ticket')) : null,
+              }
+            : { title: t('ticket_empty_list_all'), hint: t('ticket_empty_list_all_hint') };
 
     // Columns for the shared DataTable (All / Assigned-to-me tabs):
     // Request at · Ticket no. · Subject · Request by · Category · Priority · Status · Responsible by
@@ -668,7 +680,7 @@ export default function TicketsPage() {
                             rowKey={(tk) => tk.id}
                             onRowClick={openDetail}
                             loading={isLoading || isFetching}
-                            emptyState={<span>{t('ticket_none')}</span>}
+                            empty={listEmpty}
                             server={{ ...list.table.paging, total: meta?.total ?? 0 }}
                         />
                     </div>
@@ -723,7 +735,7 @@ function TicketTable({
     const fmt = useDateFormat();
     const pairOf = useLocalPair();
     if (rows.length === 0) {
-        return <div className="text-muted-foreground py-10 text-center text-sm">{t('ticket_none')}</div>;
+        return <EmptyState title={t('ticket_empty_overview_latest')} hint={t('ticket_empty_overview_latest_hint')} />;
     }
     return (
         <div className="overflow-x-auto">
