@@ -20,6 +20,8 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
     const sourcePos = vertical ? Position.Bottom : Position.Right;
     const primaryName = localName(d, lang);
     const secondaryName = lang === 'th' ? (d.name_th ? d.name : null) : d.name_th;
+    const sectionLabel = localName({ name: d.section ?? '', name_th: d.section_th }, lang) || null;
+    const departmentLabel = localName({ name: d.department ?? '', name_th: d.department_th }, lang) || null;
     const ink = deptInk(d.department_code);
     const branchLabel = t(d.collapsed ? 'org_expand_branch' : 'org_collapse_branch').replace('{n}', String(d.reports_count));
 
@@ -63,21 +65,21 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                     </div>
                     <div
                         className="text-foreground/85 truncate text-[12px] leading-[17px]"
-                        title={d.section ? `${t('org_card_section')}: ${d.section}` : undefined}
+                        title={sectionLabel ? `${t('org_card_section')}: ${sectionLabel}` : undefined}
                     >
-                        {d.section ?? '—'}
+                        {sectionLabel ?? '—'}
                     </div>
                     <div
                         className={cn('text-foreground/85 truncate text-[12px] leading-[17px]', d.hasReports && 'pr-9')}
-                        title={d.department ? `${t('org_card_department')}: ${d.department}` : undefined}
+                        title={departmentLabel ? `${t('org_card_department')}: ${departmentLabel}` : undefined}
                     >
-                        {d.department ?? '—'}
+                        {departmentLabel ?? '—'}
                     </div>
                 </div>
             </div>
 
             <span
-                title={d.department ?? undefined}
+                title={departmentLabel ?? undefined}
                 className="absolute top-[11px] right-[11px] rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide text-[var(--dept-ink)] dark:text-[var(--dept-ink-dark)]"
                 style={
                     {
@@ -87,7 +89,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                     } as CSSProperties
                 }
             >
-                {d.department_code ?? d.department ?? '—'}
+                {d.department_code ?? departmentLabel ?? '—'}
             </span>
 
             {d.hasReports && (

@@ -49,6 +49,19 @@ class OrgChartTest extends TestCase
         $this->assertSame(0, $row['reports_count']);
     }
 
+    public function test_node_carries_thai_twins_for_section_and_department(): void
+    {
+        $this->actingAs($this->super());
+        $dept = Department::create(['name' => 'Information Technology', 'name_th' => 'เทคโนโลยีสารสนเทศ', 'tag' => 'IT']);
+        $section = Section::create(['name' => 'Infrastructure', 'department_id' => $dept->id]);
+        Employee::create(['first_name' => 'Nara', 'department_id' => $dept->id, 'section_id' => $section->id]);
+
+        $row = $this->getJson('/api/employees/org-chart')->assertOk()->json('data.0');
+
+        $this->assertSame('เทคโนโลยีสารสนเทศ', $row['department_th']);
+        $this->assertNull($row['section_th']);
+    }
+
     public function test_node_carries_position_section_and_department_names(): void
     {
         $this->actingAs($this->super());

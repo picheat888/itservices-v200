@@ -135,7 +135,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         const s = new Set<number>();
         for (const n of data) {
             const hay =
-                `${n.name} ${n.name_th ?? ''} ${n.title ?? ''} ${n.section ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase();
+                `${n.name} ${n.name_th ?? ''} ${n.title ?? ''} ${n.section ?? ''} ${n.section_th ?? ''} ${n.department ?? ''} ${n.department_th ?? ''} ${n.department_code ?? ''}`.toLowerCase();
             if (hay.includes(q)) {
                 s.add(n.id);
             }
@@ -266,7 +266,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 nameTh: n.name_th,
                 code: n.code,
                 color: deptColor(n.department_code),
-                search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.section ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
+                search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.section ?? ''} ${n.section_th ?? ''} ${n.department ?? ''} ${n.department_th ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
             })),
         [data],
     );

@@ -543,7 +543,9 @@ function OrgPane({
         name_th: rootFocus.nameTh ?? null,
         title: rootFocus.title ?? null,
         section: null,
+        section_th: null,
         department: null,
+        department_th: null,
         department_code: rootFocus.deptCode ?? null,
         photo_url: null,
         manager_id: null,
@@ -662,7 +664,11 @@ function OrgPane({
                             <div className="min-w-0 flex-1">
                                 <div className="truncate text-[14px] leading-tight font-bold">{nameOf(focusNode)}</div>
                                 <div className="text-muted-foreground truncate text-[12px]">{focusNode.title || '—'}</div>
-                                {focusNode.department && <div className="text-muted-foreground truncate text-[11px]">{focusNode.department}</div>}
+                                {focusNode.department && (
+                                    <div className="text-muted-foreground truncate text-[11px]">
+                                        {localName({ name: focusNode.department, name_th: focusNode.department_th }, lang)}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         {/* Footer: View profile (left) + report counts (right) */}
