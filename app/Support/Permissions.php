@@ -82,6 +82,12 @@ class Permissions
                 'inapp_edit', 'inapp_toggle', 'inapp_test',
                 'logs',
             ],
+            // Report Center — see reportHierarchy().
+            'reports' => [
+                'module',
+                'tickets', 'assets', 'contracts', 'stock', 'requests', 'employees', 'access',
+                'export', 'schedule',
+            ],
             'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'requestdata', 'assets', 'security'],
         ];
     }
@@ -664,6 +670,45 @@ class Permissions
         }
 
         return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'notifications.')));
+    }
+
+    /**
+     * Report Center gate: the master opens /reports; each domain switch opens that domain's reports;
+     * export and schedule are the two tools, usable on whatever the reader may open.
+     *
+     * @return array{master: string, groups: array<string, list<string>>}
+     */
+    public static function reportHierarchy(): array
+    {
+        return [
+            'master' => 'reports.module',
+            'groups' => [
+                'reports.tickets' => [],
+                'reports.assets' => [],
+                'reports.contracts' => [],
+                'reports.stock' => [],
+                'reports.requests' => [],
+                'reports.employees' => [],
+                'reports.access' => [],
+                'reports.export' => [],
+                'reports.schedule' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Without the master every reports key is dropped; the children never cascade. Other keys pass through.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeReports(array $granted): array
+    {
+        if (in_array(self::reportHierarchy()['master'], $granted, true)) {
+            return $granted;
+        }
+
+        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'reports.')));
     }
 
     /**
