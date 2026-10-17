@@ -66,7 +66,11 @@ export function AssetActivityCard({ activity, highlightLast }: { activity: Asset
                     data={bars}
                     unit={activity.unit}
                     highlightLast={highlightLast}
-                    emptyLabel={t(view === 'handover' ? 'asset_activity_none_handover' : 'asset_activity_none_returned')}
+                    empty={{
+                        kind: 'empty',
+                        title: t(view === 'handover' ? 'asset_empty_activity_handover' : 'asset_empty_activity_returned'),
+                        hint: t(view === 'handover' ? 'asset_empty_activity_handover_hint' : 'asset_empty_activity_returned_hint'),
+                    }}
                     className="h-auto min-h-[172px] flex-1"
                 />
             </div>

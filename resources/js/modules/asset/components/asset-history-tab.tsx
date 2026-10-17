@@ -1,9 +1,9 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { EmptyState } from '@/shared/components/empty-state';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import type { AssetTransferEntry } from '@/shared/types';
-import { History } from 'lucide-react';
 import { AssetEventBadge } from './asset-event-badge';
 
 /**
@@ -56,11 +56,7 @@ export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransf
             {/* "No history" is a claim about the asset, so it waits until this asset's
                 trail has actually arrived — until then the table shows loading rows. */}
             {transfers.length === 0 && !loading ? (
-                <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 text-center text-sm">
-                    <History className="text-muted-foreground/50 h-8 w-8" />
-                    <div>{t('asset_history_empty')}</div>
-                    <div className="text-xs">{t('asset_history_empty_hint')}</div>
-                </div>
+                <EmptyState kind="empty" title={t('asset_empty_drawer_history')} hint={t('asset_empty_drawer_history_hint')} />
             ) : (
                 // fillHeight, like the repair-tickets tab: rows-per-page is derived from the
                 // space the tab actually has, so a two-row trail leaves no field of blank filler

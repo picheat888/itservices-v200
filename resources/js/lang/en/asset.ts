@@ -77,10 +77,7 @@ export const asset: Dict = {
     asset_returned: 'Returned',
     asset_activity_cap_handover: 'Assets transferred out each {unit}',
     asset_activity_cap_returned: 'Assets back in the pool each {unit}',
-    asset_activity_none_handover: 'Nothing transferred in the last 12 months',
-    asset_activity_none_returned: 'Nothing returned in the last 12 months',
     asset_top_value: 'Highest-value assets',
-    asset_none: 'No assets found',
     asset_general: 'General information',
     asset_information: 'Asset information',
     asset_ownership: 'Ownership',
@@ -125,10 +122,6 @@ export const asset: Dict = {
     asset_tab_tickets: 'Repair tickets',
     asset_open_contract: 'Open contract',
     asset_view_contract: 'View contract',
-    asset_tickets_empty: 'No repair tickets',
-    asset_tickets_empty_hint: 'This asset has not been referenced in any service ticket.',
-    asset_history_empty: 'No history yet',
-    asset_history_empty_hint: 'This asset has never been transferred, returned or moved.',
     asset_history_title: 'Asset history',
     asset_history_desc: 'Every ownership transfer, return-to-pool and location change for this asset, most recent first.',
     asset_tk_subject: 'Subject',
@@ -172,7 +165,6 @@ export const asset: Dict = {
     asset_inventory_table: 'Asset inventory',
     asset_select_page_group: 'Select every asset with this status on this page',
     asset_select_row: 'Select',
-    asset_none_filtered: 'No assets match the search or filters',
     asset_rows_per_page: 'Rows per page',
     asset_prev_page: 'Previous page',
     asset_next_page: 'Next page',
@@ -252,7 +244,6 @@ export const asset: Dict = {
     // contract-peek-dialog.tsx — labels moved from the component
     asset_peek_owner: 'Owner',
     asset_contract: 'Contract',
-    asset_no_assets_linked_to_this_contract: 'No assets linked to this contract',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     asset_empty_overview_by_type: 'No assets yet',

@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
@@ -32,7 +34,6 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAccessSummary, useRevokeGrant } from '../hooks/use-access';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Per-channel identity: brand-neutral colour (same hexes the registry NameCell uses) + icon + label key. */
 const CHANNEL: Record<AccessKind, { color: string; icon: LucideIcon; labelKey: string }> = {
@@ -300,11 +301,7 @@ function IssuesDrawer({
 
                 <div className="mt-5 flex-1 space-y-3.5 overflow-y-auto px-1">
                     {total === 0 ? (
-                        <div className="flex flex-col items-center gap-1.5 py-16 text-center">
-                            <CheckCircle2 className="h-8 w-8 text-emerald-500 dark:text-emerald-400" />
-                            <div className="text-sm font-semibold">{t('access_issues_clear')}</div>
-                            <div className="text-muted-foreground text-xs">{t('access_issues_clear_sub')}</div>
-                        </div>
+                        <EmptyState kind="clear" title={t('access_empty_overview_issues')} hint={t('access_empty_overview_issues_hint')} />
                     ) : (
                         <>
                             {/* Only the grant queue gets an in-place action: revoking is one
@@ -596,7 +593,7 @@ export function AccessOverview({
                     <span className="text-sm font-semibold">{t('access_dash_top_title')}</span>
                 </div>
                 {data.top_resources.length === 0 ? (
-                    <div className="text-muted-foreground py-12 text-center text-sm">{t('access_dash_empty')}</div>
+                    <EmptyState kind="empty" title={t('access_empty_overview_top_resources')} hint={t('access_empty_overview_top_resources_hint')} />
                 ) : (
                     <table className="w-full text-sm">
                         <thead>

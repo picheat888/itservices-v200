@@ -2,12 +2,14 @@ import { useT } from '@/lang';
 import { AssetStatusBadge, assetApi } from '@/modules/asset';
 import { useCurrency, useVendors } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { FileDropZone, formatFileSize } from '@/shared/components/file-drop-zone';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
@@ -25,7 +27,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 25 * 1024 * 1024; // 25MB
@@ -820,9 +821,19 @@ export function ContractFormDrawer({
                                                         {t('contract_link_assets_loading')}
                                                     </div>
                                                 ) : filteredAssets.length === 0 ? (
-                                                    <div className="text-muted-foreground px-3 py-4 text-center text-sm">
-                                                        {t('contract_link_assets_none')}
-                                                    </div>
+                                                    <EmptyState
+                                                        kind={assetSearch.trim() ? 'search' : 'pick'}
+                                                        title={t(
+                                                            assetSearch.trim()
+                                                                ? 'contract_empty_form_link_assets_search'
+                                                                : 'contract_empty_form_link_assets',
+                                                        )}
+                                                        hint={t(
+                                                            assetSearch.trim()
+                                                                ? 'contract_empty_form_link_assets_search_hint'
+                                                                : 'contract_empty_form_link_assets_hint',
+                                                        )}
+                                                    />
                                                 ) : (
                                                     filteredAssets.map((a) => {
                                                         const checked = form.asset_ids.includes(a.id);

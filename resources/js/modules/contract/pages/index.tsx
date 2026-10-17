@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCurrency } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
+import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
@@ -16,6 +17,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -49,7 +51,6 @@ import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 import { CONTRACT_TYPE_TONE } from '../tones';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'all'] as const;
@@ -476,7 +477,15 @@ export default function ContractsPage() {
                             loading={isLoading || isFetching}
                             loadingRows={rows.length || 8}
                             caption={t('contracts_title')}
-                            emptyState={<div className="text-muted-foreground py-12 text-center text-sm">{t('contract_none')}</div>}
+                            empty={
+                                hasActiveFilters
+                                    ? { kind: 'search', title: t('contract_empty_list_search'), hint: t('contract_empty_list_search_hint') }
+                                    : {
+                                          kind: 'empty',
+                                          title: t('contract_empty_list'),
+                                          hint: t('contract_empty_list_hint').replace('{button}', t('new_contract')),
+                                      }
+                            }
                             server={{ ...list.table.paging, total: totalRows }}
                         />
                     </div>
@@ -750,7 +759,12 @@ function OverviewTab({
                 </div>
 
                 {summary.timeline.length === 0 ? (
-                    <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-6 text-center text-sm">{t('contract_timeline_empty')}</div>
+                    <EmptyState
+                        kind="empty"
+                        title={t('contract_empty_overview_timeline')}
+                        hint={t('contract_empty_overview_timeline_hint')}
+                        className="bg-muted/50 rounded-md"
+                    />
                 ) : (
                     <div className="bg-muted/40 relative overflow-hidden rounded-lg">
                         {/* Full-height NOW column highlight, sitting behind the dots and labels */}
@@ -859,7 +873,11 @@ function OverviewTab({
                         doesn't stretch the layout past the Top-vendors card beside it. */}
                     <div className="divide-border/60 max-h-96 divide-y overflow-y-auto p-2">
                         {summary.action_queue.length === 0 && (
-                            <div className="text-muted-foreground px-3 py-4 text-center text-sm">{t('contract_action_queue_empty')}</div>
+                            <EmptyState
+                                kind="clear"
+                                title={t('contract_empty_overview_action_queue')}
+                                hint={t('contract_empty_overview_action_queue_hint')}
+                            />
                         )}
                         {summary.action_queue.map((c) => (
                             <button

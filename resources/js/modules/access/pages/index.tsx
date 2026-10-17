@@ -2,11 +2,13 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { AvatarStack } from '@/shared/components/avatar-stack';
 import { DataTable, type Column } from '@/shared/components/data-table';
+import type { EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { readTabParam } from '@/shared/lib/tab-param';
@@ -22,7 +24,6 @@ import { AccessOverview } from '../components/access-overview';
 import { MembersDrawer, type MemberTarget } from '../components/members-drawer';
 import { ResourceModal } from '../components/resource-modal';
 import { useEmailGroups, useFileShares, useSocialPlatforms, useSoftware } from '../hooks/use-access';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** The overview tab plus the four resource registries. */
 type Tab = 'overview' | AccessKind;
@@ -37,6 +38,20 @@ type AnyResource = EmailGroup | FileShare | SocialPlatform | Software;
 const ALL = '__all__';
 /** Software licence types, in display order (matches the resource form). */
 const LICENSES = ['subscription', 'perpetual', 'open_source', 'free'] as const;
+
+// Empty-state words per tab
+const FIRST_EMPTY = {
+    'email-groups': { title: 'access_empty_email_groups', hint: 'access_empty_email_groups_hint' },
+    'file-shares': { title: 'access_empty_file_shares', hint: 'access_empty_file_shares_hint' },
+    'social-platforms': { title: 'access_empty_social', hint: 'access_empty_social_hint' },
+    software: { title: 'access_empty_software', hint: 'access_empty_software_hint' },
+} as const;
+const SEARCH_EMPTY = {
+    'email-groups': { title: 'access_empty_email_groups_search', hint: 'access_empty_email_groups_search_hint' },
+    'file-shares': { title: 'access_empty_file_shares_search', hint: 'access_empty_file_shares_search_hint' },
+    'social-platforms': { title: 'access_empty_social_search', hint: 'access_empty_social_search_hint' },
+    software: { title: 'access_empty_software_search', hint: 'access_empty_software_search_hint' },
+} as const;
 
 /** Owner cell: small avatar (photo or brand-chip initials) + name. */
 function OwnerCell({ owner, photoUrl }: { owner?: string | null; photoUrl?: string | null }) {
@@ -371,6 +386,16 @@ export default function AccessControlPage() {
             </Button>
         ) : undefined;
 
+    // Empty state of a tab: the searched variant when a search or filter is on, else the first-use hint
+    const emptyFor = (kind: AccessKind, searched: boolean): EmptyStateProps =>
+        searched
+            ? { kind: 'search', title: t(SEARCH_EMPTY[kind].title), hint: t(SEARCH_EMPTY[kind].hint) }
+            : {
+                  kind: 'empty',
+                  title: t(FIRST_EMPTY[kind].title),
+                  hint: t(FIRST_EMPTY[kind].hint).replace('{button}', newLabel[kind]),
+              };
+
     // Compose the split size columns for display: null = unspecified (—), 0 = unlimited,
     // otherwise a thousands-separated value with its unit ("5,000 GB").
     const sizeText = (size?: number | null, unit?: string | null) => {
@@ -614,6 +639,7 @@ export default function AccessControlPage() {
                             paging={list.table.paging}
                             search={list.table.search}
                             actions={addButton('email-groups')}
+                            empty={emptyFor('email-groups', list.get('search') !== '' || !!egDept)}
                         />
                     )}
                     {tab === 'file-shares' && (
@@ -629,6 +655,7 @@ export default function AccessControlPage() {
                             paging={list.table.paging}
                             search={list.table.search}
                             actions={addButton('file-shares')}
+                            empty={emptyFor('file-shares', list.get('search') !== '' || !!fsDept)}
                         />
                     )}
                     {tab === 'social-platforms' && (
@@ -643,6 +670,7 @@ export default function AccessControlPage() {
                             paging={list.table.paging}
                             search={list.table.search}
                             actions={addButton('social-platforms')}
+                            empty={emptyFor('social-platforms', list.get('search') !== '')}
                         />
                     )}
                     {tab === 'software' && (
@@ -658,6 +686,7 @@ export default function AccessControlPage() {
                             paging={list.table.paging}
                             search={list.table.search}
                             actions={addButton('software')}
+                            empty={emptyFor('software', list.get('search') !== '' || !!swLicense || !!swPublisher)}
                         />
                     )}
                 </div>

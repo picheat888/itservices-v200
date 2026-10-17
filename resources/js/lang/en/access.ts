@@ -11,8 +11,6 @@ export const access: Dict = {
     access_social_search: 'Search name or URL…',
     access_software_search: 'Search name or publisher…',
     access_members_search: 'Search name, ID or department…',
-    access_no_members: 'No members yet',
-    access_no_members_hint: 'Add the first member from the panel above.',
     access_member_added: 'Member added',
     access_member_removed: 'Access revoked',
     access_resource_deleted: 'Item deleted',
@@ -153,8 +151,6 @@ export const access: Dict = {
     access_revoke_confirm_title: 'Revoke this access?',
     access_revoke_confirm_desc: 'They lose access to this resource. You can add them back later from its manage page.',
     access_issue_empty_hint: 'No members yet',
-    access_issues_clear: 'Nothing to review',
-    access_issues_clear_sub: 'No grants left over, and every resource has an owner and members.',
     access_dash_recent_title: 'Grants added in this period',
     access_dash_recent_sub: 'New grants issued in the chosen period',
     access_dash_owners_ok: 'Every resource has a current owner',
@@ -168,7 +164,6 @@ export const access: Dict = {
     access_dash_top_title: 'Resources with the most members',
     access_dash_channel: 'Type',
     access_dash_reach: 'Members',
-    access_dash_empty: 'No data yet',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     access_empty_overview_issues: 'Nothing to review',

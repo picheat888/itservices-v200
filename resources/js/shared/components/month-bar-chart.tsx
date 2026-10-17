@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
@@ -25,12 +26,15 @@ export type BarUnit = 'day' | 'week' | 'month' | 'year';
 export function MonthBarChart({
     data,
     emptyLabel,
+    empty,
     className,
     unit = 'month',
     highlightLast = true,
 }: {
     data: MonthBar[];
-    emptyLabel: string;
+    emptyLabel?: string;
+    /** Shared empty state shown instead of emptyLabel. */
+    empty?: EmptyStateProps;
     className?: string;
     unit?: BarUnit;
     /** Off for a period that ended in the past: no column is the current one. */
@@ -52,6 +56,7 @@ export function MonthBarChart({
         return { mon: fmt.month(start), yy: fmt.year(y).slice(-2) };
     };
 
+    if (isEmpty && empty) return <EmptyState {...empty} />;
     if (isEmpty) {
         return <div className="text-muted-foreground py-10 text-center text-sm">{emptyLabel}</div>;
     }

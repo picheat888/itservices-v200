@@ -2,10 +2,11 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import type { AssetTicket, TicketPriority, TicketStatus } from '@/shared/types';
-import { Wrench } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Tones + i18n keys mirror the Tickets module's ticket-meta. Kept inline (like
@@ -35,17 +36,12 @@ export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; 
     const navigate = useNavigate();
     const { can } = useAuth();
     const canSeePriority = can('tickets.resolve');
+    const [query, setQuery] = useState('');
 
     // Empty is a fact about the asset; while its tickets are still loading the
     // table's own loading rows say "not yet" instead.
     if (tickets.length === 0 && !loading) {
-        return (
-            <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-center text-sm">
-                <Wrench className="text-muted-foreground/50 h-8 w-8" />
-                <div>{t('asset_tickets_empty')}</div>
-                <div className="text-xs">{t('asset_tickets_empty_hint')}</div>
-            </div>
-        );
+        return <EmptyState kind="empty" title={t('asset_empty_drawer_tickets')} hint={t('asset_empty_drawer_tickets_hint')} className="h-full" />;
     }
 
     const columns: Column<AssetTicket>[] = [
@@ -101,6 +97,8 @@ export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; 
                 rows={tickets}
                 rowKey={(tk) => tk.id}
                 loading={loading}
+                search={{ value: query, onChange: setQuery }}
+                empty={{ kind: 'search', title: t('asset_empty_drawer_tickets_search'), hint: t('asset_empty_drawer_tickets_search_hint') }}
                 searchPlaceholder={t('asset_tickets_search')}
                 searchable={(tk) => `${tk.ticket_no} ${tk.subject}`}
                 onRowClick={(tk) => navigate(`/tickets?view=${tk.id}`)}

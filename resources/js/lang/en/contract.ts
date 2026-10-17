@@ -72,8 +72,6 @@ export const contract: Dict = {
     contract_timeline: 'Expiration timeline',
     contract_top_vendors: 'Top vendors by spend',
     contract_action_queue: 'Action queue',
-    contract_action_queue_empty: 'No contracts need action',
-    contract_none: 'No contracts yet',
     contract_delete_confirm: 'Delete this contract?',
     contract_delete: 'Delete contract',
     contract_delete_note:
@@ -130,7 +128,6 @@ export const contract: Dict = {
     contract_search: 'Search number, name or vendor…',
     contract_assets_search: 'Search code, name or serial…',
     contract_link_assets_loading: 'Loading…',
-    contract_link_assets_none: 'No assets available',
     contract_link_assets_selected: '{n} selected',
     contract_link_asset_locked: "Can't remove: already written off or returned to the lessor",
     contract_type_locked: 'This contract holds assets already returned or written off, so it stays hardware.',
@@ -176,7 +173,6 @@ export const contract: Dict = {
     contract_timeline_upcoming: 'Upcoming',
     contract_timeline_in_reminder: 'In reminder window',
     contract_timeline_overdue: 'Overdue',
-    contract_timeline_empty: 'No expirations in this 12-month window.',
     contract_timeline_ends: 'Ends {date}',
     contract_timeline_open: 'Open contract',
     contract_timeline_expired_ago: '{n} days overdue',
@@ -205,7 +201,6 @@ export const contract: Dict = {
     contract_reminder_days_before: '{n} days before expiry',
 
     // contract-assets-tab.tsx — linked assets table
-    contract_assets_empty: 'No assets linked to this contract',
     contract_asset_col_id: 'Asset code',
     contract_asset_col_name: 'Name',
     contract_asset_col_serial: 'Serial number',
