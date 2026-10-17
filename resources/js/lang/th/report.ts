@@ -359,7 +359,7 @@ export const report: Dict = {
     rep_opt_90d: '90 วัน',
     rep_opt_180d: '180 วัน',
     rep_opt_365d: '1 ปี',
-    rep_domain_stock: 'สต็อก',
+    rep_domain_stock: 'คลังอะไหล่',
     rep_stock_movements_title: 'ความเคลื่อนไหวรับเข้า-เบิกออก',
     rep_stock_movements_desc: 'ทุกเอกสารในช่วงเวลา แยกประเภท และคลัง',
     rep_stock_below_min_title: 'อะไหล่ต่ำกว่าขั้นต่ำ',
