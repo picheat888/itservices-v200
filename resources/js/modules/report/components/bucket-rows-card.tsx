@@ -44,7 +44,7 @@ export function SplitLine({
 }) {
     const lang = useUiStore((s) => s.lang);
     const t = useT();
-    const title = `${name}: ${series.map((s) => `${values[s.key] ?? 0} ${t(s.label_key)}`).join(', ')}`;
+    const title = `${name}: ${series.map((s) => `${formatNumber(values[s.key] ?? 0, lang)} ${t(s.label_key)}`).join(', ')}`;
 
     return (
         <div className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3" role="img" aria-label={title} title={title}>
