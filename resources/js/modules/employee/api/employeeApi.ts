@@ -231,9 +231,24 @@ function withoutPhoto(payload: EmployeePayload): Omit<EmployeePayload, 'photo'> 
     return copy;
 }
 
+/** Query of GET /employees/options: a page of matches, or exactly `ids`. */
+export interface EmployeeOptionsParams {
+    search?: string;
+    limit?: number;
+    ids?: number[];
+    exclude?: number[];
+    status?: 'active' | 'resigned';
+    match?: 'position';
+}
+
 export const employeeApi = {
     // Slim rows for pickers and lookups.
-    options: () => http.get<ApiEnvelope<EmployeeOption[]>>('/employees/options').then((r) => r.data.data),
+    options: (params: EmployeeOptionsParams = {}) =>
+        http
+            .get<ApiEnvelope<EmployeeOption[]>>('/employees/options', {
+                params: { ...params, ids: params.ids?.join(','), exclude: params.exclude?.length ? params.exclude.join(',') : undefined },
+            })
+            .then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Employee>>(`/employees/${id}`).then((r) => r.data.data),
     // Assets the employee currently holds (read-only, gated by employees.view).
     assets: (id: number) => http.get<ApiEnvelope<EmployeeHeldAsset[]>>(`/employees/${id}/assets`).then((r) => r.data.data),
