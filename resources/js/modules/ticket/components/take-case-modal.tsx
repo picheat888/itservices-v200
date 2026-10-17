@@ -5,11 +5,13 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
+import { useUiStore } from '@/stores/ui';
 import { Loader2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketMutations, useTicketRequesterAssets } from '../hooks/use-tickets';
@@ -35,6 +37,7 @@ const ASSET_BACKED: TicketCategory[] = ['hardware', 'cctv', 'telephone'];
 
 export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { take } = useTicketMutations();
     const [priority, setPriority] = useState<TicketPriority>('medium');
     // null on a case nobody reported directly — see the note on Ticket['from_request'].
@@ -158,7 +161,10 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                                 {(ownAssets?.length ?? 0) > 0 && (
                                     <div>
                                         <div className="text-muted-foreground mb-1.5 text-xs">
-                                            {t('ticket_requester_assets').replace('{name}', view?.requester_name ?? '')}
+                                            {t('ticket_requester_assets').replace(
+                                                '{name}',
+                                                localPair(view?.requester_name, view?.requester_name_th, lang) ?? '',
+                                            )}
                                         </div>
                                         <div className="flex flex-wrap gap-1.5">
                                             {(ownAssets ?? []).map((a) => {
