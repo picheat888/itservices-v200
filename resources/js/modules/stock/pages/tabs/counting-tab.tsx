@@ -6,6 +6,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
@@ -15,6 +16,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Ban, Check, ClipboardList, FileText, Loader2, Search, Zap } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
@@ -27,6 +29,7 @@ const EYEBROW = 'text-muted-foreground text-xs font-semibold';
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const fmt = useDateFormat();
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const whFieldId = useId();
     const catFieldId = useId();
@@ -164,9 +167,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         acc[c] = (acc[c] ?? 0) + 1;
         return acc;
     }, {});
+    // Category label in the UI language (the English name stays the filter key).
+    const catTh = new Map(itemsInWh.map((i) => [i.category ?? '—', i.category_th] as const));
+    const catLabel = (c: string) => localPair(c, catTh.get(c), lang) ?? c;
     const categoryOptions = [
         { value: 'all', label: `${t('stock_count_all_cat')} (${itemsInWh.length})`, search: t('stock_count_all_cat') },
-        ...Object.entries(catCounts).map(([c, n]) => ({ value: c, label: `${c} (${n})`, search: c })),
+        ...Object.entries(catCounts).map(([c, n]) => ({ value: c, label: `${catLabel(c)} (${n})`, search: `${c} ${catTh.get(c) ?? ''}` })),
     ];
     const skuList = (cat === 'all' ? itemsInWh : itemsInWh.filter((i) => (i.category ?? '—') === cat)).filter(
         (i) => !skuSearch || `${i.sku} ${i.name}`.toLowerCase().includes(skuSearch.toLowerCase()),
@@ -411,7 +417,9 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                     <div className="text-xs">{i.sku}</div>
                                                     <div className="text-muted-foreground truncate text-xs">{i.name}</div>
                                                 </div>
-                                                <span className="text-muted-foreground shrink-0 text-xs">{i.category ?? '—'}</span>
+                                                <span className="text-muted-foreground shrink-0 text-xs">
+                                                    {localPair(i.category, i.category_th, lang) ?? '—'}
+                                                </span>
                                                 <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums">{i.current_stock}</span>
                                             </label>
                                         );

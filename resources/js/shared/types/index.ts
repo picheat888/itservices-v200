@@ -702,6 +702,7 @@ export interface StockItem {
     serial: string | null;
     track_serial: boolean;
     category: string | null;
+    category_th?: string | null;
     category_id: number | null;
     brand: string | null;
     brand_id: number | null;
@@ -850,7 +851,7 @@ export interface StockSummary {
     out_items: StockReorderItem[];
     low_items: StockReorderItem[];
     by_warehouse: { warehouse: string; skus: number; units: number }[];
-    by_category: { category: string; skus: number; units: number }[];
+    by_category: { category: string; category_th?: string | null; skus: number; units: number }[];
     /** Latest movements folded in (view_events only; empty otherwise) so the card lands with the summary. */
     recent_movements: StockMovement[];
 }

@@ -8,11 +8,13 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
+import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { useUiStore } from '@/stores/ui';
 import { Box, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
 import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
@@ -132,6 +134,7 @@ export function StockItemDetailModal({
 }) {
     const fmt = useDateFormat();
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     const lotDetailId = useId();
     const { data, isError } = useStockItem(itemId);
@@ -271,7 +274,7 @@ export function StockItemDetailModal({
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
-                                        <Meta label={t('stock_category')}>{item.category ?? '—'}</Meta>
+                                        <Meta label={t('stock_category')}>{localPair(item.category, item.category_th, lang) ?? '—'}</Meta>
                                         <Meta label={t('stock_brand_model')}>{[item.brand, item.model].filter(Boolean).join(' ') || '—'}</Meta>
                                         <Meta label={t('stock_unit')}>{item.unit}</Meta>
                                         <Meta label={t('stock_min_max')}>

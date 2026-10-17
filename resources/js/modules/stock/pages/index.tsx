@@ -12,13 +12,14 @@ import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-para
 import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
-import { nameSearch } from '@/shared/lib/local-name';
+import { localPair, nameSearch } from '@/shared/lib/local-name';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
+import { useUiStore } from '@/stores/ui';
 import {
     AlertTriangle,
     Archive,
@@ -231,6 +232,7 @@ function AlertCard({
 export default function StockPage() {
     const t = useT();
     const nameOf = useLocalName();
+    const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const filterIds = { cat: useId(), wh: useId(), status: useId(), sort: useId() };
     // Every gate on this page lives under the stock.* prefix.
@@ -429,7 +431,7 @@ export default function StockPage() {
             header: t('stock_category'),
             width: '140px',
             hideBelow: 'lg',
-            render: (i) => <span className="text-sm">{i.category ?? '—'}</span>,
+            render: (i) => <span className="text-sm">{localPair(i.category, i.category_th, lang) ?? '—'}</span>,
         },
         { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, width: '200px', render: (i) => <StockBar item={i} t={t} /> },
         {

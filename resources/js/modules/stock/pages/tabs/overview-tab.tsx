@@ -2,9 +2,11 @@ import { useT } from '@/lang';
 import { OverviewHeader } from '@/shared/components/overview-period';
 import { StatCard } from '@/shared/components/stat-card';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Archive, Check, ChevronRight, Layers, Warehouse } from 'lucide-react';
 import { useStockSummary } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
@@ -38,6 +40,7 @@ export function OverviewTab({
     canEvents: boolean;
 }) {
     const fmt = useDateFormat();
+    const lang = useUiStore((s) => s.lang);
     // Recent movements ride along in the summary payload; empty for users without view_events.
     const movements = summary?.recent_movements ?? [];
     const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
@@ -278,7 +281,9 @@ export function OverviewTab({
                                     className="group block w-full text-left"
                                 >
                                     <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                                        <span className="group-hover:text-brand min-w-0 truncate font-medium transition-colors">{c.category}</span>
+                                        <span className="group-hover:text-brand min-w-0 truncate font-medium transition-colors">
+                                            {localPair(c.category, c.category_th, lang)}
+                                        </span>
                                         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{c.units}</span>
                                     </div>
                                     <div className="bg-muted h-2 overflow-hidden rounded-full">
