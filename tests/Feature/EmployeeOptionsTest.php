@@ -93,4 +93,29 @@ class EmployeeOptionsTest extends TestCase
 
         $this->assertSame($few, $count());
     }
+
+    public function test_directory_page_filters_and_orders_on_the_server(): void
+    {
+        $admin = User::factory()->create(['role' => 'super']);
+        $it = Department::create(['name' => 'IT', 'tag' => 'IT']);
+        $hr = Department::create(['name' => 'HR', 'tag' => 'HR']);
+        Employee::create(['code' => '680001', 'first_name' => 'Gone', 'last_name' => 'Away', 'status' => 'resigned', 'department_id' => $it->id]);
+        Employee::create(['code' => '520001', 'first_name' => 'Old', 'last_name' => 'Timer', 'first_name_th' => 'สมชาย', 'status' => 'active', 'department_id' => $it->id]);
+        Employee::create(['code' => '680002', 'first_name' => 'New', 'last_name' => 'Hire', 'status' => 'active', 'department_id' => $hr->id]);
+        $withLogin = Employee::create(['code' => '680003', 'first_name' => 'Has', 'last_name' => 'Login', 'status' => 'active', 'department_id' => $it->id]);
+        User::factory()->create(['role' => 'super', 'employee_id' => $withLogin->id]);
+
+        $page = fn (array $q) => $this->actingAs($admin)->getJson('/api/employees?'.http_build_query(['page' => 1, 'per_page' => 10, ...$q]))->assertOk();
+        $codes = fn (array $q) => $page($q)->json('data.*.code');
+
+        // No-account staff first, then those with a login, resigned last; newest code first within a group.
+        $this->assertSame(['680002', '520001', '680003', '680001'], $codes([]));
+        $this->assertSame(['520001', '680003', '680001'], $codes(['department_id' => $it->id]));
+        $this->assertSame(['680002', '520001'], $codes(['status' => 'no_account']));
+        $this->assertSame(['680003'], $codes(['status' => 'has_account']));
+        $this->assertSame(['680001'], $codes(['status' => 'resigned']));
+        $this->assertSame(['520001'], $codes(['search' => 'สมชาย']));
+        $this->assertSame(4, $page([])->json('meta.total'));
+        $this->assertSame(2, $page(['per_page' => 10, 'status' => 'no_account'])->json('meta.total'));
+    }
 }
