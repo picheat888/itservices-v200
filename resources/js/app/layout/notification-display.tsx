@@ -236,6 +236,7 @@ const REQUEST_MESSAGE_KEY: Record<string, string> = {
     approved_final: 'notif_request_approved_final',
     rejected: 'notif_request_rejected',
     completed: 'notif_request_completed',
+    not_delivered: 'notif_request_not_delivered',
     cancelled: 'notif_request_cancelled',
     cancelled_for_owner: 'notif_request_cancelled_for_owner',
     // Goes to whoever can provision a login, not to a participant.

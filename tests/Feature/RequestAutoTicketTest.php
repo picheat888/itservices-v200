@@ -326,15 +326,13 @@ class RequestAutoTicketTest extends TestCase
             $request->approvals()->where('kind', 'completion')->value('note'),
         );
 
-        // The requester has to be told their approved request is not coming. The
-        // completion row is an IT-queue step with no person on it, so the approver-facing
-        // cancellation notice reached nobody and this closed in silence.
-        $this->assertContains('cancelled', $this->requestBells($this->requester));
-
-        // Carrying IT's reason, so the bell answers "why" without opening anything.
+        // The requester hears who cancelled it and why, not "cancelled by the requester"
+        $this->assertContains('not_delivered', $this->requestBells($this->requester));
+        $this->assertNotContains('cancelled', $this->requestBells($this->requester));
         $notice = $this->requester->notifications()->get()
-            ->last(fn ($n) => ($n->data['subtype'] ?? null) === 'cancelled');
+            ->last(fn ($n) => ($n->data['subtype'] ?? null) === 'not_delivered');
         $this->assertStringContainsString('Model discontinued', (string) $notice?->data['remark']);
+        $this->assertSame($request->approvals()->where('kind', 'completion')->value('acted_by_name'), $notice?->data['actor_name']);
     }
 
     /**

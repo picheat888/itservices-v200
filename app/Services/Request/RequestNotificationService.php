@@ -137,15 +137,7 @@ class RequestNotificationService
         }
     }
 
-    /**
-     * Approved, worked on, and then closed without delivery — the requester and whoever
-     * filed it for them are told, with the reason IT gave.
-     *
-     * Separate from cancelled() below, which speaks to the approver who was still holding
-     * a pending request. Nobody is holding this one: it cleared every step, so the
-     * completion row belongs to the IT queue and carries no person at all. Routed here it
-     * reached nobody, which is how a request could be closed in silence.
-     */
+    /** Approved, then closed without delivery: the requester and the filer hear who cancelled it and why. */
     public function notDelivered(ServiceRequest $request, ?string $reason): void
     {
         $followers = $this->followers($request);
@@ -153,11 +145,10 @@ class RequestNotificationService
             return;
         }
 
-        Notification::send($followers, new RequestWorkflowNotification($request, 'cancelled', null, null, $reason));
-        // actor.name is "who decided this" in every request mail — the rejecting approver in
-        // request.rejected, and here the IT staff who closed the case out.
+        $closedBy = $this->completedBy($request);
+        Notification::send($followers, new RequestWorkflowNotification($request, 'not_delivered', null, $closedBy, $reason));
         $this->emailEach($followers, 'request.not_delivered', $request, [
-            'actor.name' => $this->completedBy($request),
+            'actor.name' => $closedBy,
             'remark' => $this->remark($reason),
         ]);
     }

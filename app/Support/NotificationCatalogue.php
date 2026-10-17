@@ -273,6 +273,16 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
+                'key' => 'notif_request_not_delivered',
+                'module' => 'requests',
+                'name' => 'Request cancelled by IT',
+                'trigger' => 'IT cancels the case of an approved request',
+                'audience' => 'The requester and followers',
+                'message_en' => 'Cancelled by {actor}: {remark}',
+                'message_th' => 'ยกเลิกโดย {actor}: {remark}',
+                'enabled' => true,
+            ],
+            [
                 'key' => 'notif_request_cancelled',
                 'module' => 'requests',
                 'name' => 'Request cancelled',
