@@ -1,5 +1,6 @@
 // Below min & overstock report cards: tiles, the rows legend with counts, and items by category (data: useStockLevelsBreakdown).
 import { useT } from '@/lang';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -11,7 +12,7 @@ import { CardEmpty, CardPager, CardTitle, InfoMark, Swatch } from './chart-parts
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, KpiRowSkeleton } from './report-skeletons';
-import { stockCount, stockMoney, TileFoot } from './stock-parts';
+import { sharePercent, shownPieces, splitBar, stockCount, stockMoney, TileFoot, TileLegend } from './stock-parts';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
@@ -38,6 +39,14 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
     const n = (v: number) => stockCount(v, lang);
     const unit = t('rep_slv_unit');
     const foot = (template: string, bold: Record<string, string>) => <TileFoot template={template} bold={bold} />;
+    const share = (count: number) => `${sharePercent(count, tiles.items_total)}%`;
+    const ok = Math.max(0, tiles.items_total - tiles.out - tiles.low - tiles.over);
+    const pieces = shownPieces([
+        { key: 'ok', label: t('stock_st_ok'), fill: FILL.green, value: ok, text: n(ok) },
+        { key: 'low', label: t('stock_st_low'), fill: FILL.amber, value: tiles.low, text: n(tiles.low) },
+        { key: 'out', label: t('rep_slv_k_out_short'), fill: FILL.red, value: tiles.out, text: n(tiles.out) },
+        { key: 'over', label: t('stock_st_over'), fill: FILL.blue, value: tiles.over, text: n(tiles.over) },
+    ]);
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
@@ -45,17 +54,29 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
                 label={t('stock_st_out')}
                 value={n(tiles.out)}
                 unit={unit}
+                tone={tiles.out > 0 ? 'red' : undefined}
                 alert={tiles.out > 0 ? 'red' : undefined}
-                footer={foot('rep_slv_k_out_foot', { n: n(tiles.items_total) })}
+                badge={tiles.out > 0 ? <StatusBadge tone="red">{share(tiles.out)}</StatusBadge> : undefined}
+                bar={pieces.length > 0 ? splitBar(pieces) : undefined}
+                footer={pieces.length > 0 ? <TileLegend pieces={pieces} /> : undefined}
             />
             <KpiTile
                 label={t('stock_st_low')}
                 value={n(tiles.low)}
                 unit={unit}
+                tone={tiles.low > 0 ? 'amber' : undefined}
                 alert={tiles.low > 0 ? 'amber' : undefined}
+                badge={tiles.low > 0 ? <StatusBadge tone="amber">{share(tiles.low)}</StatusBadge> : undefined}
                 footer={foot('rep_slv_k_low_foot', { n: n(tiles.low_gap) })}
             />
-            <KpiTile label={t('stock_st_over')} value={n(tiles.over)} unit={unit} footer={foot('rep_slv_k_over_foot', { n: n(tiles.over_excess) })} />
+            <KpiTile
+                label={t('stock_st_over')}
+                value={n(tiles.over)}
+                unit={unit}
+                tone={tiles.over > 0 ? 'blue' : undefined}
+                badge={tiles.over > 0 ? <StatusBadge tone="blue">{share(tiles.over)}</StatusBadge> : undefined}
+                footer={foot('rep_slv_k_over_foot', { n: n(tiles.over_excess) })}
+            />
             <KpiTile
                 label={t('rep_slv_k_reorder')}
                 badge={<InfoMark info={[t('rep_slv_k_reorder_info_qty'), t('rep_slv_k_reorder_info_none')]} />}

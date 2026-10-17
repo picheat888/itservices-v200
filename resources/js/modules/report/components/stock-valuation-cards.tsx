@@ -1,5 +1,6 @@
 // Stock value report cards: tiles, value by category and by warehouse, dead stock (data: useStockValuationBreakdown).
 import { useT } from '@/lang';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -10,13 +11,15 @@ import { useState } from 'react';
 import { useStockValuationBreakdown } from '../hooks/use-reports';
 import type { StockValuationBreakdown, TabularFilters } from '../types';
 import { CardEmpty, CardPager, CardTitle, fold, FoldToggle } from './chart-parts';
+import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { CardHeadingSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
-import { stockCount, stockMoney, TileFoot } from './stock-parts';
+import { sharePercent, shownPieces, splitBar, type SplitPiece, stockCount, stockMoney, TileFoot, TileLegend } from './stock-parts';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
 type Tiles = StockValuationBreakdown['tiles'];
+type Categories = StockValuationBreakdown['categories'];
 type Dead = StockValuationBreakdown['dead'];
 type DeadDays = 90 | 180 | 365;
 
@@ -35,38 +38,81 @@ const TOTAL_ROW = 'bg-muted/40 border-border border-t font-semibold';
 
 /* ─────────────────────────── tiles ─────────────────────────── */
 
-function ValueTiles({ tiles, asOf }: { tiles: Tiles; asOf: string }) {
+/** The value tile's top categories: three chart tones away from the stock statuses, the rest gray. */
+const TOP_CATEGORY_FILLS = [FILL.violet, FILL.pink, FILL['access-file']];
+
+/** The three most valuable categories and "อื่น ๆ" for the rest, each with its % of the value. */
+function categoryPieces(categories: Categories, total: number, t: (key: string) => string, lang: string): SplitPiece[] {
+    const piece = (key: string, label: string, fill: string, value: number): SplitPiece => ({
+        key,
+        label,
+        fill,
+        value,
+        text: `${sharePercent(value, total)}%`,
+    });
+    const top = categories
+        .slice(0, TOP_CATEGORY_FILLS.length)
+        .map((c, i) =>
+            piece(String(c.category_id ?? 'none'), localPair(c.name, c.name_th, lang) ?? t('rep_wo_no_category'), TOP_CATEGORY_FILLS[i], c.value),
+        );
+    const rest = categories.slice(TOP_CATEGORY_FILLS.length).reduce((s, c) => s + c.value, 0);
+    return shownPieces(categories.length > TOP_CATEGORY_FILLS.length ? [...top, piece('others', t('rep_sva_k_others'), FILL.gray, rest)] : top);
+}
+
+function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Categories; asOf: string }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
     const n = (v: number) => stockCount(v, lang);
-    const deadShare = tiles.value > 0 ? Math.round((tiles.dead90.value / tiles.value) * 100) : 0;
+    const deadShare = sharePercent(tiles.dead90.value, tiles.value);
     const foot = (template: string, bold: Record<string, string>) => <TileFoot template={template} bold={bold} />;
+    const valuePieces = categoryPieces(categories, tiles.value, t, lang);
+    const heldPieces = shownPieces([
+        { key: 'held', label: t('rep_sva_k_held'), fill: FILL.green, value: tiles.held, text: n(tiles.held) },
+        { key: 'out', label: t('stock_st_out'), fill: FILL.red, value: tiles.out, text: n(tiles.out) },
+    ]);
+    const outLine = t('rep_sva_k_held_foot').replace('{n}', n(tiles.out));
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(4))}>
             <KpiTile
                 label={t('rep_sva_k_value')}
                 value={stockMoney(tiles.value, lang)}
-                footer={foot('rep_sva_k_value_foot', { date: fmt.date(asOf) })}
+                bar={valuePieces.length > 0 ? splitBar(valuePieces) : undefined}
+                footer={valuePieces.length > 0 ? <TileLegend pieces={valuePieces} /> : undefined}
             />
             <KpiTile
                 label={t('rep_sva_k_qty')}
                 value={n(tiles.qty)}
                 unit={t('rep_sva_unit')}
-                footer={foot('rep_sva_k_qty_foot', { n: n(tiles.held) })}
+                footer={foot('rep_sva_k_qty_foot', { n: n(tiles.held), date: fmt.date(asOf) })}
             />
             <KpiTile
                 label={t('rep_sva_k_held')}
                 value={n(tiles.held)}
                 unit={t('rep_sva_k_held_of').replace('{n}', n(tiles.items))}
-                footer={foot('rep_sva_k_held_foot', { n: n(tiles.out) })}
+                alert={tiles.out > 0 ? 'amber' : undefined}
+                bar={heldPieces.length > 0 ? splitBar(heldPieces) : undefined}
+                footer={
+                    tiles.out > 0 ? (
+                        <span className="block truncate font-medium text-red-700 dark:text-red-400" title={outLine}>
+                            {outLine}
+                        </span>
+                    ) : (
+                        foot('rep_sva_k_all_held', {})
+                    )
+                }
             />
             <KpiTile
                 label={t('rep_sva_k_dead')}
                 value={stockMoney(tiles.dead90.value, lang)}
                 alert={tiles.dead90.count > 0 ? 'amber' : undefined}
-                footer={foot('rep_sva_k_dead_foot', { n: n(tiles.dead90.count), pct: `${deadShare}%` })}
+                badge={
+                    tiles.dead90.value > 0 ? (
+                        <StatusBadge tone="amber">{t('rep_sva_k_dead_share').replace('{pct}', String(deadShare))}</StatusBadge>
+                    ) : undefined
+                }
+                footer={foot('rep_sva_items', { n: n(tiles.dead90.count) })}
             />
         </div>
     );
@@ -397,7 +443,7 @@ export function StockValuationCards({ filters }: { filters: TabularFilters }) {
 
     return (
         <div className="space-y-4">
-            <ValueTiles tiles={data.tiles} asOf={data.as_of} />
+            <ValueTiles tiles={data.tiles} categories={data.categories} asOf={data.as_of} />
             {/* A new day or category starts both share cards on page 1. */}
             <ShareCards key={`${filters.as_of ?? ''}|${filters.category_id ?? ''}`} data={data} />
             <DeadCard dead={data.dead} />
