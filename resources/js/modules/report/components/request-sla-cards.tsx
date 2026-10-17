@@ -27,6 +27,8 @@ import { useRequestSlaBreakdown } from '../hooks/use-reports';
 import type { RequestSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
 import { reportDates } from './chart-parts';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { formatLiveNumber } from './report-scope';
 
 export type T = (key: string) => string;
 
@@ -44,14 +46,14 @@ export function oneDecimal(value: number, lang: 'th' | 'en'): string {
 /** "9.7 ชม." / "20 นาที" — an average time under an hour reads in minutes. */
 export function hoursText(t: T, lang: 'th' | 'en', hours: number | null): string {
     if (hours === null) return '—';
-    return hours < 1 ? t('rep_rs_minutes').replace('{n}', String(Math.round(hours * 60))) : `${oneDecimal(hours, lang)} ${t('rep_hours')}`;
+    return hours < 1 ? t('rep_rs_minutes').replace('{n}', formatNumber(Math.round(hours * 60), lang)) : `${oneDecimal(hours, lang)} ${t('rep_hours')}`;
 }
 
 /** "25 วัน" / "5 ชม." — the same rule as the time-left pills. */
 export function spanText(t: T, hours: number): string {
     return hours < 24
-        ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(hours))))
-        : t('rep_days_n').replace('{n}', String(Math.round(hours / 24)));
+        ? t('rep_hours_n').replace('{n}', formatLiveNumber(Math.max(1, Math.round(hours))))
+        : t('rep_days_n').replace('{n}', formatLiveNumber(Math.round(hours / 24)));
 }
 
 /** "Y-m-d H:i" → date and time in the system date setting. */
@@ -111,6 +113,7 @@ export function SlaCells({ met, n, goal, label }: { met: number; n: number; goal
 
 function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const goal = data.rules.goal;
     const active = (filters.request_type as string | null | undefined) ?? null;
@@ -133,7 +136,7 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                 info={t('rep_rs_types_sub')}
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone="bg-emerald-400">{t('rep_rs_at_goal').replace('{n}', String(goal))}</Swatch>
+                        <Swatch tone="bg-emerald-400">{t('rep_rs_at_goal').replace('{n}', fmtN(goal))}</Swatch>
                         <Swatch tone="bg-red-400">{t('rep_rs_below_goal')}</Swatch>
                     </span>
                 }
@@ -223,7 +226,7 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                             })}
                             <tr className="bg-muted/40 font-semibold">
                                 <th scope="row" className={cn(TD, 'text-left')}>
-                                    {t('rep_rs_total_row').replace('{n}', String(data.types.length))}
+                                    {t('rep_rs_total_row').replace('{n}', fmtN(data.types.length))}
                                 </th>
                                 {line(data.overall)}
                             </tr>
@@ -245,6 +248,7 @@ const OPEN_SHOWN = 3;
 
 function OpenCard({ data }: { data: RequestSlaBreakdown }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const canOpen = useCanOpen();
     const lang = useUiStore((s) => s.lang);
     const shown = data.open.slice(0, OPEN_SHOWN);
@@ -253,7 +257,7 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
         <Card className="flex flex-col overflow-hidden">
             <Heading
                 title={t('rep_rs_open_title')}
-                sub={data.open.length > 0 ? t('rep_rs_open_sub').replace('{n}', String(data.open.length)) : undefined}
+                sub={data.open.length > 0 ? t('rep_rs_open_sub').replace('{n}', fmtN(data.open.length)) : undefined}
             />
             {data.open.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_rs_open_none')}</div>
@@ -291,7 +295,7 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
                     })}
                     {data.open.length > shown.length && !canOpen(BACKLOG_HREF) && (
                         <div className="text-muted-foreground px-5 py-2 text-xs">
-                            {t('rep_rs_open_more').replace('{n}', String(data.open.length - shown.length))}
+                            {t('rep_rs_open_more').replace('{n}', fmtN(data.open.length - shown.length))}
                         </div>
                     )}
                 </div>
@@ -302,7 +306,7 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
                     className="text-brand hover:bg-accent border-border mt-auto border-t py-2.5 text-center text-xs font-semibold"
                 >
                     {data.open.length > shown.length
-                        ? t('rep_rs_open_more_link').replace('{n}', String(data.open.length - shown.length))
+                        ? t('rep_rs_open_more_link').replace('{n}', fmtN(data.open.length - shown.length))
                         : t('rep_rs_open_all')}
                 </Link>
             )}
@@ -312,17 +316,18 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
 
 /** "24 ชม. ทำการ" / "24 ชม." — a target in its own clock. */
 export function targetText(t: T, hours: number, clock: 'business' | 'calendar' | null): string {
-    return t(clock === 'calendar' ? 'rep_rs_hours_calendar' : 'rep_rs_hours_business').replace('{n}', String(hours));
+    return t(clock === 'calendar' ? 'rep_rs_hours_calendar' : 'rep_rs_hours_business').replace('{n}', formatLiveNumber(hours));
 }
 
 function RulesCard({ rules }: { rules: RequestSlaBreakdown['rules'] }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const canOpen = useCanOpen();
     const minutes = rules.response_minutes;
     const response =
         minutes % 60 === 0
-            ? t('rep_rs_hours_business').replace('{n}', String(minutes / 60))
-            : t('rep_rs_minutes_business').replace('{n}', String(minutes));
+            ? t('rep_rs_hours_business').replace('{n}', fmtN(minutes / 60))
+            : t('rep_rs_minutes_business').replace('{n}', fmtN(minutes));
     // One sentence when every type has the same target; otherwise the types grouped by target
     // ("24 ชม. ทำการ: คอมพิวเตอร์, กู้คืนข้อมูล"), the most shared target first.
     const targets = rules.resolve.map((r) => (r.hours === null ? t('rep_rs_by_priority') : targetText(t, r.hours, r.clock)));

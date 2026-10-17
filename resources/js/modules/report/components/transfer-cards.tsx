@@ -33,6 +33,7 @@ import { FILL, PIECE_INK } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { axisTop } from './weekly-ticket-chart';
+import { formatLiveNumber } from './report-scope';
 
 type Lang = 'th' | 'en';
 type Month = AssetTransferBreakdown['months'][number];
@@ -79,8 +80,8 @@ export function shortDate(value: string, lang: Lang): string {
 /** Hours as "29 ชม." under two days, else whole days — how long an acceptance or a wait took. */
 export function spanText(t: (key: string) => string, hours: number): string {
     return hours < 48
-        ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(hours))))
-        : t('rep_days_n').replace('{n}', String(Math.floor(hours / 24)));
+        ? t('rep_hours_n').replace('{n}', formatLiveNumber(Math.max(1, Math.round(hours))))
+        : t('rep_days_n').replace('{n}', formatLiveNumber(Math.floor(hours / 24)));
 }
 
 /* ─────────────────────────── in and out by month ─────────────────────────── */

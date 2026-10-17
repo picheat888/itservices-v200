@@ -1,6 +1,7 @@
 // One short line naming a report file's slice ("ก.ย. 2026, กรอง 2 อย่าง, 5 คอลัมน์") for the Report Center rail,
 // plus `periodRange` for the hub's period switch. Ranges follow the system date setting.
 import { bindDateFormat } from '@/shared/lib/datetime';
+import { formatNumber } from '@/shared/lib/number';
 import { useUiStore } from '@/stores/ui';
 
 type Translate = (key: string) => string;
@@ -17,6 +18,11 @@ export function compactRange(fromValue: string, toValue: string, lang: string): 
     return bindDateFormat(useUiStore.getState().dateConfig, lang).range(fromValue, toValue);
 }
 
+/** A number in the reader's language, for helpers that run outside a component. */
+export function formatLiveNumber(value: number): string {
+    return formatNumber(value, useUiStore.getState().lang);
+}
+
 export function reportScope(filters: Record<string, unknown>, columnsCount: number | null, t: Translate, lang: string): string {
     const parts: string[] = [];
     if (typeof filters.from === 'string' && typeof filters.to === 'string') {
@@ -26,8 +32,8 @@ export function reportScope(filters: Record<string, unknown>, columnsCount: numb
     }
 
     const narrowed = Object.entries(filters).filter(([key, value]) => !DATE_KEYS.has(key) && !VIEW_KEYS.has(key) && isSet(value)).length;
-    if (narrowed > 0) parts.push(t('rep_scope_filters').replace('{n}', String(narrowed)));
-    if (columnsCount) parts.push(t('rep_scope_columns').replace('{n}', String(columnsCount)));
+    if (narrowed > 0) parts.push(t('rep_scope_filters').replace('{n}', formatLiveNumber(narrowed)));
+    if (columnsCount) parts.push(t('rep_scope_columns').replace('{n}', formatLiveNumber(columnsCount)));
 
     return parts.length > 0 ? parts.join(', ') : t('rep_scope_all');
 }

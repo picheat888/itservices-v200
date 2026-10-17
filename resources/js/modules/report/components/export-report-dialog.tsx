@@ -22,6 +22,7 @@ import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ExportFormat } from '../types';
 import type { FilterChip } from './schedule-filter-summary';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Mirrors TabularReportExporter::PDF_ROW_LIMIT (and TicketOverviewExporter's own copy). */
 const PDF_ROW_LIMIT = 1000;
@@ -58,6 +59,7 @@ export function ExportReportDialog({
 }) {
     const lang = useUiStore((s) => s.lang);
     const t = useT();
+    const fmtN = useNumberFormat();
     const navigate = useNavigate();
     const [format, setFormat] = useState<ExportFormat>(formats[0] ?? 'xlsx');
     const formatLabelId = useId();
@@ -147,7 +149,7 @@ export function ExportReportDialog({
                         )}
                         {note && <div className="text-muted-foreground text-xs">{note}</div>}
                         {format === 'pdf' && total > PDF_ROW_LIMIT && (
-                            <div className="text-muted-foreground text-xs">{t('rep_export_pdf_cap').replace('{n}', String(PDF_ROW_LIMIT))}</div>
+                            <div className="text-muted-foreground text-xs">{t('rep_export_pdf_cap').replace('{n}', fmtN(PDF_ROW_LIMIT))}</div>
                         )}
                     </div>
                     {/* Said before the click — the file is not what comes back from the button. */}

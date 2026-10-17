@@ -9,6 +9,7 @@ import { TabularReportView } from '../components/tabular-report-view';
 import { WriteoffCards } from '../components/writeoff-cards';
 import { YearsTip } from '../components/years-tip';
 import { useCanOpen } from '../hooks/use-can-open';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Row = Record<string, unknown> & { _links?: Record<string, string> };
 
@@ -73,12 +74,13 @@ function SourceCell({ row }: { row: Row }) {
 
 function WarrantyCell({ row }: { row: Row }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     switch (row.warranty) {
         case 'remaining':
             return (
                 <StatusBadge tone="amber">
                     {typeof row.warranty_months === 'number'
-                        ? t('rep_wo_wty_left').replace('{n}', String(row.warranty_months))
+                        ? t('rep_wo_wty_left').replace('{n}', fmtN(row.warranty_months))
                         : t('rep_wo_warranty_remaining')}
                 </StatusBadge>
             );

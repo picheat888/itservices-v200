@@ -26,6 +26,7 @@ import type { ReportExportItem, ReportExportStatus } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { reportStem } from './report-catalogue';
 import { reportScope } from './report-scope';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Mirrors ReportExport::KEEP_DAYS. */
 const KEEP_DAYS = 7;
@@ -215,6 +216,7 @@ export function RailHeading({ icon: Icon, title, note, action }: { icon: typeof 
 /** "ลบทั้งหมด": every finished file at once, after a confirm; ones still being built stay. */
 function DeleteAllButton({ count }: { count: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const removeAll = useDeleteAllExports();
 
@@ -223,7 +225,7 @@ function DeleteAllButton({ count }: { count: number }) {
             variant: 'danger',
             title: t('rep_my_exports_delete_all_title'),
             description: t('rep_my_exports_delete_all_desc'),
-            entity: { name: t('rep_my_exports_title'), sub: t('rep_my_exports_files').replace('{n}', String(count)) },
+            entity: { name: t('rep_my_exports_title'), sub: t('rep_my_exports_files').replace('{n}', fmtN(count)) },
             confirmText: t('rep_my_exports_delete_all'),
             action: () => removeAll.mutateAsync(),
         });
@@ -280,6 +282,7 @@ export function RailRowsSkeleton({ rows = 3 }: { rows?: number }) {
 
 export function MyExports() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { data: items = [], isLoading } = useMyExports();
     // What "ลบทั้งหมด" would take: the finished files — ones still being built are left to finish.
     const finished = items.filter((item) => item.status === 'ready' || item.status === 'failed').length;
@@ -292,7 +295,7 @@ export function MyExports() {
                 <RailHeading
                     icon={Download}
                     title={t('rep_my_exports_title')}
-                    note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))}
+                    note={t('rep_my_exports_sub').replace('{days}', fmtN(KEEP_DAYS))}
                     action={finished > 0 ? <DeleteAllButton count={finished} /> : undefined}
                 />
             )}

@@ -26,6 +26,7 @@ import { fold, FoldToggle, InfoMark, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
 import { TICKET_PRIORITY_TONE } from './ticket-badges';
 import { categoryKey, priorityKey } from './ticket-labels';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export type SlaState = 'over_sla' | 'due_soon' | 'on_track';
 
@@ -192,6 +193,7 @@ function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
 
 function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     // Lanes opened past LANE_CARDS — each lane folds and opens on its own.
     const [openLanes, setOpenLanes] = useState<string[]>([]);
     const toggleLane = (key: string) => setOpenLanes((keys) => (keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key]));
@@ -242,7 +244,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                 <div className="flex min-w-0 flex-col gap-2 pt-7">
                                     <div className={cn('flex items-baseline justify-between gap-1.5 border-b-2 pb-1.5', lane.tone)}>
                                         <span className="text-muted-foreground text-xs font-semibold">{t(lane.label)}</span>
-                                        <b className={cn('text-lg', lane.count)}>{items.length}</b>
+                                        <b className={cn('text-lg', lane.count)}>{fmtN(items.length)}</b>
                                     </div>
                                     {items.length === 0 ? (
                                         <span className="text-muted-foreground py-2 text-xs">{t('rep_bl_none')}</span>
@@ -257,7 +259,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                             className="border-border text-muted-foreground hover:border-brand/50 hover:bg-accent hover:text-foreground focus-visible:ring-brand flex items-center justify-center gap-1 rounded-lg border border-dashed py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                                         >
                                             {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                                            {open ? t('rep_chart_show_less') : t('rep_bl_more').replace('{n}', String(folding.rest.length))}
+                                            {open ? t('rep_chart_show_less') : t('rep_bl_more').replace('{n}', fmtN(folding.rest.length))}
                                         </button>
                                     )}
                                 </div>

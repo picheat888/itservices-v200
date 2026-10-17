@@ -33,6 +33,7 @@ import { FILL } from './chart-tones';
 import { CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Lang = 'th' | 'en';
 
@@ -111,6 +112,7 @@ function StuckColumn({
     span: number;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { folds, shown } = fold(rows, STUCK_SHOWN, open, 0);
     const leavers = [...new Map(rows.map((r) => [r.approver.name, r.approver_left_on])).entries()];
@@ -165,9 +167,9 @@ function StuckColumn({
                                     <span className="truncate">{t('rep_rqa_waits_on').replace('{name}', r.approver.name)}</span>
                                     <span
                                         className="truncate"
-                                        title={t('rep_rqa_step_n').replace('{label}', r.label).replace('{n}', String(r.position))}
+                                        title={t('rep_rqa_step_n').replace('{label}', r.label).replace('{n}', fmtN(r.position))}
                                     >
-                                        {t('rep_rqa_step_n').replace('{label}', r.label).replace('{n}', String(r.position))}
+                                        {t('rep_rqa_step_n').replace('{label}', r.label).replace('{n}', fmtN(r.position))}
                                     </span>
                                     <span className="truncate">{t('rep_rqa_requester').replace('{name}', r.requester)}</span>
                                 </span>

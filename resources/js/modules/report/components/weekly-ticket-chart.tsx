@@ -148,9 +148,9 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                             <title>
                                 {t('rep_weekly_tip')
                                     .replace('{week}', span)
-                                    .replace('{opened}', String(w.opened))
-                                    .replace('{closed}', String(w.closed))
-                                    .replace('{backlog}', String(w.backlog))}
+                                    .replace('{opened}', fmtN(w.opened))
+                                    .replace('{closed}', fmtN(w.closed))
+                                    .replace('{backlog}', fmtN(w.backlog ?? 0))}
                             </title>
                             {/* The whole week column answers the hover, not just its bars. */}
                             <rect x={x - gw / 2} y={PAD.t} width={gw} height={ch} className="fill-transparent" />
@@ -200,7 +200,7 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                             textAnchor="end"
                             className="fill-foreground pointer-events-none text-[11px] font-bold"
                         >
-                            {t('rep_weekly_backlog_end').replace('{n}', String(lastBacklog))}
+                            {t('rep_weekly_backlog_end').replace('{n}', fmtN(lastBacklog))}
                         </text>
                     </>
                 )}

@@ -25,6 +25,7 @@ import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -342,6 +343,7 @@ function NameCell({ row }: { row: Row }) {
 
 function AlertCell({ filters, id }: { filters: TabularFilters; id: unknown }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const item = useListItem(filters, id);
     if (!item) return <span className="text-muted-foreground">—</span>;
@@ -352,13 +354,13 @@ function AlertCell({ filters, id }: { filters: TabularFilters; id: unknown }) {
             t('rep_cren_alert_sent')
                 .replace(
                     '{list}',
-                    alert.sent.map((d) => (d === 0 ? t('rep_cren_alert_sent_end') : t('rep_cren_alert_days').replace('{d}', String(d)))).join(', '),
+                    alert.sent.map((d) => (d === 0 ? t('rep_cren_alert_sent_end') : t('rep_cren_alert_days').replace('{d}', fmtN(d)))).join(', '),
                 )
                 .replace('{at}', fmt.date(alert.sent_at))
         ) : alert.state === 'missed' ? (
             <span className={TODO_TONE.warn}>{t('rep_cren_alert_missed')}</span>
         ) : (
-            t('rep_cren_alert_starts').replace('{n}', String(alert.starts_in ?? 0))
+            t('rep_cren_alert_starts').replace('{n}', fmtN(alert.starts_in ?? 0))
         );
 
     return (

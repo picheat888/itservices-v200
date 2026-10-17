@@ -9,6 +9,7 @@ import { TabularReportView } from '../components/tabular-report-view';
 import { KindMark, spanText, TransferCards, type TransferKind } from '../components/transfer-cards';
 import { useCanOpen } from '../hooks/use-can-open';
 import type { ChartLabel, TabularFilters } from '../types';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Row = Record<string, unknown> & { _links?: Record<string, string> };
 type Patch = (next: TabularFilters) => void;
@@ -41,6 +42,7 @@ function None() {
 
 function AssetCell({ row, patch }: { row: Row; patch: Patch }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const canOpen = useCanOpen();
     const href = row._links?.asset_code;
@@ -67,10 +69,10 @@ function AssetCell({ row, patch }: { row: Row; patch: Patch }) {
                     <button
                         type="button"
                         onClick={() => patch({ search: code, kind: null })}
-                        aria-label={t('rep_th_trips_aria').replace('{code}', code).replace('{n}', String(moves))}
+                        aria-label={t('rep_th_trips_aria').replace('{code}', code).replace('{n}', fmtN(moves))}
                         className="border-border text-brand hover:bg-brand/10 focus-visible:ring-brand rounded-full border px-2 py-px text-[11px] font-semibold focus-visible:ring-2 focus-visible:outline-none"
                     >
-                        {t('rep_th_trips').replace('{n}', String(moves))}
+                        {t('rep_th_trips').replace('{n}', fmtN(moves))}
                     </button>
                 )}
             </div>

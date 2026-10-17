@@ -16,6 +16,7 @@ import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
 import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotRange } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { periodRange } from './report-scope';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * A report's page address: its key with every "." and "_" made a "-" — "assets.warranty_expiring"
@@ -152,6 +153,7 @@ function ReportRow({ report, latest, range }: { report: ReportDefinition; latest
  */
 function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; title: string; count: number; children: React.ReactNode }) {
     const t = useT();
+    const fmtN = useNumberFormat();
 
     return (
         <Card className="overflow-hidden">
@@ -160,7 +162,7 @@ function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; t
                     <Icon className="h-[15px] w-[15px]" />
                 </span>
                 <span className="text-sm font-semibold">{title}</span>
-                <span className="text-muted-foreground text-xs">{t('rep_count_reports').replace('{n}', String(count))}</span>
+                <span className="text-muted-foreground text-xs">{t('rep_count_reports').replace('{n}', fmtN(count))}</span>
             </div>
             {children}
         </Card>

@@ -20,6 +20,7 @@ import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { BASIS_PCT, pct } from './percent-classes';
 import { CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Patch = (next: TabularFilters) => void;
 type Point = EmployeeOverviewBreakdown['points'][number];
@@ -55,6 +56,7 @@ const niceStep = (span: number) => STEPS.find((s) => span / s <= 4) ?? 1000;
 /** A bucket's short label under the axis and its long name in notes. */
 function useBucketLabels(bucket: EmployeeOverviewBreakdown['bucket']) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     return (p: Point) => {
         const month = p.start.slice(0, 7);
@@ -62,9 +64,9 @@ function useBucketLabels(bucket: EmployeeOverviewBreakdown['bucket']) {
         const quarter = Math.floor((Number(p.start.slice(5, 7)) - 1) / 3) + 1;
         if (bucket === 'quarter')
             return {
-                short: t('rep_eo_quarter_short').replace('{q}', String(quarter)),
+                short: t('rep_eo_quarter_short').replace('{q}', fmtN(quarter)),
                 year: year.slice(-2),
-                long: t('rep_eo_quarter').replace('{q}', String(quarter)).replace('{y}', year),
+                long: t('rep_eo_quarter').replace('{q}', fmtN(quarter)).replace('{y}', year),
             };
         if (bucket === 'year') return { short: year, year: '', long: t('rep_eo_year').replace('{y}', year) };
         return { short: fmt.month(month), year: year.slice(-2), long: fmt.monthYearLong(month) };

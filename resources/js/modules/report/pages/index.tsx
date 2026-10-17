@@ -9,6 +9,7 @@
  * Server decides visibility (GET /api/reports → ReportCatalogue) and remembers pins.
  */
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
@@ -28,6 +29,7 @@ type Chip = ReportDomain | 'all';
 
 export default function ReportsPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { seesMyExports } = useReportRights();
     const { data: reports = [], isLoading } = useReportCatalogue();
     // Search (?search) and module chip (?domain) live in the URL; a domain this user has no report in reads as all
@@ -103,7 +105,7 @@ export default function ReportsPage() {
                                             )}
                                         >
                                             {c.label}
-                                            <span className="opacity-70">{c.count}</span>
+                                            <span className="opacity-70">{fmtN(c.count)}</span>
                                         </button>
                                     ))}
                                 </div>

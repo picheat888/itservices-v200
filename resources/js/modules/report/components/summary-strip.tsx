@@ -13,6 +13,8 @@ import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { TileChart } from './tile-chart';
 import { YearsTip } from './years-tip';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { formatLiveNumber } from './report-scope';
 
 /** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
 const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 5: 'lg:grid-cols-3 xl:grid-cols-5' };
@@ -23,8 +25,8 @@ export const summaryColumns = (tiles: number) => WIDE_COLUMNS[tiles] ?? 'lg:grid
 function duration(t: (key: string) => string, hours: number): string {
     const abs = Math.abs(hours);
     return abs < 24
-        ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(abs))))
-        : t('rep_days_n').replace('{n}', String(Math.round(abs / 24)));
+        ? t('rep_hours_n').replace('{n}', formatLiveNumber(Math.max(1, Math.round(abs))))
+        : t('rep_days_n').replace('{n}', formatLiveNumber(Math.round(abs / 24)));
 }
 
 /** "Y-m-d H:i" → date and time in the system date setting. */
@@ -150,6 +152,7 @@ function DeltaFooter({
 
 export function SummaryStrip({ items }: { items: SummaryItem[] }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const assetStatusColors = useUiStore((s) => s.assetStatusColors);
 
@@ -208,7 +211,7 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                     <StatusBadge tone={base}>{`${share}%`}</StatusBadge>
                                 )
                             ) : goal !== null ? (
-                                <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(goal))}</StatusBadge>
+                                <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', fmtN(goal))}</StatusBadge>
                             ) : undefined
                         }
                         // Flagged only above zero: red below the goal or for a red tile, amber for an amber one.

@@ -8,6 +8,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import type { AccessType, ChartLabel } from '../types';
 import { ACCESS_TYPES, TypeDot, TypeLabel } from './access-overview-cards';
 import { shortDate } from './transfer-cards';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export type AccessRow = Record<string, unknown> & { _links?: Record<string, string> };
 
@@ -81,6 +82,7 @@ export function LevelCell({ level }: { level: unknown }) {
 /** In use; in use across departments (the pair); held by a leaver; or revoked, when and by whom. */
 export function StatusCell({ row }: { row: AccessRow }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const department = row.resource_department;
     switch (row.status) {
@@ -105,7 +107,7 @@ export function StatusCell({ row }: { row: AccessRow }) {
         case 'left': {
             const days = num(row.left_days);
             return (
-                <StatusBadge tone="red">{days === null ? t('rep_ac_left_no_date') : t('rep_ac_left_days').replace('{n}', String(days))}</StatusBadge>
+                <StatusBadge tone="red">{days === null ? t('rep_ac_left_no_date') : t('rep_ac_left_days').replace('{n}', fmtN(days))}</StatusBadge>
             );
         }
         case 'revoked': {

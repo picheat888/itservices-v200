@@ -13,15 +13,17 @@ import { BacklogBoardCards, BacklogSlaSegments, backlogRowClass } from '../compo
 import { TabularReportView } from '../components/tabular-report-view';
 import { TicketPriorityBadge, TicketStatusBadge } from '../components/ticket-badges';
 import type { TabularFilters } from '../types';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** "39 วัน" — or "5 ชม." under a day — rather than 39.4 days, as the time-left pills count. */
 function AgeCell({ days }: { days: number | null }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     if (days === null) return <>—</>;
     const text =
         days < 1
-            ? t('rep_hours_n').replace('{n}', String(Math.max(1, Math.round(days * 24))))
-            : t('rep_days_n').replace('{n}', String(Math.round(days)));
+            ? t('rep_hours_n').replace('{n}', fmtN(Math.max(1, Math.round(days * 24))))
+            : t('rep_days_n').replace('{n}', fmtN(Math.round(days)));
     return <span>{text}</span>;
 }
 

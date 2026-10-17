@@ -24,6 +24,7 @@ export function fold<T>(rows: T[], top: number, open: boolean, spare = 1) {
 /** "แสดงทั้งหมด (24)" / "ย่อ" under a folding list. */
 export function FoldToggle({ open, total, onToggle }: { open: boolean; total: number; onToggle: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const Icon = open ? ChevronUp : ChevronDown;
 
     return (
@@ -34,7 +35,7 @@ export function FoldToggle({ open, total, onToggle }: { open: boolean; total: nu
             className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring mt-auto flex w-full items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
             <Icon aria-hidden className="h-3.5 w-3.5" />
-            {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', String(total))}
+            {open ? t('rep_chart_show_less') : t('rep_chart_show_all').replace('{n}', fmtN(total))}
         </button>
     );
 }

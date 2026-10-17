@@ -39,6 +39,7 @@ import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
 import { useReportDialog } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Tile alert per SLA level against the goal: within 10 points amber, further off red. */
 const SLA_ALERT: Record<SlaLevel, 'red' | 'amber' | false> = { met: false, near: 'amber', miss: 'red' };
@@ -85,12 +86,13 @@ const WORSE = 'text-red-600 dark:text-red-400';
 
 /** "▼ 0.6 ชม." — the resolve-time change against the period before: faster is better. */
 function HoursChange({ current, previous, unit }: { current: number | null; previous: number | null; unit: string }) {
+    const fmtN = useNumberFormat();
     if (current === null || previous === null || current === previous) return null;
     const diff = Math.round((current - previous) * 10) / 10;
 
     return (
         <span className={cn('font-semibold', diff < 0 ? BETTER : WORSE)}>
-            {diff > 0 ? '▲' : '▼'} {Math.abs(diff)} {unit}
+            {diff > 0 ? '▲' : '▼'} {fmtN(Math.abs(diff), { maxDecimals: 1 })} {unit}
         </span>
     );
 }
@@ -100,13 +102,14 @@ function HoursChange({ current, previous, unit }: { current: number | null; prev
  * tickets coming in means more problems, so up reads red and down green.
  */
 function Change({ current, previous, label }: { current: number; previous: number; label: string }) {
+    const fmtN = useNumberFormat();
     if (previous === 0 || current === previous) return <>{label}</>;
     const pct = Math.round(((current - previous) / previous) * 100);
 
     return (
         <span className="inline-flex items-center gap-1">
             <span className={cn('font-semibold', pct > 0 ? WORSE : BETTER)}>
-                {pct > 0 ? '▲' : '▼'} {Math.abs(pct)}%
+                {pct > 0 ? '▲' : '▼'} {fmtN(Math.abs(pct))}%
             </span>
             {label}
         </span>
@@ -115,6 +118,7 @@ function Change({ current, previous, label }: { current: number; previous: numbe
 
 export default function TicketOverviewReportPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTicketReportFilters();
     const { data, isLoading, isError, error } = useTicketOverview(filters);
@@ -129,7 +133,7 @@ export default function TicketOverviewReportPage() {
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));
     // 90% closed within … hours: the average tile's footer when there is no earlier figure, its hover text otherwise
-    const p90 = data?.kpi.p90_resolve_hours == null ? undefined : t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours));
+    const p90 = data?.kpi.p90_resolve_hours == null ? undefined : t('rep_kpi_p90').replace('{n}', fmtN(data.kpi.p90_resolve_hours));
 
     // Client-side range check runs before any request; server errors (403/422/other) are
     // reported once the request comes back. Either way the skeleton never spins forever.
@@ -223,24 +227,24 @@ export default function TicketOverviewReportPage() {
                                 <Change
                                     current={data.kpi.total}
                                     previous={data.previous.total}
-                                    label={t('rep_vs_previous').replace('{n}', String(data.previous.total))}
+                                    label={t('rep_vs_previous').replace('{n}', fmtN(data.previous.total))}
                                 />
                             }
                         />
                         <KpiTile
                             label={t('rep_kpi_completed')}
                             value={String(data.kpi.completed)}
-                            footer={t('rep_kpi_canceled').replace('{n}', String(data.kpi.canceled))}
+                            footer={t('rep_kpi_canceled').replace('{n}', fmtN(data.kpi.canceled))}
                         />
                         <KpiTile
                             label={t('rep_kpi_sla')}
-                            badge={<StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(data.sla_goal))}</StatusBadge>}
+                            badge={<StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', fmtN(data.sla_goal))}</StatusBadge>}
                             value={fmt(data.kpi.sla_rate)}
                             unit={data.kpi.sla_rate === null ? undefined : '%'}
                             alert={data.kpi.sla_rate === null ? false : SLA_ALERT[slaLevel(data.kpi.sla_rate, data.sla_goal)]}
                             meter={data.kpi.sla_rate === null ? undefined : { value: data.kpi.sla_rate, goal: data.sla_goal }}
                             footer={
-                                data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', String(data.previous.sla_rate))
+                                data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', fmtN(data.previous.sla_rate))
                             }
                         />
                         <KpiTile
@@ -270,7 +274,7 @@ export default function TicketOverviewReportPage() {
                             label={t('rep_kpi_backlog')}
                             badge={
                                 data.backlog.over_sla > 0 ? (
-                                    <StatusBadge tone="red">{t('rep_kpi_over_sla').replace('{n}', String(data.backlog.over_sla))}</StatusBadge>
+                                    <StatusBadge tone="red">{t('rep_kpi_over_sla').replace('{n}', fmtN(data.backlog.over_sla))}</StatusBadge>
                                 ) : undefined
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
@@ -278,11 +282,11 @@ export default function TicketOverviewReportPage() {
                                 // Numbers in the status badges' colours: open blue, in progress violet
                                 <span className="inline-flex items-center gap-2">
                                     <span>
-                                        {t('rep_kpi_backlog_open')} <b className="text-blue-700 dark:text-blue-400">{data.backlog.open}</b>
+                                        {t('rep_kpi_backlog_open')} <b className="text-blue-700 dark:text-blue-400">{fmtN(data.backlog.open)}</b>
                                     </span>
                                     <span>
                                         {t('rep_kpi_backlog_in_progress')}{' '}
-                                        <b className="text-violet-700 dark:text-violet-400">{data.backlog.in_progress}</b>
+                                        <b className="text-violet-700 dark:text-violet-400">{fmtN(data.backlog.in_progress)}</b>
                                     </span>
                                 </span>
                             }
@@ -331,7 +335,7 @@ export default function TicketOverviewReportPage() {
                             {/* The goal is Settings → SLA (TicketSla::goalPercent), the marker drawn on each bar. */}
                             <SectionHeading
                                 title={t('rep_sla_priority_title')}
-                                sub={t('rep_sla_priority_sub').replace('{n}', String(data.sla_goal))}
+                                sub={t('rep_sla_priority_sub').replace('{n}', fmtN(data.sla_goal))}
                             />
                             <HorizontalBars
                                 bars={data.sla_by_priority.map((p) => ({
@@ -348,7 +352,7 @@ export default function TicketOverviewReportPage() {
                             <SectionHeading
                                 className="border-t"
                                 title={t('rep_aging_title')}
-                                sub={t('rep_aging_total').replace('{n}', String(Object.values(data.backlog.aging).reduce((sum, n) => sum + n, 0)))}
+                                sub={t('rep_aging_total').replace('{n}', fmtN(Object.values(data.backlog.aging).reduce((sum, n) => sum + n, 0)))}
                             />
                             <BacklogAging aging={data.backlog.aging} />
                             <SectionHeading className="border-t" title={t('rep_by_category')} sub={t('rep_by_category_sub')} />

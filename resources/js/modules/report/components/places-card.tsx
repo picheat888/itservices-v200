@@ -52,8 +52,8 @@ function CountColumns({ rows, tone, max }: { rows: PlaceRow[]; tone: string; max
                         <span className={cn('text-xs font-semibold', row.apart && 'text-muted-foreground')}>{formatNumber(row.total, lang)}</span>
                         <span
                             role="img"
-                            aria-label={`${label(row.label)}: ${row.total}`}
-                            title={`${label(row.label)}: ${row.total}`}
+                            aria-label={`${label(row.label)}: ${formatNumber(row.total, lang)}`}
+                            title={`${label(row.label)}: ${formatNumber(row.total, lang)}`}
                             className={cn('block w-full max-w-14 rounded-t-md', tone, row.apart && 'opacity-50')}
                             style={{ height: `${(row.total / max) * COLUMN_MAX}%` }}
                         />
@@ -121,7 +121,7 @@ function ShareLine({ row, series }: { row: PlaceRow; series: ChartSeries[] }) {
     const lang = useUiStore((s) => s.lang);
     const t = useT();
     const label = useChartLabel();
-    const title = `${label(row.label)}: ${series.map((s) => `${row.values[s.key] ?? 0} ${t(s.label_key)}`).join(', ')}`;
+    const title = `${label(row.label)}: ${series.map((s) => `${formatNumber(row.values[s.key] ?? 0, lang)} ${t(s.label_key)}`).join(', ')}`;
     const width = (s: ChartSeries) => `${((row.values[s.key] ?? 0) / Math.max(1, row.total)) * 100}%`;
     const parts = series.filter((s) => (row.values[s.key] ?? 0) > 0);
 
@@ -183,11 +183,12 @@ const RING_C = 2 * Math.PI * RING_R;
  */
 function ShareRing({ row, series, centerKey }: { row: PlaceRow; series: ChartSeries[]; centerKey: string }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const label = useChartLabel();
     const parts = series.filter((s) => (row.values[s.key] ?? 0) > 0);
     const center = series.find((s) => s.key === centerKey);
     const share = row.total > 0 ? Math.round(((row.values[centerKey] ?? 0) / row.total) * 100) : null;
-    const title = `${label(row.label)}: ${series.map((s) => `${row.values[s.key] ?? 0} ${t(s.label_key)}`).join(', ')}`;
+    const title = `${label(row.label)}: ${series.map((s) => `${formatNumber(row.values[s.key] ?? 0, lang)} ${t(s.label_key)}`).join(', ')}`;
     let offset = 0;
 
     return (

@@ -30,6 +30,7 @@ import { TabularCell } from './tabular-cell';
 import { ChartsSkeleton, TabularCharts } from './tabular-charts';
 import { TabularEmptyState } from './tabular-empty-state';
 import { TabularFilterBar } from './tabular-filter-bar';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const PAGE_SIZES = [20, 50, 100];
 
@@ -202,6 +203,7 @@ function TabularReportBody({
     extras: TabularReportExtras;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTabularFilters(definition, { keepPage: extras.cardOnlyFilters });
     const { hidden, visibleColumns, toggle, reset: resetColumns } = useHiddenColumns(definition);
@@ -283,7 +285,7 @@ function TabularReportBody({
                 title={t(`rep_${stem}_title`)}
                 total={rowsTotal}
                 formats={definition.formats}
-                note={exportColumns ? t('rep_export_columns_note').replace('{n}', String(exportColumns.length)) : undefined}
+                note={exportColumns ? t('rep_export_columns_note').replace('{n}', fmtN(exportColumns.length)) : undefined}
                 filterChips={tabularFilterChips(definition, filters, t, lang, true)}
                 onExport={(format) => exportMut.mutateAsync({ key: reportKey, filters, format, columns: exportColumns })}
                 isPending={exportMut.isPending}
