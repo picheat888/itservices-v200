@@ -150,6 +150,7 @@ function StuckColumn({
                     kind={group === 'no_account' ? 'clear' : 'empty'}
                     title={t(`rep_empty_approvals_stuck_${group}`)}
                     hint={t(`rep_empty_approvals_stuck_${group}_hint`)}
+                    className="min-h-0 py-4 xl:[grid-row:2/-1]"
                 />
             ) : (
                 <>
