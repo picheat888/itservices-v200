@@ -3,6 +3,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -126,7 +127,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         {
             key: 'id',
             header: t('stock_request_no'),
-            width: '120px',
+            width: '110px',
             className: 'whitespace-nowrap',
             render: (r) => <span className="text-xs font-semibold">{r.reference ?? `REQ-${String(r.id).padStart(4, '0')}`}</span>,
         },
@@ -135,49 +136,53 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             header: t('stock_requested_at'),
             width: '130px',
             className: 'whitespace-nowrap',
+            hideBelow: 'lg',
             render: (r) => <span className="text-xs">{fmt.dateTime(r.created_at)}</span>,
         },
         {
             key: 'requester',
             header: t('stock_requester'),
-            width: '150px',
-            render: (r) => <span className="text-sm font-medium">{r.requester_name}</span>,
+            width: '120px',
+            render: (r) => <TruncText text={r.requester_name} className="text-sm font-medium" />,
         },
         {
             key: 'item',
             header: t('stock_item'),
+            minWidth: '7rem',
             render: (r) => (
-                <div>
-                    <div className="text-xs">{r.sku}</div>
-                    <div className="text-muted-foreground truncate text-xs">{r.item_name}</div>
+                <div className="min-w-0">
+                    <TruncText text={r.sku} className="text-xs" />
+                    <TruncText text={r.item_name} className="text-muted-foreground text-xs" />
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', width: '80px', render: (r) => <span className="font-bold tabular-nums">{r.qty}</span> },
+        { key: 'qty', header: t('stock_qty'), align: 'right', width: '72px', render: (r) => <span className="font-bold tabular-nums">{r.qty}</span> },
         {
             key: 'unit',
             header: t('stock_unit'),
             width: '80px',
-            render: (r) => <span className="text-muted-foreground text-xs lowercase">{r.unit || '—'}</span>,
+            hideBelow: 'lg',
+            render: (r) => <TruncText text={r.unit} className="text-muted-foreground text-xs lowercase" />,
         },
-        { key: 'reason', header: t('stock_reason'), minWidth: '14rem', render: (r) => <span className="text-sm">{r.reason}</span> },
+        { key: 'reason', header: t('stock_reason'), minWidth: '12rem', hideBelow: '2xl', render: (r) => <TruncText text={r.reason} className="text-sm" /> },
         {
             key: 'status',
             header: t('status'),
-            width: '120px',
+            width: '104px',
+            className: 'whitespace-nowrap',
             render: (r) => <StatusBadge tone={REQ_TONE[r.status]}>{t(`stock_rq_${r.status}` as Parameters<typeof t>[0])}</StatusBadge>,
         },
         {
             key: 'decided',
             header: t('stock_approver'),
             width: '170px',
-            hideBelow: 'lg',
+            hideBelow: 'xl',
             render: (r) => {
                 const decidedAt = r.approved_at ?? r.rejected_at;
                 return (
-                    <div>
-                        <div className="text-sm">{r.approver_name || '—'}</div>
-                        {decidedAt && <div className="text-muted-foreground text-xs">{fmt.dateTime(decidedAt)}</div>}
+                    <div className="min-w-0">
+                        <TruncText text={r.approver_name} className="text-sm" />
+                        {decidedAt && <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(decidedAt)}</div>}
                     </div>
                 );
             },
@@ -186,11 +191,11 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'fulfilled',
             header: t('stock_fulfilled_by'),
             width: '170px',
-            hideBelow: 'lg',
+            hideBelow: '2xl',
             render: (r) => (
-                <div>
-                    <div className="text-sm">{r.fulfilled_by || '—'}</div>
-                    {r.fulfilled_at && <div className="text-muted-foreground text-xs">{fmt.dateTime(r.fulfilled_at)}</div>}
+                <div className="min-w-0">
+                    <TruncText text={r.fulfilled_by} className="text-sm" />
+                    {r.fulfilled_at && <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(r.fulfilled_at)}</div>}
                 </div>
             ),
         },
@@ -198,14 +203,21 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            width: '190px',
+            // Icon buttons on a tablet, labelled buttons from lg up
+            width: 'clamp(80px, calc(80px + (100vw - 1024px) * 0.5), 170px)',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">
                     {r.can_decide && (
                         <>
-                            <Button size="sm" onClick={() => confirmApprove(r)} className="bg-emerald-700 text-white hover:bg-emerald-800">
+                            <Button
+                                size="sm"
+                                onClick={() => confirmApprove(r)}
+                                aria-label={t('stock_approve')}
+                                title={t('stock_approve')}
+                                className="bg-emerald-700 text-white hover:bg-emerald-800"
+                            >
                                 <Check className="h-3.5 w-3.5" aria-hidden />
-                                {t('stock_approve')}
+                                <span className="hidden xl:inline">{t('stock_approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
@@ -221,13 +233,15 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                     {can('fulfill') && r.status === 'approved' && (
                         <Button
                             size="sm"
+                            aria-label={t('stock_fulfill')}
+                            title={t('stock_fulfill')}
                             onClick={() => {
                                 setFulfillReq(r);
                                 setFulfillOpen(true);
                             }}
                         >
                             <ArrowUpFromLine className="h-3.5 w-3.5" aria-hidden />
-                            {t('stock_fulfill')}
+                            <span className="hidden xl:inline">{t('stock_fulfill')}</span>
                         </Button>
                     )}
                     {(r.status === 'fulfilled' || r.status === 'rejected') && <span className="text-muted-foreground text-xs">—</span>}
