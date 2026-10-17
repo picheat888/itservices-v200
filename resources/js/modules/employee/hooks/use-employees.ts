@@ -3,10 +3,7 @@ import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeeApi, type EmployeePayload, type UpdateCredentialsPayload } from '../api/employeeApi';
-import { DEPT, EMP, EMP_OPTIONS } from './query-keys';
-
-/** Slim employee list for pickers and lookups — used by every picker outside the directory table. */
-export const useEmployeeOptions = () => useQuery({ queryKey: EMP_OPTIONS, queryFn: () => employeeApi.options({ limit: 100 }) });
+import { DEPT, EMP } from './query-keys';
 
 export const useEmployeeSummary = (period: OverviewPeriod = 'all', enabled = true) =>
     useQuery({

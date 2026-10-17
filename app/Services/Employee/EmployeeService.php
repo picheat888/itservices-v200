@@ -83,10 +83,14 @@ class EmployeeService
             return $this->inDirectoryOrder($query->whereIn('id', $params['ids']))->get();
         }
 
-        $byPosition = ($params['match'] ?? null) === 'position';
+        $match = $params['match'] ?? null;
         SearchTerms::apply($query, $params['search'] ?? null, [
             ...SearchTerms::personName(), 'code',
-            $byPosition ? SearchTerms::related('position', ['title']) : SearchTerms::related('department', ['name', 'name_th']),
+            ...match ($match) {
+                'position' => [SearchTerms::related('position', ['title'])],
+                'none' => [],
+                default => [SearchTerms::related('department', ['name', 'name_th'])],
+            },
         ]);
 
         if (! empty($params['exclude'])) {

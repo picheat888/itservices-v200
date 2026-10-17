@@ -16,15 +16,7 @@ export { AccessPane, AssetsPane, IdChip, RAIL_HEADING, RailRow, RequestsPane, Ti
 export { PhotoCropDialog } from './components/photo-crop-dialog';
 export { useDepartmentMembers, useDepartmentMutations, useDepartments } from './hooks/use-departments';
 export { useEmployeePicker, useEmployeeSearch, useEmployeesByIds } from './hooks/use-employee-pickers';
-export {
-    useApprovalChain,
-    useEmployee,
-    useEmployeeDirectory,
-    useEmployeeMutations,
-    useEmployeeOptions,
-    useEmployeeSummary,
-    useOrgChart,
-} from './hooks/use-employees';
+export { useApprovalChain, useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary, useOrgChart } from './hooks/use-employees';
 export { useLocationMutations, useLocations } from './hooks/use-locations';
 export { usePositionMembers, usePositionMutations, usePositions } from './hooks/use-positions';
 export { useSectionMembers, useSectionMutations, useSections } from './hooks/use-sections';

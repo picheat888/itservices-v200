@@ -124,6 +124,8 @@ class EmployeeOptionsTest extends TestCase
         $this->assertSame([], $this->optionCodes(['search' => 'analyst']));
         $this->assertSame(['680001'], $this->optionCodes(['search' => 'analyst', 'match' => 'position']));
         $this->assertSame([], $this->optionCodes(['search' => 'finance', 'match' => 'position']));
+        $this->assertSame([], $this->optionCodes(['search' => 'finance', 'match' => 'none']));
+        $this->assertSame(['680001'], $this->optionCodes(['search' => 'one', 'match' => 'none']));
     }
 
     public function test_full_list_query_count_does_not_grow_with_the_row_count(): void

@@ -238,7 +238,7 @@ export interface EmployeeOptionsParams {
     ids?: number[];
     exclude?: number[];
     status?: 'active' | 'resigned';
-    match?: 'position';
+    match?: 'position' | 'none';
 }
 
 export const employeeApi = {
