@@ -205,6 +205,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
 
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');
+    Route::get('employees/options', [EmployeeController::class, 'options'])->name('api.employees.options');
     Route::get('employees/import-template', [EmployeeController::class, 'importTemplate'])->name('api.employees.import-template');
     // The spellings the template's department / section / position columns accept —
     // downloaded beside it, so the list is open while the sheet is being typed.
