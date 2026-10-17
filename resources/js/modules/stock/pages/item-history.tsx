@@ -11,6 +11,7 @@ import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer,
 import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useStockItemHistory } from '../hooks/use-stock';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type View = 'issue' | 'receive' | 'adjust' | 'transfer';
 type Movement = StockItemHistory['movements'][number];
@@ -49,6 +50,7 @@ const VIEW_FILTER: Record<View, { types: string[]; event: SerialEvent['event'] }
 
 export default function ItemHistoryPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     useDocumentTitle('stock_history'); // tab title → "History - <brand>"
     const { id } = useParams();
     const [params, setParams] = useSearchParams();
@@ -91,7 +93,7 @@ export default function ItemHistoryPage() {
                         </div>
                     </div>
                     <div className="text-right text-sm whitespace-nowrap">
-                        {t('stock_current')} <span className="text-base font-bold tabular-nums">{data.item.current_stock}</span>
+                        {t('stock_current')} <span className="text-base font-bold tabular-nums">{fmtN(data.item.current_stock)}</span>
                     </div>
                 </div>
                 <hr className="mt-2 border-black/50" />
@@ -144,6 +146,7 @@ export default function ItemHistoryPage() {
 
 // ── Hub ───────────────────────────────────────────────────────────────
 function Hub({ data, onOpen, t, fmt }: { data: StockItemHistory; onOpen: (v: View) => void; t: Translate; fmt: FormatDateTime }) {
+    const fmtN = useNumberFormat();
     return (
         <>
             <h2 className="mb-2 text-sm font-semibold">{t('stock_history_other')}</h2>
@@ -169,7 +172,7 @@ function Hub({ data, onOpen, t, fmt }: { data: StockItemHistory; onOpen: (v: Vie
 
             <div className="border-border bg-muted/30 mb-6 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm print:hidden">
                 <span className="text-muted-foreground">{t('stock_current')}</span>
-                <span className="text-lg font-bold tabular-nums">{data.item.current_stock}</span>
+                <span className="text-lg font-bold tabular-nums">{fmtN(data.item.current_stock)}</span>
             </div>
 
             {data.item.track_serial && (
@@ -202,6 +205,7 @@ function CategoryView({
     fmt: FormatDateTime;
     formatMoney: (value: number) => string;
 }) {
+    const fmtN = useNumberFormat();
     const pairOf = useLocalPair();
     const meta = VIEW_META[view];
     const ev = VIEW_FILTER[view].event;
@@ -210,7 +214,7 @@ function CategoryView({
         const list = serialsOf(m, ev);
         return list.length ? <span className="text-xs">{list.join(', ')}</span> : '—';
     };
-    const qtyCell = (m: Movement) => <span className="tabular-nums">{m.qty}</span>;
+    const qtyCell = (m: Movement) => <span className="tabular-nums">{fmtN(m.qty)}</span>;
 
     let headers: string[];
     let rows: ReactNode[][];
@@ -329,7 +333,7 @@ function CategoryView({
                     <Icon className={cn('h-4 w-4', meta.tone)} />
                 </span>
                 <h2 className="text-base font-semibold">{t(meta.titleKey as Parameters<typeof t>[0])}</h2>
-                <span className="text-muted-foreground text-sm tabular-nums">({movements.length})</span>
+                <span className="text-muted-foreground text-sm tabular-nums">({fmtN(movements.length)})</span>
             </div>
             <Table headers={headers} rows={rows} wrapColumns={wrapColumns} emptyText={t('stock_history_no_events')} />
         </>

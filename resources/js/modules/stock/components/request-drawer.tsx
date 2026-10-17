@@ -13,10 +13,12 @@ import { useToastStore } from '@/stores/toast';
 import { useEffect, useRef, useState } from 'react';
 import { useStockItems, useStockRequestActions } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** RequestDrawer — submit a new stock request (Requester → approver → fulfilled). */
 export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { submit } = useStockRequestActions();
     const { data: items = [] } = useStockItems({}, open);
     const [sku, setSku] = useState('');
@@ -77,12 +79,12 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                 value: String(i.id),
                                 label: i.name,
                                 sub: i.sku,
-                                hint: `${t('stock_stock')} ${i.current_stock} ${i.unit ?? ''}`.trim(),
+                                hint: `${t('stock_stock')} ${fmtN(i.current_stock)} ${i.unit ?? ''}`.trim(),
                                 search: `${i.sku} ${i.name}`,
                             }))}
                         />
                     </Field>
-                    <Field label={t('stock_qty')} required error={over ? `${t('stock_request_over')} (${available})` : undefined}>
+                    <Field label={t('stock_qty')} required error={over ? `${t('stock_request_over')} (${fmtN(available)})` : undefined}>
                         {(control) => (
                             <>
                                 <Input
@@ -98,7 +100,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                 <div className="text-muted-foreground mt-1.5 text-xs">
                                     {t('stock_available')}{' '}
                                     <b className={cn('tabular-nums', available > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive')}>
-                                        {available}
+                                        {fmtN(available)}
                                     </b>{' '}
                                     {selected?.unit}
                                 </div>

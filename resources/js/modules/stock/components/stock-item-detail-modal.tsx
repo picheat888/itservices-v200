@@ -137,6 +137,7 @@ export function StockItemDetailModal({
 }) {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     const lotDetailId = useId();
@@ -247,8 +248,8 @@ export function StockItemDetailModal({
                                             sub={
                                                 item.reserved != null && item.reserved > 0 ? (
                                                     <span className="flex flex-wrap gap-x-3">
-                                                        <span>{t('stock_reserved_n').replace('{n}', String(item.reserved))}</span>
-                                                        <span>{t('stock_free_n').replace('{n}', String(item.current_stock - item.reserved))}</span>
+                                                        <span>{t('stock_reserved_n').replace('{n}', fmtN(item.reserved))}</span>
+                                                        <span>{t('stock_free_n').replace('{n}', fmtN(item.current_stock - item.reserved))}</span>
                                                     </span>
                                                 ) : (
                                                     <span className="lowercase">{item.unit}</span>
@@ -281,7 +282,7 @@ export function StockItemDetailModal({
                                         <Meta label={t('stock_unit')}>{item.unit}</Meta>
                                         <Meta label={t('stock_min_max')}>
                                             <span className="tabular-nums">
-                                                {item.min_stock} / {item.max_stock}
+                                                {fmtN(item.min_stock)} / {fmtN(item.max_stock)}
                                             </span>
                                         </Meta>
                                         <Meta label={t('stock_warranty')}>{item.warranty ?? '—'}</Meta>
@@ -301,7 +302,7 @@ export function StockItemDetailModal({
                                                             <span className="truncate">{b.warehouse}</span>
                                                         </div>
                                                         <div className="mt-1 text-lg leading-none font-bold tabular-nums">
-                                                            {b.qty}
+                                                            {fmtN(b.qty)}
                                                             <span className="text-muted-foreground ml-1 text-xs font-normal">{item.unit}</span>
                                                         </div>
                                                     </div>
@@ -380,8 +381,8 @@ export function StockItemDetailModal({
                                                                         {format(l.unit_cost)}
                                                                     </td>
                                                                     <td className="px-3 py-1.5 text-right whitespace-nowrap tabular-nums">
-                                                                        {l.qty_remaining}
-                                                                        <span className="text-muted-foreground">/{l.qty_received}</span>
+                                                                        {fmtN(l.qty_remaining)}
+                                                                        <span className="text-muted-foreground">/{fmtN(l.qty_received)}</span>
                                                                     </td>
                                                                     <td className="px-3 py-1.5 text-right font-semibold whitespace-nowrap tabular-nums">
                                                                         {format(l.value)}
@@ -402,7 +403,7 @@ export function StockItemDetailModal({
                                                                                 </Meta>
                                                                                 <Meta label={t('stock_qty')}>
                                                                                     <span className="tabular-nums">
-                                                                                        {l.qty_remaining}/{l.qty_received}
+                                                                                        {fmtN(l.qty_remaining)}/{fmtN(l.qty_received)}
                                                                                     </span>
                                                                                 </Meta>
                                                                             </div>
@@ -440,7 +441,7 @@ export function StockItemDetailModal({
                             {/* Serials (tab only present when track_serial) */}
                             {tab === 'serials' && (
                                 <div>
-                                    <SectionRow right={<span className="text-muted-foreground tabular-nums">{serials.length}</span>}>
+                                    <SectionRow right={<span className="text-muted-foreground tabular-nums">{fmtN(serials.length)}</span>}>
                                         {t('stock_serial_list')}
                                     </SectionRow>
                                     {serials.length > 0 ? (

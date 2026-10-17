@@ -16,6 +16,7 @@ import { ArrowRight, Filter, Printer } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Types offered by the filter (and accepted from ?type=).
 const MOVEMENT_TYPES: StockMovementType[] = ['receive', 'issue', 'return', 'transfer'];
@@ -26,6 +27,7 @@ const EYEBROW = 'text-muted-foreground text-xs font-semibold';
 export function MovementsTab() {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const pairOf = useLocalPair();
     const { format } = useCurrency();
     const typeFilterId = useId();
@@ -90,7 +92,7 @@ export function MovementsTab() {
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', width: '70px', render: (m) => <span className="font-bold tabular-nums">{m.qty}</span> },
+        { key: 'qty', header: t('stock_qty'), align: 'right', width: '70px', render: (m) => <span className="font-bold tabular-nums">{fmtN(m.qty)}</span> },
         {
             key: 'unit_cost',
             header: t('stock_unit_cost_short'),
@@ -224,7 +226,7 @@ export function MovementsTab() {
                                                 )}
                                             >
                                                 {inbound ? '+' : '−'}
-                                                {viewMove.qty}
+                                                {fmtN(viewMove.qty)}
                                             </div>
                                         </div>
 
@@ -263,7 +265,7 @@ export function MovementsTab() {
                                                     </div>
                                                     <div className="border-border bg-card border-l px-2 py-2">
                                                         <div className={EYEBROW}>{t('stock_qty')}</div>
-                                                        <div className="mt-0.5 tabular-nums">{viewMove.qty}</div>
+                                                        <div className="mt-0.5 tabular-nums">{fmtN(viewMove.qty)}</div>
                                                     </div>
                                                     <div className="border-border bg-card border-l px-2 py-2">
                                                         <div className={EYEBROW}>{t('stock_mv_total')}</div>

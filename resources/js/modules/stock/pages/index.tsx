@@ -58,6 +58,7 @@ import { AuditTab } from './tabs/counting-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { OverviewTab } from './tabs/overview-tab';
 import { RequestsTab } from './tabs/requests-tab';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // The page's tabs, mirrored in the URL (?tab=).
 const STOCK_TABS = ['overview', 'items', 'movements', 'requests', 'audit'] as const;
@@ -131,6 +132,7 @@ function AlertCard({
     t: ReturnType<typeof useT>;
     onViewItems: () => void;
 }) {
+    const fmtN = useNumberFormat();
     const hasCritical = summary.out_count > 0 || summary.low_count > 0;
     const counts = [
         { key: 'out', count: summary.out_count, label: t('stock_alert_out'), className: 'text-destructive' },
@@ -162,7 +164,7 @@ function AlertCard({
                                     key={c.key}
                                     className={cn('bg-background/60 rounded-full border px-2 py-0.5 font-medium tabular-nums', c.className)}
                                 >
-                                    {c.count} {c.label}
+                                    {fmtN(c.count)} {c.label}
                                 </li>
                             ))}
                         </ul>
@@ -178,6 +180,7 @@ function AlertCard({
 
 export default function StockPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const nameOf = useLocalName();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
@@ -345,7 +348,7 @@ export default function StockPage() {
                 // Stock arrived after the list was drawn, so the button was still enabled.
                 if (refusal?.reason === 'item_has_stock') return t('stock_refusal_item_has_stock');
                 if (refusal?.reason !== 'has_history') return undefined;
-                return t('stock_delete_has_history').replace('{count}', String(refusal.body.movements_count ?? 0));
+                return t('stock_delete_has_history').replace('{count}', fmtN(Number(refusal.body.movements_count ?? 0)));
             },
         });
     };
@@ -400,12 +403,12 @@ export default function StockPage() {
                     <span className="text-sm font-bold tabular-nums">{formatNumber(i.current_stock, lang)}</span>
                     {!!i.reserved && (
                         <InfoPopover
-                            label={t('stock_reserved_n').replace('{n}', String(i.reserved))}
-                            content={t('stock_reserved_note').replace('{n}', String(Math.max(0, i.current_stock - i.reserved)))}
+                            label={t('stock_reserved_n').replace('{n}', fmtN(i.reserved))}
+                            content={t('stock_reserved_note').replace('{n}', fmtN(Math.max(0, i.current_stock - i.reserved)))}
                             className="text-muted-foreground block w-full text-right text-xs whitespace-nowrap"
                             isolate
                         >
-                            {t('stock_reserved_n').replace('{n}', String(i.reserved))}
+                            {t('stock_reserved_n').replace('{n}', fmtN(i.reserved))}
                         </InfoPopover>
                     )}
                 </div>
@@ -495,7 +498,7 @@ export default function StockPage() {
 
     const viewAlerts = () => openItems({ status: 'alerts' });
     const kpis = [
-        { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${summary?.total_units ?? 0} ${t('stock_units_total')}`, icon: Archive },
+        { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${fmtN(summary?.total_units ?? 0)} ${t('stock_units_total')}`, icon: Archive },
         {
             label: t('stock_kpi_alerts_sub'),
             value: summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : '—',

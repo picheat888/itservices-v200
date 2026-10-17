@@ -11,6 +11,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Archive, Check, ChevronRight, Layers, Warehouse } from 'lucide-react';
 import { useStockSummary } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export type Kpi = { label: string; value: string | number; sub: string; subTitle?: string; icon: typeof Archive; onClick?: () => void };
 
@@ -41,6 +42,7 @@ export function OverviewTab({
     canEvents: boolean;
 }) {
     const fmt = useDateFormat();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     // Recent movements ride along in the summary payload; empty for users without view_events.
     const movements = summary?.recent_movements ?? [];
@@ -104,7 +106,7 @@ export function OverviewTab({
                             </div>
                             {reorderItems.length > 0 && (
                                 <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-[11px] font-bold text-red-700 tabular-nums">
-                                    {reorderItems.length}
+                                    {fmtN(reorderItems.length)}
                                 </span>
                             )}
                         </div>
@@ -144,11 +146,11 @@ export function OverviewTab({
                                                 </div>
                                                 <div className="shrink-0 text-right">
                                                     <div className="text-muted-foreground text-[11px] tabular-nums">
-                                                        {it.current_stock}/{it.min_stock}
+                                                        {fmtN(it.current_stock)}/{fmtN(it.min_stock)}
                                                     </div>
                                                     <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-xs font-bold text-emerald-700 tabular-nums dark:text-emerald-400">
                                                         <span className="sr-only">{t('stock_reorder_qty')} </span>+
-                                                        {Math.max(0, it.max_stock - it.current_stock)}
+                                                        {fmtN(Math.max(0, it.max_stock - it.current_stock))}
                                                     </span>
                                                 </div>
                                             </div>
@@ -161,7 +163,7 @@ export function OverviewTab({
                                         onClick={onViewAlerts}
                                         className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring mt-auto flex w-full shrink-0 items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                                     >
-                                        {t('stock_show_all_alerts').replace('{n}', String(alertTotal))}
+                                        {t('stock_show_all_alerts').replace('{n}', fmtN(alertTotal))}
                                         <ChevronRight className="h-3.5 w-3.5" aria-hidden />
                                     </button>
                                 )}
@@ -215,7 +217,7 @@ export function OverviewTab({
                                                         )}
                                                     >
                                                         {meta.sign > 0 ? '+' : meta.sign < 0 ? '−' : ''}
-                                                        {m.qty}
+                                                        {fmtN(m.qty)}
                                                     </div>
                                                     <div className="text-muted-foreground text-[10px] whitespace-nowrap">
                                                         <span className="lg:hidden">{fmt.date(m.moved_at)}</span>
@@ -258,11 +260,11 @@ export function OverviewTab({
                                     <div className="flex shrink-0 gap-4 text-right text-sm tabular-nums">
                                         <div className="w-12">
                                             <div className="text-muted-foreground text-[10px] uppercase">{t('stock_sku')}</div>
-                                            {w.skus}
+                                            {fmtN(w.skus)}
                                         </div>
                                         <div className="w-14">
                                             <div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>
-                                            {w.units}
+                                            {fmtN(w.units)}
                                         </div>
                                     </div>
                                 </button>
@@ -290,7 +292,7 @@ export function OverviewTab({
                                         <span className="group-hover:text-brand min-w-0 truncate font-medium transition-colors">
                                             {localPair(c.category, c.category_th, lang)}
                                         </span>
-                                        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{c.units}</span>
+                                        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{fmtN(c.units)}</span>
                                     </div>
                                     <div className="bg-muted h-2 overflow-hidden rounded-full">
                                         <span
