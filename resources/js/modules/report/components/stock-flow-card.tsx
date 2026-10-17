@@ -51,7 +51,7 @@ function axisTop(value: number): number {
 
 const inQty = (m: StockFlowMonth) => m.receive + m.return;
 
-export function StockFlowCard({ months, className }: { months: StockFlowMonth[]; className?: string }) {
+export function StockFlowCard({ months, to, className }: { months: StockFlowMonth[]; to: string | null; className?: string }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const up = axisTop(Math.max(0, ...months.map(inQty)));
@@ -62,7 +62,10 @@ export function StockFlowCard({ months, className }: { months: StockFlowMonth[];
     const barHeight = (v: number, top: number) => (v > 0 ? `max(${(v / top) * 100}%, 3px)` : '0px');
     const thisMonth = currentMonth();
     const hasCurrent = months.some((m) => m.month === thisMonth);
-    const partialNote = t('rep_wo_month_partial_tip').replace('{date}', reportDates(lang).date(new Date()));
+    // Counted up to the range end when it falls before today, as the write-off chart.
+    const today = new Date();
+    const toDate = to ? new Date(`${to}T00:00:00`) : today;
+    const partialNote = t('rep_wo_month_partial_tip').replace('{date}', reportDates(lang).date(toDate < today ? toDate : today));
     const density = monthDensity(months);
     const scroll = months.length > SCROLL_AFTER_MONTHS;
     const scroller = useRef<HTMLDivElement>(null);
