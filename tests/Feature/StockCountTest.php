@@ -44,6 +44,22 @@ class StockCountTest extends TestCase
             ->assertJsonPath('data.lines.0.system_qty', 10);
     }
 
+    public function test_list_reports_line_totals_without_the_lines(): void
+    {
+        $this->item('A-1', 10);
+        $this->item('A-2', 5);
+        $this->actingAs($this->super());
+        $id = $this->postJson('/api/stock-counts', [])->json('data.id');
+        $lineId = $this->getJson("/api/stock-counts/{$id}")->json('data.lines.0.id');
+        $this->putJson("/api/stock-counts/{$id}", ['counts' => [$lineId => 3]])->assertOk();
+
+        $this->getJson('/api/stock-counts')->assertOk()
+            ->assertJsonMissingPath('data.0.lines')
+            ->assertJsonPath('data.0.line_count', 2)
+            ->assertJsonPath('data.0.counted_lines', 1);
+        $this->getJson("/api/stock-counts/{$id}")->assertJsonCount(2, 'data.lines');
+    }
+
     /**
      * A count of one warehouse is a count of that shelf: it snapshots that warehouse's
      * balance, and committing it moves that balance and the total by the difference. It
