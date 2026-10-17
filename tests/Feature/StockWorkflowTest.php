@@ -431,4 +431,25 @@ class StockWorkflowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('meta.total', 2);
     }
+
+    public function test_a_movement_cannot_be_dated_in_the_future(): void
+    {
+        $item = $this->item(10);
+
+        $this->actingAs($this->superUser())
+            ->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 1, 'moved_at' => now()->addDay()->toDateTimeString()])
+            ->assertUnprocessable()->assertJsonValidationErrors('moved_at');
+    }
+
+    public function test_a_backdated_movement_does_not_move_the_last_move_day_back(): void
+    {
+        $item = $this->item(10);
+        $item->update(['last_move_at' => now()->toDateString()]);
+
+        $this->actingAs($this->superUser())
+            ->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 1, 'moved_at' => now()->subDays(30)->toDateTimeString()])
+            ->assertCreated();
+
+        $this->assertSame(now()->toDateString(), $item->fresh()->last_move_at?->toDateString() ?? (string) $item->fresh()->last_move_at);
+    }
 }

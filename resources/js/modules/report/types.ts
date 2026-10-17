@@ -1350,6 +1350,8 @@ export interface StockWaitingRequest {
     requester_th: string | null;
     status: 'pending' | 'approved';
     created_at: string | null;
+    /** Approval for an approved request, filing for a pending one. */
+    waiting_since: string | null;
 }
 
 /** GET /reports/stock/movements/breakdown — StockMovementReport::breakdown(). */

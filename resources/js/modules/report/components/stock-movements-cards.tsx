@@ -106,7 +106,7 @@ function MovementTiles({ tiles, months }: { tiles: Tiles; months: Months }) {
 function WaitingRow({ request }: { request: StockWaitingRequest }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const days = request.created_at ? daysBetween(request.created_at) : 0;
+    const days = request.waiting_since ? daysBetween(request.waiting_since) : 0;
     const tone = days > 7 ? 'red' : days >= 3 ? 'amber' : 'gray';
     const line = t('rep_smv_wait_line')
         .replace('{item}', request.item_name ?? '—')

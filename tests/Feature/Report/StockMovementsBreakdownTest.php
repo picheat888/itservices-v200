@@ -292,7 +292,7 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertSame(['pending', 'approved', 'pending'], array_column($requests['rows'], 'status'));
         $this->assertSame(['LAN cable', 'SSD 1TB', 'SSD 1TB'], array_column($requests['rows'], 'item_name'));
         $first = $requests['rows'][0];
-        $this->assertSame(['reference', 'item_name', 'sku', 'qty', 'unit', 'requester', 'requester_th', 'status', 'created_at'], array_keys($first));
+        $this->assertSame(['reference', 'item_name', 'sku', 'qty', 'unit', 'requester', 'requester_th', 'status', 'created_at', 'waiting_since'], array_keys($first));
         $this->assertSame(2, $first['qty']);
         $this->assertSame('pcs', $first['unit']);
         $this->assertSame('Suda', $first['requester']);
@@ -303,6 +303,19 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertSame(1, $parts['pending']);
         $this->assertSame(1, $parts['approved']);
         $this->assertCount(2, $parts['rows']);
+    }
+
+    public function test_an_approved_request_waits_from_its_approval_a_pending_one_from_its_filing(): void
+    {
+        $this->seedStock();
+        $approved = $this->request($this->s['ssd'], $this->s['suda'], 1, 'approved', '2026-09-10 09:00:00', ['approved_at' => '2026-09-24 15:00:00']);
+
+        $rows = collect($this->breakdown()['requests']['rows'])->keyBy('reference');
+        $row = $rows[$approved->fresh()->reference];
+        $pending = collect($rows)->firstWhere('status', 'pending');
+
+        $this->assertTrue(CarbonImmutable::parse($row['waiting_since'])->equalTo(CarbonImmutable::parse('2026-09-24 15:00:00')));
+        $this->assertSame($pending['created_at'], $pending['waiting_since']);
     }
 
     public function test_requesters_and_departments_count_fulfilled_requests_in_the_range(): void

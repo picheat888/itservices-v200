@@ -164,7 +164,7 @@ class StockMovementController extends Controller
             'to_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:120', $knownWarehouse('to_label')],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'moved_at' => ['nullable', 'date'],
+            'moved_at' => ['nullable', 'date', 'before_or_equal:now'],
             'serials' => ['array'],
             'serials.*' => ['nullable', 'string', 'max:120'],
             'serial_ids' => ['array'],
@@ -360,14 +360,14 @@ class StockMovementController extends Controller
                         ]);
                     }
                 }
-                $item->last_move_at = $movement->moved_at->toDateString();
+                $this->touchLastMove($item, $movement);
                 $item->save();
             } else {
                 // Inbound lot cost is the pre-movement average, so resolve it before current_stock changes.
                 $inboundLotCost = $inbound ? ($unitCost ?? $item->avgCost()) : null;
 
                 $item->current_stock += $movement->delta();
-                $item->last_move_at = $movement->moved_at->toDateString();
+                $this->touchLastMove($item, $movement);
                 $item->save();
 
                 if ($inbound) {
@@ -411,6 +411,14 @@ class StockMovementController extends Controller
 
             return $movement;
         });
+    }
+
+    /** The item's last movement day only moves forward: a backdated entry does not make it look idle. */
+    private function touchLastMove(StockItem $item, StockMovement $movement): void
+    {
+        if ($item->last_move_at === null || $movement->moved_at->greaterThan($item->last_move_at->endOfDay())) {
+            $item->last_move_at = $movement->moved_at->toDateString();
+        }
     }
 
     /**
