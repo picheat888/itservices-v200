@@ -26,6 +26,7 @@ export const requests: Dict = {
     requests_tab_overview: 'ภาพรวม',
     requests_tab_list: 'คำขอ',
     requests_tab_approvals: 'รอฉันพิจารณา',
+    requests_tab_queue: 'รอ IT ดำเนินการ',
 
     // pages/index.tsx — การ์ด KPI
     req_kpi_awaiting: 'รอคุณพิจารณา',

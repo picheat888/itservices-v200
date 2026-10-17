@@ -60,7 +60,7 @@ function headlineValue(request: ServiceRequest, lang: 'en' | 'th'): string {
 /** Sentinel for the filters' "all" row — a SearchableSelect option cannot be empty. */
 const ALL = '__all__';
 /** The tab slugs, which are also what ?tab= carries. */
-const TABS = ['overview', 'all', 'approvals'] as const;
+const TABS = ['overview', 'all', 'approvals', 'queue'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 /** URL keys of the list, cleared when the overview is entered or left (?per stays). */
@@ -141,9 +141,11 @@ export default function RequestsPage() {
     const listParams =
         tab === 'approvals'
             ? { page, per_page: perPage, search: sentSearch, status, type, scope: 'approvals' as const }
-            : tab === 'all'
-              ? { page, per_page: perPage, search: sentSearch, status, type }
-              : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
+            : tab === 'queue'
+              ? { page, per_page: perPage, search: sentSearch, status, type, scope: 'queue' as const }
+              : tab === 'all'
+                ? { page, per_page: perPage, search: sentSearch, status, type }
+                : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
     const { data: pageData, isLoading, isFetching, isError, refetch } = useRequests(listParams);
     const rows = pageData?.data ?? [];
     const meta = pageData?.meta;
@@ -338,6 +340,8 @@ export default function RequestsPage() {
     const filterCount = (status ? 1 : 0) + (type ? 1 : 0);
     const visibleTotal = meta ? meta.pending + meta.approved + meta.completed + meta.rejected + meta.cancelled : null;
     const kpiLoading = !meta;
+    // What the sidebar badge counts: waiting on me plus, for IT, the approved queue
+    const attention = meta ? meta.awaiting_me + meta.to_complete : null;
 
     return (
         <div className="space-y-6">
@@ -362,7 +366,7 @@ export default function RequestsPage() {
                 <PageTabs<Tab>
                     tabs={[
                         { id: 'overview', label: t('requests_tab_overview') },
-                        { id: 'all', label: t('requests_tab_list'), count: visibleTotal },
+                        { id: 'all', label: t('requests_tab_list'), count: attention },
                     ]}
                     active={isListTab ? 'all' : 'overview'}
                     onChange={(next) => switchTab(next)}
@@ -541,8 +545,11 @@ export default function RequestsPage() {
                             <div className="border-border flex h-10 items-center gap-0.5 rounded-md border p-1">
                                 {(
                                     [
-                                        ['all', t('all'), null],
+                                        ['all', t('all'), visibleTotal],
                                         ['approvals', t('requests_tab_approvals'), meta?.awaiting_me ?? null],
+                                        ...(can('requests.complete')
+                                            ? [['queue', t('requests_tab_queue'), meta?.to_complete ?? null] as [Tab, string, number | null]]
+                                            : []),
                                     ] as [Tab, string, number | null][]
                                 ).map(([id, label, count]) => (
                                     <button
@@ -556,7 +563,7 @@ export default function RequestsPage() {
                                         )}
                                     >
                                         {label}
-                                        {count != null && count > 0 && <span className="ml-1.5">{count}</span>}
+                                        {count != null && count > 0 && <span className="ml-1.5">{count.toLocaleString()}</span>}
                                     </button>
                                 ))}
                             </div>
