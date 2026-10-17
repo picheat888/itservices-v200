@@ -244,7 +244,14 @@ class TicketController extends Controller
         $windowSeconds = (int) $curStart->diffInSeconds($curEnd);
         $prevStart = $curStart->copy()->subSeconds($windowSeconds);
 
-        $tickets = Ticket::with('serviceRequest:id,ticket_id,type')->get();
+        // Every figure below is a window (current or previous) or a live backlog, so older closed tickets are never read
+        $tickets = Ticket::with('serviceRequest:id,ticket_id,type')
+            ->where(fn ($q) => $q
+                ->where('created_at', '>=', $prevStart)
+                ->orWhere('resolved_at', '>=', $prevStart)
+                ->orWhere('responded_at', '>=', $prevStart)
+                ->orWhereIn('status', TicketStatus::liveValues()))
+            ->get();
 
         // Inbound flow — tickets created in the current vs the previous window.
         $createdCur = $tickets->filter(fn (Ticket $t) => $t->created_at >= $curStart && $t->created_at <= $curEnd)->count();
