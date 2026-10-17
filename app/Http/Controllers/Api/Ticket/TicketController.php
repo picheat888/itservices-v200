@@ -30,6 +30,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\ValidationException;
 
 class TicketController extends Controller
 {
@@ -222,9 +223,14 @@ class TicketController extends Controller
             ]);
             $curEnd = Carbon::parse($request->query('to'))->endOfDay();
             $curStart = Carbon::parse($request->query('from'))->startOfDay();
-            if ($curStart->diffInDays($curEnd) > 366) {
-                $curStart = $curEnd->copy()->subDays(366)->startOfDay();
+            // At most 365 days, counting both ends; longer is refused rather than quietly cut
+            if (round($curStart->diffInDays($curEnd)) > 365) {
+                throw ValidationException::withMessages(['to' => ['range_too_long']]);
             }
+            $days = (int) round($curStart->diffInDays($curEnd));
+        } elseif ($request->query('days') === 'year') {
+            $curEnd = now();
+            $curStart = $curEnd->copy()->startOfYear();
             $days = (int) round($curStart->diffInDays($curEnd));
         } elseif ($request->query('days') === 'all') {
             $curEnd = now();
