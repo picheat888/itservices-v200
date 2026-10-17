@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import { Ban, Bell, Check, Flag, KeyRound, SkipForward, X } from 'lucide-react';
 
 /** `cancelled` = withdrawn by the requester, or the IT step closed without delivery (muted, not the red of a refusal). */
@@ -23,20 +25,22 @@ interface TrailItem {
 }
 
 /** "QC Dept.: Asst. Manager / Manager" — who is holding a step that names no one person. */
-function departmentTitle(row: RequestApproval): string {
+function departmentTitle(row: RequestApproval, lang: string): string {
     const positions = (row.approver_positions ?? []).join(' / ');
-    return positions ? `${row.approver_department}: ${positions}` : String(row.approver_department);
+    const department = localPair(row.approver_department, row.approver_department_th, lang);
+    return positions ? `${department}: ${positions}` : String(department);
 }
 
 /** The alternates holding a step, on one line (whichever signs first closes it). */
-function candidatesTitle(row: RequestApproval): string {
-    return (row.approver_candidates ?? []).join(', ');
+function candidatesTitle(row: RequestApproval, lang: string): string {
+    return (row.approver_candidates ?? []).map((name, i) => localPair(name, row.approver_candidates_th?.[i], lang)).join(', ');
 }
 
 /** Vertical approval trail: submitted, each approval step, then the IT step or the rejection notice. */
 export function RequestTrail({ request }: { request: ServiceRequest }) {
     const fmt = useDateFormat();
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const approvals = request.approvals ?? [];
 
     const items: TrailItem[] = [
@@ -119,7 +123,11 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             title: isCompletion
                 ? t('req_trail_completion')
                 : (row.approver_name ??
-                  ((row.approver_candidates ?? []).length > 0 ? candidatesTitle(row) : row.approver_department ? departmentTitle(row) : row.label)),
+                  ((row.approver_candidates ?? []).length > 0
+                      ? candidatesTitle(row, lang)
+                      : row.approver_department
+                        ? departmentTitle(row, lang)
+                        : row.label)),
             // A skip reason shows in the amber note instead
             meta: isCompletion ? completionMeta(row) : row.status === 'skipped' && row.skip_reason ? '' : stepMeta(row),
             // Decided or closed steps say when; open, queued and skipped steps have no time.
