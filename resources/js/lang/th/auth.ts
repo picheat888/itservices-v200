@@ -31,7 +31,9 @@ export const auth: Dict = {
     session_stay: 'ใช้งานต่อ',
     session_time_left: 'เหลือเวลาอีก {time}',
     session_one_minute: '1 นาที',
-    session_switched: 'แท็บอื่นเข้าสู่ระบบด้วยบัญชี {name} หน้านี้จึงโหลดใหม่',
+    session_switched_title: 'เปลี่ยนบัญชีแล้ว',
+    session_switched: 'เปลี่ยนเป็นบัญชี {name} แล้ว เพราะมีการเข้าสู่ระบบในแท็บอื่น',
+    session_reload: 'โหลดหน้าใหม่',
     session_one_second: '1 วินาที',
 
     // require-permission.tsx — labels moved from the component
