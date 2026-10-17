@@ -10,6 +10,8 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
@@ -207,6 +209,21 @@ function AssetOverviewSkeleton() {
     );
 }
 
+/** Pinned body cells: solid like the card, and tinted with the row when it is selected or hovered. */
+const PINNED_CELL = 'bg-card group-hover/row:bg-accent group-data-[selected=true]/row:bg-brand/5 sticky z-[1]';
+
+/** Warranty end for an owned asset, lease end for a rented one: a date, or how close it is when that matters. */
+function AssetCoverCell({ asset }: { asset: Asset }) {
+    const t = useT();
+    const fmt = useDateFormat();
+    if (asset.source !== 'rented' && asset.warranty_lifetime) return <span className="text-xs">{t('asset_warranty_lifetime')}</span>;
+    if (!asset.cover_end) return <span className="text-muted-foreground">—</span>;
+    const days = Math.ceil((Date.parse(asset.cover_end) - Date.now()) / 86_400_000);
+    if (days < 0) return <StatusBadge tone="gray">{t('asset_cover_ended')}</StatusBadge>;
+    if (days <= 90) return <StatusBadge tone="amber">{t('asset_cover_days_left').replace('{n}', String(days))}</StatusBadge>;
+    return <span className="text-xs">{fmt.date(asset.cover_end)}</span>;
+}
+
 /**
  * Where an asset is, for the inventory's "Warehouse / Place" column: the warehouse while it sits
  * in the pool (Ready, or waiting to be received back), otherwise where it was put to use (the
@@ -239,6 +256,7 @@ function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) 
 export default function AssetsPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const fmt = useDateFormat();
     const { user, can } = useAuth();
     const canCreate = can('assets.register');
     const canEdit = can('assets.edit');
@@ -1122,7 +1140,11 @@ export default function AssetsPage() {
                                             )}
                                         >
                                             <th
-                                                className={cn('w-10 px-2 py-2.5', eligibleStatus ? 'cursor-pointer' : 'cursor-not-allowed')}
+                                                className={cn(
+                                                    'w-10 px-2 py-2.5',
+                                                    'bg-card dark:bg-muted sticky left-0 z-[2]',
+                                                    eligibleStatus ? 'cursor-pointer' : 'cursor-not-allowed',
+                                                )}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     if (eligibleStatus) toggleAllOnPage(!allGroupSelected);
@@ -1138,15 +1160,19 @@ export default function AssetsPage() {
                                                     />
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-2.5">{t('asset_col_code_tag')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_col_brand_model')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_type')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_col_serial')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_col_holder_dept')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_col_place')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_status')}</th>
-                                            <th className="px-4 py-2.5 text-right">{t('asset_value')}</th>
-                                            <th className="px-4 py-2.5 text-right">{t('asset_actions')}</th>
+                                            <th className="bg-card dark:bg-muted sticky left-10 z-[2] px-3 py-2.5">{t('asset_col_code_tag')}</th>
+                                            <th className="px-3 py-2.5">{t('asset_col_brand_model')}</th>
+                                            <th className="px-3 py-2.5">{t('asset_type')}</th>
+                                            <th className="px-3 py-2.5">{t('asset_col_serial')}</th>
+                                            <th className="px-3 py-2.5">{t('asset_col_holder_dept')}</th>
+                                            <th className="px-3 py-2.5">{t('asset_col_place')}</th>
+                                            <th className="px-3 py-2.5">{t('asset_status')}</th>
+                                            <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_col_cover')}</th>
+                                            <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_purchase_date')}</th>
+                                            <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_col_handed_over')}</th>
+                                            <th className="px-3 py-2.5">{t('asset_supplier')}</th>
+                                            <th className="px-3 py-2.5 text-right">{t('asset_value')}</th>
+                                            <th className="px-3 py-2.5 text-right">{t('asset_actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1156,8 +1182,8 @@ export default function AssetsPage() {
                                             // table pulled the scroll position up and the page jumped.
                                             Array.from({ length: rows.length || 8 }).map((_, r) => (
                                                 <tr key={`skeleton-${r}`} aria-hidden="true" className="border-border/60 border-b last:border-0">
-                                                    {Array.from({ length: 10 }).map((_, c) => (
-                                                        <td key={c} className="px-4 py-2.5">
+                                                    {Array.from({ length: 14 }).map((_, c) => (
+                                                        <td key={c} className="px-3 py-2.5">
                                                             <div className="flex h-9 flex-col justify-center gap-1.5">
                                                                 <div className="bg-muted h-3 w-1/2 max-w-[90px] rounded motion-safe:animate-pulse" />
                                                                 <div className="bg-muted h-4 w-3/4 max-w-[160px] rounded motion-safe:animate-pulse" />
@@ -1168,7 +1194,7 @@ export default function AssetsPage() {
                                             ))
                                         ) : rows.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="text-muted-foreground px-4 py-16 text-center text-sm">
+                                                <td colSpan={14} className="text-muted-foreground px-4 py-16 text-center text-sm">
                                                     {hasActiveFilters ? (
                                                         <div className="flex flex-col items-center gap-3">
                                                             {t('asset_none_filtered')}
@@ -1187,8 +1213,9 @@ export default function AssetsPage() {
                                                 <tr
                                                     key={a.id}
                                                     onClick={() => openAsset(a)}
+                                                    data-selected={selectedIds.includes(a.id)}
                                                     className={cn(
-                                                        'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
+                                                        'group/row border-border/60 cursor-pointer border-b transition-opacity last:border-0',
                                                         selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
                                                         rowLockedOut(a) && 'bg-muted/40',
                                                     )}
@@ -1196,6 +1223,8 @@ export default function AssetsPage() {
                                                     <td
                                                         className={cn(
                                                             'px-2 py-2.5',
+                                                            PINNED_CELL,
+                                                            'left-0',
                                                             rowSelectable(a) ? 'cursor-pointer' : rowActionable(a) ? 'cursor-not-allowed' : '',
                                                         )}
                                                         onClick={(e) => {
@@ -1227,7 +1256,7 @@ export default function AssetsPage() {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                    <td className={cn(PINNED_CELL, 'left-10 px-3 py-2.5 whitespace-nowrap')}>
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
@@ -1242,7 +1271,7 @@ export default function AssetsPage() {
                                                         {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-[140px]" />}
                                                     </td>
                                                     {/* Brand over model: "Latitude 5440" alone does not say Dell. */}
-                                                    <td className="max-w-[14rem] px-4 py-2.5">
+                                                    <td className="max-w-[12rem] px-3 py-2.5">
                                                         {a.brand && (
                                                             <div className="text-muted-foreground truncate text-xs" title={a.brand}>
                                                                 {a.brand}
@@ -1252,7 +1281,7 @@ export default function AssetsPage() {
                                                             {a.model ?? '—'}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2.5">
+                                                    <td className="px-3 py-2.5">
                                                         <span className="flex items-center gap-2 whitespace-nowrap">
                                                             <AssetTypeIcon
                                                                 type={a.type}
@@ -1263,12 +1292,12 @@ export default function AssetsPage() {
                                                         </span>
                                                     </td>
                                                     {/* What IT reads off the sticker; the search already matches it. */}
-                                                    <td className="max-w-[10rem] truncate px-4 py-2.5 text-xs" title={a.serial ?? undefined}>
+                                                    <td className="max-w-[8rem] truncate px-3 py-2.5 text-xs" title={a.serial ?? undefined}>
                                                         {a.serial || <span className="text-muted-foreground">—</span>}
                                                     </td>
                                                     {/* Holder with their department under it (the department alone was a column
                                                         empty for every pool and shared asset). */}
-                                                    <td className="max-w-[12rem] px-4 py-2.5">
+                                                    <td className="max-w-[12rem] px-3 py-2.5">
                                                         {a.owner_name ? (
                                                             <>
                                                                 <div
@@ -1290,13 +1319,33 @@ export default function AssetsPage() {
                                                             <span className="text-muted-foreground">—</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-4 py-2.5">
+                                                    <td className="px-3 py-2.5">
                                                         <AssetPlace asset={a} t={t} />
                                                     </td>
-                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                    <td className="px-3 py-2.5 whitespace-nowrap">
                                                         <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                     </td>
-                                                    <td className="px-4 py-2.5 text-right text-xs whitespace-nowrap tabular-nums">
+                                                    <td className="px-3 py-2.5 whitespace-nowrap">
+                                                        <AssetCoverCell asset={a} />
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-xs whitespace-nowrap">
+                                                        {a.purchase_date ? (
+                                                            fmt.date(a.purchase_date)
+                                                        ) : (
+                                                            <span className="text-muted-foreground">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-xs whitespace-nowrap">
+                                                        {a.handed_over_at ? (
+                                                            fmt.date(a.handed_over_at)
+                                                        ) : (
+                                                            <span className="text-muted-foreground">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="max-w-[12rem] px-3 py-2.5">
+                                                        <TruncText text={localPair(a.supplier, a.supplier_th, lang)} />
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap tabular-nums">
                                                         {a.source === 'rented' ? (
                                                             // The contract's rent is for the whole contract — repeated on every unit it read as
                                                             // each one's value. A "Rented" badge with the contract code under it instead.
@@ -1312,7 +1361,7 @@ export default function AssetsPage() {
                                                             a.value_display
                                                         )}
                                                     </td>
-                                                    <td className="px-4 py-2.5">
+                                                    <td className="px-3 py-2.5">
                                                         <div className="flex items-center justify-end gap-1">
                                                             {a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode && (
                                                                 <button
