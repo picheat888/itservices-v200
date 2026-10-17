@@ -8,6 +8,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -212,19 +213,22 @@ export default function RequestsPage() {
         {
             key: 'reference',
             header: 'ID',
+            width: '100px',
+            className: 'whitespace-nowrap',
             render: (r) => <span className="text-xs font-semibold">{r.reference}</span>,
         },
         {
             key: 'title',
             header: t('req_col_title'),
+            minWidth: '9rem',
             render: (r) => {
                 const Icon = REQUEST_TYPE_META[r.type].icon;
                 return (
-                    <div className="flex max-w-[230px] min-w-0 items-center gap-2.5 xl:max-w-[360px]">
+                    <div className="flex min-w-0 items-center gap-2.5">
                         <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
-                        <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">{requestTitle(r, t)}</div>
-                            <div className="text-muted-foreground truncate text-xs">{r.reason}</div>
+                        <div className="min-w-0 flex-1">
+                            <TruncText text={requestTitle(r, t)} className="text-sm font-medium" />
+                            <TruncText text={r.reason} className="text-muted-foreground text-xs" />
                         </div>
                     </div>
                 );
@@ -233,10 +237,11 @@ export default function RequestsPage() {
         {
             key: 'requester',
             header: t('req_col_requester'),
+            width: '140px',
             render: (r) => (
                 <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{r.requester.name}</div>
-                    <div className="text-muted-foreground truncate text-xs">{r.requester.position ?? '—'}</div>
+                    <TruncText text={r.requester.name} className="text-sm font-medium" />
+                    <TruncText text={r.requester.position} className="text-muted-foreground text-xs" />
                     {/* A new hire has no login of their own */}
                     {isOnBehalfRequest(r) && (
                         <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="mt-1">
@@ -249,26 +254,29 @@ export default function RequestsPage() {
         {
             key: 'department',
             header: t('req_department'),
-            width: '200px',
-            render: (r) => <span className="text-sm">{r.requester.department ?? '—'}</span>,
+            width: '180px',
+            hideBelow: 'lg',
+            render: (r) => <TruncText text={r.requester.department} className="text-sm" />,
         },
         {
             key: 'submitted',
             header: t('req_col_submitted'),
             width: '140px',
             className: 'whitespace-nowrap',
+            hideBelow: 'lg',
             render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground" />,
         },
-        { key: 'workflow', header: t('req_col_workflow'), render: (r) => <WorkflowMini request={r} /> },
+        { key: 'workflow', header: t('req_col_workflow'), width: '150px', className: 'whitespace-nowrap', hideBelow: 'lg', render: (r) => <WorkflowMini request={r} /> },
         {
             key: 'waiting',
             header: t('req_col_waiting'),
-            minWidth: '11rem',
+            width: '200px',
+            hideBelow: 'lg',
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
                     <div className="min-w-0">
-                        <div className="truncate text-sm">{r.progress.current_approver ?? r.progress.current_label}</div>
-                        {r.progress.current_approver && <div className="text-muted-foreground truncate text-xs">{r.progress.current_label}</div>}
+                        <TruncText text={r.progress.current_approver ?? r.progress.current_label} className="text-sm" />
+                        {r.progress.current_approver && <TruncText text={r.progress.current_label} className="text-muted-foreground text-xs" />}
                     </div>
                 ) : (
                     <span className="text-muted-foreground">—</span>
@@ -277,28 +285,40 @@ export default function RequestsPage() {
         {
             key: 'status',
             header: t('req_col_status'),
+            width: '110px',
+            className: 'whitespace-nowrap',
             render: (r) => <StatusBadge tone={REQUEST_STATUS_META[r.status].tone}>{t(REQUEST_STATUS_META[r.status].labelKey)}</StatusBadge>,
         },
         {
             key: 'actions',
             header: t('actions'),
             align: 'right',
+            // Icon buttons on a tablet, labelled buttons from lg up
+            width: 'clamp(104px, calc(104px + (100vw - 768px) * 0.9), 230px)',
             render: (r) => (
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {r.can_approve && (
                         <>
-                            <Button size="sm" className={REQUEST_APPROVE_BUTTON} onClick={() => setDecide({ request: r, action: 'approve' })}>
+                            <Button
+                                size="sm"
+                                className={REQUEST_APPROVE_BUTTON}
+                                aria-label={t('req_approve')}
+                                title={t('req_approve')}
+                                onClick={() => setDecide({ request: r, action: 'approve' })}
+                            >
                                 <Check className="h-3.5 w-3.5" />
-                                {t('req_approve')}
+                                <span className="hidden lg:inline">{t('req_approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
                                 variant="outline"
                                 className={REQUEST_REJECT_BUTTON}
+                                aria-label={t('req_reject')}
+                                title={t('req_reject')}
                                 onClick={() => setDecide({ request: r, action: 'reject' })}
                             >
                                 <X className="h-3.5 w-3.5" />
-                                {t('req_reject')}
+                                <span className="hidden lg:inline">{t('req_reject')}</span>
                             </Button>
                         </>
                     )}
