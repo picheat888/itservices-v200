@@ -3,6 +3,7 @@
 namespace Tests\Feature\Report;
 
 use App\Exports\Report\TabularReportExport;
+use App\Exports\Report\TabularRowsSheet;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\Category;
@@ -18,7 +19,7 @@ use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
- * The three stock tabular reports — "ความเคลื่อนไหวรับเข้า-เบิกออก" (stock.movements),
+ * The three stock tabular reports — "รับเข้าและเบิกจ่าย" (stock.movements),
  * "อะไหล่ต่ำกว่าขั้นต่ำ" (stock.below_min) and "มูลค่าคงคลัง" (stock.valuation) — through the
  * generic /reports/tabular/{key} endpoints.
  */
@@ -78,10 +79,10 @@ class StockReportsTest extends TestCase
 
     // ── stock.movements ─────────────────────────────────────────────────────────────
 
-    public function test_movements_default_to_this_month_in_date_order_with_totals(): void
+    public function test_movements_default_to_the_last_twelve_months_in_date_order_with_totals(): void
     {
         $item = $this->item(['name' => 'SSD 1TB']);
-        $this->movement($item, 'receive', 7, '2026-08-30 09:00:00', ['unit_cost' => 10]);
+        $this->movement($item, 'receive', 7, '2025-09-30 09:00:00', ['unit_cost' => 10]);
         $receive = $this->movement($item, 'receive', 10, '2026-09-02 09:00:00', ['unit_cost' => 1500, 'to_label' => 'Main']);
         $issue = $this->movement($item, 'issue', 3, '2026-09-10 09:00:00', ['from_label' => 'Main', 'to_label' => 'Somchai']);
         $transfer = $this->movement($item, 'transfer', 2, '2026-09-12 09:00:00', ['from_label' => 'Main', 'to_label' => 'Branch']);
@@ -95,7 +96,8 @@ class StockReportsTest extends TestCase
         $this->assertSame('receive', $first['type']);
         $this->assertSame('SSD 1TB', $first['item_name']);
         $this->assertEqualsWithDelta(15000.0, $first['line_value'], 0.001);
-        $this->assertNull($body['data'][1]['line_value']);
+        // No lot and no item cost: an issue is worth 0.
+        $this->assertEqualsWithDelta(0.0, $body['data'][1]['line_value'], 0.001);
 
         $summary = collect($body['summary'])->keyBy('key');
         $this->assertSame(4, $summary['total']['value']);
@@ -252,7 +254,7 @@ class StockReportsTest extends TestCase
             ->exportReport('/api/reports/tabular/stock.movements/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_stock-movements_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheet = $export->sheets()[1];
+            $sheet = collect($export->sheets())->first(fn (object $s) => $s instanceof TabularRowsSheet);
 
             return in_array('เลขที่เอกสาร', $sheet->headings(), true)
                 && in_array('รับเข้า', $sheet->map($export->rows->first()), true);
