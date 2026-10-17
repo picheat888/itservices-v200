@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { ICON_OPTIONS, getLucideIcon } from '@/shared/lib/lucide-icons';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -77,6 +78,7 @@ export function IconPicker({
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
                             placeholder={t('icon_search')}
+                            aria-label={searchLabel(t('icon_search'))}
                             className="border-input focus:border-brand bg-background mb-2 h-8 w-full rounded-md border px-2 text-sm outline-none"
                         />
                         <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">

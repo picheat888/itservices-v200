@@ -85,7 +85,8 @@ export default function ReportsPage() {
                                         value={query}
                                         onChange={(e) => setQuery(e.target.value)}
                                         placeholder={t('rep_search_placeholder')}
-                                        className="pl-9"
+                                        aria-label={t('rep_search_label')}
+                                        className="pl-9 text-ellipsis"
                                     />
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">

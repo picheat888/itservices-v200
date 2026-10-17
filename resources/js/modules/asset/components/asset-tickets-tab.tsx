@@ -101,6 +101,7 @@ export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; 
                 rows={tickets}
                 rowKey={(tk) => tk.id}
                 loading={loading}
+                searchPlaceholder={t('asset_tickets_search')}
                 searchable={(tk) => `${tk.ticket_no} ${tk.subject}`}
                 onRowClick={(tk) => navigate(`/tickets?view=${tk.id}`)}
             />

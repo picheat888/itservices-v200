@@ -1,3 +1,4 @@
+import { useT } from '@/lang';
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { normalizeSearch, useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
@@ -52,6 +53,7 @@ export const useTicketRequesterAssets = (ticketId?: number | null) =>
 
 /** Any asset by typing, for the Take Case picker (tickets.resolve); asks the server only while the list is open. */
 export function useTicketAssetPicker(enabled: boolean) {
+    const t = useT();
     const [term, setTerm] = useState('');
     const [open, setOpen] = useState(false);
     const search = useDebouncedSearch(term);
@@ -63,7 +65,11 @@ export function useTicketAssetPicker(enabled: boolean) {
         staleTime: 30_000,
     });
     const pending = normalizeSearch(term) !== search || query.isFetching;
-    const pickerProps = useMemo(() => ({ onSearch: setTerm, onOpenChange: setOpen, loading: pending }), [pending]);
+    const searchPlaceholder = t('ticket_asset_search');
+    const pickerProps = useMemo(
+        () => ({ onSearch: setTerm, onOpenChange: setOpen, loading: pending, searchPlaceholder }),
+        [pending, searchPlaceholder],
+    );
     return { assets: query.data ?? [], pickerProps };
 }
 

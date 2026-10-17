@@ -8,6 +8,7 @@ export const report: Dict = {
     rep_center_title: 'รายงาน',
     rep_center_sub: 'ศูนย์รวมรายงานทุกเรื่องไว้ที่นี่ และสามารถส่งออกเป็น Excel หรือ PDF ได้',
     rep_search_placeholder: 'ค้นหารายงาน เช่น SLA, ประกัน, ลาออก',
+    rep_search_label: 'ค้นหารายงาน',
     rep_filter_all: 'ทั้งหมด',
     rep_domain_tickets: 'Ticket',
     rep_count_reports: '{n} รายงาน',

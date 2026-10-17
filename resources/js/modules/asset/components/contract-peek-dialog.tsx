@@ -278,6 +278,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                 columns={assetColumns}
                                 rows={c.linked_assets}
                                 rowKey={(a) => a.id}
+                                searchPlaceholder={t('asset_contract_assets_search')}
                                 searchable={(a) => `${a.asset_code} ${a.name} ${a.serial ?? ''}`}
                             />
                         </div>

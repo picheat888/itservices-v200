@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import type { SelectOption } from '@/shared/lib/locale-data';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -214,8 +215,9 @@ export function SearchSelect({ value, onChange, options, placeholder, className,
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Escape' && handleClose()}
-                                className="placeholder:text-muted-foreground flex h-10 w-full bg-transparent py-2 text-sm outline-none"
+                                className="placeholder:text-muted-foreground flex h-10 w-full bg-transparent py-2 text-sm text-ellipsis outline-none"
                                 placeholder={t('search_placeholder_short')}
+                                aria-label={searchLabel(t('search_placeholder_short'))}
                             />
                         </div>
 

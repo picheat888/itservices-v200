@@ -9,6 +9,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { localName } from '@/shared/lib/local-name';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -266,9 +267,7 @@ export function ContractFormDrawer({
         enabled: open && isHardware,
     });
     const filteredAssets = useMemo(() => {
-        const q = assetSearch.trim().toLowerCase();
-        if (!q) return linkableAssets;
-        return linkableAssets.filter((a) => `${a.asset_code} ${a.name}`.toLowerCase().includes(q));
+        return linkableAssets.filter((a) => matchesAllWords(`${a.asset_code} ${a.name}`, assetSearch));
     }, [linkableAssets, assetSearch]);
     const toggleAsset = (id: number) =>
         setForm((f) => ({ ...f, asset_ids: f.asset_ids.includes(id) ? f.asset_ids.filter((x) => x !== id) : [...f.asset_ids, id] }));
@@ -808,7 +807,8 @@ export function ContractFormDrawer({
                                                     value={assetSearch}
                                                     onChange={(e) => setAssetSearch(e.target.value)}
                                                     placeholder={t('contract_link_assets_search_ph')}
-                                                    className="border-0 pl-9 focus-visible:ring-inset"
+                                                    aria-label={searchLabel(t('contract_link_assets_search_ph'))}
+                                                    className="border-0 pl-9 text-ellipsis focus-visible:ring-inset"
                                                 />
                                             </div>
                                             <div className="max-h-72 overflow-auto">

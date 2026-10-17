@@ -158,6 +158,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                 loading={isLoading}
                 emptyState={sections.length === 0 ? t('section_empty') : undefined}
                 onRowClick={(s) => setMembersOf(s)}
+                searchPlaceholder={t('emp_sections_search')}
                 searchable={(s) => `${s.code} ${s.name} ${s.name_th ?? ''} ${s.department ?? ''} ${deptById.get(s.department_id)?.name_th ?? ''}`}
                 search={list.table.search}
                 paging={list.table.paging}

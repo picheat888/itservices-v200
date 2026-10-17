@@ -25,6 +25,7 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { bindDateFormat, relativeTime, type DateFormatter } from '@/shared/lib/datetime';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -576,8 +577,7 @@ export default function EmailTemplatesPage() {
     const rows = useMemo(() => {
         let list = templates;
         if (module) list = list.filter((tp) => tp.key.startsWith(module + '.'));
-        const q = search.trim().toLowerCase();
-        if (q) list = list.filter((tp) => tp.name.toLowerCase().includes(q) || tp.key.toLowerCase().includes(q));
+        list = list.filter((tp) => matchesAllWords(`${tp.name} ${tp.key}`, search));
         return list;
     }, [templates, module, search]);
 
@@ -757,11 +757,11 @@ export default function EmailTemplatesPage() {
                                 <Input
                                     {...SEARCH_INPUT_PROPS}
                                     name="search"
-                                    aria-label={t('email_search')}
+                                    aria-label={searchLabel(t('email_search'))}
                                     value={search}
                                     onChange={(e) => list.setFilter('search', e.target.value)}
                                     placeholder={t('email_search')}
-                                    className="pl-9"
+                                    className="pl-9 text-ellipsis"
                                 />
                             </div>
                         </div>
@@ -1298,11 +1298,11 @@ function DeliveryLogPane() {
                     <Input
                         {...SEARCH_INPUT_PROPS}
                         name="search"
-                        aria-label={t('email_log_search')}
+                        aria-label={searchLabel(t('email_log_search'))}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder={t('email_log_search')}
-                        className="pl-9"
+                        className="pl-9 text-ellipsis"
                     />
                 </div>
             </div>

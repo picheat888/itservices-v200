@@ -15,6 +15,7 @@ import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/datetime';
 import { localName } from '@/shared/lib/local-name';
+import { searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
@@ -1163,8 +1164,9 @@ function AuditTab() {
                     <Input
                         value={search}
                         onChange={(e) => setFilter('search', e.target.value)}
-                        placeholder={t('search_placeholder')}
-                        className="pl-9"
+                        placeholder={t('perm_audit_search')}
+                        aria-label={searchLabel(t('perm_audit_search'))}
+                        className="pl-9 text-ellipsis"
                     />
                 </div>
                 <div className="w-44">

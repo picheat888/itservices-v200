@@ -5,6 +5,7 @@ import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -132,9 +133,9 @@ export default function WorkflowsPage() {
                     <div className="relative w-full max-w-xs">
                         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                         <Input
-                            className="pl-9"
+                            className="pl-9 text-ellipsis"
                             placeholder={t('wf_search_ph')}
-                            aria-label={t('wf_search_ph')}
+                            aria-label={searchLabel(t('wf_search_ph'))}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />

@@ -64,7 +64,7 @@ export const requests: Dict = {
     req_col_workflow: 'สายอนุมัติ',
     req_col_waiting: 'รออนุมัติโดย',
     req_col_status: 'สถานะ',
-    req_search_ph: 'ค้นหาคำขอ…',
+    req_search_ph: 'ค้นหาเลขที่, ประเภท หรือผู้ขอ…',
     req_filter_status: 'สถานะ',
     req_filter_type: 'บริการ',
     req_age_today: 'วันนี้',

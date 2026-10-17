@@ -1,7 +1,7 @@
 // Client-side search matches the way the server's SearchTerms does: every word, any order.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { matchesAllWords, searchWords } from '../../resources/js/shared/lib/search-words.ts';
+import { matchesAllWords, searchLabel, searchWords } from '../../resources/js/shared/lib/search-words.ts';
 
 const row = 'John Smith สมชาย ใจดี EMP0012 IT';
 
@@ -27,4 +27,10 @@ test('an empty search matches everything', () => {
 test('words are distinct and at most six, like SearchTerms::words', () => {
     assert.deepEqual(searchWords('IT it It'), ['it']);
     assert.deepEqual(searchWords('a b c d e f g h'), ['a', 'b', 'c', 'd', 'e', 'f']);
+});
+
+test('a search placeholder reads as its accessible name without the trailing ellipsis', () => {
+    assert.equal(searchLabel('ค้นหาชื่อ, รหัส หรือแผนก…'), 'ค้นหาชื่อ, รหัส หรือแผนก');
+    assert.equal(searchLabel('Search name or message...'), 'Search name or message');
+    assert.equal(searchLabel('Search reports'), 'Search reports');
 });

@@ -16,6 +16,7 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
+import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
@@ -540,6 +541,7 @@ export default function EmployeesPage() {
                             rows={positions}
                             rowKey={(p) => p.id}
                             onRowClick={(p) => setViewPos(p)}
+                            searchPlaceholder={t('emp_positions_search')}
                             searchable={(p) => `${p.code} ${p.title}`}
                             search={list.table.search}
                             paging={list.table.paging}
@@ -565,6 +567,7 @@ export default function EmployeesPage() {
                             rows={departments}
                             rowKey={(d) => d.id}
                             onRowClick={(d) => setViewDept(d)}
+                            searchPlaceholder={t('emp_departments_search')}
                             searchable={(d) => `${d.code} ${d.tag} ${d.name} ${d.name_th ?? ''}`}
                             search={list.table.search}
                             paging={list.table.paging}
@@ -837,8 +840,8 @@ function DirectoryTab({
                         value={search}
                         onChange={(e) => handleSearch(e.target.value)}
                         placeholder={t('search_name_id')}
-                        aria-label={t('search_name_id')}
-                        className="pl-9"
+                        aria-label={searchLabel(t('search_name_id'))}
+                        className="pl-9 text-ellipsis"
                     />
                 </div>
                 <FilterPopover count={activeFilterCount} width={460} onClear={clearFilters} resultCount={total}>

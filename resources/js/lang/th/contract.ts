@@ -125,7 +125,9 @@ export const contract: Dict = {
 
     // contract-form-drawer.tsx — linked assets picker
     contract_link_assets_hardware_only: 'ผูกทรัพย์สินได้เฉพาะสัญญาฮาร์ดแวร์ เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้',
-    contract_link_assets_search_ph: 'ค้นหารหัสทรัพย์สินหรือชื่อ',
+    contract_link_assets_search_ph: 'ค้นหารหัสทรัพย์สินหรือชื่อ…',
+    contract_search: 'ค้นหาเลขที่, ชื่อสัญญา หรือผู้ขาย…',
+    contract_assets_search: 'ค้นหารหัส, ชื่อ หรือ Serial…',
     contract_link_assets_loading: 'กำลังโหลด…',
     contract_link_assets_none: 'ไม่มีทรัพย์สินให้เลือก',
     contract_link_assets_selected: 'เลือกแล้ว {n} รายการ',

@@ -91,6 +91,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
                     maxBodyHeight="52vh"
+                    searchPlaceholder={t('emp_search_by_position')}
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''} ${m.section ?? ''}`}
                 />
             </DialogContent>

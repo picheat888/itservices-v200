@@ -72,7 +72,7 @@ export const notification: Dict = {
     notification_modified: 'edited',
     notification_never_sent: 'never',
     notification_sub: 'Every in-app notification in the system',
-    notification_search: 'Search notifications…',
+    notification_search: 'Search name or message…',
     notification_edit: 'Edit & preview',
     notification_test: 'Send to me',
     notification_test_sent: 'Sent - check your notifications',
@@ -115,7 +115,6 @@ export const notification: Dict = {
     notification_col_id: 'ID',
     notification_lang_en: 'EN',
     notification_lang_th: 'TH',
-    notification_search_label: 'Search notifications',
     notification_empty_none: 'No notifications yet',
 
     // notification-settings-pane.tsx — name / trigger / audience per notification

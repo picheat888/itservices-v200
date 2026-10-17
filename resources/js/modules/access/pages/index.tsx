@@ -603,6 +603,7 @@ export default function AccessControlPage() {
                             columns={egColumns}
                             rows={egFiltered}
                             rowKey={(g) => g.id}
+                            searchPlaceholder={t('access_email_search')}
                             searchable={(g) => `${g.name} ${g.email} ${g.department ?? ''} ${g.department_th ?? ''}`}
                             onRowClick={openEmailGroup}
                             loading={emailGroups.isLoading}
@@ -617,6 +618,7 @@ export default function AccessControlPage() {
                             columns={fsColumns}
                             rows={fsFiltered}
                             rowKey={(s) => s.id}
+                            searchPlaceholder={t('access_share_search')}
                             searchable={(s) => `${s.name} ${s.path} ${s.department ?? ''} ${s.department_th ?? ''}`}
                             onRowClick={openFileShare}
                             loading={fileShares.isLoading}
@@ -631,6 +633,7 @@ export default function AccessControlPage() {
                             columns={spColumns}
                             rows={spRows}
                             rowKey={(p) => p.id}
+                            searchPlaceholder={t('access_social_search')}
                             searchable={(p) => `${p.name} ${p.url ?? ''} ${p.policy ?? ''}`}
                             onRowClick={openSocial}
                             loading={social.isLoading}
@@ -644,6 +647,7 @@ export default function AccessControlPage() {
                             columns={swColumns}
                             rows={swFiltered}
                             rowKey={(s) => s.id}
+                            searchPlaceholder={t('access_software_search')}
                             searchable={(s) => `${s.name} ${s.publisher ?? ''}`}
                             onRowClick={openSoftware}
                             loading={software.isLoading}

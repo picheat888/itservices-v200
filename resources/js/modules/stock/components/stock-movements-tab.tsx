@@ -84,6 +84,7 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
                 columns={columns}
                 rows={moves}
                 rowKey={(m) => m.id}
+                searchPlaceholder={t('stock_movements_search')}
                 searchable={(m) => `${m.doc_no ?? ''} ${m.recorded_by ?? ''}`}
             />
         </div>

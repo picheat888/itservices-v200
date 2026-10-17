@@ -7,7 +7,7 @@ const MAX_LENGTH = 100;
 /** The distinct lowercase words of a search, at most six; zero-width dropped and spaces collapsed like the server. */
 export function searchWords(search: string): string[] {
     const cleaned = search
-        .replace(/[​-‍⁠﻿]/g, '')
+        .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
         .replace(/\s+/g, ' ')
         .trim()
         .slice(0, MAX_LENGTH)
@@ -22,4 +22,9 @@ export function matchesAllWords(haystack: string, search: string): boolean {
     if (words.length === 0) return true;
     const text = haystack.toLowerCase();
     return words.every((word) => text.includes(word));
+}
+
+/** A search box's accessible name: its placeholder without the trailing "…". */
+export function searchLabel(placeholder: string): string {
+    return placeholder.replace(/\s*(…|\.\.\.)$/, '');
 }

@@ -23,6 +23,7 @@ import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
+import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
@@ -877,11 +878,11 @@ export default function AssetsPage() {
                                 <Input
                                     ref={searchRef}
                                     type="search"
-                                    aria-label={t('asset_search_label')}
+                                    aria-label={searchLabel(t('asset_search'))}
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder={t('asset_search')}
-                                    className="pl-9"
+                                    className="pl-9 text-ellipsis"
                                 />
                             </div>
                             <FilterPopover count={activeFilterCount} width={460} onClear={clearFilters} resultCount={totalRows}>
@@ -1495,6 +1496,7 @@ export default function AssetsPage() {
                             search={list.table.search}
                             server={{ ...list.table.paging, total: transferLog?.meta.total ?? 0 }}
                             // The box only; the server matches asset, brand, either end (Thai or English) and who moved it
+                            searchPlaceholder={t('asset_transfer_search')}
                             searchable={() => ''}
                             onRowClick={(tr) => tr.asset_id && openAssetId(tr.asset_id)}
                         />
