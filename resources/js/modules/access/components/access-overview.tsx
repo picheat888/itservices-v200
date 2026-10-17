@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { AccessIssueItem, AccessKind, AccessSummary } from '@/shared/types';
@@ -8,6 +9,7 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import {
     AlertTriangle,
     CheckCircle2,
@@ -151,6 +153,7 @@ function IssueSection({
     canEdit?: Record<AccessKind, boolean>;
     t: (k: string) => string;
 }) {
+    const lang = useUiStore((s) => s.lang);
     if (items.length === 0) return null;
     const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-700 dark:text-amber-400';
     const toneRail = tone === 'red' ? 'border-l-destructive' : 'border-l-amber-500';
@@ -197,7 +200,9 @@ function IssueSection({
                                         {item.employee ? (
                                             <>
                                                 {t(item.reason === 'resigned' ? 'access_dash_issue_owner' : 'access_dash_issue_holder')}{' '}
-                                                <span className="text-foreground font-medium">{item.employee}</span>
+                                                <span className="text-foreground font-medium">
+                                                    {localPair(item.employee, item.employee_th, lang)}
+                                                </span>
                                             </>
                                         ) : (
                                             hint
@@ -245,6 +250,7 @@ function IssuesDrawer({
     t: (k: string) => string;
 }) {
     const { issues } = governance;
+    const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const revoke = useRevokeGrant();
     const total = issues.resigned.length + issues.no_owner.length + issues.empty.length;
@@ -265,7 +271,7 @@ function IssuesDrawer({
             title: t('access_revoke_confirm_title'),
             description: t('access_revoke_confirm_desc'),
             confirmText: t('access_issue_revoke'),
-            entity: { name: item.employee ?? '—', sub: item.name ?? undefined },
+            entity: { name: localPair(item.employee, item.employee_th, lang) ?? '—', sub: item.name ?? undefined },
             action: async () => {
                 await revoke.mutateAsync({ kind: item.kind, id: item.id, membershipId: item.membership_id as number });
                 useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'users', { duration: 4000, polite: true });

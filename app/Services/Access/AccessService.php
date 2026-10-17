@@ -346,6 +346,7 @@ class AccessService
             'membership_id' => $m->id,
             'name' => $m->resource?->name,
             'employee' => $m->employee?->name,
+            'employee_th' => $m->employee?->name_th,
         ])->sortBy([['employee', 'asc'], ['name', 'asc']])->values();
 
         // Resources still OWNED by someone who has left. Ownership is not a membership row,
@@ -356,12 +357,12 @@ class AccessService
         $resignedOwned = FileShare::whereHas('owner', $ownerResigned)->with('owner')->orderBy('name')->get()
             ->map(fn (FileShare $s) => [
                 'kind' => 'file-shares', 'id' => $s->id, 'name' => $s->name,
-                'employee' => $s->owner?->name, 'reason' => 'resigned',
+                'employee' => $s->owner?->name, 'employee_th' => $s->owner?->name_th, 'reason' => 'resigned',
             ])
             ->concat(EmailGroup::whereHas('owner', $ownerResigned)->with('owner')->orderBy('name')->get()
                 ->map(fn (EmailGroup $g) => [
                     'kind' => 'email-groups', 'id' => $g->id, 'name' => $g->name,
-                    'employee' => $g->owner?->name, 'reason' => 'resigned',
+                    'employee' => $g->owner?->name, 'employee_th' => $g->owner?->name_th, 'reason' => 'resigned',
                 ]))
             ->values();
 
@@ -370,7 +371,7 @@ class AccessService
         // reason on each row so the drill-down can still tell them apart; the ones with a
         // name to hand over from come first.
         $ownerlessIssues = $resignedOwned->concat(
-            $noOwnerList->map(fn (array $row) => $row + ['employee' => null, 'reason' => 'none'])
+            $noOwnerList->map(fn (array $row) => $row + ['employee' => null, 'employee_th' => null, 'reason' => 'none'])
         )->values();
 
         return [
