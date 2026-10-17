@@ -11,6 +11,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -201,8 +202,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
             focusFirstError(found as Record<string, string>);
             return;
         }
-        if (user && isDirty && !(await confirmEdit({ name: lang === 'th' ? (user.name_th ?? user.name) : user.name, sub: user.employee_code })))
-            return;
+        if (user && isDirty && !(await confirmEdit({ name: localName(user, lang), sub: user.employee_code }))) return;
         const form = new FormData();
         form.append('first_name', firstName.trim());
         form.append('last_name', lastName.trim());
