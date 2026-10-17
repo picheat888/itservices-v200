@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { matchesAllWords } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
@@ -170,8 +171,7 @@ export function DataTable<T>({
 
     const filtered = useMemo(() => {
         if (!query || !searchable) return rows;
-        const q = query.toLowerCase();
-        return rows.filter((r) => searchable(r).toLowerCase().includes(q));
+        return rows.filter((r) => matchesAllWords(searchable(r), query));
     }, [rows, query, searchable]);
 
     // Server-paginated tables render `rows` as-is (the parent fetched just this page);

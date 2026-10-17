@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { matchesAllWords } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
@@ -95,7 +96,7 @@ export function SearchableSelect({
 
     const isAsync = onSearch !== undefined;
     const selected = options.find((o) => o.value === value) ?? (selectedOption?.value === value ? selectedOption : undefined);
-    const filtered = q && !isAsync ? options.filter((o) => o.search.toLowerCase().includes(q.toLowerCase())) : options;
+    const filtered = q && !isAsync ? options.filter((o) => matchesAllWords(o.search, q)) : options;
     // Reserve the leading icon slot on every row when at least one option supplies one,
     // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
     const hasIcons = options.some((o) => o.icon !== undefined);

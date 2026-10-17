@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { localPair } from '@/shared/lib/local-name';
+import { matchesAllWords } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
@@ -57,7 +58,7 @@ export function OrgChartToolbar({
         if (!q) {
             return [];
         }
-        return people.filter((p) => p.search.includes(q)).slice(0, 6);
+        return people.filter((p) => matchesAllWords(p.search, q)).slice(0, 6);
     }, [q, people]);
     const active = suggestions.length ? Math.min(activeIndex, suggestions.length - 1) : 0;
 
