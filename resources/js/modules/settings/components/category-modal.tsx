@@ -5,6 +5,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
+import { localName } from '@/shared/lib/local-name';
 import type { Category } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
@@ -61,7 +62,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             return;
         }
         setNameError(undefined);
-        if (category && isDirty && !(await confirmEdit({ name: lang === 'th' ? (category.name_th ?? category.name) : category.name }))) return;
+        if (category && isDirty && !(await confirmEdit({ name: localName(category, lang) }))) return;
         const payload = {
             name: name.trim(),
             name_th: nameTh.trim() || null,

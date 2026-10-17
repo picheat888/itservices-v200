@@ -4,6 +4,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError } from '@/shared/lib/api-errors';
+import { localName } from '@/shared/lib/local-name';
 import type { Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
@@ -84,7 +85,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
             return;
         }
         setErrors({});
-        if (vendor && isDirty && !(await confirmEdit({ name: lang === 'th' ? (vendor.name_th ?? vendor.name) : vendor.name }))) return;
+        if (vendor && isDirty && !(await confirmEdit({ name: localName(vendor, lang) }))) return;
         const payload = {
             name: form.name.trim(),
             name_th: form.name_th.trim(),
