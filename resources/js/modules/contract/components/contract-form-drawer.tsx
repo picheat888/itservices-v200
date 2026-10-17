@@ -8,6 +8,7 @@ import { InfoPopover } from '@/shared/components/info-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -188,7 +189,7 @@ export function ContractFormDrawer({
         // the Thai name surfaces.
         return (vendors as Vendor[]).map((v) => ({
             value: String(v.id),
-            label: lang === 'th' ? (v.name_th ?? v.name) : v.name,
+            label: localName(v, lang),
             search: `${v.name} ${v.name_th ?? ''}`,
         }));
     }, [vendors, lang]);
