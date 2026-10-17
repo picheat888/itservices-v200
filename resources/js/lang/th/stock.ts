@@ -151,6 +151,7 @@ export const stock: Dict = {
     stock_tab_lots: 'ล็อตต้นทุน',
     stock_tab_serials: 'ซีเรียล',
     stock_reserved_n: 'จอง {n}',
+    stock_reserved_note: 'กันไว้ให้คำขอเบิกที่อนุมัติแล้วแต่ยังไม่จ่าย ขอเพิ่มได้อีก {n}',
     stock_free_n: 'ว่าง {n}',
     stock_brand_model: 'ยี่ห้อ / รุ่น',
     stock_last_move: 'เคลื่อนไหวล่าสุด',

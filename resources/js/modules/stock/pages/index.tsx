@@ -4,6 +4,7 @@ import { useCategories, useCurrency, useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
@@ -392,7 +393,16 @@ export default function StockPage() {
             render: (i) => (
                 <div>
                     <span className="text-sm font-bold tabular-nums">{i.current_stock.toLocaleString()}</span>
-                    {!!i.reserved && <div className="text-muted-foreground text-xs">{t('stock_reserved_n').replace('{n}', String(i.reserved))}</div>}
+                    {!!i.reserved && (
+                        <InfoPopover
+                            label={t('stock_reserved_n').replace('{n}', String(i.reserved))}
+                            content={t('stock_reserved_note').replace('{n}', String(Math.max(0, i.current_stock - i.reserved)))}
+                            className="text-muted-foreground block w-full text-right text-xs"
+                            isolate
+                        >
+                            {t('stock_reserved_n').replace('{n}', String(i.reserved))}
+                        </InfoPopover>
+                    )}
                 </div>
             ),
         },
