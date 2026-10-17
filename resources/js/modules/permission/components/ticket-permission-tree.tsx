@@ -2,9 +2,9 @@ import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
-import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { PermissionCardHeader } from './permission-card-header';
+import { PermissionSwitch } from './permission-switch';
 
 // Mirrors App\Support\Permissions::ticketHierarchy() — keep in sync.
 const MASTER = 'tickets.module';
@@ -42,30 +42,6 @@ function hasAncestors(key: string, has: (k: string) => boolean): boolean {
         return has(parent.view);
     }
     return true;
-}
-
-/** A single toggle, matching the matrix switch (h-5 w-9). */
-function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            disabled={locked}
-            onClick={onClick}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-brand' : 'bg-muted')}
-        >
-            <span
-                className={cn(
-                    'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                    on ? 'left-[1.125rem]' : 'left-0.5',
-                )}
-            >
-                {on && <Check className="text-brand h-2.5 w-2.5" />}
-                {locked && !on && <Lock className="text-muted-foreground h-2.5 w-2.5" />}
-            </span>
-        </button>
-    );
 }
 
 /**
@@ -144,7 +120,7 @@ export function TicketPermissionTree({
                     <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
                 </div>
                 <div className="ml-auto">
-                    <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
+                    <PermissionSwitch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
                 </div>
             </div>
 
@@ -165,7 +141,7 @@ export function TicketPermissionTree({
                                             {translate(lang, 'perm_ui_view')}
                                         </span>
                                     )}
-                                    <Switch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
+                                    <PermissionSwitch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
                                 </span>
                             </div>
                             {group.children.length > 0 && (
@@ -179,7 +155,11 @@ export function TicketPermissionTree({
                                                     {childInfo && <InfoHint text={childInfo} />}
                                                 </span>
                                                 <span className="ml-auto">
-                                                    <Switch on={has(child) && viewOn} locked={isSuper || !viewOn} onClick={() => toggle(child)} />
+                                                    <PermissionSwitch
+                                                        on={has(child) && viewOn}
+                                                        locked={isSuper || !viewOn}
+                                                        onClick={() => toggle(child)}
+                                                    />
                                                 </span>
                                             </div>
                                         );
@@ -203,7 +183,7 @@ export function TicketPermissionTree({
                             <div key={level} className="flex min-h-[30px] items-center gap-2">
                                 <span className="text-muted-foreground text-[12.5px]">{label(level, lang)}</span>
                                 <span className="ml-auto">
-                                    <Switch on={has(level) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(level)} />
+                                    <PermissionSwitch on={has(level) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(level)} />
                                 </span>
                             </div>
                         ))}
@@ -219,7 +199,7 @@ export function TicketPermissionTree({
                         <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_service')}</div>
                     </div>
                     <span className="ml-auto">
-                        <Switch on={createOn} locked={isSuper} onClick={() => toggle(STANDALONE.view)} />
+                        <PermissionSwitch on={createOn} locked={isSuper} onClick={() => toggle(STANDALONE.view)} />
                     </span>
                 </div>
                 <div className="border-border ml-2 space-y-0.5 border-l pl-3">
@@ -232,7 +212,7 @@ export function TicketPermissionTree({
                                     {childInfo && <InfoHint text={childInfo} />}
                                 </span>
                                 <span className="ml-auto">
-                                    <Switch on={has(child) && createOn} locked={isSuper || !createOn} onClick={() => toggle(child)} />
+                                    <PermissionSwitch on={has(child) && createOn} locked={isSuper || !createOn} onClick={() => toggle(child)} />
                                 </span>
                             </div>
                         );
@@ -244,7 +224,7 @@ export function TicketPermissionTree({
                         {info(STANDALONE_SOLO, lang) && <InfoHint text={info(STANDALONE_SOLO, lang)} />}
                     </span>
                     <span className="ml-auto">
-                        <Switch on={has(STANDALONE_SOLO)} locked={isSuper} onClick={() => toggle(STANDALONE_SOLO)} />
+                        <PermissionSwitch on={has(STANDALONE_SOLO)} locked={isSuper} onClick={() => toggle(STANDALONE_SOLO)} />
                     </span>
                 </div>
             </div>

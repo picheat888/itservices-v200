@@ -2,9 +2,9 @@ import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
-import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { PermissionCardHeader } from './permission-card-header';
+import { PermissionSwitch } from './permission-switch';
 
 // Mirrors App\Support\Permissions::workflowHierarchy() — keep in sync.
 const MASTER = 'workflows.module';
@@ -21,30 +21,6 @@ const GATED_KEYS = [MASTER, ...GROUP.keys];
 
 const label = (key: string, lang: Lang) => actionLabel('workflows', key.replace('workflows.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('workflows', key.replace('workflows.', ''), lang);
-
-/** A single toggle, matching the matrix switch (h-5 w-9). */
-function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            disabled={locked}
-            onClick={onClick}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-brand' : 'bg-muted')}
-        >
-            <span
-                className={cn(
-                    'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                    on ? 'left-[1.125rem]' : 'left-0.5',
-                )}
-            >
-                {on && <Check className="text-brand h-2.5 w-2.5" />}
-                {locked && !on && <Lock className="text-muted-foreground h-2.5 w-2.5" />}
-            </span>
-        </button>
-    );
-}
 
 /**
  * Renders the Workflows permission card as a master → group tree (same shape as the
@@ -97,7 +73,7 @@ export function WorkflowPermissionTree({
                     <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
                 </div>
                 <div className="ml-auto">
-                    <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
+                    <PermissionSwitch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
                 </div>
             </div>
 
@@ -116,7 +92,7 @@ export function WorkflowPermissionTree({
                                         {hint && <InfoHint text={hint} />}
                                     </span>
                                     <span className="ml-auto">
-                                        <Switch on={has(key) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(key)} />
+                                        <PermissionSwitch on={has(key) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(key)} />
                                     </span>
                                 </div>
                             );
