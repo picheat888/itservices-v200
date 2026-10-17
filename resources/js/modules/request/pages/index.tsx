@@ -254,23 +254,23 @@ export default function RequestsPage() {
         {
             key: 'department',
             header: t('req_department'),
-            width: '180px',
-            hideBelow: 'lg',
+            width: '140px',
+            hideBelow: 'xl',
             render: (r) => <TruncText text={r.requester.department} className="text-sm" />,
         },
         {
             key: 'submitted',
             header: t('req_col_submitted'),
-            width: '140px',
+            width: '130px',
             className: 'whitespace-nowrap',
-            hideBelow: 'lg',
+            hideBelow: 'xl',
             render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground" />,
         },
-        { key: 'workflow', header: t('req_col_workflow'), width: '150px', className: 'whitespace-nowrap', hideBelow: 'lg', render: (r) => <WorkflowMini request={r} /> },
+        { key: 'workflow', header: t('req_col_workflow'), width: '140px', className: 'whitespace-nowrap', hideBelow: 'xl', render: (r) => <WorkflowMini request={r} /> },
         {
             key: 'waiting',
             header: t('req_col_waiting'),
-            width: '200px',
+            width: '160px',
             hideBelow: 'lg',
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
@@ -293,8 +293,8 @@ export default function RequestsPage() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            // Icon buttons on a tablet, labelled buttons from lg up
-            width: 'clamp(104px, calc(104px + (100vw - 768px) * 0.9), 230px)',
+            // Icon buttons on a tablet, labelled buttons from xl up
+            width: 'clamp(104px, calc(104px + (100vw - 1024px) * 0.5), 180px)',
             render: (r) => (
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {r.can_approve && (
@@ -307,7 +307,7 @@ export default function RequestsPage() {
                                 onClick={() => setDecide({ request: r, action: 'approve' })}
                             >
                                 <Check className="h-3.5 w-3.5" />
-                                <span className="hidden lg:inline">{t('req_approve')}</span>
+                                <span className="hidden xl:inline">{t('req_approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
@@ -318,7 +318,7 @@ export default function RequestsPage() {
                                 onClick={() => setDecide({ request: r, action: 'reject' })}
                             >
                                 <X className="h-3.5 w-3.5" />
-                                <span className="hidden lg:inline">{t('req_reject')}</span>
+                                <span className="hidden xl:inline">{t('req_reject')}</span>
                             </Button>
                         </>
                     )}
