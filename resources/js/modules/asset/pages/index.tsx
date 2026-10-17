@@ -16,6 +16,7 @@ import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { localName } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
@@ -601,7 +602,7 @@ export default function AssetsPage() {
     // Localize the asset-type name from Master Data (categories carry both name + name_th).
     const catLabel = (type: string) => {
         const c = categories.find((x) => x.name === type);
-        return c ? (lang === 'th' ? (c.name_th ?? c.name) : c.name) : type;
+        return c ? localName(c, lang) : type;
     };
     // Spoken/hover description of a bar — the row's counts are marked by color alone, so the
     // written-out split is what a screen reader and a hover both get.
@@ -885,7 +886,7 @@ export default function AssetsPage() {
                                                     { value: ALL, label: t('asset_all'), search: t('asset_all'), icon: <ToneDot tone="gray" /> },
                                                     ...categories.map((c) => ({
                                                         value: c.name,
-                                                        label: lang === 'th' ? (c.name_th ?? c.name) : c.name,
+                                                        label: localName(c, lang),
                                                         search: `${c.name} ${c.name_th ?? ''}`,
                                                         icon: <AssetTypeIcon type={c.name} className="text-muted-foreground h-4 w-4" />,
                                                     })),

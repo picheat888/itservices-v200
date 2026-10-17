@@ -3,6 +3,7 @@ import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useW
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName, nameSearch } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -78,7 +79,10 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const { data: vendors = [] } = useVendors();
     const warehouseOptions = useMemo(() => warehouses.map((w) => ({ value: String(w.id), label: w.name, search: w.name })), [warehouses]);
     const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
-    const vendorOptions = useMemo(() => vendors.map((v) => ({ value: String(v.id), label: v.name, search: v.name })), [vendors]);
+    const vendorOptions = useMemo(
+        () => vendors.map((v) => ({ value: String(v.id), label: localName(v, lang), search: nameSearch(v) })),
+        [vendors, lang],
+    );
     const [form, setForm] = useState<FormState>(EMPTY);
     const [initial, setInitial] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
@@ -153,7 +157,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         () =>
             categories.map((c) => ({
                 value: String(c.id),
-                label: lang === 'th' ? (c.name_th ?? c.name) : c.name,
+                label: localName(c, lang),
                 search: `${c.name} ${c.name_th ?? ''}`,
             })),
         [categories, lang],

@@ -3,6 +3,7 @@ import { useEmployeePicker, useEmployeesByIds, useLocations } from '@/modules/em
 import { Field } from '@/shared/components/field';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -57,7 +58,7 @@ export function AssetTransferDialog({
 
     const employeeOption = (e: EmployeeOption): SearchOption => ({
         value: String(e.id),
-        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        label: localName(e, lang),
         hint: e.department ?? undefined,
         sub: e.code,
         search: '',
