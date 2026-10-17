@@ -18,6 +18,7 @@ use App\Services\Report\TicketMetrics;
 use App\Support\TicketSla;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use WeakMap;
 
 /**
  * "สรุปผล SLA ของ Ticket จากคำขอ" (Report Center → Tickets, /reports/tickets-request-sla): the tickets the
@@ -268,9 +269,9 @@ class TicketRequestSlaReport extends TabularReport
         // the per-type table's take time is the tile's.
         $takeHours = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->responded_at !== null)
             // Unrounded until the average, so a 20-minute take still reads 20 minutes (not 0.3 h = 18).
-            ->map(fn (Ticket $t) => $t->created_at->diffInMinutes($t->responded_at, true) / 60);
+            ->map(fn (Ticket $t) => self::once($t, 'takeHours', fn () => $t->created_at->diffInMinutes($t->responded_at, true) / 60));
         $fixHours = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed)
-            ->map(fn (Ticket $t) => TicketMetrics::resolveHours($t))
+            ->map(fn (Ticket $t) => self::once($t, 'fixHours', fn () => TicketMetrics::resolveHours($t)))
             ->filter(fn (?float $h) => $h !== null);
 
         return [
@@ -294,7 +295,7 @@ class TicketRequestSlaReport extends TabularReport
      * Taking the case: in time or late against sla_response_due_at once taken; while nobody has
      * taken it yet, "over" once that deadline has passed — otherwise there is nothing to judge.
      */
-    private static function takeState(Ticket $ticket): ?string
+    private static function computeTake(Ticket $ticket): ?string
     {
         $due = $ticket->sla_response_due_at;
         if ($due === null) {
@@ -313,7 +314,7 @@ class TicketRequestSlaReport extends TabularReport
      * resolve clock starts when the case is taken. A case nobody has taken yet is late on *taking*
      * (takeState), not on closing. Canceled ones are not judged.
      */
-    private static function closeState(Ticket $ticket): ?string
+    private static function computeClose(Ticket $ticket): ?string
     {
         if ($ticket->status === TicketStatus::Completed) {
             return match (TicketMetrics::slaState($ticket, now())) {
@@ -373,5 +374,31 @@ class TicketRequestSlaReport extends TabularReport
 
         return User::query()->whereIn('id', $ids)->orderBy('name')->get(['id', 'name'])
             ->map(fn (User $u) => ['value' => $u->id, 'label' => $u->name, 'label_th' => null])->all();
+    }
+
+    /** @var WeakMap<Ticket, array<string, mixed>>|null */
+    private static ?WeakMap $memo = null;
+
+    // One answer per ticket per request: the tiles, the per-type table and the open list ask the same question of it
+    private static function once(Ticket $ticket, string $name, callable $compute): mixed
+    {
+        self::$memo ??= new WeakMap;
+        $slot = self::$memo[$ticket] ?? [];
+        if (! array_key_exists($name, $slot)) {
+            $slot[$name] = $compute();
+            self::$memo[$ticket] = $slot;
+        }
+
+        return $slot[$name];
+    }
+
+    private static function takeState(Ticket $ticket): ?string
+    {
+        return self::once($ticket, 'take', fn () => self::computeTake($ticket));
+    }
+
+    private static function closeState(Ticket $ticket): ?string
+    {
+        return self::once($ticket, 'close', fn () => self::computeClose($ticket));
     }
 }
