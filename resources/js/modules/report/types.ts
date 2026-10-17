@@ -280,6 +280,8 @@ export interface SummaryItem {
     /** One line for the tile's foot when it has no split: a key with {n} (hours, shown as days / hours) and/or {at} ("Y-m-d H:i"), plus plain numbers by name (`values` — {met}, {n}). */
     note?: {
         label_key: string;
+        /** The unshortened words, shown on hover when label_key is the short form. */
+        full_key?: string;
         hours?: number | null;
         at?: string | null;
         values?: Record<string, number>;

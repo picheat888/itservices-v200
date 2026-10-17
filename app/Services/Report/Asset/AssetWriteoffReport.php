@@ -284,7 +284,7 @@ class AssetWriteoffReport extends TabularReport
                 ->withAttention('red')
                 ->withNote($overdue->isEmpty()
                     ? ['label_key' => 'rep_n_wo_rented_overdue_none']
-                    : ['label_key' => 'rep_n_wo_rented_overdue', 'texts' => ['codes' => $overdue->pluck('code')->implode(', ')]]),
+                    : $this->overdueNote($overdue->pluck('code')->all())),
         ];
     }
 
@@ -535,6 +535,27 @@ class AssetWriteoffReport extends TabularReport
                     $breakdown['contracts'],
                 ),
             ],
+        ];
+    }
+
+    /**
+     * The overdue rentals line: up to two contract codes, then how many more; every code on hover.
+     *
+     * @param  list<string>  $codes
+     * @return array{label_key: string, full_key?: string, texts: array<string, string>, values?: array<string, int>}
+     */
+    private function overdueNote(array $codes): array
+    {
+        $all = implode(', ', $codes);
+        if (count($codes) <= 2) {
+            return ['label_key' => 'rep_n_wo_rented_overdue', 'texts' => ['codes' => $all]];
+        }
+
+        return [
+            'label_key' => 'rep_n_wo_rented_overdue_short',
+            'full_key' => 'rep_n_wo_rented_overdue',
+            'texts' => ['codes' => $all, 'first' => implode(', ', array_slice($codes, 0, 2))],
+            'values' => ['more' => count($codes) - 2],
         ];
     }
 }

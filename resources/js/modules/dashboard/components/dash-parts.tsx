@@ -84,7 +84,7 @@ export interface LegendItem {
 /** The legend under a tile's bar: dot, label, and the count in ink. */
 export function LegendFooter({ items }: { items: LegendItem[] }) {
     return (
-        <span className="flex flex-wrap gap-x-3 gap-y-0.5">
+        <span className="flex gap-x-2.5 overflow-hidden" title={items.map((item) => `${item.label} ${item.value}`).join(', ')}>
             {items.map((item) => {
                 const body = (
                     <>

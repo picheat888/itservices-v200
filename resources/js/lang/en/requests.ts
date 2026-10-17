@@ -34,6 +34,7 @@ export const requests: Dict = {
     // pages/index.tsx — KPI cards
     req_kpi_awaiting: 'Waiting for you',
     req_kpi_awaiting_of: 'of {n} pending',
+    req_kpi_awaiting_of_short: 'of {n} pending',
     req_kpi_approved: 'Approved',
     req_kpi_rejected: 'Rejected',
     req_kpi_cycle: 'Avg. decision time',

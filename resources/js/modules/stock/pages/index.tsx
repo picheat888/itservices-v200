@@ -498,7 +498,8 @@ export default function StockPage() {
         {
             label: t('stock_kpi_alerts_sub'),
             value: summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : '—',
-            sub: t('stock_kpi_low'),
+            sub: t('stock_kpi_low_short'),
+            subTitle: t('stock_kpi_low'),
             icon: AlertTriangle,
             onClick: viewAlerts,
         },

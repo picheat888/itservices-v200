@@ -88,6 +88,9 @@ export function TicketOverviewTiles({
     const reportHref = canOpenReport ? `/reports/tickets-overview?from=${sla.from}&to=${sla.to}` : null;
     const pct = (rate: number | null) => (rate == null ? '—' : `${Math.round(rate)}%`);
     const linked = reportHref ? 'group-hover:border-brand/40 h-full' : 'h-full';
+    const ofLive = t('ticket_tile_of_live').replace('{n}', fmt(live));
+    const oldest = t('ticket_tile_oldest').replace('{n}', fmt(summary.over_sla_oldest_days ?? 0));
+    const split = (key: string) => t(key).replace('{request}', pct(sla.request_rate)).replace('{manual}', pct(sla.manual_rate));
 
     return (
         <StatGrid count={4}>
@@ -99,15 +102,9 @@ export function TicketOverviewTiles({
                 alert={summary.over_sla_now > 0 ? 'red' : undefined}
                 onClick={summary.over_sla_now > 0 ? onOpenOverSla : undefined}
                 className="h-full"
-                footer={
-                    summary.over_sla_now > 0
-                        ? [
-                              t('ticket_tile_of_live').replace('{n}', fmt(live)),
-                              summary.over_sla_oldest_days != null && t('ticket_tile_oldest').replace('{n}', fmt(summary.over_sla_oldest_days)),
-                          ]
-                              .filter(Boolean)
-                              .join(' ')
-                        : t('ticket_dash_over_sla_ok_sub')
+                footer={summary.over_sla_now === 0 ? t('ticket_dash_over_sla_ok_sub') : summary.over_sla_oldest_days != null ? oldest : ofLive}
+                footerTitle={
+                    summary.over_sla_now > 0 ? [ofLive, summary.over_sla_oldest_days != null && oldest].filter(Boolean).join(' ') : undefined
                 }
             />
             <StatCard
@@ -131,6 +128,7 @@ export function TicketOverviewTiles({
                     value={pct(sla.rate)}
                     tone={sla.rate == null ? undefined : SLA_TONE[slaLevel(sla.rate, sla.goal)]}
                     aside={sla.rate == null ? null : <SlaBar rate={sla.rate} goal={sla.goal} />}
+                    footerTitle={sla.rate == null ? undefined : split('ticket_tile_sla_split')}
                     className={linked}
                     footer={
                         sla.rate == null ? (
@@ -138,7 +136,7 @@ export function TicketOverviewTiles({
                         ) : (
                             <span className="inline-flex items-center gap-1.5">
                                 {sla.delta_pts != null && <PointsTrend delta={sla.delta_pts} />}
-                                {t('ticket_tile_sla_split').replace('{request}', pct(sla.request_rate)).replace('{manual}', pct(sla.manual_rate))}
+                                {split('ticket_tile_sla_split_short')}
                             </span>
                         )
                     }
@@ -151,13 +149,14 @@ export function TicketOverviewTiles({
                     value={Math.abs(net)}
                     tone={net > 0 ? 'red' : net < 0 ? 'green' : undefined}
                     aside={<FlowBars flow={summary.flow} />}
+                    footerTitle={`${t('ticket_tile_flow_opened').replace('{n}', fmt(summary.created))} ${t('ticket_tile_flow_closed').replace('{n}', fmt(summary.resolved))}`}
                     className={linked}
                     footer={
                         <span className="inline-flex items-center gap-1.5">
                             <span className="bg-brand/50 h-2 w-2 rounded-sm" />
-                            {t('ticket_tile_flow_opened').replace('{n}', fmt(summary.created))}
+                            {t('ticket_tile_flow_opened_short').replace('{n}', fmt(summary.created))}
                             <span className="ml-1 h-2 w-2 rounded-sm bg-emerald-500" />
-                            {t('ticket_tile_flow_closed').replace('{n}', fmt(summary.resolved))}
+                            {t('ticket_tile_flow_closed_short').replace('{n}', fmt(summary.resolved))}
                         </span>
                     }
                 />

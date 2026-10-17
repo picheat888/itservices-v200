@@ -128,6 +128,8 @@ export default function TicketOverviewReportPage() {
     const scheduleMut = useCreateSchedule();
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));
+    // 90% closed within … hours: the average tile's footer when there is no earlier figure, its hover text otherwise
+    const p90 = data?.kpi.p90_resolve_hours == null ? undefined : t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours));
 
     // Client-side range check runs before any request; server errors (403/422/other) are
     // reported once the request comes back. Either way the skeleton never spins forever.
@@ -247,17 +249,22 @@ export default function TicketOverviewReportPage() {
                             value={fmt(data.kpi.avg_resolve_hours)}
                             unit={data.kpi.avg_resolve_hours === null ? undefined : t('rep_hours')}
                             footer={
-                                data.kpi.p90_resolve_hours === null ? undefined : (
+                                data.kpi.avg_resolve_hours === null ||
+                                data.previous.avg_resolve_hours === null ||
+                                data.kpi.avg_resolve_hours === data.previous.avg_resolve_hours ? (
+                                    p90
+                                ) : (
                                     <span className="inline-flex items-center gap-1.5">
                                         <HoursChange
                                             current={data.kpi.avg_resolve_hours}
                                             previous={data.previous.avg_resolve_hours}
                                             unit={t('rep_hours')}
                                         />
-                                        {t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours))}
+                                        {t('rep_from_previous')}
                                     </span>
                                 )
                             }
+                            footerTitle={p90}
                         />
                         <KpiTile
                             label={t('rep_kpi_backlog')}
@@ -268,17 +275,14 @@ export default function TicketOverviewReportPage() {
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
                             footer={
-                                // In the status badges' colours (open blue, in progress amber), as in the ticket list.
-                                <span className="inline-flex items-center gap-3">
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <i className="inline-block h-2 w-2 rounded-full bg-blue-400" />
-                                        {t('rep_kpi_backlog_open')}
-                                        <b className="text-blue-600 dark:text-blue-400">{data.backlog.open}</b>
+                                // Numbers in the status badges' colours: open blue, in progress violet
+                                <span className="inline-flex items-center gap-2">
+                                    <span>
+                                        {t('rep_kpi_backlog_open')} <b className="text-blue-700 dark:text-blue-400">{data.backlog.open}</b>
                                     </span>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <i className="inline-block h-2 w-2 rounded-full bg-amber-400" />
-                                        {t('rep_kpi_backlog_in_progress')}
-                                        <b className="text-amber-600 dark:text-amber-400">{data.backlog.in_progress}</b>
+                                    <span>
+                                        {t('rep_kpi_backlog_in_progress')}{' '}
+                                        <b className="text-violet-700 dark:text-violet-400">{data.backlog.in_progress}</b>
                                     </span>
                                 </span>
                             }

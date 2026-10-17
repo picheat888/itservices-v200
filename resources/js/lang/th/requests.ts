@@ -31,6 +31,7 @@ export const requests: Dict = {
     // pages/index.tsx — การ์ด KPI
     req_kpi_awaiting: 'รอคุณพิจารณา',
     req_kpi_awaiting_of: 'จากทั้งหมด {n} รายการที่รออนุมัติ',
+    req_kpi_awaiting_of_short: 'จาก {n} ที่รออนุมัติ',
     req_kpi_approved: 'อนุมัติแล้ว',
     req_kpi_rejected: 'ไม่อนุมัติ',
     req_kpi_cycle: 'เวลาพิจารณาเฉลี่ย',
