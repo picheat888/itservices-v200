@@ -102,7 +102,7 @@ class NotificationTemplateTest extends TestCase
         // own account wears in place of the record name every other bell names.
         $chrome = [
             'notif_title', 'notif_all', 'notif_mark_all', 'notif_clear_all', 'notif_empty',
-            'notif_dismiss', 'notif_dismiss_failed', 'notif_unread', 'notif_test_prefix', 'notif_load_more',
+            'notif_dismiss', 'notif_dismiss_failed', 'notif_keys_hint', 'notif_unread', 'notif_test_prefix', 'notif_load_more',
             'notif_group_system', 'notif_password_title',
         ];
         $frontEnd = array_values(array_diff($matches[1], $chrome));

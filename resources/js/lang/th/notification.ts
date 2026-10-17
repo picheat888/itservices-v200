@@ -9,6 +9,7 @@ export const notification: Dict = {
     notif_empty: 'ไม่มีการแจ้งเตือน',
     notif_dismiss: 'ปิดรายการนี้',
     notif_dismiss_failed: 'ปิดรายการนี้ไม่สำเร็จ ลองอีกครั้ง',
+    notif_keys_hint: 'ใช้ลูกศรขึ้นลงเลื่อนระหว่างรายการ ลูกศรขวาไปที่ปุ่มปิด กด Delete เพื่อปิดรายการ',
     notif_unread: 'ยังไม่ได้อ่าน',
     notif_load_more: 'โหลดเพิ่ม',
     notif_group_system: 'อื่น ๆ',
