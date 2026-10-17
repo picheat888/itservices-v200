@@ -309,6 +309,18 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame([$return->id], array_column($onlyReturns, 'id'));
     }
 
+    public function test_transfer_history_search_matches_a_thai_name(): void
+    {
+        Employee::create(['code' => 'EMP-T9', 'first_name' => 'Somchai', 'last_name' => 'Jaidee', 'first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี']);
+        $mine = $this->transfer('handover', '2026-09-10 09:00:00', ['to_owner' => 'EMP-T9']);
+        $this->transfer('handover', '2026-09-11 09:00:00');
+
+        $rows = $this->actingAs($this->userWith([...$this->reportRights('assets')]))
+            ->getJson('/api/reports/tabular/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30&search='.urlencode('สมชาย'))->assertOk()->json('data');
+
+        $this->assertSame([$mine->id], array_column($rows, 'id'));
+    }
+
     public function test_asset_activity_reports_need_assets_view(): void
     {
         $user = $this->userWith([...$this->reportRights('employees')]);

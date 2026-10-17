@@ -147,7 +147,6 @@ export const asset: Dict = {
     asset_hist_kind_return: 'รับคืน',
     asset_hist_kind_recall: 'เรียกคืน',
     asset_hist_kind_relocate: 'ย้ายที่ตั้ง',
-    asset_log_capped: 'แสดง {n} รายการล่าสุด รายการที่เก่ากว่านี้ดูได้ในประวัติของทรัพย์สินแต่ละชิ้น',
     asset_search: 'ค้นหาทรัพย์สิน…',
     asset_search_label: 'ค้นหาทรัพย์สิน',
     asset_col_code_tag: 'รหัสทรัพย์สิน / Tag',

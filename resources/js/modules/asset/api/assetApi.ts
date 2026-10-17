@@ -70,9 +70,9 @@ export const assetApi = {
         http
             .get<ApiEnvelope<ContractLinkableAsset[]>>('/assets/linkable', { params: contractId ? { contract_id: contractId } : {} })
             .then((r) => r.data.data),
-    // The envelope carries `meta.limit` — how far back the log reaches — so the page can say so
-    // instead of presenting a capped slice as the whole history.
-    transfers: () => http.get<{ data: AssetTransferLog[]; meta?: { limit: number } }>('/assets/transfers').then((r) => r.data),
+    // One page of the ownership log, searched on the server
+    transfers: (params: { page: number; per_page: number; search?: string }) =>
+        http.get<{ data: AssetTransferLog[]; meta: { total: number } }>('/assets/transfers', { params }).then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<Asset>>(`/assets/${id}`).then((r) => r.data.data),
     // The contract linked to an asset (read-only "peek"); gated by assets.view, not contracts.view.
     getContract: (id: number) => http.get<ApiEnvelope<Contract>>(`/assets/${id}/contract`).then((r) => r.data.data),

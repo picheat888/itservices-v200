@@ -28,9 +28,6 @@ use Illuminate\Support\Carbon;
 
 class AssetController extends Controller
 {
-    /** How far back the cross-asset transfer log reaches. Surfaced to the page, which says so. */
-    private const TRANSFER_LOG_LIMIT = 100;
-
     /**
      * The statuses the dashboard counts as "in use" — the asset has left the pool and sits
      * with a holder. The two pending states belong here too: a hand-over awaiting acceptance
@@ -264,16 +261,21 @@ class AssetController extends Controller
         return response()->json(['data' => AssetResource::collection($assets)]);
     }
 
-    /** Recent ownership-change history across all assets (newest first). */
+    /** Ownership-change history across all assets, newest first, paged and searched on the server. */
     public function transfers(Request $request): JsonResponse
     {
         $this->gateView($request);
 
         // Ownership only — a location correction keeps the same holder, so it belongs on the
         // asset's own History tab, not in a list of who handed what to whom.
-        $rows = AssetTransfer::whereNot('kind', AssetTransferKind::Relocate)
-            ->latest()->limit(self::TRANSFER_LOG_LIMIT)->get();
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $page = AssetTransfer::whereNot('kind', AssetTransferKind::Relocate)
+            ->searchFor($request->query('search'))
+            ->latest()->latest('id')
+            ->paginate($perPage);
+        $rows = collect($page->items());
         $names = AssetTransfer::employeeNamesFor($rows);
+        $namesTh = AssetTransfer::employeeThaiNamesFor($rows);
 
         $log = $rows->map(fn (AssetTransfer $tr) => [
             'id' => $tr->id,
@@ -290,13 +292,16 @@ class AssetController extends Controller
             // Set only when that end was an employee; a warehouse or shared label has none.
             'from_name' => $names[$tr->from_owner] ?? null,
             'to_name' => $names[$tr->to_owner] ?? null,
+            'from_name_th' => $namesTh[$tr->from_owner] ?? null,
+            'to_name_th' => $namesTh[$tr->to_owner] ?? null,
             'reason' => $tr->reason,
             'performed_by' => $tr->performed_by,
         ]);
 
-        // The cap is part of the answer: without it the page says "1-20 of 100" and looks
-        // complete while older moves sit unseen behind it.
-        return response()->json(['data' => $log, 'meta' => ['limit' => self::TRANSFER_LOG_LIMIT]]);
+        return response()->json([
+            'data' => $log,
+            'meta' => ['total' => $page->total(), 'per_page' => $page->perPage(), 'current_page' => $page->currentPage(), 'last_page' => $page->lastPage()],
+        ]);
     }
 
     public function store(StoreAssetRequest $request): JsonResponse
