@@ -298,7 +298,8 @@ export default function RequestsPage() {
             header: t('actions'),
             align: 'right',
             // Room for the approve and reject buttons only when this page has a request the reader can decide
-            width: rows.some((r) => r.can_approve) ? '230px' : '72px',
+            // Icon buttons below xl, labelled buttons from xl up
+            width: rows.some((r) => r.can_approve) ? 'clamp(150px, calc(150px + (100vw - 1100px) * 0.8), 300px)' : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {r.can_approve && (
@@ -311,7 +312,7 @@ export default function RequestsPage() {
                                 onClick={() => setDecide({ request: r, action: 'approve' })}
                             >
                                 <Check className="h-3.5 w-3.5" />
-                                <span>{t('req_approve')}</span>
+                                <span className="hidden xl:inline">{t('req_approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
@@ -322,7 +323,7 @@ export default function RequestsPage() {
                                 onClick={() => setDecide({ request: r, action: 'reject' })}
                             >
                                 <X className="h-3.5 w-3.5" />
-                                <span>{t('req_reject')}</span>
+                                <span className="hidden xl:inline">{t('req_reject')}</span>
                             </Button>
                         </>
                     )}

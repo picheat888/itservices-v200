@@ -201,7 +201,9 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             header: t('actions'),
             align: 'right',
             // Room for the buttons only when this page has a request the reader can approve or fulfill
-            width: requests.some((r) => r.can_decide || (can('fulfill') && r.status === 'approved')) ? '190px' : '72px',
+            width: requests.some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'))
+                ? 'clamp(110px, calc(110px + (100vw - 1100px) * 0.5), 190px)'
+                : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">
                     {r.can_decide && (
@@ -214,7 +216,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                 className="bg-emerald-700 text-white hover:bg-emerald-800"
                             >
                                 <Check className="h-3.5 w-3.5" aria-hidden />
-                                <span>{t('stock_approve')}</span>
+                                <span className="hidden xl:inline">{t('stock_approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
@@ -238,7 +240,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             }}
                         >
                             <ArrowUpFromLine className="h-3.5 w-3.5" aria-hidden />
-                            <span>{t('stock_fulfill')}</span>
+                            <span className="hidden xl:inline">{t('stock_fulfill')}</span>
                         </Button>
                     )}
                     {(r.status === 'fulfilled' || r.status === 'rejected') && <span className="text-muted-foreground text-xs">—</span>}
