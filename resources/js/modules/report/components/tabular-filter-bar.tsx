@@ -8,6 +8,7 @@
  */
 import { useT } from '@/lang';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { DateInput } from '@/shared/ui/date-input';
 import { DateRangeInput } from '@/shared/ui/date-range-input';
@@ -34,7 +35,19 @@ const normalize = (v: string | number | null | undefined) => (v === null || v ==
 /** True when the filter's value is not the report's default — what tints the field. */
 const differs = (filter: TabularFilterDef, filters: TabularFilters) => normalize(filters[filter.name]) !== normalize(filter.default);
 
-function SearchField({ id, value, active, onChange }: { id: string; value: string; active: boolean; onChange: (v: string) => void }) {
+function SearchField({
+    id,
+    value,
+    active,
+    placeholder,
+    onChange,
+}: {
+    id: string;
+    value: string;
+    active: boolean;
+    placeholder?: string;
+    onChange: (v: string) => void;
+}) {
     const [draft, setDraft] = useState(value);
 
     // Keep the field in sync when the filters are reset (or seeded) from outside.
@@ -50,7 +63,7 @@ function SearchField({ id, value, active, onChange }: { id: string; value: strin
     }, [draft]);
 
     return (
-        <div className="relative w-full sm:w-48">
+        <div className="relative w-full sm:w-64">
             <Search
                 aria-hidden="true"
                 className={cn(
@@ -58,7 +71,14 @@ function SearchField({ id, value, active, onChange }: { id: string; value: strin
                     active ? 'text-brand' : 'text-muted-foreground',
                 )}
             />
-            <Input id={id} value={draft} onChange={(e) => setDraft(e.target.value)} className={cn('pl-9', active && FILTER_ACTIVE)} />
+            <Input
+                id={id}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={placeholder}
+                aria-label={placeholder ? searchLabel(placeholder) : undefined}
+                className={cn('pl-9 text-ellipsis', active && FILTER_ACTIVE)}
+            />
         </div>
     );
 }
@@ -170,6 +190,7 @@ export function TabularFilterBar({
                                 id={id}
                                 value={value ? String(value) : ''}
                                 active={active}
+                                placeholder={filter.placeholder_key ? t(filter.placeholder_key) : undefined}
                                 onChange={(v) => onChange({ [filter.name]: v || null })}
                             />
                         </FilterField>

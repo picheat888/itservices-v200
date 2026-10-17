@@ -61,7 +61,7 @@ class StockBelowMinReport extends TabularReport
         return [
             ReportFilter::select('status', Options::fromLabels(self::STATUS_KEYS)),
             ReportFilter::select('category_id', Options::categories()),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_stock_items'),
         ];
     }
 

@@ -73,7 +73,7 @@ class AccessResourceMembersReport extends TabularReport
             ReportFilter::select('type', Options::fromLabels(array_intersect_key(AccessFacts::TYPE_KEYS, array_flip(self::TYPES))))->labelKey('rep_fl_ac_type'),
             ReportFilter::select('department_id', Options::departments())->labelKey('rep_fl_ar_department'),
             ReportFilter::select('todo', Options::fromLabels(self::TODO_KEYS))->labelKey('rep_fl_ar_todo'),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_resource_members'),
             ReportFilter::select('resource', self::resourceOptions())->labelKey('rep_fl_ar_resource'),
             ReportFilter::select('state', Options::fromLabels(self::STATE_KEYS), 'active')->labelKey('rep_fl_ar_state'),
             ReportFilter::select('sort', Options::fromLabels(self::SORT_KEYS), 'resource')->labelKey('rep_fl_ar_sort')->viewOnly(),

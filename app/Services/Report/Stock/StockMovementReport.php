@@ -63,7 +63,7 @@ class StockMovementReport extends TabularReport
             ReportFilter::select('type', Options::fromLabels(self::MOVEMENT_TYPE_KEYS)),
             ReportFilter::select('warehouse_id', Options::warehouses()),
             ReportFilter::select('category_id', Options::categories()),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_stock_movements'),
             // How each rank card sorts (value, pieces or times); the page keeps it in the URL.
             ReportFilter::select('people_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->labelKey('rep_smv_sort_by')->viewOnly(),
             ReportFilter::select('dept_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->labelKey('rep_smv_sort_by')->viewOnly(),

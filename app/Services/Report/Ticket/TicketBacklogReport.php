@@ -61,7 +61,7 @@ class TicketBacklogReport extends TabularReport
             ReportFilter::select('priority', Options::fromLabels(self::priorityKeys())),
             ReportFilter::select('assignee', self::assigneeOptions()),
             ReportFilter::select('source', Options::fromLabels(self::SOURCE_KEYS)),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_ticket_backlog'),
         ];
     }
 

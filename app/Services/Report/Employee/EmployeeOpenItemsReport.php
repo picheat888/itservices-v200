@@ -42,7 +42,7 @@ class EmployeeOpenItemsReport extends TabularReport
         return [
             ReportFilter::select('department_id', Options::departments()),
             ReportFilter::select('group', Options::fromLabels(self::GROUP_KEYS)),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_open_items'),
         ];
     }
 

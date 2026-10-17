@@ -216,6 +216,8 @@ export interface TabularFilterDef {
     options: FilterOption[];
     default: string | number | null;
     label_key: string;
+    /** What the search box searches (ReportFilter::placeholderKey). */
+    placeholder_key?: string | null;
     /** Only sets how the page is shown (ReportFilter::viewOnly) — never listed, counted or cleared as a filter. */
     view?: boolean;
 }
