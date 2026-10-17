@@ -99,7 +99,7 @@ class StockBelowMinReport extends TabularReport
             ReportColumn::number('gap', 'ขาด / เกิน', fn (StockItem $i) => self::figures($i)['gap']),
             ...$unit,
             ReportColumn::number('reorder_qty', 'ควรสั่ง', fn (StockItem $i) => self::figures($i)['reorder_qty']),
-            ReportColumn::money('unit_cost', 'ราคาต่อหน่วย', fn (StockItem $i) => self::rounded(self::figures($i)['unit_cost']))->labelKey('rep_slv_c_price'),
+            ReportColumn::money('unit_cost', 'ต้นทุน/หน่วย', fn (StockItem $i) => self::rounded(self::figures($i)['unit_cost']))->labelKey('rep_slv_c_price'),
             ReportColumn::enum('unit_cost_basis', 'ที่มาของราคา', fn (StockItem $i) => self::figures($i)['basis'], self::BASIS_KEYS, self::BASIS_TH)
                 ->hiddenByDefault(),
             ReportColumn::money('value', 'มูลค่า', fn (StockItem $i) => self::rounded(self::figures($i)['value'])),

@@ -100,7 +100,7 @@ class StockValuationReport extends TabularReport
             ReportSummary::make('total', 'ทั้งหมด', $items->count()),
             ReportSummary::make('qty_total', 'จำนวนคงเหลือรวม', (int) $items->sum(fn (StockItem $i) => $this->qtyAt($i))),
             ReportSummary::make('stock_value', 'มูลค่าคงคลังรวม', round((float) $items->sum(fn (StockItem $i) => $this->valueAt($i)), 2), format: 'money'),
-            ReportSummary::make('out', 'รายการที่ไม่มีของ', $tiles['out']),
+            ReportSummary::make('out', 'รายการที่หมดสต็อก', $tiles['out']),
             ReportSummary::make('dead90_count', 'ไม่เคลื่อนไหวเกิน 90 วัน (รายการ)', $tiles['dead90']['count']),
             ReportSummary::make('dead90_value', 'มูลค่าที่ไม่เคลื่อนไหวเกิน 90 วัน', $tiles['dead90']['value'], format: 'money'),
         ];
