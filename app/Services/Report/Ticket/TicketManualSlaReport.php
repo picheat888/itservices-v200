@@ -153,7 +153,7 @@ class TicketManualSlaReport extends TabularReport
 
     public function summary(Builder $query, array $filters): array
     {
-        $tally = self::tally((clone $query)->setEagerLoads([])->get());
+        $tally = TicketSlaFacts::tally(TicketSlaFacts::load(clone $query), withWork: true);
         $goal = TicketSla::goalPercent();
 
         return [
@@ -195,30 +195,30 @@ class TicketManualSlaReport extends TabularReport
     public function breakdown(User $viewer, array $filters): array
     {
         $by = in_array($filters['by'] ?? null, self::DIMENSIONS, true) ? $filters['by'] : 'category';
-        $tickets = $this->tickets($viewer, $filters, $by)->get();
+        $facts = TicketSlaFacts::load($this->tickets($viewer, $filters, $by));
+        // Assignees are people, named from the data; the other dimensions are translated on the page.
+        $names = User::query()->whereIn('id', array_unique(array_filter(array_column($facts, 'assignee'))))->pluck('name', 'id');
 
-        $groups = $tickets
-            ->groupBy(fn (Ticket $t) => self::groupKey($t, $by))
+        $groups = collect($facts)
+            ->groupBy(fn (array $f) => self::groupKey($f, $by))
             ->map(fn (Collection $group, string $key) => [
                 'key' => $key,
-                // Assignees are people, named from the data; the other dimensions are translated on the page.
-                'label' => $by === 'assignee' && $key !== self::NONE ? $group->first()->assignee?->name : null,
-                ...self::tally($group),
+                'label' => $by === 'assignee' && $key !== self::NONE ? ($names[$group->first()['assignee']] ?? null) : null,
+                ...TicketSlaFacts::tally($group->all(), withWork: true),
             ])
             ->sortBy(self::groupOrder($by))
             ->values()
             ->all();
 
-        $open = $tickets
-            ->filter(fn (Ticket $t) => self::isOverNow($t))
-            ->map(fn (Ticket $t) => [
-                'id' => $t->id,
-                'ticket_no' => $t->ticket_no,
-                'category' => $t->category?->value,
-                'assignee' => $t->assignee?->name,
-                'due_kind' => self::takeState($t) === 'over' ? 'response' : 'resolve',
-                'due_at' => TicketMetrics::activeDue($t)?->format('Y-m-d H:i'),
-                'over_hours' => ($due = TicketMetrics::activeDue($t)) === null ? null : round($due->diffInMinutes(now(), true) / 60, 1),
+        $open = collect($facts)
+            ->filter(fn (array $f) => $f['over'])
+            ->map(fn (array $f) => [
+                'id' => $f['id'],
+                'ticket_no' => $f['no'],
+                'category' => $f['cat'],
+                'assignee' => $names[$f['assignee']] ?? null,
+                'due_kind' => $f['take'] === 'over' ? 'response' : 'resolve',
+                ...array_slice(TicketSlaFacts::overLine($f), 2),
             ])
             ->sortByDesc('over_hours')
             ->values()
@@ -227,9 +227,9 @@ class TicketManualSlaReport extends TabularReport
         return [
             'by' => $by,
             'groups' => $groups,
-            'overall' => self::tally($tickets),
+            'overall' => TicketSlaFacts::tally($facts, withWork: true),
             'open' => $open,
-            'late' => self::lateness($tickets),
+            'late' => TicketSlaFacts::lateness($facts),
             'rules' => self::slaRules(),
         ];
     }
@@ -261,13 +261,13 @@ class TicketManualSlaReport extends TabularReport
     }
 
     /** A ticket's group under a dimension; 'none' when that field is not set. */
-    private static function groupKey(Ticket $ticket, string $by): string
+    private static function groupKey(array $fact, string $by): string
     {
         return match ($by) {
-            'category' => $ticket->category?->value ?? 'other',
-            'priority' => $ticket->priority?->value ?? self::NONE,
-            'work_class' => $ticket->work_class?->value ?? TicketWorkClass::Standard->value,
-            'assignee' => $ticket->assignee_id === null ? self::NONE : (string) $ticket->assignee_id,
+            'category' => $fact['cat'] ?? 'other',
+            'priority' => $fact['prio'] ?? self::NONE,
+            'work_class' => $fact['wc'] ?? TicketWorkClass::Standard->value,
+            'assignee' => $fact['assignee'] === null ? self::NONE : (string) $fact['assignee'],
         };
     }
 
@@ -315,28 +315,6 @@ class TicketManualSlaReport extends TabularReport
         }
 
         return round($ticket->sla_resolve_due_at->diffInMinutes($ticket->resolved_at, true) / 60, 1);
-    }
-
-    /**
-     * How late the late closes were: a count per band, the median, and how many missed by under
-     * eight hours — near misses a slightly faster close would have saved.
-     *
-     * @param  Collection<int, Ticket>  $tickets
-     * @return array{total: int, bands: list<array{key: string, n: int}>, median_hours: ?float, near: int}
-     */
-    private static function lateness(Collection $tickets): array
-    {
-        $late = $tickets->map(fn (Ticket $t) => self::lateHours($t))->filter(fn (?float $h) => $h !== null)->sort()->values();
-
-        return [
-            'total' => $late->count(),
-            'bands' => array_map(fn (array $b) => [
-                'key' => $b[0],
-                'n' => $late->filter(fn (float $h) => $h >= $b[1] && ($b[2] === null || $h < $b[2]))->count(),
-            ], self::LATE_BANDS),
-            'median_hours' => TicketMetrics::percentile($late, 0.5),
-            'near' => $late->filter(fn (float $h) => $h < 8)->count(),
-        ];
     }
 
     /**

@@ -1,0 +1,5322 @@
+{
+    "manual.category": {
+        "by": "category",
+        "groups": [
+            {
+                "key": "software",
+                "label": null,
+                "total": 82,
+                "completed": 33,
+                "canceled": 8,
+                "open": 41,
+                "take_met": 43,
+                "take_total": 61,
+                "close_met": 26,
+                "close_total": 28,
+                "take_avg_hours": 7.42,
+                "fix_avg_hours": 29.0,
+                "work_avg_hours": 25.6,
+                "over_now": 28,
+                "over_untaken": 8,
+                "over_taken": 23
+            },
+            {
+                "key": "hardware",
+                "label": null,
+                "total": 28,
+                "completed": 8,
+                "canceled": 8,
+                "open": 12,
+                "take_met": 16,
+                "take_total": 22,
+                "close_met": 5,
+                "close_total": 5,
+                "take_avg_hours": 6.91,
+                "fix_avg_hours": 39.8,
+                "work_avg_hours": 31.4,
+                "over_now": 5,
+                "over_untaken": 1,
+                "over_taken": 5
+            },
+            {
+                "key": "other",
+                "label": null,
+                "total": 27,
+                "completed": 9,
+                "canceled": 4,
+                "open": 14,
+                "take_met": 15,
+                "take_total": 21,
+                "close_met": 6,
+                "close_total": 6,
+                "take_avg_hours": 7.1,
+                "fix_avg_hours": 36.9,
+                "work_avg_hours": 29.7,
+                "over_now": 10,
+                "over_untaken": 2,
+                "over_taken": 8
+            }
+        ],
+        "overall": {
+            "total": 137,
+            "completed": 50,
+            "canceled": 20,
+            "open": 67,
+            "take_met": 74,
+            "take_total": 104,
+            "close_met": 37,
+            "close_total": 39,
+            "take_avg_hours": 7.25,
+            "fix_avg_hours": 31.6,
+            "work_avg_hours": 27.3,
+            "over_now": 43,
+            "over_untaken": 11,
+            "over_taken": 36
+        },
+        "open": [
+            {
+                "id": 86,
+                "ticket_no": "TKT-SW-261017-043",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-03 03:35",
+                "over_hours": 534.4
+            },
+            {
+                "id": 122,
+                "ticket_no": "TKT-OTH-261017-017",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-08 07:39",
+                "over_hours": 410.3
+            },
+            {
+                "id": 36,
+                "ticket_no": "TKT-OTH-261017-005",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-10 19:48",
+                "over_hours": 350.2
+            },
+            {
+                "id": 83,
+                "ticket_no": "TKT-SW-261017-041",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-11 22:44",
+                "over_hours": 323.3
+            },
+            {
+                "id": 1,
+                "ticket_no": "TKT-SW-261017-001",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 11:49",
+                "over_hours": 286.2
+            },
+            {
+                "id": 143,
+                "ticket_no": "TKT-OTH-261017-024",
+                "category": "other",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 16:11",
+                "over_hours": 281.8
+            },
+            {
+                "id": 125,
+                "ticket_no": "TKT-OTH-261017-019",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-15 19:09",
+                "over_hours": 230.8
+            },
+            {
+                "id": 227,
+                "ticket_no": "TKT-SW-261017-112",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 05:23",
+                "over_hours": 220.6
+            },
+            {
+                "id": 153,
+                "ticket_no": "TKT-SW-261017-078",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 17:06",
+                "over_hours": 208.9
+            },
+            {
+                "id": 100,
+                "ticket_no": "TKT-SW-261017-051",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-17 04:23",
+                "over_hours": 197.6
+            },
+            {
+                "id": 37,
+                "ticket_no": "TKT-SW-261017-021",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": "2026-09-19 01:31",
+                "over_hours": 152.5
+            },
+            {
+                "id": 146,
+                "ticket_no": "TKT-SW-261017-072",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-19 13:56",
+                "over_hours": 140.1
+            },
+            {
+                "id": 11,
+                "ticket_no": "TKT-SW-261017-005",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 22,
+                "ticket_no": "TKT-SW-261017-011",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 34,
+                "ticket_no": "TKT-SW-261017-019",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 67,
+                "ticket_no": "TKT-SW-261017-033",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 73,
+                "ticket_no": "TKT-HW-261017-009",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 74,
+                "ticket_no": "TKT-SW-261017-037",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 87,
+                "ticket_no": "TKT-OTH-261017-011",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 92,
+                "ticket_no": "TKT-SW-261017-047",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 96,
+                "ticket_no": "TKT-HW-261017-014",
+                "category": "hardware",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 108,
+                "ticket_no": "TKT-SW-261017-055",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 109,
+                "ticket_no": "TKT-SW-261017-056",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 112,
+                "ticket_no": "TKT-SW-261017-058",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 117,
+                "ticket_no": "TKT-SW-261017-061",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 123,
+                "ticket_no": "TKT-OTH-261017-018",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 134,
+                "ticket_no": "TKT-OTH-261017-021",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 137,
+                "ticket_no": "TKT-SW-261017-070",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 145,
+                "ticket_no": "TKT-OTH-261017-025",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 149,
+                "ticket_no": "TKT-HW-261017-022",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 157,
+                "ticket_no": "TKT-SW-261017-079",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 163,
+                "ticket_no": "TKT-HW-261017-026",
+                "category": "hardware",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 166,
+                "ticket_no": "TKT-SW-261017-085",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 184,
+                "ticket_no": "TKT-HW-261017-031",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 185,
+                "ticket_no": "TKT-SW-261017-093",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 188,
+                "ticket_no": "TKT-OTH-261017-028",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 196,
+                "ticket_no": "TKT-SW-261017-099",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 209,
+                "ticket_no": "TKT-SW-261017-106",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 212,
+                "ticket_no": "TKT-SW-261017-108",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 216,
+                "ticket_no": "TKT-OTH-261017-032",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 225,
+                "ticket_no": "TKT-SW-261017-111",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 235,
+                "ticket_no": "TKT-SW-261017-116",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 241,
+                "ticket_no": "TKT-SW-261017-119",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "late": {
+            "total": 2,
+            "bands": [
+                {
+                    "key": "under_1h",
+                    "n": 0
+                },
+                {
+                    "key": "1_8h",
+                    "n": 1
+                },
+                {
+                    "key": "8_24h",
+                    "n": 1
+                },
+                {
+                    "key": "1_3d",
+                    "n": 0
+                },
+                {
+                    "key": "over_3d",
+                    "n": 0
+                }
+            ],
+            "median_hours": 7.4,
+            "near": 1
+        },
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "priority": "critical",
+                    "hours": 4,
+                    "clock": "business"
+                },
+                {
+                    "priority": "high",
+                    "hours": 8,
+                    "clock": "business"
+                },
+                {
+                    "priority": "medium",
+                    "hours": 24,
+                    "clock": "business"
+                },
+                {
+                    "priority": "low",
+                    "hours": 72,
+                    "clock": "business"
+                }
+            ],
+            "repair_rules": 0,
+            "hours": {
+                "days": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "start": "08:00",
+                "end": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00"
+            }
+        }
+    },
+    "manual.category.sheet": [
+        {
+            "title": "ตามหมวด",
+            "headings": [
+                "หมวด",
+                "ทั้งหมด",
+                "เสร็จสิ้น",
+                "ยกเลิก",
+                "ยังเปิด",
+                "รับเคสทัน SLA (ทัน\/รับแล้ว)",
+                "รับเคสทัน SLA (%)",
+                "ปิดทัน SLA (ทัน\/เสร็จสิ้น)",
+                "ปิดทัน SLA (%)",
+                "เวลารับเคสโดยเฉลี่ย (ชม.)",
+                "เวลาแก้ไขโดยเฉลี่ย (ชม.)"
+            ],
+            "rows": [
+                [
+                    "ซอฟต์แวร์",
+                    82,
+                    33,
+                    8,
+                    41,
+                    "43\/61",
+                    70,
+                    "26\/28",
+                    93,
+                    7.42,
+                    29.0
+                ],
+                [
+                    "ฮาร์ดแวร์",
+                    28,
+                    8,
+                    8,
+                    12,
+                    "16\/22",
+                    73,
+                    "5\/5",
+                    100,
+                    6.91,
+                    39.8
+                ],
+                [
+                    "อื่น ๆ",
+                    27,
+                    9,
+                    4,
+                    14,
+                    "15\/21",
+                    71,
+                    "6\/6",
+                    100,
+                    7.1,
+                    36.9
+                ],
+                [
+                    "รวม",
+                    137,
+                    50,
+                    20,
+                    67,
+                    "74\/104",
+                    71,
+                    "37\/39",
+                    95,
+                    7.25,
+                    31.6
+                ]
+            ]
+        }
+    ],
+    "manual.priority": {
+        "by": "priority",
+        "groups": [
+            {
+                "key": "critical",
+                "label": null,
+                "total": 23,
+                "completed": 9,
+                "canceled": 2,
+                "open": 12,
+                "take_met": 13,
+                "take_total": 14,
+                "close_met": 6,
+                "close_total": 6,
+                "take_avg_hours": 2.0,
+                "fix_avg_hours": 29.1,
+                "work_avg_hours": 26.6,
+                "over_now": 8,
+                "over_untaken": 4,
+                "over_taken": 6
+            },
+            {
+                "key": "high",
+                "label": null,
+                "total": 24,
+                "completed": 7,
+                "canceled": 4,
+                "open": 13,
+                "take_met": 13,
+                "take_total": 19,
+                "close_met": 4,
+                "close_total": 4,
+                "take_avg_hours": 7.92,
+                "fix_avg_hours": 26.5,
+                "work_avg_hours": 28.6,
+                "over_now": 6,
+                "over_untaken": 0,
+                "over_taken": 6
+            },
+            {
+                "key": "medium",
+                "label": null,
+                "total": 21,
+                "completed": 7,
+                "canceled": 2,
+                "open": 12,
+                "take_met": 11,
+                "take_total": 18,
+                "close_met": 7,
+                "close_total": 7,
+                "take_avg_hours": 9.63,
+                "fix_avg_hours": 38.6,
+                "work_avg_hours": 24.6,
+                "over_now": 10,
+                "over_untaken": 2,
+                "over_taken": 8
+            },
+            {
+                "key": "low",
+                "label": null,
+                "total": 40,
+                "completed": 19,
+                "canceled": 5,
+                "open": 16,
+                "take_met": 22,
+                "take_total": 29,
+                "close_met": 14,
+                "close_total": 15,
+                "take_avg_hours": 6.16,
+                "fix_avg_hours": 30.7,
+                "work_avg_hours": 27.5,
+                "over_now": 11,
+                "over_untaken": 3,
+                "over_taken": 8
+            },
+            {
+                "key": "none",
+                "label": null,
+                "total": 29,
+                "completed": 8,
+                "canceled": 7,
+                "open": 14,
+                "take_met": 15,
+                "take_total": 24,
+                "close_met": 6,
+                "close_total": 7,
+                "take_avg_hours": 9.29,
+                "fix_avg_hours": 33.6,
+                "work_avg_hours": 29.6,
+                "over_now": 8,
+                "over_untaken": 2,
+                "over_taken": 8
+            }
+        ],
+        "overall": {
+            "total": 137,
+            "completed": 50,
+            "canceled": 20,
+            "open": 67,
+            "take_met": 74,
+            "take_total": 104,
+            "close_met": 37,
+            "close_total": 39,
+            "take_avg_hours": 7.25,
+            "fix_avg_hours": 31.6,
+            "work_avg_hours": 27.3,
+            "over_now": 43,
+            "over_untaken": 11,
+            "over_taken": 36
+        },
+        "open": [
+            {
+                "id": 86,
+                "ticket_no": "TKT-SW-261017-043",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-03 03:35",
+                "over_hours": 534.4
+            },
+            {
+                "id": 122,
+                "ticket_no": "TKT-OTH-261017-017",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-08 07:39",
+                "over_hours": 410.3
+            },
+            {
+                "id": 36,
+                "ticket_no": "TKT-OTH-261017-005",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-10 19:48",
+                "over_hours": 350.2
+            },
+            {
+                "id": 83,
+                "ticket_no": "TKT-SW-261017-041",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-11 22:44",
+                "over_hours": 323.3
+            },
+            {
+                "id": 1,
+                "ticket_no": "TKT-SW-261017-001",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 11:49",
+                "over_hours": 286.2
+            },
+            {
+                "id": 143,
+                "ticket_no": "TKT-OTH-261017-024",
+                "category": "other",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 16:11",
+                "over_hours": 281.8
+            },
+            {
+                "id": 125,
+                "ticket_no": "TKT-OTH-261017-019",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-15 19:09",
+                "over_hours": 230.8
+            },
+            {
+                "id": 227,
+                "ticket_no": "TKT-SW-261017-112",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 05:23",
+                "over_hours": 220.6
+            },
+            {
+                "id": 153,
+                "ticket_no": "TKT-SW-261017-078",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 17:06",
+                "over_hours": 208.9
+            },
+            {
+                "id": 100,
+                "ticket_no": "TKT-SW-261017-051",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-17 04:23",
+                "over_hours": 197.6
+            },
+            {
+                "id": 37,
+                "ticket_no": "TKT-SW-261017-021",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": "2026-09-19 01:31",
+                "over_hours": 152.5
+            },
+            {
+                "id": 146,
+                "ticket_no": "TKT-SW-261017-072",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-19 13:56",
+                "over_hours": 140.1
+            },
+            {
+                "id": 11,
+                "ticket_no": "TKT-SW-261017-005",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 22,
+                "ticket_no": "TKT-SW-261017-011",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 34,
+                "ticket_no": "TKT-SW-261017-019",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 67,
+                "ticket_no": "TKT-SW-261017-033",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 73,
+                "ticket_no": "TKT-HW-261017-009",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 74,
+                "ticket_no": "TKT-SW-261017-037",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 87,
+                "ticket_no": "TKT-OTH-261017-011",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 92,
+                "ticket_no": "TKT-SW-261017-047",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 96,
+                "ticket_no": "TKT-HW-261017-014",
+                "category": "hardware",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 108,
+                "ticket_no": "TKT-SW-261017-055",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 109,
+                "ticket_no": "TKT-SW-261017-056",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 112,
+                "ticket_no": "TKT-SW-261017-058",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 117,
+                "ticket_no": "TKT-SW-261017-061",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 123,
+                "ticket_no": "TKT-OTH-261017-018",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 134,
+                "ticket_no": "TKT-OTH-261017-021",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 137,
+                "ticket_no": "TKT-SW-261017-070",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 145,
+                "ticket_no": "TKT-OTH-261017-025",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 149,
+                "ticket_no": "TKT-HW-261017-022",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 157,
+                "ticket_no": "TKT-SW-261017-079",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 163,
+                "ticket_no": "TKT-HW-261017-026",
+                "category": "hardware",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 166,
+                "ticket_no": "TKT-SW-261017-085",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 184,
+                "ticket_no": "TKT-HW-261017-031",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 185,
+                "ticket_no": "TKT-SW-261017-093",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 188,
+                "ticket_no": "TKT-OTH-261017-028",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 196,
+                "ticket_no": "TKT-SW-261017-099",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 209,
+                "ticket_no": "TKT-SW-261017-106",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 212,
+                "ticket_no": "TKT-SW-261017-108",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 216,
+                "ticket_no": "TKT-OTH-261017-032",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 225,
+                "ticket_no": "TKT-SW-261017-111",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 235,
+                "ticket_no": "TKT-SW-261017-116",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 241,
+                "ticket_no": "TKT-SW-261017-119",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "late": {
+            "total": 2,
+            "bands": [
+                {
+                    "key": "under_1h",
+                    "n": 0
+                },
+                {
+                    "key": "1_8h",
+                    "n": 1
+                },
+                {
+                    "key": "8_24h",
+                    "n": 1
+                },
+                {
+                    "key": "1_3d",
+                    "n": 0
+                },
+                {
+                    "key": "over_3d",
+                    "n": 0
+                }
+            ],
+            "median_hours": 7.4,
+            "near": 1
+        },
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "priority": "critical",
+                    "hours": 4,
+                    "clock": "business"
+                },
+                {
+                    "priority": "high",
+                    "hours": 8,
+                    "clock": "business"
+                },
+                {
+                    "priority": "medium",
+                    "hours": 24,
+                    "clock": "business"
+                },
+                {
+                    "priority": "low",
+                    "hours": 72,
+                    "clock": "business"
+                }
+            ],
+            "repair_rules": 0,
+            "hours": {
+                "days": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "start": "08:00",
+                "end": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00"
+            }
+        }
+    },
+    "manual.priority.sheet": [
+        {
+            "title": "ตามความสำคัญ",
+            "headings": [
+                "ความสำคัญ",
+                "ทั้งหมด",
+                "เสร็จสิ้น",
+                "ยกเลิก",
+                "ยังเปิด",
+                "รับเคสทัน SLA (ทัน\/รับแล้ว)",
+                "รับเคสทัน SLA (%)",
+                "ปิดทัน SLA (ทัน\/เสร็จสิ้น)",
+                "ปิดทัน SLA (%)",
+                "เวลารับเคสโดยเฉลี่ย (ชม.)",
+                "เวลาแก้ไขโดยเฉลี่ย (ชม.)"
+            ],
+            "rows": [
+                [
+                    "วิกฤต",
+                    23,
+                    9,
+                    2,
+                    12,
+                    "13\/14",
+                    93,
+                    "6\/6",
+                    100,
+                    2.0,
+                    29.1
+                ],
+                [
+                    "สูง",
+                    24,
+                    7,
+                    4,
+                    13,
+                    "13\/19",
+                    68,
+                    "4\/4",
+                    100,
+                    7.92,
+                    26.5
+                ],
+                [
+                    "ปานกลาง",
+                    21,
+                    7,
+                    2,
+                    12,
+                    "11\/18",
+                    61,
+                    "7\/7",
+                    100,
+                    9.63,
+                    38.6
+                ],
+                [
+                    "ต่ำ",
+                    40,
+                    19,
+                    5,
+                    16,
+                    "22\/29",
+                    76,
+                    "14\/15",
+                    93,
+                    6.16,
+                    30.7
+                ],
+                [
+                    "ยังไม่ประเมิน",
+                    29,
+                    8,
+                    7,
+                    14,
+                    "15\/24",
+                    63,
+                    "6\/7",
+                    86,
+                    9.29,
+                    33.6
+                ],
+                [
+                    "รวม",
+                    137,
+                    50,
+                    20,
+                    67,
+                    "74\/104",
+                    71,
+                    "37\/39",
+                    95,
+                    7.25,
+                    31.6
+                ]
+            ]
+        }
+    ],
+    "manual.work_class": {
+        "by": "work_class",
+        "groups": [
+            {
+                "key": "standard",
+                "label": null,
+                "total": 70,
+                "completed": 26,
+                "canceled": 11,
+                "open": 33,
+                "take_met": 37,
+                "take_total": 52,
+                "close_met": 18,
+                "close_total": 19,
+                "take_avg_hours": 7.32,
+                "fix_avg_hours": 32.4,
+                "work_avg_hours": 28.0,
+                "over_now": 20,
+                "over_untaken": 7,
+                "over_taken": 16
+            },
+            {
+                "key": "repair_internal",
+                "label": null,
+                "total": 29,
+                "completed": 11,
+                "canceled": 1,
+                "open": 17,
+                "take_met": 15,
+                "take_total": 23,
+                "close_met": 10,
+                "close_total": 10,
+                "take_avg_hours": 8.58,
+                "fix_avg_hours": 37.1,
+                "work_avg_hours": 25.8,
+                "over_now": 12,
+                "over_untaken": 3,
+                "over_taken": 10
+            },
+            {
+                "key": "repair_vendor",
+                "label": null,
+                "total": 38,
+                "completed": 13,
+                "canceled": 8,
+                "open": 17,
+                "take_met": 22,
+                "take_total": 29,
+                "close_met": 9,
+                "close_total": 10,
+                "take_avg_hours": 6.06,
+                "fix_avg_hours": 26.0,
+                "work_avg_hours": 27.3,
+                "over_now": 11,
+                "over_untaken": 1,
+                "over_taken": 10
+            }
+        ],
+        "overall": {
+            "total": 137,
+            "completed": 50,
+            "canceled": 20,
+            "open": 67,
+            "take_met": 74,
+            "take_total": 104,
+            "close_met": 37,
+            "close_total": 39,
+            "take_avg_hours": 7.25,
+            "fix_avg_hours": 31.6,
+            "work_avg_hours": 27.3,
+            "over_now": 43,
+            "over_untaken": 11,
+            "over_taken": 36
+        },
+        "open": [
+            {
+                "id": 86,
+                "ticket_no": "TKT-SW-261017-043",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-03 03:35",
+                "over_hours": 534.4
+            },
+            {
+                "id": 122,
+                "ticket_no": "TKT-OTH-261017-017",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-08 07:39",
+                "over_hours": 410.3
+            },
+            {
+                "id": 36,
+                "ticket_no": "TKT-OTH-261017-005",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-10 19:48",
+                "over_hours": 350.2
+            },
+            {
+                "id": 83,
+                "ticket_no": "TKT-SW-261017-041",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-11 22:44",
+                "over_hours": 323.3
+            },
+            {
+                "id": 1,
+                "ticket_no": "TKT-SW-261017-001",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 11:49",
+                "over_hours": 286.2
+            },
+            {
+                "id": 143,
+                "ticket_no": "TKT-OTH-261017-024",
+                "category": "other",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 16:11",
+                "over_hours": 281.8
+            },
+            {
+                "id": 125,
+                "ticket_no": "TKT-OTH-261017-019",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-15 19:09",
+                "over_hours": 230.8
+            },
+            {
+                "id": 227,
+                "ticket_no": "TKT-SW-261017-112",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 05:23",
+                "over_hours": 220.6
+            },
+            {
+                "id": 153,
+                "ticket_no": "TKT-SW-261017-078",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 17:06",
+                "over_hours": 208.9
+            },
+            {
+                "id": 100,
+                "ticket_no": "TKT-SW-261017-051",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-17 04:23",
+                "over_hours": 197.6
+            },
+            {
+                "id": 37,
+                "ticket_no": "TKT-SW-261017-021",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": "2026-09-19 01:31",
+                "over_hours": 152.5
+            },
+            {
+                "id": 146,
+                "ticket_no": "TKT-SW-261017-072",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-19 13:56",
+                "over_hours": 140.1
+            },
+            {
+                "id": 11,
+                "ticket_no": "TKT-SW-261017-005",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 22,
+                "ticket_no": "TKT-SW-261017-011",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 34,
+                "ticket_no": "TKT-SW-261017-019",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 67,
+                "ticket_no": "TKT-SW-261017-033",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 73,
+                "ticket_no": "TKT-HW-261017-009",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 74,
+                "ticket_no": "TKT-SW-261017-037",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 87,
+                "ticket_no": "TKT-OTH-261017-011",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 92,
+                "ticket_no": "TKT-SW-261017-047",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 96,
+                "ticket_no": "TKT-HW-261017-014",
+                "category": "hardware",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 108,
+                "ticket_no": "TKT-SW-261017-055",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 109,
+                "ticket_no": "TKT-SW-261017-056",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 112,
+                "ticket_no": "TKT-SW-261017-058",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 117,
+                "ticket_no": "TKT-SW-261017-061",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 123,
+                "ticket_no": "TKT-OTH-261017-018",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 134,
+                "ticket_no": "TKT-OTH-261017-021",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 137,
+                "ticket_no": "TKT-SW-261017-070",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 145,
+                "ticket_no": "TKT-OTH-261017-025",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 149,
+                "ticket_no": "TKT-HW-261017-022",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 157,
+                "ticket_no": "TKT-SW-261017-079",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 163,
+                "ticket_no": "TKT-HW-261017-026",
+                "category": "hardware",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 166,
+                "ticket_no": "TKT-SW-261017-085",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 184,
+                "ticket_no": "TKT-HW-261017-031",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 185,
+                "ticket_no": "TKT-SW-261017-093",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 188,
+                "ticket_no": "TKT-OTH-261017-028",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 196,
+                "ticket_no": "TKT-SW-261017-099",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 209,
+                "ticket_no": "TKT-SW-261017-106",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 212,
+                "ticket_no": "TKT-SW-261017-108",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 216,
+                "ticket_no": "TKT-OTH-261017-032",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 225,
+                "ticket_no": "TKT-SW-261017-111",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 235,
+                "ticket_no": "TKT-SW-261017-116",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 241,
+                "ticket_no": "TKT-SW-261017-119",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "late": {
+            "total": 2,
+            "bands": [
+                {
+                    "key": "under_1h",
+                    "n": 0
+                },
+                {
+                    "key": "1_8h",
+                    "n": 1
+                },
+                {
+                    "key": "8_24h",
+                    "n": 1
+                },
+                {
+                    "key": "1_3d",
+                    "n": 0
+                },
+                {
+                    "key": "over_3d",
+                    "n": 0
+                }
+            ],
+            "median_hours": 7.4,
+            "near": 1
+        },
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "priority": "critical",
+                    "hours": 4,
+                    "clock": "business"
+                },
+                {
+                    "priority": "high",
+                    "hours": 8,
+                    "clock": "business"
+                },
+                {
+                    "priority": "medium",
+                    "hours": 24,
+                    "clock": "business"
+                },
+                {
+                    "priority": "low",
+                    "hours": 72,
+                    "clock": "business"
+                }
+            ],
+            "repair_rules": 0,
+            "hours": {
+                "days": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "start": "08:00",
+                "end": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00"
+            }
+        }
+    },
+    "manual.work_class.sheet": [
+        {
+            "title": "ตามลักษณะงาน",
+            "headings": [
+                "ลักษณะงาน",
+                "ทั้งหมด",
+                "เสร็จสิ้น",
+                "ยกเลิก",
+                "ยังเปิด",
+                "รับเคสทัน SLA (ทัน\/รับแล้ว)",
+                "รับเคสทัน SLA (%)",
+                "ปิดทัน SLA (ทัน\/เสร็จสิ้น)",
+                "ปิดทัน SLA (%)",
+                "เวลารับเคสโดยเฉลี่ย (ชม.)",
+                "เวลาแก้ไขโดยเฉลี่ย (ชม.)"
+            ],
+            "rows": [
+                [
+                    "งานปกติ",
+                    70,
+                    26,
+                    11,
+                    33,
+                    "37\/52",
+                    71,
+                    "18\/19",
+                    95,
+                    7.32,
+                    32.4
+                ],
+                [
+                    "งานซ่อม (ช่างในบริษัท)",
+                    29,
+                    11,
+                    1,
+                    17,
+                    "15\/23",
+                    65,
+                    "10\/10",
+                    100,
+                    8.58,
+                    37.1
+                ],
+                [
+                    "งานซ่อม (ช่างภายนอก)",
+                    38,
+                    13,
+                    8,
+                    17,
+                    "22\/29",
+                    76,
+                    "9\/10",
+                    90,
+                    6.06,
+                    26.0
+                ],
+                [
+                    "รวม",
+                    137,
+                    50,
+                    20,
+                    67,
+                    "74\/104",
+                    71,
+                    "37\/39",
+                    95,
+                    7.25,
+                    31.6
+                ]
+            ]
+        }
+    ],
+    "manual.assignee": {
+        "by": "assignee",
+        "groups": [
+            {
+                "key": "2",
+                "label": "Som",
+                "total": 38,
+                "completed": 16,
+                "canceled": 5,
+                "open": 17,
+                "take_met": 22,
+                "take_total": 31,
+                "close_met": 15,
+                "close_total": 15,
+                "take_avg_hours": 7.29,
+                "fix_avg_hours": 38.3,
+                "work_avg_hours": 30.9,
+                "over_now": 11,
+                "over_untaken": 2,
+                "over_taken": 9
+            },
+            {
+                "key": "3",
+                "label": "Ant",
+                "total": 33,
+                "completed": 8,
+                "canceled": 4,
+                "open": 21,
+                "take_met": 18,
+                "take_total": 26,
+                "close_met": 5,
+                "close_total": 6,
+                "take_avg_hours": 7.63,
+                "fix_avg_hours": 36.6,
+                "work_avg_hours": 30.6,
+                "over_now": 14,
+                "over_untaken": 3,
+                "over_taken": 14
+            },
+            {
+                "key": "1",
+                "label": "Kan",
+                "total": 29,
+                "completed": 12,
+                "canceled": 6,
+                "open": 11,
+                "take_met": 17,
+                "take_total": 21,
+                "close_met": 5,
+                "close_total": 6,
+                "take_avg_hours": 4.95,
+                "fix_avg_hours": 28.8,
+                "work_avg_hours": 28.1,
+                "over_now": 7,
+                "over_untaken": 2,
+                "over_taken": 5
+            },
+            {
+                "key": "none",
+                "label": null,
+                "total": 37,
+                "completed": 14,
+                "canceled": 5,
+                "open": 18,
+                "take_met": 17,
+                "take_total": 26,
+                "close_met": 12,
+                "close_total": 12,
+                "take_avg_hours": 8.65,
+                "fix_avg_hours": 23.0,
+                "work_avg_hours": 19.3,
+                "over_now": 11,
+                "over_untaken": 4,
+                "over_taken": 8
+            }
+        ],
+        "overall": {
+            "total": 137,
+            "completed": 50,
+            "canceled": 20,
+            "open": 67,
+            "take_met": 74,
+            "take_total": 104,
+            "close_met": 37,
+            "close_total": 39,
+            "take_avg_hours": 7.25,
+            "fix_avg_hours": 31.6,
+            "work_avg_hours": 27.3,
+            "over_now": 43,
+            "over_untaken": 11,
+            "over_taken": 36
+        },
+        "open": [
+            {
+                "id": 86,
+                "ticket_no": "TKT-SW-261017-043",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-03 03:35",
+                "over_hours": 534.4
+            },
+            {
+                "id": 122,
+                "ticket_no": "TKT-OTH-261017-017",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-08 07:39",
+                "over_hours": 410.3
+            },
+            {
+                "id": 36,
+                "ticket_no": "TKT-OTH-261017-005",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-10 19:48",
+                "over_hours": 350.2
+            },
+            {
+                "id": 83,
+                "ticket_no": "TKT-SW-261017-041",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-11 22:44",
+                "over_hours": 323.3
+            },
+            {
+                "id": 1,
+                "ticket_no": "TKT-SW-261017-001",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 11:49",
+                "over_hours": 286.2
+            },
+            {
+                "id": 143,
+                "ticket_no": "TKT-OTH-261017-024",
+                "category": "other",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 16:11",
+                "over_hours": 281.8
+            },
+            {
+                "id": 125,
+                "ticket_no": "TKT-OTH-261017-019",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-15 19:09",
+                "over_hours": 230.8
+            },
+            {
+                "id": 227,
+                "ticket_no": "TKT-SW-261017-112",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 05:23",
+                "over_hours": 220.6
+            },
+            {
+                "id": 153,
+                "ticket_no": "TKT-SW-261017-078",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 17:06",
+                "over_hours": 208.9
+            },
+            {
+                "id": 100,
+                "ticket_no": "TKT-SW-261017-051",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-17 04:23",
+                "over_hours": 197.6
+            },
+            {
+                "id": 37,
+                "ticket_no": "TKT-SW-261017-021",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": "2026-09-19 01:31",
+                "over_hours": 152.5
+            },
+            {
+                "id": 146,
+                "ticket_no": "TKT-SW-261017-072",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-19 13:56",
+                "over_hours": 140.1
+            },
+            {
+                "id": 11,
+                "ticket_no": "TKT-SW-261017-005",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 22,
+                "ticket_no": "TKT-SW-261017-011",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 34,
+                "ticket_no": "TKT-SW-261017-019",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 67,
+                "ticket_no": "TKT-SW-261017-033",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 73,
+                "ticket_no": "TKT-HW-261017-009",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 74,
+                "ticket_no": "TKT-SW-261017-037",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 87,
+                "ticket_no": "TKT-OTH-261017-011",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 92,
+                "ticket_no": "TKT-SW-261017-047",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 96,
+                "ticket_no": "TKT-HW-261017-014",
+                "category": "hardware",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 108,
+                "ticket_no": "TKT-SW-261017-055",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 109,
+                "ticket_no": "TKT-SW-261017-056",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 112,
+                "ticket_no": "TKT-SW-261017-058",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 117,
+                "ticket_no": "TKT-SW-261017-061",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 123,
+                "ticket_no": "TKT-OTH-261017-018",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 134,
+                "ticket_no": "TKT-OTH-261017-021",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 137,
+                "ticket_no": "TKT-SW-261017-070",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 145,
+                "ticket_no": "TKT-OTH-261017-025",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 149,
+                "ticket_no": "TKT-HW-261017-022",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 157,
+                "ticket_no": "TKT-SW-261017-079",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 163,
+                "ticket_no": "TKT-HW-261017-026",
+                "category": "hardware",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 166,
+                "ticket_no": "TKT-SW-261017-085",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 184,
+                "ticket_no": "TKT-HW-261017-031",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 185,
+                "ticket_no": "TKT-SW-261017-093",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 188,
+                "ticket_no": "TKT-OTH-261017-028",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 196,
+                "ticket_no": "TKT-SW-261017-099",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 209,
+                "ticket_no": "TKT-SW-261017-106",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 212,
+                "ticket_no": "TKT-SW-261017-108",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 216,
+                "ticket_no": "TKT-OTH-261017-032",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 225,
+                "ticket_no": "TKT-SW-261017-111",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 235,
+                "ticket_no": "TKT-SW-261017-116",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 241,
+                "ticket_no": "TKT-SW-261017-119",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "late": {
+            "total": 2,
+            "bands": [
+                {
+                    "key": "under_1h",
+                    "n": 0
+                },
+                {
+                    "key": "1_8h",
+                    "n": 1
+                },
+                {
+                    "key": "8_24h",
+                    "n": 1
+                },
+                {
+                    "key": "1_3d",
+                    "n": 0
+                },
+                {
+                    "key": "over_3d",
+                    "n": 0
+                }
+            ],
+            "median_hours": 7.4,
+            "near": 1
+        },
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "priority": "critical",
+                    "hours": 4,
+                    "clock": "business"
+                },
+                {
+                    "priority": "high",
+                    "hours": 8,
+                    "clock": "business"
+                },
+                {
+                    "priority": "medium",
+                    "hours": 24,
+                    "clock": "business"
+                },
+                {
+                    "priority": "low",
+                    "hours": 72,
+                    "clock": "business"
+                }
+            ],
+            "repair_rules": 0,
+            "hours": {
+                "days": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "start": "08:00",
+                "end": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00"
+            }
+        }
+    },
+    "manual.assignee.sheet": [
+        {
+            "title": "ตามผู้รับผิดชอบ",
+            "headings": [
+                "ผู้รับผิดชอบ",
+                "ทั้งหมด",
+                "เสร็จสิ้น",
+                "ยกเลิก",
+                "ยังเปิด",
+                "รับเคสทัน SLA (ทัน\/รับแล้ว)",
+                "รับเคสทัน SLA (%)",
+                "ปิดทัน SLA (ทัน\/เสร็จสิ้น)",
+                "ปิดทัน SLA (%)",
+                "เวลารับเคสโดยเฉลี่ย (ชม.)",
+                "เวลาแก้ไขโดยเฉลี่ย (ชม.)"
+            ],
+            "rows": [
+                [
+                    "Som",
+                    38,
+                    16,
+                    5,
+                    17,
+                    "22\/31",
+                    71,
+                    "15\/15",
+                    100,
+                    7.29,
+                    38.3
+                ],
+                [
+                    "Ant",
+                    33,
+                    8,
+                    4,
+                    21,
+                    "18\/26",
+                    69,
+                    "5\/6",
+                    83,
+                    7.63,
+                    36.6
+                ],
+                [
+                    "Kan",
+                    29,
+                    12,
+                    6,
+                    11,
+                    "17\/21",
+                    81,
+                    "5\/6",
+                    83,
+                    4.95,
+                    28.8
+                ],
+                [
+                    "ยังไม่มีผู้รับ",
+                    37,
+                    14,
+                    5,
+                    18,
+                    "17\/26",
+                    65,
+                    "12\/12",
+                    100,
+                    8.65,
+                    23.0
+                ],
+                [
+                    "รวม",
+                    137,
+                    50,
+                    20,
+                    67,
+                    "74\/104",
+                    71,
+                    "37\/39",
+                    95,
+                    7.25,
+                    31.6
+                ]
+            ]
+        }
+    ],
+    "manual.bogus": {
+        "by": "category",
+        "groups": [
+            {
+                "key": "software",
+                "label": null,
+                "total": 82,
+                "completed": 33,
+                "canceled": 8,
+                "open": 41,
+                "take_met": 43,
+                "take_total": 61,
+                "close_met": 26,
+                "close_total": 28,
+                "take_avg_hours": 7.42,
+                "fix_avg_hours": 29.0,
+                "work_avg_hours": 25.6,
+                "over_now": 28,
+                "over_untaken": 8,
+                "over_taken": 23
+            },
+            {
+                "key": "hardware",
+                "label": null,
+                "total": 28,
+                "completed": 8,
+                "canceled": 8,
+                "open": 12,
+                "take_met": 16,
+                "take_total": 22,
+                "close_met": 5,
+                "close_total": 5,
+                "take_avg_hours": 6.91,
+                "fix_avg_hours": 39.8,
+                "work_avg_hours": 31.4,
+                "over_now": 5,
+                "over_untaken": 1,
+                "over_taken": 5
+            },
+            {
+                "key": "other",
+                "label": null,
+                "total": 27,
+                "completed": 9,
+                "canceled": 4,
+                "open": 14,
+                "take_met": 15,
+                "take_total": 21,
+                "close_met": 6,
+                "close_total": 6,
+                "take_avg_hours": 7.1,
+                "fix_avg_hours": 36.9,
+                "work_avg_hours": 29.7,
+                "over_now": 10,
+                "over_untaken": 2,
+                "over_taken": 8
+            }
+        ],
+        "overall": {
+            "total": 137,
+            "completed": 50,
+            "canceled": 20,
+            "open": 67,
+            "take_met": 74,
+            "take_total": 104,
+            "close_met": 37,
+            "close_total": 39,
+            "take_avg_hours": 7.25,
+            "fix_avg_hours": 31.6,
+            "work_avg_hours": 27.3,
+            "over_now": 43,
+            "over_untaken": 11,
+            "over_taken": 36
+        },
+        "open": [
+            {
+                "id": 86,
+                "ticket_no": "TKT-SW-261017-043",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-03 03:35",
+                "over_hours": 534.4
+            },
+            {
+                "id": 122,
+                "ticket_no": "TKT-OTH-261017-017",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-08 07:39",
+                "over_hours": 410.3
+            },
+            {
+                "id": 36,
+                "ticket_no": "TKT-OTH-261017-005",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-10 19:48",
+                "over_hours": 350.2
+            },
+            {
+                "id": 83,
+                "ticket_no": "TKT-SW-261017-041",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-11 22:44",
+                "over_hours": 323.3
+            },
+            {
+                "id": 1,
+                "ticket_no": "TKT-SW-261017-001",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 11:49",
+                "over_hours": 286.2
+            },
+            {
+                "id": 143,
+                "ticket_no": "TKT-OTH-261017-024",
+                "category": "other",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 16:11",
+                "over_hours": 281.8
+            },
+            {
+                "id": 125,
+                "ticket_no": "TKT-OTH-261017-019",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-15 19:09",
+                "over_hours": 230.8
+            },
+            {
+                "id": 227,
+                "ticket_no": "TKT-SW-261017-112",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 05:23",
+                "over_hours": 220.6
+            },
+            {
+                "id": 153,
+                "ticket_no": "TKT-SW-261017-078",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 17:06",
+                "over_hours": 208.9
+            },
+            {
+                "id": 100,
+                "ticket_no": "TKT-SW-261017-051",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-17 04:23",
+                "over_hours": 197.6
+            },
+            {
+                "id": 37,
+                "ticket_no": "TKT-SW-261017-021",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": "2026-09-19 01:31",
+                "over_hours": 152.5
+            },
+            {
+                "id": 146,
+                "ticket_no": "TKT-SW-261017-072",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-19 13:56",
+                "over_hours": 140.1
+            },
+            {
+                "id": 11,
+                "ticket_no": "TKT-SW-261017-005",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 22,
+                "ticket_no": "TKT-SW-261017-011",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 34,
+                "ticket_no": "TKT-SW-261017-019",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 67,
+                "ticket_no": "TKT-SW-261017-033",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 73,
+                "ticket_no": "TKT-HW-261017-009",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 74,
+                "ticket_no": "TKT-SW-261017-037",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 87,
+                "ticket_no": "TKT-OTH-261017-011",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 92,
+                "ticket_no": "TKT-SW-261017-047",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 96,
+                "ticket_no": "TKT-HW-261017-014",
+                "category": "hardware",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 108,
+                "ticket_no": "TKT-SW-261017-055",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 109,
+                "ticket_no": "TKT-SW-261017-056",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 112,
+                "ticket_no": "TKT-SW-261017-058",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 117,
+                "ticket_no": "TKT-SW-261017-061",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 123,
+                "ticket_no": "TKT-OTH-261017-018",
+                "category": "other",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 134,
+                "ticket_no": "TKT-OTH-261017-021",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 137,
+                "ticket_no": "TKT-SW-261017-070",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 145,
+                "ticket_no": "TKT-OTH-261017-025",
+                "category": "other",
+                "assignee": "Som",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 149,
+                "ticket_no": "TKT-HW-261017-022",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 157,
+                "ticket_no": "TKT-SW-261017-079",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 163,
+                "ticket_no": "TKT-HW-261017-026",
+                "category": "hardware",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 166,
+                "ticket_no": "TKT-SW-261017-085",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 184,
+                "ticket_no": "TKT-HW-261017-031",
+                "category": "hardware",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 185,
+                "ticket_no": "TKT-SW-261017-093",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 188,
+                "ticket_no": "TKT-OTH-261017-028",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 196,
+                "ticket_no": "TKT-SW-261017-099",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 209,
+                "ticket_no": "TKT-SW-261017-106",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 212,
+                "ticket_no": "TKT-SW-261017-108",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 216,
+                "ticket_no": "TKT-OTH-261017-032",
+                "category": "other",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 225,
+                "ticket_no": "TKT-SW-261017-111",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 235,
+                "ticket_no": "TKT-SW-261017-116",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 241,
+                "ticket_no": "TKT-SW-261017-119",
+                "category": "software",
+                "assignee": "Ant",
+                "due_kind": "response",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "late": {
+            "total": 2,
+            "bands": [
+                {
+                    "key": "under_1h",
+                    "n": 0
+                },
+                {
+                    "key": "1_8h",
+                    "n": 1
+                },
+                {
+                    "key": "8_24h",
+                    "n": 1
+                },
+                {
+                    "key": "1_3d",
+                    "n": 0
+                },
+                {
+                    "key": "over_3d",
+                    "n": 0
+                }
+            ],
+            "median_hours": 7.4,
+            "near": 1
+        },
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "priority": "critical",
+                    "hours": 4,
+                    "clock": "business"
+                },
+                {
+                    "priority": "high",
+                    "hours": 8,
+                    "clock": "business"
+                },
+                {
+                    "priority": "medium",
+                    "hours": 24,
+                    "clock": "business"
+                },
+                {
+                    "priority": "low",
+                    "hours": 72,
+                    "clock": "business"
+                }
+            ],
+            "repair_rules": 0,
+            "hours": {
+                "days": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "start": "08:00",
+                "end": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00"
+            }
+        }
+    },
+    "manual.bogus.sheet": [
+        {
+            "title": "ตามหมวด",
+            "headings": [
+                "หมวด",
+                "ทั้งหมด",
+                "เสร็จสิ้น",
+                "ยกเลิก",
+                "ยังเปิด",
+                "รับเคสทัน SLA (ทัน\/รับแล้ว)",
+                "รับเคสทัน SLA (%)",
+                "ปิดทัน SLA (ทัน\/เสร็จสิ้น)",
+                "ปิดทัน SLA (%)",
+                "เวลารับเคสโดยเฉลี่ย (ชม.)",
+                "เวลาแก้ไขโดยเฉลี่ย (ชม.)"
+            ],
+            "rows": [
+                [
+                    "ซอฟต์แวร์",
+                    82,
+                    33,
+                    8,
+                    41,
+                    "43\/61",
+                    70,
+                    "26\/28",
+                    93,
+                    7.42,
+                    29.0
+                ],
+                [
+                    "ฮาร์ดแวร์",
+                    28,
+                    8,
+                    8,
+                    12,
+                    "16\/22",
+                    73,
+                    "5\/5",
+                    100,
+                    6.91,
+                    39.8
+                ],
+                [
+                    "อื่น ๆ",
+                    27,
+                    9,
+                    4,
+                    14,
+                    "15\/21",
+                    71,
+                    "6\/6",
+                    100,
+                    7.1,
+                    36.9
+                ],
+                [
+                    "รวม",
+                    137,
+                    50,
+                    20,
+                    67,
+                    "74\/104",
+                    71,
+                    "37\/39",
+                    95,
+                    7.25,
+                    31.6
+                ]
+            ]
+        }
+    ],
+    "manual.narrow": {
+        "by": "priority",
+        "groups": [
+            {
+                "key": "critical",
+                "label": null,
+                "total": 4,
+                "completed": 1,
+                "canceled": 1,
+                "open": 2,
+                "take_met": 3,
+                "take_total": 3,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": 0.33,
+                "fix_avg_hours": 3.1,
+                "work_avg_hours": 3.1,
+                "over_now": 2,
+                "over_untaken": 1,
+                "over_taken": 1
+            },
+            {
+                "key": "high",
+                "label": null,
+                "total": 4,
+                "completed": 1,
+                "canceled": 1,
+                "open": 2,
+                "take_met": 2,
+                "take_total": 3,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": 8.17,
+                "fix_avg_hours": 27.8,
+                "work_avg_hours": null,
+                "over_now": 1,
+                "over_untaken": 0,
+                "over_taken": 1
+            },
+            {
+                "key": "medium",
+                "label": null,
+                "total": 3,
+                "completed": 1,
+                "canceled": 0,
+                "open": 2,
+                "take_met": 3,
+                "take_total": 3,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": 0.25,
+                "fix_avg_hours": 35.8,
+                "work_avg_hours": 35.6,
+                "over_now": 2,
+                "over_untaken": 0,
+                "over_taken": 2
+            },
+            {
+                "key": "low",
+                "label": null,
+                "total": 8,
+                "completed": 6,
+                "canceled": 0,
+                "open": 2,
+                "take_met": 5,
+                "take_total": 6,
+                "close_met": 5,
+                "close_total": 5,
+                "take_avg_hours": 4.38,
+                "fix_avg_hours": 27.3,
+                "work_avg_hours": 31.8,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "key": "none",
+                "label": null,
+                "total": 6,
+                "completed": 2,
+                "canceled": 2,
+                "open": 2,
+                "take_met": 3,
+                "take_total": 5,
+                "close_met": 1,
+                "close_total": 2,
+                "take_avg_hours": 9.7,
+                "fix_avg_hours": 30.1,
+                "work_avg_hours": 30.1,
+                "over_now": 2,
+                "over_untaken": 0,
+                "over_taken": 2
+            }
+        ],
+        "overall": {
+            "total": 25,
+            "completed": 11,
+            "canceled": 4,
+            "open": 10,
+            "take_met": 16,
+            "take_total": 20,
+            "close_met": 8,
+            "close_total": 9,
+            "take_avg_hours": 5.05,
+            "fix_avg_hours": 26.4,
+            "work_avg_hours": 28.3,
+            "over_now": 7,
+            "over_untaken": 1,
+            "over_taken": 6
+        },
+        "open": [
+            {
+                "id": 1,
+                "ticket_no": "TKT-SW-261017-001",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-13 11:49",
+                "over_hours": 286.2
+            },
+            {
+                "id": 153,
+                "ticket_no": "TKT-SW-261017-078",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-16 17:06",
+                "over_hours": 208.9
+            },
+            {
+                "id": 22,
+                "ticket_no": "TKT-SW-261017-011",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "response",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 92,
+                "ticket_no": "TKT-SW-261017-047",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 108,
+                "ticket_no": "TKT-SW-261017-055",
+                "category": "software",
+                "assignee": "Kan",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 137,
+                "ticket_no": "TKT-SW-261017-070",
+                "category": "software",
+                "assignee": "Som",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 185,
+                "ticket_no": "TKT-SW-261017-093",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "late": {
+            "total": 1,
+            "bands": [
+                {
+                    "key": "under_1h",
+                    "n": 0
+                },
+                {
+                    "key": "1_8h",
+                    "n": 1
+                },
+                {
+                    "key": "8_24h",
+                    "n": 0
+                },
+                {
+                    "key": "1_3d",
+                    "n": 0
+                },
+                {
+                    "key": "over_3d",
+                    "n": 0
+                }
+            ],
+            "median_hours": 7.4,
+            "near": 1
+        },
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "priority": "critical",
+                    "hours": 4,
+                    "clock": "business"
+                },
+                {
+                    "priority": "high",
+                    "hours": 8,
+                    "clock": "business"
+                },
+                {
+                    "priority": "medium",
+                    "hours": 24,
+                    "clock": "business"
+                },
+                {
+                    "priority": "low",
+                    "hours": 72,
+                    "clock": "business"
+                }
+            ],
+            "repair_rules": 0,
+            "hours": {
+                "days": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "start": "08:00",
+                "end": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00"
+            }
+        }
+    },
+    "manual.assignee_none": {
+        "by": "category",
+        "groups": [
+            {
+                "key": "software",
+                "label": null,
+                "total": 7,
+                "completed": 2,
+                "canceled": 2,
+                "open": 3,
+                "take_met": 3,
+                "take_total": 6,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": 12.29,
+                "fix_avg_hours": 10.6,
+                "work_avg_hours": 8.7,
+                "over_now": 2,
+                "over_untaken": 0,
+                "over_taken": 2
+            },
+            {
+                "key": "hardware",
+                "label": null,
+                "total": 2,
+                "completed": 0,
+                "canceled": 0,
+                "open": 2,
+                "take_met": 0,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": 24.0,
+                "fix_avg_hours": null,
+                "work_avg_hours": null,
+                "over_now": 1,
+                "over_untaken": 1,
+                "over_taken": 1
+            }
+        ],
+        "overall": {
+            "total": 9,
+            "completed": 2,
+            "canceled": 2,
+            "open": 5,
+            "take_met": 3,
+            "take_total": 7,
+            "close_met": 1,
+            "close_total": 1,
+            "take_avg_hours": 13.96,
+            "fix_avg_hours": 10.6,
+            "work_avg_hours": 8.7,
+            "over_now": 3,
+            "over_untaken": 1,
+            "over_taken": 3
+        },
+        "open": [
+            {
+                "id": 96,
+                "ticket_no": "TKT-HW-261017-014",
+                "category": "hardware",
+                "assignee": null,
+                "due_kind": "response",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 157,
+                "ticket_no": "TKT-SW-261017-079",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 185,
+                "ticket_no": "TKT-SW-261017-093",
+                "category": "software",
+                "assignee": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "late": {
+            "total": 0,
+            "bands": [
+                {
+                    "key": "under_1h",
+                    "n": 0
+                },
+                {
+                    "key": "1_8h",
+                    "n": 0
+                },
+                {
+                    "key": "8_24h",
+                    "n": 0
+                },
+                {
+                    "key": "1_3d",
+                    "n": 0
+                },
+                {
+                    "key": "over_3d",
+                    "n": 0
+                }
+            ],
+            "median_hours": null,
+            "near": 0
+        },
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "priority": "critical",
+                    "hours": 4,
+                    "clock": "business"
+                },
+                {
+                    "priority": "high",
+                    "hours": 8,
+                    "clock": "business"
+                },
+                {
+                    "priority": "medium",
+                    "hours": 24,
+                    "clock": "business"
+                },
+                {
+                    "priority": "low",
+                    "hours": 72,
+                    "clock": "business"
+                }
+            ],
+            "repair_rules": 0,
+            "hours": {
+                "days": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "start": "08:00",
+                "end": "17:00",
+                "break_start": "12:00",
+                "break_end": "13:00"
+            }
+        }
+    },
+    "manual.summary": [
+        {
+            "key": "ms_total",
+            "label_key": "rep_k_ms_total",
+            "heading": "Ticket ที่ผู้ใช้เปิดเอง",
+            "value": 137,
+            "tone": null,
+            "format": "count",
+            "split": [
+                {
+                    "key": "completed",
+                    "label_key": "rep_rs_completed",
+                    "tone": "soft-green",
+                    "value": 50
+                },
+                {
+                    "key": "canceled",
+                    "label_key": "rep_rs_canceled",
+                    "tone": "gray",
+                    "value": 20
+                },
+                {
+                    "key": "open",
+                    "label_key": "rep_rs_open",
+                    "tone": "soft-blue",
+                    "value": 67
+                }
+            ],
+            "share": null,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_close_rate",
+            "label_key": "rep_k_ms_close_rate",
+            "heading": "ปิดทัน SLA (%)",
+            "value": 95,
+            "tone": null,
+            "format": "percent",
+            "split": [],
+            "share": null,
+            "note": {
+                "label_key": "rep_rs_note_close",
+                "values": {
+                    "met": 37,
+                    "n": 39
+                }
+            },
+            "goal": 90,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_take_rate",
+            "label_key": "rep_k_ms_take_rate",
+            "heading": "รับเคสทัน SLA (%)",
+            "value": 71,
+            "tone": null,
+            "format": "percent",
+            "split": [],
+            "share": null,
+            "note": {
+                "label_key": "rep_rs_note_take",
+                "values": {
+                    "met": 74,
+                    "n": 104
+                }
+            },
+            "goal": 90,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_fix_avg",
+            "label_key": "rep_k_ms_fix_avg",
+            "heading": "เวลาแก้ไขโดยเฉลี่ย (ชม.)",
+            "value": 31.6,
+            "tone": null,
+            "format": "hours",
+            "split": [
+                {
+                    "key": "wait",
+                    "label_key": "rep_rs_split_wait",
+                    "tone": "soft-amber",
+                    "value": 7.3
+                },
+                {
+                    "key": "work",
+                    "label_key": "rep_rs_split_work",
+                    "tone": "soft-blue",
+                    "value": 27.3
+                }
+            ],
+            "share": null,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_over_sla",
+            "label_key": "rep_k_ms_over_sla",
+            "heading": "เกิน SLA ตอนนี้",
+            "value": 43,
+            "tone": "soft-red",
+            "format": "count",
+            "split": [
+                {
+                    "key": "untaken",
+                    "label_key": "rep_rs_over_untaken",
+                    "tone": "soft-red",
+                    "value": 11
+                },
+                {
+                    "key": "taken",
+                    "label_key": "rep_rs_over_taken",
+                    "tone": "soft-orange",
+                    "value": 36
+                }
+            ],
+            "share": 64,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        }
+    ],
+    "manual.summary_narrow": [
+        {
+            "key": "ms_total",
+            "label_key": "rep_k_ms_total",
+            "heading": "Ticket ที่ผู้ใช้เปิดเอง",
+            "value": 25,
+            "tone": null,
+            "format": "count",
+            "split": [
+                {
+                    "key": "completed",
+                    "label_key": "rep_rs_completed",
+                    "tone": "soft-green",
+                    "value": 11
+                },
+                {
+                    "key": "canceled",
+                    "label_key": "rep_rs_canceled",
+                    "tone": "gray",
+                    "value": 4
+                },
+                {
+                    "key": "open",
+                    "label_key": "rep_rs_open",
+                    "tone": "soft-blue",
+                    "value": 10
+                }
+            ],
+            "share": null,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_close_rate",
+            "label_key": "rep_k_ms_close_rate",
+            "heading": "ปิดทัน SLA (%)",
+            "value": 89,
+            "tone": null,
+            "format": "percent",
+            "split": [],
+            "share": null,
+            "note": {
+                "label_key": "rep_rs_note_close",
+                "values": {
+                    "met": 8,
+                    "n": 9
+                }
+            },
+            "goal": 90,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_take_rate",
+            "label_key": "rep_k_ms_take_rate",
+            "heading": "รับเคสทัน SLA (%)",
+            "value": 80,
+            "tone": null,
+            "format": "percent",
+            "split": [],
+            "share": null,
+            "note": {
+                "label_key": "rep_rs_note_take",
+                "values": {
+                    "met": 16,
+                    "n": 20
+                }
+            },
+            "goal": 90,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_fix_avg",
+            "label_key": "rep_k_ms_fix_avg",
+            "heading": "เวลาแก้ไขโดยเฉลี่ย (ชม.)",
+            "value": 26.4,
+            "tone": null,
+            "format": "hours",
+            "split": [
+                {
+                    "key": "wait",
+                    "label_key": "rep_rs_split_wait",
+                    "tone": "soft-amber",
+                    "value": 5.1
+                },
+                {
+                    "key": "work",
+                    "label_key": "rep_rs_split_work",
+                    "tone": "soft-blue",
+                    "value": 28.3
+                }
+            ],
+            "share": null,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "ms_over_sla",
+            "label_key": "rep_k_ms_over_sla",
+            "heading": "เกิน SLA ตอนนี้",
+            "value": 7,
+            "tone": "soft-red",
+            "format": "count",
+            "split": [
+                {
+                    "key": "untaken",
+                    "label_key": "rep_rs_over_untaken",
+                    "tone": "soft-red",
+                    "value": 1
+                },
+                {
+                    "key": "taken",
+                    "label_key": "rep_rs_over_taken",
+                    "tone": "soft-orange",
+                    "value": 6
+                }
+            ],
+            "share": 70,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        }
+    ],
+    "request": {
+        "types": [
+            {
+                "type": "computer",
+                "total": 7,
+                "completed": 4,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 3,
+                "take_total": 4,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 8.33,
+                "fix_avg_hours": 31.7,
+                "over_now": 2,
+                "over_untaken": 2,
+                "over_taken": 1
+            },
+            {
+                "type": "hardware",
+                "total": 7,
+                "completed": 3,
+                "canceled": 2,
+                "open": 2,
+                "take_met": 3,
+                "take_total": 4,
+                "close_met": 3,
+                "close_total": 3,
+                "take_avg_hours": 12.13,
+                "fix_avg_hours": 18.4,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "social",
+                "total": 7,
+                "completed": 5,
+                "canceled": 1,
+                "open": 1,
+                "take_met": 5,
+                "take_total": 5,
+                "close_met": 3,
+                "close_total": 3,
+                "take_avg_hours": 0.08,
+                "fix_avg_hours": 26.3,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "other",
+                "total": 6,
+                "completed": 2,
+                "canceled": 0,
+                "open": 4,
+                "take_met": 6,
+                "take_total": 6,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 0.38,
+                "fix_avg_hours": 23.5,
+                "over_now": 4,
+                "over_untaken": 0,
+                "over_taken": 4
+            },
+            {
+                "type": "recovery",
+                "total": 6,
+                "completed": 2,
+                "canceled": 0,
+                "open": 4,
+                "take_met": 4,
+                "take_total": 4,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": 0.25,
+                "fix_avg_hours": 35.6,
+                "over_now": 2,
+                "over_untaken": 0,
+                "over_taken": 2
+            },
+            {
+                "type": "fileshare",
+                "total": 5,
+                "completed": 0,
+                "canceled": 1,
+                "open": 4,
+                "take_met": 3,
+                "take_total": 3,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 3,
+                "over_untaken": 1,
+                "over_taken": 2
+            },
+            {
+                "type": "mailgroup",
+                "total": 5,
+                "completed": 2,
+                "canceled": 1,
+                "open": 2,
+                "take_met": 3,
+                "take_total": 3,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 0.5,
+                "fix_avg_hours": 31.0,
+                "over_now": 1,
+                "over_untaken": 0,
+                "over_taken": 1
+            },
+            {
+                "type": "software",
+                "total": 5,
+                "completed": 2,
+                "canceled": 2,
+                "open": 1,
+                "take_met": 4,
+                "take_total": 4,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 0.38,
+                "fix_avg_hours": 32.8,
+                "over_now": 1,
+                "over_untaken": 1,
+                "over_taken": 1
+            },
+            {
+                "type": "mobile",
+                "total": 4,
+                "completed": 1,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 2,
+                "take_total": 2,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": null,
+                "fix_avg_hours": 39.8,
+                "over_now": 3,
+                "over_untaken": 1,
+                "over_taken": 2
+            },
+            {
+                "type": "network",
+                "total": 4,
+                "completed": 1,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 2,
+                "take_total": 3,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": null,
+                "fix_avg_hours": 39.4,
+                "over_now": 1,
+                "over_untaken": 0,
+                "over_taken": 1
+            },
+            {
+                "type": "telephone",
+                "total": 4,
+                "completed": 1,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 2,
+                "over_untaken": 1,
+                "over_taken": 1
+            },
+            {
+                "type": "email",
+                "total": 3,
+                "completed": 1,
+                "canceled": 0,
+                "open": 2,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": 0.5,
+                "fix_avg_hours": 33.2,
+                "over_now": 1,
+                "over_untaken": 1,
+                "over_taken": 0
+            },
+            {
+                "type": "cctv",
+                "total": 2,
+                "completed": 1,
+                "canceled": 1,
+                "open": 0,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 1,
+                "take_avg_hours": 0.25,
+                "fix_avg_hours": 53.0,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            }
+        ],
+        "overall": {
+            "total": 65,
+            "completed": 25,
+            "canceled": 8,
+            "open": 32,
+            "take_met": 38,
+            "take_total": 41,
+            "close_met": 17,
+            "close_total": 18,
+            "take_avg_hours": 3.28,
+            "fix_avg_hours": 30.1,
+            "over_now": 20,
+            "over_untaken": 7,
+            "over_taken": 15
+        },
+        "empty_types": [],
+        "open": [
+            {
+                "id": 44,
+                "ticket_no": "TKT-SW-261017-024",
+                "request_type": "computer",
+                "due_kind": "response",
+                "due_at": "2026-09-04 18:43",
+                "over_hours": 495.3
+            },
+            {
+                "id": 60,
+                "ticket_no": "TKT-OTH-261017-008",
+                "request_type": "email",
+                "due_kind": "response",
+                "due_at": "2026-09-05 17:17",
+                "over_hours": 472.7
+            },
+            {
+                "id": 91,
+                "ticket_no": "TKT-SW-261017-046",
+                "request_type": "other",
+                "due_kind": "resolve",
+                "due_at": "2026-09-07 01:14",
+                "over_hours": 440.8
+            },
+            {
+                "id": 260,
+                "ticket_no": "TKT-SW-261017-123",
+                "request_type": "mailgroup",
+                "due_kind": "resolve",
+                "due_at": "2026-09-07 15:39",
+                "over_hours": 426.3
+            },
+            {
+                "id": 14,
+                "ticket_no": "TKT-HW-261017-002",
+                "request_type": "recovery",
+                "due_kind": "resolve",
+                "due_at": "2026-09-09 11:39",
+                "over_hours": 382.3
+            },
+            {
+                "id": 12,
+                "ticket_no": "TKT-OTH-261017-002",
+                "request_type": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-11 10:52",
+                "over_hours": 335.1
+            },
+            {
+                "id": 64,
+                "ticket_no": "TKT-OTH-261017-009",
+                "request_type": "telephone",
+                "due_kind": "response",
+                "due_at": "2026-09-18 06:01",
+                "over_hours": 172.0
+            },
+            {
+                "id": 89,
+                "ticket_no": "TKT-SW-261017-044",
+                "request_type": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-19 15:26",
+                "over_hours": 138.6
+            },
+            {
+                "id": 120,
+                "ticket_no": "TKT-HW-261017-020",
+                "request_type": "mobile",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 197,
+                "ticket_no": "TKT-SW-261017-100",
+                "request_type": "fileshare",
+                "due_kind": "resolve",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 203,
+                "ticket_no": "TKT-SW-261017-104",
+                "request_type": "mobile",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 139,
+                "ticket_no": "TKT-OTH-261017-022",
+                "request_type": "fileshare",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 130,
+                "ticket_no": "TKT-SW-261017-066",
+                "request_type": "network",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 78,
+                "ticket_no": "TKT-OTH-261017-010",
+                "request_type": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 19,
+                "ticket_no": "TKT-SW-261017-009",
+                "request_type": "software",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 84,
+                "ticket_no": "TKT-HW-261017-013",
+                "request_type": "telephone",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 57,
+                "ticket_no": "TKT-SW-261017-031",
+                "request_type": "mobile",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 160,
+                "ticket_no": "TKT-SW-261017-081",
+                "request_type": "fileshare",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 17,
+                "ticket_no": "TKT-HW-261017-003",
+                "request_type": "recovery",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 6,
+                "ticket_no": "TKT-SW-261017-002",
+                "request_type": "computer",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            }
+        ],
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "type": "computer",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "hardware",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "mobile",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "email",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "social",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "fileshare",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "software",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "recovery",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "mailgroup",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "telephone",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "network",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "cctv",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "other",
+                    "hours": null,
+                    "clock": null
+                }
+            ]
+        }
+    },
+    "request.sheet": [
+        {
+            "title": "ตามประเภทคำขอ",
+            "headings": [
+                "ประเภทคำขอ",
+                "ทั้งหมด",
+                "เสร็จสิ้น",
+                "ยกเลิก",
+                "ยังเปิด",
+                "รับเคสทัน SLA (ทัน\/รับแล้ว)",
+                "รับเคสทัน SLA (%)",
+                "ปิดทัน SLA (ทัน\/เสร็จสิ้น)",
+                "ปิดทัน SLA (%)",
+                "รอคนรับเฉลี่ย (ชม.)",
+                "ปิดเคสเฉลี่ย (ชม.)"
+            ],
+            "rows": [
+                [
+                    "คอมพิวเตอร์",
+                    7,
+                    4,
+                    0,
+                    3,
+                    "3\/4",
+                    75,
+                    "2\/2",
+                    100,
+                    8.33,
+                    31.7
+                ],
+                [
+                    "ฮาร์ดแวร์ \/ อุปกรณ์ต่อพ่วง",
+                    7,
+                    3,
+                    2,
+                    2,
+                    "3\/4",
+                    75,
+                    "3\/3",
+                    100,
+                    12.13,
+                    18.4
+                ],
+                [
+                    "ขอใช้โซเชียลมีเดีย",
+                    7,
+                    5,
+                    1,
+                    1,
+                    "5\/5",
+                    100,
+                    "3\/3",
+                    100,
+                    0.08,
+                    26.3
+                ],
+                [
+                    "คำขออื่น ๆ",
+                    6,
+                    2,
+                    0,
+                    4,
+                    "6\/6",
+                    100,
+                    "2\/2",
+                    100,
+                    0.38,
+                    23.5
+                ],
+                [
+                    "กู้คืนข้อมูล",
+                    6,
+                    2,
+                    0,
+                    4,
+                    "4\/4",
+                    100,
+                    "0\/0",
+                    null,
+                    0.25,
+                    35.6
+                ],
+                [
+                    "ขอเข้าถึงไฟล์แชร์",
+                    5,
+                    0,
+                    1,
+                    4,
+                    "3\/3",
+                    100,
+                    "0\/0",
+                    null,
+                    null,
+                    null
+                ],
+                [
+                    "กลุ่มเมล",
+                    5,
+                    2,
+                    1,
+                    2,
+                    "3\/3",
+                    100,
+                    "2\/2",
+                    100,
+                    0.5,
+                    31.0
+                ],
+                [
+                    "ติดตั้งซอฟต์แวร์",
+                    5,
+                    2,
+                    2,
+                    1,
+                    "4\/4",
+                    100,
+                    "2\/2",
+                    100,
+                    0.38,
+                    32.8
+                ],
+                [
+                    "อุปกรณ์มือถือ",
+                    4,
+                    1,
+                    0,
+                    3,
+                    "2\/2",
+                    100,
+                    "1\/1",
+                    100,
+                    null,
+                    39.8
+                ],
+                [
+                    "ระบบเครือข่าย",
+                    4,
+                    1,
+                    0,
+                    3,
+                    "2\/3",
+                    67,
+                    "1\/1",
+                    100,
+                    null,
+                    39.4
+                ],
+                [
+                    "โทรศัพท์",
+                    4,
+                    1,
+                    0,
+                    3,
+                    "1\/1",
+                    100,
+                    "0\/0",
+                    null,
+                    null,
+                    null
+                ],
+                [
+                    "บัญชีอีเมล",
+                    3,
+                    1,
+                    0,
+                    2,
+                    "1\/1",
+                    100,
+                    "1\/1",
+                    100,
+                    0.5,
+                    33.2
+                ],
+                [
+                    "กล้องวงจรปิด",
+                    2,
+                    1,
+                    1,
+                    0,
+                    "1\/1",
+                    100,
+                    "0\/1",
+                    0,
+                    0.25,
+                    53.0
+                ],
+                [
+                    "รวม",
+                    65,
+                    25,
+                    8,
+                    32,
+                    "38\/41",
+                    93,
+                    "17\/18",
+                    94,
+                    3.28,
+                    30.1
+                ]
+            ]
+        }
+    ],
+    "request.type": {
+        "types": [
+            {
+                "type": "computer",
+                "total": 7,
+                "completed": 4,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 3,
+                "take_total": 4,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 8.33,
+                "fix_avg_hours": 31.7,
+                "over_now": 2,
+                "over_untaken": 2,
+                "over_taken": 1
+            },
+            {
+                "type": "hardware",
+                "total": 7,
+                "completed": 3,
+                "canceled": 2,
+                "open": 2,
+                "take_met": 3,
+                "take_total": 4,
+                "close_met": 3,
+                "close_total": 3,
+                "take_avg_hours": 12.13,
+                "fix_avg_hours": 18.4,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "social",
+                "total": 7,
+                "completed": 5,
+                "canceled": 1,
+                "open": 1,
+                "take_met": 5,
+                "take_total": 5,
+                "close_met": 3,
+                "close_total": 3,
+                "take_avg_hours": 0.08,
+                "fix_avg_hours": 26.3,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "other",
+                "total": 6,
+                "completed": 2,
+                "canceled": 0,
+                "open": 4,
+                "take_met": 6,
+                "take_total": 6,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 0.38,
+                "fix_avg_hours": 23.5,
+                "over_now": 4,
+                "over_untaken": 0,
+                "over_taken": 4
+            },
+            {
+                "type": "recovery",
+                "total": 6,
+                "completed": 2,
+                "canceled": 0,
+                "open": 4,
+                "take_met": 4,
+                "take_total": 4,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": 0.25,
+                "fix_avg_hours": 35.6,
+                "over_now": 2,
+                "over_untaken": 0,
+                "over_taken": 2
+            },
+            {
+                "type": "fileshare",
+                "total": 5,
+                "completed": 0,
+                "canceled": 1,
+                "open": 4,
+                "take_met": 3,
+                "take_total": 3,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 3,
+                "over_untaken": 1,
+                "over_taken": 2
+            },
+            {
+                "type": "mailgroup",
+                "total": 5,
+                "completed": 2,
+                "canceled": 1,
+                "open": 2,
+                "take_met": 3,
+                "take_total": 3,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 0.5,
+                "fix_avg_hours": 31.0,
+                "over_now": 1,
+                "over_untaken": 0,
+                "over_taken": 1
+            },
+            {
+                "type": "software",
+                "total": 5,
+                "completed": 2,
+                "canceled": 2,
+                "open": 1,
+                "take_met": 4,
+                "take_total": 4,
+                "close_met": 2,
+                "close_total": 2,
+                "take_avg_hours": 0.38,
+                "fix_avg_hours": 32.8,
+                "over_now": 1,
+                "over_untaken": 1,
+                "over_taken": 1
+            },
+            {
+                "type": "mobile",
+                "total": 4,
+                "completed": 1,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 2,
+                "take_total": 2,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": null,
+                "fix_avg_hours": 39.8,
+                "over_now": 3,
+                "over_untaken": 1,
+                "over_taken": 2
+            },
+            {
+                "type": "network",
+                "total": 4,
+                "completed": 1,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 2,
+                "take_total": 3,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": null,
+                "fix_avg_hours": 39.4,
+                "over_now": 1,
+                "over_untaken": 0,
+                "over_taken": 1
+            },
+            {
+                "type": "telephone",
+                "total": 4,
+                "completed": 1,
+                "canceled": 0,
+                "open": 3,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 2,
+                "over_untaken": 1,
+                "over_taken": 1
+            },
+            {
+                "type": "email",
+                "total": 3,
+                "completed": 1,
+                "canceled": 0,
+                "open": 2,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": 0.5,
+                "fix_avg_hours": 33.2,
+                "over_now": 1,
+                "over_untaken": 1,
+                "over_taken": 0
+            },
+            {
+                "type": "cctv",
+                "total": 2,
+                "completed": 1,
+                "canceled": 1,
+                "open": 0,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 1,
+                "take_avg_hours": 0.25,
+                "fix_avg_hours": 53.0,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            }
+        ],
+        "overall": {
+            "total": 65,
+            "completed": 25,
+            "canceled": 8,
+            "open": 32,
+            "take_met": 38,
+            "take_total": 41,
+            "close_met": 17,
+            "close_total": 18,
+            "take_avg_hours": 3.28,
+            "fix_avg_hours": 30.1,
+            "over_now": 20,
+            "over_untaken": 7,
+            "over_taken": 15
+        },
+        "empty_types": [],
+        "open": [
+            {
+                "id": 44,
+                "ticket_no": "TKT-SW-261017-024",
+                "request_type": "computer",
+                "due_kind": "response",
+                "due_at": "2026-09-04 18:43",
+                "over_hours": 495.3
+            },
+            {
+                "id": 60,
+                "ticket_no": "TKT-OTH-261017-008",
+                "request_type": "email",
+                "due_kind": "response",
+                "due_at": "2026-09-05 17:17",
+                "over_hours": 472.7
+            },
+            {
+                "id": 91,
+                "ticket_no": "TKT-SW-261017-046",
+                "request_type": "other",
+                "due_kind": "resolve",
+                "due_at": "2026-09-07 01:14",
+                "over_hours": 440.8
+            },
+            {
+                "id": 260,
+                "ticket_no": "TKT-SW-261017-123",
+                "request_type": "mailgroup",
+                "due_kind": "resolve",
+                "due_at": "2026-09-07 15:39",
+                "over_hours": 426.3
+            },
+            {
+                "id": 14,
+                "ticket_no": "TKT-HW-261017-002",
+                "request_type": "recovery",
+                "due_kind": "resolve",
+                "due_at": "2026-09-09 11:39",
+                "over_hours": 382.3
+            },
+            {
+                "id": 12,
+                "ticket_no": "TKT-OTH-261017-002",
+                "request_type": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-11 10:52",
+                "over_hours": 335.1
+            },
+            {
+                "id": 64,
+                "ticket_no": "TKT-OTH-261017-009",
+                "request_type": "telephone",
+                "due_kind": "response",
+                "due_at": "2026-09-18 06:01",
+                "over_hours": 172.0
+            },
+            {
+                "id": 89,
+                "ticket_no": "TKT-SW-261017-044",
+                "request_type": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-19 15:26",
+                "over_hours": 138.6
+            },
+            {
+                "id": 120,
+                "ticket_no": "TKT-HW-261017-020",
+                "request_type": "mobile",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 197,
+                "ticket_no": "TKT-SW-261017-100",
+                "request_type": "fileshare",
+                "due_kind": "resolve",
+                "due_at": null,
+                "over_hours": null
+            },
+            {
+                "id": 203,
+                "ticket_no": "TKT-SW-261017-104",
+                "request_type": "mobile",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 139,
+                "ticket_no": "TKT-OTH-261017-022",
+                "request_type": "fileshare",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 130,
+                "ticket_no": "TKT-SW-261017-066",
+                "request_type": "network",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 78,
+                "ticket_no": "TKT-OTH-261017-010",
+                "request_type": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 19,
+                "ticket_no": "TKT-SW-261017-009",
+                "request_type": "software",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 84,
+                "ticket_no": "TKT-HW-261017-013",
+                "request_type": "telephone",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 57,
+                "ticket_no": "TKT-SW-261017-031",
+                "request_type": "mobile",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 160,
+                "ticket_no": "TKT-SW-261017-081",
+                "request_type": "fileshare",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 17,
+                "ticket_no": "TKT-HW-261017-003",
+                "request_type": "recovery",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 6,
+                "ticket_no": "TKT-SW-261017-002",
+                "request_type": "computer",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            }
+        ],
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "type": "computer",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "hardware",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "mobile",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "email",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "social",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "fileshare",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "software",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "recovery",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "mailgroup",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "telephone",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "network",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "cctv",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "other",
+                    "hours": null,
+                    "clock": null
+                }
+            ]
+        }
+    },
+    "request.assignee": {
+        "types": [
+            {
+                "type": "email",
+                "total": 2,
+                "completed": 1,
+                "canceled": 0,
+                "open": 1,
+                "take_met": 0,
+                "take_total": 0,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": 0.5,
+                "fix_avg_hours": 33.2,
+                "over_now": 1,
+                "over_untaken": 1,
+                "over_taken": 0
+            },
+            {
+                "type": "network",
+                "total": 2,
+                "completed": 0,
+                "canceled": 0,
+                "open": 2,
+                "take_met": 1,
+                "take_total": 2,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 1,
+                "over_untaken": 0,
+                "over_taken": 1
+            },
+            {
+                "type": "software",
+                "total": 2,
+                "completed": 1,
+                "canceled": 1,
+                "open": 0,
+                "take_met": 2,
+                "take_total": 2,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": 0.25,
+                "fix_avg_hours": 14.0,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "telephone",
+                "total": 2,
+                "completed": 0,
+                "canceled": 0,
+                "open": 2,
+                "take_met": 0,
+                "take_total": 0,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 2,
+                "over_untaken": 1,
+                "over_taken": 1
+            },
+            {
+                "type": "computer",
+                "total": 1,
+                "completed": 1,
+                "canceled": 0,
+                "open": 0,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": 0.25,
+                "fix_avg_hours": null,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "fileshare",
+                "total": 1,
+                "completed": 0,
+                "canceled": 0,
+                "open": 1,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "mailgroup",
+                "total": 1,
+                "completed": 1,
+                "canceled": 0,
+                "open": 0,
+                "take_met": 0,
+                "take_total": 0,
+                "close_met": 1,
+                "close_total": 1,
+                "take_avg_hours": null,
+                "fix_avg_hours": 6.1,
+                "over_now": 0,
+                "over_untaken": 0,
+                "over_taken": 0
+            },
+            {
+                "type": "mobile",
+                "total": 1,
+                "completed": 0,
+                "canceled": 0,
+                "open": 1,
+                "take_met": 0,
+                "take_total": 0,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 1,
+                "over_untaken": 1,
+                "over_taken": 0
+            },
+            {
+                "type": "other",
+                "total": 1,
+                "completed": 0,
+                "canceled": 0,
+                "open": 1,
+                "take_met": 1,
+                "take_total": 1,
+                "close_met": 0,
+                "close_total": 0,
+                "take_avg_hours": null,
+                "fix_avg_hours": null,
+                "over_now": 1,
+                "over_untaken": 0,
+                "over_taken": 1
+            }
+        ],
+        "overall": {
+            "total": 13,
+            "completed": 4,
+            "canceled": 1,
+            "open": 8,
+            "take_met": 6,
+            "take_total": 7,
+            "close_met": 3,
+            "close_total": 3,
+            "take_avg_hours": 0.33,
+            "fix_avg_hours": 17.8,
+            "over_now": 6,
+            "over_untaken": 3,
+            "over_taken": 3
+        },
+        "empty_types": [
+            "hardware",
+            "social",
+            "recovery",
+            "cctv"
+        ],
+        "open": [
+            {
+                "id": 60,
+                "ticket_no": "TKT-OTH-261017-008",
+                "request_type": "email",
+                "due_kind": "response",
+                "due_at": "2026-09-05 17:17",
+                "over_hours": 472.7
+            },
+            {
+                "id": 64,
+                "ticket_no": "TKT-OTH-261017-009",
+                "request_type": "telephone",
+                "due_kind": "response",
+                "due_at": "2026-09-18 06:01",
+                "over_hours": 172.0
+            },
+            {
+                "id": 120,
+                "ticket_no": "TKT-HW-261017-020",
+                "request_type": "mobile",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 130,
+                "ticket_no": "TKT-SW-261017-066",
+                "request_type": "network",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 10:00",
+                "over_hours": 0.0
+            },
+            {
+                "id": 78,
+                "ticket_no": "TKT-OTH-261017-010",
+                "request_type": null,
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            },
+            {
+                "id": 84,
+                "ticket_no": "TKT-HW-261017-013",
+                "request_type": "telephone",
+                "due_kind": "resolve",
+                "due_at": "2026-09-25 09:59",
+                "over_hours": 0.0
+            }
+        ],
+        "rules": {
+            "goal": 90,
+            "response_minutes": 120,
+            "resolve": [
+                {
+                    "type": "computer",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "hardware",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "mobile",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "email",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "social",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "fileshare",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "software",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "recovery",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "mailgroup",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "telephone",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "network",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "cctv",
+                    "hours": null,
+                    "clock": null
+                },
+                {
+                    "type": "other",
+                    "hours": null,
+                    "clock": null
+                }
+            ]
+        }
+    },
+    "request.summary": [
+        {
+            "key": "rs_total",
+            "label_key": "rep_k_rs_total",
+            "heading": "Ticket จากคำขอ",
+            "value": 65,
+            "tone": null,
+            "format": "count",
+            "split": [
+                {
+                    "key": "completed",
+                    "label_key": "rep_rs_completed",
+                    "tone": "soft-green",
+                    "value": 25
+                },
+                {
+                    "key": "canceled",
+                    "label_key": "rep_rs_canceled",
+                    "tone": "gray",
+                    "value": 8
+                },
+                {
+                    "key": "open",
+                    "label_key": "rep_rs_open",
+                    "tone": "soft-blue",
+                    "value": 32
+                }
+            ],
+            "share": null,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "rs_close_rate",
+            "label_key": "rep_k_rs_close_rate",
+            "heading": "ปิดทัน SLA (%)",
+            "value": 94,
+            "tone": null,
+            "format": "percent",
+            "split": [],
+            "share": null,
+            "note": {
+                "label_key": "rep_rs_note_close",
+                "values": {
+                    "met": 17,
+                    "n": 18
+                }
+            },
+            "goal": 90,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "rs_take_rate",
+            "label_key": "rep_k_rs_take_rate",
+            "heading": "รับเคสทัน SLA (%)",
+            "value": 93,
+            "tone": null,
+            "format": "percent",
+            "split": [],
+            "share": null,
+            "note": {
+                "label_key": "rep_rs_note_take",
+                "values": {
+                    "met": 38,
+                    "n": 41
+                }
+            },
+            "goal": 90,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "rs_fix_avg",
+            "label_key": "rep_k_rs_fix_avg",
+            "heading": "เวลาปิดเคสเฉลี่ย (ชม.)",
+            "value": 30.1,
+            "tone": null,
+            "format": "hours",
+            "split": [
+                {
+                    "key": "wait",
+                    "label_key": "rep_rs_split_wait",
+                    "tone": "soft-amber",
+                    "value": 3.3
+                },
+                {
+                    "key": "work",
+                    "label_key": "rep_rs_split_work",
+                    "tone": "soft-blue",
+                    "value": 26.8
+                }
+            ],
+            "share": null,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        },
+        {
+            "key": "rs_over_sla",
+            "label_key": "rep_k_rs_over_sla",
+            "heading": "เกิน SLA ตอนนี้",
+            "value": 20,
+            "tone": "soft-red",
+            "format": "count",
+            "split": [
+                {
+                    "key": "untaken",
+                    "label_key": "rep_rs_over_untaken",
+                    "tone": "soft-red",
+                    "value": 7
+                },
+                {
+                    "key": "taken",
+                    "label_key": "rep_rs_over_taken",
+                    "tone": "soft-orange",
+                    "value": 15
+                }
+            ],
+            "share": 63,
+            "note": null,
+            "goal": null,
+            "attention": null,
+            "chart": null,
+            "progress": null
+        }
+    ]
+}
