@@ -223,6 +223,46 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertSame(0, array_sum(array_column($short['months'], 'return')));
     }
 
+    public function test_a_renamed_warehouse_keeps_its_history_in_the_report(): void
+    {
+        $this->seedStock();
+        $before = $this->breakdown('warehouse_id='.$this->s['main']->id);
+
+        $this->s['main']->update(['name' => 'Main Store']);
+        $after = $this->breakdown('warehouse_id='.$this->s['main']->id);
+
+        $this->assertSame(20, $before['tiles']['receive']['qty']);
+        $this->assertSame($before['tiles'], $after['tiles']);
+        $this->assertSame(array_column($before['counts'], 'reference'), array_column($after['counts'], 'reference'));
+        $this->assertSame(
+            $this->actingAs($this->userWith($this->reportRights('stock')))->getJson('/api/reports/tabular/stock.movements/rows?warehouse_id='.$this->s['main']->id.'&from=2025-01-01')->json('meta.total'),
+            StockMovement::query()->where(fn ($q) => $q->where('from_warehouse_id', $this->s['main']->id)->orWhere('to_warehouse_id', $this->s['main']->id))->count(),
+        );
+    }
+
+    public function test_a_manual_count_books_nothing_so_it_is_not_a_variance(): void
+    {
+        $this->seedStock();
+        $manual = $this->stockCount('SC-2026-009', 'Main', 'committed', '2026-09-24 10:00:00', [[$this->s['ssd'], 10, 7]]);
+        $manual->update(['adjust_mode' => 'manual']);
+
+        $this->assertNotContains('SC-2026-009', array_column($this->breakdown()['counts'], 'reference'));
+    }
+
+    public function test_an_all_warehouse_count_shows_under_the_warehouse_it_adjusted(): void
+    {
+        $this->seedStock();
+        $this->stockCount('SC-2026-010', null, 'committed', '2026-09-24 11:00:00', [[$this->s['ssd'], 10, 8], [$this->s['cable'], 5, 6]]);
+        $this->movement($this->s['ssd'], 'adjust_down', 2, '2026-09-24 11:00:00', ['from_label' => 'Main', 'reference' => 'SC-2026-010']);
+        $this->movement($this->s['cable'], 'adjust_up', 1, '2026-09-24 11:00:00', ['to_label' => 'Branch', 'reference' => 'SC-2026-010']);
+
+        $main = collect($this->breakdown('warehouse_id='.$this->s['main']->id)['counts'])->keyBy('reference');
+        $branch = collect($this->breakdown('warehouse_id='.$this->s['branch']->id)['counts'])->keyBy('reference');
+
+        $this->assertEquals(['lines' => 1, 'up' => 0, 'down' => 2], collect($main['SC-2026-010'])->only('lines', 'up', 'down')->all());
+        $this->assertEquals(['lines' => 1, 'up' => 1, 'down' => 0], collect($branch['SC-2026-010'])->only('lines', 'up', 'down')->all());
+    }
+
     public function test_warehouse_and_category_narrow_the_breakdown_but_type_does_not(): void
     {
         $this->seedStock();

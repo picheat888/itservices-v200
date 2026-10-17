@@ -2,6 +2,7 @@
 
 namespace App\Services\Report\Stock;
 
+use App\Enums\Stock\StockCountAdjustMode;
 use App\Enums\Stock\StockCountStatus;
 use App\Models\Stock\StockCount;
 use App\Models\Stock\StockCountLine;
@@ -73,20 +74,24 @@ class StockMovementReport extends TabularReport
      */
     private function scoped(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
     {
-        $warehouse = $this->warehouseName($filters);
-
         return StockMovement::query()
             ->whereBetween('moved_at', [$from, $to])
-            ->when($warehouse !== null, fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('from_label', $warehouse)->orWhere('to_label', $warehouse)))
+            ->when($this->warehouseId($filters), fn (Builder $q, int $id) => self::touchingWarehouse($q, $id))
             ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)));
     }
 
     /** @param  array<string, mixed>  $filters */
-    private function warehouseName(array $filters): ?string
+    private function warehouseId(array $filters): ?int
     {
-        $id = $filters['warehouse_id'] ?? null;
+        $id = (int) ($filters['warehouse_id'] ?? 0);
 
-        return $id ? (string) Warehouse::query()->whereKey((int) $id)->value('name') : null;
+        return $id > 0 ? $id : null;
+    }
+
+    /** Movements that left from or arrived at the warehouse, by id so a renamed warehouse keeps its history. */
+    private static function touchingWarehouse(Builder $query, int $id): Builder
+    {
+        return $query->where(fn (Builder $w) => $w->where('stock_movements.from_warehouse_id', $id)->orWhere('stock_movements.to_warehouse_id', $id));
     }
 
     public function query(User $viewer, array $filters): Builder
@@ -388,18 +393,27 @@ class StockMovementReport extends TabularReport
      */
     private function committedCounts(array $filters, CarbonImmutable $from, CarbonImmutable $to): Collection
     {
-        $warehouse = $this->warehouseName($filters);
+        $warehouseId = $this->warehouseId($filters);
         $category = $filters['category_id'] ?? null;
+        // An all-warehouse count reaches a warehouse through the adjustments it booked there (reference + item).
+        $bookedHere = $warehouseId === null ? collect() : self::touchingWarehouse(StockMovement::query(), $warehouseId)
+            ->whereIn('type', ['adjust_up', 'adjust_down'])->whereNotNull('reference')
+            ->toBase()->get(['reference', 'stock_item_id'])
+            ->map(fn (object $m) => $m->reference.'|'.$m->stock_item_id)->flip();
 
         return StockCount::query()
             ->where('status', StockCountStatus::Committed->value)
+            // A Manual count is report-only: it booked no adjustment.
+            ->where(fn (Builder $q) => $q->whereNull('adjust_mode')->orWhere('adjust_mode', '!=', StockCountAdjustMode::Manual->value))
             ->whereBetween('committed_at', [$from, $to])
-            ->when($warehouse !== null, fn (Builder $q) => $q->where('warehouse', $warehouse))
+            ->when($warehouseId, fn (Builder $q, int $id) => $q->where(fn (Builder $w) => $w->where('warehouse_id', $id)
+                ->orWhere(fn (Builder $all) => $all->whereNull('warehouse_id')->whereIn('reference', $bookedHere->keys()->map(fn (string $k) => strstr($k, '|', true))->unique()->values()))))
             ->with(['lines:id,stock_count_id,stock_item_id,system_qty,counted_qty', 'lines.item:id,category_id'])
             ->orderByDesc('committed_at')->orderByDesc('id')
-            ->get(['id', 'reference', 'warehouse', 'committed_at'])
+            ->get(['id', 'reference', 'warehouse', 'warehouse_id', 'committed_at'])
             ->each(fn (StockCount $c) => $c->setRelation('lines', $c->lines->filter(
-                fn (StockCountLine $l) => ! $category || (int) $l->item?->category_id === (int) $category,
+                fn (StockCountLine $l) => (! $category || (int) $l->item?->category_id === (int) $category)
+                    && ($warehouseId === null || $c->warehouse_id !== null || $bookedHere->has($c->reference.'|'.$l->stock_item_id)),
             )->values()))
             ->filter(fn (StockCount $c) => ! $category || $c->lines->isNotEmpty())
             ->values();
