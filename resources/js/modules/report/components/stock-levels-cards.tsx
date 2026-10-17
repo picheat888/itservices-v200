@@ -4,11 +4,12 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
 import { useStockLevelsBreakdown } from '../hooks/use-reports';
-import type { StockLevelsBreakdown, TabularFilters } from '../types';
-import { CardEmpty, CardPager, CardTitle, InfoMark, Swatch } from './chart-parts';
+import type { ChartTone, StockLevelsBreakdown, TabularFilters } from '../types';
+import { CardEmpty, CardPager, CardTitle, CountBar, InfoMark, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, KpiRowSkeleton } from './report-skeletons';
@@ -23,13 +24,11 @@ type Level = 'out' | 'low' | 'over';
 const PAGE_SIZE = 10;
 
 /** The three levels in page order, each in its stock module tone. */
-const LEVELS: { key: Level; fill: string }[] = [
-    { key: 'out', fill: FILL.red },
-    { key: 'low', fill: FILL.amber },
-    { key: 'over', fill: FILL.blue },
+const LEVELS: { key: Level; tone: ChartTone }[] = [
+    { key: 'out', tone: 'red' },
+    { key: 'low', tone: 'amber' },
+    { key: 'over', tone: 'blue' },
 ];
-
-const TRACK = 'dark:bg-muted block h-3 overflow-hidden rounded-full bg-slate-200';
 
 /* ─────────────────────────── tiles ─────────────────────────── */
 
@@ -104,12 +103,20 @@ export function StockLevelsLegend({ filters }: { filters: TabularFilters }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { data } = useStockLevelsBreakdown(filters);
-    if (!data) return null;
+    if (!data) {
+        return (
+            <span aria-hidden className="flex items-center gap-3">
+                {LEVELS.map((l) => (
+                    <Skeleton key={l.key} className="h-3.5 w-20" />
+                ))}
+            </span>
+        );
+    }
 
     return (
         <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             {LEVELS.map((l) => (
-                <Swatch key={l.key} fill={l.fill}>
+                <Swatch key={l.key} fill={FILL[l.tone]}>
                     {t(`stock_st_${l.key}`)}
                     <b className="text-foreground font-semibold tabular-nums">{stockCount(data.tiles[l.key], lang)}</b>
                 </Swatch>
@@ -127,24 +134,20 @@ interface CategoryRow {
     total: number;
 }
 
-/** One category: its name, the out / low / over pieces on a shared scale, and the total. */
+/** One category: its name, the out / low / over counts inside a bar on a shared scale (tap for the split), and the total. */
 function CategoryLine({ row, scale }: { row: CategoryRow; scale: number }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const label = LEVELS.map((l) => `${t(`stock_st_${l.key}`)} ${stockCount(row.counts[l.key], lang)}`).join(', ');
 
     return (
         <li className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_3rem] items-center gap-3 text-sm sm:grid-cols-[minmax(0,11.5rem)_minmax(0,1fr)_3.5rem]">
             <span className="truncate" title={row.name}>
                 {row.name}
             </span>
-            <span role="img" aria-label={`${row.name}: ${label}`} className={TRACK}>
-                <span className="flex h-full gap-px overflow-hidden rounded-full" style={{ width: `${Math.min(100, (row.total / scale) * 100)}%` }}>
-                    {LEVELS.filter((l) => row.counts[l.key] > 0).map((l) => (
-                        <i key={l.key} className={cn('block h-full min-w-[3px] basis-0', l.fill)} style={{ flexGrow: row.counts[l.key] }} />
-                    ))}
-                </span>
-            </span>
+            <CountBar
+                pieces={LEVELS.map((l) => ({ key: l.key, label: t(`stock_st_${l.key}`), tone: l.tone, value: row.counts[l.key] }))}
+                scale={scale}
+            />
             <b className="text-right text-[13px] font-semibold tabular-nums">{stockCount(row.total, lang)}</b>
         </li>
     );
@@ -166,7 +169,7 @@ function CategoryCard({ categories }: { categories: StockLevelsBreakdown['catego
     const legend = (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {LEVELS.map((l) => (
-                <Swatch key={l.key} fill={l.fill}>
+                <Swatch key={l.key} fill={FILL[l.tone]}>
                     {t(`stock_st_${l.key}`)}
                 </Swatch>
             ))}
