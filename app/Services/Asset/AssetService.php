@@ -130,7 +130,7 @@ class AssetService
         ?string $from,
         string $to,
         ?string $reason,
-        ?string $performedBy,
+        ?User $performedBy,
     ): void {
         AssetTransfer::create([
             'asset_id' => $asset->id,
@@ -140,7 +140,8 @@ class AssetService
             'from_owner' => $from,
             'to_owner' => $to,
             'reason' => $reason,
-            'performed_by' => $performedBy,
+            'performed_by' => $performedBy?->name,
+            'performed_by_user_id' => $performedBy?->id,
         ]);
     }
 
@@ -247,7 +248,7 @@ class AssetService
      *
      * @param  array{mode: string, owner_employee_id?: int|null, owner_label?: string|null, location_id: int, reason?: string|null}  $data
      */
-    public function transfer(Asset $asset, array $data, ?string $performedBy = null): Asset
+    public function transfer(Asset $asset, array $data, ?User $performedBy = null): Asset
     {
         // A pooled asset has no owner — it "leaves" its warehouse, so stamp that
         // warehouse as the custody-trail origin instead of a blank sender.
@@ -298,7 +299,7 @@ class AssetService
      * has to accept anything. The move is still recorded on the custody trail as a
      * `Relocate` row so the History tab can show "old place → new place".
      */
-    public function relocate(Asset $asset, Location $location, ?string $performedBy = null, ?string $note = null): Asset
+    public function relocate(Asset $asset, Location $location, ?User $performedBy = null, ?string $note = null): Asset
     {
         $from = $asset->location?->name;
         $asset->update(['location_id' => $location->id]);
@@ -425,7 +426,7 @@ class AssetService
      * When a destination warehouse is supplied, the asset is stored there;
      * otherwise it keeps whatever warehouse it already had.
      */
-    public function markReceived(Asset $asset, ?string $performedBy = null, ?string $warehouse = null): Asset
+    public function markReceived(Asset $asset, ?User $performedBy = null, ?string $warehouse = null): Asset
     {
         $from = $asset->ownerCode();
         // Back in the pool = no owner (same as a freshly registered asset); its physical
@@ -455,7 +456,7 @@ class AssetService
      * picked. A force recall (see AssetController::recall) also reaches an asset an employee
      * is actually holding, which is why the bell distinguishes the two.
      */
-    public function recall(Asset $asset, ?string $performedBy = null, ?string $warehouse = null, ?string $reason = null): Asset
+    public function recall(Asset $asset, ?User $performedBy = null, ?string $warehouse = null, ?string $reason = null): Asset
     {
         // The intended (not-yet-accepted) recipient becomes the custody-trail origin.
         $from = $asset->ownerCode();

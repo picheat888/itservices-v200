@@ -4,6 +4,7 @@ namespace App\Models\Asset;
 
 use App\Enums\Asset\AssetTransferKind;
 use App\Models\Employee\Employee;
+use App\Models\User;
 use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Support\Collection;
 class AssetTransfer extends Model
 {
     protected $fillable = [
-        'asset_id', 'asset_tag', 'asset_model', 'kind', 'from_owner', 'to_owner', 'reason', 'performed_by',
+        'asset_id', 'asset_tag', 'asset_model', 'kind', 'from_owner', 'to_owner', 'reason', 'performed_by', 'performed_by_user_id',
     ];
 
     /** @return array<string, string> */
@@ -42,7 +43,15 @@ class AssetTransfer extends Model
                 $codes = SearchTerms::anyLike(Employee::query()->select('code'), SearchTerms::personName(), $like);
                 $w->orWhereIn('from_owner', $codes)->orWhereIn('to_owner', $codes);
             },
+            fn (Builder $w, string $like) => $w->orWhereIn('performed_by_user_id', User::query()->select('id')
+                ->whereIn('employee_id', SearchTerms::anyLike(Employee::query()->select('id'), SearchTerms::personName(), $like))),
         ]);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function performer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'performed_by_user_id');
     }
 
     /** @return BelongsTo<Asset, $this> */

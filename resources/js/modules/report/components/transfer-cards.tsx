@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -472,7 +473,7 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
                                                 )}
                                             </td>
                                             <td className={cn(TD, 'whitespace-nowrap')}>
-                                                {r.by ?? <span className="text-muted-foreground">—</span>}
+                                                {localPair(r.by, r.by_th, lang) ?? <span className="text-muted-foreground">—</span>}
                                             </td>
                                         </tr>
                                     );

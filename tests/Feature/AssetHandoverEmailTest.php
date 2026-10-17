@@ -135,7 +135,7 @@ class AssetHandoverEmailTest extends TestCase
             'owner_employee_id' => $employee->id,
         ]);
 
-        app(AssetService::class)->recall($asset, 'Admin', 'IT Store', 'Wrong person');
+        app(AssetService::class)->recall($asset, null, 'IT Store', 'Wrong person');
 
         $mail = $this->mail('asset.recalled');
         $this->assertNotNull($mail, 'A recall told the holder nothing.');

@@ -269,7 +269,7 @@ class AssetController extends Controller
         // Ownership only — a location correction keeps the same holder, so it belongs on the
         // asset's own History tab, not in a list of who handed what to whom.
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-        $page = AssetTransfer::whereNot('kind', AssetTransferKind::Relocate)
+        $page = AssetTransfer::with('performer.employee:id,first_name_th,last_name_th')->whereNot('kind', AssetTransferKind::Relocate)
             ->searchFor($request->query('search'))
             ->latest()->latest('id')
             ->paginate($perPage);
@@ -296,6 +296,7 @@ class AssetController extends Controller
             'to_name_th' => $namesTh[$tr->to_owner] ?? null,
             'reason' => $tr->reason,
             'performed_by' => $tr->performed_by,
+            'performed_by_th' => $tr->performer?->name_th,
         ]);
 
         return response()->json([
@@ -317,7 +318,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee.employee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator.employee', 'updater.employee', 'writtenOffBy.employee', 'writeoffReason', 'returnedToVendorBy.employee']);
+        $asset->load(['contract.vendor', 'transfers.performer.employee:id,first_name_th,last_name_th', 'tickets.assignee.employee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator.employee', 'updater.employee', 'writtenOffBy.employee', 'writeoffReason', 'returnedToVendorBy.employee']);
 
         return (new AssetResource($asset))->response();
     }
@@ -420,7 +421,7 @@ class AssetController extends Controller
         // Transfer on a Ready asset; the API now agrees.
         abort_unless($asset->status === AssetStatus::Ready, 422, 'Only a Ready asset can be handed over.');
 
-        $asset = $this->service->transfer($asset, $data, $request->user()?->name);
+        $asset = $this->service->transfer($asset, $data, $request->user());
         AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -471,7 +472,7 @@ class AssetController extends Controller
         $data = $request->validate([
             'warehouse' => ['required', 'string', 'max:120'],
         ]);
-        $asset = $this->service->markReceived($asset, $request->user()?->name, $data['warehouse']);
+        $asset = $this->service->markReceived($asset, $request->user(), $data['warehouse']);
         AuditLog::record('Received asset', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -512,7 +513,7 @@ class AssetController extends Controller
             'warehouse' => ['required', 'string', 'max:120'],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
-        $asset = $this->service->recall($asset, $user?->name, $data['warehouse'], $data['reason'] ?? null);
+        $asset = $this->service->recall($asset, $user, $data['warehouse'], $data['reason'] ?? null);
         AuditLog::record($normallyRecallable ? 'Recalled asset' : 'Force-recalled asset', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -603,7 +604,7 @@ class AssetController extends Controller
 
         $location = Location::findOrFail($data['location_id']);
         foreach ($assets as $asset) {
-            $this->service->relocate($asset, $location, $request->user()?->name, $data['note'] ?? null);
+            $this->service->relocate($asset, $location, $request->user(), $data['note'] ?? null);
         }
         // One entry per asset, so each asset's own history carries the move.
         foreach ($assets as $asset) {
@@ -644,7 +645,7 @@ class AssetController extends Controller
                 'owner_label' => $data['owner_label'] ?? null,
                 'location_id' => $data['location_id'],
                 'reason' => $data['reason'] ?? null,
-            ], $request->user()?->name);
+            ], $request->user());
         }
         foreach ($assets as $asset) {
             AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
@@ -681,7 +682,7 @@ class AssetController extends Controller
             }
         }
         foreach ($assets as $asset) {
-            $this->service->recall($asset, $user?->name, $data['warehouse'], $data['reason'] ?? null);
+            $this->service->recall($asset, $user, $data['warehouse'], $data['reason'] ?? null);
             // Named per asset, as the single recall does: only the ones outside the normal states were forced.
             AuditLog::record(in_array($asset->id, $forcedIds, true) ? 'Force-recalled asset' : 'Recalled asset', $asset->asset_code, subject: $asset);
         }
@@ -703,7 +704,7 @@ class AssetController extends Controller
         abort_if($assets->contains(fn (Asset $a) => $a->status !== AssetStatus::PendingReturn), 422, 'Only assets pending return can be received.');
 
         foreach ($assets as $asset) {
-            $this->service->markReceived($asset, $request->user()?->name, $data['warehouse']);
+            $this->service->markReceived($asset, $request->user(), $data['warehouse']);
         }
         foreach ($assets as $asset) {
             AuditLog::record('Received asset', $asset->asset_code, subject: $asset);

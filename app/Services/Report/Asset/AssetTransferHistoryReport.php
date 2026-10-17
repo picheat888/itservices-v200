@@ -99,7 +99,7 @@ class AssetTransferHistoryReport extends TabularReport
 
     public function query(User $viewer, array $filters): Builder
     {
-        return $this->filtered($filters)->orderByDesc('created_at')->orderByDesc('id');
+        return $this->filtered($filters)->with('performer.employee:id,first_name_th,last_name_th')->orderByDesc('created_at')->orderByDesc('id');
     }
 
     public function columns(): array
@@ -124,7 +124,7 @@ class AssetTransferHistoryReport extends TabularReport
             // Hours to the acceptance, the wait so far, or from the return request to the return.
             ReportColumn::number('outcome_hours', 'ผลหลังส่ง (ชม.)', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['hours'] ?? null)->hiddenByDefault(),
             ReportColumn::text('reason', 'เหตุผล', fn (AssetTransfer $t) => $t->reason),
-            ReportColumn::text('performed_by', 'ผู้ดำเนินการ', fn (AssetTransfer $t) => $t->performed_by),
+            ReportColumn::localized('performed_by', 'ผู้ดำเนินการ', fn (AssetTransfer $t) => ['name' => $t->performed_by, 'name_th' => $t->performer?->name_th]),
         ];
     }
 
@@ -328,14 +328,15 @@ class AssetTransferHistoryReport extends TabularReport
      * Every location update in the range, newest first: the asset, where from and to, why and by whom.
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{id: int, asset_id: int, at: string, code: string, brand: ?string, model: string, from: ?string, to: string, reason: ?string, by: ?string}>
+     * @return list<array{id: int, asset_id: int, at: string, code: string, brand: ?string, model: string, from: ?string, to: string, reason: ?string, by: ?string, by_th: ?string}>
      */
     private function relocations(array $filters): array
     {
         $moves = $this->filtered($filters)
             ->where('kind', AssetTransferKind::Relocate->value)
+            ->with('performer.employee:id,first_name_th,last_name_th')
             ->orderByDesc('created_at')->orderByDesc('id')
-            ->get(['id', 'asset_id', 'asset_tag', 'asset_model', 'from_owner', 'to_owner', 'reason', 'performed_by', 'created_at']);
+            ->get(['id', 'asset_id', 'asset_tag', 'asset_model', 'from_owner', 'to_owner', 'reason', 'performed_by', 'performed_by_user_id', 'created_at']);
         $brands = TransferTrail::brands($moves->pluck('asset_id')->unique());
 
         return $moves
@@ -350,6 +351,7 @@ class AssetTransferHistoryReport extends TabularReport
                 'to' => $t->to_owner,
                 'reason' => $t->reason,
                 'by' => $t->performed_by,
+                'by_th' => $t->performer?->name_th,
             ])
             ->all();
     }
@@ -499,7 +501,7 @@ class AssetTransferHistoryReport extends TabularReport
             [
                 'title' => 'อัปเดตสถานที่',
                 'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ'],
-                'rows' => array_map(fn (array $r) => [DateDisplay::cellDateTime($r['at']), $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by']], $b['relocations']),
+                'rows' => array_map(fn (array $r) => [DateDisplay::cellDateTime($r['at']), $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by_th'] ?: $r['by']], $b['relocations']),
             ],
         ];
     }

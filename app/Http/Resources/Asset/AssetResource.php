@@ -104,6 +104,7 @@ class AssetResource extends JsonResource
             // Included only on the single-asset endpoint (whenLoaded) so the list stays lean.
             'transfers' => $this->whenLoaded('transfers', function () {
                 $names = AssetTransfer::employeeNamesFor($this->transfers);
+                $namesTh = AssetTransfer::employeeThaiNamesFor($this->transfers);
 
                 return $this->transfers->map(fn ($tr) => [
                     'id' => $tr->id,
@@ -118,8 +119,11 @@ class AssetResource extends JsonResource
                     // Set only when that end was an employee; a warehouse or shared label has none.
                     'from_name' => $names[$tr->from_owner] ?? null,
                     'to_name' => $names[$tr->to_owner] ?? null,
+                    'from_name_th' => $namesTh[$tr->from_owner] ?? null,
+                    'to_name_th' => $namesTh[$tr->to_owner] ?? null,
                     'reason' => $tr->reason,
                     'performed_by' => $tr->performed_by,
+                    'performed_by_th' => $tr->performer?->name_th,
                 ]);
             }),
             'tickets' => $this->whenLoaded('tickets', fn () => $this->tickets->map(fn ($tk) => [
