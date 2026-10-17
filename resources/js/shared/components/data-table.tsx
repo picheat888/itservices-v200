@@ -69,7 +69,7 @@ interface DataTableProps<T> {
     loadingRows?: number;
     /** The first column's skeleton leads with an avatar circle, for tables whose rows open with a UserAvatar. */
     loadingAvatar?: boolean;
-    /** Custom content for the empty state (defaults to a plain "No data" line). */
+    /** Custom content for the empty state (defaults to the shared EmptyState from `empty`). */
     emptyState?: React.ReactNode;
     /** Props of the shared empty state shown when emptyState is not given. */
     empty?: EmptyStateProps;
