@@ -3,6 +3,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
+import { localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -97,7 +98,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
         }
     };
 
-    const name = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
+    const name = shown ? localName(shown, lang) : '';
     const department = shown ? (lang === 'th' ? (shown.department_th ?? shown.department) : shown.department) : null;
 
     const pageCount = Math.max(1, Math.ceil(heldAssets.length / ASSETS_PER_PAGE));

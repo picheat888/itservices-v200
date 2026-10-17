@@ -7,6 +7,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { focusFirstError } from '@/shared/lib/utils';
 import type { Employee, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -148,7 +149,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     // Manager candidates come from the picker search (the edited employee is excluded server-side).
     const managerOption = (e: EmployeeOption): SearchOption => ({
         value: String(e.id),
-        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        label: localName(e, lang),
         hint: e.position ?? undefined,
         avatar: e.photo_url,
         sub: e.code,
@@ -164,12 +165,12 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     /** Human label for a department id (language-aware), or "(none)" when unset. */
     const departmentLabel = (id: string) => {
         const d = departments.find((x) => String(x.id) === id);
-        return d ? (lang === 'th' ? (d.name_th ?? d.name) : d.name) : t('emp_org_change_none');
+        return d ? localName(d, lang) : t('emp_org_change_none');
     };
     /** Human label for a manager id (employee name), or "(none)" when unset. */
     const managerLabel = (id: string) => {
         const m = knownManagers.find((e) => String(e.id) === id);
-        return m ? (lang === 'th' ? (m.name_th ?? m.name) : m.name) : t('emp_org_change_none');
+        return m ? localName(m, lang) : t('emp_org_change_none');
     };
 
     // Org assignment as it stood when the dialog opened, used to diff against the form.
@@ -259,12 +260,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             setOrgConfirm(true);
             return;
         }
-        if (
-            employee &&
-            isDirty &&
-            !(await confirmEdit({ name: lang === 'th' ? (employee.name_th ?? employee.name) : employee.name, sub: employee.code }))
-        )
-            return;
+        if (employee && isDirty && !(await confirmEdit({ name: localName(employee, lang), sub: employee.code }))) return;
         await persist();
     };
 
@@ -453,7 +449,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 placeholder={t('department_ph')}
                 options={departments.map((d) => ({
                     value: String(d.id),
-                    label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                    label: localName(d, lang),
                     search: `${d.name} ${d.name_th ?? ''}`,
                 }))}
             />
@@ -470,7 +466,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                     form.departmentId
                         ? sections.map((s) => ({
                               value: String(s.id),
-                              label: lang === 'th' ? (s.name_th ?? s.name) : s.name,
+                              label: localName(s, lang),
                               search: `${s.name} ${s.name_th ?? ''}`,
                           }))
                         : []

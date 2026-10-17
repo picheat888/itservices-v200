@@ -4,6 +4,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -144,7 +145,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const servicesBlocked = chainBlocked || precheckFailed;
     // Nothing may be ticked before the verdict either
     const servicesLocked = servicesBlocked || precheck.isPending;
-    const blockedNames = (precheck.data?.resigned_in_chain ?? []).map((e) => (lang === 'th' ? (e.name_th ?? e.name) : e.name)).join(', ');
+    const blockedNames = (precheck.data?.resigned_in_chain ?? []).map((e) => localName(e, lang)).join(', ');
     // Why Save is held, shared by the banner and the disabled Save button's tooltip
     const blockedReasonText = precheckFailed
         ? t('emp_onboarding_check_failed_desc')
@@ -241,7 +242,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     // All employees are manager candidates when adding a new employee.
     const managerOption = (e: EmployeeOption): SearchOption => ({
         value: String(e.id),
-        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        label: localName(e, lang),
         hint: e.position ?? undefined,
         avatar: e.photo_url,
         sub: e.code,
@@ -627,7 +628,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                             placeholder={t('department_ph')}
                                             options={departments.map((d) => ({
                                                 value: String(d.id),
-                                                label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                                                label: localName(d, lang),
                                                 search: `${d.name} ${d.name_th ?? ''}`,
                                             }))}
                                         />
@@ -641,7 +642,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                                 form.departmentId
                                                     ? sections.map((s) => ({
                                                           value: String(s.id),
-                                                          label: lang === 'th' ? (s.name_th ?? s.name) : s.name,
+                                                          label: localName(s, lang),
                                                           search: `${s.name} ${s.name_th ?? ''}`,
                                                       }))
                                                     : []

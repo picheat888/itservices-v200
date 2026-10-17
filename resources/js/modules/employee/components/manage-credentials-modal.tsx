@@ -6,6 +6,7 @@ import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
@@ -178,7 +179,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         setTimeout(() => setCopied(false), 1500);
     };
 
-    const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
+    const empName = shown ? localName(shown, lang) : '';
     // Nothing to save until the field actually differs from the name on the account.
     const usernameDirty = username.trim() !== savedUsername;
     const isDirty = !newPassword && (usernameDirty || password !== '' || !forceChange);

@@ -5,6 +5,7 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
@@ -133,7 +134,7 @@ export function EmployeeViewDrawer({
 
     // The id check stops a previous employee's record from drawing under this name
     const emp = liveEmp && liveEmp.id === shown.id ? liveEmp : shown;
-    const name = lang === 'th' ? (emp.name_th ?? emp.name) : emp.name;
+    const name = localName(emp, lang);
     const altName = lang === 'th' ? emp.name : emp.name_th;
     const resigned = emp.status === 'resigned';
     // Un-deletable until the single-employee fetch brings the blockers
@@ -144,7 +145,7 @@ export function EmployeeViewDrawer({
     // The person this employee reports to (their manager), resolved from the org list.
     const managerNode = emp.manager_id ? nodeById.get(emp.manager_id) : null;
     const manager = managerNode ?? (emp.manager_name ? { name: emp.manager_name, name_th: emp.manager_name_th ?? null } : null);
-    const managerName = manager ? (lang === 'th' ? (manager.name_th ?? manager.name) : manager.name) : null;
+    const managerName = manager ? localName(manager, lang) : null;
 
     const accentCode = nodeById.get(emp.id)?.department_code ?? null;
 
@@ -569,7 +570,7 @@ function OrgPane({
     const shownReports = reportsExpanded ? directReports : directReports.slice(0, VISIBLE_REPORTS);
     const hiddenReportsCount = directReports.length - shownReports.length;
 
-    const nameOf = (n: { name: string; name_th?: string | null }) => (lang === 'th' ? (n.name_th ?? n.name) : n.name);
+    const nameOf = (n: { name: string; name_th?: string | null }) => localName(n, lang);
 
     const Connector = () => <div className="bg-border mx-auto h-3 w-px" />;
 

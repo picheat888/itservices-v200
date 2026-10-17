@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { initials } from '@/shared/components/user-avatar';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { useUiStore } from '@/stores/ui';
@@ -17,7 +18,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
     const vertical = d.dir === 'TB';
     const targetPos = vertical ? Position.Top : Position.Left;
     const sourcePos = vertical ? Position.Bottom : Position.Right;
-    const primaryName = lang === 'th' ? (d.name_th ?? d.name) : d.name;
+    const primaryName = localName(d, lang);
     const secondaryName = lang === 'th' ? (d.name_th ? d.name : null) : d.name_th;
     const ink = deptInk(d.department_code);
     const branchLabel = t(d.collapsed ? 'org_expand_branch' : 'org_collapse_branch').replace('{n}', String(d.reports_count));
