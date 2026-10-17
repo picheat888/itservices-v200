@@ -68,7 +68,6 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
                     icon={ArrowRightLeft}
                     eyebrow={view?.ticket_no}
                     title={t('ticket_forward')}
-                    code={view?.ticket_no}
                     srDescription={t('ticket_forward')}
                 />
 
