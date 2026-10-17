@@ -65,6 +65,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                     icon={isComplete ? CheckCircle2 : XCircle}
                     eyebrow={view?.ticket_no}
                     title={isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
+                    titleSuffix={<span className="sr-only"> {view?.ticket_no}</span>}
                     accent={isComplete ? undefined : '#ef4444'}
                     srDescription={isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
                 />

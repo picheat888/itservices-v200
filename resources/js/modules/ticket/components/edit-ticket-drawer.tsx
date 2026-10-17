@@ -57,6 +57,13 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     // visible after the mutations' isPending flips back to false.
     const [saving, setSaving] = useState(false);
 
+    // Retain a "shown" copy so the header doesn't blank out during the Radix exit animation.
+    const [shown, setShown] = useState<Ticket | null>(null);
+    useEffect(() => {
+        if (ticket) setShown(ticket);
+    }, [ticket]);
+    const view = ticket ?? shown;
+
     // Preload the form + attachments from the ticket each time it opens.
     useEffect(() => {
         if (!ticket) return;
@@ -168,7 +175,13 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
-                <FocusDialogHeader icon={Pencil} eyebrow={ticket?.ticket_no} title={t('ticket_edit_title')} srDescription={t('ticket_edit_sub')} />
+                <FocusDialogHeader
+                    icon={Pencil}
+                    eyebrow={view?.ticket_no}
+                    title={t('ticket_edit_title')}
+                    titleSuffix={<span className="sr-only"> {view?.ticket_no}</span>}
+                    srDescription={t('ticket_edit_sub')}
+                />
 
                 {/* Two equal columns mirroring Open Ticket: left = describe the issue, right = reach-back + evidence. */}
                 <div className="grid flex-1 grid-cols-1 content-start gap-x-10 gap-y-6 overflow-y-auto border-t px-6 py-6 sm:grid-cols-2">

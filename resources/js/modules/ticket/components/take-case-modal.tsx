@@ -124,6 +124,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                     icon={Zap}
                     eyebrow={view?.ticket_no}
                     title={t('ticket_take_case')}
+                    titleSuffix={<span className="sr-only"> {view?.ticket_no}</span>}
                     subtitle={view ? <span className="text-muted-foreground truncate text-sm">{view.subject}</span> : undefined}
                     srDescription={t('ticket_take_case')}
                 />
