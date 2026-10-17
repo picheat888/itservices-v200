@@ -55,7 +55,7 @@ export const permission: Dict = {
     perm_mod_contracts: 'สัญญา',
     perm_mod_stock: 'คลังอะไหล่',
     perm_mod_employees: 'พนักงาน',
-    perm_mod_access: 'ทะเบียนการเข้าถึง',
+    perm_mod_access: 'สิทธิ์การเข้าถึง',
     perm_mod_profile: 'โปรไฟล์ของฉัน',
     'perm_act_access.module': 'เข้าใช้ Access Directory',
     'perm_desc_access.module':
