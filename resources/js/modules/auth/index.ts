@@ -1,6 +1,7 @@
 // Barrel for the auth module — re-exports everything that the rest of the app consumes.
 
 // Hooks
+export * from './hooks/use-account-sync';
 export * from './hooks/use-auth';
 export * from './hooks/use-session-timeout';
 export * from './hooks/use-user-preferences';
