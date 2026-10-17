@@ -6,13 +6,10 @@
  */
 import { findNavItem } from '@/app/nav';
 import { useAuth } from '@/modules/auth';
+import { canOpenNavItem } from '../lib/can-open';
 
 export function useCanOpen(): (href: string) => boolean {
     const { can } = useAuth();
 
-    return (href: string) => {
-        const item = findNavItem(href.split('?')[0]);
-        if (!item) return false;
-        return !item.anyOf || item.anyOf.some((permission) => can(permission));
-    };
+    return (href: string) => canOpenNavItem(findNavItem(href.split('?')[0]), can);
 }

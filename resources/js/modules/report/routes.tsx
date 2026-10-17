@@ -40,36 +40,32 @@ export interface ReportPageRoute {
 
 export const reportPageRoutes: ReportPageRoute[] = [
     // Tickets
-    { path: 'tickets-overview', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsOverviewReportPage },
-    { path: 'tickets-backlog', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsBacklogReportPage },
-    { path: 'tickets-request-sla', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsRequestSlaReportPage },
-    { path: 'tickets-manual-sla', allOf: ['tickets.view_all', 'tickets.resolve'], Page: TicketsManualSlaReportPage },
+    { path: 'tickets-overview', allOf: ['reports.module', 'reports.tickets'], Page: TicketsOverviewReportPage },
+    { path: 'tickets-backlog', allOf: ['reports.module', 'reports.tickets'], Page: TicketsBacklogReportPage },
+    { path: 'tickets-request-sla', allOf: ['reports.module', 'reports.tickets'], Page: TicketsRequestSlaReportPage },
+    { path: 'tickets-manual-sla', allOf: ['reports.module', 'reports.tickets'], Page: TicketsManualSlaReportPage },
     // Assets
-    { path: 'assets-warranty-expiring', allOf: ['assets.view'], Page: AssetsWarrantyExpiringReportPage },
-    { path: 'assets-overview', allOf: ['assets.view'], Page: AssetsOverviewReportPage },
-    { path: 'assets-transfer-history', allOf: ['assets.view'], Page: AssetsTransferHistoryReportPage },
-    { path: 'assets-writeoffs', allOf: ['assets.view'], Page: AssetsWriteoffsReportPage },
+    { path: 'assets-warranty-expiring', allOf: ['reports.module', 'reports.assets'], Page: AssetsWarrantyExpiringReportPage },
+    { path: 'assets-overview', allOf: ['reports.module', 'reports.assets'], Page: AssetsOverviewReportPage },
+    { path: 'assets-transfer-history', allOf: ['reports.module', 'reports.assets'], Page: AssetsTransferHistoryReportPage },
+    { path: 'assets-writeoffs', allOf: ['reports.module', 'reports.assets'], Page: AssetsWriteoffsReportPage },
     // Contracts
-    { path: 'contracts-overview', allOf: ['contracts.view'], Page: ContractsOverviewReportPage },
-    { path: 'contracts-renewals', allOf: ['contracts.view'], Page: ContractsRenewalsReportPage },
-    { path: 'contracts-rentals', allOf: ['contracts.view', 'assets.view'], Page: ContractsRentalsReportPage },
+    { path: 'contracts-overview', allOf: ['reports.module', 'reports.contracts'], Page: ContractsOverviewReportPage },
+    { path: 'contracts-renewals', allOf: ['reports.module', 'reports.contracts'], Page: ContractsRenewalsReportPage },
+    { path: 'contracts-rentals', allOf: ['reports.module', 'reports.contracts'], Page: ContractsRentalsReportPage },
     // Stock
-    { path: 'stock-movements', allOf: ['stock.view_events'], Page: StockMovementsReportPage },
-    { path: 'stock-below-min', allOf: ['stock.view'], Page: StockBelowMinReportPage },
-    { path: 'stock-valuation', allOf: ['stock.view'], Page: StockValuationReportPage },
+    { path: 'stock-movements', allOf: ['reports.module', 'reports.stock'], Page: StockMovementsReportPage },
+    { path: 'stock-below-min', allOf: ['reports.module', 'reports.stock'], Page: StockBelowMinReportPage },
+    { path: 'stock-valuation', allOf: ['reports.module', 'reports.stock'], Page: StockValuationReportPage },
     // Requests
-    { path: 'requests-overview', allOf: ['requests.view_all'], Page: RequestsOverviewReportPage },
-    { path: 'requests-approvals', allOf: ['requests.view_all'], Page: RequestsApprovalsReportPage },
-    { path: 'requests-it-pending', allOf: ['requests.view_all'], Page: RequestsItPendingReportPage },
+    { path: 'requests-overview', allOf: ['reports.module', 'reports.requests'], Page: RequestsOverviewReportPage },
+    { path: 'requests-approvals', allOf: ['reports.module', 'reports.requests'], Page: RequestsApprovalsReportPage },
+    { path: 'requests-it-pending', allOf: ['reports.module', 'reports.requests'], Page: RequestsItPendingReportPage },
     // Employees
-    { path: 'employees-overview', allOf: ['employees.view'], Page: EmployeesOverviewReportPage },
-    { path: 'employees-open-items', allOf: ['employees.view'], Page: EmployeesOpenItemsReportPage },
+    { path: 'employees-overview', allOf: ['reports.module', 'reports.employees'], Page: EmployeesOverviewReportPage },
+    { path: 'employees-open-items', allOf: ['reports.module', 'reports.employees'], Page: EmployeesOpenItemsReportPage },
     // Access
-    { path: 'access-overview', allOf: ['access.overview'], Page: AccessOverviewReportPage },
-    {
-        path: 'access-resource-members',
-        allOf: ['access.email_view', 'access.file_view', 'access.social_view'],
-        Page: AccessResourceMembersReportPage,
-    },
-    { path: 'access-software-licenses', allOf: ['access.software_view'], Page: AccessSoftwareLicensesReportPage },
+    { path: 'access-overview', allOf: ['reports.module', 'reports.access'], Page: AccessOverviewReportPage },
+    { path: 'access-resource-members', allOf: ['reports.module', 'reports.access'], Page: AccessResourceMembersReportPage },
+    { path: 'access-software-licenses', allOf: ['reports.module', 'reports.access'], Page: AccessSoftwareLicensesReportPage },
 ];
