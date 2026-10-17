@@ -116,7 +116,7 @@ function StatusRow({
                 type="button"
                 onClick={onClick}
                 className={cn(
-                    'focus-visible:ring-brand/40 flex w-full items-start gap-3 rounded-lg px-3 py-2.5 transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
+                    'focus-visible:ring-ring flex w-full items-start gap-3 rounded-lg px-3 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-hidden',
                     rowTint || 'hover:bg-muted/40',
                 )}
             >
@@ -181,7 +181,7 @@ function IssueSection({
                             <button
                                 type="button"
                                 onClick={() => onPick(item.kind, item.id)}
-                                className="focus-visible:ring-brand/40 flex min-w-0 flex-1 items-center gap-3 rounded-md px-2.5 py-2.5 text-left focus-visible:ring-[3px] focus-visible:outline-hidden"
+                                className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded-md px-2.5 py-2.5 text-left focus-visible:ring-2 focus-visible:outline-hidden"
                             >
                                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={tint(meta.color)}>
                                     <ChannelIcon className="h-4 w-4" />
@@ -215,7 +215,7 @@ function IssueSection({
                                 <button
                                     type="button"
                                     onClick={() => onRevoke(item)}
-                                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/25 shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
+                                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
                                 >
                                     {t('access_issue_revoke')}
                                 </button>
@@ -402,7 +402,7 @@ export function AccessOverview({
                                     onOpenTab(kind);
                                 }
                             }}
-                            className="hover:border-brand/40 focus-visible:ring-brand/40 cursor-pointer p-5 transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
+                            className="hover:border-brand/40 focus-visible:ring-ring cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
                         >
                             <div className="flex items-start justify-between">
                                 <div className="text-muted-foreground text-sm">{t(meta.labelKey)}</div>
@@ -465,7 +465,7 @@ export function AccessOverview({
                                 <span className="relative flex h-2 w-2">
                                     <span
                                         className={cn(
-                                            'absolute inline-flex h-full w-full animate-ping rounded-full motion-reduce:hidden',
+                                            'absolute inline-flex h-full w-full animate-ping rounded-full [animation-iteration-count:3] motion-reduce:hidden',
                                             gov.resigned_holders > 0 ? 'bg-destructive/60' : 'bg-amber-500/60',
                                         )}
                                     />
@@ -636,7 +636,7 @@ export function AccessOverview({
                                                             e.stopPropagation();
                                                             onOpenResource(r.kind, r.id);
                                                         }}
-                                                        className="focus-visible:ring-brand/40 rounded-sm text-left font-medium hover:underline focus-visible:ring-[3px] focus-visible:outline-hidden"
+                                                        className="focus-visible:ring-ring rounded-sm text-left font-medium hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
                                                     >
                                                         {r.name}
                                                     </button>

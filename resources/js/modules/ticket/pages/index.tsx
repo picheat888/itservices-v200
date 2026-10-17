@@ -750,7 +750,16 @@ function TicketTable({
                         >
                             <td className="text-muted-foreground px-4 py-2.5 text-xs whitespace-nowrap">{tk.ticket_no}</td>
                             <td className="w-full max-w-0 min-w-[12rem] px-4 py-2.5 font-medium">
-                                <TicketSubject ticket={tk} t={t} />
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRow(tk);
+                                    }}
+                                    className="focus-visible:ring-ring block w-full rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <TicketSubject ticket={tk} t={t} />
+                                </button>
                             </td>
                             <td className="px-4 py-2.5 whitespace-nowrap">
                                 <span className="flex items-center gap-2">
