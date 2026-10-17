@@ -107,4 +107,22 @@ export const dashboard: Dict = {
     dash_today_n: '{n} today',
     dash_view_audit: 'View all in the audit log',
     dash_empty_staff: 'No active staff yet',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    dash_empty_mine_tickets: 'No open tickets',
+    dash_empty_mine_tickets_hint: 'Every ticket you filed is closed.',
+    dash_empty_mine_requests: 'No open requests',
+    dash_empty_mine_requests_hint: 'All your requests are done or closed.',
+    dash_empty_it_opened_per_day: 'No new tickets in the last 14 days',
+    dash_empty_it_opened_per_day_hint: 'This chart always covers the last 14 days.',
+    dash_empty_it_workload: 'Nobody holds a case right now',
+    dash_empty_it_workload_hint: 'Taken cases show here by assignee.',
+    dash_empty_people_by_department: 'No active employees yet',
+    dash_empty_people_by_department_hint: 'Add employees on the Employees page.',
+    dash_empty_people_activity: 'No activity yet',
+    dash_empty_people_activity_hint: 'Adds, edits and deletes show here.',
+    dash_empty_requests_waiting: 'No request waiting over {n} days',
+    dash_empty_requests_waiting_hint: 'Requests waiting longer show here.',
+    dash_empty_requests_by_type: 'No requests in the last 30 days',
+    dash_empty_requests_by_type_hint: 'This chart always covers the last 30 days.',
 };

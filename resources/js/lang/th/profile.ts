@@ -30,4 +30,14 @@ export const profile: Dict = {
     profile_assets_accept_all: 'รับมอบทั้งหมด',
     profile_assets_accept_all_confirm: 'ยืนยันว่าได้รับทรัพย์สินทั้ง {n} รายการนี้ครบแล้ว',
     profile_assets_accepted: 'รับมอบแล้ว',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    profile_empty_assets_held: 'คุณยังไม่ได้ถือครองทรัพย์สิน',
+    profile_empty_assets_held_hint: 'ทรัพย์สินที่ส่งมอบให้คุณจะแสดงที่นี่',
+    profile_empty_tickets: 'คุณยังไม่เคยแจ้ง Ticket',
+    profile_empty_tickets_hint: 'แจ้งปัญหา IT ได้จากปุ่มเปิด Ticket',
+    profile_empty_requests: 'คุณยังไม่เคยยื่นคำขอ',
+    profile_empty_requests_hint: 'ยื่นคำขอได้ที่หน้าคำขอ',
+    profile_empty_access: 'ยังไม่มีสิทธิ์เข้าถึงที่บันทึกไว้ให้คุณ',
+    profile_empty_access_hint: 'ขอสิทธิ์ได้จากหน้าคำขอ',
 };

@@ -268,4 +268,10 @@ export const notification: Dict = {
     notification_name_report_schedule_failed: 'Scheduled report not sent',
     notification_when_report_schedule_failed: 'An auto-sent report could not be built or mailed',
     notification_who_report_schedule_failed: 'The person who set the schedule',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    notification_empty_settings_filtered: 'No notification matches',
+    notification_empty_settings_filtered_hint: 'Try other words or pick all modules.',
+    notification_empty_settings_none: 'No notifications yet',
+    notification_empty_settings_none_hint: 'Notification types are created at install.',
 };

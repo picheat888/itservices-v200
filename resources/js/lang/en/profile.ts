@@ -30,4 +30,14 @@ export const profile: Dict = {
     profile_assets_accept_all: 'Accept all',
     profile_assets_accept_all_confirm: 'Confirm you have received all {n} of these assets.',
     profile_assets_accepted: 'Accepted',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    profile_empty_assets_held: 'You hold no assets',
+    profile_empty_assets_held_hint: 'Assets handed to you show here.',
+    profile_empty_tickets: 'You have not filed a ticket',
+    profile_empty_tickets_hint: 'Report an IT problem with "Open ticket".',
+    profile_empty_requests: 'You have not submitted a request',
+    profile_empty_requests_hint: 'Submit one on the Requests page.',
+    profile_empty_access: 'No access recorded for you yet',
+    profile_empty_access_hint: 'Ask for access on the Requests page.',
 };

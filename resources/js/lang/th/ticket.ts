@@ -203,4 +203,20 @@ export const ticket: Dict = {
     ticket_refusal_forbidden: 'คุณไม่มีสิทธิ์ทำรายการนี้กับเคสนี้',
     ticket_refusal_invalid: 'ทำรายการไม่ได้ ข้อมูลไม่ถูกต้องหรือเคสเปลี่ยนสถานะไปแล้ว กรุณาปิดแล้วเปิดดูใหม่',
     ticket_refusal_failed: 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    ticket_empty_overview_latest: 'ยังไม่มี Ticket',
+    ticket_empty_overview_latest_hint: 'Ticket ที่เปิดใหม่จะแสดงที่นี่',
+    ticket_empty_list_all: 'ยังไม่มี Ticket',
+    ticket_empty_list_all_hint: 'Ticket ที่ผู้ใช้แจ้งจะแสดงที่นี่',
+    ticket_empty_list_mine: 'ยังไม่มีงานของคุณ',
+    ticket_empty_list_mine_hint: 'เคสที่คุณรับหรือได้รับมอบหมายจะแสดงที่นี่',
+    ticket_empty_list_my: 'คุณยังไม่เคยแจ้ง Ticket',
+    ticket_empty_list_my_hint: 'กดปุ่ม "{button}" เพื่อแจ้งปัญหา IT',
+    ticket_empty_list_search: 'ไม่พบ Ticket ที่ตรงกับคำค้นหรือตัวกรอง',
+    ticket_empty_list_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
+    ticket_empty_drawer_progress: 'ยังไม่มีความคืบหน้า',
+    ticket_empty_drawer_progress_hint: 'เคสนี้ยังรอเจ้าหน้าที่รับ',
+    ticket_empty_drawer_files: 'ไม่มีไฟล์แนบ',
+    ticket_empty_drawer_files_hint: 'ผู้แจ้งไม่ได้แนบไฟล์มากับ Ticket นี้',
 };

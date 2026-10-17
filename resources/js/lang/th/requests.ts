@@ -193,4 +193,20 @@ export const requests: Dict = {
     req_cancel_reason_ph: 'เช่น ไม่ต้องการแล้ว หรือยื่นผิดประเภท',
     req_cancel_reason_required: 'กรุณาระบุเหตุผลที่ยกเลิก',
     req_cancel_keep: 'ไม่ยกเลิก',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    req_empty_overview_queue: 'ตอนนี้ไม่มีคำขอรอคุณพิจารณา',
+    req_empty_overview_queue_hint: 'คุณพิจารณาคำขอที่ส่งถึงคุณครบแล้ว',
+    req_empty_overview_recent: 'ยังไม่มีคำขอ',
+    req_empty_overview_recent_hint: 'กดปุ่ม "{button}" เพื่อเริ่ม',
+    req_empty_list_all: 'ยังไม่มีคำขอ',
+    req_empty_list_all_hint: 'กดปุ่ม "{button}" เพื่อเริ่ม',
+    req_empty_list_all_search: 'ไม่พบคำขอที่ตรงกับคำค้นหรือตัวกรอง',
+    req_empty_list_all_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
+    req_empty_list_approvals: 'ตอนนี้ไม่มีคำขอรอคุณพิจารณา',
+    req_empty_list_approvals_hint: 'คำขอที่ถึงขั้นของคุณจะแสดงที่นี่',
+    req_empty_list_queue: 'ไม่มีคำขอที่รอ IT ดำเนินการ',
+    req_empty_list_queue_hint: 'คำขอที่อนุมัติครบจะเข้าคิวนี้',
+    req_empty_detail_attachments: 'ยังไม่มีไฟล์แนบ',
+    req_empty_detail_attachments_hint: 'ผู้ขอไม่ได้แนบไฟล์มากับคำขอนี้',
 };

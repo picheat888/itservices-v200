@@ -187,4 +187,16 @@ export const email: Dict = {
     email_html_issue_open_inside: 'End tag </{tag}> seen, but there were open elements (<{inner}> on line {n}).',
     email_html_issue_not_allowed: 'Element <{tag}> not allowed as child of element <{parent}> in this context.',
     email_html_issue_unsupported: 'Element <{tag}> is not supported by some email clients.',
+
+    // empty states — การ์ดและตารางที่ไม่มีข้อมูล
+    email_empty_templates_filtered: 'No template matches',
+    email_empty_templates_filtered_hint: 'Try other words or pick all modules.',
+    email_empty_templates_none: 'No email templates yet',
+    email_empty_templates_none_hint: 'Standard templates are created at install.',
+    email_empty_logs_filtered: 'No log matches',
+    email_empty_logs_filtered_hint: 'Try other words or clear the filters.',
+    email_empty_logs_none: 'Nothing sent yet',
+    email_empty_logs_none_hint: 'Every email the system sends is logged here.',
+    email_empty_log_detail_content: 'Content not stored',
+    email_empty_log_detail_content_hint: 'Emails sent before content capture have no body.',
 };
