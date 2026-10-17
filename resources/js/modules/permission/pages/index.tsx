@@ -14,6 +14,7 @@ import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/datetime';
+import { localName } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE, type Lang } from '@/shared/types';
@@ -1063,9 +1064,9 @@ function AuditTab() {
     const lookups = useMemo<AuditLookups>(
         () => ({
             positions: new Map(positions.map((p) => [p.id, p.title])),
-            departments: new Map(departments.map((d) => [d.id, lang === 'th' ? (d.name_th ?? d.name) : d.name])),
-            sections: new Map(sections.map((s) => [s.id, lang === 'th' ? (s.name_th ?? s.name) : s.name])),
-            employees: new Map(employees.map((e) => [e.id, lang === 'th' ? (e.name_th ?? e.name) : e.name])),
+            departments: new Map(departments.map((d) => [d.id, localName(d, lang)])),
+            sections: new Map(sections.map((s) => [s.id, localName(s, lang)])),
+            employees: new Map(employees.map((e) => [e.id, localName(e, lang)])),
         }),
         [positions, departments, sections, employees, lang],
     );
