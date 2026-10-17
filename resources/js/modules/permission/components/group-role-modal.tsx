@@ -1,5 +1,5 @@
 import { translate, useT } from '@/lang';
-import { departmentApi, useDepartments, useEmployeeOptions } from '@/modules/employee';
+import { departmentApi, useDepartments, useEmployeePicker, useEmployeesByIds } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -37,13 +37,16 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useGroupRoleMutations();
     const { data: matrix } = usePermissionMatrix();
-    const { data: employees = [] } = useEmployeeOptions();
     const { data: departments = [] } = useDepartments();
     const { data: groupsData } = useGroupRoles();
 
     const [name, setName] = useState('');
     const [role, setRole] = useState<string>('');
     const [empIds, setEmpIds] = useState<number[]>([]);
+    const { employees: found, pickerProps } = useEmployeePicker({ exclude: empIds, match: 'none' });
+    const { data: selectedEmployees = [] } = useEmployeesByIds(empIds);
+    // Name lookup for the chips and the move review: the people on the list, plus the latest matches
+    const employees = useMemo(() => [...selectedEmployees, ...found], [selectedEmployees, found]);
 
     // Review-before-move: holds the employees that will be pulled out of another
     // group on save. When non-null, the confirmation dialog is shown.
@@ -97,18 +100,12 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
         if (newIds.length > 0) setEmpIds((p) => [...p, ...newIds]);
     };
 
-    const empOptions = useMemo(
-        () =>
-            employees
-                .filter((e) => !empIds.includes(e.id))
-                .map((e) => ({
-                    value: String(e.id),
-                    label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
-                    sub: e.code,
-                    search: `${e.name} ${e.name_th ?? ''} ${e.code}`,
-                })),
-        [employees, empIds, lang],
-    );
+    const empOptions = found.map((e) => ({
+        value: String(e.id),
+        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        sub: e.code,
+        search: '',
+    }));
 
     /** Resolves a role key to its human label from the permission matrix. */
     const roleLabel = (roleKey: string | null) => (roleKey ? (matrix?.roles.find((r) => r.value === roleKey)?.label ?? roleKey) : '—');
@@ -211,7 +208,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
 
                         {/* Individual employee picker */}
                         <Field label={t('gr_employees')}>
-                            <SearchableSelect value="" onChange={(v) => setEmpIds((p) => [...p, Number(v)])} options={empOptions} />
+                            <SearchableSelect value="" onChange={(v) => setEmpIds((p) => [...p, Number(v)])} options={empOptions} {...pickerProps} />
                             {empIds.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                     {empIds.map((id) => {

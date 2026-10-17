@@ -1,6 +1,6 @@
 import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
-import { useDepartments, useEmployeeOptions, usePositions, useSections } from '@/modules/employee';
+import { useDepartments, useEmployeesByIds, usePositions, useSections } from '@/modules/employee';
 import { PAGE_SIZES } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { InfoHint } from '@/shared/components/info-hint';
@@ -68,6 +68,7 @@ import {
     useSetDefaultGroup,
     useUpdateRolePermissions,
 } from '../hooks/use-permissions';
+import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 
@@ -1058,7 +1059,7 @@ function AuditTab() {
     const { data: positions = [] } = usePositions();
     const { data: departments = [] } = useDepartments();
     const { data: sections = [] } = useSections();
-    const { data: employees = [] } = useEmployeeOptions();
+    const { data: employees = [] } = useEmployeesByIds(auditEmployeeIds(data?.data ?? []));
     const lookups = useMemo<AuditLookups>(
         () => ({
             positions: new Map(positions.map((p) => [p.id, p.title])),
