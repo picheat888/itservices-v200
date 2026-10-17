@@ -10,6 +10,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { FlaskConicalOff, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Write off the selected Ready assets. The reason is picked from the list kept in Settings →
@@ -19,6 +20,7 @@ import { useAssetMutations } from '../hooks/use-assets';
  */
 export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: number[]; open: boolean; onClose: () => void; onDone: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { bulk } = useAssetMutations();
     const { data: reasons = [] } = useWriteoffReasons();
     const [reasonId, setReasonId] = useState('');
@@ -65,7 +67,7 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
                     <FlaskConicalOff className="text-destructive h-5 w-5" />
                     {t('asset_writeoff_title')}
                 </DialogTitle>
-                <DialogDescription>{t('asset_bulk_count').replace('{count}', String(ids.length))}</DialogDescription>
+                <DialogDescription>{t('asset_bulk_count').replace('{count}', fmtN(ids.length))}</DialogDescription>
 
                 <div className="mt-4 space-y-4">
                     <Field label={t('asset_writeoff_reason')} required error={reasonErr}>

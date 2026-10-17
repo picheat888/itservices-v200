@@ -23,6 +23,7 @@ import { ArrowDown, ArrowUp, Check, Flag, Loader2, Plus, Trash2, Users, Workflow
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { workflowApi, type ResolvedPreviewRow, type WorkflowStepPayload } from '../api/workflowApi';
 import { useWorkflowMutations } from '../hooks/use-workflows';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** A step being edited — positions held as ids, which is what the API takes. */
 type EditableStep = {
@@ -68,6 +69,7 @@ const CHAIN_LABEL_PRESET_KEYS = ['wf_preset_supervisor_head', 'wf_preset_manager
  */
 export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow | null; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const confirmEdit = useConfirmEdit();
     const { update, preview } = useWorkflowMutations();
@@ -285,7 +287,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                         <div className="mb-3 flex items-end justify-between gap-3">
                             <SectionLabel className="mb-0">
                                 {t('wf_steps')}{' '}
-                                <span className="text-muted-foreground text-xs">({t('wf_steps_count').replace('{n}', String(approvalCount))})</span>
+                                <span className="text-muted-foreground text-xs">({t('wf_steps_count').replace('{n}', fmtN(approvalCount))})</span>
                             </SectionLabel>
                             <Button variant="outline" size="sm" onClick={addStep}>
                                 <Plus className="h-4 w-4" />
@@ -362,20 +364,20 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                     <IconBtn
                                                         disabled={i === 0}
                                                         onClick={() => moveStep(i, -1)}
-                                                        label={t('wf_step_move_up').replace('{n}', String(i + 1))}
+                                                        label={t('wf_step_move_up').replace('{n}', fmtN(i + 1))}
                                                     >
                                                         <ArrowUp className="h-3.5 w-3.5" />
                                                     </IconBtn>
                                                     <IconBtn
                                                         disabled={i === steps.length - 1}
                                                         onClick={() => moveStep(i, 1)}
-                                                        label={t('wf_step_move_down').replace('{n}', String(i + 1))}
+                                                        label={t('wf_step_move_down').replace('{n}', fmtN(i + 1))}
                                                     >
                                                         <ArrowDown className="h-3.5 w-3.5" />
                                                     </IconBtn>
                                                     <IconBtn
                                                         onClick={() => removeStep(i)}
-                                                        label={t('wf_step_remove').replace('{n}', String(i + 1))}
+                                                        label={t('wf_step_remove').replace('{n}', fmtN(i + 1))}
                                                         className="text-destructive/70 hover:text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4" />

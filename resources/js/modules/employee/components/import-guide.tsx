@@ -6,6 +6,7 @@ import { useId, useMemo, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Employee import guide: the no-account notice, the column table and the valid-values list (live master data).
 
@@ -121,6 +122,7 @@ interface ValueRow {
 /** The spellings the free-text columns accept, straight from the master data. */
 function ValidValues() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const [tab, setTab] = useState<'department' | 'section' | 'position'>('department');
     const [search, setSearch] = useState('');
     const [copied, setCopied] = useState<string | null>(null);
@@ -191,7 +193,7 @@ function ValidValues() {
                         )}
                     >
                         {one.label}
-                        <span className="ml-1 font-semibold tabular-nums">{one.count}</span>
+                        <span className="ml-1 font-semibold tabular-nums">{fmtN(one.count)}</span>
                     </button>
                 ))}
             </div>

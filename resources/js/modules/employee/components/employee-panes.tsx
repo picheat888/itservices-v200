@@ -16,6 +16,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Folder, Globe, Inbox, Laptop, Mail, Package, Shield, Tag, Ticket, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
 import { HELD_STATUS_META } from '../lib/held-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export const RAIL_HEADING = 'text-muted-foreground border-border border-b pb-1.5 text-xs font-bold';
 
@@ -83,6 +84,7 @@ export function RailRow({
 /** Access tab: read-only, grouped by kind, owners first; granting and revoking live in the Access Directory. */
 export function AccessPane({ access, loading, emptyText }: { access: EmployeeAccess | undefined; loading?: boolean; emptyText: string }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const accessLoading = loading;
 
     const accessGroups = [
@@ -160,7 +162,7 @@ export function AccessPane({ access, loading, emptyText }: { access: EmployeeAcc
                             {grp.icon}
                             {grp.label}
                             <span className="bg-muted inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 text-[11px] font-bold">
-                                {rows.length}
+                                {fmtN(rows.length)}
                             </span>
                         </div>
                         {rows.map((r) => {

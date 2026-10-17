@@ -4,6 +4,7 @@ import { employeeApi, type ImportPreviewRow } from '../api/employeeApi';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { ImportAccountNotice, ImportEmployeeGuide } from './import-guide';
 import { ImportPreviewTable } from './import-preview-table';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Bulk-import employees from a CSV. The shared ImportDialog does the file handling;
@@ -13,6 +14,7 @@ import { ImportPreviewTable } from './import-preview-table';
  */
 export function ImportEmployeeDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { import: importMut, previewImport: previewMut } = useEmployeeMutations();
 
     return (
@@ -37,7 +39,7 @@ export function ImportEmployeeDialog({ open, onClose }: { open: boolean; onClose
             guide={<ImportEmployeeGuide />}
             runImport={(file) => importMut.mutateAsync(file)}
             importPending={importMut.isPending}
-            successMessage={(n) => t('import_success_count').replace('{n}', String(n))}
+            successMessage={(n) => t('import_success_count').replace('{n}', fmtN(n))}
             preview={{
                 run: (file) => previewMut.mutateAsync(file),
                 pending: previewMut.isPending,

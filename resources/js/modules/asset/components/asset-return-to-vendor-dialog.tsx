@@ -8,6 +8,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { Loader2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Return the selected rented assets to their lessor (POST /assets/bulk-return-to-vendor).
@@ -20,6 +21,7 @@ import { useAssetMutations } from '../hooks/use-assets';
  */
 export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids: number[]; open: boolean; onClose: () => void; onDone: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { returnToVendor } = useAssetMutations();
     const [note, setNote] = useState('');
     const [error, setError] = useState<string | undefined>();
@@ -52,7 +54,7 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
                     {t('asset_return_vendor_title')}
                 </DialogTitle>
                 <DialogDescription>
-                    {t('asset_bulk_count').replace('{count}', String(ids.length))}
+                    {t('asset_bulk_count').replace('{count}', fmtN(ids.length))}
                     <span className="mt-1 block">{t('asset_return_vendor_desc')}</span>
                 </DialogDescription>
 

@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAccessSummary, useRevokeGrant } from '../hooks/use-access';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Per-channel identity: brand-neutral colour (same hexes the registry NameCell uses) + icon + label key. */
 const CHANNEL: Record<AccessKind, { color: string; icon: LucideIcon; labelKey: string }> = {
@@ -158,6 +159,7 @@ function IssueSection({
     t: (k: string) => string;
 }) {
     const lang = useUiStore((s) => s.lang);
+    const fmtN = useNumberFormat();
     if (items.length === 0) return null;
     const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-700 dark:text-amber-400';
     const toneRail = tone === 'red' ? 'border-l-destructive' : 'border-l-amber-500';
@@ -168,7 +170,7 @@ function IssueSection({
             <div className={cn(CARD_HEADING, 'border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5')}>
                 <Icon className={cn('h-4 w-4 shrink-0', toneText)} />
                 <span className="text-sm font-semibold">{title}</span>
-                <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold">{items.length}</span>
+                <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold">{fmtN(items.length)}</span>
             </div>
             <div className="divide-border/60 divide-y p-1.5">
                 {items.map((item, i) => {
@@ -255,6 +257,7 @@ function IssuesDrawer({
 }) {
     const { issues } = governance;
     const lang = useUiStore((s) => s.lang);
+    const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const revoke = useRevokeGrant();
     const total = issues.resigned.length + issues.no_owner.length + issues.empty.length;
@@ -289,7 +292,7 @@ function IssuesDrawer({
                         <ShieldCheck className="text-muted-foreground h-5 w-5" />
                         {t('access_issues_title')}
                         <span className="bg-brand/10 text-brand ml-1 rounded-full px-2.5 py-0.5 text-xs font-bold">
-                            {total} {t('access_issues_total')}
+                            {fmtN(total)} {t('access_issues_total')}
                         </span>
                     </SheetTitle>
                     <SheetDescription>{t('access_issues_sub')}</SheetDescription>
@@ -363,6 +366,7 @@ export function AccessOverview({
 }) {
     const lang = useUiStore((s) => s.lang);
     const t = useT();
+    const fmtN = useNumberFormat();
     const [period, setPeriod] = useOverviewPeriod();
     const { data, isLoading, isError, refetch } = useAccessSummary(period);
     // Whether the governance triage drawer is open (every issue group in one panel).
@@ -410,7 +414,7 @@ export function AccessOverview({
                             icon={Icon}
                             value={stat.resources}
                             onClick={() => onOpenTab(kind)}
-                            footer={<span className={deltaTone}>{t(deltaKey).replace('{n}', String(Math.abs(net)))}</span>}
+                            footer={<span className={deltaTone}>{t(deltaKey).replace('{n}', fmtN(Math.abs(net)))}</span>}
                         />
                     );
                 })}
@@ -443,7 +447,7 @@ export function AccessOverview({
                                         <div className="bg-brand h-full rounded-full" style={{ width: `${(grants / maxGrants) * 100}%` }} />
                                     </div>
                                     <span className="w-16 shrink-0 text-right text-sm font-semibold whitespace-nowrap">
-                                        {grants} <span className="text-muted-foreground text-[11px] font-medium">{pct}%</span>
+                                        {fmtN(grants)} <span className="text-muted-foreground text-[11px] font-medium">{pct}%</span>
                                     </span>
                                 </div>
                             );
@@ -656,7 +660,7 @@ export function AccessOverview({
                                                 <div className="bg-secondary hidden h-1.5 w-24 overflow-hidden rounded-full sm:block">
                                                     <div className="bg-brand h-full rounded-full" style={{ width }} />
                                                 </div>
-                                                <span className="w-5 text-right font-semibold">{r.grants}</span>
+                                                <span className="w-5 text-right font-semibold">{fmtN(r.grants)}</span>
                                             </div>
                                         </td>
                                     </tr>

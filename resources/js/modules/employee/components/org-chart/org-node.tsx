@@ -9,10 +9,12 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import type { OrgFlowNode, OrgNodeData } from '../../lib/org-tree';
 import { deptFill, deptInk, NODE_W } from '../../lib/org-tree';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** One person card in the org chart: department bar + avatar, four text lines, code chip and collapse toggle. */
 export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const d = data as OrgNodeData;
     const vertical = d.dir === 'TB';
@@ -23,7 +25,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
     const sectionLabel = localPair(d.section, d.section_th, lang);
     const departmentLabel = localPair(d.department, d.department_th, lang);
     const ink = deptInk(d.department_code);
-    const branchLabel = t(d.collapsed ? 'org_expand_branch' : 'org_collapse_branch').replace('{n}', String(d.reports_count));
+    const branchLabel = t(d.collapsed ? 'org_expand_branch' : 'org_collapse_branch').replace('{n}', fmtN(d.reports_count));
 
     return (
         <div
@@ -105,7 +107,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                     className="nokey bg-brand/10 text-brand-ink hover:bg-brand/20 focus-visible:ring-brand absolute right-[11px] bottom-[11px] inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                     {d.collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    {d.reports_count}
+                    {fmtN(d.reports_count)}
                 </button>
             )}
 

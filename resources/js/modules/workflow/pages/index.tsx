@@ -18,10 +18,12 @@ import { WorkflowEditorDialog } from '../components/workflow-editor-dialog';
 import { WorkflowStrip } from '../components/workflow-strip';
 import { WorkflowViewDialog } from '../components/workflow-view-dialog';
 import { useWorkflows } from '../hooks/use-workflows';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Workflows admin page: one card per request type's approval route, with a view dialog and the step editor. */
 export default function WorkflowsPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { data, isLoading, isError, refetch } = useWorkflows();
     const workflows = useMemo(() => data?.data ?? [], [data]);
     const measureDays = data?.meta.measure_days ?? 30;
@@ -89,7 +91,7 @@ export default function WorkflowsPage() {
                     icon={WorkflowIcon}
                     label={t('wf_kpi_active')}
                     value={String(workflows.filter((w) => w.active).length)}
-                    sub={t('wf_kpi_active_sub').replace('{n}', String(workflows.length))}
+                    sub={t('wf_kpi_active_sub').replace('{n}', fmtN(workflows.length))}
                     loading={isLoading}
                 />
                 <StatCard
@@ -108,13 +110,13 @@ export default function WorkflowsPage() {
                     sub={
                         measuredRequests ? (
                             <>
-                                <span>{t('wf_kpi_decision_window').replace('{days}', String(measureDays))}</span>
+                                <span>{t('wf_kpi_decision_window').replace('{days}', fmtN(measureDays))}</span>
                                 <span className="ml-3">
                                     {measuredRequests} {t('wf_kpi_decision_requests')}
                                 </span>
                             </>
                         ) : (
-                            t('wf_kpi_decision_none').replace('{days}', String(measureDays))
+                            t('wf_kpi_decision_none').replace('{days}', fmtN(measureDays))
                         )
                     }
                 />
@@ -193,11 +195,11 @@ export default function WorkflowsPage() {
                                                 {t(REQUEST_TYPE_META[wf.request_type].labelKey)}
                                             </span>
                                             <span>
-                                                {approvals} {t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')}
+                                                {fmtN(approvals)} {t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')}
                                             </span>
                                             {wf.measured && (
                                                 <span>
-                                                    {t('wf_row_decision')} {wf.measured.avg_days}
+                                                    {t('wf_row_decision')} {fmtN(wf.measured.avg_days, { maxDecimals: 1 })}
                                                     {t('wf_days_suffix')}
                                                 </span>
                                             )}

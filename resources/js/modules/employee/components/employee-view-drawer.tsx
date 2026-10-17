@@ -49,6 +49,7 @@ import {
 } from '../hooks/use-employees';
 import { deptColor, deptFill } from '../lib/org-tree';
 import { AccessPane, AssetsPane, IdChip, RAIL_HEADING, RailRow, RequestsPane, TicketsPane } from './employee-panes';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type DrawerTab = 'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access';
 
@@ -102,6 +103,7 @@ export function EmployeeViewDrawer({
     onViewProfile?: (employeeId: number) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
 
@@ -238,9 +240,9 @@ export function EmployeeViewDrawer({
                             lbl={t('emp_v_tenure')}
                         />
                         <div className="bg-border h-7 w-px" />
-                        <Kpi val={directReports.length} lbl={t('emp_v_reports')} />
+                        <Kpi val={fmtN(directReports.length)} lbl={t('emp_v_reports')} />
                         <div className="bg-border h-7 w-px" />
-                        <Kpi val={approvalChain.length} lbl={t('emp_v_approval')} />
+                        <Kpi val={fmtN(approvalChain.length)} lbl={t('emp_v_approval')} />
                     </div>
                 </div>
 
@@ -419,14 +421,15 @@ export function EmployeeViewDrawer({
 /** Overview tab — summary cards. */
 function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: { y: number; m: number }; reports: number; steps: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const cards = [
         {
             icon: <Clock className="h-[17px] w-[17px]" />,
             val: `${tenure.y}${t('emp_v_y')} ${tenure.m}${t('emp_v_m')}`,
             lbl: t('emp_v_tenure'),
         },
-        { icon: <Users className="h-[17px] w-[17px]" />, val: reports, lbl: t('emp_v_direct_reports') },
-        { icon: <Crown className="h-[17px] w-[17px]" />, val: steps, lbl: t('emp_v_approval_steps') },
+        { icon: <Users className="h-[17px] w-[17px]" />, val: fmtN(reports), lbl: t('emp_v_direct_reports') },
+        { icon: <Crown className="h-[17px] w-[17px]" />, val: fmtN(steps), lbl: t('emp_v_approval_steps') },
         { icon: <ShieldCheck className="h-[17px] w-[17px]" />, val: emp.has_account ? '✓' : '—', lbl: t('emp_v_account') },
     ];
     return (
@@ -471,6 +474,7 @@ function OrgPane({
     onViewProfile?: (employeeId: number) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
 
     // Managers / reports shown before a "Show N more" control
@@ -597,7 +601,7 @@ function OrgPane({
                 {total > 0 && (
                     <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1 text-[11px]">
                         <Users className="h-3 w-3" />
-                        {total}
+                        {fmtN(total)}
                     </span>
                 )}
             </div>
@@ -642,7 +646,7 @@ function OrgPane({
                                         </span>
                                     ))}
                                 </span>
-                                {t('emp_v_show_more').replace('{n}', String(hiddenManagers.length))}
+                                {t('emp_v_show_more').replace('{n}', fmtN(hiddenManagers.length))}
                             </button>
                             <Connector />
                         </>
@@ -685,7 +689,7 @@ function OrgPane({
                             )}
                             <div className="text-muted-foreground shrink-0 text-right text-[11px] leading-tight">
                                 <div>
-                                    <span className="text-foreground font-bold">{totalReports(focusId)}</span> {t('emp_v_total_reports')}
+                                    <span className="text-foreground font-bold">{fmtN(totalReports(focusId))}</span> {t('emp_v_total_reports')}
                                 </div>
                                 <div className="mt-0.5">
                                     <span className="text-foreground font-bold">{directCount(focusId)}</span> {t('emp_v_direct')}
@@ -715,7 +719,7 @@ function OrgPane({
                                     onClick={() => setReportsExpanded(true)}
                                     className="border-border bg-card hover:bg-accent mx-auto mt-3 inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition"
                                 >
-                                    {t('emp_v_show_more').replace('{n}', String(hiddenReportsCount))}
+                                    {t('emp_v_show_more').replace('{n}', fmtN(hiddenReportsCount))}
                                 </button>
                             )}
                         </>

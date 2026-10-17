@@ -16,6 +16,7 @@ import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/datetime';
 import { localName } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -228,6 +229,7 @@ const ADMIN_CARD_META: Record<string, { subtitleKey: string; master: ModuleMaste
 
 function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const { data, isLoading, isError } = usePermissionMatrix();
@@ -264,9 +266,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         const blocked = r.is_system
             ? t('role_del_blocked_system')
             : r.members > 0
-              ? t('role_del_blocked_members').replace('{n}', String(r.members))
+              ? t('role_del_blocked_members').replace('{n}', fmtN(r.members))
               : r.groups > 0
-                ? t('role_del_blocked_group').replace('{n}', String(r.groups))
+                ? t('role_del_blocked_group').replace('{n}', fmtN(r.groups))
                 : null;
 
         if (blocked) {
@@ -448,7 +450,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                         <SectionIcon className="text-muted-foreground h-4 w-4" />
                                         <span className="text-foreground text-sm font-bold">{t(section.label)}</span>
                                         <span className="text-muted-foreground ml-auto text-[11px]">
-                                            {sectionOn} / {sectionActions.length}
+                                            {fmtN(sectionOn)} / {fmtN(sectionActions.length)}
                                         </span>
                                     </div>
 
@@ -664,6 +666,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
 function GroupRolesTab() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const { isSuper } = useAuth();
@@ -773,7 +776,7 @@ function GroupRolesTab() {
                             )}
                             <div className="border-border text-muted-foreground mt-3 flex items-center justify-between border-t pt-3 text-sm">
                                 <span className="text-foreground flex items-center gap-1.5 font-semibold">
-                                    <Users className="h-3.5 w-3.5" /> {g.member_count}
+                                    <Users className="h-3.5 w-3.5" /> {fmtN(g.member_count)}
                                 </span>
                                 <span>{translate(lang, 'perm_ui_members')}</span>
                             </div>
@@ -1026,9 +1029,9 @@ function auditInitials(name: string | null): string {
 function auditAgo(iso: string, lang: Lang, absolute: string): string {
     const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
     if (m < 1) return translate(lang, 'perm_ui_just_now');
-    if (m < 60) return translate(lang, 'perm_ui_minutes_short').replace('{n}', String(m));
+    if (m < 60) return translate(lang, 'perm_ui_minutes_short').replace('{n}', formatNumber(m, lang));
     const h = Math.floor(m / 60);
-    if (h < 24) return translate(lang, 'perm_ui_hours_short').replace('{n}', String(h));
+    if (h < 24) return translate(lang, 'perm_ui_hours_short').replace('{n}', formatNumber(h, lang));
     return absolute;
 }
 

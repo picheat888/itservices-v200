@@ -18,6 +18,7 @@ import { AssetLocationDialog } from './asset-location-dialog';
 import { AssetStatusBadge, AssetTypeIcon } from './asset-meta';
 import { AssetTicketsTab } from './asset-tickets-tab';
 import { ContractPeekDialog } from './contract-peek-dialog';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type TabId = 'overview' | 'tickets' | 'history';
 
@@ -85,6 +86,7 @@ export function AssetDetailDrawer({
 }) {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const [tab, setTab] = useState<TabId>('overview');
@@ -155,7 +157,7 @@ export function AssetDetailDrawer({
             errorMessage: (e) => {
                 const refusal = refusalReason(e);
                 if (refusal?.reason !== 'has_history') return undefined;
-                return t('asset_delete_has_history').replace('{count}', String(refusal.body.transfers_count ?? 0));
+                return t('asset_delete_has_history').replace('{count}', fmtN(Number(refusal.body.transfers_count ?? 0)));
             },
         });
     };
