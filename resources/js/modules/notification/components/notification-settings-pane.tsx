@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
@@ -26,6 +27,7 @@ import {
     Bell,
     BellOff,
     CalendarClock,
+    Eye,
     Inbox,
     KeyRound,
     Loader2,
@@ -109,8 +111,18 @@ function BellPreview({ bell, message }: { bell: NotificationTemplate; message: s
 }
 
 /** Reword one notification, and decide whether it fires at all. */
+/** The bell rights the server checks per change (NotificationTemplateController): toggle, edit wording, test; Reset needs edit and toggle. */
+function useBellRights() {
+    const { can } = useAuth();
+    const edit = can('notifications.inapp_edit');
+    const toggle = can('notifications.inapp_toggle');
+
+    return { edit, toggle, test: can('notifications.inapp_test'), reset: edit && toggle, any: edit || toggle };
+}
+
 function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: NotificationTemplate | null; onClose: () => void }) {
     const t = useT();
+    const rights = useBellRights();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const { update, reset, test } = useNotificationTemplateMutations();
@@ -136,10 +148,13 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
     const guardClose = useDiscardGuard(isDirty);
 
     const busy = update.isPending || reset.isPending || test.isPending;
+    // Reset restores the wording AND the on/off state, so it is offered when either differs.
+    const atStandard = !!bell && bell.is_standard && bell.enabled === bell.standard_enabled;
+    const resetBlocked = !rights.reset ? t('notification_no_reset_right') : atStandard ? t('notification_already_standard') : null;
     const name = bell ? t(`notification_name_${suffix(bell.key)}`) : '';
 
     const save = async () => {
-        if (!bell || submitting.current || saved || !en.trim() || !th.trim()) return;
+        if (!bell || !rights.any || submitting.current || saved || !en.trim() || !th.trim()) return;
         submitting.current = true;
         try {
             await update.mutateAsync({ key: bell.key, payload: { message_en: en.trim(), message_th: th.trim(), enabled } });
@@ -199,7 +214,14 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                     <div className="mt-4 space-y-5">
                         {/* On / off */}
                         <div className="flex items-start gap-3 rounded-lg border p-3">
-                            <Switch checked={enabled} onChange={setEnabled} disabled={saved} aria-label={`${t('notification_toggle')} ${name}`} />
+                            <DisabledReason reason={rights.toggle ? null : t('notification_no_toggle_right')} label={t('notification_toggle')}>
+                                <Switch
+                                    checked={enabled}
+                                    onChange={setEnabled}
+                                    disabled={saved || !rights.toggle}
+                                    aria-label={`${t('notification_toggle')} ${name}`}
+                                />
+                            </DisabledReason>
                             <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium">{enabled ? t('notification_on') : t('notification_off')}</div>
                                 <div className="text-muted-foreground mt-0.5 text-xs">
@@ -218,11 +240,12 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                             </div>
                         )}
 
+                        {!rights.edit && <p className="text-muted-foreground text-xs">{t('notification_no_edit_right')}</p>}
                         <Field label={t('notification_message_en')} required>
-                            <Input value={en} onChange={(e) => setEn(e.target.value)} onKeyDown={onEnter} maxLength={300} />
+                            <Input value={en} onChange={(e) => setEn(e.target.value)} onKeyDown={onEnter} maxLength={300} readOnly={!rights.edit} />
                         </Field>
                         <Field label={t('notification_message_th')} required>
-                            <Input value={th} onChange={(e) => setTh(e.target.value)} onKeyDown={onEnter} maxLength={300} />
+                            <Input value={th} onChange={(e) => setTh(e.target.value)} onKeyDown={onEnter} maxLength={300} readOnly={!rights.edit} />
                         </Field>
 
                         {placeholdersIn(bell.message_en).length > 0 && (
@@ -246,12 +269,14 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
 
                     <div className="mt-6 flex flex-row gap-2">
                         {/* Test sends the saved wording */}
-                        <Button variant="outline" onClick={() => test.mutate(bell.key)} disabled={busy || saved}>
-                            {test.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
-                            {t('notification_test')}
-                        </Button>
-                        <DisabledReason reason={bell.is_standard ? t('notification_already_standard') : null} label={t('notification_reset')}>
-                            <Button variant="outline" onClick={resetToStandard} disabled={busy || saved || bell.is_standard}>
+                        <DisabledReason reason={rights.test ? null : t('notification_no_test_right')} label={t('notification_test')}>
+                            <Button variant="outline" onClick={() => test.mutate(bell.key)} disabled={busy || saved || !rights.test}>
+                                {test.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+                                {t('notification_test')}
+                            </Button>
+                        </DisabledReason>
+                        <DisabledReason reason={resetBlocked} label={t('notification_reset')}>
+                            <Button variant="outline" onClick={resetToStandard} disabled={busy || saved || resetBlocked !== null}>
                                 {reset.isPending ? (
                                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                                 ) : (
@@ -264,12 +289,14 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                         <Button variant="outline" onClick={() => guardClose(onClose)} disabled={busy}>
                             {t('cancel')}
                         </Button>
-                        <SaveButton
-                            loading={update.isPending}
-                            success={saved}
-                            onClick={save}
-                            disabled={reset.isPending || test.isPending || saved || !en.trim() || !th.trim()}
-                        />
+                        {rights.any && (
+                            <SaveButton
+                                loading={update.isPending}
+                                success={saved}
+                                onClick={save}
+                                disabled={reset.isPending || test.isPending || saved || !en.trim() || !th.trim()}
+                            />
+                        )}
                     </div>
                 </DialogContent>
             )}
@@ -314,6 +341,7 @@ function ModuleChip({ label, count, selected, onSelect }: { label: string; count
 /** The Notification tab of Email & Notifications: every in-app alert, reworded or switched off per row. */
 export function NotificationSettingsPane() {
     const t = useT();
+    const rights = useBellRights();
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useNotificationTemplates();
     const { update } = useNotificationTemplateMutations();
@@ -450,16 +478,18 @@ export function NotificationSettingsPane() {
             className: 'w-[2%]',
             // Keeps its own click inside the clickable row
             render: (n) => (
-                <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
-                    <Switch
-                        checked={n.enabled}
-                        disabled={togglePending(n)}
-                        aria-label={`${t('notification_toggle')} ${t(`notification_name_${suffix(n.key)}`)}`}
-                        onChange={(next) =>
-                            update.mutate({ key: n.key, payload: { message_en: n.message_en, message_th: n.message_th, enabled: next } })
-                        }
-                    />
-                </span>
+                <DisabledReason reason={rights.toggle ? null : t('notification_no_toggle_right')} label={t('notification_toggle')}>
+                    <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                            checked={n.enabled}
+                            disabled={togglePending(n) || !rights.toggle}
+                            aria-label={`${t('notification_toggle')} ${t(`notification_name_${suffix(n.key)}`)}`}
+                            onChange={(next) =>
+                                update.mutate({ key: n.key, payload: { message_en: n.message_en, message_th: n.message_th, enabled: next } })
+                            }
+                        />
+                    </span>
+                </DisabledReason>
             ),
         },
         {
@@ -475,10 +505,10 @@ export function NotificationSettingsPane() {
                             e.stopPropagation();
                             openEditor(n);
                         }}
-                        aria-label={`${t('notification_edit')} ${t(`notification_name_${suffix(n.key)}`)}`}
+                        aria-label={`${t(rights.any ? 'notification_edit' : 'notification_view')} ${t(`notification_name_${suffix(n.key)}`)}`}
                         className="text-muted-foreground hover:bg-accent hover:text-brand focus-visible:ring-ring/50 flex h-8 w-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
                     >
-                        <PenLine className="h-4 w-4" aria-hidden />
+                        {rights.any ? <PenLine className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                     </button>
                 </div>
             ),

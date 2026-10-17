@@ -235,6 +235,20 @@ class NotificationTemplateTest extends TestCase
         $this->assertCount(count(NotificationCatalogue::all()) - 1, $rows);
     }
 
+    /** The page offers Reset when the wording OR the on/off state differs from the standard. */
+    public function test_each_bell_carries_its_standard_on_off_state(): void
+    {
+        $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
+        $this->seed(NotificationTemplateSeeder::class);
+        NotificationTemplate::where('key', 'notif_asset_assigned')->update(['enabled' => false]);
+
+        $row = collect($this->getJson('/api/notification-templates')->assertOk()->json('data'))->keyBy('key')['notif_asset_assigned'];
+
+        $this->assertTrue($row['is_standard']);
+        $this->assertFalse($row['enabled']);
+        $this->assertSame(NotificationCatalogue::find('notif_asset_assigned')['enabled'], $row['standard_enabled']);
+    }
+
     public function test_every_bell_reports_whether_mail_covers_its_event(): void
     {
         $this->actingAs($this->userWith(NOTIFICATION_ADMIN));

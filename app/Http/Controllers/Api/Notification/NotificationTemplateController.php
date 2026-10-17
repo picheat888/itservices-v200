@@ -77,6 +77,8 @@ class NotificationTemplateController extends Controller
                 'updated_at' => SystemTime::date($row->updated_at),
                 'updated_by_name' => $row->updater?->name,
                 'is_standard' => $row->message_en === $bell['message_en'] && $row->message_th === $bell['message_th'],
+                // Reset also restores this, so the page offers it when only the switch moved.
+                'standard_enabled' => (bool) $bell['enabled'],
                 'has_email' => in_array($this->emailPrefixFor($bell['module']), $emailModules, true),
             ];
         })->values();
