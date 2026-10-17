@@ -6,6 +6,7 @@ import type { EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { TruncText } from '@/shared/components/trunc-text';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -58,8 +59,8 @@ function OwnerCell({ owner, photoUrl }: { owner?: string | null; photoUrl?: stri
     if (!owner) return <span className="text-muted-foreground">—</span>;
     return (
         <div className="flex items-center gap-2 whitespace-nowrap">
-            <UserAvatar name={owner} photoUrl={photoUrl} className="h-7 w-7" textClassName="text-[10px]" />
-            <span className="text-sm">{owner}</span>
+            <UserAvatar name={owner} photoUrl={photoUrl} className="h-7 w-7 shrink-0" textClassName="text-[10px]" />
+            <TruncText text={owner} className="text-sm" />
         </div>
     );
 }
@@ -79,7 +80,7 @@ function NameCell({
     logoUrl?: string | null;
 }) {
     return (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 whitespace-nowrap">
             {logoUrl ? (
                 <img src={logoUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
             ) : (
@@ -88,8 +89,8 @@ function NameCell({
                 </span>
             )}
             <div className="min-w-0">
-                <div className="font-medium">{name}</div>
-                {sub && <div className="text-muted-foreground max-w-[240px] truncate text-[11.5px]">{sub}</div>}
+                <TruncText text={name} className="font-medium" />
+                {sub && <div className="text-muted-foreground truncate text-[11.5px]">{sub}</div>}
             </div>
         </div>
     );
@@ -510,80 +511,95 @@ export default function AccessControlPage() {
     // Stops propagation so the row-click (open members) doesn't also fire.
     const actionsCol = <T extends AnyResource>(open: (r: T) => void): Column<T> => ({
         key: 'actions',
-        header: t('actions'),
+        header: <span className="sr-only">{t('actions')}</span>,
+        width: '60px',
         align: 'right',
         render: (r) => (
             <div className="flex items-center justify-end gap-1.5">
                 <Button
                     variant="outline"
+                    aria-label={t('access_manage_members')}
                     size="sm"
                     onClick={(e) => {
                         e.stopPropagation();
                         open(r);
                     }}
                 >
-                    <Users className="h-3.5 w-3.5" /> {t('access_manage_members')}
+                    <Users className="h-3.5 w-3.5" /> <span className="hidden xl:inline">{t('access_manage_members')}</span>
                 </Button>
             </div>
         ),
     });
 
     const egColumns: Column<EmailGroup>[] = [
-        { key: 'name', header: t('access_name'), render: (g) => <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} /> },
-        { key: 'owner', header: t('access_owner'), render: (g) => <OwnerCell owner={ownerLabel(g)} photoUrl={g.owner_photo_url} /> },
-        { key: 'members', header: t('access_members'), render: (g) => <AvatarStack members={g.members ?? []} total={g.members_count} /> },
-        { key: 'department', header: t('access_department'), render: (g) => deptLabel(g) ?? '—' },
+        {
+            key: 'name',
+            header: t('access_name'),
+            minWidth: '14rem',
+            render: (g) => <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} />,
+        },
+        { key: 'owner', header: t('access_owner'), width: '200px', render: (g) => <OwnerCell owner={ownerLabel(g)} photoUrl={g.owner_photo_url} /> },
+        {
+            key: 'members',
+            header: t('access_members'),
+            width: '140px',
+            render: (g) => <AvatarStack members={g.members ?? []} total={g.members_count} />,
+        },
+        { key: 'department', header: t('access_department'), width: '180px', render: (g) => <TruncText text={deptLabel(g)} /> },
         actionsCol<EmailGroup>(openEmailGroup),
     ];
 
-    // Fixed 26/16/16/18/16/8 split across name / department / size / owner / members / actions.
     const fsColumns: Column<FileShare>[] = [
         {
             key: 'name',
             header: t('access_name'),
-            className: 'w-[26%]',
+            minWidth: '14rem',
             render: (s) => <NameCell icon={Folder} color="#0d9488" name={s.name} sub={s.path} />,
         },
         {
             key: 'size',
             header: t('access_size'),
-            className: 'w-[16%]',
+            width: '110px',
+            align: 'right',
             render: (s) => <span className="text-[12.5px] whitespace-nowrap">{sizeText(s.size, s.size_unit) ?? '—'}</span>,
         },
-        {
-            key: 'owner',
-            header: t('access_owner'),
-            className: 'w-[18%]',
-            render: (s) => <OwnerCell owner={ownerLabel(s)} photoUrl={s.owner_photo_url} />,
-        },
-        { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => deptLabel(s) ?? '—' },
+        { key: 'owner', header: t('access_owner'), width: '200px', render: (s) => <OwnerCell owner={ownerLabel(s)} photoUrl={s.owner_photo_url} /> },
+        { key: 'department', header: t('access_department'), width: '180px', render: (s) => <TruncText text={deptLabel(s)} /> },
         {
             key: 'members',
             header: t('access_members'),
-            className: 'w-[16%]',
+            width: '140px',
             render: (s) => <AvatarStack members={s.members ?? []} total={s.members_count} />,
         },
-        { ...actionsCol<FileShare>(openFileShare), className: 'w-[8%]' },
+        actionsCol<FileShare>(openFileShare),
     ];
 
     const spColumns: Column<SocialPlatform>[] = [
         {
             key: 'name',
             header: t('access_name'),
+            minWidth: '14rem',
             render: (p) => <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} />,
         },
-        { key: 'policy', header: t('access_policy'), render: (p) => p.policy ?? '—' },
-        { key: 'members', header: t('access_members'), render: (p) => <AvatarStack members={p.members ?? []} /> },
+        { key: 'policy', header: t('access_policy'), width: '200px', render: (p) => <TruncText text={p.policy} /> },
+        { key: 'members', header: t('access_members'), width: '140px', render: (p) => <AvatarStack members={p.members ?? []} /> },
         actionsCol<SocialPlatform>(openSocial),
     ];
 
     const swColumns: Column<Software>[] = [
-        { key: 'name', header: t('access_name'), render: (s) => <NameCell icon={Package} color="#f59e0b" name={s.name} logoUrl={s.logo_url} /> },
-        { key: 'publisher', header: t('access_publisher'), render: (s) => s.publisher ?? '—' },
-        { key: 'license_type', header: t('access_license_type'), render: (s) => t(`access_lic_${s.license_type}`) },
+        {
+            key: 'name',
+            header: t('access_name'),
+            minWidth: '16rem',
+            render: (s) => <NameCell icon={Package} color="#f59e0b" name={s.name} logoUrl={s.logo_url} />,
+        },
+        { key: 'publisher', header: t('access_publisher'), width: '160px', render: (s) => <TruncText text={s.publisher} /> },
+        { key: 'license_type', header: t('access_license_type'), width: '130px', render: (s) => t(`access_lic_${s.license_type}`) },
         {
             key: 'seats',
             header: t('access_seats'),
+            width: '120px',
+            align: 'right',
             render: (s) => {
                 const used = s.seats_used ?? s.members?.length ?? 0;
                 const over = s.seats != null && used > s.seats;
@@ -606,7 +622,12 @@ export default function AccessControlPage() {
                 );
             },
         },
-        { key: 'members', header: t('access_members'), render: (s) => <AvatarStack members={s.members ?? []} total={s.members_count} /> },
+        {
+            key: 'members',
+            header: t('access_members'),
+            width: '140px',
+            render: (s) => <AvatarStack members={s.members ?? []} total={s.members_count} />,
+        },
         actionsCol<Software>(openSoftware),
     ];
 
