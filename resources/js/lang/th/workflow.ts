@@ -23,7 +23,7 @@ export const workflow: Dict = {
     wf_row_decision: 'พิจารณาเฉลี่ย',
     wf_cell_decision: 'เวลาพิจารณาเฉลี่ย ({days} วันที่ผ่านมา)',
     wf_days_suffix: ' วัน',
-    wf_kpi_auto: 'เปิด Auto Ticket',
+    wf_kpi_auto: 'เปิด Ticket อัตโนมัติ',
     wf_kpi_auto_sub: 'เปิดเคสให้ IT อัตโนมัติเมื่ออนุมัติครบ',
 
     // pages/index.tsx — ช่องค้นหา + การ์ด Workflow
@@ -34,7 +34,7 @@ export const workflow: Dict = {
     wf_edit: 'แก้ไข',
     wf_active: 'เปิดใช้งาน',
     wf_inactive: 'ปิดใช้งาน',
-    wf_auto_ticket: 'Auto Ticket',
+    wf_auto_ticket: 'เปิด Ticket อัตโนมัติ',
     wf_applies_to: 'ใช้กับคำขอ',
     wf_steps: 'ขั้นตอน',
 

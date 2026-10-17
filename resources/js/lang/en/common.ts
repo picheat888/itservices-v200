@@ -57,7 +57,6 @@ export const common: Dict = {
     sidebar_labeled: 'Labeled',
     sidebar_icons: 'Icons only',
     foundation_ready: 'Foundation ready',
-    foundation_desc: 'Shell, theme, i18n, role-aware navigation, and Sanctum SPA auth are wired up. Modules come next.',
     view_all: 'View all',
     add_employee: 'Add employee',
     edit_employee: 'Edit employee',
@@ -105,7 +104,6 @@ export const common: Dict = {
     cancel_resign_confirm: 'Cancel this resignation and restore the employee to Active status?',
     coming_soon: 'Coming soon',
     assigned_assets: 'Assigned assets',
-    no_assigned_assets: 'No assigned assets (Assets module pending)',
     confirm_delete: 'Delete this item?',
     search_name_id: 'Search name, ID, username or email…',
     back: 'Back',
@@ -197,5 +195,5 @@ export const common: Dict = {
 
     // placeholder.tsx — labels moved from the component
     cmn_placeholder_later: 'This module ships in a later phase',
-    cmn_placeholder_ready: 'The foundation (shell, theme, i18n, role-aware access) is ready.',
+    cmn_placeholder_ready: 'This part is not available yet.',
 };

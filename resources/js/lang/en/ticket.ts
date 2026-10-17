@@ -4,7 +4,7 @@ export const ticket: Dict = {
     tickets_title: 'IT Support Tickets',
     tickets_sub: 'Report and track IT issues across the company.',
     ticket_tab_overview: 'Overview',
-    ticket_tab_all: 'Tickets',
+    ticket_tab_all: 'All tickets',
     ticket_tab_mine: 'My Jobs',
     ticket_tab_my: 'My Tickets',
     ticket_sla: 'SLA',

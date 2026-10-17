@@ -57,7 +57,6 @@ export const common: Dict = {
     sidebar_labeled: 'แสดงชื่อ',
     sidebar_icons: 'เฉพาะไอคอน',
     foundation_ready: 'รากฐานพร้อมแล้ว',
-    foundation_desc: 'โครงระบบ ธีม ภาษา เมนูตาม role และการล็อกอินแบบ Sanctum SPA ติดตั้งเรียบร้อย โมดูลต่าง ๆ จะตามมา',
     view_all: 'ดูทั้งหมด',
     add_employee: 'เพิ่มพนักงาน',
     edit_employee: 'แก้ไขพนักงาน',
@@ -105,9 +104,8 @@ export const common: Dict = {
     cancel_resign_confirm: 'ยืนยันยกเลิกการลาออก และคืนสถานะพนักงานเป็น "ปกติ"?',
     coming_soon: 'เร็ว ๆ นี้',
     assigned_assets: 'อุปกรณ์ที่ได้รับมอบหมาย',
-    no_assigned_assets: 'ยังไม่มีอุปกรณ์ (รอโมดูล Assets)',
     confirm_delete: 'ลบรายการนี้?',
-    search_name_id: 'ค้นหาชื่อ, รหัส, Username หรืออีเมล…',
+    search_name_id: 'ค้นหาชื่อ, รหัส, ชื่อผู้ใช้ หรืออีเมล…',
     back: 'ย้อนกลับ',
     next: 'ถัดไป',
     coming_soon_tag: 'เร็ว ๆ นี้',
@@ -142,14 +140,14 @@ export const common: Dict = {
     attachment_no_inline_preview: 'ไฟล์ชนิดนี้ดูตัวอย่างในหน้านี้ไม่ได้ - ดาวน์โหลดเพื่อเปิด',
 
     // import-dialog.tsx — หน้าต่างนำเข้า CSV ที่ใช้ร่วมทุกโมดูล
-    import_download_template: 'ดาวน์โหลด Template (CSV)',
+    import_download_template: 'ดาวน์โหลดเทมเพลต (CSV)',
     import_run: 'นำเข้า',
     import_running: 'กำลังนำเข้า…',
     import_close: 'ปิด',
     import_errors_found: 'พบข้อผิดพลาด',
     import_row: 'แถว',
     import_failed: 'นำเข้าไม่สำเร็จ',
-    import_template_failed: 'ดาวน์โหลด Template ไม่สำเร็จ',
+    import_template_failed: 'ดาวน์โหลดเทมเพลตไม่สำเร็จ',
     import_checking: 'กำลังตรวจสอบไฟล์…',
     import_preview_title: 'ข้อมูลที่จะนำเข้า',
     import_preview_total: 'ทั้งหมด',
@@ -197,5 +195,5 @@ export const common: Dict = {
 
     // placeholder.tsx — labels moved from the component
     cmn_placeholder_later: 'โมดูลนี้จะพัฒนาในเฟสถัดไป',
-    cmn_placeholder_ready: 'รากฐานของระบบ (โครง ธีม ภาษา สิทธิ์ตาม role) พร้อมแล้ว',
+    cmn_placeholder_ready: 'ส่วนนี้ยังไม่เปิดใช้งาน',
 };
