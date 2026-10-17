@@ -3,6 +3,7 @@ import { departmentApi, useDepartments, useEmployeePicker, useEmployeesByIds } f
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
@@ -102,7 +103,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
 
     const empOptions = found.map((e) => ({
         value: String(e.id),
-        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        label: localName(e, lang),
         sub: e.code,
         search: '',
     }));
@@ -120,7 +121,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             return [
                 {
                     id,
-                    name: e ? (lang === 'th' ? (e.name_th ?? e.name) : e.name) : String(id),
+                    name: e ? localName(e, lang) : String(id),
                     fromGroup: from.name,
                     fromRole: from.role_label ?? roleLabel(from.role),
                     toRole: roleLabel(role || null),
@@ -215,7 +216,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                         const e = employees.find((x) => x.id === id);
                                         return (
                                             <span key={id} className="bg-muted flex items-center gap-1 rounded-full px-2.5 py-1 text-xs">
-                                                {e ? (lang === 'th' ? (e.name_th ?? e.name) : e.name) : id}
+                                                {e ? localName(e, lang) : id}
                                                 <button type="button" onClick={() => setEmpIds((p) => p.filter((x) => x !== id))}>
                                                     <X className="h-3 w-3" />
                                                 </button>
@@ -247,7 +248,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                                         : 'border-border text-muted-foreground hover:bg-accent/50',
                                                 )}
                                             >
-                                                {lang === 'th' ? (d.name_th ?? d.name) : d.name}
+                                                {localName(d, lang)}
                                                 <Users className="h-3 w-3" />
                                             </button>
                                         );
@@ -296,7 +297,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                                                     : 'border-border text-muted-foreground hover:border-brand hover:bg-brand/10 hover:text-brand',
                                                             )}
                                                         >
-                                                            {lang === 'th' ? (e.name_th ?? e.name) : e.name}
+                                                            {localName(e, lang)}
                                                         </button>
                                                     );
                                                 })}
