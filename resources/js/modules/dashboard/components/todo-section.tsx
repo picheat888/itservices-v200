@@ -1,7 +1,6 @@
 // Dashboard "งานที่รอคุณ": tiles that ask the reader to act, in priority order; the section hides when none apply.
 import { useT } from '@/lang';
 import { FILL } from '@/modules/report';
-import { StatusBadge } from '@/shared/components/status-badge';
 import { useUiStore } from '@/stores/ui';
 import { CircleCheckBig, FileText, Inbox, Package, PackageCheck, UserX, Wrench } from 'lucide-react';
 import type { DashboardSummary } from '../api/dashboardApi';
@@ -47,7 +46,7 @@ export function TodoSection({ data }: { data: DashboardSummary }) {
                 }
             />
         ),
-        waiting && (
+        waiting && waiting.count > 0 && (
             <DashTile
                 key="pickup"
                 to={links.pickup}
@@ -71,7 +70,7 @@ export function TodoSection({ data }: { data: DashboardSummary }) {
                 footer={oldest(approvals.oldest_days)}
             />
         ),
-        awaitingIt && (
+        awaitingIt && awaitingIt.count > 0 && (
             <DashTile
                 key="awaiting-it"
                 to={links.awaitingIt}
@@ -95,7 +94,7 @@ export function TodoSection({ data }: { data: DashboardSummary }) {
                 }
             />
         ),
-        expiring && (
+        expiring && expiring.total > 0 && (
             <DashTile
                 key="expiring"
                 to={links.expiring}
@@ -103,11 +102,6 @@ export function TodoSection({ data }: { data: DashboardSummary }) {
                 label={t('dash_todo_contracts')}
                 value={expiring.total}
                 unit={t('dash_unit_contracts')}
-                badge={
-                    expiring.overdue > 0 ? (
-                        <StatusBadge tone="red">{t('dash_overdue_n').replace('{n}', String(expiring.overdue))}</StatusBadge>
-                    ) : undefined
-                }
                 bar={sharePieces([
                     { key: 'd30', value: expiring.d30, className: FILL.amber },
                     { key: 'later', value: expiring.d31_plus, className: FILL['soft-amber'] },

@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
 import { type PageTab, PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -118,7 +119,7 @@ export default function EmployeesPage() {
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isTab, 'overview');
     const [period, setPeriod] = useOverviewPeriod();
-    const { data: summary, isLoading: summaryLoading } = useEmployeeSummary(period);
+    const { data: summary, isLoading: summaryLoading, isError: summaryFailed, refetch: refetchSummary } = useEmployeeSummary(period);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
 
@@ -497,7 +498,8 @@ export default function EmployeesPage() {
                 <div className="p-5">
                     {tab === 'overview' && <OverviewHeader value={period} onChange={setPeriod} />}
                     {tab === 'overview' && summaryLoading && <EmployeeOverviewSkeleton />}
-                    {tab === 'overview' && !summaryLoading && (
+                    {tab === 'overview' && !summaryLoading && !summary && summaryFailed && <LoadFailedPanel onRetry={() => refetchSummary()} />}
+                    {tab === 'overview' && !summaryLoading && summary && (
                         <OverviewTab
                             summary={summary}
                             highlightLast={periodReachesToday(period)}

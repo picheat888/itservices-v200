@@ -19,7 +19,6 @@ export const dashboard: Dict = {
     // pages/index.tsx — คำทักทาย
     dash_hello: 'สวัสดี {name}',
     dash_today: '{weekday}ที่ {date}',
-    dash_load_failed: 'โหลดข้อมูลหน้านี้ไม่สำเร็จ ลองรีเฟรชหน้าอีกครั้ง',
     // components/dash-parts.tsx — ลิงก์และหน่วย
     dash_view_all: 'ดูทั้งหมด',
     dash_view_all_n: 'ดูทั้งหมด ({n})',
@@ -35,6 +34,7 @@ export const dashboard: Dict = {
     dash_oldest_days: 'ค้างนานสุด {n} วัน',
     dash_last_14d: '14 วันล่าสุด',
     dash_last_30d: '30 วันล่าสุด',
+    dash_filed_last_30d: 'ยื่นใน 30 วันล่าสุด',
     // components/todo-section.tsx — งานที่รอคุณ
     dash_sec_todo: 'งานที่รอคุณ',
     dash_sec_todo_sub: 'กดการ์ดเพื่อไปทำต่อ',
@@ -48,7 +48,6 @@ export const dashboard: Dict = {
     dash_age_gt14: 'เกิน 14 วัน',
     dash_in_30: 'ใน 30 วัน',
     dash_after_30: 'หลัง 30 วัน',
-    dash_overdue_n: 'เกินกำหนด {n}',
     dash_accept_more: '{model} และอีก {n} รุ่น',
     // components/mine-section.tsx — ของฉัน
     dash_sec_mine: 'ของฉัน',
@@ -87,9 +86,9 @@ export const dashboard: Dict = {
     dash_go_requests: 'ไปที่คำขอ',
     dash_filed_14d: 'ยื่นใหม่ใน 14 วัน',
     dash_peak_requests: 'สูงสุด {n} คำขอต่อวัน',
-    dash_completed_30d: 'เสร็จสิ้นใน 30 วัน',
+    dash_completed_30d: 'เสร็จสิ้นแล้ว (ยื่นใน 30 วัน)',
     dash_from_filed: 'จากที่ยื่นใหม่ {n} คำขอ',
-    dash_declined_30d: 'ไม่อนุมัติหรือยกเลิกใน 30 วัน',
+    dash_declined_30d: 'ไม่อนุมัติหรือยกเลิก (ยื่นใน 30 วัน)',
     dash_avg_complete: 'เวลาเฉลี่ยจนเสร็จสิ้น',
     dash_waiting_over: 'คำขอค้างเกิน {n} วัน',
     dash_col_waiting_on: 'รออนุมัติโดย',

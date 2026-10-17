@@ -4,6 +4,7 @@ import { useFoldRow } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { CircleCheck, CirclePlus, Layers, Target, Timer, Wrench } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { DashboardIt } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
 import { DashTile, Delta, PAIR_GRID, SectionHeading, SparkFooter, TILE_GRID } from './dash-parts';
@@ -31,14 +32,13 @@ export function ItSection({ it }: { it: DashboardIt }) {
             />
             <div className={TILE_GRID}>
                 <DashTile
-                    to={links.ticketsAll}
                     icon={Layers}
                     label={t('rep_kpi_backlog')}
                     value={backlog}
                     unit={t('dash_unit_cases')}
                     badge={
                         it.backlog.over_sla > 0 ? (
-                            <StatusBadge tone="red">{t('dash_over_sla_n').replace('{n}', String(it.backlog.over_sla))}</StatusBadge>
+                            <OverSlaBadge to={links.overSla} label={t('dash_over_sla_n').replace('{n}', String(it.backlog.over_sla))} />
                         ) : undefined
                     }
                     footer={
@@ -50,7 +50,6 @@ export function ItSection({ it }: { it: DashboardIt }) {
                     }
                 />
                 <DashTile
-                    to={links.ticketsAll}
                     icon={CirclePlus}
                     label={t('dash_opened_14d')}
                     value={it.opened.total}
@@ -58,7 +57,6 @@ export function ItSection({ it }: { it: DashboardIt }) {
                     footer={<SparkFooter text={peak(it.opened.peak)} values={it.opened.series} className="text-blue-500" />}
                 />
                 <DashTile
-                    to={links.ticketsAll}
                     icon={CircleCheck}
                     label={t('dash_closed_14d')}
                     value={it.closed.total}
@@ -104,5 +102,16 @@ export function ItSection({ it }: { it: DashboardIt }) {
                 />
             </div>
         </section>
+    );
+}
+
+/** The backlog's over-SLA badge, its own link to exactly those tickets (the tile itself counts every live one). */
+function OverSlaBadge({ to, label }: { to: string | null; label: string }) {
+    const badge = <StatusBadge tone="red">{label}</StatusBadge>;
+    if (!to) return badge;
+    return (
+        <Link to={to} className="focus-visible:ring-ring rounded-md hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none">
+            {badge}
+        </Link>
     );
 }

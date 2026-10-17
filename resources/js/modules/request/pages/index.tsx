@@ -3,7 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
-import { LoadFailed } from '@/shared/components/load-failed';
+import { LoadFailed, LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, overviewPeriodParams, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -34,10 +34,26 @@ import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
-import { Check, CheckCircle2, ChevronRight, CircleDot, Clock, Eye, History, Inbox, Layers, Plus, Search, X, type LucideIcon } from 'lucide-react';
+import {
+    CalendarDays,
+    Check,
+    CheckCircle2,
+    ChevronRight,
+    CircleDot,
+    Clock,
+    Eye,
+    History,
+    Inbox,
+    Layers,
+    Plus,
+    Search,
+    X,
+    type LucideIcon,
+} from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DecisionDialog, type DecisionAction } from '../components/decision-dialog';
+import { FiledDateFilter, type FiledPatch } from '../components/filed-date-filter';
 import { RequestCreateDialog } from '../components/request-create-dialog';
 import { RequestDetailDialog } from '../components/request-detail-dialog';
 import { WorkflowMini } from '../components/workflow-mini';
@@ -69,7 +85,8 @@ const TABS = ['overview', 'all', 'approvals', 'queue'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 /** URL keys of the list, cleared when the overview is entered or left (?per stays). */
-const LIST_KEYS = ['search', 'status', 'type', 'page'];
+const LIST_KEYS = ['search', 'status', 'type', 'filed_days', 'filed_from', 'filed_to', 'page'];
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A URL value when it is one of `allowed`, else '' (all). */
 const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T | '' =>
@@ -110,6 +127,12 @@ export default function RequestsPage() {
     const sentSearch = useDebouncedSearch(search);
     const status = pickAllowed(list.get('status'), REQUEST_STATUSES);
     const type = pickAllowed(list.get('type'), REQUEST_TYPES);
+    // Filed-date filter: ?filed_days=N, or a whole-day ?filed_from&filed_to range
+    const filedFrom = ISO_DAY.test(list.get('filed_from')) ? list.get('filed_from') : '';
+    const filedTo = ISO_DAY.test(list.get('filed_to')) ? list.get('filed_to') : '';
+    const filedRange = filedFrom && filedTo ? { filed_from: filedFrom, filed_to: filedTo } : null;
+    const filedDays = !filedRange && Number(list.get('filed_days')) > 0 ? list.get('filed_days') : '';
+    const filed = filedRange ?? (filedDays ? { filed_days: filedDays } : {});
 
     // The box types instantly; the trimmed text reaches ?search 300ms later. `written` tells our own writes from Back / tab clears.
     const [searchInput, setSearchInput] = useState(search);
@@ -145,11 +168,11 @@ export default function RequestsPage() {
     const [period, setPeriod] = useOverviewPeriod();
     const listParams =
         tab === 'approvals'
-            ? { page, per_page: perPage, search: sentSearch, status, type, scope: 'approvals' as const }
+            ? { page, per_page: perPage, search: sentSearch, status, type, ...filed, scope: 'approvals' as const }
             : tab === 'queue'
-              ? { page, per_page: perPage, search: sentSearch, status, type, scope: 'queue' as const }
+              ? { page, per_page: perPage, search: sentSearch, status, type, ...filed, scope: 'queue' as const }
               : tab === 'all'
-                ? { page, per_page: perPage, search: sentSearch, status, type }
+                ? { page, per_page: perPage, search: sentSearch, status, type, ...filed }
                 : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
     const { data: pageData, isLoading, isFetching, isError, refetch } = useRequests(listParams);
     const rows = pageData?.data ?? [];
@@ -345,7 +368,14 @@ export default function RequestsPage() {
         },
     ];
 
-    const filterCount = (status ? 1 : 0) + (type ? 1 : 0);
+    const filterCount = (status ? 1 : 0) + (type ? 1 : 0) + (filedRange || filedDays ? 1 : 0);
+    // The overview period carried into the list, so a KPI opens the requests it counted
+    const periodFiled: Record<string, string> =
+        typeof period === 'number'
+            ? { filed_days: String(period) }
+            : typeof period === 'object'
+              ? { filed_from: period.from, filed_to: period.to }
+              : {};
     const visibleTotal = meta ? meta.pending + meta.approved + meta.completed + meta.rejected + meta.cancelled : null;
     const kpiLoading = !meta;
     // What the sidebar badge counts: waiting on me plus, for IT, the approved queue
@@ -384,39 +414,43 @@ export default function RequestsPage() {
                     <div className="space-y-4 p-5">
                         <OverviewHeader value={period} onChange={setPeriod} />
                         {/* KPI row — the awaiting card is as of now, the rest count requests filed in the period */}
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                            <StatCard
-                                icon={Inbox}
-                                label={t('req_kpi_awaiting')}
-                                value={String(meta?.awaiting_me ?? 0)}
-                                onClick={() => switchTab('approvals')}
-                                sub={t('req_kpi_awaiting_of').replace('{n}', String(meta?.pending ?? 0))}
-                                loading={kpiLoading}
-                            />
-                            <StatCard
-                                icon={Check}
-                                label={t('req_kpi_approved')}
-                                value={String(meta?.period.approved ?? 0)}
-                                onClick={() => switchTab('all', { status: 'approved' })}
-                                sub={`${meta?.period.completed ?? 0} ${t('req_status_completed')}`}
-                                loading={kpiLoading}
-                            />
-                            <StatCard
-                                icon={X}
-                                label={t('req_kpi_rejected')}
-                                value={String(meta?.period.rejected ?? 0)}
-                                onClick={() => switchTab('all', { status: 'rejected' })}
-                                sub={`${meta?.period.cancelled ?? 0} ${t('req_status_cancelled')}`}
-                                loading={kpiLoading}
-                            />
-                            <StatCard
-                                icon={Clock}
-                                label={t('req_kpi_cycle')}
-                                value={meta?.period.avg_cycle_days != null ? `${meta.period.avg_cycle_days}${t('req_kpi_days_suffix')}` : '—'}
-                                sub={t('req_kpi_cycle_sub')}
-                                loading={kpiLoading}
-                            />
-                        </div>
+                        {isError && !meta ? (
+                            <LoadFailedPanel onRetry={() => refetch()} />
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                                <StatCard
+                                    icon={Inbox}
+                                    label={t('req_kpi_awaiting')}
+                                    value={String(meta?.awaiting_me ?? 0)}
+                                    onClick={() => switchTab('approvals')}
+                                    sub={t('req_kpi_awaiting_of').replace('{n}', String(meta?.pending ?? 0))}
+                                    loading={kpiLoading}
+                                />
+                                <StatCard
+                                    icon={Check}
+                                    label={t('req_kpi_approved')}
+                                    value={String(meta?.period.approved ?? 0)}
+                                    onClick={() => switchTab('all', { status: 'approved', ...periodFiled })}
+                                    sub={`${meta?.period.completed ?? 0} ${t('req_status_completed')}`}
+                                    loading={kpiLoading}
+                                />
+                                <StatCard
+                                    icon={X}
+                                    label={t('req_kpi_rejected')}
+                                    value={String(meta?.period.rejected ?? 0)}
+                                    onClick={() => switchTab('all', { status: 'rejected', ...periodFiled })}
+                                    sub={`${meta?.period.cancelled ?? 0} ${t('req_status_cancelled')}`}
+                                    loading={kpiLoading}
+                                />
+                                <StatCard
+                                    icon={Clock}
+                                    label={t('req_kpi_cycle')}
+                                    value={meta?.period.avg_cycle_days != null ? `${meta.period.avg_cycle_days}${t('req_kpi_days_suffix')}` : '—'}
+                                    sub={t('req_kpi_cycle_sub')}
+                                    loading={kpiLoading}
+                                />
+                            </div>
+                        )}
 
                         {/* Your approval queue */}
                         <DashCard
@@ -593,7 +627,9 @@ export default function RequestsPage() {
                                 count={filterCount}
                                 width={460}
                                 resultCount={meta?.total}
-                                onClear={() => list.setParams({ status: null, type: null, page: null })}
+                                onClear={() =>
+                                    list.setParams({ status: null, type: null, filed_days: null, filed_from: null, filed_to: null, page: null })
+                                }
                             >
                                 {() => (
                                     <div className="grid grid-cols-2 gap-3">
@@ -638,6 +674,18 @@ export default function RequestsPage() {
                                                         };
                                                     }),
                                                 ]}
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            {fieldLabel(
+                                                'req-filter-filed',
+                                                <CalendarDays className="h-3.5 w-3.5" aria-hidden />,
+                                                t('req_col_submitted'),
+                                            )}
+                                            <FiledDateFilter
+                                                id="req-filter-filed"
+                                                value={{ days: filedDays, from: filedFrom, to: filedTo }}
+                                                onChange={(patch: FiledPatch) => list.setParams({ ...patch, page: null })}
                                             />
                                         </div>
                                     </div>

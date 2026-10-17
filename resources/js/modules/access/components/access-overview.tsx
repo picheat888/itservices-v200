@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
@@ -359,11 +360,19 @@ export function AccessOverview({
 }) {
     const t = useT();
     const [period, setPeriod] = useOverviewPeriod();
-    const { data, isLoading } = useAccessSummary(period);
+    const { data, isLoading, isError, refetch } = useAccessSummary(period);
     // Whether the governance triage drawer is open (every issue group in one panel).
     const [issuesOpen, setIssuesOpen] = useState(false);
 
     const header = <OverviewHeader value={period} onChange={setPeriod} />;
+    if (isError && !data) {
+        return (
+            <div className="space-y-4">
+                {header}
+                <LoadFailedPanel onRetry={() => refetch()} />
+            </div>
+        );
+    }
     if (isLoading || !data) {
         return (
             <div className="space-y-4">

@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * Service requests: list/show scoped to what the viewer participates in,
@@ -111,6 +112,7 @@ class RequestController extends Controller
         if ($type = $request->query('type')) {
             $query->where('type', $type);
         }
+        $this->applyFiledFilter($query, $request);
         // Each word also matches the service name in either language through the TYPE (the stored title is English only).
         SearchTerms::apply($query, $request->query('search'), [
             'reference', 'title', 'requester_name',
@@ -153,6 +155,27 @@ class RequestController extends Controller
             'data' => ServiceRequestResource::collection($paginator->items()),
             'meta' => $this->meta($paginator, $visible, $canComplete, $employee, OverviewPeriod::fromRequest($request)),
         ]);
+    }
+
+    /**
+     * Filed-date filter, named apart from the overview's from/to: ?filed_from=&filed_to= (inclusive days)
+     * or ?filed_days=N (the last N days to the minute, as the overview presets and the dashboard count).
+     */
+    private function applyFiledFilter(Builder $query, Request $request): void
+    {
+        if ($request->filled('filed_from') || $request->filled('filed_to')) {
+            $request->validate([
+                'filed_from' => ['required', 'date_format:Y-m-d'],
+                'filed_to' => ['required', 'date_format:Y-m-d', 'after_or_equal:filed_from'],
+            ]);
+            $query->whereBetween('created_at', [
+                Carbon::parse($request->query('filed_from'))->startOfDay(),
+                Carbon::parse($request->query('filed_to'))->endOfDay(),
+            ]);
+        } elseif ($request->filled('filed_days')) {
+            $request->validate(['filed_days' => ['integer', 'min:1', 'max:366']]);
+            $query->where('created_at', '>=', now()->subDays((int) $request->query('filed_days')));
+        }
     }
 
     public function store(StoreServiceRequestRequest $request): JsonResponse

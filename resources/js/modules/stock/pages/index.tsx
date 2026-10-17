@@ -5,6 +5,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover } from '@/shared/components/info-popover';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
@@ -295,7 +296,7 @@ export default function StockPage() {
     const [moveKind, setMoveKind] = useState<MovementKind | null>(null);
     const [reqOpen, setReqOpen] = useState(false);
 
-    const { data: summary } = useStockSummary();
+    const { data: summary, isError: summaryFailed, refetch: refetchSummary } = useStockSummary();
     const { data: categories = [] } = useCategories();
     const { data: warehouses = [] } = useWarehouses();
     // Server-side pagination for the Items table.
@@ -494,9 +495,9 @@ export default function StockPage() {
     const kpis = [
         { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${summary?.total_units ?? 0} ${t('stock_units_total')}`, icon: Archive },
         {
-            label: t('stock_kpi_low'),
-            value: summary ? summary.out_count + summary.low_count + summary.over_count : '—',
-            sub: t('stock_kpi_alerts_sub'),
+            label: t('stock_kpi_alerts_sub'),
+            value: summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : '—',
+            sub: t('stock_kpi_low'),
             icon: AlertTriangle,
             onClick: viewAlerts,
         },
@@ -565,7 +566,8 @@ export default function StockPage() {
                 <PageTabs tabs={tabs.map((tb) => ({ ...tb, tone: 'alert' as const }))} active={tab} onChange={changeTab} />
 
                 <div className="p-5">
-                    {tab === 'overview' && (
+                    {tab === 'overview' && !summary && summaryFailed && <LoadFailedPanel onRetry={() => refetchSummary()} />}
+                    {tab === 'overview' && (summary || !summaryFailed) && (
                         <OverviewTab
                             summary={summary}
                             t={t}

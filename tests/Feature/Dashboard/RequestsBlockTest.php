@@ -59,6 +59,9 @@ class RequestsBlockTest extends TestCase
         $this->request('RQ-2026-0014', 'rejected', stamps: ['rejected_at' => now()->subDays(3)]);
         $this->request('RQ-2026-0015', 'cancelled', stamps: ['cancelled_at' => now()->subDay()]);
         $this->request('RQ-2026-0016', 'pending', stamps: ['created_at' => now()->subDays(5)]);
+        // Filed before the window: left out though it ended inside it
+        $this->request('RQ-2026-0017', 'completed', stamps: ['created_at' => now()->subDays(40), 'completed_at' => now()->subDays(3)]);
+        $this->request('RQ-2026-0018', 'rejected', stamps: ['created_at' => now()->subDays(35), 'rejected_at' => now()->subDays(2)]);
 
         $block = $this->block();
 

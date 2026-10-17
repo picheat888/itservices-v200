@@ -40,6 +40,10 @@ export interface RequestListParams {
     type?: string;
     /** Tab scopes: approvals (awaiting me) | queue (IT completion) | mine. */
     scope?: 'approvals' | 'queue' | 'mine';
+    /** Filed-date filter: the last N days, or a whole-day range. */
+    filed_days?: string;
+    filed_from?: string;
+    filed_to?: string;
     /** The Overview period (overviewPeriodParams): ?days or ?from&to. */
     days?: string | number;
     from?: string | number;

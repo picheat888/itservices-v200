@@ -46,6 +46,8 @@ export function OverviewTab({
     const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
     // Items below their minimum, out-of-stock first, are the reorder queue.
     const reorderItems = summary ? [...summary.out_items, ...summary.low_items] : [];
+    // The list "view all" opens (status=alerts) also holds over-Max and dead stock
+    const alertTotal = summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : 0;
     return (
         <div className="space-y-8">
             <OverviewHeader />
@@ -157,7 +159,7 @@ export function OverviewTab({
                                         onClick={onViewAlerts}
                                         className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring mt-auto flex w-full shrink-0 items-center justify-center gap-1.5 border-t py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                                     >
-                                        {t('stock_show_all_alerts').replace('{n}', String(reorderItems.length))}
+                                        {t('stock_show_all_alerts').replace('{n}', String(alertTotal))}
                                         <ChevronRight className="h-3.5 w-3.5" aria-hidden />
                                     </button>
                                 )}

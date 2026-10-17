@@ -83,19 +83,37 @@ export interface LegendItem {
     label: string;
     value: number;
     dot: string;
+    /** Opens the list of just this piece; only on a tile that has no link of its own. */
+    to?: To | null;
 }
 
 /** The legend under a tile's bar: dot, label, and the count in ink. */
 export function LegendFooter({ items }: { items: LegendItem[] }) {
     return (
         <span className="flex flex-wrap gap-x-3 gap-y-0.5">
-            {items.map((item) => (
-                <span key={item.key} className="inline-flex items-center gap-1">
-                    <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', item.dot)} />
-                    {item.label}
-                    <span className="text-foreground font-semibold tabular-nums">{item.value}</span>
-                </span>
-            ))}
+            {items.map((item) => {
+                const body = (
+                    <>
+                        <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', item.dot)} />
+                        {item.label}
+                        <span className="text-foreground font-semibold tabular-nums">{item.value}</span>
+                    </>
+                );
+                return item.to ? (
+                    <Link
+                        key={item.key}
+                        to={item.to}
+                        state={stateFor(item.to)}
+                        className="focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                        {body}
+                    </Link>
+                ) : (
+                    <span key={item.key} className="inline-flex items-center gap-1">
+                        {body}
+                    </span>
+                );
+            })}
         </span>
     );
 }

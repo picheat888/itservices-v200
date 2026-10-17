@@ -25,6 +25,15 @@ import {
 } from './dash-parts';
 
 const FOLDS = ['types'] as const;
+/** The 30-day request tiles count requests filed in the last 30 days, the list's ?filed_days=30. */
+const WINDOW_DAYS = 30;
+
+/** Today shifted by `offset` days, as YYYY-MM-DD in local time. */
+function isoDay(offset: number): string {
+    const day = new Date();
+    day.setDate(day.getDate() + offset);
+    return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+}
 const TYPES_TOP = 5;
 
 export function RequestsSection({ requests }: { requests: DashboardRequests }) {
@@ -43,7 +52,7 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
             />
             <div className={TILE_GRID}>
                 <DashTile
-                    to={links.requestsAll}
+                    to={links.requestsFiled(isoDay(1 - requests.filed.series.length), isoDay(0))}
                     icon={FilePlus}
                     label={t('dash_filed_14d')}
                     value={requests.filed.total}
@@ -66,7 +75,7 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
                     footer={requests.pending.count > 0 ? t('dash_oldest_days').replace('{n}', String(requests.pending.oldest_days)) : undefined}
                 />
                 <DashTile
-                    to={links.requestsStatus('completed')}
+                    to={links.requestsStatus('completed', WINDOW_DAYS)}
                     icon={CircleCheck}
                     label={t('dash_completed_30d')}
                     value={requests.completed_30d}
@@ -74,7 +83,6 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
                     footer={t('dash_from_filed').replace('{n}', String(requests.filed_30d))}
                 />
                 <DashTile
-                    to={links.requestsStatus('rejected')}
                     icon={CircleX}
                     label={t('dash_declined_30d')}
                     value={declined}
@@ -86,8 +94,20 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
                     footer={
                         <LegendFooter
                             items={[
-                                { key: 'rejected', label: t('req_status_rejected'), value: requests.rejected_30d, dot: FILL.red },
-                                { key: 'cancelled', label: t('req_status_cancelled'), value: requests.cancelled_30d, dot: FILL.gray },
+                                {
+                                    key: 'rejected',
+                                    label: t('req_status_rejected'),
+                                    value: requests.rejected_30d,
+                                    dot: FILL.red,
+                                    to: links.requestsStatus('rejected', WINDOW_DAYS),
+                                },
+                                {
+                                    key: 'cancelled',
+                                    label: t('req_status_cancelled'),
+                                    value: requests.cancelled_30d,
+                                    dot: FILL.gray,
+                                    to: links.requestsStatus('cancelled', WINDOW_DAYS),
+                                },
                             ]}
                         />
                     }
@@ -97,7 +117,7 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
                     label={t('dash_avg_complete')}
                     value={requests.avg_days_to_complete ?? '—'}
                     unit={requests.avg_days_to_complete === null ? undefined : t('dash_unit_days')}
-                    footer={t('dash_last_30d')}
+                    footer={t('dash_filed_last_30d')}
                 />
             </div>
             <div className={cn(PAIR_GRID, row.anyOpen && 'xl:items-start')}>

@@ -62,3 +62,21 @@ test('the SLA tiles open the overview report on the same 30 days', () => {
     // Workspace ticket rights do not open the report.
     assert.equal(dashLinks((p) => p === 'tickets.view_all' || p === 'tickets.resolve', false).slaReport('2026-09-18', '2026-10-17'), null);
 });
+
+test('request figures open the list on the window they count', () => {
+    const links = dashLinks((p) => p === 'requests.view_all', false);
+    assert.equal(links.requestsStatus('completed', 30), '/requests?tab=all&status=completed&filed_days=30');
+    assert.equal(links.requestsStatus('pending'), '/requests?tab=all&status=pending');
+    assert.equal(links.requestsFiled('2026-10-04', '2026-10-17'), '/requests?tab=all&filed_from=2026-10-04&filed_to=2026-10-17');
+    assert.equal(dashLinks(() => false, false).requestsFiled('2026-10-04', '2026-10-17'), null);
+});
+
+test('awaiting IT opens the IT queue for completers, the approved list for overseers', () => {
+    assert.equal(dashLinks((p) => p === 'requests.complete', false).awaitingIt, '/requests?tab=queue');
+    assert.equal(dashLinks((p) => p === 'requests.view_all', false).awaitingIt, '/requests?tab=all&status=approved');
+});
+
+test('the over-SLA badge opens exactly the over-SLA tickets', () => {
+    assert.equal(dashLinks((p) => p === 'tickets.view_all', false).overSla, '/tickets?tab=all&sla=over_sla');
+    assert.equal(dashLinks(() => false, false).overSla, null);
+});

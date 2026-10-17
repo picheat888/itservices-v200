@@ -19,7 +19,6 @@ export const dashboard: Dict = {
     // pages/index.tsx — คำทักทาย
     dash_hello: 'Hello, {name}',
     dash_today: '{weekday}, {date}',
-    dash_load_failed: 'The dashboard could not be loaded. Refresh the page to try again.',
     // components/dash-parts.tsx — ลิงก์และหน่วย
     dash_view_all: 'View all',
     dash_view_all_n: 'View all ({n})',
@@ -35,6 +34,7 @@ export const dashboard: Dict = {
     dash_oldest_days: 'Oldest {n} days',
     dash_last_14d: 'Last 14 days',
     dash_last_30d: 'Last 30 days',
+    dash_filed_last_30d: 'Filed in the last 30 days',
     // components/todo-section.tsx — งานที่รอคุณ
     dash_sec_todo: 'Waiting on you',
     dash_sec_todo_sub: 'Select a card to open it',
@@ -48,7 +48,6 @@ export const dashboard: Dict = {
     dash_age_gt14: 'Over 14 days',
     dash_in_30: 'Within 30 days',
     dash_after_30: 'After 30 days',
-    dash_overdue_n: 'Overdue {n}',
     dash_accept_more: '{model} and {n} more',
     // components/mine-section.tsx — ของฉัน
     dash_sec_mine: 'Mine',
@@ -87,9 +86,9 @@ export const dashboard: Dict = {
     dash_go_requests: 'Go to Requests',
     dash_filed_14d: 'Filed in 14 days',
     dash_peak_requests: 'Peak {n} a day',
-    dash_completed_30d: 'Completed in 30 days',
+    dash_completed_30d: 'Completed (filed in 30 days)',
     dash_from_filed: 'Out of {n} filed',
-    dash_declined_30d: 'Rejected or cancelled in 30 days',
+    dash_declined_30d: 'Rejected or cancelled (filed in 30 days)',
     dash_avg_complete: 'Average time to complete',
     dash_waiting_over: 'Waiting over {n} days',
     dash_col_waiting_on: 'Waiting for',
