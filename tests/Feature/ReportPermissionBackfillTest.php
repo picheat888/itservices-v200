@@ -91,6 +91,12 @@ class ReportPermissionBackfillTest extends TestCase
         $this->assertSame(1, RolePermission::where('role_id', $role->id)->where('permission', 'reports.stock')->count());
     }
 
+    /** Report switches the defaults leave off on purpose, though the backfill rule would grant them. */
+    private const DEFAULTS_LEAVE_OFF = [
+        // IT Support: no stock reports (decided 2026-10-17).
+        'admin' => ['reports.stock'],
+    ];
+
     public function test_defaults_follow_the_backfill_rule(): void
     {
         $migration = $this->migration();
@@ -98,7 +104,7 @@ class ReportPermissionBackfillTest extends TestCase
         foreach (Permissions::defaults() as $role => $keys) {
             $own = array_values(array_filter($keys, fn (string $k) => ! str_starts_with($k, 'reports.')));
             $reports = array_values(array_filter($keys, fn (string $k) => str_starts_with($k, 'reports.')));
-            $expected = $migration->grantsFor($own);
+            $expected = array_values(array_diff($migration->grantsFor($own), self::DEFAULTS_LEAVE_OFF[$role] ?? []));
             sort($reports);
             sort($expected);
 

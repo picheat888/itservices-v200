@@ -165,7 +165,7 @@ class Permissions
                 'dashboard.view_contracts', 'dashboard.view_hr', 'dashboard.view_it', 'dashboard.view_requests',
                 'employees.add', 'employees.edit', 'employees.module', 'employees.reset_password', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
                 'profile.return_assets',
-                'reports.access', 'reports.assets', 'reports.contracts', 'reports.employees', 'reports.export', 'reports.module', 'reports.requests', 'reports.schedule', 'reports.stock', 'reports.tickets',
+                'reports.access', 'reports.assets', 'reports.contracts', 'reports.employees', 'reports.export', 'reports.module', 'reports.requests', 'reports.schedule', 'reports.tickets',
                 'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
                 'settings.access', 'settings.requestdata',
                 'stock.module', 'stock.request', 'stock.view', 'stock.view_dashboard', 'stock.view_request',
