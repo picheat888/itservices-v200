@@ -1220,7 +1220,11 @@ export default function AssetsPage() {
                                                         <EmptyState
                                                             kind="empty"
                                                             title={t('asset_empty_inventory_none')}
-                                                            hint={t('asset_empty_inventory_none_hint').replace('{button}', t('register_asset'))}
+                                                            hint={
+                                                                canCreate
+                                                                    ? t('asset_empty_inventory_none_hint').replace('{button}', t('register_asset'))
+                                                                    : null
+                                                            }
                                                         />
                                                     )}
                                                 </td>

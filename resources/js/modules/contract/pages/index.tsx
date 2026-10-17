@@ -483,7 +483,7 @@ export default function ContractsPage() {
                                     : {
                                           kind: 'empty',
                                           title: t('contract_empty_list'),
-                                          hint: t('contract_empty_list_hint').replace('{button}', t('new_contract')),
+                                          hint: canCreate ? t('contract_empty_list_hint').replace('{button}', t('new_contract')) : null,
                                       }
                             }
                             server={{ ...list.table.paging, total: totalRows }}
