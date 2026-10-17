@@ -18,6 +18,7 @@ use App\Support\DateDisplay;
 use App\Support\DocNumber;
 use App\Support\DocumentName;
 use App\Support\Refusal;
+use App\Support\SearchTerms;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,6 +59,12 @@ class StockMovementController extends Controller
         if ($request->filled('stock_item_id')) {
             $query->where('stock_item_id', $request->query('stock_item_id'));
         }
+
+        SearchTerms::apply($query, $request->query('search'), [
+            'doc_no', 'reference', 'recorded_by',
+            SearchTerms::related('item', ['sku', 'name']),
+            SearchTerms::related('user', [SearchTerms::related('employee', ['code', ...SearchTerms::personName()])]),
+        ]);
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);
