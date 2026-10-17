@@ -5,7 +5,9 @@ namespace Tests\Feature\Report;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 // Reports open by the reports.* switches alone, never by Workspace rights.
@@ -75,6 +77,20 @@ class ReportGateTest extends TestCase
         foreach ($expected as $domain => $keys) {
             $this->assertSame($keys, $this->listedFor($this->userWith(['reports.module', "reports.{$domain}"])), $domain);
         }
+    }
+
+    public function test_the_hub_list_reads_the_readers_grants_once(): void
+    {
+        $user = $this->userWith(['reports.module', 'reports.assets', 'reports.stock'])->fresh();
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $keys = array_column(ReportCatalogue::forUser($user), 'key');
+        DB::disableQueryLog();
+        $grantReads = array_filter(array_column(DB::getQueryLog(), 'query'), fn (string $sql) => str_contains($sql, 'role_permissions'));
+
+        $this->assertCount(7, $keys);
+        $this->assertCount(1, $grantReads);
     }
 
     public function test_ticket_reports_still_keep_to_the_readers_levels(): void

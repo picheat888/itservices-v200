@@ -268,18 +268,16 @@ class ReportCatalogue
 
     public static function allows(?User $user, string $key): bool
     {
-        $definition = self::definitions()[$key] ?? null;
-        if ($user === null || $definition === null) {
-            return false;
-        }
+        return $user !== null && self::opens(self::definitions()[$key] ?? null, $user->permissions());
+    }
 
-        foreach ($definition['requires'] as $permission) {
-            if (! $user->hasPermission($permission)) {
-                return false;
-            }
-        }
-
-        return true;
+    /**
+     * @param  array{requires: list<string>}|null  $definition
+     * @param  list<string>  $granted  the reader's permissions, read once by the caller
+     */
+    private static function opens(?array $definition, array $granted): bool
+    {
+        return $definition !== null && array_diff($definition['requires'], $granted) === [];
     }
 
     /** Queue a file of a report the user may open. */
@@ -303,9 +301,10 @@ class ReportCatalogue
      */
     public static function forUser(?User $user): array
     {
+        $granted = $user?->permissions() ?? [];
         $visible = [];
         foreach (self::definitions() as $key => $definition) {
-            if (self::allows($user, $key)) {
+            if (self::opens($definition, $granted)) {
                 $visible[] = ['key' => $key, 'domain' => $definition['domain'], 'kind' => $definition['kind'], 'formats' => $definition['formats'], 'range' => $definition['range'] ?? false];
             }
         }
