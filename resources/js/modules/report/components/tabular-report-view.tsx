@@ -2,7 +2,6 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
-import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -14,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
-import { useReportRights } from '../hooks/use-report-rights';
+import { useReportDialog } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows, useTabularSummary } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
@@ -31,7 +30,6 @@ import { ChartsSkeleton, TabularCharts } from './tabular-charts';
 import { TabularEmptyState } from './tabular-empty-state';
 import { TabularFilterBar } from './tabular-filter-bar';
 
-const REPORT_DIALOGS = ['export', 'schedule'] as const;
 const PAGE_SIZES = [20, 50, 100];
 
 export function errorMessageFor(t: (key: string) => string, error: unknown): string {
@@ -206,11 +204,10 @@ function TabularReportBody({
     const { filters, patch, reset } = useTabularFilters(definition, { keepPage: extras.cardOnlyFilters });
     const { hidden, visibleColumns, toggle, reset: resetColumns } = useHiddenColumns(definition);
     // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
-    const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
-    const { canExport, canSchedule } = useReportRights();
-    const exportOpen = dialog === 'export' && canExport;
+    const { dialog, setDialog, canExport, canSchedule } = useReportDialog();
+    const exportOpen = dialog === 'export';
     const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
-    const scheduleOpen = dialog === 'schedule' && canSchedule;
+    const scheduleOpen = dialog === 'schedule';
     const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
