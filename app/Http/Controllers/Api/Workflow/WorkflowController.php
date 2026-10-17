@@ -232,8 +232,10 @@ class WorkflowController extends Controller
                 'id' => $e->id,
                 'code' => $e->code,
                 'name' => $e->name,
+                'name_th' => $e->name_th,
                 'position' => $e->position?->title,
                 'department' => $e->department?->name,
+                'department_th' => $e->department?->name_th,
             ])->values(),
         ]);
     }

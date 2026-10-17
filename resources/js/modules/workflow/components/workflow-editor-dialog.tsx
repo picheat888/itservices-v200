@@ -7,6 +7,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName, nameSearch } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
@@ -16,6 +17,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
+import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Check, Flag, Loader2, Plus, Trash2, Users, Workflow as WorkflowIcon, X, Zap } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -66,6 +68,7 @@ const CHAIN_LABEL_PRESETS = ['Supervisor / Head', 'Manager / Asst. Manager', 'De
  */
 export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow | null; onClose: () => void }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const confirmEdit = useConfirmEdit();
     const { update, preview } = useWorkflowMutations();
 
@@ -157,12 +160,12 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         () =>
             employees.map((e) => ({
                 value: String(e.id),
-                label: e.name,
+                label: localName(e, lang),
                 sub: e.code,
-                hint: [e.position, e.department].filter(Boolean).join(', ') || undefined,
-                search: `${e.name} ${e.code} ${e.position ?? ''} ${e.department ?? ''}`,
+                hint: [e.position, lang === 'th' ? e.department_th || e.department : e.department].filter(Boolean).join(', ') || undefined,
+                search: `${nameSearch(e)} ${e.code} ${e.position ?? ''} ${e.department ?? ''} ${e.department_th ?? ''}`,
             })),
-        [employees],
+        [employees, lang],
     );
     const [previewEmployee, setPreviewEmployee] = useState('');
     const [previewRows, setPreviewRows] = useState<ResolvedPreviewRow[] | null>(null);
@@ -605,6 +608,7 @@ function DepartmentStepFields({
     onChange: (patch: Partial<EditableStep>) => void;
     t: (key: string) => string;
 }) {
+    const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: members = [] } = useDepartmentMembers(step.department_id);
     const byPerson = !!step.by_person;
@@ -625,7 +629,7 @@ function DepartmentStepFields({
                         value={step.department_id === null ? '' : String(step.department_id)}
                         // A new department drops the people named in the old one
                         onChange={(v) => onChange({ department_id: v ? Number(v) : null, approver_employee_ids: [] })}
-                        options={departments.map((d) => ({ value: String(d.id), label: d.name, search: `${d.name} ${d.name_th ?? ''}` }))}
+                        options={departments.map((d) => ({ value: String(d.id), label: localName(d, lang), search: nameSearch(d) }))}
                         placeholder={t('wf_step_department_pick')}
                     />
                 </span>
@@ -666,10 +670,10 @@ function DepartmentStepFields({
                             key={m.id}
                             className="border-brand/30 bg-brand/5 text-brand flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
                         >
-                            {m.name}
+                            {localName(m, lang)}
                             <button
                                 type="button"
-                                aria-label={`${t('wf_step_person_remove')} ${m.name}`}
+                                aria-label={`${t('wf_step_person_remove')} ${localName(m, lang)}`}
                                 onClick={() => onChange({ approver_employee_ids: step.approver_employee_ids.filter((id) => id !== m.id) })}
                                 className="hover:text-destructive"
                             >
@@ -691,7 +695,12 @@ function DepartmentStepFields({
                                     if (!v || step.approver_employee_ids.includes(id)) return;
                                     onChange({ approver_employee_ids: [...step.approver_employee_ids, id] });
                                 }}
-                                options={addable.map((m) => ({ value: String(m.id), label: m.name, sub: m.position ?? undefined, search: m.name }))}
+                                options={addable.map((m) => ({
+                                    value: String(m.id),
+                                    label: localName(m, lang),
+                                    sub: m.position ?? undefined,
+                                    search: nameSearch(m),
+                                }))}
                                 placeholder={t('wf_step_person_add')}
                             />
                         </span>

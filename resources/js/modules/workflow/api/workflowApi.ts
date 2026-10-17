@@ -61,8 +61,10 @@ export interface WorkflowEmployeeOption {
     id: number;
     code: string;
     name: string;
+    name_th: string | null;
     position: string | null;
     department: string | null;
+    department_th: string | null;
 }
 
 /** The definitions plus the window their measured decision times were taken over. */

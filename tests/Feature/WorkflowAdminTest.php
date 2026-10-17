@@ -374,6 +374,19 @@ class WorkflowAdminTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.position_ids');
     }
 
+    public function test_employee_options_carry_the_thai_names_for_the_picker(): void
+    {
+        $dept = Department::create(['code' => 'DEP-TH', 'tag' => 'TH', 'name' => 'Quality Control', 'name_th' => 'ควบคุมคุณภาพ']);
+        $employee = Employee::create(['first_name' => 'Somchai', 'first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี', 'department_id' => $dept->id]);
+        User::factory()->create(['employee_id' => $employee->id]);
+
+        $row = collect($this->actingAs($this->admin)->getJson('/api/workflows/employee-options')->assertOk()->json('data'))
+            ->firstWhere('id', $employee->id);
+
+        $this->assertSame('สมชาย ใจดี', $row['name_th']);
+        $this->assertSame('ควบคุมคุณภาพ', $row['department_th']);
+    }
+
     public function test_update_stores_the_positions_of_each_rung(): void
     {
         $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
