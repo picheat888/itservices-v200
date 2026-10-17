@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { OverviewHeader, overviewPeriodParams, useOverviewPeriod } from '@/shared/components/overview-period';
@@ -9,7 +10,6 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
-import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -212,6 +212,7 @@ export default function RequestsPage() {
     const columns: Column<ServiceRequest>[] = [
         {
             key: 'reference',
+            sticky: 'left',
             header: 'ID',
             width: '100px',
             className: 'whitespace-nowrap',
@@ -220,7 +221,7 @@ export default function RequestsPage() {
         {
             key: 'title',
             header: t('req_col_title'),
-            minWidth: '9rem',
+            minWidth: '16rem',
             render: (r) => {
                 const Icon = REQUEST_TYPE_META[r.type].icon;
                 return (
@@ -255,7 +256,6 @@ export default function RequestsPage() {
             key: 'department',
             header: t('req_department'),
             width: '140px',
-            hideBelow: 'xl',
             render: (r) => <TruncText text={r.requester.department} className="text-sm" />,
         },
         {
@@ -263,15 +263,19 @@ export default function RequestsPage() {
             header: t('req_col_submitted'),
             width: '130px',
             className: 'whitespace-nowrap',
-            hideBelow: 'xl',
             render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground" />,
         },
-        { key: 'workflow', header: t('req_col_workflow'), width: '140px', className: 'whitespace-nowrap', hideBelow: 'xl', render: (r) => <WorkflowMini request={r} /> },
+        {
+            key: 'workflow',
+            header: t('req_col_workflow'),
+            width: '140px',
+            className: 'whitespace-nowrap',
+            render: (r) => <WorkflowMini request={r} />,
+        },
         {
             key: 'waiting',
             header: t('req_col_waiting'),
             width: '160px',
-            hideBelow: 'lg',
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
                     <div className="min-w-0">
@@ -291,10 +295,10 @@ export default function RequestsPage() {
         },
         {
             key: 'actions',
+
             header: t('actions'),
             align: 'right',
-            // Icon buttons on a tablet, labelled buttons from xl up
-            width: 'clamp(104px, calc(104px + (100vw - 1024px) * 0.5), 180px)',
+            width: '230px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {r.can_approve && (
@@ -307,7 +311,7 @@ export default function RequestsPage() {
                                 onClick={() => setDecide({ request: r, action: 'approve' })}
                             >
                                 <Check className="h-3.5 w-3.5" />
-                                <span className="hidden xl:inline">{t('req_approve')}</span>
+                                <span>{t('req_approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
@@ -318,7 +322,7 @@ export default function RequestsPage() {
                                 onClick={() => setDecide({ request: r, action: 'reject' })}
                             >
                                 <X className="h-3.5 w-3.5" />
-                                <span className="hidden xl:inline">{t('req_reject')}</span>
+                                <span>{t('req_reject')}</span>
                             </Button>
                         </>
                     )}

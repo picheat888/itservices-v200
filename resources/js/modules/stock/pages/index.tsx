@@ -357,6 +357,7 @@ export default function StockPage() {
     const columns: Column<StockItem>[] = [
         {
             key: 'sku',
+            sticky: 'left',
             header: t('stock_sku'),
             width: '110px',
             className: 'whitespace-nowrap',
@@ -365,7 +366,7 @@ export default function StockPage() {
         {
             key: 'name',
             header: t('stock_item'),
-            minWidth: '7rem',
+            minWidth: '14rem',
             render: (i) => (
                 <div className="min-w-0">
                     <TruncText text={i.name} className="text-sm font-medium" />
@@ -376,15 +377,13 @@ export default function StockPage() {
         {
             key: 'category',
             header: t('stock_category'),
-            width: '120px',
-            hideBelow: 'xl',
+            width: '180px',
             render: (i) => <span className="text-sm">{localPair(i.category, i.category_th, lang) ?? '—'}</span>,
         },
         {
             key: 'bar',
             header: `${t('stock_stock')} (Min / Max)`,
             width: '170px',
-            hideBelow: 'xl',
             render: (i) => <StockLevelBar current={i.current_stock} min={i.min_stock} max={i.max_stock} status={i.status} />,
         },
         {
@@ -420,7 +419,6 @@ export default function StockPage() {
             header: t('stock_unit_cost_short'),
             align: 'right',
             width: '110px',
-            hideBelow: 'lg',
             className: 'whitespace-nowrap',
             render: (i) => <span className="text-xs tabular-nums">{format(i.cost)}</span>,
         },
@@ -429,7 +427,6 @@ export default function StockPage() {
             header: t('stock_value'),
             align: 'right',
             width: '120px',
-            hideBelow: 'lg',
             className: 'whitespace-nowrap',
             render: (i) => <span className="text-xs tabular-nums">{format(i.total_value)}</span>,
         },
@@ -439,18 +436,17 @@ export default function StockPage() {
             header: t('stock_last_move'),
             width: '130px',
             className: 'whitespace-nowrap',
-            hideBelow: '2xl',
             render: (i) => <span className="text-muted-foreground text-xs">{i.last_move_at ? fmt.date(i.last_move_at) : '—'}</span>,
         },
         {
             key: 'warranty',
             header: t('stock_warranty'),
             width: '110px',
-            hideBelow: '2xl',
             render: (i) => <TruncText text={i.warranty} className="text-xs" />,
         },
         {
             key: 'actions',
+
             header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
             width: '80px',

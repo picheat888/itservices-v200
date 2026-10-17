@@ -27,13 +27,23 @@ export interface Column<T> {
     hideBelow?: 'lg' | 'xl' | '2xl';
     /** A column without a width keeps at least this much in a sized table (default 12rem); a bar or chip column can take less. */
     minWidth?: string;
+    /** Pin the column to a side while the table scrolls sideways; it needs a px width, and offsets stack in column order. */
+    sticky?: 'left' | 'right';
 }
 
 /** The least a column without a width keeps in a sized table, unless it sets its own minWidth. */
 const FLEX_COLUMN_MIN = '12rem';
 
-const HIDE_BELOW: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell', '2xl': 'hidden 2xl:table-cell' };
-const HIDE_BELOW_COL: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-column', xl: 'hidden xl:table-column', '2xl': 'hidden 2xl:table-column' };
+const HIDE_BELOW: Record<NonNullable<Column<unknown>['hideBelow']>, string> = {
+    lg: 'hidden lg:table-cell',
+    xl: 'hidden xl:table-cell',
+    '2xl': 'hidden 2xl:table-cell',
+};
+const HIDE_BELOW_COL: Record<NonNullable<Column<unknown>['hideBelow']>, string> = {
+    lg: 'hidden lg:table-column',
+    xl: 'hidden xl:table-column',
+    '2xl': 'hidden 2xl:table-column',
+};
 
 interface DataTableProps<T> {
     columns: Column<T>[];
@@ -193,6 +203,19 @@ export function DataTable<T>({
 
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
     const hideClass = (c: Column<T>) => (c.hideBelow ? HIDE_BELOW[c.hideBelow] : undefined);
+    // Offset of each pinned column from its edge: the px widths of the pinned columns before it (left) or after it (right)
+    const stickyOffset = (c: Column<T>) => {
+        if (!c.sticky) return undefined;
+        const side = columns.filter((o) => o.sticky === c.sticky);
+        const before = c.sticky === 'left' ? side.slice(0, side.indexOf(c)) : side.slice(side.indexOf(c) + 1);
+        return before.reduce((sum, o) => sum + (parseFloat(o.width ?? '') || 0), 0);
+    };
+    const stickyStyle = (c: Column<T>): React.CSSProperties | undefined =>
+        c.sticky ? { position: 'sticky', [c.sticky]: stickyOffset(c) } : undefined;
+    // Pinned cells need their own solid background so scrolled cells do not show through
+    const stickyClass = (c: Column<T>, head: boolean) =>
+        c.sticky ? cn('bg-card border-border/60 z-[1] border-r', head && 'dark:bg-muted') : undefined;
+
     // Fixed widths plus room for each flexible column among the columns a screen shows, so a narrow screen scrolls instead of squeezing it to 0
     const floorOf = (visible: Column<T>[]) => {
         const flexible = visible.filter((c) => !c.width);
@@ -265,7 +288,12 @@ export function DataTable<T>({
                     )}
                     style={
                         flexFloor
-                            ? ({ '--flex-floor': flexFloor, '--flex-floor-lg': flexFloorLg ?? flexFloor, '--flex-floor-xl': flexFloorXl ?? flexFloor, '--flex-floor-2xl': flexFloor2xl ?? flexFloor } as React.CSSProperties)
+                            ? ({
+                                  '--flex-floor': flexFloor,
+                                  '--flex-floor-lg': flexFloorLg ?? flexFloor,
+                                  '--flex-floor-xl': flexFloorXl ?? flexFloor,
+                                  '--flex-floor-2xl': flexFloor2xl ?? flexFloor,
+                              } as React.CSSProperties)
                             : undefined
                     }
                 >
@@ -293,10 +321,12 @@ export function DataTable<T>({
                                 <th
                                     key={c.key}
                                     title={typeof c.header === 'string' ? c.header : undefined}
+                                    style={stickyStyle(c)}
                                     className={cn(
+                                        stickyClass(c, true),
                                         // A header is one label; broken across lines it reads as
                                         // several and makes the header row taller than every data row.
-                                        'text-muted-foreground px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide overflow-hidden text-ellipsis whitespace-nowrap uppercase',
+                                        'text-muted-foreground overflow-hidden px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide text-ellipsis whitespace-nowrap uppercase',
                                         alignClass(c.align),
                                         hideClass(c),
                                     )}
@@ -361,7 +391,14 @@ export function DataTable<T>({
                                     {columns.map((c) => (
                                         <td
                                             key={c.key}
-                                            className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align), c.className, hideClass(c))}
+                                            style={stickyStyle(c)}
+                                            className={cn(
+                                                'px-[var(--row-px)] py-[var(--row-py)]',
+                                                alignClass(c.align),
+                                                c.className,
+                                                hideClass(c),
+                                                stickyClass(c, false),
+                                            )}
                                         >
                                             {c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)}
                                         </td>
