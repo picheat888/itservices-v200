@@ -129,53 +129,47 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Returns all employees (for dashboard/pickers) or a paginated page
-     * with search (name, code, email, username) + department filtering when ?page is present.
+     * Directory page: search (name, code, email, username), department and status filters.
      */
     public function index(Request $request): JsonResponse
     {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
         $query = $this->service->inDirectoryOrder(Employee::with(['department', 'position', 'section', 'user.role']));
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
 
-        if ($request->has('page')) {
-            abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        SearchTerms::apply($query, $request->query('search'), [
+            ...SearchTerms::personName(), 'code', 'email', 'username',
+            SearchTerms::related('user', ['username']),
+        ]);
 
-            $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-
-            SearchTerms::apply($query, $request->query('search'), [
-                ...SearchTerms::personName(), 'code', 'email', 'username',
-                SearchTerms::related('user', ['username']),
-            ]);
-
-            if ($request->filled('department_id')) {
-                $query->where('department_id', (int) $request->query('department_id'));
-            }
-
-            // Status filter: active employees, resigned, or active-without-login-account.
-            $status = $request->query('status');
-            if ($status === 'active') {
-                $query->where('status', 'active');
-            } elseif ($status === 'resigned') {
-                $query->where('status', 'resigned');
-            } elseif ($status === 'no_account') {
-                $query->where('status', 'active')->whereDoesntHave('user');
-            } elseif ($status === 'has_account') {
-                $query->where('status', 'active')->whereHas('user');
-            }
-
-            $paginator = $query->paginate($perPage);
-
-            return response()->json([
-                'data' => EmployeeResource::collection($paginator->items()),
-                'meta' => [
-                    'total' => $paginator->total(),
-                    'per_page' => $paginator->perPage(),
-                    'current_page' => $paginator->currentPage(),
-                    'last_page' => $paginator->lastPage(),
-                ],
-            ]);
+        if ($request->filled('department_id')) {
+            $query->where('department_id', (int) $request->query('department_id'));
         }
 
-        return EmployeeResource::collection($query->get())->response();
+        // Status filter: active employees, resigned, or active-without-login-account.
+        $status = $request->query('status');
+        if ($status === 'active') {
+            $query->where('status', 'active');
+        } elseif ($status === 'resigned') {
+            $query->where('status', 'resigned');
+        } elseif ($status === 'no_account') {
+            $query->where('status', 'active')->whereDoesntHave('user');
+        } elseif ($status === 'has_account') {
+            $query->where('status', 'active')->whereHas('user');
+        }
+
+        $paginator = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => EmployeeResource::collection($paginator->items()),
+            'meta' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
     }
 
     /**
