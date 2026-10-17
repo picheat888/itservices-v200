@@ -242,47 +242,35 @@ class TicketController extends Controller
         $windowSeconds = (int) $curStart->diffInSeconds($curEnd);
         $prevStart = $curStart->copy()->subSeconds($windowSeconds);
 
-        // Every figure below is a window (current or previous) or a live backlog, so older closed tickets are never read
-        $tickets = Ticket::with('serviceRequest:id,ticket_id,type')
-            ->where(fn ($q) => $q
-                ->where('created_at', '>=', $prevStart)
-                ->orWhere('resolved_at', '>=', $prevStart)
-                ->orWhere('responded_at', '>=', $prevStart)
-                ->orWhereIn('status', TicketStatus::liveValues()))
-            ->get();
-
-        // Every window figure comes from one pass over those tickets
-        $f = $summary->figures($tickets, $curStart, $curEnd, $prevStart);
+        // Counts and backlog come from SQL, the SLA verdicts from lean rows; see TicketSummaryService
+        $f = $summary->figures($curStart, $curEnd, $prevStart);
 
         // 30/45 วันเป็น KPI คนละตัวกับ SLA อยู่แล้วในความเป็นจริงขององค์กร การเอาเป้าหมาย
         // 4 ชั่วโมงกับ 360 ชั่วโมงมาเฉลี่ยเป็นเปอร์เซ็นต์เดียวทำให้ตัวเลขอ่านยากขึ้น ไม่ใช่ง่ายขึ้น
         // เคสตกกลุ่มไหนตัดสินจากค่า work_class ปัจจุบัน — AuditLog เก็บประวัติไว้ให้แล้วถ้าต้องสาว
 
         // SLA % over the tickets resolved within each window, so the trend is comparable.
-        $slaCur = $summary->resolveMetPct($f['standard_cur']);
-        $slaPrev = $summary->resolveMetPct($f['standard_prev']);
+        $slaCur = $f['standard_cur_pct'];
+        $slaPrev = $f['standard_prev_pct'];
 
         // Repair KPI — same math, over the repair-classed cases the SLA figure above excludes.
-        $repairCur = $summary->resolveMetPct($f['repair_cur']);
-        $repairPrev = $summary->resolveMetPct($f['repair_prev']);
+        $repairCur = $f['repair_cur_pct'];
+        $repairPrev = $f['repair_prev_pct'];
 
         // Response SLA % over the tickets first-responded within each window. Open
         // tickets that are already past due are NOT counted here — they live in the
         // backlog KPI and the red per-ticket badge instead.
-        $respSlaCur = $summary->responseMetPct($f['responded_cur']);
-        $respSlaPrev = $summary->responseMetPct($f['responded_prev']);
+        $respSlaCur = $f['response_cur_pct'];
+        $respSlaPrev = $f['response_prev_pct'];
 
         // Average time-to-take per window (minutes) — the delta reads negative = faster.
-        $avgCur = $summary->averageResponseMinutes($f['responded_cur']);
-        $avgPrev = $summary->averageResponseMinutes($f['responded_prev']);
+        $avgCur = $f['avg_cur'];
+        $avgPrev = $f['avg_prev'];
 
         $byCategory = collect(TicketCategory::cases())->map(fn (TicketCategory $c) => [
             'category' => $c->value,
             'count' => $f['by_category'][$c->value],
         ]);
-
-        // Cases currently past their active SLA deadline — the dashboard's red status row.
-        $overSla = collect($f['over_sla']);
 
         return response()->json([
             'range_days' => $days,
@@ -299,8 +287,9 @@ class TicketController extends Controller
             'backlog' => $f['open'] + $f['in_progress'],
             'backlog_open' => $f['open'],
             'backlog_in_progress' => $f['in_progress'],
-            'over_sla_now' => $overSla->count(),
-            'over_sla_oldest_days' => $overSla->isEmpty() ? null : (int) floor($overSla->max(fn (Ticket $t) => $t->created_at->diffInDays(now()))),
+            // Cases past their active SLA deadline now — the dashboard's red status row
+            'over_sla_now' => $f['over_sla_count'],
+            'over_sla_oldest_days' => $f['over_sla_oldest_days'],
             'flow' => $f['flow'],
             'period_sla' => $this->periodSla($request->user(), $report, $curStart, $curEnd),
 
