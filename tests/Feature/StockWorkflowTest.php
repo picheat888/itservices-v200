@@ -186,6 +186,26 @@ class StockWorkflowTest extends TestCase
         $this->assertNotNull($row['fulfilled_at']);
     }
 
+    public function test_request_list_filters_by_status_but_keeps_the_totals(): void
+    {
+        $item = $this->item(0);
+        $super = $this->superUser();
+        $this->actingAs($super)->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 10])->assertCreated();
+        $asker = $this->userWith(['stock.view', 'stock.request']);
+        $first = $this->actingAs($asker)->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 1, 'reason' => 'A'])->json('data.id');
+        $this->actingAs($asker)->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 1, 'reason' => 'B'])->assertCreated();
+        $this->actingAs($super)->postJson("/api/stock-requests/{$first}/approve")->assertOk();
+
+        $approved = $this->actingAs($super)->getJson('/api/stock-requests?status=approved')->assertOk();
+        $this->assertSame([$first], collect($approved->json('data'))->pluck('id')->all());
+        $this->assertSame(1, $approved->json('meta.total'));
+        $this->assertSame(1, $approved->json('meta.pending'));
+        $this->assertSame(2, $approved->json('meta.outstanding'));
+        $this->assertArrayHasKey('unit', $approved->json('data.0'));
+
+        $this->assertSame(2, $this->actingAs($super)->getJson('/api/stock-requests?status=nonsense')->json('meta.total'));
+    }
+
     /** An approver who asks for stock waits on somebody else, like every other request. */
     public function test_nobody_approves_or_rejects_their_own_requisition(): void
     {

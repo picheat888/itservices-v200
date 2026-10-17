@@ -1,7 +1,8 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FormErrorBanner } from '@/shared/components/field';
-import { StatusBadge } from '@/shared/components/status-badge';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -13,8 +14,8 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
-import { ArrowUpFromLine, Check, FilePlus2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowUpFromLine, Check, FilePlus2, Filter, X } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
 
@@ -24,6 +25,9 @@ const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> =
     fulfilled: 'green',
     rejected: 'red',
 };
+
+// Statuses offered by the filter (and accepted from ?status=).
+const REQUEST_STATUS_FILTERS: StockRequestStatus[] = ['pending', 'approved', 'fulfilled', 'rejected'];
 
 // Small section heading inside the fulfill dialog.
 const EYEBROW = 'text-muted-foreground text-xs font-semibold';
@@ -43,8 +47,17 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     // Page and rows-per-page live in the URL (?page, ?per).
     const list = useListParams();
     const { page, perPage } = list;
+    const statusFilterId = useId();
+    // Status filter lives in the URL too (?status).
+    const statusParam = list.get('status');
+    const status = REQUEST_STATUS_FILTERS.includes(statusParam as StockRequestStatus) ? statusParam : 'all';
+    const setStatus = (value: string) => list.setFilter('status', value === 'all' ? '' : value);
     // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
-    const { data: requestsPage, isLoading: requestsLoading, isFetching: requestsFetching } = useStockRequests({ page, per_page: perPage });
+    const {
+        data: requestsPage,
+        isLoading: requestsLoading,
+        isFetching: requestsFetching,
+    } = useStockRequests({ page, per_page: perPage, status: status === 'all' ? undefined : status });
     const requests = requestsPage?.data ?? [];
     const { approve, reject, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
@@ -141,6 +154,12 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             ),
         },
         { key: 'qty', header: t('stock_qty'), align: 'right', width: '80px', render: (r) => <span className="font-bold tabular-nums">{r.qty}</span> },
+        {
+            key: 'unit',
+            header: t('stock_unit'),
+            width: '80px',
+            render: (r) => <span className="text-muted-foreground text-xs lowercase">{r.unit || '—'}</span>,
+        },
         { key: 'reason', header: t('stock_reason'), minWidth: '14rem', render: (r) => <span className="text-sm">{r.reason}</span> },
         {
             key: 'status',
@@ -248,14 +267,37 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
 
     return (
         <div className="space-y-3">
-            {can('request') && (
-                <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                {/* Inline status filter: icon + label + dropdown (same as the Movements type filter). */}
+                <div className="flex items-center gap-1.5">
+                    <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <label htmlFor={statusFilterId} className="text-muted-foreground shrink-0 text-sm font-medium">
+                        {t('status')}
+                    </label>
+                    <div className="w-44">
+                        <SearchableSelect
+                            id={statusFilterId}
+                            value={status}
+                            onChange={setStatus}
+                            options={[
+                                { value: 'all', label: t('stock_all_statuses'), search: t('stock_all_statuses'), icon: <ToneDot tone="gray" /> },
+                                ...REQUEST_STATUS_FILTERS.map((k) => ({
+                                    value: k,
+                                    label: t(`stock_rq_${k}` as Parameters<typeof t>[0]),
+                                    search: t(`stock_rq_${k}` as Parameters<typeof t>[0]),
+                                    icon: <ToneDot tone={REQ_TONE[k]} />,
+                                })),
+                            ]}
+                        />
+                    </div>
+                </div>
+                {can('request') && (
                     <Button onClick={onNew}>
                         <FilePlus2 className="h-4 w-4" aria-hidden />
                         {t('stock_request')}
                     </Button>
-                </div>
-            )}
+                )}
+            </div>
             <DataTable
                 columns={columns}
                 rows={requests}

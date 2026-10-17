@@ -392,10 +392,15 @@ export default function StockPage() {
             render: (i) => (
                 <div>
                     <span className="text-sm font-bold tabular-nums">{i.current_stock.toLocaleString()}</span>
-                    {i.unit && <span className="text-muted-foreground ml-1 text-xs lowercase">{i.unit}</span>}
                     {!!i.reserved && <div className="text-muted-foreground text-xs">{t('stock_reserved_n').replace('{n}', String(i.reserved))}</div>}
                 </div>
             ),
+        },
+        {
+            key: 'unit',
+            header: t('stock_unit'),
+            width: '80px',
+            render: (i) => <span className="text-muted-foreground text-xs lowercase">{i.unit || '—'}</span>,
         },
         {
             key: 'cost',
