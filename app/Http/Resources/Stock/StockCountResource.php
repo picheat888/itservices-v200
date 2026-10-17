@@ -36,8 +36,9 @@ class StockCountResource extends JsonResource
                     ? $l->item->serials->map(fn ($s) => ['id' => $s->id, 'serial' => $s->serial])->values()
                     : [],
             ])),
-            'line_count' => $this->whenLoaded('lines', fn () => $this->lines->count()),
-            'counted_lines' => $this->whenLoaded('lines', fn () => $this->lines->whereNotNull('counted_qty')->count()),
+            // List rows carry SQL counts (withCount); full records count their loaded lines
+            'line_count' => $this->lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->count()),
+            'counted_lines' => $this->counted_lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->whereNotNull('counted_qty')->count()),
         ];
     }
 }
