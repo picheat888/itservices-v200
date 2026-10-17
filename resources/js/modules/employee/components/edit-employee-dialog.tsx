@@ -1,14 +1,14 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
-import { SearchableSelect } from '@/shared/components/searchable-select';
+import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { focusFirstError } from '@/shared/lib/utils';
-import type { Employee } from '@/shared/types';
+import type { Employee, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
@@ -18,7 +18,8 @@ import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, ArrowRight, Briefcase, Check, Loader2, SquarePen, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
-import { useEmployeeMutations, useEmployeeOptions } from '../hooks/use-employees';
+import { useEmployeePicker, useEmployeesByIds } from '../hooks/use-employee-pickers';
+import { useEmployeeMutations } from '../hooks/use-employees';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
 import { PhotoCropDialog } from './photo-crop-dialog';
@@ -46,7 +47,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
-    const { data: employees = [] } = useEmployeeOptions();
+    const { employees, pickerProps: managerPickerProps } = useEmployeePicker({ match: 'position', exclude: employee ? [employee.id] : undefined });
     const { update } = useEmployeeMutations();
 
     const [form, setForm] = useState(empty);
@@ -144,21 +145,19 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         });
     };
 
-    // Manager candidates: everyone except the employee being edited.
-    const managerOptions = useMemo(
-        () =>
-            employees
-                .filter((e) => e.id !== employee?.id)
-                .map((e) => ({
-                    value: String(e.id),
-                    label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
-                    hint: e.position ?? undefined,
-                    avatar: e.photo_url,
-                    sub: e.code,
-                    search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.position ?? ''}`,
-                })),
-        [employees, employee, lang],
-    );
+    // Manager candidates come from the picker search (the edited employee is excluded server-side).
+    const managerOption = (e: EmployeeOption): SearchOption => ({
+        value: String(e.id),
+        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        hint: e.position ?? undefined,
+        avatar: e.photo_url,
+        sub: e.code,
+        search: '',
+    });
+    const managerOptions = employees.map(managerOption);
+    const { data: knownManagers = [] } = useEmployeesByIds([form.managerId ? Number(form.managerId) : null, employee?.manager_id]);
+    const chosenManager = knownManagers.find((e) => String(e.id) === form.managerId);
+    const chosenManagerOption = chosenManager ? managerOption(chosenManager) : undefined;
 
     /** Human label for a position id, or "(none)" when unset. */
     const positionLabel = (id: string) => positions.find((p) => String(p.id) === id)?.title ?? t('emp_org_change_none');
@@ -169,7 +168,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     };
     /** Human label for a manager id (employee name), or "(none)" when unset. */
     const managerLabel = (id: string) => {
-        const m = employees.find((e) => String(e.id) === id);
+        const m = knownManagers.find((e) => String(e.id) === id);
         return m ? (lang === 'th' ? (m.name_th ?? m.name) : m.name) : t('emp_org_change_none');
     };
 
@@ -503,6 +502,8 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 onChange={(v) => set('managerId', v)}
                 placeholder={t('emp_manager_ph')}
                 options={managerOptions}
+                {...managerPickerProps}
+                selectedOption={chosenManagerOption}
                 clearable
                 maxRows={4}
             />
