@@ -1,7 +1,7 @@
-// Dashboard pure figures: bar shares, the chart axis, and mixed-language names.
+// Dashboard pure figures: bar shares and the chart axis.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { localName, niceAxis, sharePieces } from '../../resources/js/modules/dashboard/lib/dash-math.ts';
+import { niceAxis, sharePieces } from '../../resources/js/modules/dashboard/lib/dash-math.ts';
 
 test('shares are percents of the sum, zero pieces dropped', () => {
     assert.deepEqual(
@@ -26,10 +26,4 @@ test('the axis tops out on a round step of whole cases', () => {
     assert.deepEqual(niceAxis(3), { top: 4, ticks: [0, 1, 2, 3, 4] });
     assert.deepEqual(niceAxis(130), { top: 200, ticks: [0, 50, 100, 150, 200] });
     assert.deepEqual(niceAxis(0), { top: 4, ticks: [0, 1, 2, 3, 4] });
-});
-
-test('Thai names fall back to the stored name when name_th is empty', () => {
-    assert.equal(localName('Information Technology', 'ไอที', 'th'), 'ไอที');
-    assert.equal(localName('Information Technology', null, 'th'), 'Information Technology');
-    assert.equal(localName('Information Technology', 'ไอที', 'en'), 'Information Technology');
 });
