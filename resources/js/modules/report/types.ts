@@ -1325,3 +1325,112 @@ export interface EmployeeOpenItemsBreakdown {
         })[];
     };
 }
+
+/** One of the 12 months of the stock in & out chart; `in_range` false = drawn faded. */
+export interface StockFlowMonth {
+    month: string;
+    in_range: boolean;
+    receive: number;
+    return: number;
+    issue: number;
+    transfer: number;
+    receive_value: number;
+    issue_value: number;
+    /** Adjust up − adjust down, in pieces. */
+    adjust_net: number;
+}
+
+/** A stock request still waiting today: pending approval, or approved and not yet issued. */
+export interface StockWaitingRequest {
+    reference: string | null;
+    item_name: string | null;
+    sku: string | null;
+    qty: number;
+    unit: string | null;
+    requester: string;
+    status: 'pending' | 'approved';
+    created_at: string | null;
+}
+
+/** GET /reports/stock/movements/breakdown — StockMovementReport::breakdown(); null sections are hidden from this viewer. */
+export interface StockMovementsBreakdown {
+    tiles: Record<import('@/shared/types').StockMovementType, { qty: number; value: number; times: number }>;
+    /** 12 months ending with the range's end month. */
+    months: StockFlowMonth[];
+    /** As of today, oldest first; needs stock.view_request. `rows` stop at 500, the counts do not. */
+    requests: { pending: number; approved: number; rows: StockWaitingRequest[] } | null;
+    /** Fulfilled requests in the range per requester, unsorted; needs stock.view_request. */
+    people:
+        | {
+              user_id: number | null;
+              name: string;
+              department_id: number | null;
+              department: string | null;
+              department_th: string | null;
+              qty: number;
+              value: number;
+              times: number;
+          }[]
+        | null;
+    /** The same per department (department_id null = no department), unsorted; needs stock.view_request. */
+    departments:
+        | { department_id: number | null; name: string | null; name_th: string | null; people: number; qty: number; value: number; times: number }[]
+        | null;
+    /** Committed counts in the range, newest first; `lines` = lines that differ; needs stock.view_count. */
+    counts:
+        | { reference: string; warehouse: string | null; committed_at: string | null; lines: number; up: number; down: number; net_value: number }[]
+        | null;
+}
+
+/** GET /reports/stock/valuation/breakdown — StockValuationReport::breakdown(). */
+export interface StockValuationBreakdown {
+    as_of: string;
+    /** as_of is today: only then are warehouses known. */
+    today: boolean;
+    tiles: {
+        value: number;
+        qty: number;
+        /** Items with stock at the day. */
+        held: number;
+        /** Every item in scope. */
+        items: number;
+        out: number;
+        dead90: { value: number; count: number };
+    };
+    /** Held items by category, most valuable first. */
+    categories: { category_id: number | null; name: string | null; name_th: string | null; items: number; qty: number; value: number }[];
+    /** Today's balances by warehouse, most valuable first; null for a past day. */
+    warehouses: { warehouse_id: number | null; name: string | null; items: number; qty: number; value: number }[] | null;
+    /** Held items not moved for more than 90 days, most valuable first. */
+    dead: {
+        item_id: number;
+        sku: string;
+        name: string;
+        category: string | null;
+        category_th: string | null;
+        unit: string | null;
+        qty: number;
+        value: number;
+        last_move: string;
+        days: number;
+    }[];
+}
+
+/** GET /reports/stock/below-min/breakdown — StockBelowMinReport::breakdown(). */
+export interface StockLevelsBreakdown {
+    tiles: {
+        items_total: number;
+        out: number;
+        low: number;
+        over: number;
+        /** Pieces short of Min over the low items. */
+        low_gap: number;
+        /** Pieces above Max over the over items. */
+        over_excess: number;
+        /** Out and low items, and what reordering them costs. */
+        reorder: { value: number; items: number };
+        excess_value: number;
+    };
+    /** Most items outside min/max first. */
+    categories: { category_id: number | null; name: string | null; name_th: string | null; out: number; low: number; over: number }[];
+}
