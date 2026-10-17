@@ -274,7 +274,7 @@ export function DataTable<T>({
                 ref={bodyRef}
                 className={cn(
                     // relative: absolute children (sr-only headers) stay inside the scroll box instead of widening <main>
-                    'border-border relative rounded-xl border',
+                    '@container border-border relative rounded-xl border',
                     // Too wide: scroll sideways; fits: clip (not a scroll box) so the header can stick to the page
                     fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-auto' : fitsWidth ? 'overflow-clip' : 'overflow-x-auto',
                 )}
@@ -373,8 +373,11 @@ export function DataTable<T>({
                             ))}
                         {!loading && pageRows.length === 0 && (
                             <tr>
-                                <td colSpan={columns.length} className={cn('text-muted-foreground px-4 text-center', emptyState ? 'py-10' : 'py-0')}>
-                                    {emptyState ?? <EmptyState {...(empty ?? { title: t('cmn_no_data') })} />}
+                                <td colSpan={columns.length} className={cn('text-muted-foreground px-0 text-center', emptyState ? 'py-10' : 'py-0')}>
+                                    {/* Empty content: pinned to the visible scroller width */}
+                                    <div className="sticky left-0 box-border w-[100cqw] max-w-full px-4">
+                                        {emptyState ?? <EmptyState {...(empty ?? { title: t('cmn_no_data') })} />}
+                                    </div>
                                 </td>
                             </tr>
                         )}
