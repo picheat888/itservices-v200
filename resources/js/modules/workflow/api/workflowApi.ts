@@ -34,9 +34,11 @@ export interface ResolvedPreviewRow {
     label: string;
     approver_employee_id: number | null;
     approver_name: string | null;
+    approver_name_th?: string | null;
     approver_position: string | null;
     /** Names a step is open to when it names several people — empty on every other row. */
     approver_candidates?: string[];
+    approver_candidates_th?: (string | null)[];
     status: 'waiting' | 'skipped';
     note: string | null;
     /** Why a skipped row was skipped — a code the editor writes out through `req_skip_*`. */

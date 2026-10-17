@@ -812,6 +812,7 @@ export interface StockCount {
     reference: string;
     warehouse: string | null;
     category: string | null;
+    category_th?: string | null;
     status: StockCountStatus;
     adjust_mode: StockCountAdjustMode | null;
     note: string | null;
@@ -856,9 +857,11 @@ export interface StockRequest {
     reason: string;
     status: StockRequestStatus;
     approver_name: string | null;
+    approver_name_th?: string | null;
     approved_at: string | null;
     fulfilled_at: string | null;
     fulfilled_by: string | null;
+    fulfilled_by_th?: string | null;
     rejected_at: string | null;
     created_at: string | null;
     /** Approve / Reject offered to this reader: pending, holds stock.approve, not their own. */

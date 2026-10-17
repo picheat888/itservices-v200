@@ -171,8 +171,9 @@ class WorkflowController extends Controller
         // leaving the line blank on the one shape that names nobody in particular.
         // get()->pluck(), never pluck() on the query: `name` is composed from first_name and
         // last_name by an accessor, so asking the database for a `name` column is an error.
-        $candidates = Employee::whereIn('id', $rows->pluck('approver_employee_ids')->filter()->flatten()->unique())
-            ->get()->pluck('name', 'id');
+        $candidateModels = Employee::whereIn('id', $rows->pluck('approver_employee_ids')->filter()->flatten()->unique())->get();
+        $candidates = $candidateModels->pluck('name', 'id');
+        $candidatesTh = $candidateModels->pluck('name_th', 'id');
 
         return response()->json([
             'data' => [
@@ -182,16 +183,20 @@ class WorkflowController extends Controller
                     'position' => $employee->position?->title,
                     'department' => $employee->department?->name,
                 ],
-                'rows' => $rows->map(function (array $row) use ($approvers, $candidates) {
+                'rows' => $rows->map(function (array $row) use ($approvers, $candidates, $candidatesTh) {
                     $approver = $row['approver_employee_id'] !== null
                         ? $approvers->get($row['approver_employee_id'])
                         : null;
 
                     return [...$row,
+                        'approver_name_th' => $approver?->name_th,
                         'approver_position' => $approver?->position?->title,
                         'approver_candidates' => collect($row['approver_employee_ids'] ?? [])
                             ->map(fn (int $id) => $candidates->get($id))
                             ->filter()->values(),
+                        'approver_candidates_th' => collect($row['approver_employee_ids'] ?? [])
+                            ->filter(fn (int $id) => $candidates->get($id))
+                            ->map(fn (int $id) => $candidatesTh->get($id))->values(),
                     ];
                 })->values(),
             ],

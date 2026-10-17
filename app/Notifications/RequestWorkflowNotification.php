@@ -74,6 +74,7 @@ class RequestWorkflowNotification extends Notification
             // reader's language (`title` above is the server's canonical English one), and an
             // on-behalf request has to name the new hire the way the list does.
             'requester_name' => $this->request->requester_name,
+            'requester_name_th' => $this->request->employee?->name_th,
             'step_label' => $this->stepLabel,
             'actor_name' => $this->actorName,
             'remark' => $this->remark,

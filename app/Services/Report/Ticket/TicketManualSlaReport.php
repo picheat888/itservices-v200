@@ -90,7 +90,7 @@ class TicketManualSlaReport extends TabularReport
 
         return $this->scopedTickets($viewer, $set('category'))
             ->with([
-                'assignee:id,name',
+                'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th',
                 'requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,name,name_th',
             ])
             ->where('tickets.source', TicketSource::Manual->value)
@@ -197,13 +197,17 @@ class TicketManualSlaReport extends TabularReport
         $by = in_array($filters['by'] ?? null, self::DIMENSIONS, true) ? $filters['by'] : 'category';
         $facts = TicketSlaFacts::load($this->tickets($viewer, $filters, $by));
         // Assignees are people, named from the data; the other dimensions are translated on the page.
-        $names = User::query()->whereIn('id', array_unique(array_filter(array_column($facts, 'assignee'))))->pluck('name', 'id');
+        $people = User::query()->with('employee:id,first_name,last_name,first_name_th,last_name_th')
+            ->whereIn('id', array_unique(array_filter(array_column($facts, 'assignee'))))->get(['id', 'name', 'employee_id'])->keyBy('id');
+        $names = $people->map(fn (User $u) => $u->name);
+        $namesTh = $people->map(fn (User $u) => $u->name_th);
 
         $groups = collect($facts)
             ->groupBy(fn (array $f) => self::groupKey($f, $by))
             ->map(fn (Collection $group, string $key) => [
                 'key' => $key,
                 'label' => $by === 'assignee' && $key !== self::NONE ? ($names[$group->first()['assignee']] ?? null) : null,
+                'label_th' => $by === 'assignee' && $key !== self::NONE ? ($namesTh[$group->first()['assignee']] ?? null) : null,
                 ...TicketSlaFacts::tally($group->all(), withWork: true),
             ])
             ->sortBy(self::groupOrder($by))
@@ -217,6 +221,7 @@ class TicketManualSlaReport extends TabularReport
                 'ticket_no' => $f['no'],
                 'category' => $f['cat'],
                 'assignee' => $names[$f['assignee']] ?? null,
+                'assignee_th' => $namesTh[$f['assignee']] ?? null,
                 'due_kind' => $f['take'] === 'over' ? 'response' : 'resolve',
                 ...array_slice(TicketSlaFacts::overLine($f), 2),
             ])

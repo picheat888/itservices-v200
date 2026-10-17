@@ -71,7 +71,7 @@ class TicketBacklogReport extends TabularReport
         $soon = self::soonSql();
 
         return $this->scopedTickets($viewer, $filters['category'])
-            ->with(['requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,name,name_th', 'assignee:id,name'])
+            ->with(['requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,name,name_th', 'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th'])
             ->whereIn('status', ['open', 'in_progress'])
             ->when($filters['priority'], fn (Builder $q, string $priority) => $q->where('priority', $priority))
             ->when($filters['assignee'] ?? null, fn (Builder $q, string|int $assignee) => $assignee === 'none'
@@ -180,7 +180,7 @@ class TicketBacklogReport extends TabularReport
      * them — unpaged (a backlog is short), most overdue first.
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{id: int, ticket_no: string, subject: string, category: ?string, priority: ?string, status: ?string, assignee_id: ?int, assignee: ?string, department: ?array{name: ?string, name_th: ?string}, due_at: ?string, due_kind: ?string, hours_left: ?float}>
+     * @return list<array{id: int, ticket_no: string, subject: string, category: ?string, priority: ?string, status: ?string, assignee_id: ?int, assignee: ?string, assignee_th: ?string, department: ?array{name: ?string, name_th: ?string}, due_at: ?string, due_kind: ?string, hours_left: ?float}>
      */
     public function board(User $viewer, array $filters): array
     {
@@ -194,6 +194,7 @@ class TicketBacklogReport extends TabularReport
                 'status' => $t->status?->value,
                 'assignee_id' => $t->assignee_id,
                 'assignee' => $t->assignee?->name,
+                'assignee_th' => $t->assignee?->name_th,
                 'department' => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null,
                 'due_at' => TicketMetrics::activeDue($t)?->format('Y-m-d H:i'),
                 'due_kind' => self::dueKind($t),

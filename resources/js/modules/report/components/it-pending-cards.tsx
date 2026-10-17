@@ -375,7 +375,7 @@ function HoldersCard({
                         {ownerFold.shown.map((g) => (
                             <GroupRow
                                 key={g.key}
-                                label={g.name ?? g.key}
+                                label={localPair(g.name, g.name_th, f.lang) ?? g.key}
                                 sub={ownerSub(g)}
                                 values={g.bands}
                                 total={g.total}
