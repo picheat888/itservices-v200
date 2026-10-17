@@ -295,10 +295,10 @@ export default function RequestsPage() {
         },
         {
             key: 'actions',
-
             header: t('actions'),
             align: 'right',
-            width: '230px',
+            // Room for the approve and reject buttons only when this page has a request the reader can decide
+            width: rows.some((r) => r.can_approve) ? '230px' : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {r.can_approve && (
