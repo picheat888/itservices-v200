@@ -1,4 +1,4 @@
-import { useT } from '@/lang';
+import { translate, useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -7,7 +7,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
-import { searchLabel } from '@/shared/lib/search-words';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -60,12 +60,11 @@ export default function WorkflowsPage() {
     const missing = data != null && (viewingId != null || editingId != null) && !viewing && !editing;
 
     const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return workflows;
-        return workflows.filter((w) =>
-            [w.name, t(REQUEST_TYPE_META[w.request_type].labelKey), ...w.steps.map((s) => s.label)].join(' ').toLowerCase().includes(q),
-        );
-    }, [workflows, search, t]);
+        return workflows.filter((w) => {
+            const typeKey = REQUEST_TYPE_META[w.request_type].labelKey;
+            return matchesAllWords([w.name, translate('en', typeKey), translate('th', typeKey), ...w.steps.map((s) => s.label)].join(' '), search);
+        });
+    }, [workflows, search]);
 
     const totalSteps = workflows.reduce((sum, w) => sum + w.steps.length, 0);
     const longest = workflows.reduce((max, w) => Math.max(max, w.steps.filter((s) => s.kind === 'approval').length), 0);

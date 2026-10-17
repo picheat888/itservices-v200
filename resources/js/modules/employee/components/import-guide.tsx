@@ -1,5 +1,7 @@
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { matchesAllWords } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { AlertTriangle, Check, ChevronDown, Copy, ListChecks, Search, TableProperties } from 'lucide-react';
@@ -7,7 +9,6 @@ import { useId, useMemo, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Employee import guide: the no-account notice, the column table and the valid-values list (live master data).
 
@@ -160,8 +161,7 @@ function ValidValues() {
         }));
     }, [tab, departments, sections, positions, departmentName]);
 
-    const term = search.trim().toLowerCase();
-    const shown = term ? rows.filter((row) => [row.value, row.where ?? '', ...row.aliases].some((text) => text.toLowerCase().includes(term))) : rows;
+    const shown = rows.filter((row) => matchesAllWords([row.value, row.where ?? '', ...row.aliases].join(' '), search));
 
     const copy = async (row: ValueRow) => {
         try {
