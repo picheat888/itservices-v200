@@ -67,7 +67,7 @@ class ItPendingRequestReport extends TabularReport
             ReportFilter::select('type', Options::fromLabels(self::typeKeys()))->labelKey('rep_fl_request_type'),
             ReportFilter::select('department_id', Options::departments()),
             ReportFilter::select('assignee', self::assigneeOptions()),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_it_pending'),
             ReportFilter::select('by', Options::fromLabels(self::BY_KEYS), 'owner')->viewOnly(),
         ];
     }

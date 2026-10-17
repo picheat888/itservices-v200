@@ -71,7 +71,7 @@ class AssetTransferHistoryReport extends TabularReport
             ReportFilter::select('warehouse_id', Options::warehouses()),
             ReportFilter::select('category_id', Options::categories())->labelKey('rep_fl_asset_category'),
             ReportFilter::select('department_id', Options::departments()),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_transfer_history'),
         ];
     }
 

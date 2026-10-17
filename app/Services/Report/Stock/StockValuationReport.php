@@ -50,7 +50,7 @@ class StockValuationReport extends TabularReport
         return [
             ReportFilter::date('as_of', today()->toDateString()),
             ReportFilter::select('category_id', Options::categories()),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_stock_items'),
             // The dead-stock card's threshold; the page keeps it in the URL.
             ReportFilter::select('dead_days', Options::fromLabels([90 => 'rep_sva_dead_90', 180 => 'rep_sva_dead_180', 365 => 'rep_sva_dead_365']), 90)->labelKey('rep_sva_dead_seg')->viewOnly(),
         ];

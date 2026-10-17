@@ -32,6 +32,17 @@ final class ReportFilter
         return $this;
     }
 
+    /** The search box's placeholder i18n key: what the box searches. */
+    private ?string $placeholderKey = null;
+
+    /** Name what this search box searches (shown in the box, also its accessible name). */
+    public function placeholderKey(string $key): self
+    {
+        $this->placeholderKey = $key;
+
+        return $this;
+    }
+
     /** Only sets how the page is shown, not which rows it keeps. */
     private bool $view = false;
 
@@ -80,7 +91,7 @@ final class ReportFilter
     }
 
     /**
-     * @return array{name: string, type: string, options: list<array<string, mixed>>, default: string|int|null, label_key: string, view: bool}
+     * @return array{name: string, type: string, options: list<array<string, mixed>>, default: string|int|null, label_key: string, placeholder_key: ?string, view: bool}
      */
     public function toArray(): array
     {
@@ -90,6 +101,7 @@ final class ReportFilter
             'options' => $this->options,
             'default' => $this->default,
             'label_key' => $this->labelKey ?? "rep_fl_{$this->name}",
+            'placeholder_key' => $this->placeholderKey,
             'view' => $this->view,
         ];
     }

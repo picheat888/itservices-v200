@@ -94,7 +94,7 @@ class SoftwareLicenseReport extends TabularReport
             ReportFilter::select('usage', Options::fromLabels(self::USAGE_KEYS)),
             ReportFilter::select('license_type', Options::fromLabels(self::LICENSE_KEYS)),
             ReportFilter::select('brand_id', self::brandOptions())->labelKey('rep_fl_sl_brand'),
-            ReportFilter::search(),
+            ReportFilter::search()->placeholderKey('rep_ph_software_licenses'),
             ReportFilter::select('software_id', self::softwareOptions())->labelKey('rep_fl_sl_software'),
             ReportFilter::select('state', Options::fromLabels(self::STATE_KEYS), 'active')->labelKey('rep_fl_sl_state'),
         ];
