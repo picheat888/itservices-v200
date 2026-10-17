@@ -49,7 +49,8 @@ class ReportSnapshotService
             $this->requestsPending($viewer, $from, $to),
             $this->assetsInUse($viewer),
             $this->fromTabular($viewer, 'contracts_expiring', ReportCatalogue::CONTRACTS_RENEWALS, ['within' => 30], 'overdue', 'overdue'),
-            $this->fromTabular($viewer, 'stock_below_min', ReportCatalogue::STOCK_BELOW_MIN, [], 'out_of_stock', 'out'),
+            // Below min = out + low; the report's over-max rows stay out of this tile.
+            $this->fromTabular($viewer, 'stock_below_min', ReportCatalogue::STOCK_BELOW_MIN, [], 'out_of_stock', 'out', ['out_of_stock', 'below_min']),
         ]));
 
         return ['period' => $period, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'tiles' => $tiles];
@@ -236,13 +237,14 @@ class ReportSnapshotService
     }
 
     /**
-     * A tile read straight off a tabular report's own summary: its `total`, plus one more of
-     * its summary numbers as the tile's second line.
+     * A tile read straight off a tabular report's own summary: its `total` (or the sum of $valueKeys), plus one
+     * more of its summary numbers as the tile's second line.
      *
      * @param  array<string, mixed>  $filters
+     * @param  list<string>  $valueKeys
      * @return array<string, mixed>|null
      */
-    private function fromTabular(User $viewer, string $tileKey, string $reportKey, array $filters, string $summaryKey, string $secondaryKey): ?array
+    private function fromTabular(User $viewer, string $tileKey, string $reportKey, array $filters, string $summaryKey, string $secondaryKey, array $valueKeys = ['total']): ?array
     {
         if (! ReportCatalogue::allows($viewer, $reportKey)) {
             return null;
@@ -253,7 +255,9 @@ class ReportSnapshotService
         $summary = collect($report->summary($report->query($viewer, $resolved), $resolved))->keyBy('key');
         $value = fn (string $key) => $summary->get($key) instanceof ReportSummary ? $summary->get($key)->value : null;
 
-        return $this->tile($tileKey, $reportKey, $value('total'), secondary: ['key' => $secondaryKey, 'value' => $value($summaryKey)]);
+        $figure = count($valueKeys) === 1 ? $value($valueKeys[0]) : array_sum(array_map($value, $valueKeys));
+
+        return $this->tile($tileKey, $reportKey, $figure, secondary: ['key' => $secondaryKey, 'value' => $value($summaryKey)]);
     }
 
     /**
