@@ -412,7 +412,7 @@ class AssetService
                 // Set by resign() before this runs, so the mail can state it. Nullable:
                 // a resignation may be recorded without a last day agreed yet.
                 'employee.last_working' => DateDisplay::emailDate($employee->last_day),
-                'asset.count' => (string) $assets->count(),
+                'asset.count' => number_format($assets->count()),
                 'asset.table' => $this->assetTable($assets),
                 'reference.id' => (string) $employee->code,
             ], '/assets', 'Open the assets list');

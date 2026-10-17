@@ -643,7 +643,7 @@ class RequestNotificationService
 
         $this->email->sendTemplate('request.stalled_digest', $recipient->email, [
             'user.first_name' => e(explode(' ', (string) $recipient->name)[0] ?: 'there'),
-            'digest.count' => (string) $items->count(),
+            'digest.count' => number_format($items->count()),
             'digest.table' => $this->digestTable($items),
         ], rtrim((string) config('app.url'), '/').'/requests?tab=mine', 'Open my approvals', $recipient->name);
     }
@@ -668,7 +668,7 @@ class RequestNotificationService
                     EmailTable::link($this->requestUrl($request), $request->reference),
                     EmailTable::text((string) $request->title),
                     EmailTable::text((string) ($request->requester_name ?? '-'), 32),
-                    (string) $item['days'],
+                    number_format((int) $item['days']),
                 ];
             })
             ->values()

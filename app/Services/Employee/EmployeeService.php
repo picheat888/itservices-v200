@@ -517,7 +517,7 @@ class EmployeeService
                 'employee.name' => e((string) $employee->name),
                 'employee.code' => e((string) $employee->code),
                 'employee.last_working' => DateDisplay::emailDate($employee->last_day),
-                'access.count' => (string) $outstanding['total'],
+                'access.count' => number_format((int) $outstanding['total']),
                 'access.table' => $table,
             ], url('/access'), 'Open the Access Directory', $recipient->name);
         }

@@ -71,9 +71,9 @@ class ContractDigestService
         foreach ($recipients as $recipient) {
             $this->email->sendTemplate('contract.weekly_digest', $recipient->email, [
                 'user.first_name' => strtok((string) $recipient->name, ' '),
-                'digest.expiring_count' => (string) $expiring->count(),
+                'digest.expiring_count' => number_format($expiring->count()),
                 'digest.expiring_table' => $this->table($expiring),
-                'digest.overdue_count' => (string) $overdue->count(),
+                'digest.overdue_count' => number_format($overdue->count()),
                 'digest.overdue_table' => $this->table($overdue),
             ], rtrim((string) config('app.url'), '/').'/contracts', 'Open the contract list', $recipient->name);
         }
