@@ -85,6 +85,22 @@ export function MovementsTab() {
             ),
         },
         { key: 'qty', header: t('stock_qty'), align: 'right', width: '80px', render: (m) => <span className="font-bold tabular-nums">{m.qty}</span> },
+        {
+            key: 'unit_cost',
+            header: t('stock_unit_cost_short'),
+            align: 'right',
+            width: '110px',
+            hideBelow: 'lg',
+            render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost) : '—'}</span>,
+        },
+        {
+            key: 'value',
+            header: t('stock_value'),
+            align: 'right',
+            width: '120px',
+            hideBelow: 'lg',
+            render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost * m.qty) : '—'}</span>,
+        },
         { key: 'from', header: t('stock_events_from'), width: '130px', render: (m) => <span className="text-sm">{m.from || '—'}</span> },
         { key: 'to', header: t('stock_events_to'), width: '130px', render: (m) => <span className="text-sm">{m.to || '—'}</span> },
         {
@@ -100,6 +116,13 @@ export function MovementsTab() {
             width: '150px',
             hideBelow: 'lg',
             render: (m) => <span className="text-sm">{m.recorded_by || '—'}</span>,
+        },
+        {
+            key: 'notes',
+            header: t('stock_notes'),
+            minWidth: '12rem',
+            hideBelow: 'xl',
+            render: (m) => <span className="text-muted-foreground line-clamp-2 text-xs">{m.notes || '—'}</span>,
         },
     ];
 

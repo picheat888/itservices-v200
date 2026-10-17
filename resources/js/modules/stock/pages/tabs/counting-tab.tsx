@@ -250,6 +250,27 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             render: (s) => <span className="text-sm">{s.warehouse || t('stock_count_all_wh')}</span>,
         },
         {
+            key: 'category',
+            header: t('stock_category'),
+            className: 'whitespace-nowrap',
+            hideBelow: 'lg',
+            render: (s) => <span className="text-sm">{s.category || '—'}</span>,
+        },
+        {
+            key: 'counted_by',
+            header: t('stock_counted_by'),
+            className: 'whitespace-nowrap',
+            hideBelow: 'lg',
+            render: (s) => <span className="text-sm">{s.counted_by || '—'}</span>,
+        },
+        {
+            key: 'note',
+            header: t('stock_notes'),
+            className: 'max-w-64',
+            hideBelow: 'xl',
+            render: (s) => <span className="text-muted-foreground line-clamp-2 text-xs">{s.note || '—'}</span>,
+        },
+        {
             key: 'progress',
             header: t('stock_count_progress'),
             className: 'whitespace-nowrap',

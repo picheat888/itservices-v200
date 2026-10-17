@@ -7,6 +7,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalName } from '@/shared/hooks/use-local-name';
@@ -345,6 +346,7 @@ export default function StockPage() {
     };
 
     const { format, formatCompact } = useCurrency();
+    const fmt = useDateFormat();
 
     const statusBadge = (s: StockItemStatus) => (
         <StatusBadge tone={STOCK_STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>
@@ -387,7 +389,21 @@ export default function StockPage() {
             header: t('stock_current'),
             align: 'right',
             width: '90px',
-            render: (i) => <span className="text-sm font-bold tabular-nums">{i.current_stock.toLocaleString()}</span>,
+            render: (i) => (
+                <div>
+                    <span className="text-sm font-bold tabular-nums">{i.current_stock.toLocaleString()}</span>
+                    {i.unit && <span className="text-muted-foreground ml-1 text-xs lowercase">{i.unit}</span>}
+                    {!!i.reserved && <div className="text-muted-foreground text-xs">{t('stock_reserved_n').replace('{n}', String(i.reserved))}</div>}
+                </div>
+            ),
+        },
+        {
+            key: 'cost',
+            header: t('stock_unit_cost_short'),
+            align: 'right',
+            width: '110px',
+            hideBelow: 'lg',
+            render: (i) => <span className="text-xs tabular-nums">{format(i.cost)}</span>,
         },
         {
             key: 'value',
@@ -397,6 +413,21 @@ export default function StockPage() {
             render: (i) => <span className="text-xs tabular-nums">{format(i.total_value)}</span>,
         },
         { key: 'status', header: t('status'), width: '120px', render: (i) => statusBadge(i.status) },
+        {
+            key: 'last_move',
+            header: t('stock_last_move'),
+            width: '130px',
+            className: 'whitespace-nowrap',
+            hideBelow: 'xl',
+            render: (i) => <span className="text-muted-foreground text-xs">{i.last_move_at ? fmt.date(i.last_move_at) : '—'}</span>,
+        },
+        {
+            key: 'warranty',
+            header: t('stock_warranty'),
+            width: '110px',
+            hideBelow: 'xl',
+            render: (i) => <span className="text-xs">{i.warranty ?? '—'}</span>,
+        },
         {
             key: 'actions',
             header: <span className="sr-only">{t('actions')}</span>,

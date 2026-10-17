@@ -165,6 +165,27 @@ class StockWorkflowTest extends TestCase
         $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'issue', 'qty' => 4, 'reference' => $reqRef]);
     }
 
+    public function test_request_list_names_who_decided_and_who_fulfilled(): void
+    {
+        $item = $this->item(0);
+        $super = $this->superUser();
+        $this->actingAs($super)->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 10])->assertCreated();
+
+        $asker = $this->userWith(['stock.view', 'stock.request']);
+        $id = $this->actingAs($asker)
+            ->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 2, 'reason' => 'Spare'])
+            ->json('data.id');
+        $this->actingAs($super)->postJson("/api/stock-requests/{$id}/approve")->assertOk();
+        $this->actingAs($super)->postJson("/api/stock-requests/{$id}/fulfill")->assertOk();
+
+        $row = collect($this->actingAs($super)->getJson('/api/stock-requests')->assertOk()->json('data'))->firstWhere('id', $id);
+
+        $this->assertSame($super->name, $row['approver_name']);
+        $this->assertSame($super->name, $row['fulfilled_by']);
+        $this->assertNotNull($row['approved_at']);
+        $this->assertNotNull($row['fulfilled_at']);
+    }
+
     /** An approver who asks for stock waits on somebody else, like every other request. */
     public function test_nobody_approves_or_rejects_their_own_requisition(): void
     {
