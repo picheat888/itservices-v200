@@ -3,10 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Contract\Contract;
+use App\Models\Notification\NotificationTemplate;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use App\Notifications\NotificationTestNotification;
+use App\Support\NotificationCatalogue;
+use Database\Seeders\NotificationTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -238,5 +242,66 @@ class NotificationApiTest extends TestCase
         $this->assertSame(1, $counts['contract_expiring']['count']);
         // A test sample carries the module it imitates, so the tray can tab it with its kin.
         $this->assertSame('assets', $counts['test']['module']);
+    }
+
+    /** The kind ("type|module") is stored on the row, so the tray counts and pages in SQL. */
+    public function test_each_notification_stores_its_kind(): void
+    {
+        $user = User::factory()->create();
+        $this->notify($user, $this->makeContract());
+        $user->notify(new NotificationTestNotification('notif_asset_assigned', 'assets'));
+
+        $kinds = $user->notifications()->orderBy('kind')->pluck('kind')->all();
+
+        $this->assertSame(['contract_expiring|', 'test|assets'], $kinds);
+    }
+
+    /** Rows created in the same second page in a fixed order: no repeats, no gaps. */
+    public function test_rows_sharing_a_second_page_without_repeats_or_gaps(): void
+    {
+        $this->freezeTime();
+        $contract = $this->makeContract();
+        $user = User::factory()->create();
+        foreach (range(1, 35) as $ignored) {
+            $this->notify($user, $contract);
+        }
+
+        $first = $this->actingAs($user)->getJson('/api/notifications')->json('data');
+        $second = $this->actingAs($user)->getJson('/api/notifications?offset=30')->json('data');
+        $ids = [...array_column($first, 'id'), ...array_column($second, 'id')];
+
+        $this->assertCount(35, $ids);
+        $this->assertCount(35, array_unique($ids));
+    }
+
+    public function test_mark_all_read_is_one_update_whatever_the_count(): void
+    {
+        $contract = $this->makeContract();
+        $user = User::factory()->create();
+        foreach (range(1, 12) as $ignored) {
+            $this->notify($user, $contract);
+        }
+
+        DB::enableQueryLog();
+        $this->actingAs($user)->putJson('/api/notifications/read-all')->assertOk();
+        $updates = collect(DB::getQueryLog())->filter(fn (array $q) => str_starts_with(strtolower($q['query']), 'update "notifications"'));
+
+        $this->assertCount(1, $updates);
+        $this->assertSame(0, $user->unreadNotifications()->count());
+    }
+
+    /** Sending a bell stamps last_sent_at only; "last edited" stays the administrator's. */
+    public function test_sending_leaves_the_templates_edit_time_alone(): void
+    {
+        $this->seed(NotificationTemplateSeeder::class);
+        $edited = now()->subWeek()->startOfSecond();
+        NotificationTemplate::where('key', 'notif_contract_expiring')->update(['updated_at' => $edited]);
+        NotificationCatalogue::forgetSwitches();
+
+        NotificationCatalogue::stampSent('notif_contract_expiring');
+
+        $template = NotificationTemplate::where('key', 'notif_contract_expiring')->first();
+        $this->assertNotNull($template->last_sent_at);
+        $this->assertTrue($template->updated_at->equalTo($edited));
     }
 }

@@ -598,7 +598,8 @@ class NotificationCatalogue
         }
 
         self::$stamped[$key] = true;
-        NotificationTemplate::where('key', $key)->update(['last_sent_at' => now()]);
+        // toBase(): a send is not an edit, so updated_at (shown as "last edited") stays put.
+        NotificationTemplate::where('key', $key)->toBase()->update(['last_sent_at' => now()]);
     }
 
     /** Drops the per-request caches — for tests, and for the settings page after a save. */

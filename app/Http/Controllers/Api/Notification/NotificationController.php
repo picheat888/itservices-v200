@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api\Notification;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\NotificationKind;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Support\Collection;
 
 /**
  * Manages the current user's database notifications (in-app bell).
@@ -28,15 +29,19 @@ class NotificationController extends Controller
             'offset' => ['sometimes', 'integer', 'min:0'],
         ]);
 
-        // Filtered in PHP rather than on a JSON path, which differs by driver (MariaDB vs the SQLite tests run on).
-        $all = $request->user()->notifications()->latest()->get();
-        $matching = isset($validated['kinds'])
-            ? $all->filter(fn (DatabaseNotification $n) => in_array($this->kindOf($n), $validated['kinds'], true))->values()
-            : $all;
+        $user = $request->user();
+        $counts = $this->countsByKind($user);
+        $matching = $user->notifications()
+            ->when(isset($validated['kinds']), fn ($q) => $q->whereIn('kind', $validated['kinds']));
+        $matchingCount = isset($validated['kinds']) ? (clone $matching)->count() : array_sum(array_column($counts, 'count'));
         $offset = (int) ($validated['offset'] ?? 0);
 
+        // id breaks ties: rows created in the same second keep one order from page to page.
+        $page = (clone $matching)->reorder()->orderByDesc('created_at')->orderByDesc('id')
+            ->offset($offset)->limit(self::PAGE_SIZE)->get();
+
         return response()->json([
-            'data' => $matching->slice($offset, self::PAGE_SIZE)->values()->map(fn (DatabaseNotification $n) => [
+            'data' => $page->map(fn (DatabaseNotification $n) => [
                 'id' => $n->id,
                 'data' => $n->data,
                 'read' => ! is_null($n->read_at),
@@ -44,35 +49,32 @@ class NotificationController extends Controller
                 // The real time: the SPA toasts what arrived, not what scrolled into the capped window.
                 'created_at_iso' => $n->created_at->toIso8601String(),
             ]),
-            'unread' => $all->whereNull('read_at')->count(),
-            'total' => $all->count(),
-            'matching' => $matching->count(),
-            'has_more' => $matching->count() > $offset + self::PAGE_SIZE,
-            'counts' => $this->countsByKind($all),
+            'unread' => array_sum(array_column($counts, 'unread')),
+            'total' => array_sum(array_column($counts, 'count')),
+            'matching' => $matchingCount,
+            'has_more' => $matchingCount > $offset + self::PAGE_SIZE,
+            'counts' => $counts,
         ]);
     }
 
-    /** The payload's type plus, for a test sample, the module it imitates. */
-    private function kindOf(DatabaseNotification $notification): string
-    {
-        return ($notification->data['type'] ?? '').'|'.($notification->data['module'] ?? '');
-    }
-
     /**
-     * Totals and unread per kind; which module a kind belongs to is decided by the SPA's moduleOf().
+     * Totals and unread per kind, one grouped query; which module a kind belongs to is decided by the SPA's moduleOf().
      *
-     * @param  Collection<int, DatabaseNotification>  $notifications
      * @return list<array{type: string|null, module: string|null, count: int, unread: int}>
      */
-    private function countsByKind(Collection $notifications): array
+    private function countsByKind(User $user): array
     {
-        return $notifications
-            ->groupBy(fn (DatabaseNotification $n) => $this->kindOf($n))
-            ->map(fn (Collection $group) => [
-                'type' => $group->first()->data['type'] ?? null,
-                'module' => $group->first()->data['module'] ?? null,
-                'count' => $group->count(),
-                'unread' => $group->whereNull('read_at')->count(),
+        return $user->notifications()->toBase()
+            ->reorder()
+            ->select('kind')
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN read_at IS NULL THEN 1 ELSE 0 END) as unread_total')
+            ->groupBy('kind')
+            ->orderBy('kind')
+            ->get()
+            ->map(fn (object $row) => [
+                ...NotificationKind::split((string) $row->kind),
+                'count' => (int) $row->total,
+                'unread' => (int) $row->unread_total,
             ])
             ->values()
             ->all();
@@ -90,7 +92,8 @@ class NotificationController extends Controller
     /** Marks all notifications for the current user as read. */
     public function markAllRead(Request $request): JsonResponse
     {
-        $request->user()->unreadNotifications->markAsRead();
+        // One UPDATE, not a load-and-save per row.
+        $request->user()->unreadNotifications()->update(['read_at' => now()]);
 
         return response()->json(['message' => 'success']);
     }
