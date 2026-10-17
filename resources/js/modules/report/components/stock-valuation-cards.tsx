@@ -71,7 +71,6 @@ function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Cat
         { key: 'held', label: t('rep_sva_k_held'), fill: FILL.green, value: tiles.held, text: n(tiles.held) },
         { key: 'out', label: t('stock_st_out'), fill: FILL.red, value: tiles.out, text: n(tiles.out) },
     ]);
-    const outLine = t('rep_sva_k_held_foot').replace('{n}', n(tiles.out));
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(4))}>
@@ -93,15 +92,7 @@ function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Cat
                 unit={t('rep_sva_k_held_of').replace('{n}', n(tiles.items))}
                 alert={tiles.out > 0 ? 'amber' : undefined}
                 bar={heldPieces.length > 0 ? splitBar(heldPieces) : undefined}
-                footer={
-                    tiles.out > 0 ? (
-                        <span className="block truncate font-medium text-red-700 dark:text-red-400" title={outLine}>
-                            {outLine}
-                        </span>
-                    ) : (
-                        foot('rep_sva_k_all_held', {})
-                    )
-                }
+                footer={heldPieces.length > 0 ? <TileLegend pieces={heldPieces} /> : undefined}
             />
             <KpiTile
                 label={t('rep_sva_k_dead')}

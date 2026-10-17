@@ -1871,8 +1871,6 @@ export const report: Dict = {
     rep_sva_k_qty_foot: 'จาก {n} รายการที่มีของ ณ {date}',
     rep_sva_k_held: 'รายการที่มีของ',
     rep_sva_k_held_of: 'จาก {n}',
-    rep_sva_k_held_foot: 'หมดสต็อก {n} รายการ',
-    rep_sva_k_all_held: 'ทุกรายการมีของ',
     rep_sva_k_dead: 'ไม่เคลื่อนไหวเกิน 90 วัน',
     rep_sva_k_dead_share: '{pct}% ของมูลค่า',
     rep_sva_k_others: 'อื่น ๆ',
