@@ -1,6 +1,7 @@
 // "ประวัติโอนย้ายและรับคืน" report page (/reports/assets-transfer-history): shared tabular body + TransferCards + its own list cells.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
@@ -102,14 +103,15 @@ function PartyCell({ row, end }: { row: Row; end: 'from' | 'to' }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const type = str(row[`${end}_type`]);
-    const name = str(row[`${end}_name`]);
+    const nameValue = row[`${end}_name`];
+    const name = isLabel(nameValue) ? str(localPair(nameValue.name, nameValue.name_th, lang)) : str(nameValue);
     if (!type || !name) return <None />;
     const department = row[`${end}_department`];
     const sub = (
         type === 'employee'
             ? [
                   str(row[`${end}_code`]),
-                  isLabel(department) ? (lang === 'th' && department.name_th) || department.name : null,
+                  isLabel(department) ? localPair(department.name, department.name_th, lang) : null,
                   row[`${end}_resigned`] === 1 ? t('rep_th_resigned') : null,
               ]
             : [t(`rep_th_party_${type}`)]
