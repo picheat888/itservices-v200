@@ -91,10 +91,16 @@ class StockValuationReport extends TabularReport
         // Needs the lots on every item, so keep the eager loads (but not the name relations).
         $items = (clone $query)->without(['category', 'unit'])->get();
 
+        // The rest of the page tiles (day + category), so the file reads like the screen.
+        $tiles = $this->breakdown(null, $filters)['tiles'];
+
         return [
             ReportSummary::make('total', 'ทั้งหมด', $items->count()),
             ReportSummary::make('qty_total', 'จำนวนคงเหลือรวม', (int) $items->sum(fn (StockItem $i) => $this->qtyAt($i))),
             ReportSummary::make('stock_value', 'มูลค่าคงคลังรวม', round((float) $items->sum(fn (StockItem $i) => $this->valueAt($i)), 2), format: 'money'),
+            ReportSummary::make('out', 'รายการที่ไม่มีของ', $tiles['out']),
+            ReportSummary::make('dead90_count', 'ไม่เคลื่อนไหวเกิน 90 วัน (รายการ)', $tiles['dead90']['count']),
+            ReportSummary::make('dead90_value', 'มูลค่าที่ไม่เคลื่อนไหวเกิน 90 วัน', $tiles['dead90']['value'], format: 'money'),
         ];
     }
 

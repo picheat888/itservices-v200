@@ -103,9 +103,14 @@ class StockReportsTest extends TestCase
 
         $summary = collect($body['summary'])->keyBy('key');
         $this->assertSame(4, $summary['total']['value']);
-        $this->assertSame(10, $summary['qty_in']['value']);
-        $this->assertSame(4, $summary['qty_out']['value']);
+        // The file headline repeats the page tiles: pieces and value per movement type.
+        $this->assertSame(['total', 'receive_qty', 'receive_value', 'issue_qty', 'issue_value', 'return_qty', 'transfer_qty', 'adjust_net'], $summary->keys()->all());
+        $this->assertSame(10, $summary['receive_qty']['value']);
         $this->assertEqualsWithDelta(15000.0, $summary['receive_value']['value'], 0.001);
+        $this->assertSame(3, $summary['issue_qty']['value']);
+        $this->assertSame(0, $summary['return_qty']['value']);
+        $this->assertSame(2, $summary['transfer_qty']['value']);
+        $this->assertSame(-1, $summary['adjust_net']['value']);
     }
 
     public function test_movements_filter_by_range_type_warehouse_and_search(): void
