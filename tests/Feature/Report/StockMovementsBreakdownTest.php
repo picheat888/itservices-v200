@@ -489,13 +489,13 @@ class StockMovementsBreakdownTest extends TestCase
         $report = new StockMovementReport;
         $titles = fn (array $permissions) => array_column($report->exportSections($this->userWith($permissions), $report->resolveFilters([])), 'title');
 
-        $this->assertSame(['รับเข้าและเบิกออกรายเดือน', 'คำขอเบิกที่ค้าง', 'ผู้ขอเบิกสูงสุด', 'แผนกที่เบิกสูงสุด', 'ส่วนต่างจากการนับสต็อก'], $titles($this->reportRights('stock')));
+        $this->assertSame(['รับเข้าและเบิกออกรายเดือน', 'คำขอเบิกที่ค้าง', 'ผู้ขอที่เบิกมากที่สุด', 'แผนกที่เบิกมากที่สุด', 'ส่วนต่างจากการนับสต็อก'], $titles($this->reportRights('stock')));
 
         $sections = collect((new StockMovementReport)->exportSections($this->userWith($this->reportRights('stock')), $report->resolveFilters(['from' => '2026-08-01', 'to' => '2026-09-30'])))->keyBy('title');
         $this->assertCount(2, $sections['รับเข้าและเบิกออกรายเดือน']['rows']);
-        $this->assertSame(['Suda', 'สมชาย ใจดี', 'Nobody'], array_column($sections['ผู้ขอเบิกสูงสุด']['rows'], 0));
-        $this->assertSame('บุคคล', $sections['ผู้ขอเบิกสูงสุด']['rows'][0][1]);
-        $this->assertSame('ไม่มีแผนก', $sections['แผนกที่เบิกสูงสุด']['rows'][2][0]);
+        $this->assertSame(['Suda', 'สมชาย ใจดี', 'Nobody'], array_column($sections['ผู้ขอที่เบิกมากที่สุด']['rows'], 0));
+        $this->assertSame('บุคคล', $sections['ผู้ขอที่เบิกมากที่สุด']['rows'][0][1]);
+        $this->assertSame('ไม่มีแผนก', $sections['แผนกที่เบิกมากที่สุด']['rows'][2][0]);
         $this->assertSame(['SC-2026-001', 'SC-2026-002'], array_column($sections['ส่วนต่างจากการนับสต็อก']['rows'], 0));
     }
 
@@ -510,7 +510,7 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertExportStored('Report_stock-movements_2026-09-25.xlsx', function (TabularReportExport $export) {
             $rows = collect($export->sheets())->first(fn (object $s) => $s instanceof TabularRowsSheet);
 
-            return array_column($export->sections, 'title') === ['รับเข้าและเบิกออกรายเดือน', 'คำขอเบิกที่ค้าง', 'ผู้ขอเบิกสูงสุด', 'แผนกที่เบิกสูงสุด', 'ส่วนต่างจากการนับสต็อก']
+            return array_column($export->sections, 'title') === ['รับเข้าและเบิกออกรายเดือน', 'คำขอเบิกที่ค้าง', 'ผู้ขอที่เบิกมากที่สุด', 'แผนกที่เบิกมากที่สุด', 'ส่วนต่างจากการนับสต็อก']
                 && $rows !== null
                 && in_array('มูลค่า', $rows->headings(), true);
         });

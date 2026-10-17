@@ -464,15 +464,15 @@ class StockMovementReport extends TabularReport
             ], $data['requests']['rows']),
         ];
         $sections[] = [
-            'title' => 'ผู้ขอเบิกสูงสุด',
-            'headings' => ['ผู้ขอเบิก', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
+            'title' => 'ผู้ขอที่เบิกมากที่สุด',
+            'headings' => ['ผู้ขอ', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
             'rows' => array_map(fn (array $p) => [
                 $p['name_th'] ?: $p['name'], $p['department_id'] === null ? self::NO_DEPARTMENT_TH : ($p['department_th'] ?: $p['department']),
                 $p['value'], $p['qty'], $p['times'],
             ], $byValue($data['people'])),
         ];
         $sections[] = [
-            'title' => 'แผนกที่เบิกสูงสุด',
+            'title' => 'แผนกที่เบิกมากที่สุด',
             'headings' => ['แผนก', 'คน', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
             'rows' => array_map(fn (array $d) => [
                 $d['department_id'] === null ? self::NO_DEPARTMENT_TH : ($d['name_th'] ?: $d['name']),
