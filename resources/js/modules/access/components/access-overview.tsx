@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
+import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
@@ -401,28 +402,14 @@ export function AccessOverview({
                     const deltaTone = net > 0 ? 'text-emerald-700 dark:text-emerald-400' : net < 0 ? 'text-destructive' : 'text-muted-foreground';
                     const deltaKey = net > 0 ? 'access_dash_up' : net < 0 ? 'access_dash_down' : 'access_dash_flat';
                     return (
-                        <Card
+                        <StatCard
                             key={kind}
-                            role="button"
-                            tabIndex={0}
+                            label={t(meta.labelKey)}
+                            icon={Icon}
+                            value={stat.resources}
                             onClick={() => onOpenTab(kind)}
-                            onKeyDown={(e) => {
-                                if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
-                                    e.preventDefault();
-                                    onOpenTab(kind);
-                                }
-                            }}
-                            className="hover:border-brand/40 focus-visible:ring-ring cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="text-muted-foreground text-sm">{t(meta.labelKey)}</div>
-                                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
-                                    <Icon className="h-[18px] w-[18px]" />
-                                </span>
-                            </div>
-                            <div className="mt-2 text-3xl font-bold">{stat.resources}</div>
-                            <div className={cn('mt-1 text-xs', deltaTone)}>{t(deltaKey).replace('{n}', String(Math.abs(net)))}</div>
-                        </Card>
+                            footer={<span className={deltaTone}>{t(deltaKey).replace('{n}', String(Math.abs(net)))}</span>}
+                        />
                     );
                 })}
             </div>

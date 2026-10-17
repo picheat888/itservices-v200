@@ -50,7 +50,7 @@ export function OverviewTab({
     // The list "view all" opens (status=alerts) also holds over-Max and dead stock
     const alertTotal = summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : 0;
     return (
-        <div className="space-y-8">
+        <div className="space-y-4">
             <OverviewHeader />
             {/* KPI cards */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -69,7 +69,7 @@ export function OverviewTab({
 
             {!summary ? (
                 // Skeleton mirrors the real card grid (header + rows).
-                <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
                     {Array.from({ length: canEvents ? 4 : 3 }).map((_, i) => (
                         <Card key={i} className={PANEL}>
                             <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3')}>
@@ -93,7 +93,7 @@ export function OverviewTab({
                 </div>
             ) : (
                 // One grid holds every panel so a hidden card lets the rest reflow up.
-                <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
                     {/* Reorder queue */}
                     <Card className={PANEL}>
                         <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3')}>

@@ -894,7 +894,7 @@ const DASH_DEPT_LIMIT = 8;
 /** Pulse skeleton mirroring the dashboard (KPI row + trend + two 2-col grids) while the summary loads. */
 function EmployeeOverviewSkeleton() {
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
@@ -918,7 +918,7 @@ function EmployeeOverviewSkeleton() {
                 </div>
             </Card>
             {Array.from({ length: 2 }).map((_, g) => (
-                <div key={g} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div key={g} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, i) => (
                         <Card key={i} className="overflow-hidden">
                             <div className={cn(CARD_HEADING, 'border-border border-b px-5 py-3.5')}>
@@ -986,7 +986,7 @@ function OverviewTab({
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {kpis.map((k) => (
                     <StatCard key={k.label} icon={k.icon} label={k.label} value={k.value} sub={k.sub} />
@@ -994,7 +994,7 @@ function OverviewTab({
             </div>
             <HiresTrendCard trend={summary?.hires_trend ?? { unit: 'month', data: [] }} highlightLast={highlightLast} />
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {/* Employee status — active vs resigned */}
                 <Card className="overflow-hidden">
                     <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
@@ -1069,7 +1069,7 @@ function OverviewTab({
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <Card className="overflow-hidden">
                     <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                         <span className="flex items-center gap-2 text-sm font-semibold">

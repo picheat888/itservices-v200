@@ -10,6 +10,7 @@ import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -84,21 +85,6 @@ const isAssetTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]
 // List keys of the Inventory and Transfers tabs (rows-per-page `per` is shared and kept).
 const LIST_KEYS = ['search', 'type', 'source', 'status', 'warehouse', 'page'];
 
-function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof Box }) {
-    return (
-        <Card className="p-5">
-            <div className="flex items-start justify-between">
-                <div className="text-muted-foreground text-sm">{label}</div>
-                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
-                    <Icon className="h-[18px] w-[18px]" />
-                </span>
-            </div>
-            <div className="mt-2 text-3xl font-bold">{value}</div>
-            {hint && <div className="text-muted-foreground mt-1 text-xs">{hint}</div>}
-        </Card>
-    );
-}
-
 const ALL = '__all__';
 
 /**
@@ -143,7 +129,7 @@ function foldTypeBars(rest: AssetSummary['by_type']): TypeBar {
 /** Pulse skeleton mirroring the dashboard layout (KPI row + card pair + table) while the summary loads. */
 function AssetOverviewSkeleton() {
     return (
-        <div className="space-y-6 px-5 pb-5">
+        <div className="space-y-4 px-5 pb-5">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
@@ -682,14 +668,14 @@ export default function AssetsPage() {
                 {tab === 'overview' && summaryLoading && <AssetOverviewSkeleton />}
                 {tab === 'overview' && !summaryLoading && !summary && summaryFailed && <LoadFailedPanel onRetry={() => refetchSummary()} />}
                 {tab === 'overview' && !summaryLoading && summary && (
-                    <div className="space-y-6 px-5 pb-5">
+                    <div className="space-y-4 px-5 pb-5">
                         {/* Summary stats live on the Overview tab. */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                             <StatCard label={t('asset_total')} value={summary?.total ?? 0} icon={Box} />
                             <StatCard
                                 label={t('asset_deployed')}
                                 value={summary?.deployed ?? 0}
-                                hint={`${summary?.ready ?? 0} ${t('asset_ready').toLowerCase()}`}
+                                footer={`${summary?.ready ?? 0} ${t('asset_ready').toLowerCase()}`}
                                 icon={CheckCircle2}
                             />
                             <StatCard label={t('asset_pending_accept')} value={summary?.pending_acceptance ?? 0} icon={Clock} />

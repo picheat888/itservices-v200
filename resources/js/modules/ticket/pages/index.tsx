@@ -82,7 +82,7 @@ const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T 
 /** Loading placeholder for the dashboard body (four tiles, then category bars beside the latest list). */
 function TicketOverviewBodySkeleton() {
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
@@ -452,7 +452,7 @@ export default function TicketsPage() {
                         {summaryLoading ? (
                             <TicketOverviewBodySkeleton />
                         ) : (
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {summary && (
                                     <TicketOverviewTiles
                                         summary={summary}

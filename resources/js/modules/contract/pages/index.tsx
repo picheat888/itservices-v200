@@ -629,7 +629,7 @@ function OverviewTab({
     // Loading state mirrors the real layout with pulsing placeholders (same feel as the Stock dashboard).
     if (!summary)
         return (
-            <div className="space-y-6 p-5">
+            <div className="space-y-4 p-5">
                 <OverviewHeader />
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     {Array.from({ length: 4 }).map((_, i) => (
@@ -643,7 +643,7 @@ function OverviewTab({
                     ))}
                 </div>
                 <div className="bg-muted/40 h-36 animate-pulse rounded-lg" />
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, i) => (
                         <Card key={i} className="overflow-hidden">
                             <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
@@ -702,7 +702,7 @@ function OverviewTab({
     const plotHeight = Math.max(64, laneCount * 16 + 16);
 
     return (
-        <div className="space-y-6 p-5">
+        <div className="space-y-4 p-5">
             <OverviewHeader />
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard label={t('contract_total')} value={String(summary.total)} sub={null} icon={FileText} />
@@ -819,7 +819,7 @@ function OverviewTab({
                 )}
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
                 {/* Top vendors by spend */}
                 <Card className="overflow-hidden">
                     <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
