@@ -16,6 +16,7 @@ use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockSerialService;
 use App\Support\DocNumber;
 use App\Support\Refusal;
+use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +59,12 @@ class StockRequestController extends Controller
         if (in_array($status, ['pending', 'approved', 'fulfilled', 'rejected'], true)) {
             $query->where('status', $status);
         }
+
+        SearchTerms::apply($query, $request->query('search'), [
+            'reference', 'requester_name',
+            SearchTerms::related('item', ['sku', 'name']),
+            SearchTerms::related('user', [SearchTerms::related('employee', ['code', ...SearchTerms::personName()])]),
+        ]);
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);

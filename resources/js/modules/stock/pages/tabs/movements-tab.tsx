@@ -5,15 +5,18 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { ArrowRight, Filter, Printer } from 'lucide-react';
+import { Input } from '@/shared/ui/input';
+import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
@@ -37,11 +40,14 @@ export function MovementsTab() {
     const typeParam = list.get('type');
     const type = MOVEMENT_TYPES.includes(typeParam as StockMovementType) ? typeParam : 'all';
     const setType = (value: string) => list.setFilter('type', value === 'all' ? '' : value);
+    // Search lives in ?search; the list asks the server once typing pauses.
+    const search = list.get('search');
+    const sentSearch = useDebouncedSearch(search);
     const {
         data: movementsPage,
         isLoading: movementsLoading,
         isFetching: movementsFetching,
-    } = useStockMovements({ type: type === 'all' ? undefined : type, page, per_page: perPage });
+    } = useStockMovements({ type: type === 'all' ? undefined : type, search: sentSearch || undefined, page, per_page: perPage });
     const movements = movementsPage?.data ?? [];
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
     // Open state is separate from the data so the detail stays mounted during the close animation.
@@ -139,26 +145,40 @@ export function MovementsTab() {
 
     return (
         <div className="space-y-3">
-            {/* Inline type filter: icon + label + dropdown (no popover). */}
-            <div className="flex flex-wrap items-center gap-1.5">
-                <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
-                <label htmlFor={typeFilterId} className="text-muted-foreground shrink-0 text-sm font-medium">
-                    {t('stock_mv_type')}
-                </label>
-                <div className="w-44">
-                    <SearchableSelect
-                        id={typeFilterId}
-                        value={type}
-                        onChange={setType}
-                        options={[
-                            { value: 'all', label: t('stock_all_types'), search: t('stock_all_types') },
-                            ...MOVEMENT_TYPES.map((k) => ({
-                                value: k,
-                                label: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
-                                search: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
-                            })),
-                        ]}
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-full max-w-xs">
+                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" aria-hidden />
+                    <Input
+                        value={search}
+                        onChange={(e) => list.setFilter('search', e.target.value)}
+                        placeholder={t('stock_movements_tab_search')}
+                        aria-label={searchLabel(t('stock_movements_tab_search'))}
+                        name="search"
+                        autoComplete="off"
+                        className="pl-9 text-ellipsis"
                     />
+                </div>
+                {/* Inline type filter: icon + label + dropdown (no popover). */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <label htmlFor={typeFilterId} className="text-muted-foreground shrink-0 text-sm font-medium">
+                        {t('stock_mv_type')}
+                    </label>
+                    <div className="w-44">
+                        <SearchableSelect
+                            id={typeFilterId}
+                            value={type}
+                            onChange={setType}
+                            options={[
+                                { value: 'all', label: t('stock_all_types'), search: t('stock_all_types') },
+                                ...MOVEMENT_TYPES.map((k) => ({
+                                    value: k,
+                                    label: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
+                                    search: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
+                                })),
+                            ]}
+                        />
+                    </div>
                 </div>
             </div>
             <DataTable
@@ -172,7 +192,7 @@ export function MovementsTab() {
                 loading={movementsLoading || movementsFetching}
                 server={{ ...list.table.paging, total: movementsPage?.meta.total ?? 0 }}
                 empty={
-                    type !== 'all'
+                    type !== 'all' || search.trim() !== ''
                         ? { kind: 'search', title: t('stock_empty_movements_search'), hint: t('stock_empty_movements_search_hint') }
                         : { title: t('stock_empty_movements'), hint: t('stock_empty_movements_hint') }
                 }

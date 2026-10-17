@@ -99,14 +99,14 @@ export const stockApi = {
 };
 
 export const stockMovementApi = {
-    list: (params: { type?: string; stock_item_id?: number; page?: number; per_page?: number }) =>
+    list: (params: { type?: string; stock_item_id?: number; search?: string; page?: number; per_page?: number }) =>
         http.get<Paginated<StockMovement>>('/stock-movements', { params }).then((r) => r.data),
     serials: (id: number) => http.get<ApiEnvelope<string[]>>(`/stock-movements/${id}/serials`).then((r) => r.data.data),
     create: (payload: StockMovementPayload) => mutate<StockMovement>('post', '/stock-movements', payload),
 };
 
 export const stockRequestApi = {
-    list: (params?: { page?: number; per_page?: number; status?: string }) =>
+    list: (params?: { page?: number; per_page?: number; status?: string; search?: string }) =>
         http.get<Paginated<StockRequest, StockRequestPageMeta>>('/stock-requests', { params }).then((r) => r.data),
     create: (payload: StockRequestPayload) => mutate<StockRequest>('post', '/stock-requests', payload),
     approve: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/approve`),

@@ -67,7 +67,7 @@ export function useStockItemMutations() {
  * Server-paginated movement log, optionally filtered by type. Returns { data, meta }.
  * Pass enabled=false to skip the fetch (e.g. when the caller lacks view_events permission).
  */
-export const useStockMovements = (params: { type?: string; page?: number; per_page?: number } = {}, enabled = true) =>
+export const useStockMovements = (params: { type?: string; search?: string; page?: number; per_page?: number } = {}, enabled = true) =>
     useQuery({ queryKey: [...MOVEMENTS, params], queryFn: () => stockMovementApi.list(params), enabled, placeholderData: (prev) => prev });
 
 /** Serial codes tied to a single movement (for the movement detail dialog). */
@@ -88,7 +88,7 @@ export function useRecordMovement() {
 }
 
 /** Server-paginated stock requests visible to the current user. meta carries pending/outstanding totals. */
-export const useStockRequests = (params: { page?: number; per_page?: number; status?: string } = {}, enabled = true) =>
+export const useStockRequests = (params: { page?: number; per_page?: number; status?: string; search?: string } = {}, enabled = true) =>
     useQuery({
         queryKey: [...REQUESTS, params],
         queryFn: () => stockRequestApi.list(params),

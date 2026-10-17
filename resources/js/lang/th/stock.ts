@@ -130,6 +130,8 @@ export const stock: Dict = {
     stock_audit_tab: 'นับสต็อก',
     stock_search: 'ค้นหา SKU, ชื่อ, ยี่ห้อ หรือรุ่น…',
     stock_movements_search: 'ค้นหาเลขที่เอกสารหรือผู้บันทึก…',
+    stock_requests_search: 'ค้นหาเลขที่, SKU, สินค้า หรือผู้ขอ…',
+    stock_movements_tab_search: 'ค้นหาเลขที่เอกสาร, SKU, สินค้า, อ้างอิง หรือผู้บันทึก…',
     stock_sku: 'SKU',
     stock_level_aria: 'คงเหลือ {current} {unit}, Min {min}, Max {max}',
     stock_fulfill_desc: 'ตรวจสอบจำนวนที่จะจ่ายแล้วตัดสต็อกให้ผู้ขอ',

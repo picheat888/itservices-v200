@@ -130,6 +130,8 @@ export const stock: Dict = {
     stock_audit_tab: 'Counting',
     stock_search: 'Search SKU, name, brand or model…',
     stock_movements_search: 'Search doc no. or recorder…',
+    stock_requests_search: 'Search number, SKU, item or requester…',
+    stock_movements_tab_search: 'Search doc no., SKU, item, reference or recorder…',
     stock_sku: 'SKU',
     stock_level_aria: 'On hand {current} {unit}, Min {min}, Max {max}',
     stock_fulfill_desc: 'Review the units to issue, then deduct the stock for the requester',

@@ -7,10 +7,12 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';
@@ -19,7 +21,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
-import { ArrowUpFromLine, Check, FilePlus2, Filter, X } from 'lucide-react';
+import { ArrowUpFromLine, Check, FilePlus2, Filter, Search, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
@@ -60,12 +62,15 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const statusParam = list.get('status');
     const status = REQUEST_STATUS_FILTERS.includes(statusParam as StockRequestStatus) ? statusParam : 'all';
     const setStatus = (value: string) => list.setFilter('status', value === 'all' ? '' : value);
+    // Search lives in ?search; the list asks the server once typing pauses.
+    const search = list.get('search');
+    const sentSearch = useDebouncedSearch(search);
     // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
     const {
         data: requestsPage,
         isLoading: requestsLoading,
         isFetching: requestsFetching,
-    } = useStockRequests({ page, per_page: perPage, status: status === 'all' ? undefined : status });
+    } = useStockRequests({ page, per_page: perPage, status: status === 'all' ? undefined : status, search: sentSearch || undefined });
     const requests = requestsPage?.data ?? [];
     const { approve, reject, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
@@ -301,27 +306,41 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     return (
         <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                {/* Inline status filter: icon + label + dropdown (same as the Movements type filter). */}
-                <div className="flex items-center gap-1.5">
-                    <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <label htmlFor={statusFilterId} className="text-muted-foreground shrink-0 text-sm font-medium">
-                        {t('status')}
-                    </label>
-                    <div className="w-44">
-                        <SearchableSelect
-                            id={statusFilterId}
-                            value={status}
-                            onChange={setStatus}
-                            options={[
-                                { value: 'all', label: t('stock_all_statuses'), search: t('stock_all_statuses'), icon: <ToneDot tone="gray" /> },
-                                ...REQUEST_STATUS_FILTERS.map((k) => ({
-                                    value: k,
-                                    label: t(`stock_rq_${k}` as Parameters<typeof t>[0]),
-                                    search: t(`stock_rq_${k}` as Parameters<typeof t>[0]),
-                                    icon: <ToneDot tone={REQ_TONE[k]} />,
-                                })),
-                            ]}
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative w-full max-w-xs">
+                        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" aria-hidden />
+                        <Input
+                            value={search}
+                            onChange={(e) => list.setFilter('search', e.target.value)}
+                            placeholder={t('stock_requests_search')}
+                            aria-label={searchLabel(t('stock_requests_search'))}
+                            name="search"
+                            autoComplete="off"
+                            className="pl-9 text-ellipsis"
                         />
+                    </div>
+                    {/* Inline status filter: icon + label + dropdown (same as the Movements type filter). */}
+                    <div className="flex items-center gap-1.5">
+                        <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
+                        <label htmlFor={statusFilterId} className="text-muted-foreground shrink-0 text-sm font-medium">
+                            {t('status')}
+                        </label>
+                        <div className="w-44">
+                            <SearchableSelect
+                                id={statusFilterId}
+                                value={status}
+                                onChange={setStatus}
+                                options={[
+                                    { value: 'all', label: t('stock_all_statuses'), search: t('stock_all_statuses'), icon: <ToneDot tone="gray" /> },
+                                    ...REQUEST_STATUS_FILTERS.map((k) => ({
+                                        value: k,
+                                        label: t(`stock_rq_${k}` as Parameters<typeof t>[0]),
+                                        search: t(`stock_rq_${k}` as Parameters<typeof t>[0]),
+                                        icon: <ToneDot tone={REQ_TONE[k]} />,
+                                    })),
+                                ]}
+                            />
+                        </div>
                     </div>
                 </div>
                 {can('request') && (
@@ -338,7 +357,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 loading={requestsLoading || requestsFetching}
                 server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
                 empty={
-                    status !== 'all'
+                    status !== 'all' || search.trim() !== ''
                         ? { kind: 'search', title: t('stock_empty_requests_search'), hint: t('stock_empty_requests_search_hint') }
                         : { title: t('stock_empty_requests'), hint: t('stock_empty_requests_hint') }
                 }
