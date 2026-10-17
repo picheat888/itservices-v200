@@ -392,6 +392,8 @@ export interface AssetTransferLog {
     /** Full name behind the code, when that end of the move was an employee. */
     from_name: string | null;
     to_name: string | null;
+    from_name_th?: string | null;
+    to_name_th?: string | null;
     reason: string | null;
     performed_by: string | null;
 }

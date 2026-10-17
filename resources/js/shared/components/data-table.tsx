@@ -170,9 +170,9 @@ export function DataTable<T>({
     }, [fillHeight, rowHeight]);
 
     const filtered = useMemo(() => {
-        if (!query || !searchable) return rows;
+        if (!query || !searchable || server) return rows;
         return rows.filter((r) => matchesAllWords(searchable(r), query));
-    }, [rows, query, searchable]);
+    }, [rows, query, searchable, server]);
 
     // Server-paginated tables render `rows` as-is (the parent fetched just this page);
     // client tables slice the filtered set locally. Pagination state/handlers route accordingly.

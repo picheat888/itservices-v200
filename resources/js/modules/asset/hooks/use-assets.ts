@@ -80,7 +80,8 @@ export const useMyAssets = (enabled = true) =>
 export const useAssetSummary = (period: OverviewPeriod = 'all') =>
     useQuery({ queryKey: [...SUMMARY, overviewPeriodKey(period)], queryFn: () => assetApi.summary(period), placeholderData: (prev) => prev });
 
-export const useAssetTransfers = () => useQuery({ queryKey: ['asset-transfers'], queryFn: assetApi.transfers });
+export const useAssetTransfers = (params: { page: number; per_page: number; search?: string }, enabled = true) =>
+    useQuery({ queryKey: ['asset-transfers', params], queryFn: () => assetApi.transfers(params), enabled, placeholderData: (prev) => prev });
 
 export function useAssetMutations() {
     const qc = useQueryClient();

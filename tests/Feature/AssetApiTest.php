@@ -959,6 +959,27 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.0.asset_id', $asset->id);
     }
 
+    public function test_transfer_log_pages_and_searches_every_move_by_thai_name(): void
+    {
+        $this->actingAs($this->super());
+        Employee::create(['code' => 'EMP-TH1', 'first_name' => 'Somchai', 'last_name' => 'Jaidee', 'first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี']);
+        $asset = Asset::factory()->create(['status' => 'deployed']);
+        $oldest = AssetTransfer::create(['asset_id' => $asset->id, 'asset_tag' => 'OLD-1', 'asset_model' => 'X', 'from_owner' => 'Main store', 'to_owner' => 'EMP-TH1', 'kind' => 'handover']);
+        $oldest->forceFill(['created_at' => now()->subYear()])->save();
+        for ($i = 0; $i < 120; $i++) {
+            AssetTransfer::create(['asset_id' => $asset->id, 'asset_tag' => "NEW-{$i}", 'asset_model' => 'X', 'from_owner' => 'Main store', 'to_owner' => 'Shared', 'kind' => 'handover']);
+        }
+
+        $page = $this->getJson('/api/assets/transfers?per_page=20')->assertOk();
+        $this->assertCount(20, $page->json('data'));
+        $this->assertSame(121, $page->json('meta.total'));
+
+        // Older than any 100-row window, found by the Thai name in any word order
+        $found = $this->getJson('/api/assets/transfers?search='.urlencode('ใจดี สมชาย'))->assertOk();
+        $this->assertSame([$oldest->id], array_column($found->json('data'), 'id'));
+        $this->assertSame('สมชาย ใจดี', $found->json('data.0.to_name_th'));
+    }
+
     public function test_show_includes_transfer_history_and_related_tickets(): void
     {
         $this->actingAs($this->super());

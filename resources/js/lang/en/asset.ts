@@ -147,7 +147,6 @@ export const asset: Dict = {
     asset_hist_kind_return: 'Returned',
     asset_hist_kind_recall: 'Recalled',
     asset_hist_kind_relocate: 'Moved',
-    asset_log_capped: 'Showing the {n} most recent moves. Older ones live on each asset’s own history.',
     asset_search: 'Search assets…',
     asset_search_label: 'Search assets',
     asset_col_code_tag: 'Asset code / Tag',

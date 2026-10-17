@@ -423,10 +423,12 @@ export default function AssetsPage() {
         warehouse: warehouseFilter || undefined,
     });
     const { accept } = useAssetMutations();
-    const { data: transferLog, isLoading: transfersLoading } = useAssetTransfers();
+    const {
+        data: transferLog,
+        isLoading: transfersLoading,
+        isFetching: transfersFetching,
+    } = useAssetTransfers({ page: searchChanged ? 1 : page, per_page: perPage, search: sentSearch }, tab === 'transfers');
     const transfers = transferLog?.data ?? [];
-    // How far back the endpoint reaches. Only worth saying once the log is actually that long.
-    const transfersCapped = !!transferLog?.meta?.limit && transfers.length >= transferLog.meta.limit;
     // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, loaded
     // by ProtectedRoute before any page draws).
     const pendingReturnCount = useSidebarBadge('assets');
@@ -450,8 +452,12 @@ export default function AssetsPage() {
             ),
         },
         { key: 'event', header: t('asset_hist_event'), render: (tr) => <AssetEventBadge kind={tr.kind} /> },
-        { key: 'from', header: t('asset_hist_from'), render: (tr) => <Party label={tr.from_owner} name={tr.from_name} muted /> },
-        { key: 'to', header: t('asset_hist_to'), render: (tr) => <Party label={tr.to_owner} name={tr.to_name} /> },
+        {
+            key: 'from',
+            header: t('asset_hist_from'),
+            render: (tr) => <Party label={tr.from_owner} name={localPair(tr.from_name, tr.from_name_th, lang)} muted />,
+        },
+        { key: 'to', header: t('asset_hist_to'), render: (tr) => <Party label={tr.to_owner} name={localPair(tr.to_name, tr.to_name_th, lang)} /> },
         { key: 'reason', header: t('asset_hist_reason'), render: (tr) => <span className="text-[13px]">{tr.reason ?? '—'}</span> },
         {
             key: 'by',
@@ -1499,19 +1505,13 @@ export default function AssetsPage() {
                             rows={transfers}
                             rowKey={(tr) => tr.id}
                             rowHeight={32}
-                            loading={transfersLoading}
+                            loading={transfersLoading || transfersFetching}
                             search={list.table.search}
-                            paging={list.table.paging}
-                            // Search by asset, either holder or the performer
-                            searchable={(tr) =>
-                                `${tr.asset_tag} ${tr.asset_model ?? ''} ${tr.from_name ?? ''} ${tr.from_owner ?? ''} ${tr.to_name ?? ''} ${tr.to_owner} ${tr.performed_by ?? ''}`
-                            }
+                            server={{ ...list.table.paging, total: transferLog?.meta.total ?? 0 }}
+                            // The box only; the server matches asset, brand, either end (Thai or English) and who moved it
+                            searchable={() => ''}
                             onRowClick={(tr) => tr.asset_id && openAssetId(tr.asset_id)}
                         />
-                        {/* The endpoint caps the rows — say so */}
-                        {transfersCapped && (
-                            <p className="text-muted-foreground text-xs">{t('asset_log_capped').replace('{n}', String(transfers.length))}</p>
-                        )}
                     </div>
                 )}
             </Card>

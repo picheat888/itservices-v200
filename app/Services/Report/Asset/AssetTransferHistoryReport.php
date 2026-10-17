@@ -14,7 +14,6 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\DateDisplay;
-use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -95,17 +94,7 @@ class AssetTransferHistoryReport extends TabularReport
                 $codes = Employee::query()->select('code')->where('department_id', (int) $id);
                 $q->where(fn (Builder $w) => $w->whereIn('from_owner', $codes)->orWhereIn('to_owner', $codes));
             })
-            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
-                'asset_tag', 'asset_model', 'from_owner', 'to_owner',
-                fn (Builder $w, string $like) => $w->orWhereIn('asset_id', Asset::query()->select('id')
-                    ->whereHas('brand', fn (Builder $b) => SearchTerms::anyLike($b, ['name'], $like))),
-                function (Builder $w, string $like) {
-                    $codes = SearchTerms::anyLike(Employee::query()->select('code'), [
-                        'first_name', 'last_name', SearchTerms::joined(['first_name', 'last_name']),
-                    ], $like);
-                    $w->orWhereIn('from_owner', $codes)->orWhereIn('to_owner', $codes);
-                },
-            ]));
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => $q->searchFor($search));
     }
 
     public function query(User $viewer, array $filters): Builder
