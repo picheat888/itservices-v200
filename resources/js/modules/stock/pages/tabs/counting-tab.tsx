@@ -8,6 +8,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { localPair } from '@/shared/lib/local-name';
+import { matchesAllWords } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
@@ -175,8 +176,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         { value: 'all', label: `${t('stock_count_all_cat')} (${itemsInWh.length})`, search: t('stock_count_all_cat') },
         ...Object.entries(catCounts).map(([c, n]) => ({ value: c, label: `${catLabel(c)} (${n})`, search: `${c} ${catTh.get(c) ?? ''}` })),
     ];
-    const skuList = (cat === 'all' ? itemsInWh : itemsInWh.filter((i) => (i.category ?? '—') === cat)).filter(
-        (i) => !skuSearch || `${i.sku} ${i.name}`.toLowerCase().includes(skuSearch.toLowerCase()),
+    const skuList = (cat === 'all' ? itemsInWh : itemsInWh.filter((i) => (i.category ?? '—') === cat)).filter((i) =>
+        matchesAllWords(`${i.sku} ${i.name} ${i.brand ?? ''} ${i.model ?? ''}`, skuSearch),
     );
     const allVisibleSelected = skuList.length > 0 && skuList.every((i) => selectedSkus.includes(i.id));
     const toggleSku = (id: number) => setSelectedSkus((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));

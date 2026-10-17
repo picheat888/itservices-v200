@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { localName } from '@/shared/lib/local-name';
+import { matchesAllWords } from '@/shared/lib/search-words';
 import type { OrgChartNode } from '@/shared/types';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
@@ -30,6 +31,36 @@ const MAX_ZOOM = 2.5;
 // Trackpad pinch (ctrl+wheel, tiny deltas) vs mouse wheel (big notches)
 const PINCH_SENSITIVITY = 0.02;
 const WHEEL_SENSITIVITY = 0.003;
+
+/** One search text per person for both the suggestions and the dimming: names (also without the space), code, title, section, department. */
+function orgSearchText(n: {
+    name: string;
+    name_th?: string | null;
+    code: string;
+    title?: string | null;
+    section?: string | null;
+    section_th?: string | null;
+    department?: string | null;
+    department_th?: string | null;
+    department_code?: string | null;
+}): string {
+    const joined = (name?: string | null) => (name ?? '').replace(/\s+/g, '');
+    return [
+        n.name,
+        joined(n.name),
+        n.name_th,
+        joined(n.name_th),
+        n.code,
+        n.title,
+        n.section,
+        n.section_th,
+        n.department,
+        n.department_th,
+        n.department_code,
+    ]
+        .filter(Boolean)
+        .join(' ');
+}
 
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const t = useT();
@@ -126,7 +157,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         }
     }, []);
 
-    // Search dims non-matching cards (matches name / Thai name / title / section / dept / code).
+    // Search dims non-matching cards, with the same text the suggestions search
     const q = query.trim().toLowerCase();
     const matchSet = useMemo(() => {
         if (!q) {
@@ -134,9 +165,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         }
         const s = new Set<number>();
         for (const n of data) {
-            const hay =
-                `${n.name} ${n.name_th ?? ''} ${n.title ?? ''} ${n.section ?? ''} ${n.section_th ?? ''} ${n.department ?? ''} ${n.department_th ?? ''} ${n.department_code ?? ''}`.toLowerCase();
-            if (hay.includes(q)) {
+            if (matchesAllWords(orgSearchText(n), q)) {
                 s.add(n.id);
             }
         }
@@ -266,7 +295,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 nameTh: n.name_th,
                 code: n.code,
                 color: deptColor(n.department_code),
-                search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.section ?? ''} ${n.section_th ?? ''} ${n.department ?? ''} ${n.department_th ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
+                search: orgSearchText(n),
             })),
         [data],
     );
