@@ -55,6 +55,7 @@ import { ModulePermissionCard, type ModuleMaster } from '../components/module-pe
 import { NotificationPermissionTree } from '../components/notification-permission-tree';
 import { PermissionCardHeader } from '../components/permission-card-header';
 import { ProfilePermissionTree } from '../components/profile-permission-tree';
+import { ReportPermissionTree } from '../components/report-permission-tree';
 import { RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleModal } from '../components/role-modal';
 import { StockPermissionTree } from '../components/stock-permission-tree';
@@ -163,6 +164,21 @@ const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: st
 // Setting reuse the live `system.*` keys (toggleable + persisted); the remaining
 // rows are presentational "coming soon" placeholders for features not yet built.
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
+    {
+        module: 'reports',
+        keys: [
+            'reports.module',
+            'reports.tickets',
+            'reports.assets',
+            'reports.contracts',
+            'reports.stock',
+            'reports.requests',
+            'reports.employees',
+            'reports.access',
+            'reports.export',
+            'reports.schedule',
+        ],
+    },
     { module: 'workflows', keys: ['workflows.module', 'workflows.manage'] },
     { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
     {
@@ -192,7 +208,6 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
             'settings.security',
         ],
     },
-    { module: 'reports', keys: ['reports.view', 'reports.run', 'reports.export', 'reports.schedule', 'reports.custom'] },
 ];
 
 // Administration modules rendered with the richer Stock-style card (identity
@@ -530,6 +545,17 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                             if (group.module === 'notifications') {
                                                 return (
                                                     <NotificationPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            if (group.module === 'reports') {
+                                                return (
+                                                    <ReportPermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}
