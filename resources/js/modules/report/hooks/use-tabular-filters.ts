@@ -145,7 +145,10 @@ export function useTabularFilters(definition: TabularDefinition, { keepPage = []
             (next) => {
                 owned.forEach((n) => next.delete(n));
                 Object.entries(wanted).forEach(([n, v]) => next.set(n, v));
-                if (filtersChanged) next.delete('page');
+                if (filtersChanged) {
+                    // The list's ?page and each card's own ?{card}_page go back to page 1.
+                    [...next.keys()].filter((n) => n === 'page' || (n.endsWith('_page') && !owned.includes(n))).forEach((n) => next.delete(n));
+                }
                 return next;
             },
             { replace: true },
