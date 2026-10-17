@@ -1101,6 +1101,7 @@ export interface RequestApproval {
     approver_name: string | null;
     /** Set only while a department step is still open to a group rather than to one person. */
     approver_department?: string | null;
+    approver_department_th?: string | null;
     approver_positions?: string[];
     /**
      * The people a step names when it names more than one — alternates, so the first of
@@ -1108,6 +1109,7 @@ export interface RequestApproval {
      * signer into `approver_name` and the row reads like any other.
      */
     approver_candidates?: string[];
+    approver_candidates_th?: (string | null)[];
     /** What a person wrote on the step — never a system explanation. */
     note: string | null;
     skip_reason: ApprovalSkipReason | null;

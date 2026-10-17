@@ -179,6 +179,18 @@ class RequestListQueryCountTest extends TestCase
         ]);
     }
 
+    public function test_group_step_json_carries_thai_twins(): void
+    {
+        $this->makeRequests(3);
+        Employee::where('first_name', 'Alt1')->first()->update(['first_name_th' => 'อัลท์']);
+        $this->qc->update(['name_th' => 'ควบคุมคุณภาพ']);
+        $list = collect($this->actingAs($this->viewer)->getJson('/api/service-requests')->assertOk()->json('data'))
+            ->keyBy('title');
+
+        $this->assertSame(['อัลท์', null], $list['Request 1']['approvals'][1]['approver_candidates_th']);
+        $this->assertSame('ควบคุมคุณภาพ', $list['Request 2']['approvals'][1]['approver_department_th']);
+    }
+
     public function test_group_step_json_keeps_its_shape(): void
     {
         $this->makeRequests(3);

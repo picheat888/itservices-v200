@@ -36,6 +36,10 @@ class RequestApprovalResource extends JsonResource
                 $this->isOpenToDepartment(),
                 fn () => $this->groupNames()['department'],
             ),
+            'approver_department_th' => $this->when(
+                $this->isOpenToDepartment(),
+                fn () => $this->groupNames()['department_th'],
+            ),
             'approver_positions' => $this->when(
                 $this->isOpenToDepartment(),
                 fn () => $this->groupNames()['positions'],
@@ -46,6 +50,10 @@ class RequestApprovalResource extends JsonResource
             'approver_candidates' => $this->when(
                 $this->isOpenToNamedGroup(),
                 fn () => $this->groupNames()['candidates'],
+            ),
+            'approver_candidates_th' => $this->when(
+                $this->isOpenToNamedGroup(),
+                fn () => $this->groupNames()['candidates_th'],
             ),
             'note' => $this->note,
             // Why the engine skipped this step, as a code the SPA writes out in the

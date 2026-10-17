@@ -31,7 +31,7 @@ class RequestApproval extends Model
         'became_current_at', 'acted_at',
     ];
 
-    /** @var array{department: string|null, positions: list<string>, candidates: list<string>}|null */
+    /** @var array{department: string|null, department_th: string|null, positions: list<string>, candidates: list<string>, candidates_th: list<string|null>}|null */
     protected ?array $preloadedGroupNames = null;
 
     protected function casts(): array
@@ -96,7 +96,7 @@ class RequestApproval extends Model
     /**
      * What a group step shows instead of one name: its department, position titles and named people.
      *
-     * @return array{department: string|null, positions: list<string>, candidates: list<string>}
+     * @return array{department: string|null, department_th: string|null, positions: list<string>, candidates: list<string>, candidates_th: list<string|null>}
      */
     public function groupNames(): array
     {
@@ -122,13 +122,14 @@ class RequestApproval extends Model
         $positionIds = $departmentRows->flatMap(fn (self $row) => $row->approver_position_ids)->unique()->values();
         $employeeIds = $namedRows->flatMap(fn (self $row) => $row->namedApproverIds())->unique()->values();
 
-        $departments = $departmentIds->isEmpty() ? collect() : Department::whereIn('id', $departmentIds)->pluck('name', 'id');
+        $departments = $departmentIds->isEmpty() ? collect() : Department::whereIn('id', $departmentIds)->get()->keyBy('id');
         $positions = $positionIds->isEmpty() ? collect() : Position::whereIn('id', $positionIds)->pluck('title', 'id');
         $employees = $employeeIds->isEmpty() ? collect() : Employee::whereIn('id', $employeeIds)->get()->keyBy('id');
 
         foreach ($rows as $row) {
             $row->preloadedGroupNames = [
-                'department' => $row->isOpenToDepartment() ? $departments->get($row->approver_department_id) : null,
+                'department' => $row->isOpenToDepartment() ? $departments->get($row->approver_department_id)?->name : null,
+                'department_th' => $row->isOpenToDepartment() ? $departments->get($row->approver_department_id)?->name_th : null,
                 // Id order, the order a whereIn on positions returns.
                 'positions' => $row->isOpenToDepartment()
                     ? collect($row->approver_position_ids)->map(fn ($id) => (int) $id)->unique()->sort()
@@ -139,6 +140,10 @@ class RequestApproval extends Model
                 'candidates' => collect($row->namedApproverIds())
                     ->map(fn (int $id) => $employees->get($id)?->name)
                     ->filter()->values()->all(),
+                // Same order as candidates; null where the person has no Thai name.
+                'candidates_th' => collect($row->namedApproverIds())
+                    ->filter(fn (int $id) => (bool) $employees->get($id)?->name)
+                    ->map(fn (int $id) => $employees->get($id)->name_th)->values()->all(),
             ];
         }
     }
