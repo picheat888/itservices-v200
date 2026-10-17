@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from 'react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 /**
  * Whether the <table> inside `boxRef` fits the box's width, kept current as either resizes.
@@ -16,33 +16,50 @@ import { useLayoutEffect, useState, type RefObject } from 'react';
  */
 export function useTableFitsWidth(boxRef: RefObject<HTMLElement | null>): boolean {
     const [fits, setFits] = useState(true);
+    const watched = useRef<{ box: HTMLElement; stop: () => void } | null>(null);
 
+    // Checked after every render: the box can appear later (behind a tab) or be replaced
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- returns at once unless the box changed
     useLayoutEffect(() => {
         const box = boxRef.current;
-        if (!box) return;
+        if (watched.current?.box === box) return;
+        watched.current?.stop();
+        watched.current = box ? { box, stop: watchTableWidth(box, setFits) } : null;
+    });
 
-        // The <table> can mount after the box or be swapped for a new one when rows arrive
-        let table: HTMLTableElement | null = null;
-        const measure = () => setFits(!table || table.offsetWidth <= box.clientWidth + 1);
-        const sizes = new ResizeObserver(measure);
-        const follow = () => {
-            const current = box.querySelector('table');
-            if (current !== table) {
-                if (table) sizes.unobserve(table);
-                table = current;
-                if (table) sizes.observe(table);
-            }
-            measure();
-        };
-        sizes.observe(box);
-        follow();
-        const swaps = new MutationObserver(follow);
-        swaps.observe(box, { childList: true, subtree: true });
-        return () => {
-            sizes.disconnect();
-            swaps.disconnect();
-        };
-    }, [boxRef]);
+    useLayoutEffect(
+        () => () => {
+            watched.current?.stop();
+            watched.current = null;
+        },
+        [],
+    );
 
     return fits;
+}
+
+/** Follows the box and whichever <table> it holds; returns the teardown. */
+function watchTableWidth(box: HTMLElement, setFits: (fits: boolean) => void): () => void {
+    // The <table> can mount after the box or be swapped for a new one when rows arrive
+    let table: HTMLTableElement | null = null;
+    const measure = () => setFits(!table || table.offsetWidth <= box.clientWidth + 1);
+    const sizes = new ResizeObserver(measure);
+    const follow = () => {
+        const current = box.querySelector('table');
+        if (current !== table) {
+            if (table) sizes.unobserve(table);
+            table = current;
+            if (table) sizes.observe(table);
+        }
+        measure();
+    };
+    sizes.observe(box);
+    follow();
+    const swaps = new MutationObserver(follow);
+    swaps.observe(box, { childList: true, subtree: true });
+
+    return () => {
+        sizes.disconnect();
+        swaps.disconnect();
+    };
 }
