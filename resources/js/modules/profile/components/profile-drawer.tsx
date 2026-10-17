@@ -401,7 +401,10 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 <TicketsPane
                                     tickets={myTickets?.data ?? []}
                                     loading={ticketsLoading}
-                                    empty={{ title: t('profile_empty_tickets'), hint: t('profile_empty_tickets_hint') }}
+                                    empty={{
+                                        title: t('profile_empty_tickets'),
+                                        hint: can('tickets.create') ? t('profile_empty_tickets_hint').replace('{button}', t('new_ticket')) : null,
+                                    }}
                                 />
                             )}
                             {tab === 'requests' && (

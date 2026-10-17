@@ -459,7 +459,11 @@ export function MembersDrawer({
                                                   title: t('access_empty_members_drawer_search'),
                                                   hint: t('access_empty_members_drawer_search_hint'),
                                               }
-                                            : { kind: 'empty', title: t('access_empty_members_drawer'), hint: t('access_empty_members_drawer_hint') }
+                                            : {
+                                                  kind: 'empty',
+                                                  title: t('access_empty_members_drawer'),
+                                                  hint: mayEdit ? t('access_empty_members_drawer_hint') : null,
+                                              }
                                     }
                                     actions={
                                         mayEdit && seatsFull ? (
