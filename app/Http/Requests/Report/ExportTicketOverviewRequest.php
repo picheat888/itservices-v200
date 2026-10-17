@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Report;
 
+use App\Support\ReportCatalogue;
 use Illuminate\Validation\Rule;
 
 /**
@@ -9,6 +10,11 @@ use Illuminate\Validation\Rule;
  */
 class ExportTicketOverviewRequest extends TicketOverviewReportRequest
 {
+    public function authorize(): bool
+    {
+        return ReportCatalogue::canExport($this->user(), ReportCatalogue::TICKETS_OVERVIEW);
+    }
+
     /**
      * @return array<string, mixed>
      */

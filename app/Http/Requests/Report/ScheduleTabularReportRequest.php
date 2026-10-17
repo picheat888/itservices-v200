@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Report;
 
 use App\Http\Requests\Report\Concerns\SchedulesReport;
+use App\Support\ReportCatalogue;
 
 /**
  * "ตั้งเวลาส่ง" on a tabular report page: everything an export takes (the screen's filters,
@@ -11,6 +12,11 @@ use App\Http\Requests\Report\Concerns\SchedulesReport;
 class ScheduleTabularReportRequest extends ExportTabularReportRequest
 {
     use SchedulesReport;
+
+    public function authorize(): bool
+    {
+        return ReportCatalogue::canSchedule($this->user(), $this->report()->key());
+    }
 
     /**
      * @return array<string, mixed>

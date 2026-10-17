@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Report\ReportExportResource;
 use App\Models\Report\ReportExport;
 use App\Services\Report\ReportExportService;
+use App\Support\ReportCatalogue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,11 +24,14 @@ class ReportExportController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $this->mayReadExports($request);
+
         return response()->json(['data' => ReportExportResource::collection($this->exports->listFor($request->user()))]);
     }
 
     public function download(Request $request, int $export): StreamedResponse
     {
+        $this->mayReadExports($request);
         $row = $this->owned($request, $export);
         abort_unless(
             $row->status === ReportExport::READY && $row->file_path !== null && Storage::disk('local')->exists($row->file_path),
@@ -39,6 +43,7 @@ class ReportExportController extends Controller
 
     public function retry(Request $request, int $export): JsonResponse
     {
+        abort_unless((bool) $request->user()->hasPermission(ReportCatalogue::EXPORT), 403);
         $row = $this->exports->retry($this->owned($request, $export));
 
         return response()->json(['data' => new ReportExportResource($row), 'message' => 'success'], 202);
@@ -57,6 +62,13 @@ class ReportExportController extends Controller
         $deleted = $this->exports->deleteAllFor($request->user());
 
         return response()->json(['data' => ['deleted' => $deleted], 'message' => 'success']);
+    }
+
+    /** Scheduled files too large to mail land here too, so the schedule right reads them as well. */
+    private function mayReadExports(Request $request): void
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission(ReportCatalogue::EXPORT) || $user->hasPermission(ReportCatalogue::SCHEDULE), 403);
     }
 
     private function owned(Request $request, int $export): ReportExport

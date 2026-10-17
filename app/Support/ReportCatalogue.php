@@ -84,6 +84,10 @@ class ReportCatalogue
 
     public const ACCESS_SOFTWARE_LICENSES = 'access.software_licenses';
 
+    public const EXPORT = 'reports.export';
+
+    public const SCHEDULE = 'reports.schedule';
+
     /**
      * @return array<string, array{domain: string, kind: string, class?: class-string<TabularReport>, requires: list<string>, formats: list<string>, range?: bool}>
      */
@@ -276,6 +280,18 @@ class ReportCatalogue
         }
 
         return true;
+    }
+
+    /** Queue a file of a report the user may open. */
+    public static function canExport(?User $user, string $key): bool
+    {
+        return self::allows($user, $key) && (bool) $user?->hasPermission(self::EXPORT);
+    }
+
+    /** Set, change or send a schedule of a report the user may open. */
+    public static function canSchedule(?User $user, string $key): bool
+    {
+        return self::allows($user, $key) && (bool) $user?->hasPermission(self::SCHEDULE);
     }
 
     /**
