@@ -18,7 +18,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, ArrowRight, Briefcase, Check, Loader2, SquarePen, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
-import { useEmployeeMutations, useEmployees } from '../hooks/use-employees';
+import { useEmployeeMutations, useEmployeeOptions } from '../hooks/use-employees';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
 import { PhotoCropDialog } from './photo-crop-dialog';
@@ -46,7 +46,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
-    const { data: employees = [] } = useEmployees();
+    const { data: employees = [] } = useEmployeeOptions();
     const { update } = useEmployeeMutations();
 
     const [form, setForm] = useState(empty);
@@ -260,7 +260,11 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             setOrgConfirm(true);
             return;
         }
-        if (employee && isDirty && !(await confirmEdit({ name: lang === 'th' ? (employee.name_th ?? employee.name) : employee.name, sub: employee.code })))
+        if (
+            employee &&
+            isDirty &&
+            !(await confirmEdit({ name: lang === 'th' ? (employee.name_th ?? employee.name) : employee.name, sub: employee.code }))
+        )
             return;
         await persist();
     };

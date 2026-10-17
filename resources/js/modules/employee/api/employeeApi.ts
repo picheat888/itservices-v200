@@ -6,6 +6,7 @@ import type {
     ApproverNode,
     Employee,
     EmployeeAccess,
+    EmployeeOption,
     OrgChartNode,
     ServiceRequestOrigin,
     ServiceRequestStatus,
@@ -231,7 +232,8 @@ function withoutPhoto(payload: EmployeePayload): Omit<EmployeePayload, 'photo'> 
 }
 
 export const employeeApi = {
-    list: () => http.get<ApiEnvelope<Employee[]>>('/employees').then((r) => r.data.data),
+    // Slim rows for pickers and lookups.
+    options: () => http.get<ApiEnvelope<EmployeeOption[]>>('/employees/options').then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Employee>>(`/employees/${id}`).then((r) => r.data.data),
     // Assets the employee currently holds (read-only, gated by employees.view).
     assets: (id: number) => http.get<ApiEnvelope<EmployeeHeldAsset[]>>(`/employees/${id}/assets`).then((r) => r.data.data),

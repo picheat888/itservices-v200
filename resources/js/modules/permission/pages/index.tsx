@@ -1,6 +1,6 @@
 import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
-import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employee';
+import { useDepartments, useEmployeeOptions, usePositions, useSections } from '@/modules/employee';
 import { PAGE_SIZES } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { InfoHint } from '@/shared/components/info-hint';
@@ -1058,7 +1058,7 @@ function AuditTab() {
     const { data: positions = [] } = usePositions();
     const { data: departments = [] } = useDepartments();
     const { data: sections = [] } = useSections();
-    const { data: employees = [] } = useEmployees();
+    const { data: employees = [] } = useEmployeeOptions();
     const lookups = useMemo<AuditLookups>(
         () => ({
             positions: new Map(positions.map((p) => [p.id, p.title])),

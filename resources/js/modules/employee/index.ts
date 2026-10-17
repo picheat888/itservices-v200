@@ -13,8 +13,8 @@ export {
     useEmployee,
     useEmployeeDirectory,
     useEmployeeMutations,
+    useEmployeeOptions,
     useEmployeeSummary,
-    useEmployees,
     useOrgChart,
 } from './hooks/use-employees';
 export { useLocationMutations, useLocations } from './hooks/use-locations';

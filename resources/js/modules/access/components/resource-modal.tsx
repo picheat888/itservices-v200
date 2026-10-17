@@ -1,5 +1,5 @@
 import { useT } from '@/lang';
-import { PhotoCropDialog, useDepartments, useEmployees } from '@/modules/employee';
+import { PhotoCropDialog, useDepartments, useEmployeeOptions } from '@/modules/employee';
 import { useBrands } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
@@ -198,7 +198,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useAccessMutations(kind);
-    const { data: employees = [] } = useEmployees();
+    const { data: employees = [] } = useEmployeeOptions();
     const { data: departments = [] } = useDepartments();
     const { data: brands = [] } = useBrands();
     const [form, setForm] = useState<FormState>(empty);

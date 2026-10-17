@@ -1,5 +1,5 @@
 import { useT } from '@/lang';
-import { useEmployees, useLocations } from '@/modules/employee';
+import { useEmployeeOptions, useLocations } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -38,7 +38,7 @@ export function AssetTransferDialog({
     const lang = useUiStore((s) => s.lang);
     const { transfer, bulkTransfer } = useAssetMutations();
     const { data: locations = [] } = useLocations();
-    const { data: employees = [] } = useEmployees();
+    const { data: employees = [] } = useEmployeeOptions();
 
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
