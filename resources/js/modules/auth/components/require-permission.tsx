@@ -62,7 +62,7 @@ export function NoAccess({ title, hint }: { title?: string; hint?: string }) {
     return (
         <div className="grid min-h-[72vh] place-items-center px-4">
             <div className="flex flex-col items-center gap-5 text-center">
-                <EmptyState kind="denied" title={title ?? t('cmn_empty_no_access')} hint={hint ?? t('cmn_empty_no_access_hint')} />
+                <EmptyState kind="denied" titleAs="h1" title={title ?? t('cmn_empty_no_access')} hint={hint ?? t('cmn_empty_no_access_hint')} />
 
                 <div className="w-full max-w-xs space-y-1.5">
                     <div className="text-muted-foreground flex items-center justify-between text-xs">
