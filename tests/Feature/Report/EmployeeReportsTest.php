@@ -9,6 +9,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -18,6 +19,7 @@ use Tests\TestCase;
 class EmployeeReportsTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private int $seq = 0;
 
@@ -52,7 +54,7 @@ class EmployeeReportsTest extends TestCase
 
     public function test_employee_reports_need_employees_view(): void
     {
-        $assetsOnly = $this->userWith(['assets.view']);
+        $assetsOnly = $this->userWith([...$this->reportRights('assets')]);
 
         foreach (['employees.overview', 'employees.open_items'] as $key) {
             $this->actingAs($assetsOnly)->getJson("/api/reports/tabular/{$key}/rows")->assertForbidden();
@@ -63,7 +65,7 @@ class EmployeeReportsTest extends TestCase
     {
         $leaver = $this->employee('Leaver', ['status' => 'resigned', 'last_day' => '2026-09-20']);
         Asset::factory()->create(['owner_employee_id' => $leaver->id, 'owner' => null, 'status' => 'pending_return']);
-        $user = $this->userWith(['employees.view']);
+        $user = $this->userWith([...$this->reportRights('employees')]);
 
         foreach (['employees.overview', 'employees.open_items'] as $key) {
             $response = $this->actingAs($user)->exportReport("/api/reports/tabular/{$key}/export?format=pdf");

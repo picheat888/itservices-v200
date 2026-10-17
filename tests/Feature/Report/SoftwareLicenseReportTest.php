@@ -11,6 +11,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Services\Report\Access\SoftwareLicenseReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -19,6 +20,7 @@ use Tests\TestCase;
  */
 class SoftwareLicenseReportTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     private int $seq = 0;
@@ -47,8 +49,9 @@ class SoftwareLicenseReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['access.software_view']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('access');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
@@ -215,11 +218,11 @@ class SoftwareLicenseReportTest extends TestCase
         $this->assertSame('Zoom', $kept['picked']);
     }
 
-    public function test_needs_software_view(): void
+    public function test_needs_the_access_report_switch(): void
     {
-        $this->actingAs($this->userWith(['access.module', 'access.email_view']))
-            ->getJson('/api/reports/tabular/access.software_licenses/rows')->assertForbidden();
-        $this->actingAs($this->userWith(['access.module', 'access.email_view']))
-            ->getJson('/api/reports/access/software-licenses/breakdown')->assertForbidden();
+        $workspaceOnly = $this->userWith(['access.module', 'access.software_view', ...$this->reportRights('assets')]);
+
+        $this->actingAs($workspaceOnly)->getJson('/api/reports/tabular/access.software_licenses/rows')->assertForbidden();
+        $this->actingAs($workspaceOnly)->getJson('/api/reports/access/software-licenses/breakdown')->assertForbidden();
     }
 }

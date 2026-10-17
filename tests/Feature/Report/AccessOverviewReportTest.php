@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Report\Access\AccessOverviewReport;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
  */
 class AccessOverviewReportTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     /** @var array<string, AccessMembership> */
@@ -79,8 +81,9 @@ class AccessOverviewReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['access.overview']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('access');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
@@ -250,9 +253,11 @@ class AccessOverviewReportTest extends TestCase
         $this->assertSame('เจ้าของลาออกแล้ว', $sections[3]['rows'][0][0]);
     }
 
-    public function test_the_report_needs_the_access_overview_permission(): void
+    public function test_the_report_needs_the_access_report_switch(): void
     {
-        $this->actingAs($this->userWith(['access.software_view']))->getJson('/api/reports/tabular/access.overview/rows')->assertForbidden();
-        $this->actingAs($this->userWith(['access.software_view']))->getJson('/api/reports/access/overview/breakdown')->assertForbidden();
+        $workspaceOnly = $this->userWith(['access.module', 'access.overview', ...$this->reportRights('assets')]);
+
+        $this->actingAs($workspaceOnly)->getJson('/api/reports/tabular/access.overview/rows')->assertForbidden();
+        $this->actingAs($workspaceOnly)->getJson('/api/reports/access/overview/breakdown')->assertForbidden();
     }
 }

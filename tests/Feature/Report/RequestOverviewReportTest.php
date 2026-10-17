@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ use Tests\TestCase;
 class RequestOverviewReportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private int $seq = 0;
 
@@ -95,8 +97,9 @@ class RequestOverviewReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['requests.view_all']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('requests');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);

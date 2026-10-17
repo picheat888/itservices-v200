@@ -15,6 +15,7 @@ use App\Services\Report\Contract\ContractRenewalsReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,7 @@ use Tests\TestCase;
 class ContractRenewalsReportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     /** @var array<string, Contract> */
     private array $set;
@@ -85,8 +87,9 @@ class ContractRenewalsReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['contracts.view']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('contracts');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
@@ -327,7 +330,7 @@ class ContractRenewalsReportTest extends TestCase
 
     public function test_breakdown_needs_contracts_view(): void
     {
-        $this->actingAs($this->userWith(['assets.view']))->getJson('/api/reports/contracts/renewals/breakdown')->assertForbidden();
+        $this->actingAs($this->userWith([...$this->reportRights('assets')]))->getJson('/api/reports/contracts/renewals/breakdown')->assertForbidden();
     }
 
     public function test_the_file_carries_the_breakdown_as_sheets_and_the_rows_with_their_reminders(): void

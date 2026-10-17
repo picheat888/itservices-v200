@@ -14,6 +14,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Services\Report\Request\RequestApprovalsReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,7 @@ use Tests\TestCase;
  */
 class RequestApprovalsReportTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     private int $seq = 0;
@@ -38,8 +40,9 @@ class RequestApprovalsReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['requests.view_all']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('requests');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);

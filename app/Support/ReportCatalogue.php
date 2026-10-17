@@ -29,8 +29,8 @@ use App\Services\Report\Ticket\TicketRequestSlaReport;
 /**
  * Registry of every report in the Report Center (/reports).
  *
- * One entry per report: the domain it belongs to (groups the hub), the permissions a
- * reader must hold ALL of to open it, and the export formats it offers. The hub list,
+ * One entry per report: the domain it belongs to (groups the hub), the reports.* switches
+ * a reader must hold ALL of to open it (the master and the domain), and the export formats it offers. The hub list,
  * each report's Form Request authorize() and the sidebar all ask this class, so a
  * report is never listed to someone its endpoint would refuse.
  *
@@ -90,33 +90,27 @@ class ReportCatalogue
     public static function definitions(): array
     {
         return [
-            // Priority and SLA are desk internals (TicketResource::showsDeskInternals), so
-            // seeing every ticket is not enough on its own — the reader must also work cases.
+            // Ticket reports keep to the reader's tickets.level_* categories.
             self::TICKETS_OVERVIEW => [
                 'domain' => 'tickets',
                 'kind' => 'custom',
-                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'requires' => ['reports.module', 'reports.tickets'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
-            // The backlog carries SLA verdicts, so it asks what the overview asks; within that,
-            // it counts only the reader's `tickets.level_*` categories. ("Ticket ตามแผนกและหมวด"
-            // and "ผลงานเจ้าหน้าที่ IT" were merged into the overview's cards on 2026-10-02.)
             self::TICKETS_BACKLOG => [
                 'domain' => 'tickets',
                 'kind' => 'tabular',
                 'class' => TicketBacklogReport::class,
-                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'requires' => ['reports.module', 'reports.tickets'],
                 'formats' => ['xlsx', 'pdf'],
             ],
-            // Tickets opened from approved requests, judged per request type — the same SLA
-            // verdicts as the overview, so it asks what the overview asks (and keeps to the
-            // reader's `tickets.level_*` categories).
+            // Tickets opened from approved requests, judged per request type.
             self::TICKETS_REQUEST_SLA => [
                 'domain' => 'tickets',
                 'kind' => 'tabular',
                 'class' => TicketRequestSlaReport::class,
-                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'requires' => ['reports.module', 'reports.tickets'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
@@ -126,7 +120,7 @@ class ReportCatalogue
                 'domain' => 'tickets',
                 'kind' => 'tabular',
                 'class' => TicketManualSlaReport::class,
-                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'requires' => ['reports.module', 'reports.tickets'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
@@ -134,14 +128,14 @@ class ReportCatalogue
                 'domain' => 'contracts',
                 'kind' => 'tabular',
                 'class' => ContractOverviewReport::class,
-                'requires' => ['contracts.view'],
+                'requires' => ['reports.module', 'reports.contracts'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::CONTRACTS_RENEWALS => [
                 'domain' => 'contracts',
                 'kind' => 'tabular',
                 'class' => ContractRenewalsReport::class,
-                'requires' => ['contracts.view'],
+                'requires' => ['reports.module', 'reports.contracts'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             // Hardware contracts only: assets per contract, returns due, rent against buy per model.
@@ -149,29 +143,28 @@ class ReportCatalogue
                 'domain' => 'contracts',
                 'kind' => 'tabular',
                 'class' => ContractRentalsReport::class,
-                // Its rows name who holds each unit and where: asset data
-                'requires' => ['contracts.view', 'assets.view'],
+                'requires' => ['reports.module', 'reports.contracts'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::ASSETS_OVERVIEW => [
                 'domain' => 'assets',
                 'kind' => 'tabular',
                 'class' => AssetOverviewReport::class,
-                'requires' => ['assets.view'],
+                'requires' => ['reports.module', 'reports.assets'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::ASSETS_WARRANTY_EXPIRING => [
                 'domain' => 'assets',
                 'kind' => 'tabular',
                 'class' => WarrantyExpiringReport::class,
-                'requires' => ['assets.view'],
+                'requires' => ['reports.module', 'reports.assets'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::ASSETS_TRANSFER_HISTORY => [
                 'domain' => 'assets',
                 'kind' => 'tabular',
                 'class' => AssetTransferHistoryReport::class,
-                'requires' => ['assets.view'],
+                'requires' => ['reports.module', 'reports.assets'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
@@ -180,16 +173,15 @@ class ReportCatalogue
                 'domain' => 'assets',
                 'kind' => 'tabular',
                 'class' => AssetWriteoffReport::class,
-                'requires' => ['assets.view'],
+                'requires' => ['reports.module', 'reports.assets'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
-            // The movement log is its own permission in the stock module (stock.view_events).
             self::STOCK_MOVEMENTS => [
                 'domain' => 'stock',
                 'kind' => 'tabular',
                 'class' => StockMovementReport::class,
-                'requires' => ['stock.view_events'],
+                'requires' => ['reports.module', 'reports.stock'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
@@ -197,21 +189,21 @@ class ReportCatalogue
                 'domain' => 'stock',
                 'kind' => 'tabular',
                 'class' => StockBelowMinReport::class,
-                'requires' => ['stock.view'],
+                'requires' => ['reports.module', 'reports.stock'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::STOCK_VALUATION => [
                 'domain' => 'stock',
                 'kind' => 'tabular',
                 'class' => StockValuationReport::class,
-                'requires' => ['stock.view'],
+                'requires' => ['reports.module', 'reports.stock'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::REQUESTS_OVERVIEW => [
                 'domain' => 'requests',
                 'kind' => 'tabular',
                 'class' => RequestOverviewReport::class,
-                'requires' => ['requests.view_all'],
+                'requires' => ['reports.module', 'reports.requests'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
@@ -219,7 +211,7 @@ class ReportCatalogue
                 'domain' => 'requests',
                 'kind' => 'tabular',
                 'class' => RequestApprovalsReport::class,
-                'requires' => ['requests.view_all'],
+                'requires' => ['reports.module', 'reports.requests'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
@@ -227,16 +219,14 @@ class ReportCatalogue
                 'domain' => 'requests',
                 'kind' => 'tabular',
                 'class' => ItPendingRequestReport::class,
-                'requires' => ['requests.view_all'],
+                'requires' => ['reports.module', 'reports.requests'],
                 'formats' => ['xlsx', 'pdf'],
             ],
-            // Employee reports follow the Employee detail's own-module "peek": employees.view
-            // is enough to see what a person holds, without assets.view.
             self::EMPLOYEES_OVERVIEW => [
                 'domain' => 'employees',
                 'kind' => 'tabular',
                 'class' => EmployeeOverviewReport::class,
-                'requires' => ['employees.view'],
+                'requires' => ['reports.module', 'reports.employees'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
@@ -244,31 +234,29 @@ class ReportCatalogue
                 'domain' => 'employees',
                 'kind' => 'tabular',
                 'class' => EmployeeOpenItemsReport::class,
-                'requires' => ['employees.view'],
+                'requires' => ['reports.module', 'reports.employees'],
                 'formats' => ['xlsx', 'pdf'],
             ],
-            // Every registry's grants at once — the Access module's own overview permission.
             self::ACCESS_OVERVIEW => [
                 'domain' => 'access',
                 'kind' => 'tabular',
                 'class' => AccessOverviewReport::class,
-                'requires' => ['access.overview'],
+                'requires' => ['reports.module', 'reports.access'],
                 'formats' => ['xlsx', 'pdf'],
                 'range' => true,
             ],
-            // Members of the three registries an owner reviews — all three registries' view permissions.
             self::ACCESS_RESOURCE_MEMBERS => [
                 'domain' => 'access',
                 'kind' => 'tabular',
                 'class' => AccessResourceMembersReport::class,
-                'requires' => ['access.email_view', 'access.file_view', 'access.social_view'],
+                'requires' => ['reports.module', 'reports.access'],
                 'formats' => ['xlsx', 'pdf'],
             ],
             self::ACCESS_SOFTWARE_LICENSES => [
                 'domain' => 'access',
                 'kind' => 'tabular',
                 'class' => SoftwareLicenseReport::class,
-                'requires' => ['access.software_view'],
+                'requires' => ['reports.module', 'reports.access'],
                 'formats' => ['xlsx', 'pdf'],
             ],
         ];

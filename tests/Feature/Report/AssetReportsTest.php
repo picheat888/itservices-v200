@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
 class AssetReportsTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     protected function setUp(): void
     {
@@ -51,7 +53,7 @@ class AssetReportsTest extends TestCase
         $deployed = Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
         $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
 
-        $body = $this->actingAs($this->userWith(['assets.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('assets')]))
             ->getJson('/api/reports/tabular/assets.overview/rows')->assertOk()->json();
 
         $this->assertSame(2, $body['meta']['total']);
@@ -70,7 +72,7 @@ class AssetReportsTest extends TestCase
 
     public function test_overview_list_filters_by_status_and_source(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
         $ready = Asset::factory()->create(['status' => 'ready']);
         Asset::factory()->create(['status' => 'deployed']);
         $rented = Asset::factory()->rented()->create(['status' => 'common']);
@@ -96,7 +98,7 @@ class AssetReportsTest extends TestCase
      */
     public function test_overview_has_no_search(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
         $employee = Employee::create(['code' => 'EMP-8123', 'first_name' => 'Kanya', 'last_name' => 'Holder']);
         Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
         Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
@@ -110,7 +112,7 @@ class AssetReportsTest extends TestCase
 
     public function test_warranty_expiring_window_excludes_lifetime_rented_and_written_off(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
         $in10 = Asset::factory()->create(['status' => 'ready', 'warranty_end' => today()->addDays(10)->toDateString(), 'warranty_lifetime' => false]);
         $in60 = Asset::factory()->create(['status' => 'ready', 'warranty_end' => today()->addDays(60)->toDateString(), 'warranty_lifetime' => false]);
         Asset::factory()->create(['status' => 'ready', 'warranty_end' => today()->addDays(200)->toDateString(), 'warranty_lifetime' => false]);
@@ -131,11 +133,11 @@ class AssetReportsTest extends TestCase
 
     public function test_asset_reports_need_assets_view(): void
     {
-        $limited = $this->userWith(['contracts.view']);
+        $limited = $this->userWith([...$this->reportRights('contracts')]);
         $this->actingAs($limited)->getJson('/api/reports/tabular/assets.overview/rows')->assertForbidden();
         $this->actingAs($limited)->getJson('/api/reports/tabular/assets.warranty_expiring/rows')->assertForbidden();
 
-        $viewer = $this->userWith(['assets.view']);
+        $viewer = $this->userWith([...$this->reportRights('assets')]);
         $keys = collect($this->actingAs($viewer)->getJson('/api/reports')->assertOk()->json('data'))->pluck('key')->all();
         $this->assertSame(['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history', 'assets.writeoffs'], $keys);
     }
@@ -145,7 +147,7 @@ class AssetReportsTest extends TestCase
         Excel::fake();
         Asset::factory()->create(['status' => 'ready']);
 
-        $this->actingAs($this->userWith(['assets.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('assets')]))
             ->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {

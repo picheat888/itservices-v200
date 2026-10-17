@@ -18,6 +18,7 @@ use App\Services\Report\Asset\TransferTrail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -28,6 +29,7 @@ use Tests\TestCase;
 class AssetTransferHistoryReportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private const RANGE = 'from=2026-05-01&to=2026-10-07';
 
@@ -62,7 +64,7 @@ class AssetTransferHistoryReportTest extends TestCase
 
     private function viewer(): User
     {
-        return $this->userWith(['assets.view']);
+        return $this->userWith([...$this->reportRights('assets')]);
     }
 
     private function asset(string $code, Category $category, string $status, ?Employee $holder = null, ?string $owner = null): Asset
@@ -312,7 +314,7 @@ class AssetTransferHistoryReportTest extends TestCase
 
     public function test_the_breakdown_needs_assets_view(): void
     {
-        $this->actingAs($this->userWith(['employees.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/assets/transfer-history/breakdown?'.self::RANGE)->assertForbidden();
     }
 

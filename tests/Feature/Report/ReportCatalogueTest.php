@@ -7,6 +7,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -15,6 +16,7 @@ use Tests\TestCase;
  */
 class ReportCatalogueTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -36,7 +38,7 @@ class ReportCatalogueTest extends TestCase
 
     public function test_a_desk_member_sees_the_ticket_report(): void
     {
-        $user = $this->userWith(['tickets.view_all', 'tickets.resolve']);
+        $user = $this->userWith([...$this->reportRights('tickets')]);
 
         $this->actingAs($user)->getJson('/api/reports')
             ->assertOk()
@@ -48,31 +50,29 @@ class ReportCatalogueTest extends TestCase
 
     public function test_asset_and_contract_viewers_see_their_own_reports_only(): void
     {
-        $user = $this->userWith(['contracts.view']);
+        $user = $this->userWith([...$this->reportRights('contracts')]);
 
         $keys = array_column($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
-        // Rentals name who holds each unit, so they also need assets.view
-        $this->assertSame(['contracts.overview', 'contracts.renewals'], $keys);
+        $this->assertSame(['contracts.overview', 'contracts.renewals', 'contracts.rentals'], $keys);
     }
 
-    public function test_stock_reports_split_between_view_and_the_event_log(): void
+    public function test_the_stock_switch_opens_all_three_stock_reports(): void
     {
         $keysFor = fn (array $permissions) => array_column(
             $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
-        $this->assertSame(['stock.below_min', 'stock.valuation'], $keysFor(['stock.view']));
-        $this->assertSame(['stock.movements'], $keysFor(['stock.view_events']));
+        $this->assertSame(['stock.movements', 'stock.below_min', 'stock.valuation'], $keysFor([...$this->reportRights('stock')]));
     }
 
-    public function test_request_employee_and_access_reports_follow_their_module_permission(): void
+    public function test_request_employee_and_access_reports_follow_their_report_switch(): void
     {
         $keysFor = fn (array $permissions) => array_column(
             $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
-        $this->assertSame(['requests.overview', 'requests.approvals', 'requests.it_pending'], $keysFor(['requests.view_all']));
-        $this->assertSame(['employees.overview', 'employees.open_items'], $keysFor(['employees.view']));
-        $this->assertSame(['access.software_licenses'], $keysFor(['access.software_view']));
+        $this->assertSame(['requests.overview', 'requests.approvals', 'requests.it_pending'], $keysFor([...$this->reportRights('requests')]));
+        $this->assertSame(['employees.overview', 'employees.open_items'], $keysFor([...$this->reportRights('employees')]));
+        $this->assertSame(['access.overview', 'access.resource_members', 'access.software_licenses'], $keysFor([...$this->reportRights('access')]));
         // Submitting or completing requests is not reading them all.
         $this->assertSame([], $keysFor(['requests.submit', 'requests.complete']));
     }
@@ -91,7 +91,7 @@ class ReportCatalogueTest extends TestCase
             $this->assertSame($hasRange, $definition['range'] ?? false, $key);
         }
 
-        $listed = collect($this->actingAs($this->userWith(['tickets.view_all', 'tickets.resolve', 'stock.view', 'stock.view_events']))
+        $listed = collect($this->actingAs($this->userWith([...$this->reportRights('tickets', 'stock')]))
             ->getJson('/api/reports')->assertOk()->json('data'))->keyBy('key');
         $this->assertTrue($listed['tickets.overview']['range']);
         $this->assertTrue($listed['stock.movements']['range']);
@@ -105,21 +105,18 @@ class ReportCatalogueTest extends TestCase
 
         $this->assertSame(
             ['tickets.overview', 'tickets.backlog', 'tickets.request_sla', 'tickets.manual_sla'],
-            $keysFor(['tickets.view_all', 'tickets.resolve']),
+            $keysFor([...$this->reportRights('tickets')]),
         );
         $this->assertSame(
             ['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history', 'assets.writeoffs'],
-            $keysFor(['assets.view']),
+            $keysFor([...$this->reportRights('assets')]),
         );
-        $this->assertCount(20, $keysFor([
-            'tickets.view_all', 'tickets.resolve', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events',
-            'requests.view_all', 'employees.view', 'access.software_view',
-        ]));
+        $this->assertCount(22, $keysFor([...$this->reportRights('tickets', 'assets', 'contracts', 'stock', 'requests', 'employees', 'access')]));
     }
 
-    public function test_view_all_without_resolve_is_not_enough(): void
+    public function test_workspace_ticket_rights_are_not_enough(): void
     {
-        $user = $this->userWith(['tickets.view_all']);
+        $user = $this->userWith(['tickets.view_all', 'tickets.resolve']);
 
         $this->actingAs($user)->getJson('/api/reports')->assertOk()->assertExactJson(['data' => []]);
     }

@@ -15,6 +15,7 @@ use App\Support\TicketSla;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,7 @@ use Tests\TestCase;
  */
 class TicketSlaBreakdownParityTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     private const NOW = '2026-09-25 10:00:00';
@@ -38,7 +40,7 @@ class TicketSlaBreakdownParityTest extends TestCase
     private function reader(): User
     {
         $role = Role::create(['key' => 'rep_parity', 'name' => 'Report Test', 'is_system' => false]);
-        foreach (['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', 'tickets.level_software', 'tickets.level_other'] as $permission) {
+        foreach ([...$this->reportRights('tickets'), 'tickets.level_hardware', 'tickets.level_software', 'tickets.level_other'] as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
         }
 

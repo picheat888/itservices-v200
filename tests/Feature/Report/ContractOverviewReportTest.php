@@ -13,6 +13,7 @@ use App\Services\Report\Contract\ContractOverviewReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,7 @@ use Tests\TestCase;
 class ContractOverviewReportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     /** @var array<string, Contract> */
     private array $c = [];
@@ -34,8 +36,9 @@ class ContractOverviewReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['contracts.view']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('contracts');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
@@ -224,7 +227,7 @@ class ContractOverviewReportTest extends TestCase
 
     public function test_needs_contracts_view(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
         $this->actingAs($user)->getJson('/api/reports/tabular/contracts.overview/rows')->assertForbidden();
         $this->actingAs($user)->getJson('/api/reports/contracts/overview/breakdown')->assertForbidden();
     }

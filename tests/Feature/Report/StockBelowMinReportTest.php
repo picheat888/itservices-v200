@@ -16,6 +16,7 @@ use App\Services\Report\Stock\StockBelowMinReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ use Tests\TestCase;
 class StockBelowMinReportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private int $docSeq = 0;
 
@@ -109,7 +111,7 @@ class StockBelowMinReportTest extends TestCase
     /** @return array<string, mixed> */
     private function rows(string $query = ''): array
     {
-        return $this->actingAs($this->userWith(['stock.view']))
+        return $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/tabular/stock.below_min/rows'.($query === '' ? '' : '?'.$query))
             ->assertOk()->json();
     }
@@ -117,7 +119,7 @@ class StockBelowMinReportTest extends TestCase
     /** @return array<string, mixed> */
     private function breakdown(string $query = ''): array
     {
-        return $this->actingAs($this->userWith(['stock.view']))
+        return $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/stock/below-min/breakdown'.($query === '' ? '' : '?'.$query))
             ->assertOk()->json('data');
     }
@@ -308,13 +310,13 @@ class StockBelowMinReportTest extends TestCase
         $this->assertSame([], $data['categories']);
     }
 
-    public function test_bad_filters_are_refused_and_stock_view_is_needed(): void
+    public function test_bad_filters_are_refused_and_the_stock_report_switch_is_needed(): void
     {
-        $user = $this->userWith(['stock.view']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
         $this->actingAs($user)->getJson('/api/reports/stock/below-min/breakdown?status=dead')->assertUnprocessable();
         $this->actingAs($user)->getJson('/api/reports/tabular/stock.below_min/rows?status=dead')->assertUnprocessable();
 
-        $this->actingAs($this->userWith(['stock.view_events']))
+        $this->actingAs($this->userWith(['stock.module', 'stock.view', 'stock.view_events', ...$this->reportRights('assets')]))
             ->getJson('/api/reports/stock/below-min/breakdown')->assertForbidden();
     }
 
@@ -325,7 +327,7 @@ class StockBelowMinReportTest extends TestCase
         $this->seedStock();
         $report = new StockBelowMinReport;
 
-        $sections = $report->exportSections($this->userWith(['stock.view']), $report->resolveFilters([]));
+        $sections = $report->exportSections($this->userWith([...$this->reportRights('stock')]), $report->resolveFilters([]));
 
         $this->assertSame(['ตามหมวด'], array_column($sections, 'title'));
         $this->assertSame(['หมวด', 'หมดสต็อก', 'ต่ำกว่า Min', 'เกิน Max', 'รวม'], $sections[0]['headings']);
@@ -337,7 +339,7 @@ class StockBelowMinReportTest extends TestCase
         Excel::fake();
         $this->seedStock();
 
-        $this->actingAs($this->userWith(['stock.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->exportReport('/api/reports/tabular/stock.below_min/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_stock-below_min_2026-09-25.xlsx', function (TabularReportExport $export) {

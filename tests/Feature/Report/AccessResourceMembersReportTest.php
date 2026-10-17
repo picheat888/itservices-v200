@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -26,9 +27,8 @@ use Tests\TestCase;
  */
 class AccessResourceMembersReportTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
-
-    private const VIEW = ['access.email_view', 'access.file_view', 'access.social_view'];
 
     /** @var array<string, AccessMembership> */
     private array $grants;
@@ -78,8 +78,9 @@ class AccessResourceMembersReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = self::VIEW): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('access');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
@@ -241,9 +242,9 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertSame(['in_dept' => 1, 'cross' => 1, 'gone' => 0, 'open' => 1], $eg1['mix']);
     }
 
-    public function test_the_report_needs_all_three_registries(): void
+    public function test_the_report_needs_the_access_report_switch(): void
     {
-        $partial = $this->userWith(['access.email_view', 'access.file_view']);
+        $partial = $this->userWith(['access.email_view', 'access.file_view', 'access.social_view', ...$this->reportRights('assets')]);
         $this->actingAs($partial)->getJson('/api/reports/tabular/access.resource_members/rows')->assertForbidden();
         $this->actingAs($partial)->getJson('/api/reports/access/resource-members/breakdown')->assertForbidden();
         $this->actingAs($partial)->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertForbidden();
