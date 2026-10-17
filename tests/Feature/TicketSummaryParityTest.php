@@ -163,7 +163,7 @@ class TicketSummaryParityTest extends TestCase
             'super' => $this->viewer('sum_all', ['tickets.view_dashboard', 'tickets.view_all', 'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other']),
             'software_only' => $this->viewer('sum_sw', ['tickets.view_dashboard', 'tickets.level_software']),
         ];
-        $queries = ['days=7', 'days=30', 'days=90', 'days=year', 'days=all', 'days=45', 'from=2026-08-01&to=2026-09-20', 'from=2026-09-25&to=2026-09-25'];
+        $queries = ['days=7', 'days=30', 'days=90', 'days=year', 'days=45', 'from=2026-08-01&to=2026-09-20', 'from=2026-09-25&to=2026-09-25'];
 
         foreach ($viewers as $name => $viewer) {
             $this->actingAs($viewer);

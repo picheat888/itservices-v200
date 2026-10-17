@@ -146,7 +146,7 @@ class TicketSlaTest extends TestCase
         $this->getJson('/api/tickets/summary?from=2026-01-05')->assertStatus(422);
     }
 
-    public function test_summary_covers_every_ticket_since_the_first_and_shows_no_trend(): void
+    public function test_summary_over_a_long_custom_range_has_no_earlier_data_to_compare(): void
     {
         $this->actingAs($this->super());
         Ticket::factory()->create(['created_at' => '2025-03-02 10:00:00']);
@@ -156,14 +156,25 @@ class TicketSlaTest extends TestCase
             'resolved_at' => '2025-06-02 10:00:00', 'sla_resolve_due_at' => '2025-06-02 12:00:00',
         ]);
 
-        $this->getJson('/api/tickets/summary?days=all')->assertOk()
+        $this->getJson('/api/tickets/summary?from=2025-03-02&to=2026-01-14')->assertOk()
             ->assertJsonPath('created', 3)
-            ->assertJsonPath('created_delta_count', null)
-            ->assertJsonPath('resolved_delta_count', null)
+            ->assertJsonPath('created_delta_count', 3)
+            ->assertJsonPath('resolved_delta_count', 1)
             ->assertJsonPath('period_sla.from', '2025-03-02')
             ->assertJsonPath('period_sla.to', '2026-01-14')
             ->assertJsonPath('period_sla.rate', 100)
             ->assertJsonPath('period_sla.delta_pts', null);
+    }
+
+    public function test_days_all_is_no_longer_a_window_and_falls_back_to_thirty_days(): void
+    {
+        $this->actingAs($this->super());
+        Ticket::factory()->create(['created_at' => '2025-03-02 10:00:00']);
+        Ticket::factory()->create(['created_at' => '2026-01-12 10:00:00']);
+
+        $this->getJson('/api/tickets/summary?days=all')->assertOk()
+            ->assertJsonPath('range_days', 30)
+            ->assertJsonPath('created', 1);
     }
 
     public function test_metrics_are_null_without_data(): void

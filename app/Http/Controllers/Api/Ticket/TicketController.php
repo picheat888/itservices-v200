@@ -213,9 +213,6 @@ class TicketController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.view_dashboard'), 403);
 
-        // Nothing comes before the first ticket, so the whole history has no trend to show.
-        $wholeHistory = ! $request->filled('from') && ! $request->filled('to') && $request->query('days') === 'all';
-
         if ($request->filled('from') || $request->filled('to')) {
             $request->validate([
                 'from' => ['required', 'date_format:Y-m-d'],
@@ -231,11 +228,6 @@ class TicketController extends Controller
         } elseif ($request->query('days') === 'year') {
             $curEnd = now();
             $curStart = $curEnd->copy()->startOfYear();
-            $days = (int) round($curStart->diffInDays($curEnd));
-        } elseif ($request->query('days') === 'all') {
-            $curEnd = now();
-            $first = Ticket::min('created_at');
-            $curStart = $first === null ? $curEnd->copy()->startOfDay() : Carbon::parse($first)->startOfDay();
             $days = (int) round($curStart->diffInDays($curEnd));
         } else {
             $days = (int) $request->query('days', 30);
@@ -298,11 +290,11 @@ class TicketController extends Controller
             'created' => $f['created_cur'],
             // Absolute change in tickets vs the previous window (always computable,
             // unlike a % change which has no baseline when the prior window is empty).
-            'created_delta_count' => $wholeHistory ? null : $f['created_cur'] - $f['created_prev'],
+            'created_delta_count' => $f['created_cur'] - $f['created_prev'],
 
             'resolved' => $f['resolved_cur'],
             // Absolute change in tickets vs the previous window — same reading as `created`.
-            'resolved_delta_count' => $wholeHistory ? null : $f['resolved_cur'] - $f['resolved_prev'],
+            'resolved_delta_count' => $f['resolved_cur'] - $f['resolved_prev'],
 
             'backlog' => $f['open'] + $f['in_progress'],
             'backlog_open' => $f['open'],
