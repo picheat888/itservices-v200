@@ -5,6 +5,7 @@
  * Layout follows the "รายงาน Ticket & SLA" screen of docs/mockup/report-module.html.
  */
 import { useT } from '@/lang';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
@@ -36,6 +37,7 @@ import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
 import { TicketReportTable } from '../components/ticket-report-table';
 import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
+import { useReportRights } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
@@ -118,9 +120,10 @@ export default function TicketOverviewReportPage() {
     const { data, isLoading, isError, error } = useTicketOverview(filters);
     // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
     const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
-    const exportOpen = dialog === 'export';
+    const { canExport, canSchedule } = useReportRights();
+    const exportOpen = dialog === 'export' && canExport;
     const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
-    const scheduleOpen = dialog === 'schedule';
+    const scheduleOpen = dialog === 'schedule' && canSchedule;
     const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
     const exportMut = useExportTicketOverview();
     const scheduleMut = useCreateSchedule();
@@ -148,14 +151,18 @@ export default function TicketOverviewReportPage() {
                 description={t('rep_tickets_overview_desc')}
                 actions={
                     <>
-                        <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!data}>
-                            <CalendarClock className="h-4 w-4" />
-                            {t('rep_schedule')}
-                        </Button>
-                        <Button onClick={() => setExportOpen(true)} disabled={!data}>
-                            <Download className="h-4 w-4" />
-                            {t('rep_export')}
-                        </Button>
+                        <DisabledReason reason={canSchedule ? null : t('rep_no_schedule_right')} label={t('rep_schedule')}>
+                            <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!data || !canSchedule}>
+                                <CalendarClock className="h-4 w-4" />
+                                {t('rep_schedule')}
+                            </Button>
+                        </DisabledReason>
+                        <DisabledReason reason={canExport ? null : t('rep_no_export_right')} label={t('rep_export')}>
+                            <Button onClick={() => setExportOpen(true)} disabled={!data || !canExport}>
+                                <Download className="h-4 w-4" />
+                                {t('rep_export')}
+                            </Button>
+                        </DisabledReason>
                     </>
                 }
             />

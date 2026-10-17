@@ -1,6 +1,7 @@
 // Body of every tabular report page: definition, filter bar, summary tiles, paged rows, export and schedule dialogs.
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -13,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
+import { useReportRights } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows, useTabularSummary } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
@@ -205,9 +207,10 @@ function TabularReportBody({
     const { hidden, visibleColumns, toggle, reset: resetColumns } = useHiddenColumns(definition);
     // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
     const [dialog, setDialog] = useDialogParam(REPORT_DIALOGS);
-    const exportOpen = dialog === 'export';
+    const { canExport, canSchedule } = useReportRights();
+    const exportOpen = dialog === 'export' && canExport;
     const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
-    const scheduleOpen = dialog === 'schedule';
+    const scheduleOpen = dialog === 'schedule' && canSchedule;
     const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
@@ -231,14 +234,18 @@ function TabularReportBody({
                 description={t(`rep_${stem}_desc`)}
                 actions={
                     <>
-                        <Button variant="outline" onClick={() => setScheduleOpen(true)}>
-                            <CalendarClock className="h-4 w-4" />
-                            {t('rep_schedule')}
-                        </Button>
-                        <Button onClick={() => setExportOpen(true)}>
-                            <Download className="h-4 w-4" />
-                            {t('rep_export')}
-                        </Button>
+                        <DisabledReason reason={canSchedule ? null : t('rep_no_schedule_right')} label={t('rep_schedule')}>
+                            <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!canSchedule}>
+                                <CalendarClock className="h-4 w-4" />
+                                {t('rep_schedule')}
+                            </Button>
+                        </DisabledReason>
+                        <DisabledReason reason={canExport ? null : t('rep_no_export_right')} label={t('rep_export')}>
+                            <Button onClick={() => setExportOpen(true)} disabled={!canExport}>
+                                <Download className="h-4 w-4" />
+                                {t('rep_export')}
+                            </Button>
+                        </DisabledReason>
                     </>
                 }
             />

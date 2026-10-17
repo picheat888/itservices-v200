@@ -12,6 +12,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useReportRights } from '../hooks/use-report-rights';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
 import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotRange } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
@@ -227,7 +228,8 @@ export function ReportCatalogue({
     range?: SnapshotRange;
 }) {
     const t = useT();
-    const { data: exportsList = [] } = useMyExports();
+    const { seesMyExports } = useReportRights();
+    const { data: exportsList = [] } = useMyExports(seesMyExports);
     // Newest first from the API, so the first one seen per report is its latest.
     const latest = new Map<string, ReportExportItem>();
     for (const item of exportsList) if (!latest.has(item.report_key)) latest.set(item.report_key, item);

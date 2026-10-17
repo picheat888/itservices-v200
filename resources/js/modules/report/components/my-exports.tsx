@@ -19,6 +19,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Clock, Download, Loader2, RotateCcw, Trash2 } from 'lucide-react';
+import { useReportRights } from '../hooks/use-report-rights';
 import { useDeleteAllExports, useDeleteExport, useDownloadExport, useMyExports, useRetryExport } from '../hooks/use-reports';
 import type { ReportExportItem, ReportExportStatus } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
@@ -52,6 +53,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     const download = useDownloadExport();
     const retry = useRetryExport();
     const remove = useDeleteExport();
+    const { canExport } = useReportRights();
     const { Icon, tone, spin } = STATUS_META[item.status];
     const title = t(`rep_${reportStem(item.report_key)}_title`);
     const slow = item.status === 'queued' && Date.now() - new Date(item.created_at).getTime() > SLOW_QUEUE_MS;
@@ -155,7 +157,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                             {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                         </Button>
                     )}
-                    {item.status === 'failed' && (
+                    {item.status === 'failed' && canExport && (
                         <Button
                             size="icon"
                             variant="ghost"

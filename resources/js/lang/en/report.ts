@@ -234,6 +234,8 @@ export const report: Dict = {
 
     // components/schedule-report-dialog.tsx — schedule dialog
     rep_schedule: 'Schedule',
+    rep_no_export_right: 'You cannot export files',
+    rep_no_schedule_right: 'You cannot schedule reports',
     rep_schedule_eyebrow: 'Email this report automatically',
     rep_schedule_frequency: 'How often',
     rep_schedule_freq_daily: 'Daily',
