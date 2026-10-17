@@ -734,7 +734,7 @@ function OverviewTab({
                             {t('contract_timeline_upcoming')}
                         </span>
                         <span className="flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-amber-500" />
+                            <span className="h-2 w-2 rounded-full bg-amber-600 dark:bg-amber-500" />
                             {t('contract_timeline_in_reminder')}
                         </span>
                         <span className="flex items-center gap-1.5">
@@ -791,7 +791,7 @@ function OverviewTab({
                                         className={cn(
                                             // A 24px hit area around the 12px dot (WCAG 2.5.8)
                                             'ring-background focus-visible:outline-ring absolute h-3 w-3 -translate-x-1/2 cursor-pointer rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:z-10 hover:scale-125 focus-visible:z-10 data-[state=open]:z-10 data-[state=open]:scale-125',
-                                            c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-500' : 'bg-brand',
+                                            c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-600 dark:bg-amber-500' : 'bg-brand',
                                         )}
                                         style={{ left: `${frac * 100}%`, bottom: `${8 + lane * 16}px` }}
                                     >
