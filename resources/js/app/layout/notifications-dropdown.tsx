@@ -8,17 +8,38 @@ import {
     useNotifications,
     useNotificationText,
 } from '@/modules/notification';
+import { EmptyPane } from '@/shared/components/empty-pane';
 import { LoadFailed } from '@/shared/components/load-failed';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/button';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useToastStore } from '@/stores/toast';
-import { Loader2, X } from 'lucide-react';
+import { useUiStore } from '@/stores/ui';
+import { BellOff, Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTitle, openNotificationTarget } from './notification-display';
 
 // "All", then the catalogue's groups; a module tab shows once it has something in it.
 const NOTIF_TABS: { id: string; label: string }[] = [{ id: 'all', label: 'notif_all' }, ...NOTIFICATION_GROUPS];
+
+/** Scrolling and sliding honour the reader's reduced-motion setting. */
+const smooth = (): ScrollBehavior => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+
+/** Up/Down (and Home/End) move between the tray's rows. */
+function moveBetweenRows(e: React.KeyboardEvent<HTMLElement>) {
+    const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+    if (!keys.includes(e.key)) return;
+    const rows = [...(e.currentTarget.closest('#notif-tray')?.querySelectorAll<HTMLElement>('[data-notif-row]') ?? [])];
+    const at = rows.indexOf(e.currentTarget);
+    const next = e.key === 'Home' ? rows[0] : e.key === 'End' ? rows[rows.length - 1] : rows[at + (e.key === 'ArrowDown' ? 1 : -1)];
+    if (!next) return;
+    e.preventDefault();
+    next.focus();
+}
 
 /** The kind the server counts and filters by: payload type, plus the imitated module on a test sample. */
 const kindKey = (type: string | null, module: string | null) => `${type ?? ''}|${module ?? ''}`;
@@ -91,10 +112,28 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
     }, [data?.counts]);
 
     const shownTabs = NOTIF_TABS.filter((tb) => tb.id === 'all' || (totalByModule[tb.id] ?? 0) > 0);
+    // One module only: "All" and its chip would show the same list, so the chip row is left out.
+    const showChips = shownTabs.length > 2;
+
+    const selectTab = (id: string, el: HTMLElement | null) => {
+        setTab(id);
+        el?.scrollIntoView({ behavior: smooth(), inline: 'nearest', block: 'nearest' });
+    };
+
+    // Left/Right/Home/End move between the chips (a tablist), selecting as they go.
+    const onChipKey = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+        const last = shownTabs.length - 1;
+        const to = { ArrowRight: index === last ? 0 : index + 1, ArrowLeft: index === 0 ? last : index - 1, Home: 0, End: last }[e.key];
+        if (to === undefined) return;
+        e.preventDefault();
+        const el = tabsRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[to] ?? null;
+        el?.focus();
+        selectTab(shownTabs[to].id, el);
+    };
     const unreadCount = (id: string) => (id === 'all' ? unread : (unreadByModule[id] ?? 0));
 
     // The open tab's list, fetched from the server for that tab and loaded a page at a time.
-    const feed = useNotificationFeed(tab === 'all' ? null : (kindsByModule[tab] ?? []));
+    const feed = useNotificationFeed(tab, tab === 'all' ? null : (kindsByModule[tab] ?? []));
     const items = useMemo(() => {
         const seen = new Set<string>();
         // A refetch after a dismiss can shift a row onto the next page; show it once.
@@ -135,7 +174,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
         };
         el.addEventListener('wheel', onWheel, { passive: false });
         return () => el.removeEventListener('wheel', onWheel);
-    }, []);
+    }, [showChips]);
 
     const handleClick = (n: AppNotification) => {
         if (!n.read) markRead.mutate(n.id);
@@ -155,12 +194,16 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
             id="notif-tray"
             role="dialog"
             aria-labelledby="notif-tray-title"
+            onBlur={(e) => {
+                const next = e.relatedTarget as HTMLElement | null;
+                if (next && !ref.current?.contains(next) && !next.closest('[data-notif-btn]')) close(false);
+            }}
             className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 absolute top-[4.5rem] right-4 z-50 w-[440px] max-w-[calc(100vw-2rem)] origin-top-right duration-150 ease-out motion-reduce:animate-none"
         >
             {/* Caret aimed back at the bell */}
             <div className="border-border bg-popover absolute -top-[5px] right-[13px] h-2.5 w-2.5 rotate-45 border-t border-l" />
 
-            <div className="border-border bg-popover relative overflow-hidden rounded-xl border shadow-lg">
+            <div className="border-border bg-popover text-popover-foreground relative overflow-hidden rounded-lg border shadow-lg">
                 <div className="border-border flex items-center justify-between border-b px-4 py-3">
                     <div>
                         <h2 id="notif-tray-title" className="text-sm font-semibold">
@@ -171,69 +214,85 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                             {unread > 0 && `${unread} ${t('notif_unread')}`}
                         </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                        <button
+                    <div className="flex items-center gap-2">
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={() => markAllRead.mutate()}
                             disabled={unread === 0 || markAllRead.isPending}
-                            className="text-brand-ink hover:bg-accent rounded-md px-2 py-1 text-xs font-medium disabled:opacity-40"
+                            className="text-brand-ink h-8 px-2.5 text-xs [@media(pointer:coarse)]:h-10"
                         >
                             {t('notif_mark_all')}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => close(true)}
                             aria-label={t('close')}
-                            className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
+                            className="h-8 w-8 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-10"
                         >
-                            <X className="h-4 w-4" aria-hidden />
-                        </button>
+                            <X aria-hidden />
+                        </Button>
                     </div>
                 </div>
 
                 {/* Module filter chips: one row, scrolls sideways; the figure is what is still unread */}
-                <div
-                    ref={tabsRef}
-                    className="border-border [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 flex gap-1 overflow-x-auto scroll-smooth border-b px-2 pt-2 pb-1.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
-                >
-                    {shownTabs.map((tb) => {
-                        const count = unreadCount(tb.id);
-                        const active = tab === tb.id;
-                        return (
-                            <button
-                                key={tb.id}
-                                aria-pressed={active}
-                                onClick={(e) => {
-                                    setTab(tb.id);
-                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
-                                }}
-                                className={cn(
-                                    'flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                                    active ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent',
-                                )}
-                            >
-                                {t(tb.label)}
-                                {count > 0 && (
-                                    <span className={cn('font-semibold tabular-nums', !active && 'bg-brand/10 text-brand-ink rounded-full px-1.5')}>
-                                        {count}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
+                {showChips && (
+                    <div
+                        ref={tabsRef}
+                        role="tablist"
+                        aria-label={t('notif_title')}
+                        className="border-border [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 flex gap-1 overflow-x-auto border-b px-2 pt-2 pb-1.5 [scrollbar-width:thin] motion-safe:scroll-smooth [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                    >
+                        {shownTabs.map((tb, index) => {
+                            const count = unreadCount(tb.id);
+                            const active = tab === tb.id;
+                            return (
+                                <button
+                                    key={tb.id}
+                                    type="button"
+                                    role="tab"
+                                    id={`notif-tab-${tb.id}`}
+                                    aria-selected={active}
+                                    aria-controls="notif-tray-list"
+                                    tabIndex={active ? 0 : -1}
+                                    onClick={(e) => selectTab(tb.id, e.currentTarget)}
+                                    onKeyDown={(e) => onChipKey(e, index)}
+                                    className={cn(
+                                        'focus-visible:ring-ring flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-hidden [@media(pointer:coarse)]:py-2',
+                                        active ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent',
+                                    )}
+                                >
+                                    {t(tb.label)}
+                                    {count > 0 && (
+                                        <span
+                                            className={cn('font-semibold tabular-nums', !active && 'bg-brand/10 text-brand-ink rounded-full px-1.5')}
+                                        >
+                                            {count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 <div
+                    id="notif-tray-list"
+                    role={showChips ? 'tabpanel' : undefined}
+                    aria-labelledby={showChips ? `notif-tab-${tab}` : undefined}
                     aria-busy={feed.isLoading || undefined}
-                    className="[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 max-h-[360px] overflow-y-auto scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                    className="[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 max-h-[min(60vh,560px)] overflow-y-auto overscroll-contain [scrollbar-width:thin] motion-safe:scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
                 >
                     {feed.isLoading ? (
                         Array.from({ length: 3 }).map((_, i) => (
                             <div key={i} className="border-border/60 flex gap-3 border-b px-4 py-3">
-                                <div className="bg-muted h-8 w-8 shrink-0 animate-pulse rounded-full" />
+                                <Skeleton className="h-8 w-8 shrink-0 rounded-full motion-reduce:animate-none" />
                                 <div className="flex-1 space-y-2 pt-1">
-                                    <div className="bg-muted h-3.5 w-3/4 animate-pulse rounded" />
-                                    <div className="bg-muted h-3 w-1/2 animate-pulse rounded" />
+                                    <Skeleton className="h-3.5 w-3/4 motion-reduce:animate-none" />
+                                    <Skeleton className="h-3 w-1/2 motion-reduce:animate-none" />
                                 </div>
                             </div>
                         ))
@@ -242,7 +301,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                             <LoadFailed onRetry={() => feed.refetch()} />
                         </div>
                     ) : items.length === 0 ? (
-                        <div className="text-muted-foreground py-12 text-center text-sm">{t('notif_empty')}</div>
+                        <EmptyPane icon={BellOff} text={t('notif_empty')} />
                     ) : (
                         <TooltipProvider delayDuration={400}>
                             {items.map((n) => (
@@ -260,15 +319,17 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                     {/* The next page of this tab */}
                     {feed.hasNextPage && (
                         <div className="px-4 py-2.5 text-center">
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => feed.fetchNextPage()}
                                 disabled={feed.isFetchingNextPage}
-                                className="text-brand-ink hover:bg-accent focus-visible:ring-brand inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:opacity-60"
+                                className="text-brand-ink h-8 text-xs [@media(pointer:coarse)]:h-10"
                             >
-                                {feed.isFetchingNextPage && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />}
+                                {feed.isFetchingNextPage && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />}
                                 {feed.isFetchingNextPage ? t('loading') : t('notif_load_more')}
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -295,6 +356,8 @@ function NotificationRow({
     const [tipOpen, setTipOpen] = useState(false);
     const { Icon, color, bg } = iconMeta(n);
     const title = notificationTitle(n, t);
+    const lang = useUiStore((st) => st.lang);
+    const fmt = useDateFormat();
 
     // Only a title that is actually cut opens the tooltip.
     const openTip = (next: boolean) => {
@@ -305,7 +368,7 @@ function NotificationRow({
     return (
         <div
             className={cn(
-                'group border-border/60 hover:bg-accent/50 relative flex gap-3 overflow-hidden border-b px-4 py-3 transition-all duration-200 ease-out',
+                'group border-border/60 hover:bg-accent/50 relative flex gap-3 overflow-hidden border-b px-4 py-3 transition-[opacity,transform,max-height,padding] duration-200 ease-out motion-reduce:transition-none',
                 !n.read && 'bg-brand/[0.04]',
                 leaving ? 'max-h-0 translate-x-8 !border-b-0 !py-0 opacity-0' : 'max-h-32',
             )}
@@ -321,6 +384,7 @@ function NotificationRow({
                         type="button"
                         data-notif-row
                         onClick={onOpen}
+                        onKeyDown={moveBetweenRows}
                         className="focus-visible:after:ring-brand min-w-0 flex-1 cursor-pointer text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-hidden focus-visible:after:ring-2 focus-visible:after:ring-inset"
                     >
                         {/* One line of title, two of body: the same shape a toast uses */}
@@ -336,13 +400,19 @@ function NotificationRow({
                 </TooltipContent>
             </Tooltip>
             <div className="flex shrink-0 flex-col items-end gap-1">
-                <span className="text-muted-foreground text-xs">{n.created_at}</span>
+                <time
+                    dateTime={n.created_at_iso}
+                    title={n.created_at_iso ? fmt.dateTime(n.created_at_iso) : undefined}
+                    className="text-muted-foreground text-xs"
+                >
+                    {n.created_at_iso ? relativeTime(n.created_at_iso, lang, '') : n.created_at}
+                </time>
                 <button
                     type="button"
                     onClick={() => onDismiss(openRef.current)}
                     aria-label={t('notif_dismiss')}
                     title={t('notif_dismiss')}
-                    className="text-muted-foreground hover:bg-accent hover:text-foreground relative z-10 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground relative z-10 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9 [@media(pointer:coarse)]:opacity-100"
                 >
                     <X className="h-3.5 w-3.5" aria-hidden />
                 </button>
