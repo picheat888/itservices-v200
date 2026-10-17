@@ -30,12 +30,15 @@ export function useNotifications() {
 }
 
 /** The tray's list for one tab, a page at a time: every kind when `kinds` is null, else only those. */
-export function useNotificationFeed(kinds: string[] | null) {
+export function useNotificationFeed(tab: string, kinds: string[] | null) {
     return useInfiniteQuery({
-        queryKey: [...FEED, kinds?.join(',') ?? 'all'],
-        queryFn: ({ pageParam }) => notificationApi.list({ kinds: kinds ?? undefined, offset: pageParam }),
+        queryKey: [...FEED, tab, kinds?.join(',') ?? 'all'],
+        // A new kind joining this tab keeps its loaded rows on screen; another tab starts fresh.
+        placeholderData: (previous: InfiniteData<NotificationsResponse, number> | undefined, previousQuery) =>
+            previousQuery?.queryKey[2] === tab ? previous : undefined,
+        queryFn: ({ pageParam }: { pageParam: number }) => notificationApi.list({ kinds: kinds ?? undefined, offset: pageParam }),
         initialPageParam: 0,
-        getNextPageParam: (last, pages) => (last.has_more ? pages.length * PAGE_SIZE : undefined),
+        getNextPageParam: (last: NotificationsResponse, pages: NotificationsResponse[]) => (last.has_more ? pages.length * PAGE_SIZE : undefined),
         // An empty list of kinds would ask for everything.
         enabled: kinds === null || kinds.length > 0,
         staleTime: 10_000,
@@ -74,7 +77,10 @@ export function useDismissNotification() {
             const previous = qc.getQueryData<NotificationsResponse>(KEY);
             if (!previous) return { previous, feeds };
 
-            const going = previous.data.find((n) => n.id === id);
+            // The row may only be on a later page or another tab, not in the badge's first page.
+            const going =
+                previous.data.find((n) => n.id === id) ??
+                feeds.flatMap(([, feed]) => feed?.pages.flatMap((page) => page.data) ?? []).find((n) => n.id === id);
 
             qc.setQueryData<NotificationsResponse>(KEY, {
                 ...previous,
