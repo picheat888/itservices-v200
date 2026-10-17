@@ -112,7 +112,7 @@ export default function WorkflowsPage() {
                             <>
                                 <span>{t('wf_kpi_decision_window').replace('{days}', fmtN(measureDays))}</span>
                                 <span className="ml-3">
-                                    {measuredRequests} {t('wf_kpi_decision_requests')}
+                                    {fmtN(measuredRequests)} {t('wf_kpi_decision_requests')}
                                 </span>
                             </>
                         ) : (

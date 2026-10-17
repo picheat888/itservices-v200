@@ -625,7 +625,7 @@ export default function AssetsPage() {
     // Spoken/hover description of a bar — the row's counts are marked by color alone, so the
     // written-out split is what a screen reader and a hover both get.
     const typeLabel = (b: TypeBar) => (b.type === OTHER_TYPES ? t('asset_type_others').replace('{n}', fmtN(b.folded ?? 0)) : catLabel(b.type));
-    const typeBarTitle = (b: TypeBar) => `${typeLabel(b)}: ${TYPE_BUCKETS.map((s) => `${b[s.key]} ${t(s.labelKey)}`).join(', ')}`;
+    const typeBarTitle = (b: TypeBar) => `${typeLabel(b)}: ${TYPE_BUCKETS.map((s) => `${fmtN(b[s.key])} ${t(s.labelKey)}`).join(', ')}`;
 
     return (
         <div className="space-y-6">
@@ -767,7 +767,7 @@ export default function AssetsPage() {
                                                                 } as CSSProperties
                                                             }
                                                         >
-                                                            {b[s.key]}
+                                                            {fmtN(b[s.key])}
                                                         </span>
                                                     ))}
                                                 </span>

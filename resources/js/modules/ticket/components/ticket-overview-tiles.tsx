@@ -82,15 +82,14 @@ export function TicketOverviewTiles({
 }) {
     const t = useT();
     const fmtN = useNumberFormat();
-    const fmt = useNumberFormat();
     const sla = summary.period_sla;
     const live = summary.backlog_open + summary.backlog_in_progress;
     const net = summary.created - summary.resolved;
     const reportHref = canOpenReport ? `/reports/tickets-overview?from=${sla.from}&to=${sla.to}` : null;
     const pct = (rate: number | null) => (rate == null ? '—' : `${Math.round(rate)}%`);
     const linked = reportHref ? 'group-hover:border-brand/40 h-full' : 'h-full';
-    const ofLive = t('ticket_tile_of_live').replace('{n}', fmt(live));
-    const oldest = t('ticket_tile_oldest').replace('{n}', fmt(summary.over_sla_oldest_days ?? 0));
+    const ofLive = t('ticket_tile_of_live').replace('{n}', fmtN(live));
+    const oldest = t('ticket_tile_oldest').replace('{n}', fmtN(summary.over_sla_oldest_days ?? 0));
     const split = (key: string) => t(key).replace('{request}', pct(sla.request_rate)).replace('{manual}', pct(sla.manual_rate));
 
     return (
@@ -118,7 +117,7 @@ export function TicketOverviewTiles({
                 className="h-full"
                 footer={
                     summary.backlog_open > 0
-                        ? t('ticket_tile_working').replace('{n}', fmt(summary.backlog_in_progress))
+                        ? t('ticket_tile_working').replace('{n}', fmtN(summary.backlog_in_progress))
                         : t('ticket_dash_waiting_ok_sub')
                 }
             />
@@ -150,14 +149,14 @@ export function TicketOverviewTiles({
                     value={Math.abs(net)}
                     tone={net > 0 ? 'red' : net < 0 ? 'green' : undefined}
                     aside={<FlowBars flow={summary.flow} />}
-                    footerTitle={`${t('ticket_tile_flow_opened').replace('{n}', fmt(summary.created))} ${t('ticket_tile_flow_closed').replace('{n}', fmt(summary.resolved))}`}
+                    footerTitle={`${t('ticket_tile_flow_opened').replace('{n}', fmtN(summary.created))} ${t('ticket_tile_flow_closed').replace('{n}', fmtN(summary.resolved))}`}
                     className={linked}
                     footer={
                         <span className="inline-flex items-center gap-1.5">
                             <span className="bg-brand/50 h-2 w-2 rounded-sm" />
-                            {t('ticket_tile_flow_opened_short').replace('{n}', fmt(summary.created))}
+                            {t('ticket_tile_flow_opened_short').replace('{n}', fmtN(summary.created))}
                             <span className="ml-1 h-2 w-2 rounded-sm bg-emerald-500" />
-                            {t('ticket_tile_flow_closed_short').replace('{n}', fmt(summary.resolved))}
+                            {t('ticket_tile_flow_closed_short').replace('{n}', fmtN(summary.resolved))}
                         </span>
                     }
                 />

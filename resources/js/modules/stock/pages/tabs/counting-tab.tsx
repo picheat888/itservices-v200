@@ -177,7 +177,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const catLabel = (c: string) => localPair(c, catTh.get(c), lang) ?? c;
     const categoryOptions = [
         { value: 'all', label: `${t('stock_count_all_cat')} (${fmtN(itemsInWh.length)})`, search: t('stock_count_all_cat') },
-        ...Object.entries(catCounts).map(([c, n]) => ({ value: c, label: `${catLabel(c)} (${n})`, search: `${c} ${catTh.get(c) ?? ''}` })),
+        ...Object.entries(catCounts).map(([c, n]) => ({ value: c, label: `${catLabel(c)} (${fmtN(n)})`, search: `${c} ${catTh.get(c) ?? ''}` })),
     ];
     const skuList = (cat === 'all' ? itemsInWh : itemsInWh.filter((i) => (i.category ?? '—') === cat)).filter((i) =>
         matchesAllWords(`${i.sku} ${i.name} ${i.brand ?? ''} ${i.model ?? ''}`, skuSearch),

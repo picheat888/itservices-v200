@@ -1060,7 +1060,7 @@ function OverviewTab({
                     </div>
                     <div className="p-5">
                         <div className="flex items-baseline gap-2.5">
-                            <span className="text-[54px] leading-none font-bold">{summary?.active ?? 0}</span>
+                            <span className="text-[54px] leading-none font-bold">{fmtN(summary?.active ?? 0)}</span>
                             <span className="text-muted-foreground text-sm">
                                 {t('emp_status_caption').replace('{n}', fmtN(summary?.total ?? 0))}
                             </span>
