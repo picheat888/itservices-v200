@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { KpiTile, Sparkline } from '@/modules/report';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
+import { rowDelay } from '@/shared/lib/row-in';
 import { cn } from '@/shared/lib/utils';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { Link, type To } from 'react-router-dom';
@@ -12,17 +13,10 @@ export const WIDE = 'flex min-w-0 flex-col xl:col-span-3';
 export const NARROW = 'flex min-w-0 flex-col xl:col-span-2';
 export const LIST_LIMIT = 5;
 
-export const DASH_STYLES = `
-@keyframes dash-row-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.dash-row { animation: dash-row-in .3s ease-out both; }
-@media (prefers-reduced-motion: reduce) { .dash-row { animation: none; } }
-`;
-
 /** A link that opens a dialog ("?dialog=…") pushes history, so Back closes it instead of leaving the page. */
 const stateFor = (to: To) => (typeof to === 'string' && to.startsWith('?') ? dialogPushedState() : undefined);
 
-/** Staggered fade-in delay for the i-th row (40 ms apart). */
-export const rowDelay = (i: number) => ({ animationDelay: `${i * 40}ms` });
+export { rowDelay };
 
 /** Section heading: the sidebar's module icon, the title, a note, and a "go to" link when the reader may go there. */
 export function SectionHeading({
@@ -190,7 +184,7 @@ export function HBarRow({
     );
 
     return (
-        <li className={cn('dash-row', strong && 'border-border/60 border-b border-dashed pb-2')} style={rowDelay(index)}>
+        <li className={cn('row-in', strong && 'border-border/60 border-b border-dashed pb-2')} style={rowDelay(index)}>
             {to ? (
                 <Link
                     to={to}

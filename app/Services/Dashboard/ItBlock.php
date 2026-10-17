@@ -103,15 +103,20 @@ class ItBlock
 
     /**
      * @param  Collection<int, Ticket>  $inProgress
-     * @return list<array{assignee_id: int, name: ?string, open: int}>
+     * @return list<array{assignee_id: int, name: ?string, name_th: ?string, open: int}>
      */
     private function workload(Collection $inProgress): array
     {
         $counts = $inProgress->whereNotNull('assignee_id')->countBy('assignee_id');
-        $names = User::whereIn('id', $counts->keys()->all())->pluck('name', 'id');
+        $users = User::with('employee')->whereIn('id', $counts->keys()->all())->get()->keyBy('id');
 
         return $counts
-            ->map(fn (int $open, int|string $id) => ['assignee_id' => (int) $id, 'name' => $names[$id] ?? null, 'open' => $open])
+            ->map(fn (int $open, int|string $id) => [
+                'assignee_id' => (int) $id,
+                'name' => $users[$id]?->name,
+                'name_th' => $users[$id]?->name_th,
+                'open' => $open,
+            ])
             ->sortByDesc('open')
             ->values()
             ->all();

@@ -1,6 +1,6 @@
 // Dashboard "งาน IT": the live queue, two weeks of flow and the overview report's SLA figures, then the volume and workload cards.
 import { useT } from '@/lang';
-import { useFoldRow } from '@/modules/report';
+import { slaLevel, useFoldRow } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { CircleCheck, CirclePlus, Layers, Target, Timer, Wrench } from 'lucide-react';
@@ -20,7 +20,7 @@ export function ItSection({ it }: { it: DashboardIt }) {
     const backlog = it.backlog.open + it.backlog.in_progress;
     const peak = (n: number) => t('dash_peak_cases').replace('{n}', String(n));
     const { rate, goal } = it.sla;
-    const belowGoal = rate !== null && rate < goal;
+    const level = rate === null ? null : slaLevel(rate, goal);
 
     return (
         <section aria-labelledby="dash-it" className="space-y-3">
@@ -69,11 +69,16 @@ export function ItSection({ it }: { it: DashboardIt }) {
                     label={t('dash_sla_30d')}
                     value={rate === null ? '—' : rate}
                     unit={rate === null ? undefined : '%'}
-                    alert={belowGoal ? 'red' : undefined}
+                    alert={level === 'miss' ? 'red' : level === 'near' ? 'amber' : undefined}
                     badge={<StatusBadge tone="green">{t('dash_goal_n').replace('{n}', String(goal))}</StatusBadge>}
                     meter={rate === null ? undefined : { value: rate, goal }}
                     footer={
-                        <span className={cn(belowGoal && 'text-red-600 dark:text-red-400')}>
+                        <span
+                            className={cn(
+                                level === 'miss' && 'text-red-700 dark:text-red-400',
+                                level === 'near' && 'text-amber-700 dark:text-amber-400',
+                            )}
+                        >
                             {rate === null
                                 ? t('dash_no_measured')
                                 : rate >= goal

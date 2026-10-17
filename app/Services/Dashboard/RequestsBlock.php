@@ -61,12 +61,13 @@ class RequestsBlock
             // The stalled-reminder set, so this list is the morning bells, not a second definition of slow.
             'waiting_after_days' => $this->stalled->waitingAfterDays(),
             'waiting_total' => $waiting->count(),
-            'waiting' => $waiting->take(self::LIST_LIMIT)
+            'waiting' => $waiting->take(self::LIST_LIMIT)->loadMissing('approver')
                 ->map(fn (RequestApproval $step) => [
                     'id' => $step->request->id,
                     'reference' => $step->request->reference,
                     'title' => $step->request->title,
                     'waiting_on' => $step->approver_name ?: $step->label,
+                    'waiting_on_th' => $step->approver_name ? $step->approver?->name_th : null,
                     'days' => $this->stalled->daysWaiting($step),
                 ])->values()->all(),
             'by_type' => ServiceRequest::query()

@@ -18,6 +18,7 @@ import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
+import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractSummary, ContractType } from '@/shared/types';
@@ -709,7 +710,7 @@ function OverviewTab({
                 <StatCard
                     label={t('expiring_soon')}
                     value={String(summary.expiring)}
-                    sub={<span className="text-red-600 dark:text-red-400">{t('contract_hint_in_reminder')}</span>}
+                    sub={<span className="text-amber-700 dark:text-amber-400">{t('contract_hint_in_reminder')}</span>}
                     icon={Clock}
                 />
                 <StatCard
@@ -826,8 +827,8 @@ function OverviewTab({
                         <span className="text-sm font-semibold">{t('contract_top_vendors')}</span>
                     </div>
                     <div className="space-y-2.5 p-5">
-                        {summary.top_vendors.map((r) => (
-                            <div key={r.vendor}>
+                        {summary.top_vendors.map((r, i) => (
+                            <div key={r.vendor} className="row-in" style={rowDelay(i)}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{localPair(r.vendor, r.vendor_th, lang)}</span>
                                     <span className="text-muted-foreground text-xs">{formatCompact(r.amount)}</span>

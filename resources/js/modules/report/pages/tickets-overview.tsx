@@ -18,7 +18,7 @@ import { BacklogAging } from '../components/backlog-aging';
 import { CARD_HEADING_TINT } from '../components/card-heading';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
-import { KpiTile } from '../components/kpi-tile';
+import { KpiTile, slaLevel, type SlaLevel } from '../components/kpi-tile';
 import { ReportHeader } from '../components/report-header';
 import { compactRange } from '../components/report-scope';
 import {
@@ -39,6 +39,9 @@ import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
 import { useReportDialog } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
+
+/** Tile alert per SLA level against the goal: within 10 points amber, further off red. */
+const SLA_ALERT: Record<SlaLevel, 'red' | 'amber' | false> = { met: false, near: 'amber', miss: 'red' };
 
 // The page's soft palette: today's hues one step lighter (Tailwind 400), the same meanings.
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-400', high: 'bg-amber-400', medium: 'bg-emerald-400', low: 'bg-emerald-400' };
@@ -232,7 +235,7 @@ export default function TicketOverviewReportPage() {
                             badge={<StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(data.sla_goal))}</StatusBadge>}
                             value={fmt(data.kpi.sla_rate)}
                             unit={data.kpi.sla_rate === null ? undefined : '%'}
-                            alert={data.kpi.sla_rate !== null && data.kpi.sla_rate < data.sla_goal ? 'red' : false}
+                            alert={data.kpi.sla_rate === null ? false : SLA_ALERT[slaLevel(data.kpi.sla_rate, data.sla_goal)]}
                             meter={data.kpi.sla_rate === null ? undefined : { value: data.kpi.sla_rate, goal: data.sla_goal }}
                             footer={
                                 data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', String(data.previous.sla_rate))

@@ -129,7 +129,7 @@ function ActivityCard({
             ) : (
                 <ul className="divide-border/60 flex flex-1 flex-col justify-between divide-y px-5 py-1">
                     {activity.items.map((item, i) => (
-                        <li key={item.id} className="dash-row flex items-start justify-between gap-3 py-2" style={rowDelay(i)}>
+                        <li key={item.id} className="row-in flex items-start justify-between gap-3 py-2" style={rowDelay(i)}>
                             <div className="min-w-0">
                                 <div className="truncate text-sm font-medium">
                                     {item.action}

@@ -440,6 +440,22 @@
 .animate-shake {
     animation: shake 0.4s both;
 }
+/* List rows fade up one after another (delay from shared/lib/row-in.ts) */
+@keyframes row-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.row-in {
+    animation: row-in 0.3s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .animate-shake {
         animation-duration: 0.01ms;
@@ -460,6 +476,10 @@
 
     /* Loading skeletons stay as still blocks. */
     .animate-pulse {
+        animation: none;
+    }
+
+    .row-in {
         animation: none;
     }
 }

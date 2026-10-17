@@ -4,8 +4,10 @@ import { CardEmpty, CardTitle, CODE_LINK, FILL } from '@/modules/report';
 import { TICKET_STATUS_META } from '@/modules/ticket';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
+import { localPair } from '@/shared/lib/local-name';
 import { REQUEST_STATUS_META } from '@/shared/lib/request-meta';
 import { Card } from '@/shared/ui/card';
+import { useUiStore } from '@/stores/ui';
 import { Box, CircleCheck, Inbox, MonitorCog, Ticket, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { DashboardMine } from '../api/dashboardApi';
@@ -41,13 +43,13 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
                     value={k.open_tickets}
                     bar={sharePieces([
                         { key: 'open', value: k.open_split.open, className: FILL.blue },
-                        { key: 'in_progress', value: k.open_split.in_progress, className: FILL.amber },
+                        { key: 'in_progress', value: k.open_split.in_progress, className: FILL.violet },
                     ])}
                     footer={
                         <LegendFooter
                             items={[
                                 { key: 'open', label: t('ticket_open'), value: k.open_split.open, dot: FILL.blue },
-                                { key: 'in_progress', label: t('ticket_in_progress'), value: k.open_split.in_progress, dot: FILL.amber },
+                                { key: 'in_progress', label: t('ticket_in_progress'), value: k.open_split.in_progress, dot: FILL.violet },
                             ]}
                         />
                     }
@@ -114,6 +116,7 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
 
 function MyTicketsCard({ mine }: { mine: DashboardMine }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const links = useDashLinks();
 
     return (
@@ -136,7 +139,7 @@ function MyTicketsCard({ mine }: { mine: DashboardMine }) {
                             const meta = TICKET_STATUS_META[row.status as keyof typeof TICKET_STATUS_META];
                             const to = links.ticket(row.id);
                             return (
-                                <tr key={row.id} className="dash-row border-border/60 border-b last:border-0" style={rowDelay(i)}>
+                                <tr key={row.id} className="row-in border-border/60 border-b last:border-0" style={rowDelay(i)}>
                                     <td className="px-5 py-2.5 whitespace-nowrap tabular-nums">
                                         {to ? (
                                             <Link to={to} className={CODE_LINK}>
@@ -150,7 +153,7 @@ function MyTicketsCard({ mine }: { mine: DashboardMine }) {
                                         {row.subject}
                                     </td>
                                     <td className="text-muted-foreground hidden px-2 py-2.5 whitespace-nowrap md:table-cell">
-                                        {row.assignee_name ?? t('dash_no_assignee')}
+                                        {localPair(row.assignee_name, row.assignee_name_th, lang) ?? t('dash_no_assignee')}
                                     </td>
                                     <td className="px-5 py-2.5 text-right">{meta && <StatusBadge tone={meta.tone}>{t(meta.key)}</StatusBadge>}</td>
                                 </tr>
@@ -187,7 +190,7 @@ function MyRequestsCard({ mine }: { mine: DashboardMine }) {
                             const meta = REQUEST_STATUS_META[row.status as keyof typeof REQUEST_STATUS_META];
                             const to = links.request(row.id);
                             return (
-                                <tr key={row.id} className="dash-row border-border/60 border-b last:border-0" style={rowDelay(i)}>
+                                <tr key={row.id} className="row-in border-border/60 border-b last:border-0" style={rowDelay(i)}>
                                     <td className="px-5 py-2.5 whitespace-nowrap tabular-nums">
                                         {to ? (
                                             <Link to={to} className={CODE_LINK}>

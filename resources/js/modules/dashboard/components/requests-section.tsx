@@ -2,8 +2,10 @@
 import { useT } from '@/lang';
 import { CardEmpty, CardTitle, CODE_LINK, FILL, fold, FoldToggle, heldStyle, useFoldRow } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import { useUiStore } from '@/stores/ui';
 import { CircleCheck, CircleX, FilePlus, Hourglass, Inbox, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { DashboardRequests } from '../api/dashboardApi';
@@ -144,6 +146,7 @@ function WaitingCard({
     heldHeight: number | null;
 }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const links = useDashLinks();
     // Every request: the stalled set holds approval steps and IT completion steps alike.
     const listLink = links.requestsAll;
@@ -171,7 +174,7 @@ function WaitingCard({
                         {requests.waiting.map((item, i) => {
                             const to = links.request(item.id);
                             return (
-                                <tr key={item.id} className="dash-row border-border/60 border-b last:border-0" style={rowDelay(i)}>
+                                <tr key={item.id} className="row-in border-border/60 border-b last:border-0" style={rowDelay(i)}>
                                     <td className="px-5 py-2.5 whitespace-nowrap tabular-nums">
                                         {to ? (
                                             <Link to={to} className={CODE_LINK}>
@@ -185,7 +188,7 @@ function WaitingCard({
                                         {item.title}
                                     </td>
                                     <td className="text-muted-foreground hidden max-w-40 truncate px-2 py-2.5 md:table-cell">
-                                        {item.waiting_on ?? '—'}
+                                        {localPair(item.waiting_on, item.waiting_on_th, lang) ?? '—'}
                                     </td>
                                     <td className="px-5 py-2.5 text-right">
                                         <StatusBadge tone="amber">{t('dash_n_days').replace('{n}', String(item.days))}</StatusBadge>

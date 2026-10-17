@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Dashboard;
 
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -27,7 +28,8 @@ class ItBlockTest extends TestCase
 
     public function test_the_live_queue_counts_open_cases_flags_past_sla_and_names_who_holds_what(): void
     {
-        $tech = User::factory()->create();
+        $employee = Employee::create(['first_name' => 'Somchai', 'first_name_th' => 'สมชาย']);
+        $tech = User::factory()->create(['employee_id' => $employee->id]);
         Ticket::factory()->create(['status' => 'open', 'assignee_id' => null, 'created_at' => now()->subDays(3), 'sla_response_due_at' => now()->subHour()]);
         Ticket::factory()->create(['status' => 'open', 'assignee_id' => null, 'created_at' => now()->subDay()]);
         Ticket::factory()->create(['status' => 'in_progress', 'assignee_id' => $tech->id, 'responded_at' => now(), 'sla_resolve_due_at' => now()->addDay()]);
@@ -40,7 +42,7 @@ class ItBlockTest extends TestCase
         $this->assertSame(1, $it['backlog']['in_progress']);
         $this->assertSame(1, $it['backlog']['over_sla']);
         $this->assertSame(2, $it['unassigned']);
-        $this->assertSame([['assignee_id' => $tech->id, 'name' => $tech->name, 'open' => 1]], $it['workload']);
+        $this->assertSame([['assignee_id' => $tech->id, 'name' => $tech->name, 'name_th' => 'สมชาย', 'open' => 1]], $it['workload']);
     }
 
     public function test_the_fourteen_day_series_count_arrivals_closures_and_the_backlog_level(): void
