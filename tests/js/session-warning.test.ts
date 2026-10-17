@@ -6,6 +6,7 @@ import {
     crossedAnnouncement,
     dismissesWarning,
     heartbeatMsFor,
+    isOtherAccount,
     newerActivity,
     parseSessionMessage,
     pingDelay,
@@ -95,10 +96,22 @@ test('only activity after the warning opened closes it', () => {
 test('messages between tabs are checked before they are trusted', () => {
     assert.deepEqual(parseSessionMessage({ type: 'activity', at: 123 }), { type: 'activity', at: 123 });
     assert.deepEqual(parseSessionMessage({ type: 'logout' }), { type: 'logout' });
+    assert.deepEqual(parseSessionMessage({ type: 'login', userId: 7 }), { type: 'login', userId: 7 });
+    assert.equal(parseSessionMessage({ type: 'login' }), null);
+    assert.equal(parseSessionMessage({ type: 'login', userId: '7' }), null);
+    assert.equal(parseSessionMessage({ type: 'login', userId: 1.5 }), null);
     assert.equal(parseSessionMessage({ type: 'activity' }), null);
     assert.equal(parseSessionMessage({ type: 'other', at: 1 }), null);
     assert.equal(parseSessionMessage('logout'), null);
     assert.equal(parseSessionMessage(null), null);
+});
+
+test('a tab follows a sign-in only when the account changed', () => {
+    assert.equal(isOtherAccount(150, 1), true);
+    assert.equal(isOtherAccount(150, 150), false);
+    // Nobody shown yet, or the session is gone: the 401 path handles that, not a reload
+    assert.equal(isOtherAccount(null, 1), false);
+    assert.equal(isOtherAccount(150, null), false);
 });
 
 test('the server hears about activity often enough for the shortest timeout', () => {

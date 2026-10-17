@@ -26,6 +26,14 @@ function announceLogout(): void {
     channel.close();
 }
 
+/** Tells the other tabs which account the shared session now belongs to (see useAccountSync). */
+export function announceSignIn(userId: number): void {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(SESSION_CHANNEL);
+    channel.postMessage({ type: 'login', userId });
+    channel.close();
+}
+
 let shared: ReturnType<typeof createLoginRedirect> | null = null;
 
 /** The app's one redirect, shared by the http client and the idle timer. */

@@ -1,4 +1,12 @@
-import { ChangePasswordDialog, SessionTimeoutModal, SetPasswordDialog, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
+import {
+    ChangePasswordDialog,
+    SessionTimeoutModal,
+    SetPasswordDialog,
+    useAccountSync,
+    useAuth,
+    useSessionTimeout,
+    useUserPreferences,
+} from '@/modules/auth';
 import { PROFILE_SECTION_PARAM, ProfileDrawer } from '@/modules/profile';
 import { settingsApi } from '@/modules/settings';
 import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-param';
@@ -20,6 +28,7 @@ export function AppShell() {
     useUserPreferences();
     const density = useUiStore((s) => s.density);
     const { user } = useAuth();
+    useAccountSync(user);
 
     // Same query key as SecurityTab.
     const { data: security } = useQuery({

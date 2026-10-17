@@ -44,7 +44,7 @@ export function crossedAnnouncement(previous: number, current: number): number |
 /** A tab writes its activity for the others at most this often. */
 export const ACTIVITY_SHARE_MS = 5_000;
 
-export type SessionMessage = { type: 'activity'; at: number } | { type: 'logout' };
+export type SessionMessage = { type: 'activity'; at: number } | { type: 'logout' } | { type: 'login'; userId: number };
 
 /** The later of this tab's activity and one read from another tab (localStorage text or a message). */
 export function newerActivity(current: number, incoming: unknown): number {
@@ -63,12 +63,20 @@ export function dismissesWarning(warningOpenedAt: number, activityAt: number): b
 
 export function parseSessionMessage(data: unknown): SessionMessage | null {
     if (typeof data !== 'object' || data === null) return null;
-    const message = data as { type?: unknown; at?: unknown };
+    const message = data as { type?: unknown; at?: unknown; userId?: unknown };
     if (message.type === 'logout') return { type: 'logout' };
+    if (message.type === 'login' && typeof message.userId === 'number' && Number.isInteger(message.userId)) {
+        return { type: 'login', userId: message.userId };
+    }
     if (message.type === 'activity' && typeof message.at === 'number' && Number.isFinite(message.at)) {
         return { type: 'activity', at: message.at };
     }
     return null;
+}
+
+/** True when the session now belongs to someone other than the account this tab shows. */
+export function isOtherAccount(shownUserId: number | null | undefined, sessionUserId: number | null | undefined): boolean {
+    return shownUserId != null && sessionUserId != null && shownUserId !== sessionUserId;
 }
 
 // Heartbeat: the server only sees requests, so real activity is pinged to it

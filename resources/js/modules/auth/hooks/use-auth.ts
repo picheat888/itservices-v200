@@ -1,4 +1,5 @@
 import { authApi, type LoginPayload } from '@/modules/auth/api/authApi';
+import { announceSignIn } from '@/shared/lib/login-redirect';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { SUPER_ROLE, type User } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -42,6 +43,7 @@ export function useLogin() {
             qc.removeQueries({ predicate: (query) => query.queryKey[0] !== 'settings' });
             qc.setQueryData(ME_KEY, user);
             qc.invalidateQueries({ queryKey: ['settings'] });
+            announceSignIn(user.id);
         },
     });
 }
