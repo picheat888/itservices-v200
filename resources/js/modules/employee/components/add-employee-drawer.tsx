@@ -1,10 +1,11 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
-import { SearchableSelect } from '@/shared/components/searchable-select';
+import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
+import type { EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
@@ -30,7 +31,8 @@ import {
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import type { OnboardingServiceField } from '../api/employeeApi';
 import { useDepartments } from '../hooks/use-departments';
-import { useEmployeeMutations, useEmployeeOptions } from '../hooks/use-employees';
+import { useEmployeePicker, useEmployeesByIds } from '../hooks/use-employee-pickers';
+import { useEmployeeMutations } from '../hooks/use-employees';
 import { useOnboardingPrecheck } from '../hooks/use-onboarding-precheck';
 import { useOnboardingServices } from '../hooks/use-onboarding-services';
 import { usePositions } from '../hooks/use-positions';
@@ -108,7 +110,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
-    const { data: employees = [] } = useEmployeeOptions();
+    const { employees, pickerProps: managerPickerProps } = useEmployeePicker({ match: 'position' });
     const { create } = useEmployeeMutations();
     const pushToast = useToastStore((s) => s.push);
     const stepHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -237,18 +239,17 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     };
 
     // All employees are manager candidates when adding a new employee.
-    const managerOptions = useMemo(
-        () =>
-            employees.map((e) => ({
-                value: String(e.id),
-                label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
-                hint: e.position ?? undefined,
-                avatar: e.photo_url,
-                sub: e.code,
-                search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.position ?? ''}`,
-            })),
-        [employees, lang],
-    );
+    const managerOption = (e: EmployeeOption): SearchOption => ({
+        value: String(e.id),
+        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        hint: e.position ?? undefined,
+        avatar: e.photo_url,
+        sub: e.code,
+        search: '',
+    });
+    const managerOptions = employees.map(managerOption);
+    const { data: chosenManagers = [] } = useEmployeesByIds([form.managerId ? Number(form.managerId) : null]);
+    const chosenManager = chosenManagers[0] ? managerOption(chosenManagers[0]) : undefined;
 
     // A "special position" skips both the Department and Report-to requirements.
     const posIsSpecial = positions.find((p) => String(p.id) === form.positionId)?.allow_special_position ?? false;
@@ -676,6 +677,8 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                             onChange={(v) => set('managerId', v)}
                                             placeholder={t('emp_manager_ph')}
                                             options={managerOptions}
+                                            {...managerPickerProps}
+                                            selectedOption={chosenManager}
                                             clearable
                                             maxRows={4}
                                         />

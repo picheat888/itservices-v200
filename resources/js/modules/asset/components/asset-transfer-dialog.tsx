@@ -1,10 +1,10 @@
 import { useT } from '@/lang';
-import { useEmployeeOptions, useLocations } from '@/modules/employee';
+import { useEmployeePicker, useEmployeesByIds, useLocations } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
-import { SearchableSelect } from '@/shared/components/searchable-select';
+import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { cn } from '@/shared/lib/utils';
-import type { Asset } from '@/shared/types';
+import type { Asset, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -38,7 +38,7 @@ export function AssetTransferDialog({
     const lang = useUiStore((s) => s.lang);
     const { transfer, bulkTransfer } = useAssetMutations();
     const { data: locations = [] } = useLocations();
-    const { data: employees = [] } = useEmployeeOptions();
+    const { employees, pickerProps } = useEmployeePicker();
 
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
@@ -47,21 +47,6 @@ export function AssetTransferDialog({
     const { data: readiness } = useRecipientReadiness(isOpen);
 
     const locationOptions = useMemo(() => locations.map((l) => ({ value: String(l.id), label: l.name, search: l.name })), [locations]);
-    const employeeOptions = useMemo(
-        () =>
-            employees.map((e) => {
-                const name = lang === 'th' ? (e.name_th ?? e.name) : e.name;
-                return {
-                    value: String(e.id),
-                    label: name,
-                    hint: e.department ?? undefined,
-                    sub: e.code,
-                    // Search both languages so a Thai query matches an English-stored name and vice versa.
-                    search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.department ?? ''}`,
-                };
-            }),
-        [employees, lang],
-    );
 
     const [mode, setMode] = useState<Mode>('employee');
     const [employeeId, setEmployeeId] = useState('');
@@ -69,6 +54,17 @@ export function AssetTransferDialog({
     const [location, setLocation] = useState('');
     const [reason, setReason] = useState('');
     const [err, setErr] = useState<{ employee?: string; shared?: string; location?: string }>({});
+
+    const employeeOption = (e: EmployeeOption): SearchOption => ({
+        value: String(e.id),
+        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        hint: e.department ?? undefined,
+        sub: e.code,
+        search: '',
+    });
+    const employeeOptions = employees.map(employeeOption);
+    const { data: chosen = [] } = useEmployeesByIds([employeeId ? Number(employeeId) : null]);
+    const chosenOption = chosen[0] ? employeeOption(chosen[0]) : undefined;
 
     // Retain the last asset so the header keeps its text while the dialog animates closed.
     const [shownAsset, setShownAsset] = useState<Asset | null>(asset ?? null);
@@ -158,6 +154,8 @@ export function AssetTransferDialog({
                                 value={employeeId}
                                 onChange={setEmployeeId}
                                 options={employeeOptions}
+                                {...pickerProps}
+                                selectedOption={chosenOption}
                                 preferDown
                                 placeholder={t('transfer_pick_employee')}
                             />
