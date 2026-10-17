@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Stock\StoreStockItemRequest;
 use App\Http\Resources\Stock\StockItemResource;
 use App\Http\Resources\Stock\StockMovementResource;
+use App\Http\Resources\Stock\StockReorderItemResource;
 use App\Models\AuditLog;
 use App\Models\Settings\AppSetting;
 use App\Models\Stock\StockBalance;
@@ -48,7 +49,7 @@ class StockItemController extends Controller
 
         $query = StockItem::query()
             ->select('stock_items.*')
-            ->with(['lots.movement', 'balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category'])
+            ->with(['balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category'])
             // Reserved = qty held by approved-but-unfulfilled requests.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
             // FIFO stock value as a sortable subquery column.
@@ -124,8 +125,8 @@ class StockItemController extends Controller
         $over = $items->filter(fn (StockItem $i) => $i->status() === 'over');
         $dead = $items->filter(fn (StockItem $i) => $i->status() === 'dead');
 
-        // The four lists render lot, balance and master names; load them once for those items only
-        $out->concat($low)->concat($over)->concat($dead)->load(['lots.movement', 'balances.warehouse', 'unit', 'warrantyType', 'brand', 'model']);
+        // The reorder lists show warehouse names; load them once for out/low items only
+        $out->concat($low)->load('balances.warehouse');
 
         // Aggregate per-warehouse totals from stock_balances so that items
         // split across multiple warehouses are counted accurately.
@@ -165,10 +166,8 @@ class StockItemController extends Controller
             'low_count' => $low->count(),
             'over_count' => $over->count(),
             'dead_count' => $dead->count(),
-            'out_items' => StockItemResource::collection($out->sortBy('name')->values()),
-            'low_items' => StockItemResource::collection($low->sortBy('current_stock')->values()),
-            'over_items' => StockItemResource::collection($over->sortByDesc(fn (StockItem $i) => $i->current_stock - $i->max_stock)->values()),
-            'dead_items' => StockItemResource::collection($dead->values()),
+            'out_items' => StockReorderItemResource::collection($out->sortBy('name')->values()),
+            'low_items' => StockReorderItemResource::collection($low->sortBy('current_stock')->values()),
             'by_warehouse' => $byWarehouse,
             'by_category' => $byCategory,
             'recent_movements' => $recentMovements,
