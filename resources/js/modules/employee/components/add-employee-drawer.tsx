@@ -30,7 +30,7 @@ import {
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import type { OnboardingServiceField } from '../api/employeeApi';
 import { useDepartments } from '../hooks/use-departments';
-import { useEmployeeMutations, useEmployees } from '../hooks/use-employees';
+import { useEmployeeMutations, useEmployeeOptions } from '../hooks/use-employees';
 import { useOnboardingPrecheck } from '../hooks/use-onboarding-precheck';
 import { useOnboardingServices } from '../hooks/use-onboarding-services';
 import { usePositions } from '../hooks/use-positions';
@@ -108,7 +108,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
-    const { data: employees = [] } = useEmployees();
+    const { data: employees = [] } = useEmployeeOptions();
     const { create } = useEmployeeMutations();
     const pushToast = useToastStore((s) => s.push);
     const stepHeadingRef = useRef<HTMLHeadingElement>(null);

@@ -1,5 +1,5 @@
 import { translate, useT } from '@/lang';
-import { departmentApi, useDepartments, useEmployees } from '@/modules/employee';
+import { departmentApi, useDepartments, useEmployeeOptions } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -37,7 +37,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useGroupRoleMutations();
     const { data: matrix } = usePermissionMatrix();
-    const { data: employees = [] } = useEmployees();
+    const { data: employees = [] } = useEmployeeOptions();
     const { data: departments = [] } = useDepartments();
     const { data: groupsData } = useGroupRoles();
 

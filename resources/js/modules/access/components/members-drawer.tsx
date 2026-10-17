@@ -1,5 +1,5 @@
 import { useT } from '@/lang';
-import { useDepartments, useEmployees } from '@/modules/employee';
+import { useDepartments, useEmployeeOptions } from '@/modules/employee';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { RecordStamps } from '@/shared/components/record-stamps';
@@ -120,7 +120,7 @@ export function MembersDrawer({
 
     const kind = tgt?.kind ?? 'email-groups';
     const { data: members = [], isLoading } = useResourceMembers(kind, tgt?.id ?? null);
-    const { data: employees = [] } = useEmployees();
+    const { data: employees = [] } = useEmployeeOptions();
     const { data: departments = [] } = useDepartments();
     const { addMember, revokeMember, remove } = useAccessMutations(kind);
     // Owner tier exists for email groups (required approver) and file shares (required owner).
