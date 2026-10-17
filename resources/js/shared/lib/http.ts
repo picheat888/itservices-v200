@@ -10,6 +10,8 @@ declare module 'axios' {
     interface AxiosRequestConfig {
         /** A 401 here is an answer, not a lost session (start-up prefetch before sign-in is known). */
         quietUnauthenticated?: boolean;
+        /** A background poll: a 5xx is retried by its query, not shown as the full-screen error. */
+        quietServerError?: boolean;
     }
 }
 
@@ -105,7 +107,7 @@ http.interceptors.response.use(
             } else {
                 showError('rate-limit', retryAfter);
             }
-        } else if (status !== undefined && status >= 500) {
+        } else if (status !== undefined && status >= 500 && !error.config?.quietServerError) {
             showError('server');
         }
 

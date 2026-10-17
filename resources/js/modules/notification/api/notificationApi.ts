@@ -114,7 +114,7 @@ export interface NotificationListParams {
 
 export const notificationApi = {
     list: (params: NotificationListParams = {}): Promise<NotificationsResponse> =>
-        http.get<NotificationsResponse>('/notifications', { params }).then((r) => r.data),
+        http.get<NotificationsResponse>('/notifications', { params, quietServerError: true }).then((r) => r.data),
 
     markRead: (id: string): Promise<void> => http.put(`/notifications/${id}/read`).then(() => undefined),
 
