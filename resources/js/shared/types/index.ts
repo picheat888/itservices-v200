@@ -830,6 +830,7 @@ export interface StockRequest {
     approver_name: string | null;
     approved_at: string | null;
     fulfilled_at: string | null;
+    fulfilled_by: string | null;
     rejected_at: string | null;
     created_at: string | null;
     /** Approve / Reject offered to this reader: pending, holds stock.approve, not their own. */

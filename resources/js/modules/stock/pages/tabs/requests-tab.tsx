@@ -118,6 +118,13 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             render: (r) => <span className="text-xs font-semibold">{r.reference ?? `REQ-${String(r.id).padStart(4, '0')}`}</span>,
         },
         {
+            key: 'requested_at',
+            header: t('stock_requested_at'),
+            width: '130px',
+            className: 'whitespace-nowrap',
+            render: (r) => <span className="text-xs">{fmt.dateTime(r.created_at)}</span>,
+        },
+        {
             key: 'requester',
             header: t('stock_requester'),
             width: '150px',
@@ -140,6 +147,33 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             header: t('status'),
             width: '120px',
             render: (r) => <StatusBadge tone={REQ_TONE[r.status]}>{t(`stock_rq_${r.status}` as Parameters<typeof t>[0])}</StatusBadge>,
+        },
+        {
+            key: 'decided',
+            header: t('stock_decided_by'),
+            width: '170px',
+            hideBelow: 'lg',
+            render: (r) => {
+                const decidedAt = r.approved_at ?? r.rejected_at;
+                return (
+                    <div>
+                        <div className="text-sm">{r.approver_name || '—'}</div>
+                        {decidedAt && <div className="text-muted-foreground text-xs">{fmt.dateTime(decidedAt)}</div>}
+                    </div>
+                );
+            },
+        },
+        {
+            key: 'fulfilled',
+            header: t('stock_fulfilled_by'),
+            width: '170px',
+            hideBelow: 'lg',
+            render: (r) => (
+                <div>
+                    <div className="text-sm">{r.fulfilled_by || '—'}</div>
+                    {r.fulfilled_at && <div className="text-muted-foreground text-xs">{fmt.dateTime(r.fulfilled_at)}</div>}
+                </div>
+            ),
         },
         {
             key: 'actions',
