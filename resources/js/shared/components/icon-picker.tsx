@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { ICON_OPTIONS, getLucideIcon } from '@/shared/lib/lucide-icons';
-import { searchLabel } from '@/shared/lib/search-words';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -29,8 +29,7 @@ export function IconPicker({
     const Current = getLucideIcon(value);
 
     const filtered = useMemo(() => {
-        const needle = q.trim().toLowerCase();
-        return needle ? ICON_OPTIONS.filter((o) => o.name.toLowerCase().includes(needle)) : ICON_OPTIONS;
+        return ICON_OPTIONS.filter((o) => matchesAllWords(o.name, q));
     }, [q]);
 
     return (

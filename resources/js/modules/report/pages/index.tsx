@@ -12,6 +12,7 @@ import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { matchesAllWords } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Search } from 'lucide-react';
@@ -47,12 +48,10 @@ export default function ReportsPage() {
         ...domains.map((d) => ({ id: d, label: t(`rep_domain_${d}`), count: reports.filter((r) => r.domain === d).length })),
     ];
     const visible = useMemo(() => {
-        const q = query.trim().toLowerCase();
         return reports.filter((r) => {
             if (domain !== 'all' && r.domain !== domain) return false;
-            if (!q) return true;
             const stem = reportStem(r.key);
-            return `${t(`rep_${stem}_title`)} ${t(`rep_${stem}_desc`)}`.toLowerCase().includes(q);
+            return matchesAllWords(`${t(`rep_${stem}_title`)} ${t(`rep_${stem}_desc`)}`, query);
         });
     }, [reports, query, domain, t]);
 
