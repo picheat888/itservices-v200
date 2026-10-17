@@ -181,6 +181,22 @@ class TicketTabularReportsTest extends TestCase
         $this->assertSame([$this->set['t2']->id], array_column($rows, 'id'));
     }
 
+    public function test_backlog_search_finds_a_ticket_by_its_requester(): void
+    {
+        $this->seedTickets();
+        $thai = Employee::create(['code' => 'EMP-T1', 'first_name' => 'Manop', 'last_name' => 'Chai', 'first_name_th' => 'มานพ', 'last_name_th' => 'ใจดี']);
+        $english = Employee::create(['code' => 'EMP-T2', 'first_name' => 'Malee', 'last_name' => 'Rose']);
+        $byThai = $this->ticket($thai, ['status' => 'open', 'created_at' => '2026-09-14 10:00:00']);
+        $byEnglish = $this->ticket($english, ['status' => 'open', 'created_at' => '2026-09-14 11:00:00']);
+        $ids = fn (string $search) => array_column($this->actingAs($this->reader())->getJson('/api/reports/tabular/tickets.backlog/rows?search='.urlencode($search))->assertOk()->json('data'), 'id');
+
+        $this->assertSame([$byThai->id], $ids('มานพ'));
+        $this->assertSame([$byThai->id], $ids('ใจดี Manop'));
+        $this->assertSame([$byEnglish->id], $ids('Malee'));
+        $this->assertSame([$byEnglish->id], $ids('EMP-T2'));
+        $this->assertSame([], $ids('Nobody'));
+    }
+
     public function test_backlog_assignee_filter_and_the_unassigned_queue(): void
     {
         $this->seedTickets();

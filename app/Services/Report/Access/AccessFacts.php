@@ -8,7 +8,9 @@ use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
+use App\Support\SearchTerms;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -83,6 +85,16 @@ final class AccessFacts
             FileShare::class => $ownable,
             Software::class => ['brand'],
         ])]);
+    }
+
+    /** Search field on a membership: its resource's code or name, whichever kind it is. */
+    public static function resourceSearch(): Closure
+    {
+        return fn (Builder $query, string $like, string $word = '') => $query->orWhereHasMorph(
+            'resource',
+            array_keys(self::MODELS),
+            fn (Builder $resource) => SearchTerms::anyLike($resource, ['code', 'name'], $like, $word),
+        );
     }
 
     /** The address a resource is found by: an email, a path, a URL, or the software's brand. */

@@ -136,6 +136,30 @@ class AccessOverviewReportTest extends TestCase
         $this->assertEqualsCanonicalizing($this->ids('m2', 'm7'), array_column($this->rows('?department_id='.$qc), 'id'));
     }
 
+    public function test_search_narrows_the_register_by_employee_code_name_or_resource(): void
+    {
+        $thai = Employee::create(['code' => 'EMP-T1', 'first_name' => 'Manop', 'last_name' => 'Chai', 'first_name_th' => 'มานพ', 'last_name_th' => 'ใจดี', 'status' => 'active']);
+        $english = Employee::create(['code' => 'EMP-T2', 'first_name' => 'Malee', 'last_name' => 'Rose', 'status' => 'active']);
+        $grant = fn (string $resource, Employee $e) => AccessMembership::create([
+            'resource_type' => $this->set[$resource]->getMorphClass(), 'resource_id' => $this->set[$resource]->getKey(), 'employee_id' => $e->id, 'granted_at' => '2026-06-01 09:00',
+        ]);
+        $t1 = $grant('eg2', $thai);
+        $t2 = $grant('sp1', $english);
+
+        $this->assertSame([$t1->id], array_column($this->rows('?search='.urlencode('มานพ')), 'id'));
+        $this->assertSame([$t1->id], array_column($this->rows('?search='.urlencode('ใจดี Manop')), 'id'));
+        $this->assertSame([$t2->id], array_column($this->rows('?search=Malee'), 'id'));
+        $this->assertSame([$t2->id], array_column($this->rows('?search=EMP-T2'), 'id'));
+        // The resource's name, in any word order with the holder's code.
+        $this->assertSame([$t2->id], array_column($this->rows('?search=LINE+EMP-T2'), 'id'));
+        $this->assertEqualsCanonicalizing($this->ids('m2', 'm3'), array_column($this->rows('?search='.urlencode('QC Docs')), 'id'));
+        $this->assertSame([], $this->rows('?search=Nobody'));
+
+        // The tiles still count every grant.
+        $tiles = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows?search=Malee')->json('summary'))->keyBy('key');
+        $this->assertSame(7, $tiles['ac_active']['value']);
+    }
+
     public function test_tiles_count_grants_holders_the_range_leavers_and_resources_to_look_after(): void
     {
         $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows')->assertOk()->json('summary'))->keyBy('key');

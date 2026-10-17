@@ -119,6 +119,28 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertEqualsCanonicalizing($this->ids('m3', 'm4'), $this->rowIds('?search=QC+Docs'));
     }
 
+    public function test_search_finds_a_resource_by_its_active_members_code_and_name(): void
+    {
+        $prod = Department::where('tag', 'PD')->value('id');
+        $thai = Employee::create(['code' => 'EMP-M1', 'first_name' => 'Manop', 'last_name' => 'Chai', 'first_name_th' => 'มานพ', 'last_name_th' => 'ใจดี', 'department_id' => $prod, 'status' => 'active']);
+        $english = Employee::create(['code' => 'EMP-M2', 'first_name' => 'Malee', 'last_name' => 'Rose', 'department_id' => $prod, 'status' => 'active']);
+        $gone = Employee::create(['code' => 'EMP-M3', 'first_name' => 'Ratree', 'last_name' => 'Moon', 'first_name_th' => 'รัตรี', 'department_id' => $prod, 'status' => 'active']);
+        $grant = fn (string $resource, Employee $e, array $extra = []) => AccessMembership::create([
+            'resource_type' => $this->set[$resource]->getMorphClass(), 'resource_id' => $this->set[$resource]->getKey(), 'employee_id' => $e->id, 'granted_at' => '2026-06-01 09:00', ...$extra,
+        ]);
+        $r2 = $grant('fs2', $thai);
+        $r3 = $grant('fs3', $english);
+        $grant('sp1', $gone, ['revoked_at' => '2026-06-02 09:00']);
+
+        // Only the resource the member sits in, by Thai name, English name, code, or the words in any order.
+        $this->assertSame([$r2->id], $this->rowIds('?search='.urlencode('มานพ')));
+        $this->assertSame([$r2->id], $this->rowIds('?search='.urlencode('ใจดี Manop')));
+        $this->assertSame([$r3->id], $this->rowIds('?search=Malee'));
+        $this->assertSame([$r3->id], $this->rowIds('?search=EMP-M2'));
+        // A member whose grant was revoked no longer makes the resource a match.
+        $this->assertSame([], $this->rowIds('?search=Ratree'));
+    }
+
     public function test_the_list_sorts_as_picked_and_says_what_each_member_is(): void
     {
         $this->assertSame($this->ids('m2', 'm5', 'm1', 'm4', 'm3'), $this->rowIds('?sort=employee'));

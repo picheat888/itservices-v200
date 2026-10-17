@@ -11,6 +11,7 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\DateDisplay;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -49,6 +50,7 @@ class AccessOverviewReport extends TabularReport
             ReportFilter::select('type', Options::fromLabels(AccessFacts::TYPE_KEYS))->labelKey('rep_fl_ac_type'),
             ReportFilter::select('department_id', Options::departments()),
             ReportFilter::select('state', Options::fromLabels(self::STATE_KEYS), 'active')->labelKey('rep_fl_ac_state'),
+            ReportFilter::search()->placeholderKey('rep_ph_access_overview'),
         ];
     }
 
@@ -72,7 +74,10 @@ class AccessOverviewReport extends TabularReport
         $query = AccessFacts::withResource($this->memberships($filters))
             ->with(['employee.department', 'grantedBy:id,name', 'revokedBy:id,name'])
             ->when($state === 'active', fn (Builder $q) => $q->whereNull('access_memberships.revoked_at'))
-            ->when($state === 'revoked', fn (Builder $q) => $q->whereNotNull('access_memberships.revoked_at'));
+            ->when($state === 'revoked', fn (Builder $q) => $q->whereNotNull('access_memberships.revoked_at'))
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
+                'employees.code', ...SearchTerms::personName('employees.'), AccessFacts::resourceSearch(),
+            ]));
 
         if ($state === 'revoked') {
             return $query->orderByDesc('access_memberships.revoked_at')->orderByDesc('access_memberships.id');

@@ -8,6 +8,7 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\Brand;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
@@ -92,22 +93,35 @@ class AssetReportsTest extends TestCase
         $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?status=bogus')->assertUnprocessable();
     }
 
-    /**
-     * The overview reads the whole picture, so it has no free-text search (finding one asset is
-     * /assets' job): the bar offers none, and a stray ?search= narrows nothing.
-     */
-    public function test_overview_has_no_search(): void
+    /** The box narrows the list by code, tag, serial, brand or holder; the tiles still count every asset. */
+    public function test_overview_search_narrows_the_list_by_code_tag_serial_brand_or_holder(): void
     {
         $user = $this->userWith([...$this->reportRights('assets')]);
-        $employee = Employee::create(['code' => 'EMP-8123', 'first_name' => 'Kanya', 'last_name' => 'Holder']);
-        Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
-        Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null, 'owner' => null]);
+        $thai = Employee::create(['code' => 'EMP-8123', 'first_name' => 'Kanya', 'last_name' => 'Holder', 'first_name_th' => 'กัญญา', 'last_name_th' => 'ถือครอง']);
+        $english = Employee::create(['code' => 'EMP-8124', 'first_name' => 'Malee', 'last_name' => 'Rose']);
+        $acme = Brand::firstOrCreate(['name' => 'Acmebrand']);
+        $byThai = Asset::factory()->create(['asset_code' => 'AST-0001', 'tag' => 'TAG-ONE', 'serial' => 'SN111', 'status' => 'deployed', 'owner_employee_id' => $thai->id, 'owner' => null]);
+        $byEnglish = Asset::factory()->create(['asset_code' => 'AST-0002', 'tag' => 'TAG-TWO', 'serial' => 'SN222', 'brand_id' => $acme->id, 'status' => 'deployed', 'owner_employee_id' => $english->id, 'owner' => null]);
+        $plain = Asset::factory()->create(['asset_code' => 'AST-0003', 'tag' => 'TAG-THREE', 'serial' => 'SN333', 'status' => 'ready', 'owner_employee_id' => null, 'owner' => 'Front desk']);
+        $ids = fn (string $search) => array_column($this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?search='.urlencode($search))->assertOk()->json('data'), 'id');
 
         $filters = $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview')->assertOk()->json('data.filters');
-        $this->assertNotContains('search', array_column($filters, 'name'));
+        $this->assertContains('search', array_column($filters, 'name'));
+        $this->assertSame([$byThai->id], $ids('AST-0001'));
+        $this->assertSame([$byThai->id], $ids('tag-one'));
+        $this->assertSame([$byEnglish->id], $ids('SN222'));
+        $this->assertSame([$byEnglish->id], $ids('Acmebrand'));
+        $this->assertSame([$byThai->id], $ids('กัญญา'));
+        $this->assertSame([$byThai->id], $ids('ถือครอง Kanya'));
+        $this->assertSame([$byEnglish->id], $ids('EMP-8124'));
+        $this->assertSame([$plain->id], $ids('Front desk'));
+        $this->assertSame([], $ids('Nobody'));
 
-        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?search=Kanya')->assertOk()->json();
-        $this->assertSame(2, $rows['meta']['total']);
+        $body = $this->actingAs($user)->getJson('/api/reports/tabular/assets.overview/rows?search=SN222')->assertOk()->json();
+        $this->assertSame(1, $body['meta']['total']);
+        $summary = collect($body['summary'])->keyBy('key');
+        $this->assertSame(2, $summary['in_use']['value']);
+        $this->assertSame(1, $summary['ready']['value']);
     }
 
     public function test_warranty_expiring_window_excludes_lifetime_rented_and_written_off(): void

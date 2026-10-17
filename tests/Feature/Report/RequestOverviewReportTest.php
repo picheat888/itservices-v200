@@ -149,6 +149,27 @@ class RequestOverviewReportTest extends TestCase
         $this->assertArrayNotHasKey('cancel_reason', $midnight);
     }
 
+    public function test_search_narrows_the_rows_by_number_type_or_requester(): void
+    {
+        $thai = Employee::create(['code' => 'EMP-T1', 'first_name' => 'Manop', 'last_name' => 'Chai', 'first_name_th' => 'มานพ', 'last_name_th' => 'ใจดี', 'department_id' => $this->prod->id]);
+        $english = Employee::create(['code' => 'EMP-T2', 'first_name' => 'Malee', 'last_name' => 'Rose', 'department_id' => $this->qc->id]);
+        $byThai = $this->request('telephone', 'pending', '2026-09-14 09:00', $thai);
+        $byEnglish = $this->request('recovery', 'pending', '2026-09-15 09:00', $english);
+        $ids = fn (string $search) => array_column($this->rows('?search='.urlencode($search))['data'], 'id');
+
+        $this->assertSame([$byThai->id], $ids($byThai->reference));
+        $this->assertSame([$byThai->id], $ids('มานพ'));
+        $this->assertSame([$byThai->id], $ids('ใจดี Manop'));
+        $this->assertSame([$byEnglish->id], $ids('EMP-T2'));
+        // The type, in either language.
+        $this->assertSame([$byThai->id], $ids('โทรศัพท์'));
+        $this->assertSame([$byEnglish->id], $ids('กู้คืนข้อมูล'));
+        $this->assertSame([], $ids('Nobody'));
+
+        // The tiles still count every request in the range.
+        $this->assertSame($this->rows()['summary'], $this->rows('?search=Malee')['summary']);
+    }
+
     public function test_tiles_count_the_range(): void
     {
         $tiles = collect($this->rows()['summary'])->keyBy('key');
