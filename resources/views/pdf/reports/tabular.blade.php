@@ -1,4 +1,8 @@
 {{-- PDF of any tabular report (Report Center → /reports/tabular/{key}/export). Rendered by TabularReportExporter. No queries here: the report's query() eager-loads everything the columns read. --}}
+@php
+    // Thousands grouping; a fractional value keeps its decimals.
+    $group = fn ($n) => number_format($n, floor($n) == $n ? 0 : strlen(rtrim(substr(strrchr((string) $n, ".") ?: "", 1), "0")));
+@endphp
 <!DOCTYPE html>
 <html>
 <head>
@@ -38,7 +42,7 @@
             'hours' => number_format($item->value, 1).' ชม.',
             'years' => number_format($item->value, 1).' ปี',
             'days' => number_format($item->value, 1).' วัน',
-            default => $item->value,
+            default => $group($item->value),
         } }}</b></td>
     @endforeach
 </tr></table>
@@ -56,7 +60,7 @@
         @foreach ($section['rows'] as $cells)
             <tr>
                 @foreach ($cells as $cell)
-                    <td>{{ $cell ?? '—' }}</td>
+                    <td>{{ is_int($cell) || is_float($cell) ? $group($cell) : ($cell ?? '—') }}</td>
                 @endforeach
             </tr>
         @endforeach
@@ -66,7 +70,7 @@
 
 <h2>รายการ</h2>
 @if ($truncated)
-    <div class="muted">แสดง {{ $rows->count() }} รายการแรกจาก {{ $total }} — ดูทั้งหมดได้ในไฟล์ Excel</div>
+    <div class="muted">แสดง {{ $group($rows->count()) }} รายการแรกจาก {{ $group($total) }} — ดูทั้งหมดได้ในไฟล์ Excel</div>
 @endif
 <table class="data">
     <thead><tr>
@@ -81,7 +85,8 @@
                 @php($cell = $column->exportValue($row))
                 <td>{{ match (true) {
                     $column->type === 'money' && $cell !== null => number_format($cell, 2),
-                    $column->type === 'days_left' && $cell < 0 => 'เลยมา '.abs($cell).' วัน',
+                    $column->type === 'days_left' && $cell < 0 => 'เลยมา '.$group(abs($cell)).' วัน',
+                    in_array($column->type, ['number', 'days_left', 'hours_left'], true) && $cell !== null => $group($cell),
                     default => $cell,
                 } }}</td>
             @endforeach
