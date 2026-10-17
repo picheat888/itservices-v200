@@ -550,7 +550,7 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
         {
             key: 'vendor',
             header: t('contract_vendor'),
-            width: '200px',
+            width: '260px',
             render: (c) => <TruncText text={localPair(c.vendor, c.vendor_th, lang)} />,
         },
         {
