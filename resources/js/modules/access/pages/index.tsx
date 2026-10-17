@@ -7,11 +7,13 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { localName } from '@/shared/lib/local-name';
 import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
+import { useUiStore } from '@/stores/ui';
 import { Building2, Folder, Globe, InfinityIcon, KeyRound, Package, Plus, Tag, TriangleAlert, Users } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -85,6 +87,11 @@ function NameCell({
  */
 export default function AccessControlPage() {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    // Department / owner in the UI language (stored English name stays the filter key).
+    type Located = { department?: string | null; department_th?: string | null; owner?: string | null; owner_th?: string | null };
+    const deptLabel = (r: Located) => localName(r.department ? { name: r.department, name_th: r.department_th } : null, lang);
+    const ownerLabel = (r: Located) => localName(r.owner ? { name: r.owner, name_th: r.owner_th } : null, lang);
     const { can } = useAuth();
     // Granular gates (master access.module opens the page): Overview + each registry's
     // tab has its own view key; add/edit/delete sit under it — edit also covers
@@ -226,9 +233,17 @@ export default function AccessControlPage() {
     const spRows = useMemo(() => social.data ?? [], [social.data]);
     const swRows = useMemo(() => software.data ?? [], [software.data]);
 
+    // Distinct department filter options (value = stored name, label = UI language, search = both).
+    const deptOptions = (rows: Located[]) => {
+        const byName = new Map<string, Located>();
+        rows.forEach((r) => r.department && byName.set(r.department, r));
+        return [...byName.entries()]
+            .map(([value, r]) => ({ value, label: deptLabel(r) ?? value, search: `${value} ${r.department_th ?? ''}`.trim() }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+    };
     // Distinct filter option values, derived from the loaded rows.
-    const egDepts = useMemo(() => [...new Set(egRows.map((g) => g.department).filter(Boolean) as string[])].sort(), [egRows]);
-    const fsDepts = useMemo(() => [...new Set(fsRows.map((s) => s.department).filter(Boolean) as string[])].sort(), [fsRows]);
+    const egDepts = deptOptions(egRows);
+    const fsDepts = deptOptions(fsRows);
     const swPublishers = useMemo(() => [...new Set(swRows.map((s) => s.publisher).filter(Boolean) as string[])].sort(), [swRows]);
 
     // Rows after the client-side filters (the DataTable still applies its own text search on top).
@@ -258,7 +273,10 @@ export default function AccessControlPage() {
                         active={!!egDept}
                         value={egDept || ALL}
                         onChange={(v) => setEgDept(v === ALL ? '' : v)}
-                        options={[{ value: ALL, label: t('all'), search: t('all') }, ...egDepts.map((d) => ({ value: d, label: d, search: d }))]}
+                        options={[
+                            { value: ALL, label: t('all'), search: t('all') },
+                            ...egDepts.map((d) => ({ value: d.value, label: d.label, search: d.search })),
+                        ]}
                     />
                 </div>
             )}
@@ -274,7 +292,10 @@ export default function AccessControlPage() {
                         active={!!fsDept}
                         value={fsDept || ALL}
                         onChange={(v) => setFsDept(v === ALL ? '' : v)}
-                        options={[{ value: ALL, label: t('all'), search: t('all') }, ...fsDepts.map((d) => ({ value: d, label: d, search: d }))]}
+                        options={[
+                            { value: ALL, label: t('all'), search: t('all') },
+                            ...fsDepts.map((d) => ({ value: d.value, label: d.label, search: d.search })),
+                        ]}
                     />
                 </div>
             )}
@@ -374,11 +395,11 @@ export default function AccessControlPage() {
                 id: g.id,
                 name: g.name,
                 detail: g.email,
-                owner: g.owner,
+                owner: ownerLabel(g),
                 ownerEmployeeId: g.owner_employee_id,
                 code: g.code,
                 metaLabel: t('access_department'),
-                metaValue: g.department,
+                metaValue: deptLabel(g),
             };
         }
         if (kind === 'file-shares') {
@@ -388,7 +409,7 @@ export default function AccessControlPage() {
                 id: s.id,
                 name: s.name,
                 detail: s.path,
-                owner: s.owner,
+                owner: ownerLabel(s),
                 ownerEmployeeId: s.owner_employee_id,
                 code: s.code,
                 metaLabel: t('access_size'),
@@ -479,9 +500,9 @@ export default function AccessControlPage() {
 
     const egColumns: Column<EmailGroup>[] = [
         { key: 'name', header: t('access_name'), render: (g) => <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} /> },
-        { key: 'owner', header: t('access_owner'), render: (g) => <OwnerCell owner={g.owner} photoUrl={g.owner_photo_url} /> },
+        { key: 'owner', header: t('access_owner'), render: (g) => <OwnerCell owner={ownerLabel(g)} photoUrl={g.owner_photo_url} /> },
         { key: 'members', header: t('access_members'), render: (g) => <AvatarStack members={g.members ?? []} total={g.members_count} /> },
-        { key: 'department', header: t('access_department'), render: (g) => g.department ?? '—' },
+        { key: 'department', header: t('access_department'), render: (g) => deptLabel(g) ?? '—' },
         actionsCol<EmailGroup>(openEmailGroup),
     ];
 
@@ -499,8 +520,13 @@ export default function AccessControlPage() {
             className: 'w-[16%]',
             render: (s) => <span className="text-[12.5px] whitespace-nowrap">{sizeText(s.size, s.size_unit) ?? '—'}</span>,
         },
-        { key: 'owner', header: t('access_owner'), className: 'w-[18%]', render: (s) => <OwnerCell owner={s.owner} photoUrl={s.owner_photo_url} /> },
-        { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => s.department ?? '—' },
+        {
+            key: 'owner',
+            header: t('access_owner'),
+            className: 'w-[18%]',
+            render: (s) => <OwnerCell owner={ownerLabel(s)} photoUrl={s.owner_photo_url} />,
+        },
+        { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => deptLabel(s) ?? '—' },
         {
             key: 'members',
             header: t('access_members'),
@@ -575,7 +601,7 @@ export default function AccessControlPage() {
                             columns={egColumns}
                             rows={egFiltered}
                             rowKey={(g) => g.id}
-                            searchable={(g) => `${g.name} ${g.email} ${g.department ?? ''}`}
+                            searchable={(g) => `${g.name} ${g.email} ${g.department ?? ''} ${g.department_th ?? ''}`}
                             onRowClick={openEmailGroup}
                             loading={emailGroups.isLoading}
                             filters={emailFilter}
@@ -589,7 +615,7 @@ export default function AccessControlPage() {
                             columns={fsColumns}
                             rows={fsFiltered}
                             rowKey={(s) => s.id}
-                            searchable={(s) => `${s.name} ${s.path} ${s.department ?? ''}`}
+                            searchable={(s) => `${s.name} ${s.path} ${s.department ?? ''} ${s.department_th ?? ''}`}
                             onRowClick={openFileShare}
                             loading={fileShares.isLoading}
                             filters={fileFilter}

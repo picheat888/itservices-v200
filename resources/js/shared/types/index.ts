@@ -848,9 +848,11 @@ export interface EmailGroup {
     email: string;
     department_id: number | null;
     department?: string | null;
+    department_th?: string | null;
     description?: string | null;
     owner_employee_id: number | null;
     owner?: string | null;
+    owner_th?: string | null;
     owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
@@ -868,12 +870,14 @@ export interface FileShare {
     path: string;
     department_id: number | null;
     department?: string | null;
+    department_th?: string | null;
     // Numeric size + unit (split for reporting). size 0 = unlimited, null = unspecified.
     size?: number | null;
     size_unit?: string | null;
     description?: string | null;
     owner_employee_id: number | null;
     owner?: string | null;
+    owner_th?: string | null;
     owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;

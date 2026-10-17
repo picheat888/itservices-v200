@@ -166,7 +166,7 @@ export function MembersDrawer({
     const askRemove = (m: AccessMember) =>
         confirm({
             variant: 'danger',
-            entity: { name: m.employee ?? '—' },
+            entity: { name: memberName(m) ?? '—' },
             action: async () => {
                 if (!tgt) return;
                 await revokeMember.mutateAsync({ id: tgt.id, membershipId: m.id });
@@ -247,7 +247,13 @@ export function MembersDrawer({
     const tileColor = isSocial && tgt?.color ? tgt.color : meta.color;
     const seatsFull = kind === 'software' && tgt?.seats != null && !isLoading && members.length >= tgt.seats;
     // Display name of the currently-selected owner (resolved from the picked id).
-    const ownerName = ownerId ? (empById.get(Number(ownerId))?.name ?? tgt?.owner ?? null) : null;
+    const ownerEmp = ownerId ? empById.get(Number(ownerId)) : undefined;
+    const ownerName = ownerId ? (ownerEmp ? nameOf(ownerEmp) : (tgt?.owner ?? null)) : null;
+    // Member name in the UI language (employee record when loaded).
+    const memberName = (m: AccessMember) => {
+        const emp = empById.get(m.employee_id);
+        return emp ? nameOf(emp) : m.employee;
+    };
 
     const add = async () => {
         if (!empId || !tgt) return;
@@ -289,12 +295,12 @@ export function MembersDrawer({
                 return (
                     <div className="flex items-center gap-2.5">
                         <UserAvatar
-                            name={m.employee}
+                            name={memberName(m)}
                             photoUrl={m.photo_url ?? emp?.photo_url}
                             className="h-7 w-7 shrink-0"
                             textClassName="text-[10px]"
                         />
-                        <span className="truncate text-sm font-medium">{m.employee ?? '—'}</span>
+                        <span className="truncate text-sm font-medium">{memberName(m) ?? '—'}</span>
                         {emp?.status === 'resigned' && <StatusBadge tone="red">{t('resigned')}</StatusBadge>}
                         {emp?.code && <span className="text-muted-foreground shrink-0 text-[11px]">{emp.code}</span>}
                     </div>
@@ -316,7 +322,7 @@ export function MembersDrawer({
                               <button
                                   type="button"
                                   title={t('access_remove')}
-                                  aria-label={`${t('access_remove')} ${m.employee ?? ''}`.trim()}
+                                  aria-label={`${t('access_remove')} ${memberName(m) ?? ''}`.trim()}
                                   className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-brand/40 grid h-8 w-8 place-items-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
                                   onClick={() => askRemove(m)}
                               >

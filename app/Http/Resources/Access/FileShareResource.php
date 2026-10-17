@@ -22,11 +22,13 @@ class FileShareResource extends JsonResource
             'path' => $this->path,
             'department_id' => $this->department_id,
             'department' => $this->whenLoaded('department', fn () => $this->department?->name),
+            'department_th' => $this->whenLoaded('department', fn () => $this->department?->name_th),
             'size' => $this->size,
             'size_unit' => $this->size_unit,
             'description' => $this->description,
             'owner_employee_id' => $this->owner_employee_id,
             'owner' => $this->whenLoaded('owner', fn () => $this->owner?->name),
+            'owner_th' => $this->whenLoaded('owner', fn () => $this->owner?->name_th),
             'owner_photo_url' => $this->whenLoaded('owner', fn () => $this->owner?->photo_url),
             'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
                 'id' => $m->id,
