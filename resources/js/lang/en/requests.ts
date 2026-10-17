@@ -130,7 +130,7 @@ export const requests: Dict = {
     req_reason_label: 'Reason',
     req_requester: 'Requester',
     req_detail_section: 'Request details',
-    req_subject: 'Subject',
+    req_subject: 'Title',
     req_requester_name: 'Name',
     req_department: 'Department',
     req_emp_code: 'Employee code',
