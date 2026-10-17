@@ -36,7 +36,7 @@ import { reportStem } from './report-catalogue';
 import { tabularFilterChips, ticketFilterChips } from './schedule-filter-summary';
 import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
 
-function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () => void }) {
+function ScheduleRow({ item, opens, onEdit }: { item: ReportScheduleItem; opens: boolean; onEdit: () => void }) {
     const fmt = useDateFormat();
     const t = useT();
     const confirm = useConfirm();
@@ -45,6 +45,9 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
     const sendNow = useSendScheduleNow();
     const { canSchedule } = useReportRights();
     const noRight = canSchedule ? null : t('rep_no_schedule_right');
+    // Pause, edit and send also need the report itself, as UpdateReportScheduleRequest and sendNow check.
+    const canAct = canSchedule && opens;
+    const actReason = noRight ?? (opens ? null : t('rep_no_report_right'));
     const title = t(`rep_${reportStem(item.report_key)}_title`);
 
     const toast = (message: string, tone: 'success' | 'error') => useToastStore.getState().push(message, tone);
@@ -107,11 +110,11 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                     {title}
                 </div>
                 <div className="flex justify-end" title={t('rep_schedules_active')}>
-                    <DisabledReason reason={noRight} label={t('rep_schedules_active')}>
+                    <DisabledReason reason={actReason} label={t('rep_schedules_active')}>
                         <Switch
                             checked={item.active}
                             onChange={onToggle}
-                            disabled={update.isPending || !canSchedule}
+                            disabled={update.isPending || !canAct}
                             aria-label={t('rep_schedules_active')}
                         />
                     </DisabledReason>
@@ -126,27 +129,27 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                 </div>
                 {/* Icons only — the name and the tooltip say what each does. */}
                 <div className="-my-1 -mr-1.5 flex items-center justify-end">
-                    <DisabledReason reason={noRight} label={t('rep_schedules_send_now')}>
+                    <DisabledReason reason={actReason} label={t('rep_schedules_send_now')}>
                         <Button
                             size="icon"
                             variant="ghost"
                             onClick={onSendNow}
-                            disabled={!item.active || sendNow.isPending || !canSchedule}
+                            disabled={!item.active || sendNow.isPending || !canAct}
                             aria-label={t('rep_schedules_send_now')}
-                            title={canSchedule ? t('rep_schedules_send_now') : undefined}
+                            title={canAct ? t('rep_schedules_send_now') : undefined}
                             className="text-brand hover:text-brand h-7 w-7"
                         >
                             <Send className="h-4 w-4" />
                         </Button>
                     </DisabledReason>
-                    <DisabledReason reason={noRight} label={t('rep_schedules_edit')}>
+                    <DisabledReason reason={actReason} label={t('rep_schedules_edit')}>
                         <Button
                             size="icon"
                             variant="ghost"
                             onClick={onEdit}
-                            disabled={!canSchedule}
+                            disabled={!canAct}
                             aria-label={t('rep_schedules_edit')}
-                            title={canSchedule ? t('rep_schedules_edit') : undefined}
+                            title={canAct ? t('rep_schedules_edit') : undefined}
                             className={iconButton}
                         >
                             <Pencil className="h-4 w-4" />
@@ -186,7 +189,7 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
 export function ScheduledReports() {
     const t = useT();
     const { data: items = [], isLoading } = useReportSchedules();
-    const { data: catalogue = [] } = useReportCatalogue();
+    const { data: catalogue = [], isSuccess: catalogueLoaded } = useReportCatalogue();
     const update = useUpdateSchedule();
     const [editing, setEditing] = useState<ReportScheduleItem | null>(null);
     // The last schedule opened, kept while the dialog animates closed so it does not blank.
@@ -222,6 +225,7 @@ export function ScheduledReports() {
                 <ScheduleRow
                     key={item.id}
                     item={item}
+                    opens={!catalogueLoaded || catalogue.some((r) => r.key === item.report_key)}
                     onEdit={() => {
                         setEditing(item);
                         setShown(item);

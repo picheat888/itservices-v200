@@ -235,6 +235,7 @@ export const report: Dict = {
     rep_schedule: 'ตั้งเวลาส่ง',
     rep_no_export_right: 'คุณไม่มีสิทธิ์ส่งออกไฟล์',
     rep_no_schedule_right: 'คุณไม่มีสิทธิ์ตั้งเวลาส่งรายงาน',
+    rep_no_report_right: 'คุณไม่มีสิทธิ์เปิดรายงานนี้แล้ว',
     rep_schedule_eyebrow: 'ส่งรายงานทางอีเมลอัตโนมัติ',
     rep_schedule_frequency: 'ความถี่',
     rep_schedule_freq_daily: 'รายวัน',
@@ -1932,4 +1933,7 @@ export const report: Dict = {
     rep_slv_value_excess: 'ส่วนที่เกิน',
     rep_slv_cat_title: 'ตามหมวด',
     rep_slv_cat_empty: 'ไม่มีรายการนอกเกณฑ์',
+
+    // manual-sla-cards.tsx — labels moved from the component
+    report_en_gb: 'th-TH',
 };
