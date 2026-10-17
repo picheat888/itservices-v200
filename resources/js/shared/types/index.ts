@@ -1103,6 +1103,7 @@ export interface RequestApproval {
     status: ApprovalRowStatus;
     approver_employee_id: number | null;
     approver_name: string | null;
+    approver_name_th?: string | null;
     /** Set only while a department step is still open to a group rather than to one person. */
     approver_department?: string | null;
     approver_department_th?: string | null;
@@ -1118,6 +1119,7 @@ export interface RequestApproval {
     note: string | null;
     skip_reason: ApprovalSkipReason | null;
     acted_by_name: string | null;
+    acted_by_name_th?: string | null;
     became_current_at: string | null;
     acted_at: string | null;
     /** Step is open and its approver has no login account yet — reported live, not snapshotted. */
@@ -1159,6 +1161,7 @@ export interface ServiceRequest {
         at: string | null;
         kind: 'submitted' | 'approved_step' | 'approved' | 'rejected' | 'cancelled' | 'completed';
         by: string | null;
+        by_th?: string | null;
     };
     /**
      * `name` / `department` are the snapshot taken at submit; `code` / `position` /
@@ -1178,9 +1181,9 @@ export interface ServiceRequest {
     };
     origin: ServiceRequestOrigin;
     /** The account that filed it — set only when that is not the owner (on-behalf). */
-    submitted_by: { user_id: number; name: string | null } | null;
+    submitted_by: { user_id: number; name: string | null; name_th?: string | null } | null;
     workflow: { id: number | null; name?: string | null };
-    ticket?: { id: number; ticket_no: string; status: string | null; assignee: string | null } | null;
+    ticket?: { id: number; ticket_no: string; status: string | null; assignee: string | null; assignee_th?: string | null } | null;
     approvals?: RequestApproval[];
     /** Compact chain summary for table rows (WorkflowMini). */
     progress: { total: number; done: number; current_label: string | null; current_approver: string | null; current_approver_th?: string | null };

@@ -285,4 +285,25 @@ class RequestListQueryCountTest extends TestCase
         $this->assertSame('ควบคุมคุณภาพ', $row['requester']['department_th']);
         $this->assertSame('หัวหน้า', $row['progress']['current_approver_th']);
     }
+
+    public function test_the_signer_and_the_activity_line_carry_a_thai_name(): void
+    {
+        $requester = $this->person('Asker2');
+        $request = ServiceRequest::create([
+            'type' => 'cctv', 'employee_id' => $requester->id, 'requester_name' => $requester->name,
+            'title' => 'Signed fixture', 'reason' => 'Thai signer', 'status' => RequestStatus::Approved->value,
+            'last_activity_at' => now(),
+        ]);
+        $signerEmployee = Employee::create(['first_name' => 'Signer', 'first_name_th' => 'ผู้ลงนาม', 'department_id' => $this->qc->id]);
+        $signer = User::factory()->create(['employee_id' => $signerEmployee->id]);
+        $this->row($request, 1, [
+            'actor_type' => 'chain', 'approver_employee_id' => $signerEmployee->id, 'approver_name' => 'Signer',
+            'status' => ApprovalStatus::Approved->value, 'acted_by_user_id' => $signer->id, 'acted_by_name' => 'Signer', 'acted_at' => now(),
+        ]);
+
+        $row = collect($this->actingAs($this->viewer)->getJson('/api/service-requests')->assertOk()->json('data'))->firstWhere('id', $request->id);
+
+        $this->assertSame('ผู้ลงนาม', $row['activity']['by_th']);
+        $this->assertSame('ผู้ลงนาม', $row['approvals'][0]['acted_by_name_th']);
+    }
 }

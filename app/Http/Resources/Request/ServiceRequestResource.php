@@ -80,7 +80,11 @@ class ServiceRequestResource extends JsonResource
             // Who filed it. Only interesting when that is somebody other than the
             // owner, so it is null for an ordinary submission.
             'submitted_by' => $this->origin?->isOnBehalf() && $this->submitted_by_user_id !== null
-                ? ['user_id' => $this->submitted_by_user_id, 'name' => $this->submitted_by_name]
+                ? [
+                    'user_id' => $this->submitted_by_user_id,
+                    'name' => $this->submitted_by_name,
+                    'name_th' => $this->relationLoaded('submittedBy') && $this->submittedBy?->relationLoaded('employee') ? $this->submittedBy->employee?->name_th : null,
+                ]
                 : null,
             'workflow' => [
                 'id' => $this->workflow_id,
@@ -94,6 +98,7 @@ class ServiceRequestResource extends JsonResource
                 // for most of its life, and "waiting" says nothing about whether anybody
                 // has picked it up yet.
                 'assignee' => $this->ticket->assignee?->name,
+                'assignee_th' => $this->ticket->relationLoaded('assignee') && $this->ticket->assignee?->relationLoaded('employee') ? $this->ticket->assignee->employee?->name_th : null,
             ]),
             'approvals' => RequestApprovalResource::collection($approvals),
             // Compact chain summary for table rows (WorkflowMini).
@@ -144,7 +149,7 @@ class ServiceRequestResource extends JsonResource
      * language; `by` is the name frozen on the row that moved, never re-resolved.
      *
      * @param  Collection<int, RequestApproval>  $approvalRows
-     * @return array{at: string|null, kind: string, by: string|null}
+     * @return array{at: string|null, kind: string, by: string|null, by_th: string|null}
      */
     private function lastActivity($approvalRows): array
     {
@@ -157,18 +162,20 @@ class ServiceRequestResource extends JsonResource
             ? $this->approvals->first(fn (RequestApproval $a) => $a->kind === WorkflowStepKind::Completion)
             : null;
 
+        $by = $this->activityBy($signed, $queueRow);
+
         return match ($this->status) {
-            RequestStatus::Rejected => ['at' => $at, 'kind' => 'rejected', 'by' => $signed?->acted_by_name],
+            RequestStatus::Rejected => ['at' => $at, 'kind' => 'rejected', 'by' => $signed?->acted_by_name, 'by_th' => $by['signed']],
             // Cancelled by the requester withdrawing it, or by IT closing the case without
             // delivering — the completion row names the second one.
-            RequestStatus::Cancelled => ['at' => $at, 'kind' => 'cancelled', 'by' => $this->cancelled_by_name ?? $queueRow?->acted_by_name],
-            RequestStatus::Completed => ['at' => $at, 'kind' => 'completed', 'by' => $queueRow?->acted_by_name],
-            RequestStatus::Approved => ['at' => $at, 'kind' => 'approved', 'by' => $signed?->acted_by_name],
+            RequestStatus::Cancelled => ['at' => $at, 'kind' => 'cancelled', 'by' => $this->cancelled_by_name ?? $queueRow?->acted_by_name, 'by_th' => $this->cancelled_by_name === null ? $by['queue'] : null],
+            RequestStatus::Completed => ['at' => $at, 'kind' => 'completed', 'by' => $queueRow?->acted_by_name, 'by_th' => $by['queue']],
+            RequestStatus::Approved => ['at' => $at, 'kind' => 'approved', 'by' => $signed?->acted_by_name, 'by_th' => $by['signed']],
             // Still in the chain: either somebody has signed a rung, or nothing has happened
             // since it was filed.
             default => $signed !== null
-                ? ['at' => $at, 'kind' => 'approved_step', 'by' => $signed->acted_by_name]
-                : ['at' => $at, 'kind' => 'submitted', 'by' => $this->submitted_by_name],
+                ? ['at' => $at, 'kind' => 'approved_step', 'by' => $signed->acted_by_name, 'by_th' => $by['signed']]
+                : ['at' => $at, 'kind' => 'submitted', 'by' => $this->submitted_by_name, 'by_th' => $by['submitter']],
         };
     }
 
@@ -235,5 +242,19 @@ class ServiceRequestResource extends JsonResource
         }
 
         return $fields;
+    }
+
+    /**
+     * Thai names of the people an activity line can name, from live employee records.
+     *
+     * @return array{signed: string|null, queue: string|null, submitter: string|null}
+     */
+    private function activityBy(?RequestApproval $signed, ?RequestApproval $queueRow): array
+    {
+        $actor = fn (?RequestApproval $row) => $row?->relationLoaded('actedBy') && $row->actedBy?->relationLoaded('employee') ? $row->actedBy->employee?->name_th : null;
+        // Filed by the requester themselves: their own Thai name is the submitter's
+        $own = $this->relationLoaded('employee') && $this->submitted_by_name === $this->requester_name ? $this->employee?->name_th : null;
+
+        return ['signed' => $actor($signed), 'queue' => $actor($queueRow), 'submitter' => $own];
     }
 }

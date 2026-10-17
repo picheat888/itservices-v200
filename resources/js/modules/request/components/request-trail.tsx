@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
-import { localPair } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
@@ -71,20 +71,26 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
     const completionMeta = (row: RequestApproval): string => {
         if (row.status === 'waiting') return t('req_trail_after_approvals');
         if (row.status === 'approved') {
-            const done = row.acted_by_name ? t('req_trail_completed_by').replace('{name}', row.acted_by_name) : t('req_trail_completed_done');
+            const done = row.acted_by_name
+                ? t('req_trail_completed_by').replace('{name}', localPair(row.acted_by_name, row.acted_by_name_th, lang) ?? '')
+                : t('req_trail_completed_done');
 
             return done;
         }
         // Closed without delivery
         if (row.status === 'rejected') {
-            const stopped = row.acted_by_name ? t('req_trail_cancelled_by').replace('{name}', row.acted_by_name) : t('req_trail_not_delivered');
+            const stopped = row.acted_by_name
+                ? t('req_trail_cancelled_by').replace('{name}', localPair(row.acted_by_name, row.acted_by_name_th, lang) ?? '')
+                : t('req_trail_not_delivered');
 
             return stopped;
         }
 
         const ticket = request.ticket;
         if (ticket?.status === 'in_progress') {
-            return ticket.assignee ? t('req_trail_ticket_in_progress').replace('{name}', ticket.assignee) : t('req_trail_ticket_taken');
+            return ticket.assignee
+                ? t('req_trail_ticket_in_progress').replace('{name}', localPair(ticket.assignee, ticket.assignee_th, lang) ?? '')
+                : t('req_trail_ticket_taken');
         }
         if (ticket?.status === 'open') return t('req_trail_ticket_waiting_take');
 
@@ -122,7 +128,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             // An untaken group step names its people, or its department and positions
             title: isCompletion
                 ? t('req_trail_completion')
-                : (row.approver_name ??
+                : (localPair(row.approver_name, row.approver_name_th, lang) ??
                   ((row.approver_candidates ?? []).length > 0
                       ? candidatesTitle(row, lang)
                       : row.approver_department
@@ -144,7 +150,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
         items.splice(firstQueued < 0 ? items.length : firstQueued, 0, {
             tone: 'cancelled',
             glyph: <Ban className="h-3 w-3" />,
-            title: request.cancelled_by ?? request.requester.name,
+            title: request.cancelled_by ?? localName(request.requester, lang),
             meta: t('req_trail_withdrawn'),
             metaTime: fmt.dateTime(request.cancelled_at),
             note: request.cancel_reason,
@@ -156,7 +162,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
         items.push({
             tone: 'rejected',
             glyph: <Bell className="h-3 w-3" />,
-            title: request.requester.name,
+            title: localName(request.requester, lang),
             meta: `${t('req_decide_notify_reject')}`,
         });
     }

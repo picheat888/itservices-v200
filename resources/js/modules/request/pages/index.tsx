@@ -13,7 +13,7 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { localPair } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import {
     isOnBehalfRequest,
     onboardingRowClass,
@@ -45,10 +45,14 @@ import { useRequests } from '../hooks/use-requests';
 import { canFileAnyRequest } from '../lib/submit-types';
 
 /** What last happened to a request, as a sentence ("Approved by X"); the event alone when nobody is attached. */
-function activityLine(request: ServiceRequest, t: (key: string) => string): string {
+function activityLine(request: ServiceRequest, t: (key: string) => string, lang: string): string {
     const what = t(`req_activity_${request.activity.kind}`);
 
-    return request.activity.by ? t('req_activity_by').replace('{what}', what).replace('{name}', request.activity.by) : what;
+    return request.activity.by
+        ? t('req_activity_by')
+              .replace('{what}', what)
+              .replace('{name}', localPair(request.activity.by, request.activity.by_th, lang) ?? '')
+        : what;
 }
 
 /** The first typed field's value: what the request is actually for (which machine, which mailbox). */
@@ -456,8 +460,12 @@ export default function RequestsPage() {
                                                             : requestTitle(r, t)}
                                                     </button>
                                                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                                                        <span className="truncate">{r.requester.name}</span>
-                                                        {r.requester.department && <span className="truncate">{r.requester.department}</span>}
+                                                        <span className="truncate">{localName(r.requester, lang)}</span>
+                                                        {r.requester.department && (
+                                                            <span className="truncate">
+                                                                {localPair(r.requester.department, r.requester.department_th, lang)}
+                                                            </span>
+                                                        )}
                                                         {isOnBehalfRequest(r) && (
                                                             <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="shrink-0">
                                                                 {t(REQUEST_ONBOARDING_BADGE.labelKey)}
@@ -529,7 +537,7 @@ export default function RequestsPage() {
                                                         {requestTitle(r, t)}
                                                     </button>
                                                     <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
-                                                        <span className="truncate">{activityLine(r, t)}</span>
+                                                        <span className="truncate">{activityLine(r, t, lang)}</span>
                                                         <span className="shrink-0">{ageLabel(r.activity.at ?? r.created_at)}</span>
                                                     </div>
                                                 </div>

@@ -10,6 +10,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useInitials } from '@/shared/hooks/use-initials';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { serverMessage } from '@/shared/lib/api-errors';
+import { localName, localPair } from '@/shared/lib/local-name';
 import {
     isOnBehalfRequest,
     REQUEST_APPROVE_BUTTON,
@@ -211,7 +212,7 @@ function RequestDetailBody({
                             {request.submitted_by?.name ? (
                                 <>
                                     <span>
-                                        {t('req_submitted_by')} {request.submitted_by.name}
+                                        {t('req_submitted_by')} {localPair(request.submitted_by.name, request.submitted_by.name_th, lang)}
                                     </span>
                                     <span>{fmt.dateTime(request.created_at)}</span>
                                 </>
@@ -360,6 +361,7 @@ function RequestAttachments({ request, onPreview }: { request: ServiceRequest; o
 /** Who is asking: photo plus code, position and department (dashes when there is no employee link). */
 function RequesterCard({ requester }: { requester: ServiceRequest['requester'] }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const getInitials = useInitials();
 
     return (
@@ -376,10 +378,10 @@ function RequesterCard({ requester }: { requester: ServiceRequest['requester'] }
             </div>
 
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3.5">
-                <KV label={t('req_requester_name')} value={requester.name} />
+                <KV label={t('req_requester_name')} value={localName(requester, lang)} />
                 <KV label={t('req_emp_code')} value={requester.code || '—'} />
                 <KV label={t('position')} value={requester.position || '—'} />
-                <KV label={t('department')} value={requester.department ?? '—'} />
+                <KV label={t('department')} value={localPair(requester.department, requester.department_th, lang) ?? '—'} />
             </div>
         </div>
     );
