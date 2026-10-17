@@ -260,6 +260,22 @@ class StockReportsTest extends TestCase
         $this->assertEqualsWithDelta(100.0, $row['stock_value'], 0.001);
     }
 
+    public function test_card_sort_and_dead_stock_days_are_view_filters_kept_in_the_url(): void
+    {
+        $user = $this->userWith($this->reportRights('stock'));
+        $view = fn (string $key) => collect($this->actingAs($user)->getJson("/api/reports/tabular/{$key}")->assertOk()->json('data.filters'))
+            ->where('view', true)->mapWithKeys(fn (array $f) => [$f['name'] => [$f['default'], array_column($f['options'], 'value')]])->all();
+
+        $this->assertEquals([
+            'people_by' => ['value', ['value', 'qty', 'times']],
+            'dept_by' => ['value', ['value', 'qty', 'times']],
+        ], $view('stock.movements'));
+        $this->assertEquals(['dead_days' => [90, [90, 180, 365]]], $view('stock.valuation'));
+
+        $this->actingAs($user)->getJson('/api/reports/tabular/stock.movements/rows?people_by=nope')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/api/reports/tabular/stock.valuation/rows?dead_days=180')->assertOk();
+    }
+
     // ── exports ─────────────────────────────────────────────────────────────────────
 
     public function test_xlsx_export_carries_thai_movement_labels(): void

@@ -60,7 +60,8 @@ export default function StockMovementsReportPage() {
             extras={{
                 tiles: 5,
                 hideSummary: true,
-                beforeTable: ({ filters }) => <StockMovementsCards filters={filters} />,
+                cardOnlyFilters: ['people_by', 'dept_by'],
+                beforeTable: ({ filters, patch }) => <StockMovementsCards filters={filters} patch={patch} />,
                 rowsTitle: 'rep_smv_rows_title',
                 renderCell: movementCell,
             }}

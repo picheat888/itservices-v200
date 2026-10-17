@@ -10,6 +10,7 @@ import { useUiStore } from '@/stores/ui';
 import { useRef, useState } from 'react';
 import { useStockMovementsBreakdown } from '../hooks/use-reports';
 import type { StockMovementsBreakdown, StockWaitingRequest, TabularFilters } from '../types';
+import { Segments } from './access-overview-cards';
 import { CardEmpty, CardTitle, fold, FoldToggle, Sparkline } from './chart-parts';
 import { FILL, TEXT } from './chart-tones';
 import { KpiTile } from './kpi-tile';
@@ -181,34 +182,9 @@ function WaitingCard({ requests, className }: { requests: Requests; className?: 
 
 const SORTS: SortBy[] = ['value', 'qty', 'times'];
 
-function SortSegment({ by, onPick }: { by: SortBy; onPick: (next: SortBy) => void }) {
-    const t = useT();
-    return (
-        <span className="inline-flex items-center gap-2">
-            <span>{t('rep_smv_sort_by')}</span>
-            <span
-                role="group"
-                aria-label={t('rep_smv_sort_by')}
-                className="border-border bg-card dark:bg-background inline-flex gap-0.5 rounded-md border p-0.5"
-            >
-                {SORTS.map((s) => (
-                    <button
-                        key={s}
-                        type="button"
-                        aria-pressed={by === s}
-                        onClick={() => onPick(s)}
-                        className={cn(
-                            'focus-visible:ring-brand focus-visible:ring-offset-background inline-flex h-6 items-center rounded px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-                            by === s ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-                        )}
-                    >
-                        {t(`rep_smv_sort_${s}`)}
-                    </button>
-                ))}
-            </span>
-        </span>
-    );
-}
+const sortBy = (value: unknown): SortBy => (SORTS.includes(value as SortBy) ? (value as SortBy) : 'value');
+
+type Patch = (next: TabularFilters) => void;
 
 interface RankRow {
     key: string;
@@ -280,7 +256,20 @@ function RankCard({
 
     return (
         <Card className="flex flex-col overflow-hidden">
-            <CardTitle title={title} sub={<SortSegment by={by} onPick={onSort} />} />
+            <CardTitle
+                title={title}
+                sub={
+                    <span className="inline-flex items-center gap-2">
+                        <span aria-hidden>{t('rep_smv_sort_by')}</span>
+                        <Segments
+                            label={t('rep_smv_sort_by')}
+                            options={SORTS.map((s) => ({ value: s, label: t(`rep_smv_sort_${s}`), count: null }))}
+                            value={by}
+                            onChange={(next) => next !== by && onSort(next)}
+                        />
+                    </span>
+                }
+            />
             {rows.length === 0 ? (
                 <CardEmpty>
                     <span>
@@ -298,10 +287,12 @@ function RankCard({
     );
 }
 
-function RankCards({ people, departments }: { people: People; departments: Departments }) {
+function RankCards({ people, departments, filters, patch }: { people: People; departments: Departments; filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const [by, setBy] = useState<SortBy>('value');
+    // Each card sorts on its own; both choices live in the URL (people_by / dept_by view filters).
+    const peopleBy = sortBy(filters.people_by);
+    const deptBy = sortBy(filters.dept_by);
     const noDept = t('rep_smv_no_dept');
     const peopleRows: RankRow[] = people.map((p, i) => ({
         key: `${p.user_id ?? 'name'}-${p.name}-${i}`,
@@ -322,8 +313,20 @@ function RankCards({ people, departments }: { people: People; departments: Depar
 
     return (
         <div className="grid gap-3 lg:grid-cols-2">
-            <RankCard title={t('rep_smv_people_title')} rows={peopleRows} by={by} onSort={setBy} restKey="rep_smv_rest_people" />
-            <RankCard title={t('rep_smv_dept_title')} rows={deptRows} by={by} onSort={setBy} restKey="rep_smv_rest_depts" />
+            <RankCard
+                title={t('rep_smv_people_title')}
+                rows={peopleRows}
+                by={peopleBy}
+                onSort={(next) => patch({ people_by: next })}
+                restKey="rep_smv_rest_people"
+            />
+            <RankCard
+                title={t('rep_smv_dept_title')}
+                rows={deptRows}
+                by={deptBy}
+                onSort={(next) => patch({ dept_by: next })}
+                restKey="rep_smv_rest_depts"
+            />
         </div>
     );
 }
@@ -467,7 +470,7 @@ function CardsSkeleton() {
     );
 }
 
-export function StockMovementsCards({ filters }: { filters: TabularFilters }) {
+export function StockMovementsCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const { data, isLoading, isError, error } = useStockMovementsBreakdown(filters);
 
@@ -482,7 +485,7 @@ export function StockMovementsCards({ filters }: { filters: TabularFilters }) {
                 <StockFlowCard months={data.months} to={typeof filters.to === 'string' ? filters.to : null} className="lg:col-span-2 xl:col-span-3" />
                 <WaitingCard requests={data.requests} className="xl:col-span-2" />
             </div>
-            <RankCards people={data.people} departments={data.departments} />
+            <RankCards people={data.people} departments={data.departments} filters={filters} patch={patch} />
             <CountsCard counts={data.counts} />
         </div>
     );

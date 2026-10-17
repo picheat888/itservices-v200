@@ -35,6 +35,8 @@ class StockMovementReport extends TabularReport
 
     private const REQUEST_ROWS = 500;
 
+    private const RANK_BY_KEYS = ['value' => 'rep_smv_sort_value', 'qty' => 'rep_smv_sort_qty', 'times' => 'rep_smv_sort_times'];
+
     private const NO_DEPARTMENT_TH = 'ไม่มีแผนก';
 
     /** @var array<string, array<string, mixed>> breakdown() per filter set */
@@ -62,6 +64,9 @@ class StockMovementReport extends TabularReport
             ReportFilter::select('warehouse_id', Options::warehouses()),
             ReportFilter::select('category_id', Options::categories()),
             ReportFilter::search(),
+            // How each rank card sorts (value, pieces or times); the page keeps it in the URL.
+            ReportFilter::select('people_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->viewOnly(),
+            ReportFilter::select('dept_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->viewOnly(),
         ];
     }
 

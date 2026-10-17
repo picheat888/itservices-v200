@@ -10,6 +10,7 @@ import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
 import { useStockValuationBreakdown } from '../hooks/use-reports';
 import type { StockValuationBreakdown, TabularFilters } from '../types';
+import { Segments } from './access-overview-cards';
 import { CardEmpty, CardPager, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
@@ -278,45 +279,17 @@ function ShareCards({ data }: { data: StockValuationBreakdown }) {
 
 /* ─────────────────────────── dead stock ─────────────────────────── */
 
-function DaysSegment({ days, onPick }: { days: DeadDays; onPick: (next: DeadDays) => void }) {
-    const t = useT();
-    return (
-        <span className="inline-flex items-center gap-2">
-            <span>{t('rep_sva_dead_seg')}</span>
-            <span
-                role="group"
-                aria-label={t('rep_sva_dead_seg')}
-                className="border-border bg-card dark:bg-background inline-flex gap-0.5 rounded-md border p-0.5"
-            >
-                {DEAD_DAYS.map((d) => (
-                    <button
-                        key={d}
-                        type="button"
-                        aria-pressed={days === d}
-                        onClick={() => onPick(d)}
-                        className={cn(
-                            'focus-visible:ring-brand focus-visible:ring-offset-background inline-flex h-6 items-center rounded px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-                            days === d ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-                        )}
-                    >
-                        {t(`rep_sva_dead_${d}`)}
-                    </button>
-                ))}
-            </span>
-        </span>
-    );
-}
-
-function DeadCard({ dead }: { dead: Dead }) {
+function DeadCard({ dead, filters, patch }: { dead: Dead; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
-    const [days, setDays] = useState<DeadDays>(90);
+    // The threshold lives in the URL (dead_days view filter).
+    const days: DeadDays = DEAD_DAYS.find((d) => String(d) === String(filters.dead_days)) ?? 90;
     const [open, setOpen] = useState(false);
     const rows = dead.filter((d) => d.days > days);
     const { folds, shown } = fold(rows, DEAD_SHOWN, open);
     const pick = (next: DeadDays) => {
-        setDays(next);
+        patch({ dead_days: String(next) });
         setOpen(false);
     };
     const headings: { key: string; right?: boolean }[] = [
@@ -332,7 +305,17 @@ function DeadCard({ dead }: { dead: Dead }) {
             <CardTitle
                 title={t('rep_sva_dead_title')}
                 info={[t('rep_sva_dead_info_scope'), t('rep_sva_dead_info_status')]}
-                sub={<DaysSegment days={days} onPick={pick} />}
+                sub={
+                    <span className="inline-flex items-center gap-2">
+                        <span aria-hidden>{t('rep_sva_dead_seg')}</span>
+                        <Segments
+                            label={t('rep_sva_dead_seg')}
+                            options={DEAD_DAYS.map((d) => ({ value: String(d), label: t(`rep_sva_dead_${d}`), count: null }))}
+                            value={String(days)}
+                            onChange={(next) => Number(next) !== days && pick(Number(next) as DeadDays)}
+                        />
+                    </span>
+                }
             />
             {rows.length === 0 ? (
                 <CardEmpty>{t('rep_sva_dead_empty').replace('{period}', t(`rep_sva_dead_${days}`))}</CardEmpty>
@@ -429,7 +412,7 @@ function CardsSkeleton() {
     );
 }
 
-export function StockValuationCards({ filters }: { filters: TabularFilters }) {
+export function StockValuationCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
     const { data, isLoading, isError, error } = useStockValuationBreakdown(filters);
 
@@ -441,7 +424,7 @@ export function StockValuationCards({ filters }: { filters: TabularFilters }) {
             <ValueTiles tiles={data.tiles} categories={data.categories} asOf={data.as_of} />
             {/* A new day or category starts both share cards on page 1. */}
             <ShareCards key={`${filters.as_of ?? ''}|${filters.category_id ?? ''}`} data={data} />
-            <DeadCard dead={data.dead} />
+            <DeadCard dead={data.dead} filters={filters} patch={patch} />
         </div>
     );
 }
