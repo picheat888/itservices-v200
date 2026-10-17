@@ -16,12 +16,14 @@ import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useMediaQuery } from '@/shared/hooks/use-media-query';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractSummary, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
+import { useUiStore } from '@/stores/ui';
 import {
     AlertOctagon,
     AlertTriangle,
@@ -495,6 +497,7 @@ export default function ContractsPage() {
 function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][number]; onOpen: () => void }) {
     const t = useT();
     const fmt = useDateFormat();
+    const lang = useUiStore((s) => s.lang);
     return (
         <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
@@ -502,7 +505,7 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
                 <DaysCell days={dot.days} inReminder={dot.in_reminder} status={dot.days <= 0 ? 'overdue' : 'active'} />
             </div>
             <div className="line-clamp-2 text-[13px] leading-snug font-semibold">{dot.name}</div>
-            {dot.vendor && <div className="text-muted-foreground truncate">{dot.vendor}</div>}
+            {dot.vendor && <div className="text-muted-foreground truncate">{localPair(dot.vendor, dot.vendor_th, lang)}</div>}
             <div className="border-border flex items-center justify-between gap-2 border-t pt-1.5">
                 <span>{t('contract_timeline_ends').replace('{date}', fmt.date(dot.end))}</span>
                 <button type="button" onClick={onOpen} className="text-brand-ink inline-flex min-h-6 items-center gap-1 font-medium hover:underline">
@@ -520,6 +523,7 @@ const NEW_ROW = 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emera
 function useContractColumns(newId: number | null, wide: boolean): Column<Contract>[] {
     const t = useT();
     const fmt = useDateFormat();
+    const lang = useUiStore((s) => s.lang);
     const columns: (Column<Contract> | false)[] = [
         {
             key: 'code',
@@ -546,8 +550,8 @@ function useContractColumns(newId: number | null, wide: boolean): Column<Contrac
             header: t('contract_vendor'),
             width: wide ? '220px' : '160px',
             render: (c) => (
-                <div className="line-clamp-2 font-medium break-words" title={c.vendor}>
-                    {c.vendor}
+                <div className="line-clamp-2 font-medium break-words" title={localPair(c.vendor, c.vendor_th, lang) ?? undefined}>
+                    {localPair(c.vendor, c.vendor_th, lang)}
                 </div>
             ),
         },
@@ -606,6 +610,7 @@ function OverviewTab({
     const t = useT();
     const fmt = useDateFormat();
     const { formatCompact } = useCurrency();
+    const lang = useUiStore((s) => s.lang);
 
     // Loading state mirrors the real layout with pulsing placeholders (same feel as the Stock dashboard).
     if (!summary)
@@ -811,7 +816,7 @@ function OverviewTab({
                         {summary.top_vendors.map((r) => (
                             <div key={r.vendor}>
                                 <div className="mb-1 flex justify-between text-sm">
-                                    <span>{r.vendor}</span>
+                                    <span>{localPair(r.vendor, r.vendor_th, lang)}</span>
                                     <span className="text-muted-foreground text-xs">{formatCompact(r.amount)}</span>
                                 </div>
                                 <div className="bg-muted h-2 overflow-hidden rounded-full">
@@ -848,7 +853,7 @@ function OverviewTab({
                                 </span>
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-medium">{c.name}</div>
-                                    <div className="text-muted-foreground text-xs">{c.vendor}</div>
+                                    <div className="text-muted-foreground text-xs">{localPair(c.vendor, c.vendor_th, lang)}</div>
                                 </div>
                                 <ArrowRight className="text-muted-foreground h-4 w-4" />
                             </button>

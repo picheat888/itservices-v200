@@ -3,6 +3,7 @@ import { type Column, DataTable } from '@/shared/components/data-table';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type ContractLinkedAsset, type ContractType } from '@/shared/types';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
@@ -140,7 +141,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
     const assetColumns: Column<ContractLinkedAsset>[] = [
         { key: 'asset_code', header: 'Asset ID', render: (a) => <span className="text-xs">{a.asset_code}</span> },
         { key: 'name', header: lang === 'th' ? 'ชื่อ' : 'Name', render: (a) => <span className="font-medium">{a.name}</span> },
-        { key: 'type', header: lang === 'th' ? 'ประเภท' : 'Type', render: (a) => a.type ?? '—' },
+        { key: 'type', header: lang === 'th' ? 'ประเภท' : 'Type', render: (a) => localPair(a.type, a.type_th, lang) ?? '—' },
         { key: 'serial', header: 'Serial', render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
         { key: 'owner', header: lang === 'th' ? 'เจ้าของ' : 'Owner', render: (a) => a.owner ?? '—' },
         {
@@ -215,7 +216,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                         <KV label={t('contract_type')} value={t(`contract_type_${c.type}`)} />
                                     </div>
                                     <KV label={t('contract_code')} value={c.code} />
-                                    <KV label={t('contract_vendor')} value={c.vendor} />
+                                    <KV label={t('contract_vendor')} value={localPair(c.vendor, c.vendor_th, lang)} />
                                     <KV label={t('contract_name')} value={c.name} />
                                     <div className="sm:col-span-3">
                                         <KV label={t('contract_details')} value={c.details || '—'} />
