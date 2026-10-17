@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import type { AssetTicket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,7 @@ const PRIORITY_META: Record<TicketPriority, { tone: 'red' | 'amber' | 'blue' | '
  */
 export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; loading?: boolean }) {
     const t = useT();
+    const pairOf = useLocalPair();
     const navigate = useNavigate();
     const { can } = useAuth();
     const canSeePriority = can('tickets.resolve');
@@ -84,7 +86,11 @@ export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; 
             header: t('asset_tk_date'),
             render: (tk) => <DateTimeCell value={tk.created_at} className="text-muted-foreground" />,
         },
-        { key: 'assignee', header: t('asset_tk_assignee'), render: (tk) => <span className="text-sm">{tk.assignee_name ?? '—'}</span> },
+        {
+            key: 'assignee',
+            header: t('asset_tk_assignee'),
+            render: (tk) => <span className="text-sm">{pairOf(tk.assignee_name, tk.assignee_name_th) ?? '—'}</span>,
+        },
     ];
 
     return (

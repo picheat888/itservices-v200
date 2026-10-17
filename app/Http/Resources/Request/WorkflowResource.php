@@ -32,6 +32,7 @@ class WorkflowResource extends JsonResource
             'updated_at' => $this->updated_at?->toDateTimeString(),
             // Who saved it last (null while nobody has) — the name when the updater was loaded.
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
+            'updated_by_name_th' => $this->whenLoaded('updater', fn () => $this->updater?->name_th),
         ];
     }
 }

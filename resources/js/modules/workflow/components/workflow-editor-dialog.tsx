@@ -245,7 +245,14 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                     subtitle={<span className="text-muted-foreground text-xs">{t(REQUEST_TYPE_META[wf.request_type].labelKey)}</span>}
                     srDescription={t('wf_sub')}
                     headerRight={
-                        wf.updated_by_name && <RecordStamps className="text-right" updatedAt={wf.updated_at} updatedBy={wf.updated_by_name} />
+                        wf.updated_by_name && (
+                            <RecordStamps
+                                className="text-right"
+                                updatedAt={wf.updated_at}
+                                updatedBy={wf.updated_by_name}
+                                updatedByTh={wf.updated_by_name_th}
+                            />
+                        )
                     }
                 />
 

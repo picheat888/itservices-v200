@@ -14,6 +14,7 @@ export interface EmailTemplate {
     /** Who reworded it last; null while nobody has. */
     updated_at?: string | null;
     updated_by_name?: string | null;
+    updated_by_name_th?: string | null;
     is_standard: boolean; // has a standard definition (can be reset)
     is_modified: boolean; // differs from its standard definition
     /** The variables this template's mail is given, A-Z; null for a custom template (no list known). */

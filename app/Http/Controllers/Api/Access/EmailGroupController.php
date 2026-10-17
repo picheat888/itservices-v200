@@ -19,7 +19,7 @@ class EmailGroupController extends Controller
     /** List all email groups (with department + owner). */
     public function index(): JsonResponse
     {
-        return EmailGroupResource::collection(EmailGroup::with(['department', 'owner', 'creator', 'updater', 'memberships' => fn ($q) => $q->active()->with('employee')->orderBy('id')->limit(EmailGroupResource::PREVIEW_MEMBERS)])->withCount(['memberships as members_count' => fn ($q) => $q->active()])->orderBy('code')->get())->response();
+        return EmailGroupResource::collection(EmailGroup::with(['department', 'owner', 'creator.employee', 'updater.employee', 'memberships' => fn ($q) => $q->active()->with('employee')->orderBy('id')->limit(EmailGroupResource::PREVIEW_MEMBERS)])->withCount(['memberships as members_count' => fn ($q) => $q->active()])->orderBy('code')->get())->response();
     }
 
     /** Create a new email group. */

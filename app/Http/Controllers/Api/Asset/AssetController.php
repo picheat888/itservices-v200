@@ -312,7 +312,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator', 'updater', 'writtenOffBy', 'writeoffReason', 'returnedToVendorBy']);
+        $asset->load(['contract.vendor', 'transfers', 'tickets.assignee.employee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'creator.employee', 'updater.employee', 'writtenOffBy.employee', 'writeoffReason', 'returnedToVendorBy.employee']);
 
         return (new AssetResource($asset))->response();
     }

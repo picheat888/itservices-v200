@@ -22,7 +22,7 @@ class SoftwareController extends Controller
     public function index(): JsonResponse
     {
         return SoftwareResource::collection(
-            Software::with(['memberships' => fn ($q) => $q->active()->with('employee')->orderBy('id')->limit(SoftwareResource::PREVIEW_MEMBERS), 'brand', 'creator', 'updater'])
+            Software::with(['memberships' => fn ($q) => $q->active()->with('employee')->orderBy('id')->limit(SoftwareResource::PREVIEW_MEMBERS), 'brand', 'creator.employee', 'updater.employee'])
                 ->withCount(['memberships as members_count' => fn ($q) => $q->active()])->orderBy('code')->get()
         )->response();
     }

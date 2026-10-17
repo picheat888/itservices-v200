@@ -61,7 +61,14 @@ export function WorkflowViewDialog({
                                 )}
                             </div>
                             {/* Only once a person has saved it — the seeded date alone says nothing. */}
-                            {wf.updated_by_name && <RecordStamps className="text-right" updatedAt={wf.updated_at} updatedBy={wf.updated_by_name} />}
+                            {wf.updated_by_name && (
+                                <RecordStamps
+                                    className="text-right"
+                                    updatedAt={wf.updated_at}
+                                    updatedBy={wf.updated_by_name}
+                                    updatedByTh={wf.updated_by_name_th}
+                                />
+                            )}
                         </div>
                     }
                 />

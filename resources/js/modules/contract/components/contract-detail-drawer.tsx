@@ -211,8 +211,10 @@ export function ContractDetailDrawer({
                                     className="text-right"
                                     createdAt={c.created_at}
                                     createdBy={c.created_by_name}
+                                    createdByTh={c.created_by_name_th}
                                     updatedAt={c.updated_at}
                                     updatedBy={c.updated_by_name}
+                                    updatedByTh={c.updated_by_name_th}
                                 />
                             </div>
                         }

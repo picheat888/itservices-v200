@@ -449,8 +449,10 @@ function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: 
                 className="mt-auto text-right"
                 createdAt={emp.created_at}
                 createdBy={emp.created_by_name}
+                createdByTh={emp.created_by_name_th}
                 updatedAt={emp.updated_at}
                 updatedBy={emp.updated_by_name}
+                updatedByTh={emp.updated_by_name_th}
             />
         </div>
     );

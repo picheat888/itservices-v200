@@ -7,6 +7,7 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';
@@ -44,6 +45,7 @@ const allocKey = (a: Record<string, number>) =>
 export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const fmt = useDateFormat();
     const t = useT();
+    const pairOf = useLocalPair();
     const confirm = useConfirm();
     // Page and rows-per-page live in the URL (?page, ?per).
     const list = useListParams();
@@ -98,7 +100,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     // Request identity shown inside the confirm dialogs.
     const reqEntity = (r: (typeof requests)[number]) => ({
         name: `${r.sku ?? ''} ${r.item_name ?? ''} ×${r.qty}`,
-        sub: `${t('stock_requester')}: ${r.requester_name}`,
+        sub: `${t('stock_requester')}: ${pairOf(r.requester_name, r.requester_name_th)}`,
     });
 
     const confirmApprove = async (r: (typeof requests)[number]) => {
@@ -143,7 +145,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'requester',
             header: t('stock_requester'),
             width: '120px',
-            render: (r) => <TruncText text={r.requester_name} className="text-sm font-medium" />,
+            render: (r) => <TruncText text={pairOf(r.requester_name, r.requester_name_th)} className="text-sm font-medium" />,
         },
         {
             key: 'item',
@@ -336,7 +338,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                 <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
                                     <span>{fulfillReq.sku}</span>
                                     <span>
-                                        {t('stock_requester')}: {fulfillReq.requester_name}
+                                        {t('stock_requester')}: {pairOf(fulfillReq.requester_name, fulfillReq.requester_name_th)}
                                     </span>
                                 </div>
                             </div>

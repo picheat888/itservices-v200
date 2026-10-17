@@ -12,6 +12,7 @@ import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
@@ -396,7 +397,9 @@ export default function TicketsPage() {
             width: '170px',
             render: (tk) =>
                 tk.assignee_name ? (
-                    <span title={tk.assignee_name}>{tk.assignee_name}</span>
+                    <span title={localPair(tk.assignee_name, tk.assignee_name_th, lang) ?? undefined}>
+                        {localPair(tk.assignee_name, tk.assignee_name_th, lang)}
+                    </span>
                 ) : (
                     <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
                 ),
@@ -714,6 +717,7 @@ function TicketTable({
     showPriority: boolean;
 }) {
     const fmt = useDateFormat();
+    const pairOf = useLocalPair();
     if (rows.length === 0) {
         return <div className="text-muted-foreground py-10 text-center text-sm">{t('ticket_none')}</div>;
     }
@@ -769,7 +773,9 @@ function TicketTable({
                             )}
                             <td className="max-w-[170px] truncate px-4 py-2.5">
                                 {tk.assignee_name ? (
-                                    <span title={tk.assignee_name}>{tk.assignee_name}</span>
+                                    <span title={pairOf(tk.assignee_name, tk.assignee_name_th) ?? undefined}>
+                                        {pairOf(tk.assignee_name, tk.assignee_name_th)}
+                                    </span>
                                 ) : (
                                     <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
                                 )}

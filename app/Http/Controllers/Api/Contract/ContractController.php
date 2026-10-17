@@ -182,7 +182,7 @@ class ContractController extends Controller
         $contract = $this->service->create($request->validated());
         AuditLog::record('Created contract', "{$contract->name} ({$contract->code})", subject: $contract);
 
-        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'creator', 'updater', 'canceller'])))
+        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'creator.employee', 'updater.employee', 'canceller'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -190,7 +190,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        return (new ContractResource($contract->load(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category', 'creator', 'updater', 'canceller'])))->response();
+        return (new ContractResource($contract->load(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category', 'creator.employee', 'updater.employee', 'canceller'])))->response();
     }
 
     public function update(StoreContractRequest $request, Contract $contract): JsonResponse
@@ -203,7 +203,7 @@ class ContractController extends Controller
         }
         AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract), subject: $contract);
 
-        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'creator', 'updater', 'canceller'])))
+        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'creator.employee', 'updater.employee', 'canceller'])))
             ->additional(['message' => 'success'])->response();
     }
 

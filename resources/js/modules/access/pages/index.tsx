@@ -383,8 +383,10 @@ export default function AccessControlPage() {
     const stampsOf = (row: AnyResource): MemberTarget['stamps'] => ({
         createdAt: row.created_at,
         createdBy: row.created_by_name,
+        createdByTh: row.created_by_name_th,
         updatedAt: row.updated_at,
         updatedBy: row.updated_by_name,
+        updatedByTh: row.updated_by_name_th,
     });
 
     const buildTargetFields = (kind: AccessKind, row: AnyResource): MemberTarget => {

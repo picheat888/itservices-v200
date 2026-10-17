@@ -51,6 +51,7 @@ class TicketResource extends JsonResource
 
             'assignee_id' => $this->assignee_id,
             'assignee_name' => $this->whenLoaded('assignee', fn () => $this->assignee?->name),
+            'assignee_name_th' => $this->whenLoaded('assignee', fn () => $this->assignee?->name_th),
 
             'callback_phone' => $this->callback_phone,
 

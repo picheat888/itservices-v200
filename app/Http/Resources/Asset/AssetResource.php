@@ -89,11 +89,15 @@ class AssetResource extends JsonResource
             'written_off_at' => $this->written_off_at?->format('Y-m-d H:i'),
             // Who added it, who changed it last, who wrote it off — names, on the single-asset endpoint only.
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'created_by_name_th' => $this->whenLoaded('creator', fn () => $this->creator?->name_th),
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
+            'updated_by_name_th' => $this->whenLoaded('updater', fn () => $this->updater?->name_th),
             'written_off_by_name' => $this->whenLoaded('writtenOffBy', fn () => $this->writtenOffBy?->name),
+            'written_off_by_name_th' => $this->whenLoaded('writtenOffBy', fn () => $this->writtenOffBy?->name_th),
             // Set when a rented asset went back to its lessor (a kind of write-off); null otherwise.
             'returned_to_vendor_at' => $this->returned_to_vendor_at?->format('Y-m-d H:i'),
             'returned_to_vendor_by_name' => $this->whenLoaded('returnedToVendorBy', fn () => $this->returnedToVendorBy?->name),
+            'returned_to_vendor_by_name_th' => $this->whenLoaded('returnedToVendorBy', fn () => $this->returnedToVendorBy?->name_th),
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),
 
@@ -127,6 +131,7 @@ class AssetResource extends JsonResource
                 'priority' => TicketResource::showsDeskInternals($request) ? $tk->priority?->value : null,
                 'status' => $tk->status?->value,
                 'assignee_name' => $tk->assignee?->name,
+                'assignee_name_th' => $tk->assignee?->name_th,
                 'created_at' => SystemTime::date($tk->created_at),
                 'resolved_at' => SystemTime::date($tk->resolved_at),
             ])),

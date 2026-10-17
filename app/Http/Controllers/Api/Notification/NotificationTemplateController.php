@@ -49,7 +49,7 @@ class NotificationTemplateController extends Controller
     {
         $this->gate($request);
 
-        $stored = NotificationTemplate::with('updater')->get()->keyBy('key');
+        $stored = NotificationTemplate::with('updater.employee')->get()->keyBy('key');
         $emailModules = collect(EmailTemplates::all())
             ->map(fn (array $template) => explode('.', $template['key'])[0])
             ->unique()
@@ -76,6 +76,7 @@ class NotificationTemplateController extends Controller
                 // Who reworded or switched it last; null while nobody has.
                 'updated_at' => SystemTime::date($row->updated_at),
                 'updated_by_name' => $row->updater?->name,
+                'updated_by_name_th' => $row->updater?->name_th,
                 'is_standard' => $row->message_en === $bell['message_en'] && $row->message_th === $bell['message_th'],
                 // Reset also restores this, so the page offers it when only the switch moved.
                 'standard_enabled' => (bool) $bell['enabled'],

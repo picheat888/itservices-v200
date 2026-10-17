@@ -227,11 +227,11 @@ export function AssetDetailDrawer({
                             <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
                                 <div>
                                     {t('asset_registered')}: {fmt.date(a.registered_date)}
-                                    {a.created_by_name && ` ${t('asset_by')} ${a.created_by_name}`}
+                                    {a.created_by_name && ` ${t('asset_by')} ${localPair(a.created_by_name, a.created_by_name_th, lang)}`}
                                 </div>
                                 <div>
                                     {t('asset_last_update')}: {fmt.date(a.updated_at)}
-                                    {a.updated_by_name && ` ${t('asset_by')} ${a.updated_by_name}`}
+                                    {a.updated_by_name && ` ${t('asset_by')} ${localPair(a.updated_by_name, a.updated_by_name_th, lang)}`}
                                 </div>
                             </div>
                         </div>
@@ -253,7 +253,7 @@ export function AssetDetailDrawer({
                                             <span>{fmt.dateTime(a.returned_to_vendor_at)}</span>
                                             {a.returned_to_vendor_by_name && (
                                                 <span>
-                                                    {t('asset_by')} {a.returned_to_vendor_by_name}
+                                                    {t('asset_by')} {localPair(a.returned_to_vendor_by_name, a.returned_to_vendor_by_name_th, lang)}
                                                 </span>
                                             )}
                                         </div>
@@ -268,7 +268,7 @@ export function AssetDetailDrawer({
                                         <div className="text-destructive text-xs font-semibold">{t('asset_writeoff_note_label')}</div>
                                         {a.written_off_by_name && (
                                             <div className="text-muted-foreground mt-0.5 text-xs">
-                                                {t('asset_by')} {a.written_off_by_name}
+                                                {t('asset_by')} {localPair(a.written_off_by_name, a.written_off_by_name_th, lang)}
                                             </div>
                                         )}
                                         {a.writeoff_reason && <div className="mt-1 text-sm font-semibold">{a.writeoff_reason}</div>}

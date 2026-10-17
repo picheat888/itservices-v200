@@ -67,7 +67,9 @@ class EmployeeResource extends JsonResource
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),
             'created_by_name' => $this->whenLoaded('creator', fn () => $this->creator?->name),
+            'created_by_name_th' => $this->whenLoaded('creator', fn () => $this->creator?->name_th),
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
+            'updated_by_name_th' => $this->whenLoaded('updater', fn () => $this->updater?->name_th),
             // Why this record cannot be deleted — empty means it is a clean mis-entry. Costs a
             // handful of existence checks, so it rides along only on the single-employee
             // endpoint, which is what the detail drawer (and its Delete button) reads.

@@ -48,7 +48,7 @@ class StockMovementController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
 
-        $query = StockMovement::with('item')->orderByDesc('moved_at')->orderByDesc('id');
+        $query = StockMovement::with(['item', 'user.employee'])->orderByDesc('moved_at')->orderByDesc('id');
 
         if ($request->filled('type')) {
             $query->where('type', $request->query('type'));
