@@ -118,6 +118,11 @@ class StockItem extends Model
     /** FIFO stock value: Σ(qty_remaining × unit_cost) across open lots. */
     public function stockValue(): float
     {
+        // The list query already sums the lots in SQL (value_total)
+        if (array_key_exists('value_total', $this->attributes)) {
+            return (float) $this->attributes['value_total'];
+        }
+
         $lots = $this->relationLoaded('lots') ? $this->lots : $this->lots()->get();
 
         return (float) $lots->sum(fn (StockLot $l) => $l->qty_remaining * (float) $l->unit_cost);

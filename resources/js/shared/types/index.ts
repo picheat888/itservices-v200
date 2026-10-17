@@ -115,6 +115,12 @@ export interface LocationItem {
     name: string;
 }
 
+/** Slim employee row for pickers and lookups (GET /employees/options). */
+export type EmployeeOption = Pick<
+    Employee,
+    'id' | 'code' | 'name' | 'name_th' | 'photo_url' | 'department_id' | 'department' | 'department_th' | 'position' | 'status'
+>;
+
 export interface Employee {
     id: number;
     code: string;
@@ -812,6 +818,11 @@ export interface StockRequest {
     can_decide: boolean;
 }
 
+/** Slim item row the summary sends for the Overview reorder list. */
+export type StockReorderItem = Pick<StockItem, 'id' | 'sku' | 'name' | 'current_stock' | 'min_stock' | 'max_stock'> & {
+    balances: StockBalance[];
+};
+
 export interface StockSummary {
     skus: number;
     total_units: number;
@@ -820,10 +831,8 @@ export interface StockSummary {
     low_count: number;
     over_count: number;
     dead_count: number;
-    out_items: StockItem[];
-    low_items: StockItem[];
-    over_items: StockItem[];
-    dead_items: StockItem[];
+    out_items: StockReorderItem[];
+    low_items: StockReorderItem[];
     by_warehouse: { warehouse: string; skus: number; units: number }[];
     by_category: { category: string; skus: number; units: number }[];
     /** Latest movements folded in (view_events only; empty otherwise) so the card lands with the summary. */

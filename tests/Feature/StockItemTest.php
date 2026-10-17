@@ -190,6 +190,34 @@ class StockItemTest extends TestCase
             ->assertJsonPath('dead_count', 1);
     }
 
+    public function test_summary_reorder_lists_carry_only_what_the_overview_reads(): void
+    {
+        $out = $this->makeItem(['current_stock' => 0, 'min_stock' => 3]);
+        $this->makeItem(['current_stock' => 30, 'max_stock' => 10]); // over
+
+        $res = $this->actingAs($this->superUser())->getJson('/api/stock-items/summary')->assertOk();
+
+        $res->assertJsonMissingPath('over_items')->assertJsonMissingPath('dead_items');
+        $row = $res->json('out_items.0');
+        $this->assertSame($out->id, $row['id']);
+        $this->assertEqualsCanonicalizing(['id', 'sku', 'name', 'current_stock', 'min_stock', 'max_stock', 'balances'], array_keys($row));
+    }
+
+    public function test_list_rows_leave_lots_to_the_single_record_but_keep_cost_and_value(): void
+    {
+        $item = $this->makeItem(['current_stock' => 4]);
+        StockLot::create(['stock_item_id' => $item->id, 'unit_cost' => 50, 'qty_received' => 4, 'qty_remaining' => 4, 'received_at' => now()]);
+
+        $this->actingAs($this->superUser())->getJson('/api/stock-items')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.lots')
+            ->assertJsonPath('data.0.cost', 50)
+            ->assertJsonPath('data.0.total_value', 200)
+            ->assertJsonStructure(['data' => [['balances']]]);
+
+        $this->getJson("/api/stock-items/{$item->id}")->assertOk()->assertJsonCount(1, 'data.lots');
+    }
+
     public function test_super_can_create_stock_item(): void
     {
         // The SKU is now generated server-side (SKU-#######); any sku sent by the
