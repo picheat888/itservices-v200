@@ -34,7 +34,8 @@ export default function StockValuationReportPage() {
             extras={{
                 tiles: 4,
                 hideSummary: true,
-                beforeTable: ({ filters }) => <StockValuationCards filters={filters} />,
+                cardOnlyFilters: ['dead_days'],
+                beforeTable: ({ filters, patch }) => <StockValuationCards filters={filters} patch={patch} />,
                 rowsTitle: 'rep_sva_rows_title',
                 renderCell: valuationCell,
             }}

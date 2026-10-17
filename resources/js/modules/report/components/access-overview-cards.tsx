@@ -122,7 +122,7 @@ export function Segments<T extends string | null>({
                     onClick={() => onChange(o.value)}
                     className={cn(
                         SEGMENT,
-                        size === 'md' ? 'h-8 px-3' : 'h-6 px-2.5',
+                        size === 'md' ? 'h-8 px-3' : 'h-6 px-2.5 [@media(pointer:coarse)]:h-9',
                         value === o.value ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent',
                     )}
                 >

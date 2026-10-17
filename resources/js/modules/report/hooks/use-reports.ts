@@ -181,7 +181,7 @@ function cardFilters(filters: TabularFilters, rowsOnly: string[]): TabularFilter
 
 /** "รับเข้าและเบิกจ่าย" — keyed without the type and search filters, which narrow only the rows. */
 export const useStockMovementsBreakdown = (filters: TabularFilters) => {
-    const scope = cardFilters(filters, ['type', 'search']);
+    const scope = cardFilters(filters, ['type', 'search', 'people_by', 'dept_by']);
     return useQuery({
         queryKey: ['reports', 'tabular', 'stock.movements', 'breakdown', scope],
         queryFn: () => reportApi.stockMovementsBreakdown(scope),
@@ -192,7 +192,7 @@ export const useStockMovementsBreakdown = (filters: TabularFilters) => {
 
 /** "มูลค่าคงคลัง" — keyed without the search, which narrows only the rows. */
 export const useStockValuationBreakdown = (filters: TabularFilters) => {
-    const scope = cardFilters(filters, ['search']);
+    const scope = cardFilters(filters, ['search', 'dead_days']);
     return useQuery({
         queryKey: ['reports', 'tabular', 'stock.valuation', 'breakdown', scope],
         queryFn: () => reportApi.stockValuationBreakdown(scope),
