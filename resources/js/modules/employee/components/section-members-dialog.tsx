@@ -28,6 +28,12 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
     }, [section]);
     const view = section ?? shown;
 
+    // Each opening starts with an empty search
+    const [query, setQuery] = useState('');
+    useEffect(() => {
+        setQuery('');
+    }, [section?.id]);
+
     const { data: members = [], isLoading } = useSectionMembers(view?.id ?? null);
     // Member count from the clicked row
     const expected = view?.members_count;
@@ -86,6 +92,12 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
                     maxBodyHeight="52vh"
+                    search={{ value: query, onChange: setQuery }}
+                    empty={
+                        query
+                            ? { kind: 'search', title: t('emp_empty_members_search'), hint: t('emp_empty_members_search_hint') }
+                            : { kind: 'empty', title: t('emp_empty_section_members'), hint: t('emp_empty_section_members_hint') }
+                    }
                     searchPlaceholder={t('emp_search_by_position')}
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''}`}
                 />

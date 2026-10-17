@@ -14,13 +14,9 @@ export const profile: Dict = {
     profile_account: 'บัญชีเข้าใช้งาน',
     profile_contact: 'ข้อมูลติดต่อ',
     profile_tab_details: 'ข้อมูลส่วนตัว',
-    profile_no_tickets: 'คุณยังไม่เคยแจ้ง Ticket',
-    profile_no_access: 'ยังไม่มีสิทธิ์เข้าถึงที่บันทึกไว้ให้คุณ',
-    profile_no_requests: 'คุณยังไม่เคยยื่นคำขอ',
     // my-assets-tab.tsx — แท็บทรัพย์สิน
     my_assets_new: 'ใหม่',
     my_assets_return_confirm: 'ส่งทรัพย์สินนี้คืน IT? จะขึ้นสถานะรอรับคืนจนกว่า IT จะกดรับคืน',
-    my_assets_empty: 'คุณยังไม่มีทรัพย์สินที่ถือครอง',
     profile_assets_pending_caption: 'รอคุณรับมอบ',
     profile_assets_held_heading: 'ทรัพย์สินของฉัน',
     profile_assets_col_handed_over: 'ส่งมอบเมื่อ',

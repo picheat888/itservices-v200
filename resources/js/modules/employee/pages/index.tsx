@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
@@ -515,6 +516,7 @@ export default function EmployeesPage() {
                     {tab === 'directory' && (
                         <DirectoryTab
                             departments={departments}
+                            canAdd={canAdd}
                             canEdit={canEdit}
                             isSuperViewer={isSuper}
                             canResetPassword={canResetPassword}
@@ -545,6 +547,15 @@ export default function EmployeesPage() {
                             searchPlaceholder={t('emp_positions_search')}
                             searchable={(p) => `${p.code} ${p.title}`}
                             search={list.table.search}
+                            empty={
+                                list.table.search.value
+                                    ? { kind: 'search', title: t('emp_empty_positions_search'), hint: t('emp_empty_positions_search_hint') }
+                                    : {
+                                          kind: 'empty',
+                                          title: t('emp_empty_positions'),
+                                          hint: canPosAdd ? t('emp_empty_positions_hint').replace('{button}', t('add_position')) : null,
+                                      }
+                            }
                             paging={list.table.paging}
                             actions={
                                 canPosAdd && (
@@ -571,6 +582,15 @@ export default function EmployeesPage() {
                             searchPlaceholder={t('emp_departments_search')}
                             searchable={(d) => `${d.code} ${d.tag} ${d.name} ${d.name_th ?? ''}`}
                             search={list.table.search}
+                            empty={
+                                list.table.search.value
+                                    ? { kind: 'search', title: t('emp_empty_departments_search'), hint: t('emp_empty_departments_search_hint') }
+                                    : {
+                                          kind: 'empty',
+                                          title: t('emp_empty_departments'),
+                                          hint: canDeptAdd ? t('emp_empty_departments_hint').replace('{button}', t('add_department')) : null,
+                                      }
+                            }
                             paging={list.table.paging}
                             actions={
                                 canDeptAdd && (
@@ -652,6 +672,7 @@ const isDirStatus = (v: string): v is (typeof DIR_STATUSES)[number] => (DIR_STAT
 
 interface DirectoryTabProps {
     departments: Department[];
+    canAdd: boolean;
     canEdit: boolean;
     isSuperViewer: boolean;
     canResetPassword: boolean;
@@ -668,6 +689,7 @@ interface DirectoryTabProps {
 
 function DirectoryTab({
     departments,
+    canAdd,
     canEdit,
     isSuperViewer,
     canResetPassword,
@@ -886,6 +908,15 @@ function DirectoryTab({
                 onRowClick={onView}
                 loading={isLoading || isFetching}
                 server={{ ...list.table.paging, total }}
+                empty={
+                    search || activeFilterCount > 0
+                        ? { kind: 'search', title: t('emp_empty_directory_search'), hint: t('emp_empty_directory_search_hint') }
+                        : {
+                              kind: 'empty',
+                              title: t('emp_empty_directory'),
+                              hint: canAdd ? t('emp_empty_directory_hint').replace('{button}', t('add_employee')) : null,
+                          }
+                }
             />
         </div>
     );
@@ -1055,7 +1086,7 @@ function OverviewTab({
                     </div>
                     <div className="max-h-[20rem] space-y-1 overflow-y-auto p-4">
                         {(summary?.recent_resignations ?? []).length === 0 ? (
-                            <div className="text-muted-foreground py-10 text-center text-sm">{t('emp_no_resignations')}</div>
+                            <EmptyState title={t('emp_empty_overview_resignations')} hint={t('emp_empty_overview_resignations_hint')} />
                         ) : (
                             (summary?.recent_resignations ?? []).map((e) => (
                                 <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
@@ -1114,7 +1145,7 @@ function OverviewTab({
                     </div>
                     <div className="max-h-[22rem] space-y-1 overflow-y-auto p-4">
                         {(summary?.recent ?? []).length === 0 ? (
-                            <div className="text-muted-foreground py-10 text-center text-sm">{t('emp_no_hires')}</div>
+                            <EmptyState title={t('emp_empty_overview_hires')} hint={t('emp_empty_overview_hires_hint')} />
                         ) : (
                             (summary?.recent ?? []).map((e) => (
                                 <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">

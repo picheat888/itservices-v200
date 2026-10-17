@@ -8,7 +8,6 @@ export const permission: Dict = {
     perm_groups: 'กลุ่มบทบาท',
     perm_audit: 'บันทึกการตรวจสอบ',
     perm_audit_search: 'ค้นหาการกระทำ, รายการ หรือผู้ทำ…',
-    perm_no_tabs: 'คุณยังไม่มีสิทธิ์ใช้งานส่วนใดในหน้านี้ (บทบาท กลุ่มบทบาท หรือบันทึกการตรวจสอบ)',
     perm_load_failed: 'โหลดข้อมูลสิทธิ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
     perm_members: 'สมาชิก',
     perm_enabled: 'สิทธิ์ที่เปิด',
@@ -38,7 +37,6 @@ export const permission: Dict = {
     gr_quick_add_dept_help: 'คลิกแผนกเพื่อเพิ่มพนักงานในแผนกนั้นเข้ารายชื่อด้านบน',
     gr_dept_members: 'สมาชิกในแผนก',
     gr_note: 'สมาชิกจะได้รับสิทธิ์ตามบทบาทที่กำหนด',
-    gr_empty: 'ยังไม่มีกลุ่มบทบาท',
     gr_admin_protected: 'เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่จัดการกลุ่มนี้ได้',
     audit_time: 'เวลา',
     audit_user: 'ผู้ใช้',
@@ -48,7 +46,6 @@ export const permission: Dict = {
     audit_records: 'รายการที่เกี่ยวข้อง',
     audit_target: 'เป้าหมาย',
     audit_details: 'รายละเอียด',
-    audit_empty: 'ยังไม่มีกิจกรรม',
     permission_level: 'ระดับสิทธิ์',
 
     // modules/permissions/lib/permission-labels.ts — ป้ายชื่อในผังสิทธิ์
@@ -334,7 +331,6 @@ export const permission: Dict = {
     perm_ui_saved: 'บันทึกแล้ว',
     perm_ui_saving: 'กำลังบันทึก…',
     perm_ui_add_all: 'เพิ่มทั้งหมด',
-    perm_ui_no_dept_employees: 'ไม่มีพนักงานในแผนกนี้',
     perm_ui_confirm_group_move: 'ยืนยันการย้ายกลุ่ม',
     perm_ui_notifications: 'แจ้งเตือน',
     perm_ui_self_service_all: 'ใช้กับของของตัวเองเท่านั้น ไม่ต้องเปิดโมดูลใด',

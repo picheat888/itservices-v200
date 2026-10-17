@@ -13,10 +13,16 @@ import { cn } from '@/shared/lib/utils';
 import type { EmployeeAccess, EmployeeAccessRow } from '@/shared/types';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
-import { Check, Copy, Folder, Globe, Inbox, Laptop, Mail, Package, Shield, Tag, Ticket, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { Check, Copy, Folder, Globe, Laptop, Mail, Package, Tag, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
 import { HELD_STATUS_META } from '../lib/held-assets';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+
+/** Title and hint a pane shows when its list is empty; the caller owns the words. */
+export interface PaneEmpty {
+    title: string;
+    hint: string | null;
+}
 
 export const RAIL_HEADING = 'text-muted-foreground border-border border-b pb-1.5 text-xs font-bold';
 
@@ -82,7 +88,7 @@ export function RailRow({
 }
 
 /** Access tab: read-only, grouped by kind, owners first; granting and revoking live in the Access Directory. */
-export function AccessPane({ access, loading, emptyText }: { access: EmployeeAccess | undefined; loading?: boolean; emptyText: string }) {
+export function AccessPane({ access, loading, empty }: { access: EmployeeAccess | undefined; loading?: boolean; empty: PaneEmpty }) {
     const t = useT();
     const fmtN = useNumberFormat();
     const accessLoading = loading;
@@ -202,30 +208,20 @@ export function AccessPane({ access, loading, emptyText }: { access: EmployeeAcc
                 );
             })}
             {access && access.email_groups.length + access.file_shares.length + access.social.length + access.software.length === 0 && (
-                <EmptyPane icon={Shield} text={emptyText} />
+                <EmptyPane kind="empty" title={empty.title} hint={empty.hint} />
             )}
         </div>
     );
 }
 
 /** Assets tab: read-only table of what the employee currently holds. */
-export function AssetsPane({
-    assets,
-    lang,
-    loading,
-    emptyText,
-}: {
-    assets: EmployeeHeldAsset[];
-    lang: string;
-    loading?: boolean;
-    emptyText: string;
-}) {
+export function AssetsPane({ assets, lang, loading, empty }: { assets: EmployeeHeldAsset[]; lang: string; loading?: boolean; empty: PaneEmpty }) {
     const t = useT();
     const fmt = useDateFormat();
     // Empty only counts once this person's list has actually arrived; while it is on
     // its way the table shows its own loading rows (below).
     if (assets.length === 0 && !loading) {
-        return <EmptyPane icon={Laptop} text={emptyText} />;
+        return <EmptyPane kind="empty" title={empty.title} hint={empty.hint} />;
     }
 
     const columns: Column<EmployeeHeldAsset>[] = [
@@ -291,15 +287,15 @@ export function AssetsPane({
 export function TicketsPane({
     tickets,
     loading,
-    emptyText,
+    empty,
 }: {
     tickets: Omit<EmployeeRequestedTicket, 'priority'>[];
     loading?: boolean;
-    emptyText: string;
+    empty: PaneEmpty;
 }) {
     const t = useT();
     if (tickets.length === 0 && !loading) {
-        return <EmptyPane icon={Ticket} text={emptyText} />;
+        return <EmptyPane kind="empty" title={empty.title} hint={empty.hint} />;
     }
 
     const columns: Column<Omit<EmployeeRequestedTicket, 'priority'>>[] = [
@@ -353,11 +349,11 @@ export function TicketsPane({
 }
 
 /** Requests tab: read-only table of requests this employee owns; rows stay unclickable (Request permission not required here). */
-export function RequestsPane({ requests, loading, emptyText }: { requests: EmployeeServiceRequest[]; loading?: boolean; emptyText: string }) {
+export function RequestsPane({ requests, loading, empty }: { requests: EmployeeServiceRequest[]; loading?: boolean; empty: PaneEmpty }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     if (requests.length === 0 && !loading) {
-        return <EmptyPane icon={Inbox} text={emptyText} />;
+        return <EmptyPane kind="empty" title={empty.title} hint={empty.hint} />;
     }
 
     const columns: Column<EmployeeServiceRequest>[] = [

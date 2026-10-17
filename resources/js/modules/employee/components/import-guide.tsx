@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { AlertTriangle, Check, ChevronDown, Copy, ListChecks, Search, TableProperties } from 'lucide-react';
@@ -217,7 +218,12 @@ function ValidValues() {
 
             <div className="max-h-56 overflow-y-auto px-2 pb-2">
                 {shown.length === 0 ? (
-                    <p className="text-muted-foreground px-1 py-3 text-center text-xs">{t('import_values_none')}</p>
+                    <EmptyState
+                        kind="search"
+                        title={t('emp_empty_import_values')}
+                        hint={t('emp_empty_import_values_hint')}
+                        className="min-h-0 py-4"
+                    />
                 ) : (
                     shown.map((row) => (
                         <button

@@ -1,5 +1,6 @@
 import { translate, useT } from '@/lang';
 import { departmentApi, useDepartments, useEmployeePicker, useEmployeesByIds } from '@/modules/employee';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -276,9 +277,12 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                         </div>
                                         {deptMembersLoading && <div className="text-muted-foreground py-2 text-center text-xs">…</div>}
                                         {!deptMembersLoading && deptMembers.length === 0 && (
-                                            <div className="text-muted-foreground py-2 text-center text-xs">
-                                                {translate(lang, 'perm_ui_no_dept_employees')}
-                                            </div>
+                                            <EmptyState
+                                                kind="pick"
+                                                title={translate(lang, 'perm_empty_group_modal_dept_members')}
+                                                hint={translate(lang, 'perm_empty_group_modal_dept_members_hint')}
+                                                className="min-h-0 py-3"
+                                            />
                                         )}
                                         {!deptMembersLoading && deptMembers.length > 0 && (
                                             <div className="flex flex-wrap gap-1.5">

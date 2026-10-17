@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { localName } from '@/shared/lib/local-name';
 import { matchesAllWords } from '@/shared/lib/search-words';
 import type { OrgChartNode } from '@/shared/types';
@@ -398,7 +399,7 @@ export function OrgChartTab() {
         return <OrgChartSkeleton />;
     }
     if (data.length === 0) {
-        return <div className="text-muted-foreground py-16 text-center text-sm">{t('org_empty')}</div>;
+        return <EmptyState title={t('emp_empty_org_chart')} hint={t('emp_empty_org_chart_hint')} className="py-16" />;
     }
 
     return (
