@@ -13,7 +13,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
@@ -736,7 +736,7 @@ function DirectoryTab({
         },
         { key: 'code', header: t('tbl_emp_id'), render: (e) => <span className="text-xs">{e.code}</span> },
         { key: 'position', header: t('position'), render: (e) => e.position ?? '—' },
-        { key: 'department', header: t('department'), render: (e) => (lang === 'th' ? (e.department_th ?? e.department) : e.department) ?? '—' },
+        { key: 'department', header: t('department'), render: (e) => localPair(e.department, e.department_th, lang) ?? '—' },
         { key: 'email', header: t('emp_email'), render: (e) => <span className="text-xs">{e.email ?? '—'}</span> },
         { key: 'joined', header: t('joined'), render: (e) => <span className="text-xs">{fmt.date(e.joined_at)}</span> },
         {
@@ -1055,9 +1055,7 @@ function OverviewTab({
                                         <div className="truncate text-sm font-medium">{localName(e, lang)}</div>
                                         <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
                                             <span className="min-w-0 truncate">{e.position}</span>
-                                            <span className="min-w-0 truncate">
-                                                {lang === 'th' ? (e.department_th ?? e.department) : e.department}
-                                            </span>
+                                            <span className="min-w-0 truncate">{localPair(e.department, e.department_th, lang)}</span>
                                         </div>
                                     </div>
                                     <span className="text-muted-foreground text-xs">{fmt.date(e.last_day)}</span>
@@ -1116,9 +1114,7 @@ function OverviewTab({
                                         <div className="truncate text-sm font-medium">{localName(e, lang)}</div>
                                         <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
                                             <span className="min-w-0 truncate">{e.position}</span>
-                                            <span className="min-w-0 truncate">
-                                                {lang === 'th' ? (e.department_th ?? e.department) : e.department}
-                                            </span>
+                                            <span className="min-w-0 truncate">{localPair(e.department, e.department_th, lang)}</span>
                                         </div>
                                     </div>
                                     <span className="text-muted-foreground text-xs">{fmt.date(e.joined_at)}</span>

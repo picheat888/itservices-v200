@@ -9,6 +9,7 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
+import { localLabel } from '@/shared/lib/local-name';
 import { REQUEST_BLOCK_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { RequestFieldSchema, ServiceRequest, ServiceRequestType } from '@/shared/types';
@@ -113,7 +114,7 @@ export function RequestCreateDialog({
         setFields(seeded);
     };
 
-    const fieldLabel = (f: RequestFieldSchema) => (lang === 'th' ? f.label_th : f.label_en);
+    const fieldLabel = (f: RequestFieldSchema) => localLabel(f, lang);
     const requiredMsg = t('req_err_required');
 
     /** Drop one field's error as soon as the user edits it. */
@@ -677,7 +678,7 @@ function SchemaField({
                 <Field label={label} required={schema.required} error={error} name={schema.key}>
                     <ChoicePair
                         label={label}
-                        options={options.map((o) => ({ value: o.value, label: lang === 'th' ? o.label_th : o.label_en }))}
+                        options={options.map((o) => ({ value: o.value, label: localLabel(o, lang) }))}
                         value={value}
                         required={schema.required}
                         invalid={!!error}
@@ -694,7 +695,7 @@ function SchemaField({
                     onChange={onChange}
                     invalid={!!error}
                     placeholder={t('req_select_placeholder')}
-                    options={options.map((o) => ({ value: o.value, label: lang === 'th' ? o.label_th : o.label_en }))}
+                    options={options.map((o) => ({ value: o.value, label: localLabel(o, lang) }))}
                 />
             </Field>
         );
@@ -828,7 +829,7 @@ function displayValue(
 ): string {
     if (f.input === 'select') {
         const opt = (f.options ?? []).find((o) => o.value === raw);
-        return opt ? (lang === 'th' ? opt.label_th : opt.label_en) : raw;
+        return opt ? localLabel(opt, lang) : raw;
     }
     if (f.input === 'source') {
         return sources?.[f.source ?? '']?.find((o) => String(o.id) === raw)?.label ?? raw;

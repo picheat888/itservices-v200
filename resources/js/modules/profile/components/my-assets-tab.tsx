@@ -5,6 +5,7 @@ import { ACCEPT_KEY, AssetTagBadge, AssetTypeIcon, useAssetMutations } from '@/m
 import { HELD_STATUS_META } from '@/modules/employee';
 import { EmptyPane } from '@/shared/components/empty-pane';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -114,7 +115,7 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
             confirmText: t('profile_assets_accept_all'),
             action: () => Promise.all(pending.filter((a) => !acceptingIds.includes(a.id)).map((a) => acceptOne(a.id))).then(() => undefined),
         });
-    const typeLabel = (a: Asset) => (lang === 'th' ? (a.type_th ?? a.type) : a.type);
+    const typeLabel = (a: Asset) => localPair(a.type, a.type_th, lang);
 
     const onReturn = (a: Asset) =>
         confirm({

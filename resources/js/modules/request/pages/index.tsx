@@ -59,7 +59,7 @@ function activityLine(request: ServiceRequest, t: (key: string) => string, lang:
 function headlineValue(request: ServiceRequest, lang: 'en' | 'th'): string {
     const row = request.fields_display[0];
 
-    return lang === 'th' ? row.value_th || row.value : row.value;
+    return localPair(row.value, row.value_th, lang) ?? row.value;
 }
 
 /** Sentinel for the filters' "all" row — a SearchableSelect option cannot be empty. */

@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useListParams } from '@/shared/hooks/use-list-params';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -46,7 +46,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
 
     const sectionLabel = (s: Section) => localName(s, lang);
     const deptById = useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
-    const deptLabel = (s: Section) => (lang === 'th' ? (deptById.get(s.department_id)?.name_th ?? s.department) : s.department);
+    const deptLabel = (s: Section) => localPair(s.department, deptById.get(s.department_id)?.name_th, lang);
 
     const deptOptions = useMemo(
         () => [

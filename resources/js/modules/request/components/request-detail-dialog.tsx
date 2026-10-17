@@ -10,7 +10,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useInitials } from '@/shared/hooks/use-initials';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { serverMessage } from '@/shared/lib/api-errors';
-import { localName, localPair } from '@/shared/lib/local-name';
+import { localLabel, localName, localPair } from '@/shared/lib/local-name';
 import {
     isOnBehalfRequest,
     REQUEST_APPROVE_BUTTON,
@@ -247,10 +247,8 @@ function RequestDetailBody({
                             </div>
                             {request.fields_display.map((row) => (
                                 <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
-                                    <span className="text-muted-foreground shrink-0 text-xs">{lang === 'th' ? row.label_th : row.label_en}</span>
-                                    <span className={'text-right font-medium break-all'}>
-                                        {lang === 'th' ? row.value_th || row.value : row.value}
-                                    </span>
+                                    <span className="text-muted-foreground shrink-0 text-xs">{localLabel(row, lang)}</span>
+                                    <span className={'text-right font-medium break-all'}>{localPair(row.value, row.value_th, lang)}</span>
                                 </div>
                             ))}
                         </div>

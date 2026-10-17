@@ -7,7 +7,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { localName, nameSearch } from '@/shared/lib/local-name';
+import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
@@ -162,7 +162,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                 value: String(e.id),
                 label: localName(e, lang),
                 sub: e.code,
-                hint: [e.position, lang === 'th' ? e.department_th || e.department : e.department].filter(Boolean).join(', ') || undefined,
+                hint: [e.position, localPair(e.department, e.department_th, lang)].filter(Boolean).join(', ') || undefined,
                 search: `${nameSearch(e)} ${e.code} ${e.position ?? ''} ${e.department ?? ''} ${e.department_th ?? ''}`,
             })),
         [employees, lang],

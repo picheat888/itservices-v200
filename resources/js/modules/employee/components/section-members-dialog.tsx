@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import type { Employee, Section } from '@/shared/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
@@ -36,7 +36,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     const sectionName = view ? localName(view, lang) : '';
     const dept = departments.find((d) => d.id === view?.department_id);
-    const deptName = lang === 'th' ? (dept?.name_th ?? view?.department) : view?.department;
+    const deptName = localPair(view?.department, dept?.name_th, lang);
 
     const columns: Column<Employee>[] = [
         {

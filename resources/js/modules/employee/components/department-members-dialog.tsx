@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import type { Department, Employee } from '@/shared/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
@@ -51,7 +51,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
         {
             key: 'section',
             header: t('emp_section'),
-            render: (m) => <span className="text-muted-foreground text-sm">{(lang === 'th' ? (m.section_th ?? m.section) : m.section) ?? '—'}</span>,
+            render: (m) => <span className="text-muted-foreground text-sm">{localPair(m.section, m.section_th, lang) ?? '—'}</span>,
         },
         { key: 'position', header: t('position'), render: (m) => <span className="text-muted-foreground text-sm">{m.position ?? '—'}</span> },
         {

@@ -4,7 +4,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { localName } from '@/shared/lib/local-name';
+import { localLabel, localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -896,7 +896,7 @@ function ServiceField({
     error?: string;
     onChange: (value: string) => void;
 }) {
-    const label = lang === 'th' ? field.label_th || field.label_en : field.label_en;
+    const label = localLabel(field, lang);
 
     return (
         <Field label={label} required={field.required} name={serviceFieldName(service, field.key)} error={error}>
@@ -906,7 +906,7 @@ function ServiceField({
                     onChange={onChange}
                     options={(field.options ?? []).map((option) => ({
                         value: option.value,
-                        label: lang === 'th' ? option.label_th || option.label_en : option.label_en,
+                        label: localLabel(option, lang),
                         search: `${option.label_en} ${option.label_th}`,
                     }))}
                 />

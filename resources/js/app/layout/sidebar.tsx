@@ -5,6 +5,7 @@ import type { ProfileSection } from '@/modules/profile';
 import { useSettings } from '@/modules/settings';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useSidebarBadges } from '@/shared/hooks/use-sidebar-badges';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Role } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
@@ -38,7 +39,7 @@ export function Sidebar({ onProfile }: { onProfile: (section?: ProfileSection) =
     // The account name follows the UI language when the employee record carries a Thai
     // one; the avatar initials stay on the English name so the chip doesn't change shape
     // with the language, exactly as the employee drawer does.
-    const displayName = lang === 'th' ? (user?.name_th ?? user?.name) : user?.name;
+    const displayName = localPair(user?.name, user?.name_th, lang);
 
     const perms = user?.permissions ?? [];
     // All "needs attention" counts arrive together from one endpoint, which decides per

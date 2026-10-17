@@ -3,7 +3,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -99,7 +99,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     };
 
     const name = shown ? localName(shown, lang) : '';
-    const department = shown ? (lang === 'th' ? (shown.department_th ?? shown.department) : shown.department) : null;
+    const department = shown ? localPair(shown.department, shown.department_th, lang) : null;
 
     const pageCount = Math.max(1, Math.ceil(heldAssets.length / ASSETS_PER_PAGE));
     const safePage = Math.min(page, pageCount);
@@ -305,7 +305,7 @@ function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHel
         <div className="divide-border divide-y">
             {assets.map((a) => {
                 const meta = HELD_STATUS_META[a.status] ?? null;
-                const type = (lang === 'th' ? (a.type_th ?? a.type) : a.type) ?? '—';
+                const type = localPair(a.type, a.type_th, lang) ?? '—';
                 return (
                     <div key={a.id} className="flex h-16 items-center gap-3 px-3">
                         <div className="bg-accent text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">

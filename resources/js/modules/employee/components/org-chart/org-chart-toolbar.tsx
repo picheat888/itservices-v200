@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
@@ -140,7 +141,7 @@ export function OrgChartToolbar({
                                         <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color }} />
                                         <div className="min-w-0 flex-1">
                                             <div className="text-foreground truncate text-[12.5px] font-medium">
-                                                {lang === 'th' ? (p.nameTh ?? p.nameEn) : p.nameEn}
+                                                {localPair(p.nameEn, p.nameTh, lang)}
                                             </div>
                                             {p.nameTh && (
                                                 <div className="text-muted-foreground truncate text-[11px]">

@@ -5,7 +5,7 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
@@ -222,7 +222,7 @@ export function EmployeeViewDrawer({
                         <div className="flex flex-wrap gap-1.5">
                             <IdChip icon={Hash}>{emp.code}</IdChip>
                             <IdChip icon={Briefcase}>{emp.position || '—'}</IdChip>
-                            <IdChip icon={Building2}>{lang === 'th' ? (emp.department_th ?? emp.department) : emp.department}</IdChip>
+                            <IdChip icon={Building2}>{localPair(emp.department, emp.department_th, lang)}</IdChip>
                         </div>
                     </div>
 
@@ -314,12 +314,12 @@ export function EmployeeViewDrawer({
                             <RailRow
                                 icon={<Users className="h-3.5 w-3.5" />}
                                 label={t('emp_section')}
-                                value={lang === 'th' ? (emp.section_th ?? emp.section) : emp.section}
+                                value={localPair(emp.section, emp.section_th, lang)}
                             />
                             <RailRow
                                 icon={<Building2 className="h-3.5 w-3.5" />}
                                 label={t('department')}
-                                value={lang === 'th' ? (emp.department_th ?? emp.department) : emp.department}
+                                value={localPair(emp.department, emp.department_th, lang)}
                             />
                             <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp.position} />
                             <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={managerName} />

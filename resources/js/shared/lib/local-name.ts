@@ -14,3 +14,7 @@ export const nameSearch = (item: Named): string => `${item.name} ${item.name_th 
 /** localName for an API field pair (`department` + `department_th`); null when there is no name. */
 export const localPair = (name: string | null | undefined, nameTh: string | null | undefined, lang: string): string | null =>
     name ? localName({ name, name_th: nameTh }, lang) : null;
+
+/** A label pair in the reader's language (`label_th` / `label_en`), English when the Thai one is empty. */
+export const localLabel = (item: { label_en: string; label_th?: string | null }, lang: string): string =>
+    (lang === 'th' && item.label_th) || item.label_en;
