@@ -1,0 +1,1378 @@
+{
+    "super.days=7": {
+        "range_days": 7,
+        "created": 34,
+        "created_delta_count": 19,
+        "resolved": 18,
+        "resolved_delta_count": 7,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 4,
+                "closed": 4
+            },
+            {
+                "opened": 5,
+                "closed": 0
+            },
+            {
+                "opened": 7,
+                "closed": 6
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            },
+            {
+                "opened": 18,
+                "closed": 8
+            }
+        ],
+        "period_sla": {
+            "from": "2026-09-18",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 13,
+            "measured": 13,
+            "rate": 100,
+            "delta_pts": 16.7,
+            "request_rate": 100,
+            "manual_rate": 100
+        },
+        "sla_met_pct": 100,
+        "sla_delta_pts": 0,
+        "repair_kpi_met_pct": 100,
+        "repair_kpi_delta_pts": 17,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 80,
+        "response_sla_delta_pts": 4,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 138,
+        "avg_response_delta_minutes": -167,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 11
+            },
+            {
+                "category": "software",
+                "count": 12
+            },
+            {
+                "category": "network",
+                "count": 9
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 2
+            }
+        ]
+    },
+    "super.days=30": {
+        "range_days": 30,
+        "created": 70,
+        "created_delta_count": 39,
+        "resolved": 42,
+        "resolved_delta_count": 21,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 7,
+                "closed": 5
+            },
+            {
+                "opened": 5,
+                "closed": 4
+            },
+            {
+                "opened": 5,
+                "closed": 3
+            },
+            {
+                "opened": 10,
+                "closed": 9
+            },
+            {
+                "opened": 17,
+                "closed": 7
+            },
+            {
+                "opened": 26,
+                "closed": 14
+            }
+        ],
+        "period_sla": {
+            "from": "2026-08-26",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 25,
+            "measured": 27,
+            "rate": 92.6,
+            "delta_pts": -7.4,
+            "request_rate": 100,
+            "manual_rate": 92
+        },
+        "sla_met_pct": 95,
+        "sla_delta_pts": 7,
+        "repair_kpi_met_pct": 95,
+        "repair_kpi_delta_pts": 15,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 76,
+        "response_sla_delta_pts": -3,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 228,
+        "avg_response_delta_minutes": 3,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 24
+            },
+            {
+                "category": "software",
+                "count": 21
+            },
+            {
+                "category": "network",
+                "count": 17
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 8
+            }
+        ]
+    },
+    "super.days=90": {
+        "range_days": 90,
+        "created": 121,
+        "created_delta_count": 58,
+        "resolved": 74,
+        "resolved_delta_count": 46,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 8,
+                "closed": 6
+            },
+            {
+                "opened": 12,
+                "closed": 7
+            },
+            {
+                "opened": 19,
+                "closed": 15
+            },
+            {
+                "opened": 12,
+                "closed": 4
+            },
+            {
+                "opened": 17,
+                "closed": 12
+            },
+            {
+                "opened": 53,
+                "closed": 30
+            }
+        ],
+        "period_sla": {
+            "from": "2026-06-27",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 42,
+            "measured": 44,
+            "rate": 95.5,
+            "delta_pts": -4.5,
+            "request_rate": 100,
+            "manual_rate": 94.4
+        },
+        "sla_met_pct": 94,
+        "sla_delta_pts": 12,
+        "repair_kpi_met_pct": 91,
+        "repair_kpi_delta_pts": 24,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 79,
+        "response_sla_delta_pts": 11,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 238,
+        "avg_response_delta_minutes": -353,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 40
+            },
+            {
+                "category": "software",
+                "count": 35
+            },
+            {
+                "category": "network",
+                "count": 35
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 11
+            }
+        ]
+    },
+    "super.days=year": {
+        "range_days": 267,
+        "created": 245,
+        "created_delta_count": 73,
+        "resolved": 136,
+        "resolved_delta_count": 60,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 25,
+                "closed": 13
+            },
+            {
+                "opened": 38,
+                "closed": 27
+            },
+            {
+                "opened": 29,
+                "closed": 13
+            },
+            {
+                "opened": 35,
+                "closed": 13
+            },
+            {
+                "opened": 36,
+                "closed": 24
+            },
+            {
+                "opened": 82,
+                "closed": 46
+            }
+        ],
+        "period_sla": {
+            "from": "2026-01-01",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 71,
+            "measured": 76,
+            "rate": 93.4,
+            "delta_pts": 1.9,
+            "request_rate": 95,
+            "manual_rate": 92.9
+        },
+        "sla_met_pct": 89,
+        "sla_delta_pts": 26,
+        "repair_kpi_met_pct": 84,
+        "repair_kpi_delta_pts": 10,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 77,
+        "response_sla_delta_pts": 3,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 384,
+        "avg_response_delta_minutes": -105,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 76
+            },
+            {
+                "category": "software",
+                "count": 64
+            },
+            {
+                "category": "network",
+                "count": 64
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 41
+            }
+        ]
+    },
+    "super.days=all": {
+        "range_days": 510,
+        "created": 417,
+        "created_delta_count": null,
+        "resolved": 210,
+        "resolved_delta_count": null,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 56,
+                "closed": 25
+            },
+            {
+                "opened": 60,
+                "closed": 30
+            },
+            {
+                "opened": 67,
+                "closed": 28
+            },
+            {
+                "opened": 57,
+                "closed": 34
+            },
+            {
+                "opened": 60,
+                "closed": 24
+            },
+            {
+                "opened": 117,
+                "closed": 69
+            }
+        ],
+        "period_sla": {
+            "from": "2025-05-03",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 114,
+            "measured": 123,
+            "rate": 92.7,
+            "delta_pts": null,
+            "request_rate": 94.1,
+            "manual_rate": 92.1
+        },
+        "sla_met_pct": 78,
+        "sla_delta_pts": null,
+        "repair_kpi_met_pct": 81,
+        "repair_kpi_delta_pts": null,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 76,
+        "response_sla_delta_pts": null,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 427,
+        "avg_response_delta_minutes": null,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 129
+            },
+            {
+                "category": "software",
+                "count": 100
+            },
+            {
+                "category": "network",
+                "count": 114
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 74
+            }
+        ]
+    },
+    "super.days=45": {
+        "range_days": 30,
+        "created": 70,
+        "created_delta_count": 39,
+        "resolved": 42,
+        "resolved_delta_count": 21,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 7,
+                "closed": 5
+            },
+            {
+                "opened": 5,
+                "closed": 4
+            },
+            {
+                "opened": 5,
+                "closed": 3
+            },
+            {
+                "opened": 10,
+                "closed": 9
+            },
+            {
+                "opened": 17,
+                "closed": 7
+            },
+            {
+                "opened": 26,
+                "closed": 14
+            }
+        ],
+        "period_sla": {
+            "from": "2026-08-26",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 25,
+            "measured": 27,
+            "rate": 92.6,
+            "delta_pts": -7.4,
+            "request_rate": 100,
+            "manual_rate": 92
+        },
+        "sla_met_pct": 95,
+        "sla_delta_pts": 7,
+        "repair_kpi_met_pct": 95,
+        "repair_kpi_delta_pts": 15,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 76,
+        "response_sla_delta_pts": -3,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 228,
+        "avg_response_delta_minutes": 3,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 24
+            },
+            {
+                "category": "software",
+                "count": 21
+            },
+            {
+                "category": "network",
+                "count": 17
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 8
+            }
+        ]
+    },
+    "super.from=2026-08-01&to=2026-09-20": {
+        "range_days": 51,
+        "created": 70,
+        "created_delta_count": 22,
+        "resolved": 44,
+        "resolved_delta_count": 15,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 6,
+                "closed": 7
+            },
+            {
+                "opened": 4,
+                "closed": 2
+            },
+            {
+                "opened": 12,
+                "closed": 7
+            },
+            {
+                "opened": 7,
+                "closed": 3
+            },
+            {
+                "opened": 15,
+                "closed": 12
+            },
+            {
+                "opened": 26,
+                "closed": 13
+            }
+        ],
+        "period_sla": {
+            "from": "2026-08-01",
+            "to": "2026-09-20",
+            "goal": 90,
+            "met": 21,
+            "measured": 23,
+            "rate": 91.3,
+            "delta_pts": -8.7,
+            "request_rate": 100,
+            "manual_rate": 90
+        },
+        "sla_met_pct": 94,
+        "sla_delta_pts": 7,
+        "repair_kpi_met_pct": 86,
+        "repair_kpi_delta_pts": -14,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 75,
+        "response_sla_delta_pts": -5,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 290,
+        "avg_response_delta_minutes": -36,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 23
+            },
+            {
+                "category": "software",
+                "count": 21
+            },
+            {
+                "category": "network",
+                "count": 18
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 8
+            }
+        ]
+    },
+    "super.from=2026-09-25&to=2026-09-25": {
+        "range_days": 1,
+        "created": 14,
+        "created_delta_count": 8,
+        "resolved": 13,
+        "resolved_delta_count": 13,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 1,
+                "closed": 0
+            },
+            {
+                "opened": 1,
+                "closed": 0
+            },
+            {
+                "opened": 12,
+                "closed": 12
+            },
+            {
+                "opened": 0,
+                "closed": 1
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            }
+        ],
+        "period_sla": {
+            "from": "2026-09-25",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 6,
+            "measured": 6,
+            "rate": 100,
+            "delta_pts": null,
+            "request_rate": null,
+            "manual_rate": 100
+        },
+        "sla_met_pct": 100,
+        "sla_delta_pts": null,
+        "repair_kpi_met_pct": 100,
+        "repair_kpi_delta_pts": null,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 100,
+        "response_sla_delta_pts": 100,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 59,
+        "avg_response_delta_minutes": -108,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 7
+            },
+            {
+                "category": "software",
+                "count": 6
+            },
+            {
+                "category": "network",
+                "count": 0
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 1
+            }
+        ]
+    },
+    "software_only.days=7": {
+        "range_days": 7,
+        "created": 34,
+        "created_delta_count": 19,
+        "resolved": 18,
+        "resolved_delta_count": 7,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 4,
+                "closed": 4
+            },
+            {
+                "opened": 5,
+                "closed": 0
+            },
+            {
+                "opened": 7,
+                "closed": 6
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            },
+            {
+                "opened": 18,
+                "closed": 8
+            }
+        ],
+        "period_sla": {
+            "from": "2026-09-18",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 13,
+            "measured": 13,
+            "rate": 100,
+            "delta_pts": 25,
+            "request_rate": 100,
+            "manual_rate": 100
+        },
+        "sla_met_pct": 100,
+        "sla_delta_pts": 0,
+        "repair_kpi_met_pct": 100,
+        "repair_kpi_delta_pts": 17,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 80,
+        "response_sla_delta_pts": 4,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 138,
+        "avg_response_delta_minutes": -167,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 11
+            },
+            {
+                "category": "software",
+                "count": 12
+            },
+            {
+                "category": "network",
+                "count": 9
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 2
+            }
+        ]
+    },
+    "software_only.days=30": {
+        "range_days": 30,
+        "created": 70,
+        "created_delta_count": 39,
+        "resolved": 42,
+        "resolved_delta_count": 21,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 7,
+                "closed": 5
+            },
+            {
+                "opened": 5,
+                "closed": 4
+            },
+            {
+                "opened": 5,
+                "closed": 3
+            },
+            {
+                "opened": 10,
+                "closed": 9
+            },
+            {
+                "opened": 17,
+                "closed": 7
+            },
+            {
+                "opened": 26,
+                "closed": 14
+            }
+        ],
+        "period_sla": {
+            "from": "2026-08-26",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 19,
+            "measured": 20,
+            "rate": 95,
+            "delta_pts": -5,
+            "request_rate": 100,
+            "manual_rate": 94.7
+        },
+        "sla_met_pct": 95,
+        "sla_delta_pts": 7,
+        "repair_kpi_met_pct": 95,
+        "repair_kpi_delta_pts": 15,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 76,
+        "response_sla_delta_pts": -3,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 228,
+        "avg_response_delta_minutes": 3,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 24
+            },
+            {
+                "category": "software",
+                "count": 21
+            },
+            {
+                "category": "network",
+                "count": 17
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 8
+            }
+        ]
+    },
+    "software_only.days=90": {
+        "range_days": 90,
+        "created": 121,
+        "created_delta_count": 58,
+        "resolved": 74,
+        "resolved_delta_count": 46,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 8,
+                "closed": 6
+            },
+            {
+                "opened": 12,
+                "closed": 7
+            },
+            {
+                "opened": 19,
+                "closed": 15
+            },
+            {
+                "opened": 12,
+                "closed": 4
+            },
+            {
+                "opened": 17,
+                "closed": 12
+            },
+            {
+                "opened": 53,
+                "closed": 30
+            }
+        ],
+        "period_sla": {
+            "from": "2026-06-27",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 29,
+            "measured": 30,
+            "rate": 96.7,
+            "delta_pts": -3.3,
+            "request_rate": 100,
+            "manual_rate": 96.4
+        },
+        "sla_met_pct": 94,
+        "sla_delta_pts": 12,
+        "repair_kpi_met_pct": 91,
+        "repair_kpi_delta_pts": 24,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 79,
+        "response_sla_delta_pts": 11,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 238,
+        "avg_response_delta_minutes": -353,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 40
+            },
+            {
+                "category": "software",
+                "count": 35
+            },
+            {
+                "category": "network",
+                "count": 35
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 11
+            }
+        ]
+    },
+    "software_only.days=year": {
+        "range_days": 267,
+        "created": 245,
+        "created_delta_count": 73,
+        "resolved": 136,
+        "resolved_delta_count": 60,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 25,
+                "closed": 13
+            },
+            {
+                "opened": 38,
+                "closed": 27
+            },
+            {
+                "opened": 29,
+                "closed": 13
+            },
+            {
+                "opened": 35,
+                "closed": 13
+            },
+            {
+                "opened": 36,
+                "closed": 24
+            },
+            {
+                "opened": 82,
+                "closed": 46
+            }
+        ],
+        "period_sla": {
+            "from": "2026-01-01",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 39,
+            "measured": 40,
+            "rate": 97.5,
+            "delta_pts": 8.6,
+            "request_rate": 100,
+            "manual_rate": 97.4
+        },
+        "sla_met_pct": 89,
+        "sla_delta_pts": 26,
+        "repair_kpi_met_pct": 84,
+        "repair_kpi_delta_pts": 10,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 77,
+        "response_sla_delta_pts": 3,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 384,
+        "avg_response_delta_minutes": -105,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 76
+            },
+            {
+                "category": "software",
+                "count": 64
+            },
+            {
+                "category": "network",
+                "count": 64
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 41
+            }
+        ]
+    },
+    "software_only.days=all": {
+        "range_days": 510,
+        "created": 417,
+        "created_delta_count": null,
+        "resolved": 210,
+        "resolved_delta_count": null,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 56,
+                "closed": 25
+            },
+            {
+                "opened": 60,
+                "closed": 30
+            },
+            {
+                "opened": 67,
+                "closed": 28
+            },
+            {
+                "opened": 57,
+                "closed": 34
+            },
+            {
+                "opened": 60,
+                "closed": 24
+            },
+            {
+                "opened": 117,
+                "closed": 69
+            }
+        ],
+        "period_sla": {
+            "from": "2025-05-03",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 47,
+            "measured": 49,
+            "rate": 95.9,
+            "delta_pts": null,
+            "request_rate": 100,
+            "manual_rate": 95.2
+        },
+        "sla_met_pct": 78,
+        "sla_delta_pts": null,
+        "repair_kpi_met_pct": 81,
+        "repair_kpi_delta_pts": null,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 76,
+        "response_sla_delta_pts": null,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 427,
+        "avg_response_delta_minutes": null,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 129
+            },
+            {
+                "category": "software",
+                "count": 100
+            },
+            {
+                "category": "network",
+                "count": 114
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 74
+            }
+        ]
+    },
+    "software_only.days=45": {
+        "range_days": 30,
+        "created": 70,
+        "created_delta_count": 39,
+        "resolved": 42,
+        "resolved_delta_count": 21,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 7,
+                "closed": 5
+            },
+            {
+                "opened": 5,
+                "closed": 4
+            },
+            {
+                "opened": 5,
+                "closed": 3
+            },
+            {
+                "opened": 10,
+                "closed": 9
+            },
+            {
+                "opened": 17,
+                "closed": 7
+            },
+            {
+                "opened": 26,
+                "closed": 14
+            }
+        ],
+        "period_sla": {
+            "from": "2026-08-26",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 19,
+            "measured": 20,
+            "rate": 95,
+            "delta_pts": -5,
+            "request_rate": 100,
+            "manual_rate": 94.7
+        },
+        "sla_met_pct": 95,
+        "sla_delta_pts": 7,
+        "repair_kpi_met_pct": 95,
+        "repair_kpi_delta_pts": 15,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 76,
+        "response_sla_delta_pts": -3,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 228,
+        "avg_response_delta_minutes": 3,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 24
+            },
+            {
+                "category": "software",
+                "count": 21
+            },
+            {
+                "category": "network",
+                "count": 17
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 8
+            }
+        ]
+    },
+    "software_only.from=2026-08-01&to=2026-09-20": {
+        "range_days": 51,
+        "created": 70,
+        "created_delta_count": 22,
+        "resolved": 44,
+        "resolved_delta_count": 15,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 6,
+                "closed": 7
+            },
+            {
+                "opened": 4,
+                "closed": 2
+            },
+            {
+                "opened": 12,
+                "closed": 7
+            },
+            {
+                "opened": 7,
+                "closed": 3
+            },
+            {
+                "opened": 15,
+                "closed": 12
+            },
+            {
+                "opened": 26,
+                "closed": 13
+            }
+        ],
+        "period_sla": {
+            "from": "2026-08-01",
+            "to": "2026-09-20",
+            "goal": 90,
+            "met": 13,
+            "measured": 14,
+            "rate": 92.9,
+            "delta_pts": -7.1,
+            "request_rate": null,
+            "manual_rate": 92.9
+        },
+        "sla_met_pct": 94,
+        "sla_delta_pts": 7,
+        "repair_kpi_met_pct": 86,
+        "repair_kpi_delta_pts": -14,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 75,
+        "response_sla_delta_pts": -5,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 290,
+        "avg_response_delta_minutes": -36,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 23
+            },
+            {
+                "category": "software",
+                "count": 21
+            },
+            {
+                "category": "network",
+                "count": 18
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 8
+            }
+        ]
+    },
+    "software_only.from=2026-09-25&to=2026-09-25": {
+        "range_days": 1,
+        "created": 14,
+        "created_delta_count": 8,
+        "resolved": 13,
+        "resolved_delta_count": 13,
+        "backlog": 186,
+        "backlog_open": 58,
+        "backlog_in_progress": 128,
+        "over_sla_now": 110,
+        "over_sla_oldest_days": 504,
+        "flow": [
+            {
+                "opened": 1,
+                "closed": 0
+            },
+            {
+                "opened": 1,
+                "closed": 0
+            },
+            {
+                "opened": 12,
+                "closed": 12
+            },
+            {
+                "opened": 0,
+                "closed": 1
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            },
+            {
+                "opened": 0,
+                "closed": 0
+            }
+        ],
+        "period_sla": {
+            "from": "2026-09-25",
+            "to": "2026-09-25",
+            "goal": 90,
+            "met": 6,
+            "measured": 6,
+            "rate": 100,
+            "delta_pts": null,
+            "request_rate": null,
+            "manual_rate": 100
+        },
+        "sla_met_pct": 100,
+        "sla_delta_pts": null,
+        "repair_kpi_met_pct": 100,
+        "repair_kpi_delta_pts": null,
+        "repair_backlog": 105,
+        "has_repair_rules": true,
+        "response_sla_met_pct": 100,
+        "response_sla_delta_pts": 100,
+        "response_target_minutes": 120,
+        "avg_response_minutes": 59,
+        "avg_response_delta_minutes": -108,
+        "by_category": [
+            {
+                "category": "hardware",
+                "count": 7
+            },
+            {
+                "category": "software",
+                "count": 6
+            },
+            {
+                "category": "network",
+                "count": 0
+            },
+            {
+                "category": "cctv",
+                "count": 0
+            },
+            {
+                "category": "telephone",
+                "count": 0
+            },
+            {
+                "category": "other",
+                "count": 1
+            }
+        ]
+    }
+}
