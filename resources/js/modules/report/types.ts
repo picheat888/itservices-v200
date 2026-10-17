@@ -187,6 +187,7 @@ export interface TicketReportRow {
     /** tickets.source — 'manual' | 'auto_request' */
     source: string | null;
     assignee_name: string | null;
+    assignee_name_th?: string | null;
     created_at: string | null;
     resolved_at: string | null;
     resolve_hours: number | null;
@@ -1277,8 +1278,6 @@ export type DataIssueKey = 'mgr_left' | 'no_mgr' | 'no_email' | 'no_dept' | 'no_
 
 /** What the "สรุปเรื่องค้างของพนักงาน" page draws. */
 export interface EmployeeOpenItemsBreakdown {
-    /** Every group, in card order. */
-    groups: OpenItemsGroup[];
     people_total: number;
     asset: {
         people: number;

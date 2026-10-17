@@ -162,7 +162,7 @@ class EmployeeOpenItemsReportTest extends TestCase
         $reader = $this->userWith($this->reportRights('employees'));
 
         $breakdown = $this->actingAs($reader)->getJson('/api/reports/employees/open-items/breakdown')->assertOk();
-        $this->assertContains('acct', $breakdown->json('data.groups'));
+        $this->assertNotNull($breakdown->json('data.acct'));
         $this->assertSame(['left' => 1, 'must_change' => 1, 'expired' => 0], $breakdown->json('data.acct.by_kind'));
         $this->assertSame(2, $breakdown->json('data.acct.accounts'));
 
@@ -271,7 +271,7 @@ class EmployeeOpenItemsReportTest extends TestCase
 
         $data = $this->breakdown();
 
-        $this->assertSame(['asset', 'access', 'acct', 'data'], $data['groups']);
+        $this->assertSame(['people_total', 'asset', 'access', 'acct', 'data'], array_keys($data));
         $this->assertSame(0, $data['asset']['people']);
         $this->assertNull($data['asset']['oldest_days']);
         $this->assertNull($data['access']['oldest_days']);
