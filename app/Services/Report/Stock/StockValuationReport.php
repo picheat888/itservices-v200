@@ -73,9 +73,13 @@ class StockValuationReport extends TabularReport
 
     public function columns(): array
     {
+        // Unit moves next to the quantity
+        $item = $this->itemColumns(fn (StockItem $i) => $i);
+
         return [
-            ...$this->itemColumns(fn (StockItem $i) => $i),
+            ...array_values(array_filter($item, fn (ReportColumn $c) => $c->key !== 'unit')),
             ReportColumn::number('qty_on_hand', 'คงเหลือ', fn (StockItem $i) => $this->qtyAt($i)),
+            ...array_values(array_filter($item, fn (ReportColumn $c) => $c->key === 'unit')),
             ReportColumn::money('avg_cost', 'ต้นทุนเฉลี่ย', fn (StockItem $i) => round($this->valueAt($i) / $this->qtyAt($i), 2)),
             ReportColumn::money('stock_value', 'มูลค่าคงคลัง', fn (StockItem $i) => $this->valueAt($i)),
             ReportColumn::date('last_move', 'เคลื่อนไหวล่าสุด', fn (StockItem $i) => $this->lastMoveAt($i)),
