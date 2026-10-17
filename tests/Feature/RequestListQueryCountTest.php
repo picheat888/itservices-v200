@@ -36,7 +36,7 @@ class RequestListQueryCountTest extends TestCase
         parent::setUp();
         $this->seed(EmployeePositionSeeder::class);
 
-        $this->qc = Department::create(['code' => 'DEP-QC', 'tag' => 'QC', 'name' => 'Quality Control']);
+        $this->qc = Department::create(['code' => 'DEP-QC', 'tag' => 'QC', 'name' => 'Quality Control', 'name_th' => 'ควบคุมคุณภาพ']);
         $this->viewerEmployee = Employee::create([
             'first_name' => 'Viewer', 'department_id' => $this->qc->id, 'position_id' => $this->positionId('Manager'),
         ]);
@@ -261,7 +261,8 @@ class RequestListQueryCountTest extends TestCase
     public function test_list_row_names_the_requester_position_and_who_it_waits_on(): void
     {
         $requester = Employee::create([
-            'first_name' => 'Asker', 'department_id' => $this->qc->id, 'position_id' => $this->positionId('Supervisor'),
+            'first_name' => 'Asker', 'first_name_th' => 'ผู้ขอ', 'last_name_th' => 'ทดสอบ',
+            'department_id' => $this->qc->id, 'position_id' => $this->positionId('Supervisor'),
         ]);
         $request = ServiceRequest::create([
             'type' => 'cctv', 'employee_id' => $requester->id, 'requester_name' => $requester->name,
@@ -269,6 +270,7 @@ class RequestListQueryCountTest extends TestCase
             'last_activity_at' => now(),
         ]);
         $boss = $this->person('Boss');
+        $boss->update(['first_name_th' => 'หัวหน้า']);
         $this->row($request, 1, [
             'actor_type' => 'chain', 'label' => 'Direct manager', 'approver_employee_id' => $boss->id,
             'approver_name' => $boss->name, 'status' => ApprovalStatus::Current->value,
@@ -279,5 +281,8 @@ class RequestListQueryCountTest extends TestCase
         $this->assertSame('Supervisor', $row['requester']['position']);
         $this->assertSame($boss->name, $row['progress']['current_approver']);
         $this->assertSame('Direct manager', $row['progress']['current_label']);
+        $this->assertSame('ผู้ขอ ทดสอบ', $row['requester']['name_th']);
+        $this->assertSame('ควบคุมคุณภาพ', $row['requester']['department_th']);
+        $this->assertSame('หัวหน้า', $row['progress']['current_approver_th']);
     }
 }

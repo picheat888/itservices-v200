@@ -67,6 +67,9 @@ class ServiceRequestResource extends JsonResource
                 'user_id' => $this->user_id,
                 'name' => $this->requester_name,
                 'department' => $this->department_name,
+                // Live Thai twins for the list; the stored name stays the fallback
+                'name_th' => $this->whenLoaded('employee', fn () => $this->employee?->name_th),
+                'department_th' => $this->whenLoaded('employee', fn () => $this->employee?->department?->name_th),
                 'code' => $this->whenLoaded('employee', fn () => $this->employee?->code),
                 'position' => $this->whenLoaded('employee', fn () => $this->employee?->position?->title),
                 'photo_url' => $this->whenLoaded('employee', fn () => $this->employee?->photo_url),
@@ -99,6 +102,7 @@ class ServiceRequestResource extends JsonResource
                 'done' => $doneApprovals->count(),
                 'current_label' => $current?->label,
                 'current_approver' => $current?->approver_name,
+                'current_approver_th' => $current !== null && $current->relationLoaded('approver') ? $current->approver?->name_th : null,
             ],
             'can_approve' => $canApprove,
             'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending

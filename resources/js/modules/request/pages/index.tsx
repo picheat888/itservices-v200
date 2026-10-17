@@ -13,6 +13,7 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { localPair } from '@/shared/lib/local-name';
 import {
     isOnBehalfRequest,
     onboardingRowClass,
@@ -243,7 +244,7 @@ export default function RequestsPage() {
             width: '190px',
             render: (r) => (
                 <div className="min-w-0">
-                    <TruncText text={r.requester.name} className="text-sm font-medium" />
+                    <TruncText text={localPair(r.requester.name, r.requester.name_th, lang)} className="text-sm font-medium" />
                     <TruncText text={r.requester.position} className="text-muted-foreground text-xs" />
                     {/* A new hire has no login of their own */}
                     {isOnBehalfRequest(r) && (
@@ -258,7 +259,7 @@ export default function RequestsPage() {
             key: 'department',
             header: t('req_department'),
             width: '190px',
-            render: (r) => <TruncText text={r.requester.department} className="text-sm" />,
+            render: (r) => <TruncText text={localPair(r.requester.department, r.requester.department_th, lang)} className="text-sm" />,
         },
         {
             key: 'submitted',
@@ -281,7 +282,10 @@ export default function RequestsPage() {
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
                     <div className="min-w-0">
-                        <TruncText text={r.progress.current_approver ?? r.progress.current_label} className="text-sm" />
+                        <TruncText
+                            text={localPair(r.progress.current_approver, r.progress.current_approver_th, lang) ?? r.progress.current_label}
+                            className="text-sm"
+                        />
                         {r.progress.current_approver && <TruncText text={r.progress.current_label} className="text-muted-foreground text-xs" />}
                     </div>
                 ) : (

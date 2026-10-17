@@ -38,7 +38,7 @@ class RequestController extends Controller
      * @var list<string>
      */
     // ticket.assignee: the trail says who is working the case, not just that one exists.
-    private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position', 'attachments'];
+    private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position', 'employee.department', 'attachments'];
 
     public function __construct(private readonly RequestService $service, private readonly RequestPeriodStats $periodStats) {}
 
@@ -86,7 +86,7 @@ class RequestController extends Controller
         // approver.user comes along because each row reports whether its approver still
         // lacks a login — without it that is one extra query per approval row. Same for
         // ticket.assignee: every row with a case serializes who holds it.
-        $query = $visible(ServiceRequest::with([...self::approvalsWithParent(), 'approvals.approver.user', 'ticket.assignee', 'employee.position']));
+        $query = $visible(ServiceRequest::with([...self::approvalsWithParent(), 'approvals.approver.user', 'ticket.assignee', 'employee.position', 'employee.department']));
         // Two orders, because the two readers want different things. The list wants what is
         // actionable first; the dashboard's activity feed wants what moved last — and under
         // the actionable order a request approved five minutes ago sat below one that has
