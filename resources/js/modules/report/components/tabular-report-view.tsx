@@ -17,6 +17,7 @@ import { useHiddenColumns } from '../hooks/use-hidden-columns';
 import { useReportDialog } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows, useTabularSummary } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
+import { withoutFilters } from '../lib/filter-scope';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { ColumnPicker } from './column-picker';
@@ -101,11 +102,10 @@ function TabularReportRows({
             { replace: true },
         );
     // Filters that only shape the cards above stay out of the rows request, so switching one does not refetch the list.
-    const cardOnly = extras.cardOnlyFilters ?? [];
-    const rowFilters = cardOnly.length > 0 ? Object.fromEntries(Object.entries(filters).filter(([name]) => !cardOnly.includes(name))) : filters;
+    const rowFilters = withoutFilters(filters, extras.cardOnlyFilters ?? []);
     const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, rowFilters, page, perPage, true);
     // The tiles and charts come once per filter set; a page turn fetches only the rows.
-    const headline = useTabularSummary(reportKey, rowFilters, !extras.hideSummary || hasCharts);
+    const headline = useTabularSummary(reportKey, withoutFilters(rowFilters, extras.rowsOnlyFilters ?? []), !extras.hideSummary || hasCharts);
     const canOpen = useCanOpen();
     const rowsTitle = t((typeof extras.rowsTitle === 'function' ? extras.rowsTitle(filters) : extras.rowsTitle) ?? 'rep_rows_generic');
     const rowsHead = extras.rowsHead?.({ filters, patch: onPatch }) ?? null;
@@ -333,6 +333,8 @@ export interface TabularReportExtras {
     /** View filters that only shape the cards above the list (a card's "แยกตาม"): left out of the rows
      *  request and its cache key, and changing one keeps the list's page. */
     cardOnlyFilters?: string[];
+    /** Filters that narrow only the list (a search the tiles and charts ignore): left out of the summary request and its cache key. */
+    rowsOnlyFilters?: string[];
     /** A control beside the rows card's heading, for a filter that narrows only the list. */
     rowsLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     /** A band at the top of the rows card, above its heading (what the list is narrowed to); null draws nothing. */
