@@ -43,6 +43,7 @@ import {
     Check,
     ChevronUp,
     CornerDownLeft,
+    Eye,
     History,
     Italic,
     Link2,
@@ -191,6 +192,15 @@ function templateAudience(t: (key: string) => string, key: string): { when: stri
 }
 
 /** The editor header's "When: …   To: …" line; the technical key for a template it can't describe. */
+/** The email rights the server checks per change (EmailTemplateController): toggle, edit wording, test; Reset needs edit and toggle. */
+function useEmailRights() {
+    const { can } = useAuth();
+    const edit = can('notifications.email_edit');
+    const toggle = can('notifications.email_toggle');
+
+    return { edit, toggle, test: can('notifications.email_test'), reset: edit && toggle, any: edit || toggle };
+}
+
 function TemplateAudienceLine({ templateKey }: { templateKey: string }) {
     const t = useT();
     const audience = templateAudience(t, templateKey);
@@ -528,6 +538,7 @@ export default function EmailTemplatesPage() {
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useEmailTemplates();
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
+    const rights = useEmailRights();
     // Active tab in ?tab=; each tab's search, filter chip, page and rows-per-page in the URL.
     const [tab, changeTab] = useTabParam(isEmailTab, 'email');
     const list = useListParams();
@@ -642,14 +653,16 @@ export default function EmailTemplatesPage() {
             className: 'w-[7%]',
             // The switch sits in a clickable row, so it keeps its own click.
             render: (tp) => (
-                <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
-                    <Switch
-                        checked={tp.enabled}
-                        onChange={() => toggle(tp)}
-                        disabled={togglingId === tp.id}
-                        aria-label={t('email_toggle_named').replace('{name}', tp.name)}
-                    />
-                </span>
+                <DisabledReason reason={rights.toggle ? null : t('email_no_toggle_right')} label={t('email_enabled')}>
+                    <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                            checked={tp.enabled}
+                            onChange={() => toggle(tp)}
+                            disabled={togglingId === tp.id || !rights.toggle}
+                            aria-label={t('email_toggle_named').replace('{name}', tp.name)}
+                        />
+                    </span>
+                </DisabledReason>
             ),
         },
         {
@@ -664,11 +677,11 @@ export default function EmailTemplatesPage() {
                         e.stopPropagation();
                         setEditing(tp);
                     }}
-                    aria-label={`${t('email_edit_preview')} ${tp.name}`}
-                    title={t('email_edit_preview')}
+                    aria-label={`${t(rights.any ? 'email_edit_preview' : 'email_view')} ${tp.name}`}
+                    title={t(rights.any ? 'email_edit_preview' : 'email_view')}
                     className="hover:bg-accent text-muted-foreground hover:text-foreground focus-visible:ring-brand/40 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
                 >
-                    <PenLine className="h-4 w-4" aria-hidden />
+                    {rights.any ? <PenLine className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                 </button>
             ),
         },
@@ -695,14 +708,16 @@ export default function EmailTemplatesPage() {
                     <p className="text-muted-foreground text-sm">{t('email_sub')}</p>
                 </div>
                 {tab === 'email' && anyModified && (
-                    <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending}>
-                        {resetAll.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
-                        ) : (
-                            <RotateCcw className="h-4 w-4" aria-hidden />
-                        )}
-                        {t('email_reset_all')}
-                    </Button>
+                    <DisabledReason reason={rights.reset ? null : t('email_no_reset_right')} label={t('email_reset_all')}>
+                        <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending || !rights.reset}>
+                            {resetAll.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
+                            ) : (
+                                <RotateCcw className="h-4 w-4" aria-hidden />
+                            )}
+                            {t('email_reset_all')}
+                        </Button>
+                    </DisabledReason>
                 )}
             </div>
 
@@ -845,7 +860,12 @@ function useLivePreview(enabled: boolean, templateKey: string | undefined, name:
 }
 
 // Single-line subject input over a colour layer that highlights {{variables}} and tags.
-function SubjectField({ value, onChange, ...control }: { value: string; onChange: (v: string) => void } & Partial<FieldControlProps>) {
+function SubjectField({
+    value,
+    onChange,
+    readOnly = false,
+    ...control
+}: { value: string; onChange: (v: string) => void; readOnly?: boolean } & Partial<FieldControlProps>) {
     const hlRef = useRef<HTMLDivElement>(null);
     return (
         <div className="border-input bg-background hover:border-brand/50 focus-within:border-brand focus-within:ring-brand/15 relative h-10 rounded-md border transition-colors focus-within:ring-[3px]">
@@ -859,6 +879,7 @@ function SubjectField({ value, onChange, ...control }: { value: string; onChange
                 {...control}
                 name="subject"
                 autoComplete="off"
+                readOnly={readOnly}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 onScroll={(e) => {
@@ -878,11 +899,13 @@ function BodyEditor({
     onChange,
     extraText = '',
     variables,
+    readOnly = false,
     ...control
 }: {
     value: string;
     onChange: (v: string) => void;
     extraText?: string;
+    readOnly?: boolean;
     /** What this template's mail is given; null offers every known variable and flags none. */
     variables: string[] | null;
 } & Partial<FieldControlProps>) {
@@ -934,7 +957,13 @@ function BodyEditor({
         <div className="flex h-full min-h-[24rem] flex-col lg:min-h-0">
             <div className="border-input bg-background focus-within:border-brand flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
                 {/* Quick tools */}
-                <div className={cn(CARD_HEADING, 'border-border flex shrink-0 flex-wrap items-center gap-0.5 border-b px-1.5 py-1')}>
+                <div
+                    className={cn(
+                        CARD_HEADING,
+                        'border-border flex shrink-0 flex-wrap items-center gap-0.5 border-b px-1.5 py-1',
+                        readOnly && 'hidden',
+                    )}
+                >
                     <ToolBtn title={t('email_tool_bold')} onClick={() => wrap('<strong>', '</strong>')}>
                         <Bold className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
@@ -979,6 +1008,7 @@ function BodyEditor({
                         {...control}
                         ref={ref}
                         name="body_html"
+                        readOnly={readOnly}
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         onScroll={(e) => {
@@ -1007,6 +1037,7 @@ function BodyEditor({
                                     key={tk}
                                     type="button"
                                     onClick={() => insertVar(tk)}
+                                    disabled={readOnly}
                                     title={unknown ? t('email_var_unknown') : t('email_insert_var')}
                                     className={cn(
                                         'focus-visible:ring-brand/40 inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-hidden',
@@ -1435,6 +1466,7 @@ function EditorDialog({
     const brand = settings?.brand_name || SAMPLE_VARS['app.name'];
     // Kept through the close animation so the content doesn't blank.
     const confirmEdit = useConfirmEdit();
+    const rights = useEmailRights();
     const { record: shown } = useRecordView(template?.id ?? null, template);
 
     const [name, setName] = useState('');
@@ -1497,7 +1529,7 @@ function EditorDialog({
     };
 
     const handleSave = async () => {
-        if (!template || !dirty || saving || savingRef.current || asking.current) return;
+        if (!template || !rights.edit || !dirty || saving || savingRef.current || asking.current) return;
         const values: Record<WordingField, string> = { name, subject, body_html: body };
         const missing: WordingErrors = {};
         for (const field of WORDING_FIELDS) {
@@ -1568,7 +1600,7 @@ function EditorDialog({
 
     // Flip the switch and save it at once; put it back if the save fails.
     const handleToggle = async () => {
-        if (!template || toggling) return;
+        if (!template || !rights.toggle || toggling) return;
         const next = !enabled;
         setEnabled(next);
         setToggling(true);
@@ -1696,7 +1728,14 @@ function EditorDialog({
                                         <span className="text-muted-foreground" aria-hidden>
                                             {t('email_enabled')}
                                         </span>
-                                        <Switch checked={enabled} onChange={handleToggle} disabled={toggling} aria-label={t('email_enabled')} />
+                                        <DisabledReason reason={rights.toggle ? null : t('email_no_toggle_right')} label={t('email_enabled')}>
+                                            <Switch
+                                                checked={enabled}
+                                                onChange={handleToggle}
+                                                disabled={toggling || !rights.toggle}
+                                                aria-label={t('email_enabled')}
+                                            />
+                                        </DisabledReason>
                                     </div>
                                     {/* Only once a person has reworded it */}
                                     {shown.updated_by_name && (
@@ -1710,14 +1749,27 @@ function EditorDialog({
                         <div className="border-border flex min-h-0 flex-1 flex-col overflow-y-auto border-t lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:overflow-hidden">
                             <div ref={formRef} className="flex shrink-0 flex-col gap-4 p-5 lg:min-h-0 lg:overflow-y-auto">
                                 {hasErrors && <FormErrorBanner message={t('email_err_fix')} shakeKey={attempt} />}
+                                {!rights.edit && <p className="text-muted-foreground text-xs">{t('email_no_edit_right')}</p>}
                                 <Field label={t('email_template')} error={errors.name} required>
-                                    <Input name="name" autoComplete="off" value={name} onChange={(e) => edit('name', setName)(e.target.value)} />
+                                    <Input
+                                        name="name"
+                                        autoComplete="off"
+                                        readOnly={!rights.edit}
+                                        value={name}
+                                        onChange={(e) => edit('name', setName)(e.target.value)}
+                                    />
                                 </Field>
                                 <Field label={t('email_subject')} error={errors.subject} required>
-                                    <SubjectField value={subject} onChange={edit('subject', setSubject)} />
+                                    <SubjectField value={subject} onChange={edit('subject', setSubject)} readOnly={!rights.edit} />
                                 </Field>
                                 <Field label={t('email_body')} error={errors.body_html} required grow>
-                                    <BodyEditor value={body} onChange={edit('body_html', setBody)} extraText={subject} variables={shown.variables} />
+                                    <BodyEditor
+                                        value={body}
+                                        onChange={edit('body_html', setBody)}
+                                        extraText={subject}
+                                        variables={shown.variables}
+                                        readOnly={!rights.edit}
+                                    />
                                 </Field>
                             </div>
 
@@ -1738,24 +1790,34 @@ function EditorDialog({
                                 {announcement}
                             </span>
                             <div className="flex flex-wrap gap-2">
-                                <Button variant="outline" onClick={handleTest} disabled={testing} title={t('email_test_hint')}>
-                                    {testing ? (
-                                        <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
-                                    ) : sentOk ? (
-                                        <Check className="animate-in zoom-in-50 fade-in duration-300" aria-hidden />
-                                    ) : (
-                                        <Send aria-hidden />
-                                    )}
-                                    {sentOk ? t('email_sent') : t('email_test')}
-                                </Button>
+                                <DisabledReason reason={rights.test ? null : t('email_no_test_right')} label={t('email_test')}>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleTest}
+                                        disabled={testing || !rights.test}
+                                        title={rights.test ? t('email_test_hint') : undefined}
+                                    >
+                                        {testing ? (
+                                            <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
+                                        ) : sentOk ? (
+                                            <Check className="animate-in zoom-in-50 fade-in duration-300" aria-hidden />
+                                        ) : (
+                                            <Send aria-hidden />
+                                        )}
+                                        {sentOk ? t('email_sent') : t('email_test')}
+                                    </Button>
+                                </DisabledReason>
                                 {/* Off until the template differs from its standard; the note says why */}
                                 {shown.is_standard && (
-                                    <DisabledReason reason={shown.is_modified ? null : t('email_reset_unchanged')} label={t('email_reset')}>
+                                    <DisabledReason
+                                        reason={!rights.reset ? t('email_no_reset_right') : shown.is_modified ? null : t('email_reset_unchanged')}
+                                        label={t('email_reset')}
+                                    >
                                         <Button
                                             variant="ghost"
                                             onClick={handleReset}
-                                            disabled={resetting || !shown.is_modified}
-                                            title={shown.is_modified ? t('email_reset_hint') : undefined}
+                                            disabled={resetting || !shown.is_modified || !rights.reset}
+                                            title={shown.is_modified && rights.reset ? t('email_reset_hint') : undefined}
                                         >
                                             {resetting ? (
                                                 <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
@@ -1773,9 +1835,17 @@ function EditorDialog({
                                 <Button variant="outline" onClick={requestClose}>
                                     {t('cancel')}
                                 </Button>
-                                <SaveButton onClick={handleSave} loading={saving} success={savedOk} disabled={!dirty} title={t('email_save_hint')}>
-                                    {t('email_save')}
-                                </SaveButton>
+                                {rights.edit && (
+                                    <SaveButton
+                                        onClick={handleSave}
+                                        loading={saving}
+                                        success={savedOk}
+                                        disabled={!dirty}
+                                        title={t('email_save_hint')}
+                                    >
+                                        {t('email_save')}
+                                    </SaveButton>
+                                )}
                             </div>
                         </div>
                     </>
