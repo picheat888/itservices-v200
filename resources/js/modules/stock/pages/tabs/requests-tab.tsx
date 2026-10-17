@@ -126,6 +126,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const columns: Column<(typeof requests)[number]>[] = [
         {
             key: 'id',
+            sticky: 'left',
             header: t('stock_request_no'),
             width: '110px',
             className: 'whitespace-nowrap',
@@ -136,7 +137,6 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             header: t('stock_requested_at'),
             width: '130px',
             className: 'whitespace-nowrap',
-            hideBelow: 'lg',
             render: (r) => <span className="text-xs">{fmt.dateTime(r.created_at)}</span>,
         },
         {
@@ -148,7 +148,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         {
             key: 'item',
             header: t('stock_item'),
-            minWidth: '7rem',
+            minWidth: '12rem',
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={r.sku} className="text-xs" />
@@ -161,10 +161,9 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'unit',
             header: t('stock_unit'),
             width: '80px',
-            hideBelow: 'lg',
             render: (r) => <TruncText text={r.unit} className="text-muted-foreground text-xs lowercase" />,
         },
-        { key: 'reason', header: t('stock_reason'), minWidth: '12rem', hideBelow: '2xl', render: (r) => <TruncText text={r.reason} className="text-sm" /> },
+        { key: 'reason', header: t('stock_reason'), minWidth: '14rem', render: (r) => <TruncText text={r.reason} className="text-sm" /> },
         {
             key: 'status',
             header: t('status'),
@@ -176,7 +175,6 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'decided',
             header: t('stock_approver'),
             width: '170px',
-            hideBelow: 'xl',
             render: (r) => {
                 const decidedAt = r.approved_at ?? r.rejected_at;
                 return (
@@ -191,7 +189,6 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'fulfilled',
             header: t('stock_fulfilled_by'),
             width: '170px',
-            hideBelow: '2xl',
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={r.fulfilled_by} className="text-sm" />
@@ -201,10 +198,10 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         },
         {
             key: 'actions',
+
             header: t('actions'),
             align: 'right',
-            // Icon buttons on a tablet, labelled buttons from lg up
-            width: 'clamp(80px, calc(80px + (100vw - 1024px) * 0.5), 170px)',
+            width: '190px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">
                     {r.can_decide && (
@@ -217,7 +214,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                 className="bg-emerald-700 text-white hover:bg-emerald-800"
                             >
                                 <Check className="h-3.5 w-3.5" aria-hidden />
-                                <span className="hidden xl:inline">{t('stock_approve')}</span>
+                                <span>{t('stock_approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
@@ -241,7 +238,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             }}
                         >
                             <ArrowUpFromLine className="h-3.5 w-3.5" aria-hidden />
-                            <span className="hidden xl:inline">{t('stock_fulfill')}</span>
+                            <span>{t('stock_fulfill')}</span>
                         </Button>
                     )}
                     {(r.status === 'fulfilled' || r.status === 'rejected') && <span className="text-muted-foreground text-xs">—</span>}

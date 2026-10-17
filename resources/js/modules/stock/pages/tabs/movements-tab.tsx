@@ -48,6 +48,7 @@ export function MovementsTab() {
     const columns: Column<(typeof movements)[number]>[] = [
         {
             key: 'doc_no',
+            sticky: 'left',
             header: t('stock_doc_no'),
             width: '110px',
             className: 'whitespace-nowrap',
@@ -79,7 +80,7 @@ export function MovementsTab() {
         {
             key: 'item',
             header: t('stock_item'),
-            minWidth: '9rem',
+            minWidth: '12rem',
             render: (m) => (
                 <div className="min-w-0">
                     <TruncText text={m.sku} className="text-xs" />
@@ -93,7 +94,6 @@ export function MovementsTab() {
             header: t('stock_unit_cost_short'),
             align: 'right',
             width: '110px',
-            hideBelow: 'xl',
             className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost) : '—'}</span>,
         },
@@ -102,31 +102,27 @@ export function MovementsTab() {
             header: t('stock_value'),
             align: 'right',
             width: '120px',
-            hideBelow: 'xl',
             className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost * m.qty) : '—'}</span>,
         },
-        { key: 'from', header: t('stock_events_from'), width: '130px', hideBelow: 'lg', render: (m) => <TruncText text={m.from} className="text-sm" /> },
-        { key: 'to', header: t('stock_events_to'), width: '130px', hideBelow: 'lg', render: (m) => <TruncText text={m.to} className="text-sm" /> },
+        { key: 'from', header: t('stock_events_from'), width: '130px', render: (m) => <TruncText text={m.from} className="text-sm" /> },
+        { key: 'to', header: t('stock_events_to'), width: '130px', render: (m) => <TruncText text={m.to} className="text-sm" /> },
         {
             key: 'reference',
             header: t('stock_reference'),
             width: '140px',
-            hideBelow: '2xl',
             render: (m) => <TruncText text={m.reference} className="text-muted-foreground text-xs" />,
         },
         {
             key: 'recorded_by',
             header: t('stock_by'),
             width: '150px',
-            hideBelow: '2xl',
             render: (m) => <TruncText text={m.recorded_by} className="text-sm" />,
         },
         {
             key: 'notes',
             header: t('stock_notes'),
             minWidth: '12rem',
-            hideBelow: '2xl',
             render: (m) => <TruncText text={m.notes} className="text-muted-foreground text-xs" />,
         },
     ];

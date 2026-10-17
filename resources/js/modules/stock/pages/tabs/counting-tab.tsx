@@ -233,6 +233,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const sessionColumns: Column<(typeof sessions)[number]>[] = [
         {
             key: 'reference',
+            sticky: 'left',
             header: t('stock_doc_no'),
             width: '120px',
             className: 'whitespace-nowrap',
@@ -255,9 +256,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'category',
             header: t('stock_category'),
-            width: '140px',
+            width: '160px',
             className: 'whitespace-nowrap',
-            hideBelow: 'lg',
             render: (s) => <TruncText text={s.category} className="text-sm" />,
         },
         {
@@ -265,14 +265,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: t('stock_counted_by'),
             minWidth: '11rem',
             className: 'whitespace-nowrap',
-            hideBelow: 'xl',
             render: (s) => <TruncText text={s.counted_by} className="text-sm" />,
         },
         {
             key: 'note',
             header: t('stock_notes'),
             minWidth: '12rem',
-            hideBelow: '2xl',
             render: (s) => <TruncText text={s.note} className="text-muted-foreground text-xs" />,
         },
         {
@@ -299,7 +297,6 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: t('stock_count_adjust_by'),
             width: '120px',
             className: 'whitespace-nowrap',
-            hideBelow: 'lg',
             // Only committed counts carry a mode; drafts/canceled show nothing yet.
             render: (s) =>
                 s.status === 'committed' && s.adjust_mode ? (
@@ -313,6 +310,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         },
         {
             key: 'actions',
+
             header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
             width: '60px',
