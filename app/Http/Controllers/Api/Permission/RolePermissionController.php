@@ -91,6 +91,7 @@ class RolePermissionController extends Controller
         $granted = Permissions::normalizeWorkflows($granted);
         $granted = Permissions::normalizeRequests($granted);
         $granted = Permissions::normalizeNotifications($granted);
+        $granted = Permissions::normalizeReports($granted);
 
         // Snapshot current permissions before overwriting to compute the diff.
         $before = RolePermission::where('role_id', $roleId)->where('allowed', true)->pluck('permission')->all();
