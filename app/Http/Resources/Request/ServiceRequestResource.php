@@ -98,6 +98,7 @@ class ServiceRequestResource extends JsonResource
                 'total' => $approvalRows->count(),
                 'done' => $doneApprovals->count(),
                 'current_label' => $current?->label,
+                'current_approver' => $current?->approver_name,
             ],
             'can_approve' => $canApprove,
             'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending
