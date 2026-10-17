@@ -8,6 +8,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -235,7 +236,7 @@ export default function RequestsPage() {
             render: (r) => (
                 <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{r.requester.name}</div>
-                    <div className="text-muted-foreground truncate text-xs">{r.requester.department ?? '—'}</div>
+                    <div className="text-muted-foreground truncate text-xs">{r.requester.position ?? '—'}</div>
                     {/* A new hire has no login of their own */}
                     {isOnBehalfRequest(r) && (
                         <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="mt-1">
@@ -245,7 +246,34 @@ export default function RequestsPage() {
                 </div>
             ),
         },
+        {
+            key: 'department',
+            header: t('req_department'),
+            width: '200px',
+            render: (r) => <span className="text-sm">{r.requester.department ?? '—'}</span>,
+        },
+        {
+            key: 'submitted',
+            header: t('req_col_submitted'),
+            width: '140px',
+            className: 'whitespace-nowrap',
+            render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground" />,
+        },
         { key: 'workflow', header: t('req_col_workflow'), render: (r) => <WorkflowMini request={r} /> },
+        {
+            key: 'waiting',
+            header: t('req_col_waiting'),
+            minWidth: '11rem',
+            render: (r) =>
+                r.status === 'pending' && r.progress.current_label ? (
+                    <div className="min-w-0">
+                        <div className="truncate text-sm">{r.progress.current_approver ?? r.progress.current_label}</div>
+                        {r.progress.current_approver && <div className="text-muted-foreground truncate text-xs">{r.progress.current_label}</div>}
+                    </div>
+                ) : (
+                    <span className="text-muted-foreground">—</span>
+                ),
+        },
         {
             key: 'status',
             header: t('req_col_status'),

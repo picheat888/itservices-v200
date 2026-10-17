@@ -86,7 +86,7 @@ class RequestController extends Controller
         // approver.user comes along because each row reports whether its approver still
         // lacks a login — without it that is one extra query per approval row. Same for
         // ticket.assignee: every row with a case serializes who holds it.
-        $query = $visible(ServiceRequest::with([...self::approvalsWithParent(), 'approvals.approver.user', 'ticket.assignee']));
+        $query = $visible(ServiceRequest::with([...self::approvalsWithParent(), 'approvals.approver.user', 'ticket.assignee', 'employee.position']));
         // Two orders, because the two readers want different things. The list wants what is
         // actionable first; the dashboard's activity feed wants what moved last — and under
         // the actionable order a request approved five minutes ago sat below one that has

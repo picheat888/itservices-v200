@@ -257,4 +257,27 @@ class RequestListQueryCountTest extends TestCase
             $this->assertSame($expected, $actual, $permission);
         }
     }
+
+    public function test_list_row_names_the_requester_position_and_who_it_waits_on(): void
+    {
+        $requester = Employee::create([
+            'first_name' => 'Asker', 'department_id' => $this->qc->id, 'position_id' => $this->positionId('Supervisor'),
+        ]);
+        $request = ServiceRequest::create([
+            'type' => 'cctv', 'employee_id' => $requester->id, 'requester_name' => $requester->name,
+            'title' => 'Waiting fixture', 'reason' => 'List columns', 'status' => RequestStatus::Pending->value,
+            'last_activity_at' => now(),
+        ]);
+        $boss = $this->person('Boss');
+        $this->row($request, 1, [
+            'actor_type' => 'chain', 'label' => 'Direct manager', 'approver_employee_id' => $boss->id,
+            'approver_name' => $boss->name, 'status' => ApprovalStatus::Current->value,
+        ]);
+
+        $row = collect($this->actingAs($this->viewer)->getJson('/api/service-requests')->assertOk()->json('data'))->firstWhere('id', $request->id);
+
+        $this->assertSame('Supervisor', $row['requester']['position']);
+        $this->assertSame($boss->name, $row['progress']['current_approver']);
+        $this->assertSame('Direct manager', $row['progress']['current_label']);
+    }
 }
