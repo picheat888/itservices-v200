@@ -55,6 +55,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
                 columns={columns}
                 rows={assets}
                 rowKey={(a) => a.id}
+                searchPlaceholder={t('contract_assets_search')}
                 searchable={(a) => `${a.asset_code} ${a.name} ${a.serial ?? ''}`}
                 onRowClick={(a) => setAssetId(a.id)}
             />

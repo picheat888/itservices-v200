@@ -1,4 +1,5 @@
 // Search-as-you-type and by-id lookups behind every employee picker (no screen loads the whole directory).
+import { useT } from '@/lang';
 import { normalizeSearch, useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -40,9 +41,16 @@ export function useEmployeesByIds(ids: readonly (number | null | undefined)[]) {
 
 /** Wires a SearchableSelect: spread `pickerProps` on it and build its options from `employees`. */
 export function useEmployeePicker(filters: SearchFilters = {}) {
+    const t = useT();
     const [term, setTerm] = useState('');
     const [open, setOpen] = useState(false);
     const { data, pending } = useEmployeeSearch(term, { ...filters, enabled: open });
-    const pickerProps = useMemo(() => ({ onSearch: setTerm, onOpenChange: setOpen, loading: pending }), [pending]);
+    const searchPlaceholder = t(
+        filters.match === 'position' ? 'emp_search_by_position' : filters.match === 'none' ? 'emp_search_by_name' : 'emp_search_by_department',
+    );
+    const pickerProps = useMemo(
+        () => ({ onSearch: setTerm, onOpenChange: setOpen, loading: pending, searchPlaceholder }),
+        [pending, searchPlaceholder],
+    );
     return { employees: data ?? [], pickerProps };
 }

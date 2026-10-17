@@ -126,7 +126,9 @@ export const contract: Dict = {
 
     // contract-form-drawer.tsx — linked assets picker
     contract_link_assets_hardware_only: 'Only hardware contracts can link assets. Change the type in step 1 to turn this on.',
-    contract_link_assets_search_ph: 'Search asset code or name',
+    contract_link_assets_search_ph: 'Search asset code or name…',
+    contract_search: 'Search number, name or vendor…',
+    contract_assets_search: 'Search code, name or serial…',
     contract_link_assets_loading: 'Loading…',
     contract_link_assets_none: 'No assets available',
     contract_link_assets_selected: '{n} selected',

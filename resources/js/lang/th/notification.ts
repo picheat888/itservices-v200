@@ -72,7 +72,7 @@ export const notification: Dict = {
     notification_modified: 'แก้แล้ว',
     notification_never_sent: 'ยังไม่เคยส่ง',
     notification_sub: 'การแจ้งเตือนในระบบทั้งหมด',
-    notification_search: 'ค้นหาการแจ้งเตือน…',
+    notification_search: 'ค้นหาชื่อหรือข้อความแจ้งเตือน…',
     notification_edit: 'แก้ไขและดูตัวอย่าง',
     notification_test: 'ส่งให้ตัวเอง',
     notification_test_sent: 'ส่งแล้ว - ดูที่กระดิ่งมุมขวาบน',
@@ -115,7 +115,6 @@ export const notification: Dict = {
     notification_col_id: 'ID',
     notification_lang_en: 'EN',
     notification_lang_th: 'TH',
-    notification_search_label: 'ค้นหาการแจ้งเตือน',
     notification_empty_none: 'ยังไม่มีการแจ้งเตือน',
 
     // notification-settings-pane.tsx — name / trigger / audience per notification

@@ -8,7 +8,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { localPair } from '@/shared/lib/local-name';
-import { matchesAllWords } from '@/shared/lib/search-words';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
@@ -418,11 +418,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                         type="search"
                                         name="sku-search"
                                         autoComplete="off"
-                                        aria-label={t('stock_search')}
+                                        aria-label={searchLabel(t('stock_search'))}
                                         value={skuSearch}
                                         onChange={(e) => setSkuSearch(e.target.value)}
                                         placeholder={t('stock_search')}
-                                        className="h-8 pl-8 text-sm"
+                                        className="h-8 pl-8 text-sm text-ellipsis"
                                     />
                                 </div>
                             </div>

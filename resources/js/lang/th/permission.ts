@@ -7,6 +7,7 @@ export const permission: Dict = {
     perm_roles: 'Role Templates',
     perm_groups: 'Role Groups',
     perm_audit: 'บันทึกการตรวจสอบ',
+    perm_audit_search: 'ค้นหาการกระทำ, รายการ หรือผู้ทำ…',
     perm_no_tabs: 'คุณยังไม่มีสิทธิ์ใช้งานส่วนใดในหน้านี้ (Role Templates, Role Groups หรือบันทึกการตรวจสอบ)',
     perm_load_failed: 'โหลดข้อมูลสิทธิ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
     perm_members: 'สมาชิก',

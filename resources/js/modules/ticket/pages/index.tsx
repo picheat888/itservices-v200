@@ -16,6 +16,7 @@ import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
+import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
@@ -528,7 +529,8 @@ export default function TicketsPage() {
                                     value={search}
                                     onChange={(e) => list.setFilter('search', e.target.value)}
                                     placeholder={t('ticket_search')}
-                                    className="pl-9"
+                                    aria-label={searchLabel(t('ticket_search'))}
+                                    className="pl-9 text-ellipsis"
                                 />
                             </div>
                             <FilterPopover count={activeFilterCount} width={460} onClear={resetFilters} resultCount={meta?.total}>

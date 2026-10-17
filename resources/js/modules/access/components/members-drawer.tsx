@@ -442,6 +442,7 @@ export function MembersDrawer({
                                     columns={columns}
                                     rows={sortedMembers}
                                     rowKey={(m) => m.id}
+                                    searchPlaceholder={t('access_members_search')}
                                     searchable={memberSearch}
                                     pageSize={7}
                                     rowHeight={49}

@@ -106,6 +106,7 @@ export function LookupSection({ rows, loading, mutations, addLabel, editLabel, n
                 rowKey={(r) => r.id}
                 search={list.table.search}
                 paging={list.table.paging}
+                searchPlaceholder={t('set_search_name_desc')}
                 searchable={(r) => `${r.name} ${r.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>

@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
-import { matchesAllWords } from '@/shared/lib/search-words';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
@@ -49,6 +49,8 @@ interface DataTableProps<T> {
     columns: Column<T>[];
     rows: T[];
     searchable?: (row: T) => string;
+    /** What the search box looks in, e.g. "ค้นหาชื่อหรือรหัส…"; also its accessible name. */
+    searchPlaceholder?: string;
     rowKey: (row: T) => string | number;
     onRowClick?: (row: T) => void;
     /** Extra classes for a single row — for marking rows that need to stand out (e.g. a left accent). */
@@ -117,6 +119,7 @@ export function DataTable<T>({
     columns,
     rows,
     searchable,
+    searchPlaceholder,
     rowKey,
     onRowClick,
     rowClassName,
@@ -247,9 +250,9 @@ export function DataTable<T>({
                                         setQuery(e.target.value);
                                         setPage(1);
                                     }}
-                                    placeholder={t('search_placeholder')}
-                                    aria-label={t('search_placeholder')}
-                                    className="pl-9"
+                                    placeholder={searchPlaceholder ?? t('search_placeholder')}
+                                    aria-label={searchLabel(searchPlaceholder ?? t('search_placeholder'))}
+                                    className="pl-9 text-ellipsis"
                                 />
                             </div>
                         ) : (

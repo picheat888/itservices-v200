@@ -27,6 +27,7 @@ import {
     requestTitle,
 } from '@/shared/lib/request-meta';
 import { rowDelay } from '@/shared/lib/row-in';
+import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
@@ -619,9 +620,9 @@ export default function RequestsPage() {
                             <div className="relative w-full max-w-xs">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
-                                    className="pl-9"
+                                    className="pl-9 text-ellipsis"
                                     placeholder={t('req_search_ph')}
-                                    aria-label={t('req_search_ph')}
+                                    aria-label={searchLabel(t('req_search_ph'))}
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
                                 />

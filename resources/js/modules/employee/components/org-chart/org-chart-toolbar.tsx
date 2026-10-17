@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { localPair } from '@/shared/lib/local-name';
-import { matchesAllWords } from '@/shared/lib/search-words';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
@@ -106,8 +106,8 @@ export function OrgChartToolbar({
                                 }
                             }}
                             placeholder={t('org_search_placeholder')}
-                            aria-label={t('org_search_placeholder')}
-                            className="text-foreground placeholder:text-muted-foreground w-44 min-w-0 border-none bg-transparent text-[12.5px] outline-none"
+                            aria-label={searchLabel(t('org_search_placeholder'))}
+                            className="text-foreground placeholder:text-muted-foreground w-56 min-w-0 border-none bg-transparent text-[12.5px] text-ellipsis outline-none"
                         />
                         {query && (
                             <button

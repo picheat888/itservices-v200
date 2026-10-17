@@ -19,6 +19,7 @@ import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
+import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractSummary, ContractType } from '@/shared/types';
@@ -338,9 +339,9 @@ export default function ContractsPage() {
                                     type="search"
                                     value={searchText}
                                     onChange={(e) => setSearchText(e.target.value)}
-                                    placeholder={`${t('contract_vendor')} / ${t('contract_details')}`}
-                                    aria-label={`${t('contract_vendor')} / ${t('contract_details')}`}
-                                    className="pl-9"
+                                    placeholder={t('contract_search')}
+                                    aria-label={searchLabel(t('contract_search'))}
+                                    className="pl-9 text-ellipsis"
                                 />
                             </div>
                             <FilterPopover count={activeFilterCount} width={460} onClear={clearFilters} resultCount={totalRows}>

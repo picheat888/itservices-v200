@@ -15,6 +15,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { relativeTime } from '@/shared/lib/datetime';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -383,12 +384,7 @@ export function NotificationSettingsPane() {
 
     const rows = useMemo(() => {
         let list = module ? all.filter((n) => n.module === module) : all;
-        const q = search.trim().toLowerCase();
-        if (q) {
-            list = list.filter((n) =>
-                [t(`notification_name_${suffix(n.key)}`), n.key, n.message_en, n.message_th].join(' ').toLowerCase().includes(q),
-            );
-        }
+        list = list.filter((n) => matchesAllWords([t(`notification_name_${suffix(n.key)}`), n.key, n.message_en, n.message_th].join(' '), search));
 
         return list;
     }, [all, module, search, t]);
@@ -531,11 +527,11 @@ export function NotificationSettingsPane() {
                         type="search"
                         name="notification-search"
                         autoComplete="off"
-                        aria-label={t('notification_search_label')}
+                        aria-label={searchLabel(t('notification_search'))}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder={t('notification_search')}
-                        className="pl-9"
+                        className="pl-9 text-ellipsis"
                     />
                 </div>
             </div>

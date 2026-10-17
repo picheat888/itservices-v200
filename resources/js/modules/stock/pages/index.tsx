@@ -17,6 +17,7 @@ import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair, nameSearch } from '@/shared/lib/local-name';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -592,10 +593,10 @@ export default function StockPage() {
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         placeholder={t('stock_search')}
-                                        aria-label={t('stock_search')}
+                                        aria-label={searchLabel(t('stock_search'))}
                                         name="search"
                                         autoComplete="off"
-                                        className="pl-9"
+                                        className="pl-9 text-ellipsis"
                                     />
                                 </div>
                                 <FilterPopover count={activeItemFilterCount} width={460} onClear={resetItemFilters} resultCount={itemsTotal}>

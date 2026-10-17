@@ -27,7 +27,7 @@ export const workflow: Dict = {
     wf_kpi_auto_sub: 'เปิดเคสให้ IT อัตโนมัติเมื่ออนุมัติครบ',
 
     // pages/index.tsx — ช่องค้นหา + การ์ด Workflow
-    wf_search_ph: 'ค้นหา Workflow…',
+    wf_search_ph: 'ค้นหาชื่อ, ประเภทคำขอ หรือขั้นอนุมัติ…',
     wf_search_hint: 'ระบบหาผู้อนุมัติจากสายบังคับบัญชาจริงของผู้ขอ ตอนที่ยื่นคำขอ',
     wf_no_match: 'ไม่พบ Workflow ที่ค้นหา',
     wf_view: 'ดู',

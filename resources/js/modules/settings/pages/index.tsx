@@ -448,6 +448,7 @@ function BrandsList() {
                 rowKey={(b) => b.id}
                 search={list.table.search}
                 paging={list.table.paging}
+                searchPlaceholder={t('set_search_name_desc')}
                 searchable={(b) => `${b.name} ${b.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -530,6 +531,7 @@ function ModelsList() {
                 rowKey={(m) => m.id}
                 search={list.table.search}
                 paging={list.table.paging}
+                searchPlaceholder={t('set_search_models')}
                 searchable={(m) => `${m.name} ${m.brand?.name ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -613,6 +615,7 @@ function CategoriesList() {
                 rowKey={(c) => c.id}
                 search={list.table.search}
                 paging={list.table.paging}
+                searchPlaceholder={t('set_search_name_desc')}
                 searchable={(c) => `${c.name} ${c.name_th ?? ''} ${c.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -703,6 +706,7 @@ function VendorsList() {
                 rowKey={(v) => v.id}
                 search={list.table.search}
                 paging={list.table.paging}
+                searchPlaceholder={t('set_search_vendors')}
                 searchable={(v) => `${v.name} ${v.name_th ?? ''} ${v.contact ?? ''} ${v.email ?? ''} ${v.phone ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -774,6 +778,7 @@ function WarehousesList() {
                 rowKey={(w) => w.id}
                 search={list.table.search}
                 paging={list.table.paging}
+                searchPlaceholder={t('set_search_name_desc')}
                 searchable={(w) => `${w.name} ${w.description ?? ''}`}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
@@ -846,6 +851,7 @@ function LocationsList() {
                 rowKey={(loc) => loc.id}
                 search={list.table.search}
                 paging={list.table.paging}
+                searchPlaceholder={t('set_search_locations')}
                 searchable={(loc) => loc.name}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>

@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { matchesAllWords } from '@/shared/lib/search-words';
+import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
@@ -35,6 +35,7 @@ export function SearchableSelect({
     onChange,
     options,
     placeholder,
+    searchPlaceholder,
     clearable = false,
     active = false,
     preferDown = false,
@@ -52,6 +53,8 @@ export function SearchableSelect({
     onChange: (v: string) => void;
     options: SearchOption[];
     placeholder?: string;
+    /** What the search box in the menu looks in; also its accessible name. */
+    searchPlaceholder?: string;
     /** Show an inline clear (×) button when a value is selected. */
     clearable?: boolean;
     /** Brand-tinted trigger — marks a filter field whose value differs from its default. */
@@ -305,9 +308,9 @@ export function SearchableSelect({
                     aria-controls={listId}
                     aria-autocomplete="list"
                     aria-activedescendant={activeOption >= 0 ? optionId(activeOption) : undefined}
-                    aria-label={t('search_placeholder_short')}
-                    placeholder={t('search_placeholder_short')}
-                    className="w-full bg-transparent px-1 text-sm outline-none"
+                    aria-label={searchLabel(searchPlaceholder ?? t('search_placeholder_short'))}
+                    placeholder={searchPlaceholder ?? t('search_placeholder_short')}
+                    className="w-full bg-transparent px-1 text-sm text-ellipsis outline-none"
                 />
             </div>
             <div

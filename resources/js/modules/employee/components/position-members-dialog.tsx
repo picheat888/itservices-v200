@@ -85,6 +85,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
                     maxBodyHeight="52vh"
+                    searchPlaceholder={t('emp_search_by_department')}
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.section ?? ''}`}
                 />
             </DialogContent>
