@@ -210,7 +210,8 @@ class AccessOverviewReport extends TabularReport
                 'key' => $type, 'label_key' => AccessFacts::TYPE_KEYS[$type], 'short_key' => AccessFacts::TYPE_SHORT_KEYS[$type], 'tone' => AccessFacts::TYPE_TONES[$type], 'value' => (int) $byType->get($type, 0),
             ], $this->types($filters))),
             ReportSummary::make('ac_holders', 'พนักงานที่ถือสิทธิ์', $holders)->withShareOf($staff)->withNote([
-                'label_key' => $staff > $holders ? 'rep_n_ac_holders' : 'rep_n_ac_holders_all',
+                'label_key' => $staff > $holders ? 'rep_n_ac_holders_short' : 'rep_n_ac_holders_all_short',
+                'full_key' => $staff > $holders ? 'rep_n_ac_holders' : 'rep_n_ac_holders_all',
                 'values' => ['staff' => $staff, 'median' => (int) round($held->countBy('employee_id')->median() ?? 0), 'none' => max(0, $staff - $holders)],
             ]),
             ReportSummary::make('ac_granted', 'ให้สิทธิ์ในช่วงวันที่', $granted)->withNote([

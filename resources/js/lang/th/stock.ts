@@ -116,6 +116,7 @@ export const stock: Dict = {
     stock_kpi_value: 'มูลค่าสต็อก',
     stock_at_cost: 'ราคาทุน',
     stock_kpi_low: 'หมด / ต่ำกว่า Min / เกิน Max / ไม่เคลื่อนไหว',
+    stock_kpi_low_short: 'หมด ต่ำ เกิน ไม่เคลื่อนไหว',
     stock_kpi_alerts_sub: 'SKU ที่มีการแจ้งเตือน',
     stock_kpi_requests: 'คำขอ',
     stock_kpi_requests_pending: 'รอดำเนินการ',

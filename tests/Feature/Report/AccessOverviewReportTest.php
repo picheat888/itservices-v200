@@ -146,7 +146,8 @@ class AccessOverviewReportTest extends TestCase
         // A, B and D hold something; E holds nothing; C has left.
         $this->assertSame(3, $summary['ac_holders']['value']);
         $this->assertSame(75, $summary['ac_holders']['share']);
-        $this->assertSame('rep_n_ac_holders', $summary['ac_holders']['note']['label_key']);
+        $this->assertSame('rep_n_ac_holders_short', $summary['ac_holders']['note']['label_key']);
+        $this->assertSame('rep_n_ac_holders', $summary['ac_holders']['note']['full_key']);
         // A holds two, B and D one each: the typical holder holds one.
         $this->assertSame(['staff' => 4, 'median' => 1, 'none' => 1], $summary['ac_holders']['note']['values']);
 
@@ -186,7 +187,8 @@ class AccessOverviewReportTest extends TestCase
         $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/access.overview/rows?department_id='.$department)->assertOk()->json('summary'))->keyBy('key');
 
         $this->assertSame(2, $summary['ac_holders']['value']);
-        $this->assertSame('rep_n_ac_holders_all', $summary['ac_holders']['note']['label_key']);
+        $this->assertSame('rep_n_ac_holders_all_short', $summary['ac_holders']['note']['label_key']);
+        $this->assertSame('rep_n_ac_holders_all', $summary['ac_holders']['note']['full_key']);
         $this->assertSame(0, $summary['ac_holders']['note']['values']['none']);
     }
 

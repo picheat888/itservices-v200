@@ -13,9 +13,11 @@ use App\Models\Settings\Vendor;
 use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Report\Asset\AssetWriteoffReport;
 use Database\Seeders\WriteoffReasonSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use ReflectionMethod;
 use Tests\Concerns\ExportsReports;
 use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
@@ -244,6 +246,24 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertSame(['label_key' => 'rep_n_wo_under_warranty_none'], $summary['wo_under_warranty']['note']);
         $this->assertSame(0, $summary['wo_rented_overdue']['value']);
         $this->assertSame(['label_key' => 'rep_n_wo_rented_overdue_none'], $summary['wo_rented_overdue']['note']);
+    }
+
+    public function test_the_overdue_rentals_line_names_two_contracts_then_how_many_more(): void
+    {
+        $note = new ReflectionMethod(AssetWriteoffReport::class, 'overdueNote');
+        $report = app(AssetWriteoffReport::class);
+
+        $this->assertSame(
+            [
+                'label_key' => 'rep_n_wo_rented_overdue_short',
+                'full_key' => 'rep_n_wo_rented_overdue',
+                'texts' => ['codes' => 'CT-1, CT-2, CT-3, CT-4', 'first' => 'CT-1, CT-2'],
+                'values' => ['more' => 2],
+            ],
+            $note->invoke($report, ['CT-1', 'CT-2', 'CT-3', 'CT-4']),
+        );
+        // Two or fewer fit the line as they are
+        $this->assertSame(['label_key' => 'rep_n_wo_rented_overdue', 'texts' => ['codes' => 'CT-1, CT-2']], $note->invoke($report, ['CT-1', 'CT-2']));
     }
 
     public function test_the_breakdown_contracts_carry_the_vendor_thai_name(): void

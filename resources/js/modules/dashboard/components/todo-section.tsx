@@ -39,7 +39,7 @@ export function TodoSection({ data }: { data: DashboardSummary }) {
                     <LegendFooter
                         items={[
                             { key: 'over', label: t('rep_sla_over_sla'), value: jobs.over_sla, dot: FILL.red },
-                            { key: 'soon', label: t('rep_sla_due_soon'), value: jobs.due_soon, dot: FILL.amber },
+                            { key: 'soon', label: t('dash_due_soon_short'), value: jobs.due_soon, dot: FILL.amber },
                             { key: 'ok', label: t('rep_sla_on_track'), value: jobs.on_track, dot: FILL.green },
                         ]}
                     />

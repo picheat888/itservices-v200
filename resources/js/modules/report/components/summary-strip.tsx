@@ -290,7 +290,10 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                                 />
                             ) : item.note ? (
                                 <span className="flex items-end justify-between gap-3">
-                                    <span className="line-clamp-2 min-w-0" title={noteTitle(t, lang, item.note)}>
+                                    <span
+                                        className="min-w-0 truncate"
+                                        title={noteTitle(t, lang, item.note.full_key ? { ...item.note, label_key: item.note.full_key } : item.note)}
+                                    >
                                         <NoteLine note={item.note} />
                                     </span>
                                     {item.note.trend?.points && (

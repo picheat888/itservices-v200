@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { LucideIcon } from 'lucide-react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 
 /** The value's ink per tone, a step darker in light mode as the reports' warning text. */
 const VALUE_INK = {
@@ -52,8 +52,10 @@ export interface StatCardProps {
     meter?: { value: number; goal: number };
     /** Stacked pieces as percents of the track, each with its fill class. */
     bar?: { key: string; percent: number; className: string; title?: string }[];
-    /** The line under the figure; on the default size it stays one line. */
+    /** The line under the figure: always one line, cut with "…" when it runs long. */
     footer?: ReactNode;
+    /** The full words of a shortened footer, shown on hover; a cut footer shows its own text otherwise. */
+    footerTitle?: string;
     /** Older name of `footer`. */
     sub?: ReactNode;
     /** A small chart at the footer's right (a sparkline), hidden on a narrow tile. */
@@ -84,6 +86,7 @@ export function StatCard({
     meter,
     bar,
     footer,
+    footerTitle,
     sub,
     side,
     dot,
@@ -98,6 +101,11 @@ export function StatCard({
     const compact = size === 'compact';
     const level = alert === true ? 'amber' : alert || null;
     const line = footer ?? sub;
+    // A cut footer offers its whole text on hover
+    const titleOnHover = (e: MouseEvent<HTMLElement>) => {
+        const el = e.currentTarget;
+        el.title = footerTitle ?? (el.scrollWidth > el.clientWidth ? el.innerText : '');
+    };
     const onKeyDown = (e: KeyboardEvent) => {
         if (!onClick || e.repeat || (e.key !== 'Enter' && e.key !== ' ')) return;
         e.preventDefault();
@@ -191,13 +199,19 @@ export function StatCard({
                     {side ? (
                         <div className={cn('text-muted-foreground @container mt-auto text-xs', !compact && 'pt-1')}>
                             <div className="flex items-end justify-between gap-2">
-                                <div className="min-w-0 flex-1">{line}</div>
+                                <div className="min-w-0 flex-1 truncate" onMouseEnter={titleOnHover}>
+                                    {line}
+                                </div>
                                 <span className="hidden shrink-0 @[11.5rem]:inline-flex">{side}</span>
                             </div>
                         </div>
                     ) : (
                         line !== undefined &&
-                        line !== null && <div className={cn('text-muted-foreground mt-auto text-xs', !compact && 'truncate pt-1')}>{line}</div>
+                        line !== null && (
+                            <div className={cn('text-muted-foreground mt-auto truncate text-xs', !compact && 'pt-1')} onMouseEnter={titleOnHover}>
+                                {line}
+                            </div>
+                        )
                     )}
                 </>
             )}

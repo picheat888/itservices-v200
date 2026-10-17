@@ -116,6 +116,7 @@ export const stock: Dict = {
     stock_kpi_value: 'Stock value',
     stock_at_cost: 'at cost',
     stock_kpi_low: 'Out / Below / Over / Dead',
+    stock_kpi_low_short: 'Out / Below / Over / Dead',
     stock_kpi_alerts_sub: 'SKUs with an alert',
     stock_kpi_requests: 'Requests',
     stock_kpi_requests_pending: 'pending',

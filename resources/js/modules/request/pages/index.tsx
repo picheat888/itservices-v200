@@ -425,7 +425,8 @@ export default function RequestsPage() {
                                     label={t('req_kpi_awaiting')}
                                     value={String(meta?.awaiting_me ?? 0)}
                                     onClick={() => switchTab('approvals')}
-                                    sub={t('req_kpi_awaiting_of').replace('{n}', String(meta?.pending ?? 0))}
+                                    sub={t('req_kpi_awaiting_of_short').replace('{n}', String(meta?.pending ?? 0))}
+                                    footerTitle={t('req_kpi_awaiting_of').replace('{n}', String(meta?.pending ?? 0))}
                                     loading={kpiLoading}
                                 />
                                 <StatCard

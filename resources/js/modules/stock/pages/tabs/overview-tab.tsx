@@ -12,7 +12,7 @@ import { AlertTriangle, Archive, Check, ChevronRight, Layers, Warehouse } from '
 import { useStockSummary } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
 
-export type Kpi = { label: string; value: string | number; sub: string; icon: typeof Archive; onClick?: () => void };
+export type Kpi = { label: string; value: string | number; sub: string; subTitle?: string; icon: typeof Archive; onClick?: () => void };
 
 /** Reorder rows listed before the rest fold behind "view all". */
 const REORDER_SHOWN = 6;
@@ -61,6 +61,7 @@ export function OverviewTab({
                         label={k.label}
                         value={String(k.value)}
                         sub={k.sub}
+                        footerTitle={k.subTitle}
                         onClick={k.onClick}
                         loading={!summary}
                     />
