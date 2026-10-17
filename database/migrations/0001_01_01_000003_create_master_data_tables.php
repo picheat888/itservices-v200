@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('name', 120)->unique();
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('categories', function (Blueprint $table) {
@@ -31,12 +33,16 @@ return new class extends Migration
             $table->string('icon', 60)->nullable();
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('locations', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('units', function (Blueprint $table) {
@@ -44,6 +50,8 @@ return new class extends Migration
             $table->string('name', 120)->unique();
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('vendors', function (Blueprint $table) {
@@ -55,6 +63,8 @@ return new class extends Migration
             $table->string('email', 120)->nullable();
             $table->string('address')->nullable();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('warehouses', function (Blueprint $table) {
@@ -62,6 +72,8 @@ return new class extends Migration
             $table->string('name', 120)->unique();
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('warranty_types', function (Blueprint $table) {
@@ -69,6 +81,8 @@ return new class extends Migration
             $table->string('name', 120)->unique();
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('asset_models', function (Blueprint $table) {
@@ -77,9 +91,23 @@ return new class extends Migration
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             // The same model name may exist under two brands, so uniqueness is the pair.
             $table->unique(['name', 'brand_id']);
             $table->foreign('brand_id')->references('id')->on('brands')->nullOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
+        });
+
+        // Why an asset was written off; MasterDataSeeder holds the standard list.
+        Schema::create('writeoff_reasons', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 120)->unique();
+            $table->string('description', 255)->nullable();
+            $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
         Schema::create('social_platforms', function (Blueprint $table) {
@@ -91,11 +119,14 @@ return new class extends Migration
             $table->string('logo_path')->nullable();
             $table->text('policy')->nullable();
             $table->timestamps();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('writeoff_reasons');
         Schema::dropIfExists('social_platforms');
         Schema::dropIfExists('asset_models');
         Schema::dropIfExists('warranty_types');

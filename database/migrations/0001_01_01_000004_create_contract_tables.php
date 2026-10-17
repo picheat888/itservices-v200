@@ -32,6 +32,7 @@ return new class extends Migration
             $table->decimal('total_value', 15, 2)->nullable();
             $table->string('billing_cycle')->default('yearly');
             $table->timestamp('cancelled_at')->nullable();
+            $table->unsignedBigInteger('cancelled_by')->nullable();
             $table->timestamp('expired_at')->nullable();
             $table->text('cancel_reason')->nullable();
             // Per-contract reminder opt-in: a contract with every flag off never alerts.
@@ -44,7 +45,12 @@ return new class extends Migration
             $table->boolean('notify_7')->default(true);
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->foreign('vendor_id')->references('id')->on('vendors')->restrictOnDelete();
+            $table->foreign('cancelled_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('contract_attachments', function (Blueprint $table) {

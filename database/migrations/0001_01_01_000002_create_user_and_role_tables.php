@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
+    private const ORG_ACTOR_TABLES = ['departments', 'positions', 'sections', 'employees'];
+
     public function up(): void
     {
         Schema::create('roles', function (Blueprint $table) {
@@ -65,15 +67,32 @@ return new class extends Migration
             $table->string('user_name')->nullable();
             $table->string('action');
             $table->string('target')->nullable();
+            $table->string('subject_type', 120)->nullable();
+            $table->unsignedBigInteger('subject_id')->nullable();
             $table->longText('details')->nullable();
             $table->timestamps();
             $table->index(['created_at'], 'audit_created_at_idx');
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            $table->index(['subject_type', 'subject_id']);
         });
+
+        // Who created / last changed an org record — the columns live in 000001, created before users.
+        foreach (self::ORG_ACTOR_TABLES as $name) {
+            Schema::table($name, function (Blueprint $table) {
+                $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+                $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     public function down(): void
     {
+        foreach (self::ORG_ACTOR_TABLES as $name) {
+            Schema::table($name, function (Blueprint $table) {
+                $table->dropForeign(['created_by']);
+                $table->dropForeign(['updated_by']);
+            });
+        }
         Schema::dropIfExists('audit_logs');
         Schema::dropIfExists('role_permissions');
         Schema::dropIfExists('users');

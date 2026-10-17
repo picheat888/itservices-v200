@@ -13,6 +13,7 @@ use App\Models\Settings\Vendor;
 use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use Database\Seeders\WriteoffReasonSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
@@ -41,6 +42,8 @@ class AssetWriteoffReportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The standard write-off reasons (a fresh install gets them from DatabaseSeeder).
+        $this->seed(WriteoffReasonSeeder::class);
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
         $this->travelTo('2026-09-25 10:00:00');
     }

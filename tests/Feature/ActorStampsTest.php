@@ -28,6 +28,7 @@ use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Contract\ContractService;
 use Database\Seeders\EmailTemplateSeeder;
+use Database\Seeders\WriteoffReasonSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -43,6 +44,13 @@ use Tests\TestCase;
 class ActorStampsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // The standard write-off reasons (a fresh install gets them from DatabaseSeeder).
+        $this->seed(WriteoffReasonSeeder::class);
+    }
 
     private function super(): User
     {
