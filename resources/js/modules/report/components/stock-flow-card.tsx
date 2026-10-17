@@ -22,7 +22,7 @@ import {
 } from './chart-parts';
 import { FILL } from './chart-tones';
 import { MV_TONE, signedCount, stockCount, stockMoney } from './stock-parts';
-import { niceMax } from './weekly-ticket-chart';
+import { axisTop } from './weekly-ticket-chart';
 
 /** The three charted kinds, bottom piece first above the line. */
 const IN_KINDS = ['receive', 'return'] as const;
@@ -41,12 +41,6 @@ function FlowMark({ dir }: { dir: 'in' | 'out' }) {
             )}
         />
     );
-}
-
-/** A tidy axis top at or above the value whose half is a whole number: 11 → 12, 3 → 4, 41 → 50. */
-function axisTop(value: number): number {
-    const steps = [4, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 60, 80, 100];
-    return steps.find((s) => s >= value) ?? niceMax(value);
 }
 
 const inQty = (m: StockFlowMonth) => m.receive + m.return;
