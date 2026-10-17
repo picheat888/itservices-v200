@@ -17,6 +17,7 @@ import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Lang = 'th' | 'en';
 type Vendor = ContractOverviewBreakdown['vendors'][number];
@@ -154,6 +155,7 @@ function BillsCard({ data }: { data: ContractOverviewBreakdown }) {
 
 function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const total = data.yearly_total;
     const max = Math.max(1, ...data.types.map((x) => x.yearly));
@@ -214,7 +216,7 @@ function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
                             {t('rep_cov_cycle_sr')
                                 .replace('{cycle}', t(`contract_billing_${row.cycle}`))
                                 .replace('{amount}', contractMoney(row.yearly, lang))
-                                .replace('{p}', String(percent(row.yearly)))}
+                                .replace('{p}', fmtN(percent(row.yearly)))}
                         </span>
                     </li>
                 ))}

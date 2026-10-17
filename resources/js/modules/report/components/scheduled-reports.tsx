@@ -35,10 +35,12 @@ import { RailHeading, RailHeadingSkeleton, RailRowsSkeleton } from './my-exports
 import { reportStem } from './report-catalogue';
 import { tabularFilterChips, ticketFilterChips } from './schedule-filter-summary';
 import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 function ScheduleRow({ item, opens, onEdit }: { item: ReportScheduleItem; opens: boolean; onEdit: () => void }) {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const update = useUpdateSchedule();
     const remove = useDeleteSchedule();
@@ -57,7 +59,7 @@ function ScheduleRow({ item, opens, onEdit }: { item: ReportScheduleItem; opens:
 
     const onSendNow = () =>
         sendNow.mutate(item.id, {
-            onSuccess: () => toast(t('rep_schedules_sent_now').replace('{n}', String(item.recipients.length)), 'success'),
+            onSuccess: () => toast(t('rep_schedules_sent_now').replace('{n}', fmtN(item.recipients.length)), 'success'),
             onError: (e) => toast(refusalText(e, t, 'rep_schedule_refusal_'), 'error'),
         });
 
@@ -82,7 +84,7 @@ function ScheduleRow({ item, opens, onEdit }: { item: ReportScheduleItem; opens:
             ? item.recipients[0]
             : t('rep_schedules_recipients')
                   .replace('{first}', item.recipients[0])
-                  .replace('{n}', String(item.recipients.length - 1));
+                  .replace('{n}', fmtN(item.recipients.length - 1));
     const failed = item.last_status === 'failed';
     const lastSent = item.last_run_at && !failed ? t('rep_schedules_last_sent').replace('{t}', fmt.dateTime(item.last_run_at)) : undefined;
     const iconButton = 'text-muted-foreground hover:text-foreground h-7 w-7';

@@ -27,6 +27,7 @@ import { useManualSlaBreakdown } from '../hooks/use-reports';
 import type { ManualSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
 import { CountCells, GROUP, hoursText, shortMoment, SlaCells, spanText, targetText, TD, TH, type T } from './request-sla-cards';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type By = ManualSlaBreakdown['by'];
 type Group = ManualSlaBreakdown['groups'][number];
@@ -47,6 +48,7 @@ function groupName(t: T, by: By, group: Pick<Group, 'key' | 'label' | 'label_th'
 
 function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const goal = data.rules.goal;
     const by = data.by;
@@ -94,7 +96,7 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
                 }
                 sub={
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <Swatch tone="bg-emerald-400">{t('rep_rs_at_goal').replace('{n}', String(goal))}</Swatch>
+                        <Swatch tone="bg-emerald-400">{t('rep_rs_at_goal').replace('{n}', fmtN(goal))}</Swatch>
                         <Swatch tone="bg-red-400">{t('rep_rs_below_goal')}</Swatch>
                     </span>
                 }
@@ -187,7 +189,7 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
                             })}
                             <tr className="bg-muted/40 font-semibold">
                                 <th scope="row" className={cn(TD, 'text-left')}>
-                                    {t('rep_ms_total_row').replace('{n}', String(data.groups.length))}
+                                    {t('rep_ms_total_row').replace('{n}', fmtN(data.groups.length))}
                                 </th>
                                 {line(data.overall)}
                             </tr>
@@ -207,6 +209,7 @@ const OPEN_SHOWN = 4;
 
 function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const canOpen = useCanOpen();
     const lang = useUiStore((s) => s.lang);
     const late = data.late;
@@ -214,7 +217,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
 
     return (
         <Card className="flex flex-col overflow-hidden">
-            <Heading title={t('rep_ms_late_title')} sub={late.total > 0 ? t('rep_ms_late_sub').replace('{n}', String(late.total)) : undefined} />
+            <Heading title={t('rep_ms_late_title')} sub={late.total > 0 ? t('rep_ms_late_sub').replace('{n}', fmtN(late.total)) : undefined} />
             {late.total === 0 ? (
                 <div className="text-muted-foreground px-5 py-6 text-center text-sm">{t('rep_ms_late_none')}</div>
             ) : (
@@ -240,8 +243,8 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                     <p className="text-muted-foreground px-5 pt-2.5 pb-4 text-[13px]">
                         {t('rep_ms_late_note')
                             .replace('{median}', late.median_hours === null ? '—' : spanText(t, late.median_hours))
-                            .replace('{near}', String(late.near))
-                            .replace('{pct}', String(Math.round((late.near / late.total) * 100)))}
+                            .replace('{near}', fmtN(late.near))
+                            .replace('{pct}', fmtN(Math.round((late.near / late.total) * 100)))}
                     </p>
                 </>
             )}
@@ -249,7 +252,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
             <div className="border-border border-t">
                 <Heading
                     title={t('rep_ms_open_title')}
-                    sub={data.open.length > 0 ? t('rep_ms_open_sub').replace('{n}', String(data.open.length)) : undefined}
+                    sub={data.open.length > 0 ? t('rep_ms_open_sub').replace('{n}', fmtN(data.open.length)) : undefined}
                 />
             </div>
             {data.open.length === 0 ? (
@@ -289,7 +292,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                     })}
                     {data.open.length > shown.length && !canOpen(BACKLOG_HREF) && (
                         <div className="text-muted-foreground px-5 py-2 text-xs">
-                            {t('rep_rs_open_more').replace('{n}', String(data.open.length - shown.length))}
+                            {t('rep_rs_open_more').replace('{n}', fmtN(data.open.length - shown.length))}
                         </div>
                     )}
                 </div>
@@ -300,7 +303,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                     className="text-brand hover:bg-accent border-border mt-auto border-t py-2.5 text-center text-xs font-semibold"
                 >
                     {data.open.length > shown.length
-                        ? t('rep_rs_open_more_link').replace('{n}', String(data.open.length - shown.length))
+                        ? t('rep_rs_open_more_link').replace('{n}', fmtN(data.open.length - shown.length))
                         : t('rep_rs_open_all')}
                 </Link>
             )}
@@ -318,12 +321,13 @@ function daysText(days: number[], t: T): string {
 
 function RulesCard({ rules }: { rules: ManualSlaBreakdown['rules'] }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const canOpen = useCanOpen();
     const minutes = rules.response_minutes;
     const response =
         minutes % 60 === 0
-            ? t('rep_rs_hours_business').replace('{n}', String(minutes / 60))
-            : t('rep_rs_minutes_business').replace('{n}', String(minutes));
+            ? t('rep_rs_hours_business').replace('{n}', fmtN(minutes / 60))
+            : t('rep_rs_minutes_business').replace('{n}', fmtN(minutes));
     const hours = rules.hours;
     const window = t(hours.break_start && hours.break_end ? 'rep_ms_rule_hours_break' : 'rep_ms_rule_hours_plain')
         .replace('{days}', daysText(hours.days, t))
@@ -368,7 +372,7 @@ function RulesCard({ rules }: { rules: ManualSlaBreakdown['rules'] }) {
                     <dd className="text-muted-foreground mt-0.5 text-[13px]">
                         {rules.repair_rules === 0
                             ? t('rep_ms_rule_repair_none')
-                            : t('rep_ms_rule_repair_some').replace('{n}', String(rules.repair_rules))}
+                            : t('rep_ms_rule_repair_some').replace('{n}', fmtN(rules.repair_rules))}
                     </dd>
                 </div>
                 <div>

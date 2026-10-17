@@ -23,6 +23,7 @@ import type { SnapshotPeriod, SnapshotRange, SnapshotTile } from '../types';
 import { Sparkline } from './chart-parts';
 import { reportRoute } from './report-catalogue';
 import { periodRange } from './report-scope';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Tiles whose main number is counted over the chosen period rather than as of now. */
 const PERIOD_TILES = new Set(['sla_rate']);
@@ -45,6 +46,7 @@ const DELTA_BASE: Record<string, 'since' | 'prev'> = { tickets_open: 'since', sl
 /** "▲ 6 ตั้งแต่ 30 วันก่อน" / "▼ 1.8% จาก 30 วันก่อนหน้า" — coloured by whether the move is good for this figure. */
 function Delta({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const value = tile.delta ?? 0;
     const base = <span className="text-muted-foreground">{t(`rep_snap_${DELTA_BASE[tile.key] ?? 'prev'}_${period}`)}</span>;
     if (value === 0) {
@@ -55,7 +57,7 @@ function Delta({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod })
         );
     }
     const good = value > 0 === (UP_IS_GOOD[tile.key] ?? true);
-    const size = tile.unit === 'percent' ? t('rep_snap_delta_pt').replace('{n}', String(Math.abs(value))) : String(Math.abs(value));
+    const size = tile.unit === 'percent' ? t('rep_snap_delta_pt').replace('{n}', fmtN(Math.abs(value))) : fmtN(Math.abs(value), { maxDecimals: 2 });
 
     return (
         <span className="min-w-0 truncate">

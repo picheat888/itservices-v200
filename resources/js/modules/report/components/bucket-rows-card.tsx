@@ -15,6 +15,7 @@ import { Box, MoreHorizontal } from 'lucide-react';
 import type { ChartSeries, TabularChart } from '../types';
 import { ChartHeading, fold, FoldToggle, StackBar, useChartLabel } from './chart-parts';
 import { FILL } from './chart-tones';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Buckets = Extract<TabularChart, { type: 'buckets' }>;
 
@@ -84,6 +85,7 @@ export function BucketsSection({
     onToggle: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const label = useChartLabel();
     const folding = fold(chart.rows, TOP_BUCKETS, expanded);
     const rest: Record<string, number> = {};
@@ -119,7 +121,7 @@ export function BucketsSection({
                     ))}
                     {folding.rest.length > 0 && (
                         <SplitLine
-                            name={t('rep_chart_others').replace('{n}', String(folding.rest.length))}
+                            name={t('rep_chart_others').replace('{n}', fmtN(folding.rest.length))}
                             icon={MoreHorizontal}
                             values={rest}
                             total={restTotal}

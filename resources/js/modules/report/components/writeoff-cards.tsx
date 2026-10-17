@@ -37,6 +37,7 @@ import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton 
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { niceMax } from './weekly-ticket-chart';
 import { YearsTip } from './years-tip';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -395,6 +396,7 @@ function ShortLifeWarning() {
 
 function CategoryCard({ categories, totals }: { categories: Category[]; totals: AssetWriteoffBreakdown['category_totals'] }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const label = (c: Category) => (c.name === null ? t('rep_wo_no_category') : localPair(c.name, c.name_th, lang));
 
@@ -478,7 +480,7 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
                             {totals && (
                                 <tr className="bg-muted/40 font-semibold">
                                     <th scope="row" className={cn(TD, 'text-left')}>
-                                        {t('rep_wo_cat_total_row').replace('{n}', String(categories.length))}
+                                        {t('rep_wo_cat_total_row').replace('{n}', fmtN(categories.length))}
                                     </th>
                                     <td className={cn(TD, NUM)}>{count(totals.total, lang)}</td>
                                     <td className={cn(TD, NUM)}>{count(totals.bought, lang)}</td>

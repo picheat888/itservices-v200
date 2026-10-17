@@ -23,6 +23,7 @@ import type { TicketOverviewSummary, TicketReportFilters } from '../types';
 import { ClearFiltersBadge, FILTER_ACTIVE, FilterField, FilterRow, useWithAllOption } from './filter-row';
 import { FILTER_SELECT_ALL as ALL } from './filter-select';
 import { categoryKey, priorityKey } from './ticket-labels';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const PRIORITIES = [
     { value: 'critical', tone: 'red' },
@@ -43,6 +44,7 @@ export function TicketReportFilterBar({
     onReset: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const defaults = defaultTicketReportFilters();
     const toggleCategory = (c: string) =>
@@ -87,7 +89,7 @@ export function TicketReportFilterBar({
                             <span className="truncate">
                                 {filters.categories.length === 0
                                     ? t('rep_f_any')
-                                    : t('rep_f_n_selected').replace('{n}', String(filters.categories.length))}
+                                    : t('rep_f_n_selected').replace('{n}', fmtN(filters.categories.length))}
                             </span>
                             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
                         </button>

@@ -24,6 +24,7 @@ import { CalendarClock, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 import type { ExportFormat, ScheduleFrequency, ScheduleInput } from '../types';
 import type { FilterChip } from './schedule-filter-summary';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** A 422 on one of these fields gets its own line; anything else falls back to the generic refusal. */
 const FIELD_ERRORS: Record<string, string> = {
@@ -86,6 +87,7 @@ export function ScheduleReportDialog({
     onReset: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { user } = useAuth();
     const [format, setFormat] = useState<ExportFormat>(formats[0] ?? 'pdf');
     const [frequency, setFrequency] = useState<ScheduleFrequency>('weekly');
@@ -142,7 +144,7 @@ export function ScheduleReportDialog({
             return null;
         }
         if (recipients.length >= MAX_RECIPIENTS) {
-            setDraftError(t('rep_schedule_recipients_max').replace('{n}', String(MAX_RECIPIENTS)));
+            setDraftError(t('rep_schedule_recipients_max').replace('{n}', fmtN(MAX_RECIPIENTS)));
             return null;
         }
         const next = recipients.includes(value) ? recipients : [...recipients, value];
@@ -272,7 +274,7 @@ export function ScheduleReportDialog({
                         <div className="text-muted-foreground flex items-baseline justify-between text-xs font-semibold">
                             <label htmlFor={recipientsInputId}>{t('rep_schedule_recipients')}</label>
                             <span className="normal-case">
-                                {recipients.length}/{MAX_RECIPIENTS}
+                                {fmtN(recipients.length)}/{fmtN(MAX_RECIPIENTS)}
                             </span>
                         </div>
                         <div

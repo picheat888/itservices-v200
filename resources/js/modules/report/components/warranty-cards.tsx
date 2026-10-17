@@ -19,6 +19,7 @@ import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton 
 import { DaysLeftBadge } from './tabular-cell';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { niceMax } from './weekly-ticket-chart';
+import { formatLiveNumber } from './report-scope';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -58,7 +59,7 @@ function periodPieces(t: T, within: number, periods: WarrantyGroupFigures['perio
         value: periods[key],
         label: t(`rep_wty_period_${key}`)
             .replace('{w}', windowText(t, within))
-            .replace('{from}', String(within + 1)),
+            .replace('{from}', formatLiveNumber(within + 1)),
     }));
 }
 

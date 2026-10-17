@@ -19,6 +19,7 @@ import { CardHeadingSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report
 import { sharePercent, shownPieces, splitBar, type SplitPiece, stockCount, stockMoney, TileFoot, TileLegend } from './stock-parts';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Tiles = StockValuationBreakdown['tiles'];
 type Categories = StockValuationBreakdown['categories'];
@@ -64,6 +65,7 @@ function categoryPieces(categories: Categories, total: number, t: (key: string) 
 
 function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Categories; asOf: string }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
     const n = (v: number) => stockCount(v, lang);
@@ -103,7 +105,7 @@ function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Cat
                 alert={tiles.dead90.count > 0 ? 'amber' : undefined}
                 badge={
                     tiles.dead90.value > 0 ? (
-                        <StatusBadge tone="gray">{t('rep_sva_k_dead_share').replace('{pct}', String(deadShare))}</StatusBadge>
+                        <StatusBadge tone="gray">{t('rep_sva_k_dead_share').replace('{pct}', fmtN(deadShare))}</StatusBadge>
                     ) : undefined
                 }
                 footer={foot('rep_sva_items', { n: n(tiles.dead90.count) })}

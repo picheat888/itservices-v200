@@ -29,6 +29,7 @@ import { CARD_HEADING_TINT } from './card-heading';
 import { fold, FoldToggle, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
 import { categoryKey } from './ticket-labels';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Rows a list shows before folding, as the asset report's department chart. */
 const TOP_ROWS = 10;
@@ -73,7 +74,8 @@ function SlaRate({ value, goal }: { value: number | null; goal: number }) {
 
 /** A count where zero reads as nothing to see. */
 function Count({ value, className }: { value: number; className?: string }) {
-    return <span className={cn('text-right', value === 0 && 'text-muted-foreground', className)}>{value}</span>;
+    const fmtN = useNumberFormat();
+    return <span className={cn('text-right', value === 0 && 'text-muted-foreground', className)}>{fmtN(value)}</span>;
 }
 
 /** Name, category bar, Ticket, ทัน SLA, ยังไม่ปิด — header and rows share the columns. */
@@ -81,6 +83,7 @@ const DEPT_GRID = 'grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3rem_4.5rem_4.5
 
 export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[]; slaGoal: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const [expanded, setExpanded] = useState(false);
 
@@ -101,7 +104,7 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
         const measured = sum((r) => r.sla_measured);
         shown.push({
             department_id: null,
-            name: t('rep_chart_others').replace('{n}', String(folding.rest.length)),
+            name: t('rep_chart_others').replace('{n}', fmtN(folding.rest.length)),
             name_th: null,
             count: sum((r) => r.count),
             categories,
@@ -213,7 +216,7 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
             header: t('rep_col_total'),
             width: '80px',
             align: 'right',
-            render: (r) => <span className="font-semibold">{r.total}</span>,
+            render: (r) => <span className="font-semibold">{formatNumber(r.total, lang)}</span>,
         },
         {
             key: 'avg',
