@@ -149,9 +149,9 @@ class EmailTemplateController extends Controller
     /** Restores one template to its standard definition. 422 if it has no standard. */
     public function reset(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
-        // Reset rewrites the wording, so it is an edit — the fact that the new text comes
-        // from the catalogue rather than a form does not make it a lesser change.
+        // Reset rewrites the wording AND restores the on/off state, so it needs both (as the bell's reset).
         $this->allow($request, 'notifications.email_edit');
+        abort_unless((bool) $request->user()?->hasPermission('notifications.email_toggle'), 403);
 
         $standard = EmailTemplates::find($emailTemplate->key);
         if ($standard === null) {
@@ -175,6 +175,7 @@ class EmailTemplateController extends Controller
     public function resetAll(Request $request): JsonResponse
     {
         $this->allow($request, 'notifications.email_edit');
+        abort_unless((bool) $request->user()?->hasPermission('notifications.email_toggle'), 403);
 
         $count = 0;
         foreach (EmailTemplates::all() as $standard) {

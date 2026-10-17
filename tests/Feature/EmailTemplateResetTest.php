@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\EmailTemplates;
 use Database\Seeders\EmailTemplateSeeder;
@@ -144,6 +145,32 @@ class EmailTemplateResetTest extends TestCase
         $this->assertSame(1, AuditLog::forSubject($changed)->count());
         // Untouched ones keep no editor: nothing about them changed.
         $this->assertSame(0, EmailTemplate::whereNotNull('updated_by')->where('key', '!=', 'ticket.created')->count());
+    }
+
+    /** @param list<string> $permissions */
+    private function userWith(array $permissions): User
+    {
+        $role = Role::create(['key' => 'et_'.uniqid(), 'name' => 'Email Test', 'is_system' => false]);
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        return User::factory()->create(['role' => $role->key]);
+    }
+
+    /** Reset (one or all) restores the wording AND the on/off state, so it needs both rights — as the bell's reset does. */
+    public function test_reset_needs_the_edit_and_the_toggle_rights(): void
+    {
+        $this->seed(EmailTemplateSeeder::class);
+        $template = EmailTemplate::where('key', 'ticket.created')->firstOrFail();
+
+        $editorOnly = $this->userWith(['notifications.module', 'notifications.email_edit']);
+        $this->actingAs($editorOnly)->postJson("/api/email-templates/{$template->id}/reset")->assertForbidden();
+        $this->actingAs($editorOnly)->postJson('/api/email-templates/reset-all')->assertForbidden();
+
+        $both = $this->userWith(['notifications.module', 'notifications.email_edit', 'notifications.email_toggle']);
+        $this->actingAs($both)->postJson("/api/email-templates/{$template->id}/reset")->assertOk();
+        $this->actingAs($both)->postJson('/api/email-templates/reset-all')->assertOk();
     }
 
     public function test_reset_requires_the_notifications_permission(): void
