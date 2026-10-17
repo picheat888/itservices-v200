@@ -49,8 +49,8 @@ class TicketSummaryLoadTest extends TestCase
 
         // Only the recent and the still-open ones, never the forty old ones
         $this->assertLessThan(10, $this->loadedTickets('/api/tickets/summary'));
-        // The whole-history view still needs everything
-        $this->assertGreaterThanOrEqual(42, $this->loadedTickets('/api/tickets/summary?days=all'));
+        // This year's view counts from 1 January, so the forty of last year stay out of it
+        $this->getJson('/api/tickets/summary?days=year')->assertOk()->assertJsonPath('created', 1);
     }
 
     public function test_window_edges_count_the_way_carbon_comparisons_do(): void
