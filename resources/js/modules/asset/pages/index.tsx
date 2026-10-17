@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
-import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
+import { DataTable, PAGE_SIZES, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
@@ -16,6 +16,7 @@ import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -53,7 +54,7 @@ import {
     Warehouse,
     X,
 } from 'lucide-react';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { assetApi } from '../api/assetApi';
 import { AssetActivityCard } from '../components/asset-activity-card';
@@ -735,11 +736,14 @@ export default function AssetsPage() {
                                                     {TYPE_BUCKETS.filter((s) => b[s.key] > 0).map((s) => (
                                                         <span
                                                             key={s.key}
-                                                            className="flex shrink-0 justify-center text-xs leading-none font-semibold whitespace-nowrap"
-                                                            style={{
-                                                                width: `${(b[s.key] / Math.max(1, b.count)) * 100}%`,
-                                                                color: statusColors[s.status],
-                                                            }}
+                                                            className="flex shrink-0 justify-center text-xs leading-none font-semibold whitespace-nowrap text-[var(--ink)] dark:text-[var(--ink-dark)]"
+                                                            style={
+                                                                {
+                                                                    width: `${(b[s.key] / Math.max(1, b.count)) * 100}%`,
+                                                                    '--ink': readableInk(statusColors[s.status], LIGHT_GROUND, 0),
+                                                                    '--ink-dark': readableInk(statusColors[s.status], DARK_GROUND, 0),
+                                                                } as CSSProperties
+                                                            }
                                                         >
                                                             {b[s.key]}
                                                         </span>
@@ -1231,7 +1235,7 @@ export default function AssetsPage() {
                                                                 openAsset(a);
                                                             }}
                                                             aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
-                                                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+                                                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring block rounded text-left text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
                                                         >
                                                             {a.asset_code}
                                                         </button>
