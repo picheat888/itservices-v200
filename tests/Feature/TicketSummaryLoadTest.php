@@ -52,4 +52,28 @@ class TicketSummaryLoadTest extends TestCase
         // The whole-history view still needs everything
         $this->assertGreaterThanOrEqual(42, $this->loadedTickets('/api/tickets/summary?days=all'));
     }
+
+    public function test_window_edges_count_the_way_carbon_comparisons_do(): void
+    {
+        $this->actingAs(User::factory()->create([
+            'role' => 'super',
+            'employee_id' => Employee::create(['first_name' => 'Boss', 'last_name' => 'Test', 'status' => 'active'])->id,
+        ]));
+
+        // now = 2026-01-14 12:00:00; 7-day window = 01-07 12:00:00 .. 01-14 12:00:00, previous = 12-31 12:00:00 .. 01-07 12:00:00
+        Ticket::factory()->create(['status' => 'open', 'created_at' => '2026-01-07 12:00:00']);
+        Ticket::factory()->create(['status' => 'open', 'created_at' => '2026-01-14 12:00:00']);
+        Ticket::factory()->create(['status' => 'open', 'created_at' => '2025-12-31 12:00:00']);
+        Ticket::factory()->create(['status' => 'open', 'created_at' => '2026-01-07 11:59:59']);
+        // Closed exactly on the shared edge: counted by both windows
+        Ticket::factory()->create(['status' => 'completed', 'created_at' => '2026-01-05 09:00:00', 'resolved_at' => '2026-01-07 12:00:00']);
+
+        $this->getJson('/api/tickets/summary?days=7')
+            ->assertOk()
+            ->assertJsonPath('created', 2)
+            ->assertJsonPath('created_delta_count', -1)
+            ->assertJsonPath('resolved', 1)
+            ->assertJsonPath('resolved_delta_count', 0)
+            ->assertJsonPath('backlog', 4);
+    }
 }

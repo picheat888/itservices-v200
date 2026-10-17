@@ -20,11 +20,11 @@ use App\Services\Report\TicketOverviewReportService;
 use App\Services\Request\RequestService;
 use App\Services\Sidebar\SidebarBadgeService;
 use App\Services\Ticket\TicketService;
+use App\Services\Ticket\TicketSummaryService;
 use App\Support\Permissions;
 use App\Support\SearchTerms;
 use App\Support\TicketSla;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -208,7 +208,7 @@ class TicketController extends Controller
      * equal-length window, the current unresolved backlog (open + in progress), and
      * the window's SLA %, average response, and per-category mix.
      */
-    public function summary(Request $request, TicketOverviewReportService $report): JsonResponse
+    public function summary(Request $request, TicketOverviewReportService $report, TicketSummaryService $summary): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.view_dashboard'), 403);
 
@@ -253,85 +253,57 @@ class TicketController extends Controller
                 ->orWhereIn('status', TicketStatus::liveValues()))
             ->get();
 
-        // Inbound flow — tickets created in the current vs the previous window.
-        $createdCur = $tickets->filter(fn (Ticket $t) => $t->created_at >= $curStart && $t->created_at <= $curEnd)->count();
-        $createdPrev = $tickets->filter(fn (Ticket $t) => $t->created_at >= $prevStart && $t->created_at < $curStart)->count();
-
-        // Closed flow — tickets resolved (completed or canceled) in each window.
-        $resolvedInWindow = fn ($start, $end) => $tickets->filter(
-            fn (Ticket $t) => $t->resolved_at !== null && $t->resolved_at >= $start && $t->resolved_at <= $end
-        );
-        $resolvedCur = $resolvedInWindow($curStart, $curEnd)->count();
-        $resolvedPrev = $resolvedInWindow($prevStart, $curStart)->count();
+        // Every window figure comes from one pass over those tickets
+        $f = $summary->figures($tickets, $curStart, $curEnd, $prevStart);
 
         // 30/45 วันเป็น KPI คนละตัวกับ SLA อยู่แล้วในความเป็นจริงขององค์กร การเอาเป้าหมาย
         // 4 ชั่วโมงกับ 360 ชั่วโมงมาเฉลี่ยเป็นเปอร์เซ็นต์เดียวทำให้ตัวเลขอ่านยากขึ้น ไม่ใช่ง่ายขึ้น
         // เคสตกกลุ่มไหนตัดสินจากค่า work_class ปัจจุบัน — AuditLog เก็บประวัติไว้ให้แล้วถ้าต้องสาว
-        $isRepair = fn (Ticket $t) => $t->work_class?->isRepair() ?? false;
-        $standardIn = fn ($start, $end) => $resolvedInWindow($start, $end)->reject($isRepair);
-        $repairIn = fn ($start, $end) => $resolvedInWindow($start, $end)->filter($isRepair);
-
-        // Backlog is a point-in-time snapshot of everything still unresolved.
-        $open = $tickets->where('status', TicketStatus::Open)->count();
-        $inProgress = $tickets->where('status', TicketStatus::InProgress)->count();
-
-        // Cases currently past their active SLA deadline (response clock while open
-        // and untaken, resolution clock afterwards) — the dashboard's red status row.
-        $overSla = $tickets
-            ->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::live(), true))
-            ->filter(function (Ticket $t) {
-                $due = ($t->status === TicketStatus::Open && $t->responded_at === null)
-                    ? $t->sla_response_due_at
-                    : $t->sla_resolve_due_at;
-
-                return $due !== null && $due->isPast();
-            });
-        $overSlaNow = $overSla->count();
 
         // SLA % over the tickets resolved within each window, so the trend is comparable.
-        $slaCur = $this->slaMetPct($standardIn($curStart, $curEnd));
-        $slaPrev = $this->slaMetPct($standardIn($prevStart, $curStart));
+        $slaCur = $summary->resolveMetPct($f['standard_cur']);
+        $slaPrev = $summary->resolveMetPct($f['standard_prev']);
 
         // Repair KPI — same math, over the repair-classed cases the SLA figure above excludes.
-        $repairCur = $this->slaMetPct($repairIn($curStart, $curEnd));
-        $repairPrev = $this->slaMetPct($repairIn($prevStart, $curStart));
+        $repairCur = $summary->resolveMetPct($f['repair_cur']);
+        $repairPrev = $summary->resolveMetPct($f['repair_prev']);
 
         // Response SLA % over the tickets first-responded within each window. Open
         // tickets that are already past due are NOT counted here — they live in the
         // backlog KPI and the red per-ticket badge instead.
-        $respondedInWindow = fn ($start, $end) => $tickets->filter(
-            fn (Ticket $t) => $t->responded_at !== null && $t->responded_at >= $start && $t->responded_at <= $end
-        );
-        $respSlaCur = $this->responseSlaMetPct($respondedInWindow($curStart, $curEnd));
-        $respSlaPrev = $this->responseSlaMetPct($respondedInWindow($prevStart, $curStart));
+        $respSlaCur = $summary->responseMetPct($f['responded_cur']);
+        $respSlaPrev = $summary->responseMetPct($f['responded_prev']);
 
         // Average time-to-take per window (minutes) — the delta reads negative = faster.
-        $avgCur = $this->avgResponseMinutes($respondedInWindow($curStart, $curEnd));
-        $avgPrev = $this->avgResponseMinutes($respondedInWindow($prevStart, $curStart));
+        $avgCur = $summary->averageResponseMinutes($f['responded_cur']);
+        $avgPrev = $summary->averageResponseMinutes($f['responded_prev']);
 
         $byCategory = collect(TicketCategory::cases())->map(fn (TicketCategory $c) => [
             'category' => $c->value,
-            'count' => $tickets->filter(fn (Ticket $t) => $t->category === $c && $t->created_at >= $curStart && $t->created_at <= $curEnd)->count(),
+            'count' => $f['by_category'][$c->value],
         ]);
+
+        // Cases currently past their active SLA deadline — the dashboard's red status row.
+        $overSla = collect($f['over_sla']);
 
         return response()->json([
             'range_days' => $days,
 
-            'created' => $createdCur,
+            'created' => $f['created_cur'],
             // Absolute change in tickets vs the previous window (always computable,
             // unlike a % change which has no baseline when the prior window is empty).
-            'created_delta_count' => $wholeHistory ? null : $createdCur - $createdPrev,
+            'created_delta_count' => $wholeHistory ? null : $f['created_cur'] - $f['created_prev'],
 
-            'resolved' => $resolvedCur,
+            'resolved' => $f['resolved_cur'],
             // Absolute change in tickets vs the previous window — same reading as `created`.
-            'resolved_delta_count' => $wholeHistory ? null : $resolvedCur - $resolvedPrev,
+            'resolved_delta_count' => $wholeHistory ? null : $f['resolved_cur'] - $f['resolved_prev'],
 
-            'backlog' => $open + $inProgress,
-            'backlog_open' => $open,
-            'backlog_in_progress' => $inProgress,
-            'over_sla_now' => $overSlaNow,
+            'backlog' => $f['open'] + $f['in_progress'],
+            'backlog_open' => $f['open'],
+            'backlog_in_progress' => $f['in_progress'],
+            'over_sla_now' => $overSla->count(),
             'over_sla_oldest_days' => $overSla->isEmpty() ? null : (int) floor($overSla->max(fn (Ticket $t) => $t->created_at->diffInDays(now()))),
-            'flow' => $this->flowSlices($tickets, $curStart, $curEnd),
+            'flow' => $f['flow'],
             'period_sla' => $this->periodSla($request->user(), $report, $curStart, $curEnd),
 
             'sla_met_pct' => $slaCur,
@@ -340,10 +312,7 @@ class TicketController extends Controller
             'repair_kpi_met_pct' => $repairCur,
             'repair_kpi_delta_pts' => ($repairCur === null || $repairPrev === null) ? null : $repairCur - $repairPrev,
             // งานซ่อมที่ยังไม่ปิด — ทำให้อ่านออกว่า null แปลว่า "ไม่มีงาน" หรือ "ยังไม่มีอันไหนปิด"
-            'repair_backlog' => $tickets
-                ->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::live(), true))
-                ->filter($isRepair)
-                ->count(),
+            'repair_backlog' => $f['repair_backlog'],
             // หน้าจอใช้ค่านี้ตัดสินว่าจะโชว์การ์ด KPI ไหม
             'has_repair_rules' => ! empty(TicketSla::rules()[SlaScope::WorkClass->value] ?? []),
 
@@ -393,30 +362,6 @@ class TicketController extends Controller
     }
 
     /**
-     * Opened vs closed in six even slices of the window, oldest first.
-     *
-     * @param  Collection<int, Ticket>  $tickets
-     * @return list<array{opened: int, closed: int}>
-     */
-    private function flowSlices(Collection $tickets, Carbon $start, Carbon $end): array
-    {
-        $step = max(1, intdiv((int) $start->diffInSeconds($end), 6));
-        $slice = fn (Carbon $at): int => min(5, intdiv((int) $start->diffInSeconds($at), $step));
-        $slices = array_fill(0, 6, ['opened' => 0, 'closed' => 0]);
-
-        foreach ($tickets as $ticket) {
-            if ($ticket->created_at >= $start && $ticket->created_at <= $end) {
-                $slices[$slice($ticket->created_at)]['opened']++;
-            }
-            if ($ticket->resolved_at !== null && $ticket->resolved_at >= $start && $ticket->resolved_at <= $end) {
-                $slices[$slice($ticket->resolved_at)]['closed']++;
-            }
-        }
-
-        return $slices;
-    }
-
-    /**
      * The window's SLA as the "ภาพรวม Ticket & SLA" report counts it, split by ticket source.
      *
      * @return array{from: string, to: string, goal: int, met: int, measured: int, rate: ?float, delta_pts: ?float, request_rate: ?float, manual_rate: ?float}
@@ -440,63 +385,6 @@ class TicketController extends Controller
             'request_rate' => $report->slaFor($viewer, $from, $to, TicketSource::AutoRequest->value)['sla_rate'],
             'manual_rate' => $report->slaFor($viewer, $from, $to, TicketSource::Manual->value)['sla_rate'],
         ];
-    }
-
-    /**
-     * Average first-response time in minutes (created → responded), rounded.
-     * Null when no ticket has been responded to yet.
-     *
-     * @param  Collection<int, Ticket>  $tickets
-     */
-    private function avgResponseMinutes(Collection $tickets): ?int
-    {
-        $responded = $tickets->filter(fn (Ticket $t) => $t->responded_at !== null);
-        if ($responded->isEmpty()) {
-            return null;
-        }
-
-        return (int) round($responded->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->responded_at)));
-    }
-
-    /**
-     * Percentage of completed tickets closed within their priority's resolution
-     * target. Null when nothing has been completed yet.
-     *
-     * @param  Collection<int, Ticket>  $tickets
-     */
-    private function slaMetPct(Collection $tickets): ?int
-    {
-        $completed = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->resolved_at !== null);
-        if ($completed->isEmpty()) {
-            return null;
-        }
-
-        $met = $completed->filter(
-            // Business-time deadline — the same clock the per-ticket SLA badge runs on.
-            fn (Ticket $t) => $t->resolved_at->lessThanOrEqualTo(TicketSla::resolveDueAt($t))
-        )->count();
-
-        return (int) round(($met / $completed->count()) * 100);
-    }
-
-    /**
-     * Percentage of first responses given within their priority's response target
-     * (business time). Null when nothing has been responded to yet.
-     *
-     * @param  Collection<int, Ticket>  $tickets
-     */
-    private function responseSlaMetPct(Collection $tickets): ?int
-    {
-        $responded = $tickets->filter(fn (Ticket $t) => $t->responded_at !== null);
-        if ($responded->isEmpty()) {
-            return null;
-        }
-
-        $met = $responded->filter(
-            fn (Ticket $t) => $t->responded_at->lessThanOrEqualTo(TicketSla::responseDueAt($t))
-        )->count();
-
-        return (int) round(($met / $responded->count()) * 100);
     }
 
     /** Raise a new ticket; the requester is the current user's linked employee. */
