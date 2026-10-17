@@ -57,7 +57,7 @@ function Delta({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod })
         );
     }
     const good = value > 0 === (UP_IS_GOOD[tile.key] ?? true);
-    const size = tile.unit === 'percent' ? t('rep_snap_delta_pt').replace('{n}', fmtN(Math.abs(value))) : fmtN(Math.abs(value), { maxDecimals: 2 });
+    const size = tile.unit === 'percent' ? t('rep_snap_delta_pt').replace('{n}', fmtN(Math.abs(value), { maxDecimals: 2 })) : fmtN(Math.abs(value), { maxDecimals: 2 });
 
     return (
         <span className="min-w-0 truncate">

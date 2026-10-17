@@ -246,6 +246,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string | null }
 /** The "Assets to return" figure: a pill reading `3 items`, or why there is no figure. */
 function HeldAssetsCount({ count, loading, failed }: { count: number; loading: boolean; failed: boolean }) {
     const t = useT();
+    const fmtN = useNumberFormat();
 
     if (loading) {
         return <div className="bg-muted h-[30px] w-24 animate-pulse rounded-md" />;
@@ -269,7 +270,7 @@ function HeldAssetsCount({ count, loading, failed }: { count: number; loading: b
             )}
         >
             <Box className="h-3.5 w-3.5" />
-            {count > 0 ? `${count} ${t(count === 1 ? 'filter_item' : 'filter_items')}` : t('resign_assets_none')}
+            {count > 0 ? `${fmtN(count)} ${t(count === 1 ? 'filter_item' : 'filter_items')}` : t('resign_assets_none')}
         </span>
     );
 }

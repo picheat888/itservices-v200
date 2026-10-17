@@ -85,7 +85,7 @@ export function ItSection({ it }: { it: DashboardIt }) {
                                 ? t('dash_no_measured')
                                 : rate >= goal
                                   ? t('dash_goal_met')
-                                  : t('dash_below_goal').replace('{n}', fmtN(Math.round((goal - rate) * 10) / 10))}
+                                  : t('dash_below_goal').replace('{n}', fmtN(Math.round((goal - rate) * 10) / 10, { maxDecimals: 1 }))}
                         </span>
                     }
                 />
