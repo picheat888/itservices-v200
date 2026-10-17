@@ -1,11 +1,13 @@
 import { useT } from '@/lang';
 import { useVendors, useWarehouses } from '@/modules/settings';
 import { DisabledReason } from '@/shared/components/disabled-reason';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
@@ -20,7 +22,6 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 import { countLockFor } from '../lib/count-lock';
 import { stockRefusalText } from '../lib/refusal';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type SerialStatus = 'ok' | 'empty' | 'dup-system' | 'dup-batch';
 
@@ -276,7 +277,9 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
             return `${t('stock_mv_receive')} (${fmtN(okCount)})`;
         }
         if (isTransfer) {
-            return transferIsSerial && transferSerialIds.size > 0 ? `${t('stock_mv_transfer')} (${fmtN(transferSerialIds.size)})` : t('stock_mv_transfer');
+            return transferIsSerial && transferSerialIds.size > 0
+                ? `${t('stock_mv_transfer')} (${fmtN(transferSerialIds.size)})`
+                : t('stock_mv_transfer');
         }
         if (returnIsSerial) {
             return returnSerialIds.size > 0 ? `${t('stock_mv_return')} (${fmtN(returnSerialIds.size)})` : t('stock_mv_return');
@@ -605,9 +608,12 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                             })}
                                         </div>
                                     ) : (
-                                        <div className="text-muted-foreground rounded-md border border-dashed py-5 text-center text-xs">
-                                            {t('stock_mv_no_transfer_serials').replace('{warehouse}', from || '—')}
-                                        </div>
+                                        <EmptyState
+                                            kind="pick"
+                                            title={t('stock_empty_movement_transfer_serials').replace('{warehouse}', from || '—')}
+                                            hint={t('stock_empty_movement_transfer_serials_hint')}
+                                            className="min-h-0 rounded-md border border-dashed py-4"
+                                        />
                                     )}
 
                                     {/* Transfer serial summary */}
@@ -623,7 +629,8 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                             </div>
                                             <div className="mt-1.5 flex items-center gap-x-3 text-xs">
                                                 <span>
-                                                    <b>{fmtN(transferSerialIds.size)}</b>/{fmtN(availableTransferSerials.length)} {t('stock_mv_selected')}
+                                                    <b>{fmtN(transferSerialIds.size)}</b>/{fmtN(availableTransferSerials.length)}{' '}
+                                                    {t('stock_mv_selected')}
                                                 </span>
                                                 {transferSerialIds.size > 0 && (
                                                     <span className="text-brand flex items-center gap-1">
@@ -785,9 +792,12 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                     })}
                                 </div>
                             ) : (
-                                <div className="text-muted-foreground rounded-md border border-dashed py-5 text-center text-xs">
-                                    {t('stock_return_none')}
-                                </div>
+                                <EmptyState
+                                    kind="pick"
+                                    title={t('stock_empty_movement_return_serials')}
+                                    hint={t('stock_empty_movement_return_serials_hint')}
+                                    className="min-h-0 rounded-md border border-dashed py-4"
+                                />
                             )}
                         </div>
                     )}
@@ -944,9 +954,12 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                     )}
                                 </div>
                             ) : (
-                                <div className="text-muted-foreground rounded-md border border-dashed py-5 text-center text-xs">
-                                    {t('stock_no_serials')}
-                                </div>
+                                <EmptyState
+                                    kind="pick"
+                                    title={t('stock_empty_movement_receive_serials')}
+                                    hint={t('stock_empty_movement_receive_serials_hint')}
+                                    className="min-h-0 rounded-md border border-dashed py-4"
+                                />
                             )}
 
                             {/* Summary bar */}

@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
+import type { EmptyStateProps } from '@/shared/components/empty-state';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
@@ -44,10 +45,20 @@ interface LookupSectionProps {
     nameLabel: string;
     /** Toolbar add button label. */
     addButtonLabel: string;
+    /** Which master-data list this is: picks its set_empty_md_<name> words. */
+    emptyName: string;
+}
+
+/** The empty state of a master-data list: its "none yet" words, or its "no match" words while a search is typed. */
+export function masterDataEmpty(t: (key: string) => string, name: string, searching: boolean, addButtonLabel: string): EmptyStateProps {
+    if (searching) {
+        return { kind: 'search', title: t(`set_empty_md_${name}_search`), hint: t(`set_empty_md_${name}_search_hint`) };
+    }
+    return { title: t(`set_empty_md_${name}`), hint: t(`set_empty_md_${name}_hint`).replace('{button}', addButtonLabel) };
 }
 
 /** LookupSection — CRUD list for a {name, description} lookup; search and page live in the URL (?search, page, per). */
-export function LookupSection({ rows, loading, mutations, addLabel, editLabel, nameLabel, addButtonLabel }: LookupSectionProps) {
+export function LookupSection({ rows, loading, mutations, addLabel, editLabel, nameLabel, addButtonLabel, emptyName }: LookupSectionProps) {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
@@ -108,6 +119,7 @@ export function LookupSection({ rows, loading, mutations, addLabel, editLabel, n
                 paging={list.table.paging}
                 searchPlaceholder={t('set_search_name_desc')}
                 searchable={(r) => `${r.name} ${r.description ?? ''}`}
+                empty={masterDataEmpty(t, emptyName, list.table.search.value.trim() !== '', addButtonLabel)}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />

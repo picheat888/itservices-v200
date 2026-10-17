@@ -6,7 +6,6 @@ export const notification: Dict = {
     notif_all: 'All',
     notif_mark_all: 'Mark all read',
     notif_clear_all: 'Clear all',
-    notif_empty: 'No notifications',
     notif_dismiss: 'Dismiss',
     notif_dismiss_failed: 'Could not dismiss this notification. Try again.',
     notif_keys_hint: 'Use the up and down arrows to move between notifications, the right arrow to reach Dismiss, and Delete to dismiss.',
@@ -78,7 +77,6 @@ export const notification: Dict = {
     notification_test_sent: 'Sent - check your notifications',
     notification_test_failed: 'Could not send the test',
     notif_test_prefix: '[Test]',
-    notification_empty: 'No notifications match this filter',
     notification_col_trigger: 'Fires when',
     notification_col_last_sent: 'Last sent',
     notification_col_on: 'On',
@@ -115,7 +113,6 @@ export const notification: Dict = {
     notification_col_id: 'ID',
     notification_lang_en: 'EN',
     notification_lang_th: 'TH',
-    notification_empty_none: 'No notifications yet',
 
     // notification-settings-pane.tsx — name / trigger / audience per notification
     notification_name_cred_required: 'Login account needed',

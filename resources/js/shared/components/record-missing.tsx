@@ -35,9 +35,9 @@ export function RecordMissing({ onClose }: { onClose: () => void }) {
             </span>
             {/* The visible heading IS the accessible name — a second sr-only copy would
                 read the same sentence twice to a screen reader. */}
-            <DialogTitle className="mt-4 text-base font-semibold">{t('record_missing_title')}</DialogTitle>
+            <DialogTitle className="mt-4 text-base font-semibold">{t('cmn_empty_record_missing')}</DialogTitle>
             <DialogDescription className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">
-                {t('record_missing_hint')}
+                {t('cmn_empty_record_missing_hint')}
             </DialogDescription>
             <Button variant="outline" className="mt-6" onClick={onClose}>
                 {t('close')}

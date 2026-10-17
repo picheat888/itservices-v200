@@ -4,12 +4,12 @@ import { EmptyPane } from '@/shared/components/empty-pane';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { type StockMovementType } from '@/shared/types';
-import { History } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useStockItemHistory } from '../hooks/use-stock';
 import { MV_META } from '../pages/shared';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** One movement row as returned by the item-history endpoint. */
 type Move = {
@@ -31,6 +31,8 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
     const fmt = useDateFormat();
     const pairOf = useLocalPair();
     const { data: history, isLoading } = useStockItemHistory(itemId);
+    const [query, setQuery] = useState('');
+    useEffect(() => setQuery(''), [itemId]);
     const moves = (history?.movements ?? []) as Move[];
     const typeLabel = (type: StockMovementType) => t(`stock_mv_${type}` as Parameters<typeof t>[0]);
 
@@ -82,7 +84,7 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
     ];
 
     if (!isLoading && moves.length === 0) {
-        return <EmptyPane icon={History} text={t('stock_no_moves')} />;
+        return <EmptyPane title={t('stock_empty_item_modal_movements')} hint={t('stock_empty_item_modal_movements_hint')} />;
     }
 
     return (
@@ -93,6 +95,12 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
                 columns={columns}
                 rows={moves}
                 rowKey={(m) => m.id}
+                search={{ value: query, onChange: setQuery }}
+                empty={{
+                    kind: 'search',
+                    title: t('stock_empty_item_modal_movements_search'),
+                    hint: t('stock_empty_item_modal_movements_search_hint'),
+                }}
                 searchPlaceholder={t('stock_movements_search')}
                 searchable={(m) => `${m.doc_no ?? ''} ${m.recorded_by ?? ''} ${m.recorded_by_th ?? ''}`}
             />

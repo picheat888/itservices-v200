@@ -7,6 +7,7 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
@@ -16,7 +17,6 @@ import { ArrowRight, Filter, Printer } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Types offered by the filter (and accepted from ?type=).
 const MOVEMENT_TYPES: StockMovementType[] = ['receive', 'issue', 'return', 'transfer'];
@@ -92,7 +92,13 @@ export function MovementsTab() {
                 </div>
             ),
         },
-        { key: 'qty', header: t('stock_qty'), align: 'right', width: '70px', render: (m) => <span className="font-bold tabular-nums">{fmtN(m.qty)}</span> },
+        {
+            key: 'qty',
+            header: t('stock_qty'),
+            align: 'right',
+            width: '70px',
+            render: (m) => <span className="font-bold tabular-nums">{fmtN(m.qty)}</span>,
+        },
         {
             key: 'unit_cost',
             header: t('stock_unit_cost_short'),
@@ -165,6 +171,11 @@ export function MovementsTab() {
                 }}
                 loading={movementsLoading || movementsFetching}
                 server={{ ...list.table.paging, total: movementsPage?.meta.total ?? 0 }}
+                empty={
+                    type !== 'all'
+                        ? { kind: 'search', title: t('stock_empty_movements_search'), hint: t('stock_empty_movements_search_hint') }
+                        : { title: t('stock_empty_movements'), hint: t('stock_empty_movements_hint') }
+                }
             />
 
             {/* Movement detail — the per-entry audit-log view. */}

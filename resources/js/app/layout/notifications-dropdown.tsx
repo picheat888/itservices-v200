@@ -8,17 +8,17 @@ import {
     useNotifications,
     useNotificationText,
 } from '@/modules/notification';
-import { EmptyPane } from '@/shared/components/empty-pane';
+import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useToastStore } from '@/stores/toast';
-import { BellOff, Loader2, X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTitle, openNotificationTarget } from './notification-display';
@@ -324,7 +324,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                             <LoadFailed onRetry={() => feed.refetch()} />
                         </div>
                     ) : items.length === 0 ? (
-                        <EmptyPane icon={BellOff} text={t('notif_empty')} />
+                        <EmptyState title={t('cmn_empty_bell_empty')} hint={t('cmn_empty_bell_empty_hint')} className="min-h-0 py-4" />
                     ) : (
                         <TooltipProvider delayDuration={400}>
                             {/* How the keyboard moves in the list, read once when a row gets focus */}

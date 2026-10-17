@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth/hooks/use-auth';
+import { EmptyState } from '@/shared/components/empty-state';
 import type { Role } from '@/shared/types';
-import { Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -43,7 +43,7 @@ export function RequirePermission({
  * Counts down and auto-redirects to the dashboard; the manual button leaves immediately.
  * The timer is cleared on unmount to avoid a stray redirect.
  */
-export function NoAccess() {
+export function NoAccess({ title, hint }: { title?: string; hint?: string }) {
     const t = useT();
     const navigate = useNavigate();
     const [count, setCount] = useState(REDIRECT_SECONDS);
@@ -62,14 +62,7 @@ export function NoAccess() {
     return (
         <div className="grid min-h-[72vh] place-items-center px-4">
             <div className="flex flex-col items-center gap-5 text-center">
-                <span className="bg-destructive/10 text-destructive flex h-16 w-16 items-center justify-center rounded-2xl">
-                    <Lock className="h-8 w-8" />
-                </span>
-
-                <div className="space-y-1.5">
-                    <h1 className="text-2xl font-bold tracking-tight">{t('noaccess_title')}</h1>
-                    <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">{t('noaccess_desc')}</p>
-                </div>
+                <EmptyState kind="denied" title={title ?? t('cmn_empty_no_access')} hint={hint ?? t('cmn_empty_no_access_hint')} />
 
                 <div className="w-full max-w-xs space-y-1.5">
                     <div className="text-muted-foreground flex items-center justify-between text-xs">

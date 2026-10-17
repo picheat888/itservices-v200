@@ -1,17 +1,18 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { OverviewHeader } from '@/shared/components/overview-period';
 import { StatCard } from '@/shared/components/stat-card';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Archive, Check, ChevronRight, Layers, Warehouse } from 'lucide-react';
+import { AlertTriangle, Archive, ChevronRight, Layers, Warehouse } from 'lucide-react';
 import { useStockSummary } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export type Kpi = { label: string; value: string | number; sub: string; subTitle?: string; icon: typeof Archive; onClick?: () => void };
 
@@ -111,10 +112,7 @@ export function OverviewTab({
                             )}
                         </div>
                         {reorderItems.length === 0 ? (
-                            <div className="text-muted-foreground flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-12 text-center text-sm">
-                                <Check className="h-6 w-6 text-emerald-500 dark:text-emerald-400" aria-hidden />
-                                {t('stock_all_stocked')}
-                            </div>
+                            <EmptyState kind="clear" title={t('stock_empty_overview_reorder')} hint={t('stock_empty_overview_reorder_hint')} />
                         ) : (
                             <>
                                 <div className={PANEL_LIST}>
@@ -179,9 +177,7 @@ export function OverviewTab({
                                 <h2 className={PANEL_TITLE}>{t('stock_recent_moves')}</h2>
                             </div>
                             {movements.length === 0 ? (
-                                <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">
-                                    {t('stock_no_moves')}
-                                </div>
+                                <EmptyState title={t('stock_empty_overview_recent_moves')} hint={t('stock_empty_overview_recent_moves_hint')} />
                             ) : (
                                 <div className={PANEL_LIST}>
                                     {movements.slice(0, 6).map((m) => {

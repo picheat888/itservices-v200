@@ -57,8 +57,6 @@ export const access: Dict = {
     access_search_shares: 'Search file shares…',
     access_role_owner: 'Owner',
     access_role_member: 'Member',
-    noaccess_title: 'No access',
-    noaccess_desc: "You don't have permission to view this section. Contact an administrator if you think this is a mistake.",
     noaccess_back: 'Back to dashboard',
     access_software: 'Software',
     access_new_software: 'Software',

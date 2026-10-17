@@ -63,8 +63,6 @@ export const access: Dict = {
     access_search_shares: 'ค้นหา File Share…',
     access_role_owner: 'เจ้าของ',
     access_role_member: 'สมาชิก',
-    noaccess_title: 'ไม่มีสิทธิ์เข้าถึง',
-    noaccess_desc: 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ หากคิดว่าเป็นข้อผิดพลาดโปรดติดต่อผู้ดูแลระบบ',
     noaccess_back: 'กลับหน้า Dashboard',
     access_software: 'Software',
     access_new_software: 'Software',
