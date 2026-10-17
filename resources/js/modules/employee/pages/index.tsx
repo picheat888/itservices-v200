@@ -11,6 +11,8 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -705,6 +707,7 @@ function DirectoryTab({
 }: DirectoryTabProps) {
     const t = useT();
     const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
     const lang = useUiStore((s) => s.lang);
     // Search, filters, page and rows-per-page live in the URL (?search, dept, status, page, per).
     const list = useListParams();
@@ -753,26 +756,34 @@ function DirectoryTab({
     ];
 
     const columns: Column<Employee>[] = [
+        { key: 'code', header: t('tbl_emp_id'), width: '96px', sticky: 'left', className: 'text-xs whitespace-nowrap', render: (e) => e.code },
         {
             key: 'name',
             header: t('sub_directory'),
+            minWidth: '14rem',
             render: (e) => (
                 <div className="flex items-center gap-2.5">
                     <UserAvatar name={e.name} photoUrl={e.photo_url} />
-                    <div className="font-medium">{localName(e, lang)}</div>
+                    <TruncText text={localName(e, lang)} className="font-medium" />
                 </div>
             ),
         },
-        { key: 'code', header: t('tbl_emp_id'), render: (e) => <span className="text-xs">{e.code}</span> },
-        { key: 'position', header: t('position'), render: (e) => e.position ?? '—' },
-        { key: 'department', header: t('department'), render: (e) => localPair(e.department, e.department_th, lang) ?? '—' },
-        { key: 'email', header: t('emp_email'), render: (e) => <span className="text-xs">{e.email ?? '—'}</span> },
-        { key: 'joined', header: t('joined'), render: (e) => <span className="text-xs">{fmt.date(e.joined_at)}</span> },
+        { key: 'position', header: t('position'), width: '180px', render: (e) => <TruncText text={e.position} /> },
+        {
+            key: 'department',
+            header: t('department'),
+            width: '180px',
+            render: (e) => <TruncText text={localPair(e.department, e.department_th, lang)} />,
+        },
+        { key: 'email', header: t('emp_email'), width: '220px', render: (e) => <TruncText text={e.email} className="text-xs" /> },
+        { key: 'joined', header: t('joined'), width: dateWidth, className: 'text-xs whitespace-nowrap', render: (e) => fmt.date(e.joined_at) },
         {
             key: 'status',
             header: t('status'),
+            width: '216px',
+            className: 'whitespace-nowrap',
             render: (e) => (
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-nowrap items-center gap-1">
                     {e.status === 'resigned' ? (
                         <StatusBadge tone="red">{t('resigned')}</StatusBadge>
                     ) : (
@@ -788,7 +799,8 @@ function DirectoryTab({
         },
         {
             key: 'actions',
-            header: '',
+            header: <span className="sr-only">{t('actions')}</span>,
+            width: '60px',
             align: 'right',
             render: (e) => (
                 <div onClick={(ev) => ev.stopPropagation()} className="flex justify-end">
