@@ -10,11 +10,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /** @mixin Software */
 class SoftwareResource extends JsonResource
 {
+    /** Members previewed per row on the list (the avatar stack shows this many). */
+    public const PREVIEW_MEMBERS = 5;
+
     public function toArray(Request $request): array
     {
-        $seatsUsed = $this->relationLoaded('memberships')
+        $seatsUsed = $this->resource->getAttributes()['members_count'] ?? ($this->relationLoaded('memberships')
             ? $this->memberships->count()
-            : $this->memberships()->active()->count();
+            : $this->memberships()->active()->count());
 
         // The product key is a secret: expose its value only to people who can
         // edit software (who also own the edit form); everyone else just learns
