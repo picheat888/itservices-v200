@@ -61,123 +61,128 @@ export function moduleOf(type: string, module?: string): string {
  * glance: contract expiry = amber (red once overdue), offboarding = red,
  * new-account = emerald, stock alerts and requests coloured by severity/status.
  */
-export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; color: string; bg: string } {
+/** Each notification tone: the icon ink and its tinted circle (vivid on purpose; one place for the bell and the toasts). */
+export type NotificationTone = 'amber' | 'blue' | 'emerald' | 'red' | 'slate' | 'violet';
+
+const TONE: Record<NotificationTone, { tone: NotificationTone; color: string; bg: string }> = {
+    amber: { tone: 'amber', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' },
+    blue: { tone: 'blue', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' },
+    emerald: { tone: 'emerald', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
+    red: { tone: 'red', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' },
+    slate: { tone: 'slate', color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-500/10' },
+    violet: { tone: 'violet', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' },
+};
+
+export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; tone: NotificationTone; color: string; bg: string } {
     // A sample sent from Settings. Violet is the one tone no real alert uses, so a test can
     // never be mistaken for the thing it is imitating.
     if (n.data.type === 'test') {
-        return { Icon: FlaskConical, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+        return { Icon: FlaskConical, ...TONE.violet };
     }
     if (n.data.type === 'contract_expiring') {
         // Already past due → red; still inside the reminder window → amber.
         if ((n.data.days_remaining ?? 0) <= 0) {
-            return { Icon: CalendarClock, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+            return { Icon: CalendarClock, ...TONE.red };
         }
-        return { Icon: CalendarClock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: CalendarClock, ...TONE.amber };
     }
     if (n.data.type === 'ticket_sla') {
         // Over SLA = red, near due = amber — mirrors the SLA badge tones on the list.
-        if (n.data.subtype?.endsWith('over_sla')) return { Icon: Gauge, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
-        return { Icon: Gauge, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype?.endsWith('over_sla')) return { Icon: Gauge, ...TONE.red };
+        return { Icon: Gauge, ...TONE.amber };
     }
     if (n.data.type === 'ticket_forwarded' || n.data.type === 'ticket_forwarded_away') {
-        return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+        return { Icon: ArrowRightLeft, ...TONE.violet };
     }
     if (n.data.type === 'ticket_new') {
-        return { Icon: Inbox, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+        return { Icon: Inbox, ...TONE.blue };
     }
     if (n.data.type === 'ticket_assigned') {
-        return { Icon: UserPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+        return { Icon: UserPlus, ...TONE.emerald };
     }
     if (n.data.type === 'ticket_owner') {
         // Owner-facing case updates: closed = green check, cancelled = red cross,
         // responsibility changes (taken / forwarded) = who has it now.
-        if (n.data.event === 'resolved') return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
-        if (n.data.event === 'cancelled') return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
-        if (n.data.event === 'forwarded') return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+        if (n.data.event === 'resolved') return { Icon: CheckCircle2, ...TONE.emerald };
+        if (n.data.event === 'cancelled') return { Icon: XCircle, ...TONE.red };
+        if (n.data.event === 'forwarded') return { Icon: ArrowRightLeft, ...TONE.violet };
         // A progress note is news about the work, not about who holds it — amber, the tone
         // the rest of the app uses for "still running".
-        if (n.data.event === 'updated') return { Icon: MessageSquare, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
-        return { Icon: UserCheck, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+        if (n.data.event === 'updated') return { Icon: MessageSquare, ...TONE.amber };
+        return { Icon: UserCheck, ...TONE.blue };
     }
     if (n.data.type === 'stock_alert') {
-        if (n.data.subtype === 'out') return { Icon: PackageMinus, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
-        if (n.data.subtype === 'over') return { Icon: PackagePlus, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
-        return { Icon: Boxes, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype === 'out') return { Icon: PackageMinus, ...TONE.red };
+        if (n.data.subtype === 'over') return { Icon: PackagePlus, ...TONE.blue };
+        return { Icon: Boxes, ...TONE.amber };
     }
     if (n.data.type === 'stock_request') {
-        if (n.data.subtype === 'rejected') return { Icon: Inbox, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
-        if (n.data.subtype === 'approved' || n.data.subtype === 'fulfilled')
-            return { Icon: Inbox, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
-        return { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype === 'rejected') return { Icon: Inbox, ...TONE.red };
+        if (n.data.subtype === 'approved' || n.data.subtype === 'fulfilled') return { Icon: Inbox, ...TONE.emerald };
+        return { Icon: Inbox, ...TONE.amber };
     }
     if (n.data.type === 'stock_count') {
-        return { Icon: ClipboardList, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+        return { Icon: ClipboardList, ...TONE.blue };
     }
     if (n.data.type === 'request') {
         // Service requests: action needed = amber, progress = blue, terminal good = green, bad = red.
         // A request stuck for want of an account is an account job, not an approval one.
-        if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
-        if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled')
-            return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
-        if (n.data.subtype === 'approved_final' || n.data.subtype === 'completed')
-            return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
-        if (n.data.subtype === 'waiting') return { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, ...TONE.amber };
+        if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled') return { Icon: XCircle, ...TONE.red };
+        if (n.data.subtype === 'approved_final' || n.data.subtype === 'completed') return { Icon: CheckCircle2, ...TONE.emerald };
+        if (n.data.subtype === 'waiting') return { Icon: Inbox, ...TONE.amber };
         // A step nobody has touched for days — the clock, not the inbox tray.
-        if (n.data.subtype === 'stalled') return { Icon: Clock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        if (n.data.subtype === 'stalled') return { Icon: Clock, ...TONE.amber };
         // The queue bell is amber only while somebody there still has to press Complete. Once
         // a case carries the delivery it is news, not a task — the case has its own bell.
         if (n.data.subtype === 'ready_to_complete') {
-            return n.data.ticket_no
-                ? { Icon: PackageCheck, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' }
-                : { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+            return n.data.ticket_no ? { Icon: PackageCheck, ...TONE.blue } : { Icon: Inbox, ...TONE.amber };
         }
-        return { Icon: Inbox, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+        return { Icon: Inbox, ...TONE.blue };
     }
     // A deadline the reader still has time to beat — amber, like every other "act before
     // this runs out" bell. Marked with the key, because it is about the password itself.
     // A file the reader asked for: ready = emerald download, failed = red.
     if (n.data.type === 'report_export') {
-        return n.data.subtype === 'failed'
-            ? { Icon: FileX, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' }
-            : { Icon: FileDown, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+        return n.data.subtype === 'failed' ? { Icon: FileX, ...TONE.red } : { Icon: FileDown, ...TONE.emerald };
     }
     // A scheduled report that did not go out — red, the mail never left.
     if (n.data.type === 'report_schedule') {
-        return { Icon: MailX, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        return { Icon: MailX, ...TONE.red };
     }
     if (n.data.type === 'password_expiring') {
-        return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: KeyRound, ...TONE.amber };
     }
     if (n.data.type === 'asset_assigned') {
-        return { Icon: PackageCheck, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+        return { Icon: PackageCheck, ...TONE.emerald };
     }
     if (n.data.type === 'asset_return_requested') {
-        return { Icon: Undo2, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: Undo2, ...TONE.amber };
     }
     // A leaver's whole kit in one bell — a job to do, so amber like the return request it
     // replaces, but PackageMinus for "these are leaving your floor" rather than one send-back.
     if (n.data.type === 'asset_offboarding') {
-        return { Icon: PackageMinus, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: PackageMinus, ...TONE.amber };
     }
     // A recall is news, never a task: the reader has nothing to press either way, so it
     // wears slate rather than joining the amber "you owe someone something" bells.
     if (n.data.type === 'asset_recalled') {
-        return { Icon: PackageX, color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-500/10' };
+        return { Icon: PackageX, ...TONE.slate };
     }
     // Access left behind reads with the same urgency as the offboarding bell it arrives
     // beside, but wears the shield the Access Directory uses for its governance rows.
     if (n.data.type === 'access_offboarding') {
-        return { Icon: ShieldAlert, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        return { Icon: ShieldAlert, ...TONE.red };
     }
     if (n.data.subtype === 'offboarding') {
-        return { Icon: UserMinus, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        return { Icon: UserMinus, ...TONE.red };
     }
     // The same departure, read by someone who cannot act on it: still the leaving icon, but
     // slate rather than red — nothing here is waiting on the reader.
     if (n.data.subtype === 'departure') {
-        return { Icon: UserMinus, color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-500/10' };
+        return { Icon: UserMinus, ...TONE.slate };
     }
-    return { Icon: UserPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+    return { Icon: UserPlus, ...TONE.emerald };
 }
 
 /** Headline line for a notification: tickets and requests lead with their number, the rest read "name (code)". */
@@ -251,23 +256,22 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     if (n.data.type === 'test') return t(n.data.source_key ?? '');
     if (n.data.type === 'contract_expiring') {
         return (n.data.days_remaining ?? 0) <= 0
-            ? t('notif_contract_expired').replace('{days}', String(Math.abs(n.data.days_remaining ?? 0)))
-            : t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining));
+            ? t('notif_contract_expired').replaceAll('{days}', () => String(Math.abs(n.data.days_remaining ?? 0)))
+            : t('notif_contract_expiring').replaceAll('{days}', () => String(n.data.days_remaining));
     }
-    if (n.data.type === 'password_expiring') return t('notif_password_expiring').replace('{days}', String(n.data.days_remaining ?? 0));
+    if (n.data.type === 'password_expiring') return t('notif_password_expiring').replaceAll('{days}', () => String(n.data.days_remaining ?? 0));
     if (n.data.type === 'report_schedule') return t('notif_report_schedule_failed');
     if (n.data.type === 'report_export')
-        return t(n.data.subtype === 'failed' ? 'notif_report_export_failed' : 'notif_report_export_ready').replace(
-            '{format}',
+        return t(n.data.subtype === 'failed' ? 'notif_report_export_failed' : 'notif_report_export_ready').replaceAll('{format}', () =>
             (n.data.format ?? '').toUpperCase(),
         );
     if (n.data.type === 'ticket_sla') return t(`notif_ticket_sla_${n.data.subtype}` as Parameters<Translate>[0]);
-    if (n.data.type === 'ticket_forwarded') return t('notif_ticket_forwarded').replace('{from}', n.data.from ?? '—');
-    if (n.data.type === 'ticket_forwarded_away') return t('notif_ticket_forwarded_away').replace('{to}', n.data.to ?? '—');
+    if (n.data.type === 'ticket_forwarded') return t('notif_ticket_forwarded').replaceAll('{from}', () => n.data.from ?? '—');
+    if (n.data.type === 'ticket_forwarded_away') return t('notif_ticket_forwarded_away').replaceAll('{to}', () => n.data.to ?? '—');
     if (n.data.type === 'ticket_new') return t('notif_ticket_new');
     if (n.data.type === 'ticket_assigned') return t('notif_ticket_assigned');
     if (n.data.type === 'ticket_owner')
-        return t(`notif_ticket_owner_${n.data.event}` as Parameters<Translate>[0]).replace('{name}', n.data.by ?? '—');
+        return t(`notif_ticket_owner_${n.data.event}` as Parameters<Translate>[0]).replaceAll('{name}', () => n.data.by ?? '—');
     if (n.data.type === 'stock_alert') return t(`notif_stock_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_request') return t(`notif_stock_req_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_count') return t('notif_stock_count_draft');
@@ -283,11 +287,11 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
         return (
             prefix +
             t(key)
-                .replace('{step}', n.data.step_label ?? '—')
-                .replace('{actor}', n.data.actor_name ?? '—')
-                .replace('{remark}', n.data.remark ?? '')
-                .replace('{ticket}', n.data.ticket_no ?? '—')
-                .replace('{days}', String(n.data.stalled_days ?? 0))
+                .replaceAll('{step}', () => n.data.step_label ?? '—')
+                .replaceAll('{actor}', () => n.data.actor_name ?? '—')
+                .replaceAll('{remark}', () => n.data.remark ?? '')
+                .replaceAll('{ticket}', () => n.data.ticket_no ?? '—')
+                .replaceAll('{days}', () => String(n.data.stalled_days ?? 0))
         );
     }
     if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
@@ -300,15 +304,15 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     // Names the count: "has assets to hand back" alone does not say whether this is one
     // machine to collect or a trolley's worth.
     if (n.data.type === 'asset_offboarding') {
-        return t('notif_asset_offboarding').replace('{count}', String(n.data.count ?? 0));
+        return t('notif_asset_offboarding').replaceAll('{count}', () => String(n.data.count ?? 0));
     }
     // Says how much is waiting and which kind, because "still holds access" alone does not
     // tell the reader whether this is one revoke or an afternoon's work.
     if (n.data.type === 'access_offboarding') {
         return t('notif_access_offboarding')
-            .replace('{grants}', String(n.data.grants ?? 0))
-            .replace('{owned}', String(n.data.owned ?? 0))
-            .replace('{total}', String(n.data.total ?? 0));
+            .replaceAll('{grants}', () => String(n.data.grants ?? 0))
+            .replaceAll('{owned}', () => String(n.data.owned ?? 0))
+            .replaceAll('{total}', () => String(n.data.total ?? 0));
     }
     if (n.data.subtype === 'offboarding') return t('notif_resigned');
     if (n.data.subtype === 'departure') return t('notif_departure');

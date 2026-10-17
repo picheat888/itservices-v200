@@ -6,7 +6,14 @@ import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { iconMeta, notificationMessage, notificationTarget, notificationTitle, openNotificationTarget } from './notification-display';
+import {
+    iconMeta,
+    notificationMessage,
+    notificationTarget,
+    notificationTitle,
+    openNotificationTarget,
+    type NotificationTone,
+} from './notification-display';
 
 /** Asset query keys refreshed the instant an asset notification arrives, so the
  *  My Assets list (and the admin lists) update in step with the toast rather than
@@ -26,10 +33,10 @@ const NOTIFICATION_LIFE_MS = 6000;
  * appears), so the tone is read back off the icon meta the bell already uses
  * rather than invented here.
  */
-function toneFor(color: string): ToastTone {
-    if (color.includes('red')) return 'error';
-    if (color.includes('amber')) return 'warning';
-    if (color.includes('emerald')) return 'success';
+function toneFor(tone: NotificationTone): ToastTone {
+    if (tone === 'red') return 'error';
+    if (tone === 'amber') return 'warning';
+    if (tone === 'emerald') return 'success';
     return 'info';
 }
 
@@ -113,10 +120,10 @@ export function useNotificationToasts(openChangePassword: () => void): void {
 
         // Oldest first, so a burst reads in the order it happened as slots free up.
         [...fresh].reverse().forEach((n: AppNotification) => {
-            const { Icon, color } = iconMeta(n);
+            const { Icon, tone } = iconMeta(n);
             const target = notificationTarget(n);
 
-            useToastStore.getState().push(notificationMessage(n, tRef.current), toneFor(color), notificationTitle(n, tRef.current), undefined, {
+            useToastStore.getState().push(notificationMessage(n, tRef.current), toneFor(tone), notificationTitle(n, tRef.current), undefined, {
                 // The notification id, not the text: two alerts can read alike without
                 // being the same alert, and the burst guard must not swallow one.
                 key: `notification:${n.id}`,

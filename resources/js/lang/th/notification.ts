@@ -4,7 +4,7 @@ export const notification: Dict = {
     notifications: 'Email & Notification',
     notif_title: 'การแจ้งเตือน',
     notif_all: 'ทั้งหมด',
-    notif_mark_all: 'อ่านทั้งหมด',
+    notif_mark_all: 'อ่านแล้วทั้งหมด',
     notif_clear_all: 'ลบทั้งหมด',
     notif_empty: 'ไม่มีการแจ้งเตือน',
     notif_dismiss: 'ปิดรายการนี้',
