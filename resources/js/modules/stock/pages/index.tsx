@@ -311,15 +311,18 @@ export default function StockPage() {
         data: itemsPageData,
         isLoading: itemsLoading,
         isFetching: itemsFetching,
-    } = useStockItemsPage({
-        search: sentSearch || undefined,
-        category: cat === 'all' ? undefined : cat,
-        warehouse: wh === 'all' ? undefined : wh,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        sort: itemSort,
-        page: searchChanged ? 1 : itemsPage,
-        per_page: itemsPerPage,
-    });
+    } = useStockItemsPage(
+        {
+            search: sentSearch || undefined,
+            category: cat === 'all' ? undefined : cat,
+            warehouse: wh === 'all' ? undefined : wh,
+            status: statusFilter === 'all' ? undefined : statusFilter,
+            sort: itemSort,
+            page: searchChanged ? 1 : itemsPage,
+            per_page: itemsPerPage,
+        },
+        tab === 'items',
+    );
     const items = itemsPageData?.data ?? [];
     const itemsTotal = itemsPageData?.meta.total ?? 0;
 

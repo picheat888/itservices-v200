@@ -30,8 +30,8 @@ export const useStockItems = (filters: StockItemFilters, enabled = true) =>
     useQuery({ queryKey: [...ITEMS, 'all', filters], queryFn: () => stockApi.list(filters), enabled });
 
 /** Server-paginated item list for the Stock items table (page/sort/filters handled by the API). */
-export const useStockItemsPage = (params: StockItemPageParams) =>
-    useQuery({ queryKey: [...ITEMS, 'page', params], queryFn: () => stockApi.listPage(params), placeholderData: (prev) => prev });
+export const useStockItemsPage = (params: StockItemPageParams, enabled = true) =>
+    useQuery({ queryKey: [...ITEMS, 'page', params], queryFn: () => stockApi.listPage(params), enabled, placeholderData: (prev) => prev });
 
 /** Dashboard aggregates (KPIs, min/max alerts, breakdowns). */
 export const useStockSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary, enabled });

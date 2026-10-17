@@ -112,4 +112,13 @@ class StockListSearchTest extends TestCase
         $this->assertSame(['MV-0002'], $this->found('/api/stock-movements', 'brown peter', 'doc_no'));
         $this->assertSame(['MV-0002'], $this->found('/api/stock-movements', 'E-EN2', 'doc_no'));
     }
+
+    public function test_rows_without_a_user_are_found_by_the_stored_name(): void
+    {
+        StockRequest::create(['reference' => 'REQ-2026-0009', 'stock_item_id' => $this->toner->id, 'user_id' => null, 'requester_name' => 'Walk In', 'qty' => 1, 'reason' => 'Need', 'status' => 'pending']);
+        StockMovement::create(['doc_no' => 'MV-0009', 'type' => 'receive', 'stock_item_id' => $this->cable->id, 'qty' => 1, 'recorded_by' => 'Night Clerk', 'user_id' => null, 'moved_at' => now()]);
+
+        $this->assertSame(['REQ-2026-0009'], $this->found('/api/stock-requests', 'walk', 'reference'));
+        $this->assertSame(['MV-0009'], $this->found('/api/stock-movements', 'clerk', 'doc_no'));
+    }
 }
