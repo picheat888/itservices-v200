@@ -11,8 +11,8 @@ import { useUiStore } from '@/stores/ui';
 import { useRef, useState } from 'react';
 import { useStockMovementsBreakdown } from '../hooks/use-reports';
 import type { StockMovementsBreakdown, StockWaitingRequest, TabularFilters } from '../types';
-import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
-import { FILL } from './chart-tones';
+import { CardEmpty, CardTitle, fold, FoldToggle, Sparkline } from './chart-parts';
+import { FILL, TEXT } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { StockFlowCard } from './stock-flow-card';
@@ -21,6 +21,8 @@ import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
 type Tiles = StockMovementsBreakdown['tiles'];
+type Months = StockMovementsBreakdown['months'];
+type FlowType = 'receive' | 'issue' | 'return' | 'transfer';
 type Requests = NonNullable<StockMovementsBreakdown['requests']>;
 type People = NonNullable<StockMovementsBreakdown['people']>;
 type Departments = NonNullable<StockMovementsBreakdown['departments']>;
@@ -43,7 +45,14 @@ const TRACK = 'dark:bg-muted block h-3 overflow-hidden rounded-full bg-slate-200
 
 /* ─────────────────────────── tiles ─────────────────────────── */
 
-function MovementTiles({ tiles }: { tiles: Tiles }) {
+/** A movement type's 12-month line in its colour; none when every month is empty. */
+function FlowSpark({ months, type }: { months: Months; type: FlowType }) {
+    const values = months.map((m) => m[type]);
+    if (!values.some((v) => v > 0)) return null;
+    return <Sparkline values={values} className={TEXT[MV_TONE[type]]} />;
+}
+
+function MovementTiles({ tiles, months }: { tiles: Tiles; months: Months }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const unit = t('rep_smv_unit');
@@ -51,38 +60,38 @@ function MovementTiles({ tiles }: { tiles: Tiles }) {
     const money = (v: number) => stockMoney(v, lang);
     const adjust = tiles.adjust_up.qty - tiles.adjust_down.qty;
     const foot = (template: string, bold: Record<string, string>) => <TileFoot template={template} bold={bold} />;
+    const flow = (type: FlowType) => ({
+        dot: FILL[MV_TONE[type]],
+        value: n(tiles[type].qty),
+        unit,
+        side: <FlowSpark months={months} type={type} />,
+    });
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
             <KpiTile
                 label={t('stock_mv_receive')}
-                value={n(tiles.receive.qty)}
-                unit={unit}
+                {...flow('receive')}
                 footer={foot('rep_smv_k_receive_foot', { amount: money(tiles.receive.value) })}
             />
             <KpiTile
                 label={t('stock_mv_issue')}
-                value={n(tiles.issue.qty)}
-                unit={unit}
+                {...flow('issue')}
                 footer={foot('rep_smv_k_issue_foot', { amount: money(tiles.issue.value), n: n(tiles.issue.times) })}
             />
             <KpiTile
                 label={t('stock_mv_return')}
-                value={n(tiles.return.qty)}
-                unit={unit}
+                {...flow('return')}
                 footer={foot('rep_smv_k_return_foot', { n: n(tiles.return.times), amount: money(tiles.return.value) })}
             />
-            <KpiTile
-                label={t('stock_mv_transfer')}
-                value={n(tiles.transfer.qty)}
-                unit={unit}
-                footer={foot('rep_smv_k_transfer_foot', { n: n(tiles.transfer.times) })}
-            />
+            <KpiTile label={t('stock_mv_transfer')} {...flow('transfer')} footer={foot('rep_smv_k_transfer_foot', { n: n(tiles.transfer.times) })} />
             <KpiTile
                 label={t('rep_smv_k_adjust')}
                 value={signedCount(adjust, lang)}
                 unit={unit}
-                alert={adjust < 0 ? 'amber' : undefined}
+                tone={adjust < 0 ? 'red' : adjust > 0 ? 'green' : undefined}
+                alert={adjust < 0 ? 'red' : undefined}
+                badge={adjust < 0 ? <StatusBadge tone="red">{t('rep_smv_k_net_down')}</StatusBadge> : undefined}
                 footer={foot('rep_smv_k_adjust_foot', {
                     up: n(tiles.adjust_up.qty),
                     down: n(tiles.adjust_down.qty),
@@ -484,7 +493,7 @@ export function StockMovementsCards({ filters }: { filters: TabularFilters }) {
 
     return (
         <div className="space-y-4">
-            <MovementTiles tiles={data.tiles} />
+            <MovementTiles tiles={data.tiles} months={data.months} />
             {/* Side by side from lg; stacked on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <StockFlowCard months={data.months} className={data.requests ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-3 xl:col-span-5'} />

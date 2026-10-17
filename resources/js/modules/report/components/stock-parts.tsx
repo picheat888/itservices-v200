@@ -1,11 +1,11 @@
-// Stock report helpers: numbers, money, day counts, the tile footer, the last-move cell and the movement colours of the stock pages (MV_META), shared by the three stock reports.
+// Stock report helpers: numbers, money, day counts, the tile footer and split legend, the last-move cell and the movement colours of the stock pages (MV_META), shared by the three stock reports.
 import { useT } from '@/lang';
 import { MV_META } from '@/modules/stock';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import type { StockMovementType } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import type { ChartTone } from '../types';
-import { rich } from './chart-parts';
+import { rich, Swatch } from './chart-parts';
 
 export type Lang = 'th' | 'en';
 
@@ -47,6 +47,41 @@ export function TileFoot({ template, bold }: { template: string; bold: Record<st
     return (
         <span className="block truncate" title={full}>
             {rich(text, bold)}
+        </span>
+    );
+}
+
+/** One piece of a tile's split bar: its name, fill class, size and the figure its legend prints. */
+export interface SplitPiece {
+    key: string;
+    label: string;
+    fill: string;
+    value: number;
+    text: string;
+}
+
+/** Whole percent of `part` in `total`, 0 when there is no total. */
+export const sharePercent = (part: number, total: number) => (total > 0 ? Math.round((part / total) * 100) : 0);
+
+/** A split's pieces above zero: the tile's bar and its dot legend draw only these. */
+export const shownPieces = (pieces: SplitPiece[]) => pieces.filter((p) => p.value > 0);
+
+/** KpiTile `bar` pieces, each as its share of the split. */
+export function splitBar(pieces: SplitPiece[]) {
+    const total = pieces.reduce((s, p) => s + p.value, 0);
+    return pieces.map((p) => ({ key: p.key, percent: (p.value / total) * 100, className: p.fill, title: `${p.label} ${p.text}` }));
+}
+
+/** A tile's dot legend: every piece with its figure, wrapping onto a second line. */
+export function TileLegend({ pieces }: { pieces: SplitPiece[] }) {
+    return (
+        <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+            {pieces.map((p) => (
+                <Swatch key={p.key} fill={p.fill}>
+                    {p.label}
+                    <b className="text-foreground font-semibold tabular-nums">{p.text}</b>
+                </Swatch>
+            ))}
         </span>
     );
 }
