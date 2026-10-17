@@ -85,6 +85,11 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         setTab('overview');
     }, [assetId]);
 
+    // Each opening, and each tab switch, starts with an empty search.
+    useEffect(() => {
+        setAssetQuery('');
+    }, [assetId, tab]);
+
     const { data: c, isLoading } = useAssetContract(shownAssetId);
 
     const open = assetId != null;

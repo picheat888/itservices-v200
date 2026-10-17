@@ -393,7 +393,7 @@ export default function AccessControlPage() {
             : {
                   kind: 'empty',
                   title: t(FIRST_EMPTY[kind].title),
-                  hint: t(FIRST_EMPTY[kind].hint).replace('{button}', newLabel[kind]),
+                  hint: canAdd[kind] ? t(FIRST_EMPTY[kind].hint).replace('{button}', newLabel[kind]) : null,
               };
 
     // Compose the split size columns for display: null = unspecified (—), 0 = unlimited,

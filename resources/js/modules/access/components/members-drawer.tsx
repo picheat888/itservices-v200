@@ -152,6 +152,7 @@ export function MembersDrawer({
     // Every opening starts with an empty add-member picker and the owner in display mode.
     const openId = target?.id ?? null;
     useEffect(() => {
+        setMemberQuery('');
         if (openId === null) return;
         setEmpId('');
         setLevel('');
