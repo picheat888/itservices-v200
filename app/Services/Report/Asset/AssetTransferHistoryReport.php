@@ -115,9 +115,9 @@ class AssetTransferHistoryReport extends TabularReport
                 ->labelKey('rep_c_asset_category')->hiddenByDefault(),
             ReportColumn::number('asset_moves', 'จำนวนครั้งที่เคลื่อนไหว', fn (AssetTransfer $t) => $this->trail($t, 'moves')[$t->asset_id] ?? null)->hiddenByDefault(),
             ReportColumn::enum('transfer_kind', 'รายการ', fn (AssetTransfer $t) => $t->kind, self::KIND_KEYS, self::KIND_TH),
-            ReportColumn::text('from_label', 'จาก', fn (AssetTransfer $t) => $this->partyLabel($t, 'from_owner')),
+            ReportColumn::localized('from_label', 'จาก', fn (AssetTransfer $t) => $this->partyLabel($t, 'from_owner')),
             ...$this->partyColumns('from'),
-            ReportColumn::text('to_label', 'ไปยัง', fn (AssetTransfer $t) => $this->partyLabel($t, 'to_owner')),
+            ReportColumn::localized('to_label', 'ไปยัง', fn (AssetTransfer $t) => $this->partyLabel($t, 'to_owner')),
             ...$this->partyColumns('to'),
             ReportColumn::enum('outcome', 'ผลหลังส่ง', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['outcome'] ?? null, self::OUTCOME_KEYS, self::OUTCOME_TH)
                 ->labelKey('rep_c_th_outcome'),
@@ -140,7 +140,9 @@ class AssetTransferHistoryReport extends TabularReport
 
         return [
             ReportColumn::enum("{$end}_type", $end === 'from' ? 'จาก (ประเภท)' : 'ไปยัง (ประเภท)', fn (AssetTransfer $t) => $this->partyType($t, $column), self::PARTY_KEYS, self::PARTY_TH)->hiddenByDefault(),
-            ReportColumn::text("{$end}_name", $end === 'from' ? 'จาก (ชื่อ)' : 'ไปยัง (ชื่อ)', fn (AssetTransfer $t) => $person($t)['name'] ?? $t->getAttribute($column))->hiddenByDefault(),
+            ReportColumn::localized("{$end}_name", $end === 'from' ? 'จาก (ชื่อ)' : 'ไปยัง (ชื่อ)', fn (AssetTransfer $t) => $person($t)
+                ? ['name' => $person($t)['name'], 'name_th' => $person($t)['name_th'] ?? null]
+                : ['name' => $t->getAttribute($column), 'name_th' => null])->hiddenByDefault(),
             ReportColumn::text("{$end}_code", $end === 'from' ? 'จาก (รหัสพนักงาน)' : 'ไปยัง (รหัสพนักงาน)', fn (AssetTransfer $t) => $person($t) ? $t->getAttribute($column) : null)->hiddenByDefault(),
             ReportColumn::localized("{$end}_department", $end === 'from' ? 'จาก (แผนก)' : 'ไปยัง (แผนก)', fn (AssetTransfer $t) => isset($person($t)['department'])
                 ? ['name' => $person($t)['department']['name'], 'name_th' => $person($t)['department']['name_th']]
@@ -191,12 +193,19 @@ class AssetTransferHistoryReport extends TabularReport
     }
 
     /** "Name (CODE)" when the stored end is an employee code, else the stored label as is. */
-    private function partyLabel(AssetTransfer $row, string $column): ?string
+    /** @return array{name: ?string, name_th: ?string} The end as the trail stored it, or the employee's name in both languages with the code */
+    private function partyLabel(AssetTransfer $row, string $column): array
     {
         $value = $row->getAttribute($column);
-        $name = $this->trail($row, 'people')[$value]['name'] ?? null;
+        $person = $this->trail($row, 'people')[$value] ?? null;
+        if ($person === null) {
+            return ['name' => $value, 'name_th' => null];
+        }
 
-        return $name === null ? $value : "{$name} ({$value})";
+        return [
+            'name' => "{$person['name']} ({$value})",
+            'name_th' => $person['name_th'] ? "{$person['name_th']} ({$value})" : null,
+        ];
     }
 
     /**
@@ -478,7 +487,7 @@ class AssetTransferHistoryReport extends TabularReport
                 'headings' => ['รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'สถานะ', 'ผู้ถือ', 'แผนก', 'เริ่มรอ', 'สาเหตุ', 'รอมาแล้ว (วัน)'],
                 'rows' => array_map(fn (array $w) => [
                     $w['code'], $w['brand'], $w['model'], $w['status'] === 'pending_acceptance' ? 'รอกดรับ' : 'รอรับคืน',
-                    $w['holder'] ? "{$w['holder']['name']} ({$w['holder']['code']})" : $w['owner_label'],
+                    $w['holder'] ? $name($w['holder']['name'], $w['holder']['name_th'], '')." ({$w['holder']['code']})" : $w['owner_label'],
                     isset($w['holder']['department']) ? $name($w['holder']['department']['name'], $w['holder']['department']['name_th'], '') : null,
                     DateDisplay::cellDateTime($w['since']),
                     match ($w['cause']) {

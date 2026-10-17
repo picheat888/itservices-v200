@@ -294,8 +294,8 @@ class AssetActivityReportsTest extends TestCase
 
         $this->assertSame(3, $body['meta']['total']);
         $rows = collect($body['data'])->keyBy('id');
-        $this->assertSame('Somchai Deploy (EMP-9)', $rows[$handover->id]['to_label']);
-        $this->assertSame('Main store', $rows[$handover->id]['from_label']);
+        $this->assertSame('Somchai Deploy (EMP-9)', $rows[$handover->id]['to_label']['name']);
+        $this->assertSame('Main store', $rows[$handover->id]['from_label']['name']);
         $this->assertSame('return', $rows[$return->id]['transfer_kind']);
         $this->assertSame('2026-09-20 09:00', $rows[$return->id]['moved_at']);
         $this->assertSame($return->id, $body['data'][1]['id']);
@@ -319,6 +319,10 @@ class AssetActivityReportsTest extends TestCase
             ->getJson('/api/reports/tabular/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30&search='.urlencode('สมชาย'))->assertOk()->json('data');
 
         $this->assertSame([$mine->id], array_column($rows, 'id'));
+        // The ends carry both languages, so a Thai reader sees the Thai name
+        $this->assertSame('สมชาย ใจดี (EMP-T9)', $rows[0]['to_label']['name_th']);
+        $this->assertSame('Somchai Jaidee (EMP-T9)', $rows[0]['to_label']['name']);
+        $this->assertSame('สมชาย ใจดี', $rows[0]['to_name']['name_th']);
     }
 
     public function test_asset_activity_reports_need_assets_view(): void

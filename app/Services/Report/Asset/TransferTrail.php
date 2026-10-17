@@ -40,9 +40,10 @@ class TransferTrail
         }
 
         return Employee::query()->whereIn('code', $codes)->with('department:id,name,name_th')
-            ->get(['id', 'code', 'first_name', 'last_name', 'department_id', 'status'])
+            ->get(['id', 'code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'department_id', 'status'])
             ->mapWithKeys(fn (Employee $e) => [$e->code => [
                 'name' => $e->name,
+                'name_th' => $e->name_th,
                 'department' => $e->department ? ['id' => $e->department->id, 'name' => $e->department->name, 'name_th' => $e->department->name_th] : null,
                 'resigned' => $e->status === EmployeeStatus::Resigned,
             ]])
@@ -213,7 +214,7 @@ class TransferTrail
             ->whereIn('status', [AssetStatus::PendingAcceptance->value, AssetStatus::PendingReturn->value])
             ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->where('category_id', (int) $id))
             ->when($filters['department_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('ownerEmployee', fn (Builder $e) => $e->where('department_id', (int) $id)))
-            ->with(['brand:id,name', 'model:id,name', 'category:id,name,name_th', 'ownerEmployee:id,code,first_name,last_name,department_id', 'ownerEmployee.department:id,name,name_th'])
+            ->with(['brand:id,name', 'model:id,name', 'category:id,name,name_th', 'ownerEmployee:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'ownerEmployee.department:id,name,name_th'])
             ->get(['id', 'asset_code', 'status', 'brand_id', 'model_id', 'category_id', 'owner_employee_id', 'owner', 'updated_at']);
         if ($assets->isEmpty()) {
             return [];
@@ -247,6 +248,7 @@ class TransferTrail
                     'holder' => $holder ? [
                         'code' => $holder->code,
                         'name' => $holder->name,
+                        'name_th' => $holder->name_th,
                         'department' => $holder->department ? ['name' => $holder->department->name, 'name_th' => $holder->department->name_th] : null,
                     ] : null,
                     'owner_label' => $holder ? null : $asset->owner,

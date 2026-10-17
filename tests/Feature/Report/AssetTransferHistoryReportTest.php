@@ -98,7 +98,7 @@ class AssetTransferHistoryReportTest extends TestCase
     {
         $this->it = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
         $this->production = Department::create(['name' => 'Production', 'name_th' => 'ฝ่ายผลิต']);
-        $anan = Employee::create(['code' => 'EMP-1', 'first_name' => 'Anan', 'last_name' => 'Tech', 'department_id' => $this->it->id]);
+        $anan = Employee::create(['code' => 'EMP-1', 'first_name' => 'Anan', 'last_name' => 'Tech', 'first_name_th' => 'อนันต์', 'last_name_th' => 'เทค', 'department_id' => $this->it->id]);
         $nid = Employee::create(['code' => 'EMP-2', 'first_name' => 'Nid', 'last_name' => 'Line', 'department_id' => $this->production->id]);
         $somsak = Employee::create(['code' => 'EMP-3', 'first_name' => 'Somsak', 'last_name' => 'Gone', 'department_id' => $this->production->id, 'status' => 'resigned']);
         Warehouse::create(['name' => 'Main store']);
@@ -212,10 +212,10 @@ class AssetTransferHistoryReportTest extends TestCase
         $a1 = $rows[$this->rows['a1']->id];
         $this->assertSame('warehouse', $a1['from_type']);
         $this->assertSame('employee', $a1['to_type']);
-        $this->assertSame('Anan Tech', $a1['to_name']);
+        $this->assertSame(['name' => 'Anan Tech', 'name_th' => 'อนันต์ เทค'], $a1['to_name']);
         $this->assertSame('EMP-1', $a1['to_code']);
         $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที'], $a1['to_department']);
-        $this->assertSame('Anan Tech (EMP-1)', $a1['to_label']);
+        $this->assertSame(['name' => 'Anan Tech (EMP-1)', 'name_th' => 'อนันต์ เทค (EMP-1)'], $a1['to_label']);
         $this->assertSame(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], $a1['category']);
         $this->assertEquals(1, $a1['asset_moves']);
         $this->assertEquals(2, $rows[$this->rows['a3']->id]['asset_moves']);
@@ -285,6 +285,7 @@ class AssetTransferHistoryReportTest extends TestCase
         $this->assertSame([6, 17, 8], array_column($waiting, 'days'));
         $this->assertSame('2026-09-29 08:00', $waiting[2]['since']);
         $this->assertSame('ไอที', $waiting[1]['holder']['department']['name_th']);
+        $this->assertSame('อนันต์ เทค', $waiting[1]['holder']['name_th']);
 
         $onlyIt = $this->breakdown('from=2026-01-01&to=2026-01-31&department_id='.$this->it->id)['waiting'];
         $this->assertSame(['A4'], array_column($onlyIt, 'code'));

@@ -950,7 +950,7 @@ export interface AssetTransferBreakdown {
         model: string | null;
         category: ChartLabel | null;
         status: 'pending_acceptance' | 'pending_return';
-        holder: { code: string; name: string; department: ChartLabel | null } | null;
+        holder: { code: string; name: string; name_th: string | null; department: ChartLabel | null } | null;
         owner_label: string | null;
         /** "Y-m-d H:i" */
         since: string;

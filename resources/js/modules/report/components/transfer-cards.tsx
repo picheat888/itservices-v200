@@ -495,7 +495,7 @@ function WaitingRow({ w }: { w: Waiting }) {
     const canOpen = useCanOpen();
     const href = `/assets?view=${w.id}`;
     const cause = t(w.cause ? `rep_th_cause_${w.cause}` : 'rep_th_cause_since').replace('{date}', shortDate(w.since, lang));
-    const who = [w.holder?.name ?? w.owner_label, label(w.holder?.department ?? null, lang), cause].filter((s): s is string => Boolean(s));
+    const who = [label(w.holder, lang) ?? w.owner_label, label(w.holder?.department ?? null, lang), cause].filter((s): s is string => Boolean(s));
     const late = w.days > LONG_WAIT_DAYS;
 
     return (
