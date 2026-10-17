@@ -49,7 +49,7 @@ class StockItemController extends Controller
 
         $query = StockItem::query()
             ->select('stock_items.*')
-            ->with(['balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category'])
+            ->with(['balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category', 'draftCountLines.count:id,reference,warehouse'])
             // Reserved = qty held by approved-but-unfulfilled requests.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
             // FIFO stock value as a sortable subquery column.
@@ -211,6 +211,7 @@ class StockItemController extends Controller
             'category',
             'creator.employee',
             'updater.employee',
+            'draftCountLines.count:id,reference,warehouse',
         ]);
 
         return (new StockItemResource($this->withReserved($stockItem)))->response();

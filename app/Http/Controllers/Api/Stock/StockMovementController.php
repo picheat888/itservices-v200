@@ -11,6 +11,7 @@ use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Services\Stock\StockBalanceService;
+use App\Services\Stock\StockCountLock;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
 use App\Support\DateDisplay;
@@ -34,6 +35,7 @@ class StockMovementController extends Controller
     public function __construct(
         private readonly StockLotService $lotService,
         private readonly StockBalanceService $balances,
+        private readonly StockCountLock $countLock,
     ) {}
 
     /** Permission per movement type; issuing only happens by fulfilling a Request (StockRequestController). */
@@ -312,6 +314,11 @@ class StockMovementController extends Controller
 
             $fromWh = $data['from_label'] ?? null;
             $toWh = $data['to_label'] ?? null;
+
+            $this->countLock->assertFree($item->id, [
+                in_array($type, StockMovement::FROM_WAREHOUSE, true) ? $fromWh : null,
+                in_array($type, StockMovement::TO_WAREHOUSE, true) ? $toWh : null,
+            ]);
 
             // Outbound (non-transfer) needs enough total stock; per-warehouse guard is in the balance service.
             if (! $inbound && ! $isTransfer && $item->current_stock < $qty) {

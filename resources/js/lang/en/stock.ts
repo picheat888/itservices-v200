@@ -179,6 +179,8 @@ export const stock: Dict = {
     stock_count_mode_auto: 'Auto - adjust stock now',
     stock_count_mode_manual: 'Manual - report only',
     stock_count_mode_auto_hint: 'Applies the counted quantities to stock immediately.',
+    stock_count_freeze_note:
+        'While this count is a draft, its {n} items cannot be received, issued, moved or handed out on the counted warehouse until it is committed or cancelled.',
     stock_count_mode_manual_hint: 'Records the count as a report. Stock is not changed.',
     stock_count_mode_badge_auto: 'Auto',
     stock_count_mode_badge_manual: 'Manual',
@@ -300,6 +302,7 @@ export const stock: Dict = {
     stock_refusal_request_wrong_status: 'The request must be {expected} (currently {current}).',
     stock_refusal_count_not_editable: 'This count can no longer be edited.',
     stock_refusal_count_closed: 'This count is already closed.',
+    stock_refusal_count_in_progress: 'This item is being counted in {reference}. It can move on this warehouse once that count is closed.',
     stock_refusal_count_serial_needs_auto: 'A count with serialized items must be committed with Auto.',
     stock_refusal_count_serial_over: 'The count for {sku} is higher than the serials on record.',
     stock_refusal_count_needs_warehouse:

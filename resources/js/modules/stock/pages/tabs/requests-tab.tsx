@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
@@ -19,6 +20,7 @@ import { useToastStore } from '@/stores/toast';
 import { ArrowUpFromLine, Check, FilePlus2, Filter, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
+import { countLockFor } from '../../lib/count-lock';
 import { stockRefusalText } from '../../lib/refusal';
 
 const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
@@ -272,6 +274,13 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const allocTotal = Object.values(alloc).reduce((s, n) => s + n, 0);
     // Ready when the chosen units cover exactly the requested qty.
     const fulfillReady = fulfillSerialized ? !!fulfillReq && issueSerialIds.length === fulfillReq.qty : !!fulfillReq && allocTotal === fulfillReq.qty;
+    // Count freeze: the warehouses this issue would draw from.
+    const fulfillFrom = fulfillSerialized
+        ? fulfillInStock.filter((x) => issueSerialIds.includes(x.id)).map((x) => x.warehouse)
+        : Object.entries(alloc)
+              .filter(([, q]) => q > 0)
+              .map(([warehouse]) => warehouse);
+    const fulfillCountedBy = countLockFor(fulfillItem, fulfillFrom);
     const toggleIssueSerial = (id: number) => setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     const fulfillDirty = issueSerialIds.length > 0 || allocKey(alloc) !== allocKey(seedAlloc);
     const guardFulfillClose = useDiscardGuard(fulfillOpen && fulfillDirty);
@@ -477,27 +486,32 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                         <Button variant="outline" onClick={() => guardFulfillClose(closeFulfill)} disabled={fulfill.isPending}>
                             {t('cancel')}
                         </Button>
-                        <Button
-                            disabled={!fulfillReq || !fulfillReady || fulfill.isPending}
-                            onClick={() =>
-                                fulfillReq &&
-                                fulfill.mutate(
-                                    {
-                                        id: fulfillReq.id,
-                                        serialIds: fulfillSerialized ? issueSerialIds : undefined,
-                                        allocations: fulfillSerialized
-                                            ? undefined
-                                            : Object.entries(alloc)
-                                                  .filter(([, q]) => q > 0)
-                                                  .map(([warehouse, qty]) => ({ warehouse, qty })),
-                                    },
-                                    { onError, onSuccess: () => setFulfillOpen(false) },
-                                )
-                            }
+                        <DisabledReason
+                            reason={fulfillCountedBy ? t('stock_refusal_count_in_progress').replace('{reference}', fulfillCountedBy) : null}
+                            label={t('stock_fulfill_deduct')}
                         >
-                            <ArrowUpFromLine className="h-4 w-4" aria-hidden />
-                            {t('stock_fulfill_deduct')}
-                        </Button>
+                            <Button
+                                disabled={!fulfillReq || !fulfillReady || fulfill.isPending || fulfillCountedBy !== null}
+                                onClick={() =>
+                                    fulfillReq &&
+                                    fulfill.mutate(
+                                        {
+                                            id: fulfillReq.id,
+                                            serialIds: fulfillSerialized ? issueSerialIds : undefined,
+                                            allocations: fulfillSerialized
+                                                ? undefined
+                                                : Object.entries(alloc)
+                                                      .filter(([, q]) => q > 0)
+                                                      .map(([warehouse, qty]) => ({ warehouse, qty })),
+                                        },
+                                        { onError, onSuccess: () => setFulfillOpen(false) },
+                                    )
+                                }
+                            >
+                                <ArrowUpFromLine className="h-4 w-4" aria-hidden />
+                                {t('stock_fulfill_deduct')}
+                            </Button>
+                        </DisabledReason>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

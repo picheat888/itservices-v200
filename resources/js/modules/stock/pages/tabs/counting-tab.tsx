@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Ban, Check, ClipboardList, FileText, Loader2, Search, Zap } from 'lucide-react';
+import { AlertTriangle, Ban, Check, ClipboardList, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
@@ -641,6 +641,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             </div>
                             {(isDraft || committedFlash) && can('view_count') && (
                                 <>
+                                    {isDraft && (
+                                        <p className="text-muted-foreground flex items-start gap-2 text-xs leading-snug">
+                                            <Lock className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                                            <span>{t('stock_count_freeze_note').replace('{n}', String(session?.lines?.length ?? 0))}</span>
+                                        </p>
+                                    )}
                                     {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
                                     <div className="border-border space-y-2.5 rounded-lg border p-3">
                                         <div className={EYEBROW}>{t('stock_count_mode_label')}</div>
