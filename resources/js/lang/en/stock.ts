@@ -135,6 +135,7 @@ export const stock: Dict = {
     stock_search: 'Search SKU, name, brand or model…',
     stock_movements_search: 'Search doc no. or recorder…',
     stock_sku: 'SKU',
+    stock_level_aria: 'On hand {current} {unit}, Min {min}, Max {max}',
     stock_fulfill_desc: 'Review the units to issue, then deduct the stock for the requester',
     stock_count_start_new: 'Start count',
     stock_count_cancel_draft: 'Cancel draft count',

@@ -257,7 +257,7 @@ export function OverviewTab({
                                     </div>
                                     <div className="flex shrink-0 gap-4 text-right text-sm tabular-nums">
                                         <div className="w-12">
-                                            <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
+                                            <div className="text-muted-foreground text-[10px] uppercase">{t('stock_sku')}</div>
                                             {w.skus}
                                         </div>
                                         <div className="w-14">

@@ -1,25 +1,15 @@
+import { translate } from '@/lang';
 import { Button } from '@/shared/ui/button';
 import { useAppErrorStore, type AppErrorKind } from '@/stores/app-error';
+import { useUiStore } from '@/stores/ui';
 import { Ban, RotateCw, ServerCrash, WifiOff } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-// Full-screen takeover for system/transient API failures. English copy by design.
+// Full-screen takeover for system/transient API failures. Words come from the bundled dictionaries, so they show even when the API is down.
 const COPY: Record<AppErrorKind, { icon: ComponentType<{ className?: string }>; title: string; message: string }> = {
-    server: {
-        icon: ServerCrash,
-        title: 'Something went wrong',
-        message: 'The server ran into a problem. Please try again in a moment.',
-    },
-    network: {
-        icon: WifiOff,
-        title: 'Connection lost',
-        message: "We can't reach the server. Check your internet connection and try again.",
-    },
-    'rate-limit': {
-        icon: Ban,
-        title: 'Too many requests',
-        message: "You've made too many requests in a short time. Please wait a moment and try again.",
-    },
+    server: { icon: ServerCrash, title: 'err_server_title', message: 'err_server_body' },
+    network: { icon: WifiOff, title: 'err_network_title', message: 'err_network_body' },
+    'rate-limit': { icon: Ban, title: 'err_throttle_title', message: 'err_throttle_body' },
 };
 
 /**
@@ -29,11 +19,12 @@ const COPY: Record<AppErrorKind, { icon: ComponentType<{ className?: string }>; 
 export function AppErrorScreen() {
     const kind = useAppErrorStore((s) => s.kind);
     const retryAfter = useAppErrorStore((s) => s.retryAfter);
+    const lang = useUiStore((s) => s.lang);
 
     if (!kind) return null;
 
     const { icon: Icon, title, message } = COPY[kind];
-    const detail = kind === 'rate-limit' && retryAfter ? `Try again in about ${retryAfter} second${retryAfter > 1 ? 's' : ''}.` : null;
+    const detail = kind === 'rate-limit' && retryAfter ? translate(lang, 'err_retry_after').replace('{n}', String(retryAfter)) : null;
 
     return (
         <div className="bg-background fixed inset-0 z-[200] flex flex-col items-center justify-center gap-5 px-6 text-center">
@@ -41,13 +32,13 @@ export function AppErrorScreen() {
                 <Icon className="h-8 w-8" />
             </span>
             <div className="space-y-1.5">
-                <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-                <p className="text-muted-foreground max-w-md text-sm">{message}</p>
+                <h1 className="text-2xl font-bold tracking-tight">{translate(lang, title)}</h1>
+                <p className="text-muted-foreground max-w-md text-sm">{translate(lang, message)}</p>
                 {detail && <p className="text-foreground text-sm font-medium">{detail}</p>}
             </div>
             <Button onClick={() => window.location.reload()}>
                 <RotateCw className="h-4 w-4" />
-                Reload
+                {translate(lang, 'session_reload')}
             </Button>
         </div>
     );

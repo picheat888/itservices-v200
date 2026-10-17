@@ -1,3 +1,4 @@
+import { translate } from '@/lang';
 import { redirectToLogin } from '@/shared/lib/login-redirect';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
@@ -102,8 +103,8 @@ http.interceptors.response.use(
             // Signed in: a toast, not a full-screen takeover
             const loggedIn = !!queryClient.getQueryData(ME_KEY);
             if (loggedIn) {
-                const detail = retryAfter ? ` Try again in about ${retryAfter} second${retryAfter > 1 ? 's' : ''}.` : '';
-                useToastStore.getState().push(`Too many requests - please slow down for a moment.${detail}`, 'warning');
+                const wait = retryAfter ?? 5;
+                useToastStore.getState().push(translate(useUiStore.getState().lang, 'err_throttle_toast').replace('{n}', String(wait)), 'warning');
             } else {
                 showError('rate-limit', retryAfter);
             }

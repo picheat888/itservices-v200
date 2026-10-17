@@ -17,7 +17,6 @@ import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useToastStore } from '@/stores/toast';
-import { useUiStore } from '@/stores/ui';
 import { BellOff, Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -395,7 +394,6 @@ function NotificationRow({
     const [tipOpen, setTipOpen] = useState(false);
     const { Icon, color, bg } = iconMeta(n);
     const title = notificationTitle(n, t);
-    const lang = useUiStore((st) => st.lang);
     const fmt = useDateFormat();
 
     // Only a title that is actually cut opens the tooltip.
@@ -457,7 +455,7 @@ function NotificationRow({
                     title={n.created_at_iso ? fmt.dateTime(n.created_at_iso) : undefined}
                     className="text-muted-foreground text-xs"
                 >
-                    {n.created_at_iso ? relativeTime(n.created_at_iso, lang, '') : n.created_at}
+                    {n.created_at_iso ? relativeTime(n.created_at_iso, t, '') : n.created_at}
                 </time>
                 <button
                     ref={dismissRef}

@@ -386,7 +386,7 @@ export default function StockPage() {
             key: 'bar',
             header: `${t('stock_stock')} (Min / Max)`,
             width: '170px',
-            render: (i) => <StockLevelBar current={i.current_stock} min={i.min_stock} max={i.max_stock} status={i.status} />,
+            render: (i) => <StockLevelBar current={i.current_stock} min={i.min_stock} max={i.max_stock} status={i.status} unit={i.unit ?? ''} />,
         },
         {
             key: 'current',

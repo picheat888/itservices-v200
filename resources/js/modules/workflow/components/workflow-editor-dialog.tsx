@@ -60,7 +60,7 @@ function toPayload(steps: EditableStep[]): WorkflowStepPayload[] {
 const OWNER_TYPES: ServiceRequestType[] = ['mailgroup', 'fileshare', 'recovery'];
 
 /** Ready-made chain labels for the actor label input (stored as data, not i18n). */
-const CHAIN_LABEL_PRESETS = ['Supervisor / Head', 'Manager / Asst. Manager', 'Department Manager', 'Vice President'];
+const CHAIN_LABEL_PRESET_KEYS = ['wf_preset_supervisor_head', 'wf_preset_manager_asst', 'wf_preset_department_manager', 'wf_preset_vice_president'];
 
 /**
  * Editor for one workflow: the steps as a ladder of rungs, plus a "test with employee" preview.
@@ -117,7 +117,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     }, [workflow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const updStep = (i: number, patch: Partial<EditableStep>) =>
-        setSteps((list) => list.map((s, idx) => (idx === i ? withDerivedLabel({ ...s, ...patch }, positions, departments) : s)));
+        setSteps((list) => list.map((s, idx) => (idx === i ? withDerivedLabel({ ...s, ...patch }, positions, departments, t) : s)));
 
     const removeStep = (i: number) => {
         setOpenRanks(null);
@@ -329,7 +329,12 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                             approver_employee_ids: actor === 'department' ? s.approver_employee_ids : [],
                                                             by_person: actor === 'department' ? s.by_person : false,
                                                             kind: actor === 'it_staff' ? 'completion' : 'approval',
-                                                            label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
+                                                            label:
+                                                                actor === 'owner'
+                                                                    ? t('wf_actor_owner')
+                                                                    : actor === 'it_staff'
+                                                                      ? t('wf_actor_it')
+                                                                      : s.label,
                                                             position_ids: actor === 'chain' || actor === 'department' ? s.position_ids : [],
                                                         });
                                                     }}
@@ -457,8 +462,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                             })}
                         </div>
                         <datalist id="wf-chain-labels">
-                            {CHAIN_LABEL_PRESETS.map((l) => (
-                                <option key={l} value={l} />
+                            {CHAIN_LABEL_PRESET_KEYS.map((key) => (
+                                <option key={key} value={t(key)} />
                             ))}
                         </datalist>
                     </div>
@@ -735,7 +740,12 @@ function DepartmentStepFields({
 }
 
 /** A step's label until somebody writes one: it reads back the rule underneath it. */
-function withDerivedLabel(step: EditableStep, positions: { id: number; title: string }[], departments: { id: number; name: string }[]): EditableStep {
+function withDerivedLabel(
+    step: EditableStep,
+    positions: { id: number; title: string }[],
+    departments: { id: number; name: string }[],
+    t: (key: string) => string,
+): EditableStep {
     if (step.label_touched) {
         return step;
     }
@@ -746,9 +756,9 @@ function withDerivedLabel(step: EditableStep, positions: { id: number; title: st
 
     const label =
         step.actor_type === 'it_staff'
-            ? 'IT Staff'
+            ? t('wf_actor_it')
             : step.actor_type === 'owner'
-              ? 'Resource Owner'
+              ? t('wf_actor_owner')
               : step.actor_type === 'department'
                 ? [department, titles.join(' / ')].filter(Boolean).join(': ')
                 : titles.join(' / ');

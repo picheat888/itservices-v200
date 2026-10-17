@@ -135,6 +135,7 @@ export const stock: Dict = {
     stock_search: 'ค้นหา SKU, ชื่อ, ยี่ห้อ หรือรุ่น…',
     stock_movements_search: 'ค้นหาเลขที่เอกสารหรือผู้บันทึก…',
     stock_sku: 'SKU',
+    stock_level_aria: 'คงเหลือ {current} {unit}, Min {min}, Max {max}',
     stock_fulfill_desc: 'ตรวจสอบจำนวนที่จะจ่ายแล้วตัดสต็อกให้ผู้ขอ',
     stock_count_start_new: 'เริ่มนับสต็อก',
     stock_count_cancel_draft: 'ยกเลิกใบนับสต็อก',

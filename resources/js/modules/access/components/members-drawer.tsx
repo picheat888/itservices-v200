@@ -71,10 +71,10 @@ const LEVEL_DOT: Record<string, string> = {
     Write: 'bg-blue-500',
 };
 
-// Display label per stored level — "Write" grants read+write, so it reads as "Read/Write".
+// Dictionary key per stored level, "Write" grants read+write.
 const LEVEL_LABEL: Record<string, string> = {
-    Read: 'Read',
-    Write: 'Read/Write',
+    Read: 'emp_v_level_read',
+    Write: 'emp_v_level_read_write',
 };
 
 // Per-kind icon tile accent (matches the registry tables / design tokens).
@@ -489,7 +489,7 @@ export function MembersDrawer({
                                                                 <SelectItem key={l} value={l}>
                                                                     <span className="flex items-center gap-1.5">
                                                                         <span className={cn('h-1.5 w-1.5 rounded-full', LEVEL_DOT[l])} />
-                                                                        {LEVEL_LABEL[l] ?? l}
+                                                                        {LEVEL_LABEL[l] ? t(LEVEL_LABEL[l]) : l}
                                                                     </span>
                                                                 </SelectItem>
                                                             ))}

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import * as React from 'react';
 import { DayPicker, getDefaultClassNames } from 'react-day-picker';
 
+import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 
@@ -75,11 +76,12 @@ function ViewHeader({
     prevDisabled?: boolean;
     nextDisabled?: boolean;
 }) {
+    const t = useT();
     const arrow =
         'text-muted-foreground hover:text-foreground hover:bg-accent grid h-7 w-7 place-items-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-30';
     return (
         <div className="mb-2 flex h-8 items-center justify-between">
-            <button type="button" onClick={onPrev} disabled={prevDisabled} className={arrow} aria-label="Previous">
+            <button type="button" onClick={onPrev} disabled={prevDisabled} className={arrow} aria-label={t('cal_prev')}>
                 <ChevronLeft className="h-4 w-4" />
             </button>
             <button
@@ -90,7 +92,7 @@ function ViewHeader({
             >
                 {title}
             </button>
-            <button type="button" onClick={onNext} disabled={nextDisabled} className={arrow} aria-label="Next">
+            <button type="button" onClick={onNext} disabled={nextDisabled} className={arrow} aria-label={t('cal_next')}>
                 <ChevronRight className="h-4 w-4" />
             </button>
         </div>

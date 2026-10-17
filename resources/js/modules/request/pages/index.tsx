@@ -245,7 +245,7 @@ export default function RequestsPage() {
         {
             key: 'reference',
             sticky: 'left',
-            header: 'ID',
+            header: t('dash_col_request'),
             width: '100px',
             className: 'whitespace-nowrap',
             render: (r) => <span className="text-xs font-semibold">{r.reference}</span>,

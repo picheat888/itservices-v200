@@ -734,7 +734,7 @@ function TicketTable({
                             'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
                         )}
                     >
-                        <th className="px-4 py-2.5">ID</th>
+                        <th className="px-4 py-2.5">{t('ticket_col_no')}</th>
                         <th className="px-4 py-2.5">{t('ticket_subject')}</th>
                         <th className="px-4 py-2.5">{t('ticket_category')}</th>
                         {showPriority && <th className="px-4 py-2.5">{t('ticket_priority')}</th>}

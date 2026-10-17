@@ -109,6 +109,7 @@ export const ticket: Dict = {
     ticket_open_by: 'Request by',
     ticket_request_at: 'Reported',
     ticket_col_no: 'Ticket no.',
+    ticket_new_eyebrow: 'New ticket',
     ticket_full_name: 'Full name',
     ticket_responsible_by: 'Responsible by',
     ticket_case_status: 'Case status',

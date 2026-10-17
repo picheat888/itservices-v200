@@ -1119,7 +1119,11 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                             />
                         </Field>
                         <Field label={t('set_email_from_name')} name="from_name" required error={errors.from_name}>
-                            <Input value={form.from_name ?? ''} onChange={(e) => set('from_name', e.target.value)} placeholder="IT Service Desk" />
+                            <Input
+                                value={form.from_name ?? ''}
+                                onChange={(e) => set('from_name', e.target.value)}
+                                placeholder={t('set_brand_name_ph')}
+                            />
                         </Field>
                     </div>
 

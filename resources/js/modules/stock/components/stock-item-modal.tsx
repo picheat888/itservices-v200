@@ -135,7 +135,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                 </DialogHeader>
                 <div className="space-y-3">
                     {/* SKU is system-generated; always read-only */}
-                    <Field label="SKU" required={!!item}>
+                    <Field label={t('stock_sku')} required={!!item}>
                         <Input name="sku" value={form.sku} disabled placeholder={t('stock_sku_auto')} />
                     </Field>
                     <Field

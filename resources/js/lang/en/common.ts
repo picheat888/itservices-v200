@@ -40,6 +40,7 @@ export const common: Dict = {
     discard_confirm: 'Discard',
     discard_keep: 'Keep editing',
     close: 'Close',
+    asset_open_detail: 'View details',
     got_it: 'Got it',
     profile: 'My Profile',
     toggle_sidebar: 'Toggle sidebar',
@@ -189,6 +190,12 @@ export const common: Dict = {
     cmn_of: 'of',
 
     // datetime.ts — labels moved from the component
+    rel_just_now: 'just now',
+    rel_minutes: '{n} min ago',
+    rel_hours: '{n} hrs ago',
+    rel_hours_one: '{n} hr ago',
+    rel_days: '{n} days ago',
+    rel_days_one: '{n} day ago',
 
     // sidebar.tsx — labels moved from the component
     cmn_sign_out: 'Sign out',
@@ -196,4 +203,18 @@ export const common: Dict = {
     // placeholder.tsx — labels moved from the component
     cmn_placeholder_later: 'This module ships in a later phase',
     cmn_placeholder_ready: 'This part is not available yet.',
+
+    // app-error-screen.tsx — full-screen error
+    err_server_title: 'Something went wrong',
+    err_server_body: 'The server ran into a problem. Please try again in a moment.',
+    err_network_title: 'Connection lost',
+    err_network_body: "We can't reach the server. Check your internet connection and try again.",
+    err_throttle_title: 'Too many requests',
+    err_throttle_body: "You've made too many requests in a short time. Please wait a moment and try again.",
+    err_retry_after: 'Try again in about {n} seconds.',
+    err_throttle_toast: 'Too many requests. Wait about {n} seconds and try again.',
+
+    // calendar.tsx — month navigation
+    cal_prev: 'Previous',
+    cal_next: 'Next',
 };

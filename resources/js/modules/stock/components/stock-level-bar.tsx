@@ -18,7 +18,19 @@ export const STOCK_STATUS_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red
 };
 
 /** Visual Min/Max bar: fixed min/max gridlines, current value scaled piecewise. */
-export function StockLevelBar({ current: cur, min, max, status }: { current: number; min: number; max: number; status: StockItemStatus }) {
+export function StockLevelBar({
+    current: cur,
+    min,
+    max,
+    status,
+    unit = '',
+}: {
+    current: number;
+    min: number;
+    max: number;
+    status: StockItemStatus;
+    unit?: string;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const n = (v: number) => v.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
@@ -46,7 +58,15 @@ export function StockLevelBar({ current: cur, min, max, status }: { current: num
                   ? 'bg-muted-foreground'
                   : 'bg-emerald-500';
     return (
-        <div className="w-full min-w-[160px] pb-0.5" role="img" aria-label={`${t('stock_current')} ${n(cur)}, Min ${n(min)}, Max ${n(max)}`}>
+        <div
+            className="w-full min-w-[160px] pb-0.5"
+            role="img"
+            aria-label={t('stock_level_aria')
+                .replace('{current}', n(cur))
+                .replace(' {unit}', unit ? ` ${unit}` : '')
+                .replace('{min}', n(min))
+                .replace('{max}', n(max))}
+        >
             <div className="dark:bg-muted relative h-1.5 w-full rounded-full bg-slate-200" aria-hidden>
                 {/* Healthy band between the fixed min and max gridlines. */}
                 <div

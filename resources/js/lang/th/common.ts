@@ -40,6 +40,7 @@ export const common: Dict = {
     discard_confirm: 'ทิ้ง',
     discard_keep: 'แก้ไขต่อ',
     close: 'ปิด',
+    asset_open_detail: 'ดูรายละเอียด',
     got_it: 'เข้าใจแล้ว',
     profile: 'โปรไฟล์ของฉัน',
     toggle_sidebar: 'เปิด/ปิดเมนูด้านข้าง',
@@ -189,6 +190,12 @@ export const common: Dict = {
     cmn_of: 'จาก',
 
     // datetime.ts — labels moved from the component
+    rel_just_now: 'เมื่อสักครู่',
+    rel_minutes: '{n} นาทีที่แล้ว',
+    rel_hours: '{n} ชั่วโมงที่แล้ว',
+    rel_hours_one: '{n} ชั่วโมงที่แล้ว',
+    rel_days: '{n} วันที่แล้ว',
+    rel_days_one: '{n} วันที่แล้ว',
 
     // sidebar.tsx — labels moved from the component
     cmn_sign_out: 'ออกจากระบบ',
@@ -196,4 +203,18 @@ export const common: Dict = {
     // placeholder.tsx — labels moved from the component
     cmn_placeholder_later: 'โมดูลนี้จะพัฒนาในเฟสถัดไป',
     cmn_placeholder_ready: 'ส่วนนี้ยังไม่เปิดใช้งาน',
+
+    // app-error-screen.tsx — full-screen error
+    err_server_title: 'เกิดข้อผิดพลาด',
+    err_server_body: 'เซิร์ฟเวอร์มีปัญหา กรุณาลองใหม่อีกครั้งในอีกสักครู่',
+    err_network_title: 'เชื่อมต่อไม่ได้',
+    err_network_body: 'ติดต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+    err_throttle_title: 'ใช้งานถี่เกินไป',
+    err_throttle_body: 'มีการส่งคำขอหลายครั้งในเวลาสั้น ๆ กรุณารอสักครู่แล้วลองใหม่',
+    err_retry_after: 'ลองใหม่ได้ในอีกประมาณ {n} วินาที',
+    err_throttle_toast: 'ใช้งานถี่เกินไป กรุณารอประมาณ {n} วินาทีแล้วลองใหม่',
+
+    // calendar.tsx — month navigation
+    cal_prev: 'ก่อนหน้า',
+    cal_next: 'ถัดไป',
 };

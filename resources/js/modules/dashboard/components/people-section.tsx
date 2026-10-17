@@ -114,7 +114,6 @@ function ActivityCard({
     auditLog: string | null;
 }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={className}>
@@ -137,7 +136,7 @@ function ActivityCard({
                                 </div>
                                 {item.actor && <div className="text-muted-foreground truncate text-xs">{item.actor}</div>}
                             </div>
-                            <span className="text-muted-foreground shrink-0 text-xs">{relativeTime(item.at, lang, '')}</span>
+                            <span className="text-muted-foreground shrink-0 text-xs">{relativeTime(item.at, t, '')}</span>
                         </li>
                     ))}
                 </ul>
