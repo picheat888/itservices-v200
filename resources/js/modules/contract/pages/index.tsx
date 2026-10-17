@@ -18,6 +18,7 @@ import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -590,7 +591,7 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
             align: 'right',
             width: '110px',
             className: 'whitespace-nowrap text-xs tabular-nums',
-            render: (c) => (c.assets_count ?? 0).toLocaleString(),
+            render: (c) => formatNumber(c.assets_count ?? 0, lang),
         },
         {
             key: 'status',

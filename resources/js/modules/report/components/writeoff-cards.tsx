@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -82,12 +83,11 @@ const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking
 const TD = 'px-3 py-2.5 align-middle';
 const NUM = 'text-right tabular-nums';
 
-const locale = (lang: Lang) => (lang === 'th' ? 'th-TH' : 'en-US');
-const count = (n: number, lang: Lang) => n.toLocaleString(locale(lang));
+const count = (n: number, lang: Lang) => formatNumber(n, lang);
 // Two decimals and no ฿, like the money tile and the list's value column on the same page.
-const money = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n: number, lang: Lang) => formatNumber(n, lang, { decimals: 2 });
 const endDate = (iso: string, lang: Lang) => reportDates(lang).date(iso);
-const years = (n: number, lang: Lang) => n.toLocaleString(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const years = (n: number, lang: Lang) => formatNumber(n, lang, { decimals: 1 });
 
 /** A heading-right legend for a set of series, optionally with each one's count. */
 function Legend({ series, counts }: { series: ChartSeries[]; counts?: Record<string, number> }) {

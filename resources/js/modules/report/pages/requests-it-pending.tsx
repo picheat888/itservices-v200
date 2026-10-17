@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { REQUEST_ONBOARDING_BADGE, REQUEST_ONBOARDING_ROW } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -58,10 +59,11 @@ function RequesterCell({ row }: { row: Row }) {
 
 /** Whole days waiting as a pill: over 7 red, 4–7 amber, up to 3 gray. */
 function WaitPill({ value }: { value: unknown }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     if (typeof value !== 'number') return <>—</>;
     const tone = value > 7 ? 'red' : value > 3 ? 'amber' : 'gray';
-    return <StatusBadge tone={tone}>{t('rep_rqi_wait_days').replace('{n}', value.toLocaleString())}</StatusBadge>;
+    return <StatusBadge tone={tone}>{t('rep_rqi_wait_days').replace('{n}', formatNumber(value, lang))}</StatusBadge>;
 }
 
 /** The ticket number (its link) with its status under it; none yet reads so. */

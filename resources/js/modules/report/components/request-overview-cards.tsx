@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { localName, localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -92,7 +93,7 @@ const ITEMS_SHOWN = 8;
 const ROWS_SHOWN = 10;
 
 /** A median in whole days: "3", "1.5". */
-const days = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { maximumFractionDigits: 1 });
+const days = (n: number, lang: Lang) => formatNumber(n, lang, { maxDecimals: 1 });
 
 /** A tidy axis top at or above the value whose half is a whole number: 11 → 12, 3 → 4, 41 → 50. */
 function axisTop(value: number): number {

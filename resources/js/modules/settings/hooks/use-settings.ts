@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { currencySymbol } from '@/shared/lib/currency';
+import { formatNumber } from '@/shared/lib/number';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -76,9 +77,10 @@ export function useCurrency() {
     const { data } = useSettings();
     const code = data?.currency ?? 'THB';
     const symbol = currencySymbol(code);
+    const lang = useUiStore((s) => s.lang);
 
     // Money formatter: symbol + thousands grouping + always 2 decimals (e.g. "฿1,234.50").
-    const format = (value: number) => `${symbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const format = (value: number) => `${symbol}${formatNumber(value, lang, { decimals: 2 })}`;
 
     // Compact money formatter for tight spaces (KPI cards): symbol + uppercase K/M/B
     // (e.g. "฿1.2M"). Forced to en-US so the suffix is always uppercase Latin, not a

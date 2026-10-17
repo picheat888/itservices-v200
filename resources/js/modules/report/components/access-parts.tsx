@@ -1,4 +1,5 @@
 // Pieces the access report cards share: number and department words, a bar split into labelled pieces, the "สิ่งที่ต้องทำ" lines and the clickable pick rows.
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ChevronRight } from 'lucide-react';
@@ -7,7 +8,7 @@ import { pct, W_PCT } from './percent-classes';
 
 export type Lang = 'th' | 'en';
 
-export const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+export const count = (n: number, lang: Lang) => formatNumber(n, lang);
 
 /** The narrowest a bar may get so each piece's number still fits, by how many pieces it has. */
 const MIN_W_BY_PIECES = ['min-w-0', 'min-w-7', 'min-w-14', 'min-w-[5.25rem]', 'min-w-28', 'min-w-[8.75rem]'];

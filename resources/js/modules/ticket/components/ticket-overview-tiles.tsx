@@ -2,14 +2,13 @@
 // two read the chosen window (SLA as the report counts it, opened vs closed).
 import { useT } from '@/lang';
 import { StatCard, StatGrid } from '@/shared/components/stat-card';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { slaLevel, type SlaLevel } from '@/shared/lib/sla-level';
 import { cn } from '@/shared/lib/utils';
 import type { TicketSummary } from '@/shared/types';
 import { AlertTriangle, ArrowDown, ArrowUp, Clock, Gauge, Inbox, Minus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-
-const fmt = (n: number) => n.toLocaleString('en-US');
 
 const RED_SMALL = 'text-red-700 dark:text-red-400';
 const GREEN_SMALL = 'text-emerald-700 dark:text-emerald-400';
@@ -82,6 +81,7 @@ export function TicketOverviewTiles({
     onOpenWaiting: () => void;
 }) {
     const t = useT();
+    const fmt = useNumberFormat();
     const sla = summary.period_sla;
     const live = summary.backlog_open + summary.backlog_in_progress;
     const net = summary.created - summary.resolved;

@@ -4,6 +4,7 @@ import { InfoPopover } from '@/shared/components/info-popover';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { bindDateFormat } from '@/shared/lib/datetime';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info } from 'lucide-react';
@@ -116,9 +117,7 @@ export function TitleWithCount({ title, count }: { title: string; count: number 
     return (
         <span className="flex items-baseline gap-2">
             {title}
-            <span className="text-muted-foreground text-xs font-normal">
-                {t('rep_chart_items').replace('{n}', count.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US'))}
-            </span>
+            <span className="text-muted-foreground text-xs font-normal">{t('rep_chart_items').replace('{n}', formatNumber(count, lang))}</span>
         </span>
     );
 }
@@ -134,7 +133,7 @@ export function useChartLabel() {
 export function StackBar({ values, series, scale }: { values: Record<string, number>; series: ChartSeries[]; scale: number }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const number = (value: number) => value.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+    const number = (value: number) => formatNumber(value, lang);
     const width = (value: number) => `${Math.min(100, (value / Math.max(1, scale)) * 100)}%`;
 
     return (
@@ -333,7 +332,7 @@ export interface BarPiece {
 /** Each piece of a counted bar keeps room for its number. */
 const PIECE_MIN_PX = 27;
 
-const pieceCount = (n: number, lang: string) => n.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+const pieceCount = (n: number, lang: string) => formatNumber(n, lang);
 
 /**
  * A stacked bar with each count inside its piece (as the month chart's pieces). Every piece keeps

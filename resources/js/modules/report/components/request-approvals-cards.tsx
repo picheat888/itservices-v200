@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -85,10 +86,7 @@ function WaitPill({ days, band }: { days: number; band: RequestAgeBand }) {
 }
 
 /** The days column: whole days, a dash when there is nothing to count. */
-const days = (value: number | null, lang: Lang, decimals = 0) =>
-    value === null
-        ? '—'
-        : value.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+const days = (value: number | null, lang: Lang, decimals = 0) => (value === null ? '—' : formatNumber(value, lang, { decimals }));
 
 /* ─────────────────────────── waiting now ─────────────────────────── */
 

@@ -8,6 +8,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { localName } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
@@ -373,7 +374,7 @@ export default function AccessControlPage() {
     const sizeText = (size?: number | null, unit?: string | null) => {
         if (size == null) return null;
         if (size === 0) return t('access_size_unlimited');
-        return `${size.toLocaleString()}${unit ? ` ${unit}` : ''}`;
+        return `${formatNumber(size, lang, { maxDecimals: 3 })}${unit ? ` ${unit}` : ''}`;
     };
 
     // Build the drawer's header/meta payload from a registry row (fields differ per kind).

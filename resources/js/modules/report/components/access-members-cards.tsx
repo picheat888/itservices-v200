@@ -4,6 +4,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localName } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -70,9 +71,7 @@ function sizeText(t: (key: string) => string, lang: Lang, size: Resource['size']
 
 /** Whole GB as "700 GB", from a terabyte as "2.32 TB". */
 function gbText(lang: Lang, gb: number): string {
-    return gb >= 1024
-        ? `${(Math.round((gb / 1024) * 100) / 100).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US')} TB`
-        : `${count(Math.round(gb), lang)} GB`;
+    return gb >= 1024 ? `${formatNumber(Math.round((gb / 1024) * 100) / 100, lang, { maxDecimals: 2 })} TB` : `${count(Math.round(gb), lang)} GB`;
 }
 
 const gbOf = (r: Resource) => (r.size && r.size.value > 0 ? r.size.value * (TO_GB[r.size.unit ?? ''] ?? 0) : 0);
@@ -157,7 +156,7 @@ function StorageCards({ resources }: { resources: Resource[] }) {
     }
     const rows = [...byDept.values()].sort((a, b) => b.gb - a.gb || a.name.localeCompare(b.name, 'th'));
     const scale = Math.max(1, ...rows.map((r) => r.gb));
-    const pct = (gb: number) => `${(Math.round((gb / total) * 1000) / 10).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US')}%`;
+    const pct = (gb: number) => `${formatNumber(Math.round((gb / total) * 1000) / 10, lang, { maxDecimals: 1 })}%`;
     const flag = (v: number) =>
         v > 0 ? (
             <StatusBadge tone="gray" className="tabular-nums">

@@ -8,7 +8,9 @@
  */
 import { useT } from '@/lang';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
+import { useUiStore } from '@/stores/ui';
 import { Box, MoreHorizontal } from 'lucide-react';
 import type { ChartSeries, TabularChart } from '../types';
 import { ChartHeading, fold, FoldToggle, StackBar, useChartLabel } from './chart-parts';
@@ -38,6 +40,7 @@ export function SplitLine({
     series: ChartSeries[];
     muted?: boolean;
 }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     const title = `${name}: ${series.map((s) => `${values[s.key] ?? 0} ${t(s.label_key)}`).join(', ')}`;
 
@@ -48,7 +51,7 @@ export function SplitLine({
                 <span className="truncate">{name}</span>
             </div>
             <StackBar values={values} series={series} scale={total} />
-            <span className="text-right text-sm leading-none font-semibold">{total.toLocaleString()}</span>
+            <span className="text-right text-sm leading-none font-semibold">{formatNumber(total, lang)}</span>
         </div>
     );
 }

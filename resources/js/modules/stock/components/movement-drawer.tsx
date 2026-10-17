@@ -6,6 +6,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
@@ -23,12 +24,12 @@ import { stockRefusalText } from '../lib/refusal';
 type SerialStatus = 'ok' | 'empty' | 'dup-system' | 'dup-batch';
 
 /** Group a raw numeric string's integer part for the locale, keeping the decimal part being typed. */
-function formatThousands(raw: string, numberFormat: Intl.NumberFormat): string {
+function formatThousands(raw: string, lang: string): string {
     if (raw === '') {
         return '';
     }
     const [intPart, decPart] = raw.split('.');
-    const intFmt = intPart ? numberFormat.format(Number(intPart)) : '';
+    const intFmt = intPart ? formatNumber(Number(intPart), lang) : '';
     return decPart !== undefined ? `${intFmt}.${decPart}` : intFmt;
 }
 
@@ -48,7 +49,6 @@ export type MovementKind = Extract<StockMovementType, 'receive' | 'return' | 'tr
 export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const numberFormat = useMemo(() => new Intl.NumberFormat(lang === 'th' ? 'th-TH' : 'en-US'), [lang]);
     const open = kind !== null;
     // Last non-null kind keeps the body mounted through the close animation
     const [shownKind, setShownKind] = useState<MovementKind | null>(null);
@@ -694,7 +694,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                 name="unit_cost"
                                 autoComplete="off"
                                 inputMode="decimal"
-                                value={formatThousands(unitCost, numberFormat)}
+                                value={formatThousands(unitCost, lang)}
                                 onChange={(e) => {
                                     // Digits + a single dot (max 2 decimals); store raw, display grouped
                                     let v = e.target.value.replace(/[^0-9.]/g, '');

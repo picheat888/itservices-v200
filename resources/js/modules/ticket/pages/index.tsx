@@ -15,6 +15,7 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
@@ -470,7 +471,7 @@ export default function TicketsPage() {
                                                 <span className="text-sm font-semibold">{t('ticket_by_category')}</span>
                                             </div>
                                             <span className="text-muted-foreground text-xs">
-                                                <b className="text-foreground font-bold">{totalCats.toLocaleString('en-US')}</b>{' '}
+                                                <b className="text-foreground font-bold">{formatNumber(totalCats, lang)}</b>{' '}
                                                 {t('ticket_trend_tickets')}
                                             </span>
                                         </div>
@@ -490,7 +491,7 @@ export default function TicketsPage() {
                                                             />
                                                         </div>
                                                         <span className="w-16 shrink-0 text-right text-sm font-semibold whitespace-nowrap">
-                                                            {c.count.toLocaleString('en-US')}{' '}
+                                                            {formatNumber(c.count, lang)}{' '}
                                                             <span className="text-muted-foreground text-[11px] font-medium">{pct}%</span>
                                                         </span>
                                                     </div>

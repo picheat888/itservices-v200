@@ -1,5 +1,6 @@
 // Min/Max level bar of the stock page (bullet-chart style), shared with the stock reports through the barrel.
 import { useT } from '@/lang';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItemStatus } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
@@ -33,7 +34,7 @@ export function StockLevelBar({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const n = (v: number) => v.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
+    const n = (v: number) => formatNumber(v, lang);
 
     // Piecewise mapping: `min` lands on BAR_MIN_X and `max` on BAR_MAX_X.
     let curPct: number;

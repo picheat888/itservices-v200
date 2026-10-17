@@ -19,6 +19,7 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
@@ -124,7 +125,7 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
                 {note && <span className="text-muted-foreground block truncate text-xs">{note}</span>}
             </span>
             <StackBar values={r.categories} series={series} scale={rowScale} />
-            <span className="text-right font-semibold">{r.count.toLocaleString()}</span>
+            <span className="text-right font-semibold">{formatNumber(r.count, lang)}</span>
             <SlaRate value={r.sla_rate} goal={slaGoal} />
             <Count value={r.open} />
         </div>

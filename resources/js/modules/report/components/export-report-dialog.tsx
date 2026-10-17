@@ -11,10 +11,12 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { refusalText } from '@/shared/lib/api-errors';
+import { formatNumber } from '@/shared/lib/number';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { Download, Info, Loader2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -54,6 +56,7 @@ export function ExportReportDialog({
     error: unknown;
     onReset: () => void;
 }) {
+    const lang = useUiStore((s) => s.lang);
     const t = useT();
     const navigate = useNavigate();
     const [format, setFormat] = useState<ExportFormat>(formats[0] ?? 'xlsx');
@@ -126,7 +129,7 @@ export function ExportReportDialog({
                     </div>
                     {/* One box for what the file holds: how many rows, which dates and filters, then the caveats. */}
                     <div className="bg-brand/5 space-y-2 rounded-lg px-3 py-2.5 text-sm">
-                        <div className="font-medium">{t('rep_export_scope').replace('{n}', total.toLocaleString())}</div>
+                        <div className="font-medium">{t('rep_export_scope').replace('{n}', formatNumber(total, lang))}</div>
                         {filterChips && (
                             <div className="flex flex-wrap items-center gap-1.5 text-xs">
                                 <span className="text-muted-foreground">{t('rep_schedule_filters_label')}</span>
