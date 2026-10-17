@@ -85,7 +85,7 @@ class StockBelowMinReport extends TabularReport
 
     public function columns(): array
     {
-        // Unit moves next to the on-hand quantity
+        // Unit sits after the gap, the one place it is shown
         $item = $this->itemColumns(fn (StockItem $i) => $i);
         $unit = array_values(array_filter($item, fn (ReportColumn $c) => $c->key === 'unit'));
 
@@ -94,10 +94,10 @@ class StockBelowMinReport extends TabularReport
             ReportColumn::enum('status', 'สถานะ', fn (StockItem $i) => $i->status(), self::STATUS_KEYS, self::STATUS_TH),
             ReportColumn::text('level', 'Min – Max', fn (StockItem $i) => $i->min_stock.' – '.$i->max_stock)->labelKey('rep_slv_c_level'),
             ReportColumn::number('qty_on_hand', 'จำนวน (ปัจจุบัน)', fn (StockItem $i) => $i->current_stock)->labelKey('stock_current'),
-            ...$unit,
             ReportColumn::number('min_stock', 'Min', fn (StockItem $i) => $i->min_stock)->hiddenByDefault(),
             ReportColumn::number('max_stock', 'Max', fn (StockItem $i) => $i->max_stock)->hiddenByDefault(),
             ReportColumn::number('gap', 'ขาด / เกิน', fn (StockItem $i) => self::figures($i)['gap']),
+            ...$unit,
             ReportColumn::number('reorder_qty', 'ควรสั่ง', fn (StockItem $i) => self::figures($i)['reorder_qty']),
             ReportColumn::money('unit_cost', 'ราคาต่อหน่วย', fn (StockItem $i) => self::rounded(self::figures($i)['unit_cost']))->labelKey('rep_slv_c_price'),
             ReportColumn::enum('unit_cost_basis', 'ที่มาของราคา', fn (StockItem $i) => self::figures($i)['basis'], self::BASIS_KEYS, self::BASIS_TH)
