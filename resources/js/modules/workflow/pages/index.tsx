@@ -1,9 +1,11 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { searchLabel } from '@/shared/lib/search-words';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -18,7 +20,6 @@ import { WorkflowEditorDialog } from '../components/workflow-editor-dialog';
 import { WorkflowStrip } from '../components/workflow-strip';
 import { WorkflowViewDialog } from '../components/workflow-view-dialog';
 import { useWorkflows } from '../hooks/use-workflows';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Workflows admin page: one card per request type's approval route, with a view dialog and the step editor. */
 export default function WorkflowsPage() {
@@ -160,7 +161,11 @@ export default function WorkflowsPage() {
                         </div>
                     )}
                     {!isLoading && filtered.length === 0 && !isError && (
-                        <p className="text-muted-foreground py-10 text-center text-sm">{t('wf_no_match')}</p>
+                        <EmptyState
+                            kind={search.trim() ? 'search' : 'empty'}
+                            title={search.trim() ? t('wf_empty_list_search') : t('wf_empty_list')}
+                            hint={search.trim() ? t('wf_empty_list_search_hint') : t('wf_empty_list_hint')}
+                        />
                     )}
 
                     {filtered.map((wf) => {

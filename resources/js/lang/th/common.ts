@@ -123,7 +123,6 @@ export const common: Dict = {
     new_contract: 'เพิ่มสัญญา',
     attachment_hint: 'PDF ไม่เกิน 25MB สูงสุด 5 ไฟล์',
     attachment_pick: 'คลิกเพื่อเลือกไฟล์ PDF',
-    attachment_none: 'ยังไม่มีไฟล์แนบ',
     attachment_new: 'ใหม่',
     attachment_pdf_only: 'รองรับเฉพาะไฟล์ PDF',
     attachment_too_big: 'แต่ละไฟล์ต้องไม่เกิน 25MB',

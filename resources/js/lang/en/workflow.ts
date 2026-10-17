@@ -26,7 +26,6 @@ export const workflow: Dict = {
     // pages/index.tsx — search + workflow cards
     wf_search_ph: 'Search name, request type or step…',
     wf_search_hint: "Approvers come from the requester's real reporting line when they submit.",
-    wf_no_match: 'No workflows match',
     wf_view: 'View',
     wf_edit: 'Edit',
     wf_active: 'Active',

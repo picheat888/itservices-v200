@@ -3,11 +3,13 @@ import { AssetTypeIcon } from '@/modules/asset';
 import { AttachmentPreview, FILE_TONE, KIND_META, fileKind } from '@/shared/components/attachment-preview';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { EmptyState } from '@/shared/components/empty-state';
 import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localPair } from '@/shared/lib/local-name';
+import { formatNumber } from '@/shared/lib/number';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus, TicketWorkClass } from '@/shared/types';
@@ -32,7 +34,6 @@ import {
 import { useEffect, useState } from 'react';
 import type { ResolveMode } from './resolve-ticket-modal';
 import { TICKET_WORK_CLASS_META, TicketPriorityBadge, TicketSlaBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
-import { formatNumber } from '@/shared/lib/number';
 
 /**
  * One-line label/value row for the rail's compact sections (SLA, dates).
@@ -517,7 +518,7 @@ export function TicketDetailDrawer({
                                 {tab === 'progress' && (
                                     <div>
                                         {progress.length === 0 ? (
-                                            <p className="text-muted-foreground py-8 text-center text-sm">{t('ticket_no_updates')}</p>
+                                            <EmptyState title={t('ticket_empty_drawer_progress')} hint={t('ticket_empty_drawer_progress_hint')} />
                                         ) : (
                                             <ol className="space-y-0">
                                                 {progress.map((entry, i) => {
@@ -567,7 +568,7 @@ export function TicketDetailDrawer({
                                 {tab === 'files' && (
                                     <div>
                                         {files.length === 0 ? (
-                                            <p className="text-muted-foreground py-8 text-center text-sm">{t('ticket_no_attachments')}</p>
+                                            <EmptyState title={t('ticket_empty_drawer_files')} hint={t('ticket_empty_drawer_files_hint')} />
                                         ) : (
                                             <ul className="grid gap-3 sm:grid-cols-2">
                                                 {files.map((a) => {

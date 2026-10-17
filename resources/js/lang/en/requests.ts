@@ -43,9 +43,6 @@ export const requests: Dict = {
 
     // pages/index.tsx — dashboard tab
     req_queue_title: 'Needs your decision',
-    req_queue_empty: 'Nothing is waiting on you',
-    req_queue_empty_sub: "You've decided every request sent to you.",
-    req_recent_empty: 'No requests yet. Click New request to start one.',
     req_view_all: 'View all',
     req_catalog_approval_one: 'approval',
     req_catalog_approval_many: 'approvals',

@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailed, LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, overviewPeriodParams, useOverviewPeriod } from '@/shared/components/overview-period';
@@ -12,6 +13,7 @@ import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -37,22 +39,7 @@ import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
-import {
-    CalendarDays,
-    Check,
-    CheckCircle2,
-    ChevronRight,
-    CircleDot,
-    Clock,
-    Eye,
-    History,
-    Inbox,
-    Layers,
-    Plus,
-    Search,
-    X,
-    type LucideIcon,
-} from 'lucide-react';
+import { CalendarDays, Check, ChevronRight, CircleDot, Clock, Eye, History, Inbox, Layers, Plus, Search, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DecisionDialog, type DecisionAction } from '../components/decision-dialog';
@@ -62,7 +49,6 @@ import { RequestDetailDialog } from '../components/request-detail-dialog';
 import { WorkflowMini } from '../components/workflow-mini';
 import { useRequests } from '../hooks/use-requests';
 import { canFileAnyRequest } from '../lib/submit-types';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** What last happened to a request, as a sentence ("Approved by X"); the event alone when nobody is attached. */
 function activityLine(request: ServiceRequest, t: (key: string) => string, lang: string): string {
@@ -374,6 +360,17 @@ export default function RequestsPage() {
     ];
 
     const filterCount = (status ? 1 : 0) + (type ? 1 : 0) + (filedRange || filedDays ? 1 : 0);
+    const hasSearchOrFilter = search !== '' || filterCount > 0;
+    const listEmpty: EmptyStateProps = hasSearchOrFilter
+        ? { kind: 'search', title: t('req_empty_list_all_search'), hint: t('req_empty_list_all_search_hint') }
+        : tab === 'approvals'
+          ? { title: t('req_empty_list_approvals'), hint: t('req_empty_list_approvals_hint') }
+          : tab === 'queue'
+            ? { title: t('req_empty_list_queue'), hint: t('req_empty_list_queue_hint') }
+            : {
+                  title: t('req_empty_list_all'),
+                  hint: canSubmit ? t('req_empty_list_all_hint').replace('{button}', t('requests_new')) : null,
+              };
     // The overview period carried into the list, so a KPI opens the requests it counted
     const periodFiled: Record<string, string> =
         typeof period === 'number'
@@ -473,13 +470,7 @@ export default function RequestsPage() {
                                         <LoadFailed onRetry={() => refetchQueue()} />
                                     </div>
                                 ) : queue.length === 0 ? (
-                                    <div className="flex items-start gap-3 px-3 py-2.5">
-                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                                        <div className="min-w-0">
-                                            <div className="text-sm font-medium">{t('req_queue_empty')}</div>
-                                            <div className="text-muted-foreground text-xs">{t('req_queue_empty_sub')}</div>
-                                        </div>
-                                    </div>
+                                    <EmptyState kind="clear" title={t('req_empty_overview_queue')} hint={t('req_empty_overview_queue_hint')} />
                                 ) : (
                                     queue.map((r, i) => {
                                         const Icon = REQUEST_TYPE_META[r.type].icon;
@@ -562,7 +553,10 @@ export default function RequestsPage() {
                                     </div>
                                 )}
                                 {!isLoading && rows.length === 0 && !isError && (
-                                    <p className="text-muted-foreground px-3 py-8 text-center text-sm">{t('req_recent_empty')}</p>
+                                    <EmptyState
+                                        title={t('req_empty_overview_recent')}
+                                        hint={canSubmit ? t('req_empty_overview_recent_hint').replace('{button}', t('requests_new')) : null}
+                                    />
                                 )}
                                 {!isLoading &&
                                     rows.map((r, i) => {
@@ -708,13 +702,8 @@ export default function RequestsPage() {
                             onRowClick={openDetail}
                             rowClassName={onboardingRowClass}
                             server={{ ...list.table.paging, total: meta?.total ?? 0 }}
-                            emptyState={
-                                isError ? (
-                                    <LoadFailed onRetry={() => refetch()} />
-                                ) : tab === 'approvals' && !search && filterCount === 0 ? (
-                                    <ApprovalsEmpty />
-                                ) : undefined
-                            }
+                            emptyState={isError ? <LoadFailed onRetry={() => refetch()} /> : undefined}
+                            empty={listEmpty}
                         />
                     </div>
                 )}
@@ -748,7 +737,9 @@ function DashCard({
                 <Icon className="text-muted-foreground h-4 w-4" />
                 <h2 className="text-sm font-semibold">{title}</h2>
                 {count != null && (
-                    <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-1.5 py-0.5 text-[11px]">{fmtN(count)}</span>
+                    <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-1.5 py-0.5 text-[11px]">
+                        {fmtN(count)}
+                    </span>
                 )}
                 {action}
             </div>
@@ -784,15 +775,4 @@ function RowSkeletons({ count }: { count: number }) {
             <Skeleton className="h-5 w-20 rounded-full" />
         </div>
     ));
-}
-
-function ApprovalsEmpty() {
-    const t = useT();
-
-    return (
-        <span className="inline-flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            {t('req_queue_empty')}
-        </span>
-    );
 }

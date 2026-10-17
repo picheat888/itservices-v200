@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { AttachmentPreview } from '@/shared/components/attachment-preview';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { EmptyState } from '@/shared/components/empty-state';
 import { AttachmentRow } from '@/shared/components/file-drop-zone';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { SectionLabel } from '@/shared/components/section-label';
@@ -26,7 +27,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
-import { Ban, Check, PackageCheck, Paperclip, Ticket as TicketIcon, UserPlus, X, Zap } from 'lucide-react';
+import { Ban, Check, PackageCheck, Ticket as TicketIcon, UserPlus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRequest, useRequestMutations } from '../hooks/use-requests';
@@ -276,10 +277,10 @@ function RequestDetailBody({
                                 </span>
                             </Link>
                         ) : (
-                            <div className="border-border/80 text-muted-foreground flex items-center gap-2.5 rounded-xl border border-dashed px-3.5 py-3 text-xs">
-                                <Zap className="h-4 w-4 shrink-0" />
-                                {request.auto_ticket && request.status === 'pending' ? t('req_auto_ticket_note') : t('req_no_ticket')}
-                            </div>
+                            <EmptyState
+                                className="border-border/80 rounded-xl border border-dashed"
+                                title={request.auto_ticket && request.status === 'pending' ? t('req_auto_ticket_note') : t('req_no_ticket')}
+                            />
                         )}
                     </div>
                 </div>
@@ -340,10 +341,11 @@ function RequestAttachments({ request, onPreview }: { request: ServiceRequest; o
 
     if (attachments.length === 0) {
         return (
-            <div className="border-border/80 text-muted-foreground flex items-center gap-2.5 rounded-xl border border-dashed px-3.5 py-3 text-xs">
-                <Paperclip className="h-4 w-4 shrink-0" />
-                {t('attachment_none')}
-            </div>
+            <EmptyState
+                className="border-border/80 rounded-xl border border-dashed"
+                title={t('req_empty_detail_attachments')}
+                hint={t('req_empty_detail_attachments_hint')}
+            />
         );
     }
 
