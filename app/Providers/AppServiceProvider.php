@@ -8,9 +8,11 @@ use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\NotificationKind;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
@@ -40,6 +42,11 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(JobProcessing::class, fn () => AppSetting::flushCache());
 
         $this->configureRateLimiting();
+
+        // Each bell row carries its kind, so the tray counts and pages in SQL.
+        DatabaseNotification::creating(function (DatabaseNotification $notification) {
+            $notification->kind = NotificationKind::of((array) $notification->data);
+        });
 
         // Strict morph map for Access Control resources. Because enforceMorphMap()
         // puts Eloquent into strict mode, EVERY model used in a polymorphic

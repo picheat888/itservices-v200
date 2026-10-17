@@ -22,6 +22,7 @@ use App\Notifications\TicketCreatedNotification;
 use App\Notifications\TicketForwardedNotification;
 use App\Notifications\TicketOwnerNotification;
 use App\Notifications\TicketSlaAlertNotification;
+use App\Support\NotificationKind;
 use App\Support\ReportCatalogue;
 use Carbon\CarbonImmutable;
 
@@ -88,7 +89,7 @@ class Logs implements PerfStep
                 $readAt = $read <= $this->end ? $read : null;
             }
             $this->ctx->sql->insert('notifications', $this->fill('notifications', [
-                'id' => $rng->uuid(), 'type' => $class, 'notifiable_type' => 'App\Models\User', 'notifiable_id' => $userId,
+                'id' => $rng->uuid(), 'type' => $class, 'kind' => NotificationKind::of($data), 'notifiable_type' => 'App\Models\User', 'notifiable_id' => $userId,
                 'data' => $data, 'read_at' => $readAt, 'created_at' => $at, 'updated_at' => $at,
             ]));
         }
