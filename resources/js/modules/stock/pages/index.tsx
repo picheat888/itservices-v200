@@ -45,6 +45,7 @@ import { MovementDrawer, type MovementKind } from '../components/movement-drawer
 import { RequestDrawer } from '../components/request-drawer';
 import { StockItemDetailModal } from '../components/stock-item-detail-modal';
 import { StockItemModal } from '../components/stock-item-modal';
+import { STOCK_STATUS_TONE, StockLevelBar } from '../components/stock-level-bar';
 import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
 import { ALERT_BLINK } from './shared';
 import { AuditTab } from './tabs/counting-tab';
@@ -113,66 +114,6 @@ const applyParams = (params: URLSearchParams, patch: ListParamPatch) => {
         }
     }
 };
-
-const STATUS_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
-    ok: 'green',
-    low: 'amber',
-    out: 'red',
-    over: 'blue',
-    dead: 'gray',
-};
-
-// Fixed screen anchors for the min/max gridlines, so markers line up across rows.
-const BAR_MIN_X = 20;
-const BAR_MAX_X = 80;
-
-/** Visual Min/Max bar (bullet-chart style): fixed min/max gridlines, current value scaled piecewise. */
-function StockBar({ item, t }: { item: StockItem; t: ReturnType<typeof useT> }) {
-    const { min_stock: min, max_stock: max, current_stock: cur } = item;
-
-    // Piecewise mapping: `min` lands on BAR_MIN_X and `max` on BAR_MAX_X.
-    let curPct: number;
-    if (cur <= min) {
-        curPct = min > 0 ? (cur / min) * BAR_MIN_X : 0;
-    } else if (cur <= max) {
-        curPct = BAR_MIN_X + ((cur - min) / Math.max(1, max - min)) * (BAR_MAX_X - BAR_MIN_X);
-    } else {
-        const over = (cur - max) / Math.max(1, max - min);
-        curPct = Math.min(100, BAR_MAX_X + over * (100 - BAR_MAX_X));
-    }
-
-    const fill =
-        item.status === 'out' || item.status === 'low'
-            ? 'bg-destructive'
-            : item.status === 'over'
-              ? 'bg-blue-500'
-              : item.status === 'dead'
-                ? 'bg-muted-foreground'
-                : 'bg-emerald-500';
-    return (
-        <div className="w-full min-w-[160px] pb-0.5" role="img" aria-label={`${t('stock_current')} ${cur}, Min ${min}, Max ${max}`}>
-            <div className="bg-muted relative h-1.5 w-full rounded-full" aria-hidden>
-                {/* Healthy band between the fixed min and max gridlines. */}
-                <div
-                    className="absolute inset-y-0 rounded-full bg-emerald-500/20"
-                    style={{ left: `${BAR_MIN_X}%`, width: `${BAR_MAX_X - BAR_MIN_X}%` }}
-                />
-                <div className="absolute -inset-y-0.5 w-px bg-amber-500" style={{ left: `${BAR_MIN_X}%` }} />
-                <div className="absolute -inset-y-0.5 w-px bg-blue-500" style={{ left: `${BAR_MAX_X}%` }} />
-                <div className={cn('absolute inset-y-0 left-0 rounded-full', fill)} style={{ width: `${curPct}%` }} />
-            </div>
-            {/* Min / Max labels under the fixed gridlines. */}
-            <div className="relative mt-1 h-3 text-[10px]" aria-hidden>
-                <span className="absolute -translate-x-1/2 whitespace-nowrap text-amber-700 dark:text-amber-400" style={{ left: `${BAR_MIN_X}%` }}>
-                    {min}
-                </span>
-                <span className="absolute -translate-x-1/2 whitespace-nowrap text-blue-600 dark:text-blue-400" style={{ left: `${BAR_MAX_X}%` }}>
-                    {max}
-                </span>
-            </div>
-        </div>
-    );
-}
 
 /** Alert banner shown when any items are in a warning state, with a count per type. */
 function AlertCard({
@@ -405,7 +346,9 @@ export default function StockPage() {
 
     const { format, formatCompact } = useCurrency();
 
-    const statusBadge = (s: StockItemStatus) => <StatusBadge tone={STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>;
+    const statusBadge = (s: StockItemStatus) => (
+        <StatusBadge tone={STOCK_STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>
+    );
 
     const columns: Column<StockItem>[] = [
         {
@@ -433,7 +376,12 @@ export default function StockPage() {
             hideBelow: 'lg',
             render: (i) => <span className="text-sm">{localPair(i.category, i.category_th, lang) ?? '—'}</span>,
         },
-        { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, width: '200px', render: (i) => <StockBar item={i} t={t} /> },
+        {
+            key: 'bar',
+            header: `${t('stock_stock')} (Min / Max)`,
+            width: '200px',
+            render: (i) => <StockLevelBar current={i.current_stock} min={i.min_stock} max={i.max_stock} status={i.status} />,
+        },
         {
             key: 'current',
             header: t('stock_current'),
@@ -687,7 +635,7 @@ export default function StockPage() {
                                                             value: s,
                                                             label: t(`stock_st_${s}` as Parameters<typeof t>[0]),
                                                             search: t(`stock_st_${s}` as Parameters<typeof t>[0]),
-                                                            icon: <ToneDot tone={STATUS_TONE[s]} />,
+                                                            icon: <ToneDot tone={STOCK_STATUS_TONE[s]} />,
                                                         })),
                                                     ]}
                                                 />
