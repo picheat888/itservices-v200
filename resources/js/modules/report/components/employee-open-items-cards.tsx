@@ -21,6 +21,8 @@ const DATA_ISSUES: DataIssueKey[] = ['mgr_left', 'no_mgr', 'no_email', 'no_dept'
 const ACCOUNT_KINDS: OpenItemsAccountKind[] = ['left', 'must_change', 'expired'];
 
 /** Each topic's colour in the tiles' bars and keys. */
+const OPEN_ITEMS_GROUPS: OpenItemsGroup[] = ['asset', 'access', 'acct', 'data'];
+
 const GROUP_FILL: Record<OpenItemsGroup, string> = {
     asset: 'bg-red-600 dark:bg-red-400',
     access: 'bg-cyan-600 dark:bg-cyan-400',
@@ -118,11 +120,10 @@ function barOf(pieces: Piece[], unit: string, lang: 'th' | 'en') {
 export function OpenItemsTopicSegments({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const { data } = useEmployeeOpenItemsBreakdown(filters);
-    const groups: OpenItemsGroup[] = data?.groups ?? ['asset', 'access', 'data'];
     const counts: Record<OpenItemsGroup, number | null> = {
         asset: data?.asset.people ?? null,
         access: data?.access.people ?? null,
-        acct: data?.acct?.accounts ?? null,
+        acct: data?.acct.accounts ?? null,
         data: data?.data.people ?? null,
     };
 
@@ -132,7 +133,7 @@ export function OpenItemsTopicSegments({ filters, patch }: { filters: TabularFil
             label={t('rep_fl_group')}
             options={[
                 { value: null, label: t('rep_f_any'), count: data?.people_total ?? null },
-                ...groups.map((g) => ({ value: g as OpenItemsGroup | null, label: t(`rep_ef_group_${g}`), count: counts[g] })),
+                ...OPEN_ITEMS_GROUPS.map((g) => ({ value: g as OpenItemsGroup | null, label: t(`rep_ef_group_${g}`), count: counts[g] })),
             ]}
             value={(filters.group as OpenItemsGroup | null | undefined) ?? null}
             onChange={(group) => patch({ group })}
@@ -151,18 +152,14 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
     const groupPieces: Piece[] = [
         { key: 'asset', n: data.asset.people, fill: GROUP_FILL.asset, label: t('rep_ef_group_asset'), short: t('rep_ef_short_asset') },
         { key: 'access', n: data.access.people, fill: GROUP_FILL.access, label: t('rep_ef_group_access'), short: t('rep_ef_short_access') },
-        ...(data.acct
-            ? [
-                  {
-                      key: 'acct',
-                      n: data.acct.accounts,
-                      fill: GROUP_FILL.acct,
-                      label: t('rep_ef_group_acct'),
-                      short: t('rep_ef_short_acct'),
-                      unit: accountsUnit,
-                  },
-              ]
-            : []),
+        {
+            key: 'acct',
+            n: data.acct.accounts,
+            fill: GROUP_FILL.acct,
+            label: t('rep_ef_group_acct'),
+            short: t('rep_ef_short_acct'),
+            unit: accountsUnit,
+        },
         { key: 'data', n: data.data.people, fill: GROUP_FILL.data, label: t('rep_ef_group_data'), short: t('rep_ef_short_data') },
     ];
     const said = (pieces: Piece[], unit = people) =>
@@ -202,13 +199,13 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
     const acct = data.acct;
     const accountPieces: Piece[] = ACCOUNT_KINDS.map((k) => ({
         key: k,
-        n: acct?.by_kind[k] ?? 0,
+        n: acct.by_kind[k],
         fill: ACCOUNT_FILL[k],
         label: t(`rep_ef_acct_kind_${k}`),
         short: t(`rep_ef_acct_short_${k}`),
     }));
 
-    const tiles = 4 + (acct ? 1 : 0);
+    const tiles = 5;
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(tiles))}>
             <KpiTile
@@ -245,21 +242,19 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
                         : t('rep_ef_access_clear')
                 }
             />
-            {acct && (
-                <KpiTile
-                    label={t('rep_ef_group_acct')}
-                    value={n(acct.accounts)}
-                    unit={accountsUnit}
-                    bar={acct.accounts > 0 ? barOf(accountPieces, accountsUnit, lang) : undefined}
-                    footer={
-                        acct.accounts > 0 ? (
-                            <Key title={t('rep_ef_group_acct')} label={said(accountPieces, accountsUnit)} line={accountPieces} />
-                        ) : (
-                            t('rep_ef_acct_none')
-                        )
-                    }
-                />
-            )}
+            <KpiTile
+                label={t('rep_ef_group_acct')}
+                value={n(acct.accounts)}
+                unit={accountsUnit}
+                bar={acct.accounts > 0 ? barOf(accountPieces, accountsUnit, lang) : undefined}
+                footer={
+                    acct.accounts > 0 ? (
+                        <Key title={t('rep_ef_group_acct')} label={said(accountPieces, accountsUnit)} line={accountPieces} />
+                    ) : (
+                        t('rep_ef_acct_none')
+                    )
+                }
+            />
             <KpiTile
                 label={t('rep_ef_group_data')}
                 value={n(data.data.people)}
@@ -305,7 +300,7 @@ export function EmployeeOpenItemsCards({ filters }: { filters: TabularFilters })
     if (isLoading || !data) return <CardsSkeleton />;
 
     const topic = (filters.group as OpenItemsGroup | null | undefined) ?? null;
-    const shows = (group: OpenItemsGroup) => data.groups.includes(group) && (topic === null || topic === group);
+    const shows = (group: OpenItemsGroup) => topic === null || topic === group;
     // A department or a search narrowed the cards, so an empty one says so instead of "all clear".
     const narrowed = Boolean(filters.department_id || filters.search);
 
@@ -314,7 +309,7 @@ export function EmployeeOpenItemsCards({ filters }: { filters: TabularFilters })
             <OpenItemsTiles data={data} />
             {shows('asset') && <AssetCard group={data.asset} narrowed={narrowed} />}
             {shows('access') && <AccessCard group={data.access} narrowed={narrowed} />}
-            {shows('acct') && data.acct && <AccountCard group={data.acct} narrowed={narrowed} />}
+            {shows('acct') && <AccountCard group={data.acct} narrowed={narrowed} />}
             {shows('data') && <DataCard group={data.data} narrowed={narrowed} />}
         </div>
     );

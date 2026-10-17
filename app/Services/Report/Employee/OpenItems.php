@@ -84,7 +84,6 @@ final class OpenItems
             + $rows->where('grp', 'acct')->whereNull('employee_id')->count();
 
         return [
-            'groups' => self::GROUPS,
             'people_total' => $people,
             'asset' => $asset,
             'access' => $access,
