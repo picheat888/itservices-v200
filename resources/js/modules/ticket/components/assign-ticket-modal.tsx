@@ -81,6 +81,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                     icon={UserPlus}
                     eyebrow={view?.ticket_no}
                     title={t('ticket_assign')}
+                    titleSuffix={<span className="sr-only"> {view?.ticket_no}</span>}
                     srDescription={t('ticket_assign')}
                 />
 
