@@ -1,50 +1,28 @@
-// Overview tab header: "ภาพรวม" plus the period buttons (7 / 30 / 90 days, all, custom range).
-// The period lives in the URL (?range=7|30|90|custom&from&to); all time, the default, stays out of it.
+// Overview tab header: "ภาพรวม" plus the period buttons (7 / 30 / 90 days, this year, all, custom range; each module picks which).
+// The period lives in the URL (?range=7|30|90|year|custom&from&to); the module's default period stays out of it.
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { cn } from '@/shared/lib/utils';
 import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { Gauge } from 'lucide-react';
+import { useState } from 'react';
 
-export type OverviewPeriod = number | 'all' | { from: string; to: string };
+import { PRESETS, readOverviewPeriod, spanDays, type OverviewPeriod, type PeriodOptions } from '@/shared/lib/overview-period-core';
 
-const PRESETS = [7, 30, 90] as const;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** The period from the URL values; anything unknown is all time. */
-export function readOverviewPeriod(range: string, from: string, to: string): OverviewPeriod {
-    if (range === 'custom') {
-        return ISO_DATE.test(from) && ISO_DATE.test(to) && from <= to ? { from, to } : 'all';
-    }
-    const days = Number(range);
-    return (PRESETS as readonly number[]).includes(days) ? days : 'all';
-}
-
-/** API query params for a period: ?days=7|30|90|all or ?from&to. */
-export function overviewPeriodParams(period: OverviewPeriod): Record<string, string | number> {
-    return typeof period === 'object' ? { from: period.from, to: period.to } : { days: period };
-}
-
-/** Whether the period runs up to today, so its last chart column is the one still being lived through. */
-export function periodReachesToday(period: OverviewPeriod, today = new Date()): boolean {
-    if (typeof period !== 'object') return true;
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return period.to >= `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-}
-
-/** A stable query-key part for a period. */
-export const overviewPeriodKey = (period: OverviewPeriod) => (typeof period === 'object' ? `${period.from}_${period.to}` : String(period));
+export { overviewPeriodKey, overviewPeriodParams, periodReachesToday, readOverviewPeriod, spanDays } from '@/shared/lib/overview-period-core';
+export type { OverviewPeriod, PeriodOptions } from '@/shared/lib/overview-period-core';
 
 /** The overview period kept in the URL. */
-export function useOverviewPeriod(): [OverviewPeriod, (next: OverviewPeriod) => void] {
+export function useOverviewPeriod(options?: PeriodOptions): [OverviewPeriod, (next: OverviewPeriod) => void] {
     const list = useListParams();
-    const period = readOverviewPeriod(list.get('range'), list.get('from'), list.get('to'));
+    const fallback = options?.fallback ?? 'all';
+    const period = readOverviewPeriod(list.get('range'), list.get('from'), list.get('to'), options);
     const setPeriod = (next: OverviewPeriod) =>
         list.setParams(
             typeof next === 'object'
                 ? { range: 'custom', from: next.from, to: next.to }
-                : { range: next === 'all' ? null : String(next), from: null, to: null },
+                : { range: next === fallback ? null : String(next), from: null, to: null },
         );
     return [period, setPeriod];
 }
@@ -53,29 +31,60 @@ const SEGMENT = 'rounded-md px-3 py-1 text-xs font-medium transition-colors [@me
 const segmentTone = (active: boolean) => (active ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground');
 
 /** Period buttons. "กำหนดเอง" opens the shared range calendar, which applies only on "นำไปใช้". */
-export function OverviewPeriodSelect({ value, onChange }: { value: OverviewPeriod; onChange: (next: OverviewPeriod) => void }) {
+export function OverviewPeriodSelect({
+    value,
+    onChange,
+    options,
+}: {
+    value: OverviewPeriod;
+    onChange: (next: OverviewPeriod) => void;
+    options?: PeriodOptions;
+}) {
     const t = useT();
     const fmt = useDateFormat();
     const custom = typeof value === 'object';
+    const [tooLong, setTooLong] = useState(false);
+    const buttons: (number | 'all' | 'year')[] = [
+        ...PRESETS,
+        ...(options?.year ? (['year'] as const) : []),
+        ...(options?.allowAll === false ? [] : (['all'] as const)),
+    ];
+
+    // A range over the limit is not applied; the reader is told instead of the range being cut quietly
+    const pickRange = (from: string, to: string) => {
+        const over = options?.maxDays != null && spanDays(from, to) > options.maxDays;
+        setTooLong(over);
+        if (!over) onChange({ from, to });
+    };
 
     return (
-        <div className="border-border inline-flex flex-wrap rounded-lg border p-0.5">
-            {[...PRESETS, 'all' as const].map((d) => (
-                <button
-                    key={d}
-                    type="button"
-                    aria-pressed={value === d}
-                    onClick={() => onChange(d)}
-                    className={cn(SEGMENT, segmentTone(value === d))}
-                >
-                    {d === 'all' ? t('all') : t('period_days').replace('{n}', String(d))}
-                </button>
-            ))}
-            <DateRangeInput from={custom ? value.from : ''} to={custom ? value.to : ''} align="end" onChange={(from, to) => onChange({ from, to })}>
-                <button type="button" aria-pressed={custom} className={cn(SEGMENT, segmentTone(custom))}>
-                    {custom ? fmt.range(value.from, value.to) : t('period_custom')}
-                </button>
-            </DateRangeInput>
+        <div className="flex flex-col items-end gap-1">
+            <div className="border-border inline-flex flex-wrap rounded-lg border p-0.5">
+                {buttons.map((d) => (
+                    <button
+                        key={d}
+                        type="button"
+                        aria-pressed={value === d}
+                        onClick={() => {
+                            setTooLong(false);
+                            onChange(d);
+                        }}
+                        className={cn(SEGMENT, segmentTone(value === d))}
+                    >
+                        {d === 'all' ? t('all') : d === 'year' ? t('period_this_year') : t('period_days').replace('{n}', String(d))}
+                    </button>
+                ))}
+                <DateRangeInput from={custom ? value.from : ''} to={custom ? value.to : ''} align="end" onChange={pickRange}>
+                    <button type="button" aria-pressed={custom} className={cn(SEGMENT, segmentTone(custom))}>
+                        {custom ? fmt.range(value.from, value.to) : t('period_custom')}
+                    </button>
+                </DateRangeInput>
+            </div>
+            {tooLong && options?.maxDays != null && (
+                <p role="alert" className="text-xs text-red-700 dark:text-red-400">
+                    {t('period_max_days').replace('{n}', String(options.maxDays))}
+                </p>
+            )}
         </div>
     );
 }
@@ -84,10 +93,12 @@ export function OverviewPeriodSelect({ value, onChange }: { value: OverviewPerio
 export function OverviewHeader({
     value,
     onChange,
+    options,
     className,
 }: {
     value?: OverviewPeriod;
     onChange?: (next: OverviewPeriod) => void;
+    options?: PeriodOptions;
     className?: string;
 }) {
     const t = useT();
@@ -97,7 +108,7 @@ export function OverviewHeader({
                 <Gauge className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm font-semibold">{t('sub_overview')}</span>
             </div>
-            {value !== undefined && onChange && <OverviewPeriodSelect value={value} onChange={onChange} />}
+            {value !== undefined && onChange && <OverviewPeriodSelect value={value} onChange={onChange} options={options} />}
         </div>
     );
 }
