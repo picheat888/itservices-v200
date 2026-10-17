@@ -106,9 +106,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
             ? t('contract_expired')
             : c.status === 'overdue'
               ? t('contract_overdue')
-              : lang === 'th'
-                ? 'ใช้งาน'
-                : 'Active';
+              : t('active');
 
     const days = c?.days_remaining ?? 0;
     const daysBadge =
@@ -125,35 +123,29 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
             >
                 <Clock className="h-3 w-3" />
                 {days <= 0
-                    ? lang === 'th'
-                        ? `เกินกำหนด ${-days} วัน`
-                        : `${-days} days overdue`
+                    ? t('contract_days_overdue').replace('{n}', String(-days))
                     : c.in_reminder
-                      ? lang === 'th'
-                          ? `หมดอายุใน ${days} วัน`
-                          : `Expires in ${days} days`
-                      : lang === 'th'
-                        ? `เหลือ ${days} วัน`
-                        : `${days} days left`}
+                      ? t('contract_expires_in').replace('{n}', String(days))
+                      : t('contract_days_left').replace('{n}', String(days))}
             </span>
         );
 
     const assetColumns: Column<ContractLinkedAsset>[] = [
         { key: 'asset_code', header: 'Asset ID', render: (a) => <span className="text-xs">{a.asset_code}</span> },
-        { key: 'name', header: lang === 'th' ? 'ชื่อ' : 'Name', render: (a) => <span className="font-medium">{a.name}</span> },
-        { key: 'type', header: lang === 'th' ? 'ประเภท' : 'Type', render: (a) => localPair(a.type, a.type_th, lang) ?? '—' },
+        { key: 'name', header: t('asset_owner_name'), render: (a) => <span className="font-medium">{a.name}</span> },
+        { key: 'type', header: t('asset_type'), render: (a) => localPair(a.type, a.type_th, lang) ?? '—' },
         { key: 'serial', header: 'Serial', render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
-        { key: 'owner', header: lang === 'th' ? 'เจ้าของ' : 'Owner', render: (a) => a.owner ?? '—' },
+        { key: 'owner', header: t('asset_peek_owner'), render: (a) => a.owner ?? '—' },
         {
             key: 'status',
-            header: lang === 'th' ? 'สถานะ' : 'Status',
+            header: t('asset_status'),
             render: (a) => (a.status ? <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge> : '—'),
         },
     ];
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: lang === 'th' ? 'ภาพรวม' : 'Overview' },
-        { id: 'assets', label: lang === 'th' ? 'ทรัพย์สิน' : 'Assets', count: c?.linked_assets.length },
+        { id: 'overview', label: t('asset_overview') },
+        { id: 'assets', label: t('assets'), count: c?.linked_assets.length },
     ];
 
     return (
@@ -165,9 +157,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                         <TypeIcon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                        <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">
-                            {lang === 'th' ? 'สัญญา' : 'Contract'}
-                        </div>
+                        <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{t('asset_contract')}</div>
                         <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                             <span className="truncate">{c ? c.name || c.details || '—' : '—'}</span>
                             {c?.code && (
@@ -239,12 +229,17 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                     <KV
                                         label={t('contract_duration')}
                                         value={(() => {
-                                            const mo = lang === 'th' ? 'เดือน' : c.duration_months === 1 ? 'month' : 'months';
-                                            const dy = lang === 'th' ? 'วัน' : c.duration_days === 1 ? 'day' : 'days';
-                                            if (c.duration_months > 0 && c.duration_days > 0)
-                                                return `${c.duration_months} ${mo} ${c.duration_days} ${dy}`;
-                                            if (c.duration_months > 0) return `${c.duration_months} ${mo}`;
-                                            return `${c.duration_days} ${dy}`;
+                                            const monthsText = t(c.duration_months === 1 ? 'contract_months_one' : 'contract_months_many').replace(
+                                                '{n}',
+                                                String(c.duration_months),
+                                            );
+                                            const daysText = t(c.duration_days === 1 ? 'contract_days_one' : 'contract_days_many').replace(
+                                                '{n}',
+                                                String(c.duration_days),
+                                            );
+                                            if (c.duration_months > 0 && c.duration_days > 0) return `${monthsText} ${daysText}`;
+                                            if (c.duration_months > 0) return monthsText;
+                                            return daysText;
                                         })()}
                                     />
                                     <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
@@ -274,7 +269,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                     ) : c.linked_assets.length === 0 ? (
                         <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-sm">
                             <Package className="text-muted-foreground/50 h-8 w-8" />
-                            {lang === 'th' ? 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน' : 'No assets linked to this contract'}
+                            {t('asset_no_assets_linked_to_this_contract')}
                         </div>
                     ) : (
                         <div className="h-full">

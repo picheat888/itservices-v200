@@ -1,7 +1,6 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth/hooks/use-auth';
 import type { Role } from '@/shared/types';
-import { useUiStore } from '@/stores/ui';
 import { Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -46,7 +45,6 @@ export function RequirePermission({
  */
 export function NoAccess() {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const navigate = useNavigate();
     const [count, setCount] = useState(REDIRECT_SECONDS);
 
@@ -75,7 +73,7 @@ export function NoAccess() {
 
                 <div className="w-full max-w-xs space-y-1.5">
                     <div className="text-muted-foreground flex items-center justify-between text-xs">
-                        <span>{lang === 'th' ? 'กำลังกลับหน้า Dashboard' : 'Redirecting to dashboard'}</span>
+                        <span>{t('auth_redirecting_to_dashboard')}</span>
                         <span className="tabular-nums">{count}s</span>
                     </div>
                     <div className="bg-muted h-1 w-full overflow-hidden rounded-full">

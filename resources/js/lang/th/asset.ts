@@ -224,4 +224,28 @@ export const asset: Dict = {
 
     // asset-detail-drawer.tsx — write-off note
     asset_writeoff_note_label: 'ตัดจำหน่ายแล้ว',
+
+    // asset-detail-drawer.tsx — labels moved from the component
+    asset_history: 'ประวัติ',
+    asset_label: 'ทรัพย์สิน',
+
+    // asset-form-drawer.tsx — labels moved from the component
+    asset_could_not_save: 'บันทึกไม่สำเร็จ',
+    asset_select_type: 'เลือกประเภท',
+    asset_select_brand: 'เลือกยี่ห้อ',
+    asset_select_model: 'เลือกรุ่น',
+    asset_select_warehouse: 'เลือกคลัง',
+    asset_nickname_ph: 'เช่น เครื่องพี่สมชาย',
+    asset_select_lease_contract: 'เลือกสัญญาเช่า',
+    asset_select_supplier: 'เลือกผู้ขาย',
+    asset_saved: 'บันทึกแล้ว',
+
+    // asset-receive-modal.tsx — labels moved from the component
+    asset_from: 'เดิมอยู่',
+    asset_select_destination_warehouse: 'เลือกคลังปลายทาง',
+
+    // contract-peek-dialog.tsx — labels moved from the component
+    asset_peek_owner: 'เจ้าของ',
+    asset_contract: 'สัญญา',
+    asset_no_assets_linked_to_this_contract: 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน',
 };

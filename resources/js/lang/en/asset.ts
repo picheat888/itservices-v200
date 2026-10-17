@@ -225,4 +225,28 @@ export const asset: Dict = {
 
     // asset-detail-drawer.tsx — write-off note
     asset_writeoff_note_label: 'Written off',
+
+    // asset-detail-drawer.tsx — labels moved from the component
+    asset_history: 'History',
+    asset_label: 'Asset',
+
+    // asset-form-drawer.tsx — labels moved from the component
+    asset_could_not_save: 'Could not save',
+    asset_select_type: 'Select type',
+    asset_select_brand: 'Select brand',
+    asset_select_model: 'Select model',
+    asset_select_warehouse: 'Select warehouse',
+    asset_nickname_ph: 'e.g. Reception PC',
+    asset_select_lease_contract: 'Select lease contract',
+    asset_select_supplier: 'Select supplier',
+    asset_saved: 'Saved!',
+
+    // asset-receive-modal.tsx — labels moved from the component
+    asset_from: 'from',
+    asset_select_destination_warehouse: 'Select destination warehouse',
+
+    // contract-peek-dialog.tsx — labels moved from the component
+    asset_peek_owner: 'Owner',
+    asset_contract: 'Contract',
+    asset_no_assets_linked_to_this_contract: 'No assets linked to this contract',
 };
