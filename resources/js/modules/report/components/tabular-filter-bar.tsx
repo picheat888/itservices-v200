@@ -50,7 +50,7 @@ function SearchField({ id, value, active, onChange }: { id: string; value: strin
     }, [draft]);
 
     return (
-        <div className="relative w-48">
+        <div className="relative w-full sm:w-48">
             <Search
                 aria-hidden="true"
                 className={cn(

@@ -42,8 +42,8 @@ export function errorMessageFor(t: (key: string) => string, error: unknown): str
 
 export function ErrorCard({ message }: { message: string }) {
     return (
-        <Card className="flex flex-col items-center gap-2 border-dashed p-10 text-center">
-            <AlertCircle className="text-muted-foreground h-8 w-8" />
+        <Card role="alert" className="flex flex-col items-center gap-2 border-dashed p-10 text-center">
+            <AlertCircle aria-hidden className="text-muted-foreground h-8 w-8" />
             <p className="text-muted-foreground text-sm">{message}</p>
         </Card>
     );
@@ -80,6 +80,7 @@ function TabularReportRows({
     onPatch: (next: TabularFilters) => void;
 }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const [params, setParams] = useSearchParams();
     const page = Math.max(1, Math.floor(Number(params.get('page'))) || 1);
     const perParam = Number(params.get('per'));
@@ -149,7 +150,7 @@ function TabularReportRows({
                         <div className="flex shrink-0 items-center gap-3">
                             {data && (
                                 <span className="text-muted-foreground text-xs tabular-nums">
-                                    {t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString())}
+                                    {t('rep_rows_count').replace('{n}', data.meta.total.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US'))}
                                 </span>
                             )}
                             <span aria-hidden className="bg-border h-5 w-px" />
