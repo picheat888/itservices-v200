@@ -193,8 +193,9 @@ class EmployeePermissionGatingTest extends TestCase
         $picker = $this->userWith(['tickets.create']); // no employee perms
         // Paginated directory browse is gated
         $this->actingAs($picker)->getJson('/api/employees?page=1')->assertForbidden();
-        // Unpaginated picker list stays open
-        $this->actingAs($picker)->getJson('/api/employees')->assertOk();
+        // Picker list stays open
+        $this->actingAs($picker)->getJson('/api/employees')->assertForbidden();
+        $this->actingAs($picker)->getJson('/api/employees/options')->assertOk();
 
         $viewer = $this->userWith(['employees.module', 'employees.view']);
         $this->actingAs($viewer)->getJson('/api/employees?page=1')->assertOk();
@@ -210,16 +211,16 @@ class EmployeePermissionGatingTest extends TestCase
         ]);
         $personal = ['email', 'phone', 'username', 'joined_at', 'resign_reason', 'last_day'];
 
-        $row = collect($this->actingAs($this->userWith(['tickets.create']))->getJson('/api/employees')->assertOk()->json('data'))
+        $row = collect($this->actingAs($this->userWith(['tickets.create']))->getJson('/api/employees/options')->assertOk()->json('data'))
             ->firstWhere('id', $someone->id);
         $this->assertSame('Somchai Private', $row['name']);
         $this->assertSame('EMP-777', $row['code']);
         $this->assertSame('resigned', $row['status']);
         foreach ($personal as $field) {
-            $this->assertNull($row[$field], $field);
+            $this->assertArrayNotHasKey($field, $row, $field);
         }
 
-        $full = collect($this->actingAs($this->userWith(['employees.module', 'employees.view']))->getJson('/api/employees')->json('data'))
+        $full = collect($this->actingAs($this->userWith(['employees.module', 'employees.view']))->getJson('/api/employees?page=1')->json('data'))
             ->firstWhere('id', $someone->id);
         $this->assertSame('somchai@example.test', $full['email']);
         $this->assertSame('Personal matters', $full['resign_reason']);

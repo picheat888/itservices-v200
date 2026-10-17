@@ -76,7 +76,7 @@ class EmployeeOptionsTest extends TestCase
         $count = function () use ($viewer): int {
             DB::flushQueryLog();
             DB::enableQueryLog();
-            $this->actingAs($viewer)->getJson('/api/employees')->assertOk();
+            $this->actingAs($viewer)->getJson('/api/employees?page=1&per_page=100')->assertOk();
 
             return count(DB::getQueryLog());
         };
