@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreEmployeeRequest;
 use App\Http\Resources\Access\EmployeeAccessResource;
 use App\Http\Resources\Employee\ApproverNodeResource;
+use App\Http\Resources\Employee\EmployeeOptionResource;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\OrgChartNodeResource;
 use App\Models\Asset\Asset;
@@ -133,14 +134,7 @@ class EmployeeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Resigned sink to the bottom; within active, no-account first;
-        // then newest employee code first (68xxxx before 52xxxx); then by name.
-        $query = Employee::with(['department', 'position', 'section', 'user'])
-            ->orderByRaw("status = 'resigned'")
-            ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
-            ->orderByDesc('code')
-            ->orderBy('first_name')
-            ->orderBy('last_name');
+        $query = $this->service->inDirectoryOrder(Employee::with(['department', 'position', 'section', 'user.role']));
 
         if ($request->has('page')) {
             abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
@@ -182,6 +176,16 @@ class EmployeeController extends Controller
         }
 
         return EmployeeResource::collection($query->get())->response();
+    }
+
+    /**
+     * Slim employee rows for pickers and lookups — open to any signed-in user, no personal fields.
+     */
+    public function options(Request $request): JsonResponse
+    {
+        $search = $request->query('search');
+
+        return EmployeeOptionResource::collection($this->service->pickerList(is_string($search) ? $search : null))->response();
     }
 
     /**

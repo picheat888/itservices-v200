@@ -25,6 +25,8 @@ use App\Services\Asset\AssetService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Request\RequestNotificationService;
 use App\Support\DateDisplay;
+use App\Support\SearchTerms;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -45,6 +47,43 @@ class EmployeeService
      * own — see resign(). Injected rather than resolved inline so tests can swap it out.
      */
     public function __construct(private readonly AssetService $assets) {}
+
+    /**
+     * Directory ordering: resigned sink to the bottom; within active, no-account first;
+     * then newest employee code first; then by name.
+     *
+     * @param  Builder<Employee>  $query
+     * @return Builder<Employee>
+     */
+    public function inDirectoryOrder(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw("status = 'resigned'")
+            ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
+            ->orderByDesc('code')
+            ->orderBy('first_name')
+            ->orderBy('last_name');
+    }
+
+    /**
+     * Slim rows for pickers and lookups, in directory order, optionally narrowed by a
+     * multi-word search over names, code and department.
+     *
+     * @return Collection<int, Employee>
+     */
+    public function pickerList(?string $search = null): Collection
+    {
+        $query = Employee::query()
+            ->select(['id', 'code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'photo_path', 'department_id', 'position_id', 'status'])
+            ->with(['department:id,name,name_th', 'position:id,title']);
+
+        SearchTerms::apply($query, $search, [
+            ...SearchTerms::personName(), 'code',
+            SearchTerms::related('department', ['name', 'name_th']),
+        ]);
+
+        return $this->inDirectoryOrder($query)->get();
+    }
 
     /**
      * Creates a new employee and assigns them to the default Role Group.
