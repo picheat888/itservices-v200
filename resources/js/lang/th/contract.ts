@@ -72,8 +72,6 @@ export const contract: Dict = {
     contract_timeline: 'ไทม์ไลน์การหมดอายุ',
     contract_top_vendors: 'ผู้ขายที่ใช้จ่ายสูงสุด',
     contract_action_queue: 'ต้องดำเนินการ',
-    contract_action_queue_empty: 'ไม่มีสัญญาที่ต้องดำเนินการ',
-    contract_none: 'ยังไม่มีสัญญา',
     contract_delete_confirm: 'ลบสัญญานี้?',
     contract_delete: 'ลบสัญญา',
     contract_delete_note: 'ลบสัญญาและเอกสารแนบทั้งหมดออกอย่างถาวร ใช้สำหรับกรณีเพิ่มผิดเท่านั้น และไม่สามารถกู้คืนได้',
@@ -129,7 +127,6 @@ export const contract: Dict = {
     contract_search: 'ค้นหาเลขที่, ชื่อสัญญา หรือผู้ขาย…',
     contract_assets_search: 'ค้นหารหัส, ชื่อ หรือ Serial…',
     contract_link_assets_loading: 'กำลังโหลด…',
-    contract_link_assets_none: 'ไม่มีทรัพย์สินให้เลือก',
     contract_link_assets_selected: 'เลือกแล้ว {n} รายการ',
     contract_link_asset_locked: 'ถอดออกไม่ได้ เพราะตัดจำหน่ายหรือคืนผู้ให้เช่าแล้ว',
     contract_type_locked: 'สัญญานี้มีทรัพย์สินที่คืนผู้ให้เช่าหรือตัดจำหน่ายแล้ว จึงต้องเป็นประเภทฮาร์ดแวร์',
@@ -175,7 +172,6 @@ export const contract: Dict = {
     contract_timeline_upcoming: 'กำลังจะถึง',
     contract_timeline_in_reminder: 'ในช่วงแจ้งเตือน',
     contract_timeline_overdue: 'เกินกำหนด',
-    contract_timeline_empty: 'ไม่มีสัญญาที่หมดอายุในช่วง 12 เดือนนี้',
     contract_timeline_ends: 'หมดอายุ {date}',
     contract_timeline_open: 'ดูสัญญา',
     contract_timeline_expired_ago: 'เกินกำหนด {n} วัน',
@@ -204,7 +200,6 @@ export const contract: Dict = {
     contract_reminder_days_before: '{n} วันก่อนหมดอายุ',
 
     // contract-assets-tab.tsx — linked assets table
-    contract_assets_empty: 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน',
     contract_asset_col_id: 'รหัสทรัพย์สิน',
     contract_asset_col_name: 'ชื่อ',
     contract_asset_col_serial: 'Serial',

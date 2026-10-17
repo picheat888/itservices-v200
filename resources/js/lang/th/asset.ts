@@ -77,10 +77,7 @@ export const asset: Dict = {
     asset_returned: 'รับคืน',
     asset_activity_cap_handover: 'จำนวนเครื่องที่ส่งมอบในแต่ละ{unit}',
     asset_activity_cap_returned: 'จำนวนเครื่องที่กลับเข้าคลังในแต่ละ{unit}',
-    asset_activity_none_handover: 'ยังไม่มีการส่งมอบใน 12 เดือนที่ผ่านมา',
-    asset_activity_none_returned: 'ยังไม่มีการรับคืนใน 12 เดือนที่ผ่านมา',
     asset_top_value: 'ทรัพย์สินมูลค่าสูงสุด',
-    asset_none: 'ไม่พบทรัพย์สิน',
     asset_general: 'ข้อมูลทั่วไป',
     asset_information: 'ข้อมูลทรัพย์สิน',
     asset_ownership: 'การครอบครอง',
@@ -124,10 +121,6 @@ export const asset: Dict = {
     asset_tab_tickets: 'งานแจ้งซ่อม',
     asset_open_contract: 'เปิดสัญญา',
     asset_view_contract: 'ดูสัญญา',
-    asset_tickets_empty: 'ยังไม่มีงานแจ้งซ่อม',
-    asset_tickets_empty_hint: 'ทรัพย์สินนี้ยังไม่เคยถูกอ้างอิงในใบแจ้งซ่อม',
-    asset_history_empty: 'ยังไม่มีประวัติ',
-    asset_history_empty_hint: 'ทรัพย์สินนี้ยังไม่เคยถูกโอนย้าย รับคืน หรือย้ายที่ตั้ง',
     asset_history_title: 'ประวัติทรัพย์สิน',
     asset_history_desc: 'การโอนย้ายเจ้าของ การรับคืนเข้าคลัง และการย้ายที่ตั้งทั้งหมดของทรัพย์สินนี้ เรียงจากล่าสุด',
     asset_tk_subject: 'เรื่อง',
@@ -171,7 +164,6 @@ export const asset: Dict = {
     asset_inventory_table: 'รายการทรัพย์สิน',
     asset_select_page_group: 'เลือกทุกเครื่องในหน้านี้ที่สถานะเดียวกัน',
     asset_select_row: 'เลือก',
-    asset_none_filtered: 'ไม่พบทรัพย์สินที่ตรงกับการค้นหาหรือตัวกรอง',
     asset_rows_per_page: 'แสดง',
     asset_prev_page: 'หน้าก่อนหน้า',
     asset_next_page: 'หน้าถัดไป',
@@ -250,7 +242,6 @@ export const asset: Dict = {
     // contract-peek-dialog.tsx — labels moved from the component
     asset_peek_owner: 'เจ้าของ',
     asset_contract: 'สัญญา',
-    asset_no_assets_linked_to_this_contract: 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     asset_empty_overview_by_type: 'ยังไม่มีทรัพย์สิน',

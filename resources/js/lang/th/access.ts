@@ -17,8 +17,6 @@ export const access: Dict = {
     access_social_search: 'ค้นหาชื่อหรือ URL…',
     access_software_search: 'ค้นหาชื่อหรือผู้ผลิต…',
     access_members_search: 'ค้นหาชื่อ, รหัส หรือแผนก…',
-    access_no_members: 'ยังไม่มีสมาชิก',
-    access_no_members_hint: 'เพิ่มสมาชิกคนแรกจากด้านบนได้เลย',
     access_member_added: 'เพิ่มสมาชิกแล้ว',
     access_member_removed: 'ถอนสิทธิ์แล้ว',
     access_resource_deleted: 'ลบรายการแล้ว',
@@ -159,8 +157,6 @@ export const access: Dict = {
     access_revoke_confirm_title: 'ถอนสิทธิ์นี้?',
     access_revoke_confirm_desc: 'พนักงานคนนี้จะใช้ Resource นี้ไม่ได้อีก เพิ่มกลับได้ภายหลังจากหน้าจัดการ',
     access_issue_empty_hint: 'ยังไม่มีสมาชิก',
-    access_issues_clear: 'ไม่มีรายการที่ต้องตรวจสอบ',
-    access_issues_clear_sub: 'ไม่มีสิทธิ์ค้าง ทุก Resource มีเจ้าของและมีสมาชิก',
     access_dash_recent_title: 'สิทธิ์ที่เพิ่มในช่วงนี้',
     access_dash_recent_sub: 'การมอบสิทธิ์ใหม่ในช่วงที่เลือก',
     access_dash_owners_ok: 'ทุก Resource มีเจ้าของครบ',
@@ -174,7 +170,6 @@ export const access: Dict = {
     access_dash_top_title: 'Resource ที่มีสมาชิกมากที่สุด',
     access_dash_channel: 'ประเภท',
     access_dash_reach: 'จำนวนสมาชิก',
-    access_dash_empty: 'ยังไม่มีข้อมูล',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     access_empty_overview_issues: 'ไม่มีรายการที่ต้องตรวจสอบ',

@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type ContractLinkedAsset, type ContractType } from '@/shared/types';
@@ -11,7 +13,6 @@ import { useUiStore } from '@/stores/ui';
 import { Clock, Cog, FileText, Laptop, Loader2, type LucideIcon, Package, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetContract } from '../hooks/use-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Icon per contract type — mirrors the Contract detail drawer. */
 const TYPE_ICON: Record<ContractType, LucideIcon> = {
@@ -70,6 +71,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     const [tab, setTab] = useState<TabId>('overview');
+    const [assetQuery, setAssetQuery] = useState('');
 
     // Retain the last opened asset id so the query keeps its data (and the dialog keeps rendering
     // content) while Radix animates the close transition after `assetId` goes null.
@@ -269,10 +271,12 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                             )}
                         </div>
                     ) : c.linked_assets.length === 0 ? (
-                        <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-sm">
-                            <Package className="text-muted-foreground/50 h-8 w-8" />
-                            {t('asset_no_assets_linked_to_this_contract')}
-                        </div>
+                        <EmptyState
+                            kind="empty"
+                            title={t('asset_empty_contract_peek_assets')}
+                            hint={t('asset_empty_contract_peek_assets_hint')}
+                            className="h-full"
+                        />
                     ) : (
                         <div className="h-full">
                             <DataTable
@@ -280,6 +284,12 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                                 columns={assetColumns}
                                 rows={c.linked_assets}
                                 rowKey={(a) => a.id}
+                                search={{ value: assetQuery, onChange: setAssetQuery }}
+                                empty={{
+                                    kind: 'search',
+                                    title: t('asset_empty_contract_peek_assets_search'),
+                                    hint: t('asset_empty_contract_peek_assets_search_hint'),
+                                }}
                                 searchPlaceholder={t('asset_contract_assets_search')}
                                 searchable={(a) => `${a.asset_code} ${a.name} ${a.serial ?? ''}`}
                             />

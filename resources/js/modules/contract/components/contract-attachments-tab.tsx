@@ -4,7 +4,7 @@ import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { type ContractAttachment } from '@/shared/types';
-import { Download, ExternalLink, FileText } from 'lucide-react';
+import { Download, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 
 /** Split a filename into [head, tail] for middle-truncation, keeping the extension visible. */
@@ -31,7 +31,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
     const [selected, setSelected] = useState(0);
 
     if (attachments.length === 0) {
-        return <EmptyPane icon={FileText} text={t('attachment_none')} />;
+        return <EmptyPane kind="empty" title={t('contract_empty_drawer_attachments')} hint={t('contract_empty_drawer_attachments_hint')} />;
     }
 
     const active = attachments[Math.min(selected, attachments.length - 1)];

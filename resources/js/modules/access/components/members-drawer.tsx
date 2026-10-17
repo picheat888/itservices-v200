@@ -10,6 +10,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useLocalName } from '@/shared/hooks/use-local-name';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { refusalReason, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember, EmployeeOption } from '@/shared/types';
@@ -22,7 +23,6 @@ import { Folder, Globe, Package, Pencil, Plus, SquarePen, Trash2, TriangleAlert,
 import { useEffect, useMemo, useState } from 'react';
 import { useAccessMutations, useResourceMembers, useSetEmailGroupOwner, useSetFileShareOwner } from '../hooks/use-access';
 import { AccessBadge } from './access-badge';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** The resource a member dialog is bound to, with enough detail for the header. */
 export type MemberTarget = {
@@ -247,6 +247,7 @@ export function MembersDrawer({
     const addChosen = empById.get(Number(empId));
     const ownerChosen = empById.get(Number(ownerId));
 
+    const [memberQuery, setMemberQuery] = useState('');
     const levels = LEVELS[kind];
     const meta = KIND_META[kind];
     const Icon = meta.icon;
@@ -449,12 +450,15 @@ export function MembersDrawer({
                                     pageSize={7}
                                     rowHeight={49}
                                     loading={isLoading}
-                                    emptyState={
-                                        <div className="flex flex-col items-center gap-1.5 py-4">
-                                            <Users className="text-muted-foreground/40 h-8 w-8" />
-                                            <span className="text-foreground font-medium">{t('access_no_members')}</span>
-                                            <span className="text-xs">{t('access_no_members_hint')}</span>
-                                        </div>
+                                    search={{ value: memberQuery, onChange: setMemberQuery }}
+                                    empty={
+                                        memberQuery.trim() !== ''
+                                            ? {
+                                                  kind: 'search',
+                                                  title: t('access_empty_members_drawer_search'),
+                                                  hint: t('access_empty_members_drawer_search_hint'),
+                                              }
+                                            : { kind: 'empty', title: t('access_empty_members_drawer'), hint: t('access_empty_members_drawer_hint') }
                                     }
                                     actions={
                                         mayEdit && seatsFull ? (

@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
 import { DataTable, PAGE_SIZES, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
@@ -17,6 +18,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
@@ -78,7 +80,6 @@ import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { PendingReturnStrip } from '../components/pending-return-strip';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -787,7 +788,13 @@ export default function AssetsPage() {
                                             <span className="text-right text-sm leading-none font-semibold">{fmtN(b.count)}</span>
                                         </div>
                                     ))}
-                                    {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
+                                    {typeBars.length === 0 && (
+                                        <EmptyState
+                                            kind="empty"
+                                            title={t('asset_empty_overview_by_type')}
+                                            hint={t('asset_empty_overview_by_type_hint')}
+                                        />
+                                    )}
                                     {allTypeBars.length > TYPE_ROWS_SHOWN + 1 && (
                                         <button
                                             type="button"
@@ -1197,17 +1204,24 @@ export default function AssetsPage() {
                                             ))
                                         ) : rows.length === 0 ? (
                                             <tr>
-                                                <td colSpan={14} className="text-muted-foreground px-4 py-16 text-center text-sm">
+                                                <td colSpan={14} className="px-4">
                                                     {hasActiveFilters ? (
-                                                        <div className="flex flex-col items-center gap-3">
-                                                            {t('asset_none_filtered')}
+                                                        <EmptyState
+                                                            kind="search"
+                                                            title={t('asset_empty_inventory_filtered')}
+                                                            hint={t('asset_empty_inventory_filtered_hint')}
+                                                        >
                                                             <Button size="sm" variant="outline" onClick={clearFilters}>
                                                                 <X className="h-4 w-4" aria-hidden="true" />
                                                                 {t('reset_filters')}
                                                             </Button>
-                                                        </div>
+                                                        </EmptyState>
                                                     ) : (
-                                                        t('asset_none')
+                                                        <EmptyState
+                                                            kind="empty"
+                                                            title={t('asset_empty_inventory_none')}
+                                                            hint={t('asset_empty_inventory_none_hint').replace('{button}', t('register_asset'))}
+                                                        />
                                                     )}
                                                 </td>
                                             </tr>
@@ -1501,6 +1515,11 @@ export default function AssetsPage() {
                             // The box only; the server matches asset, brand, either end (Thai or English) and who moved it
                             searchPlaceholder={t('asset_transfer_search')}
                             searchable={() => ''}
+                            empty={
+                                list.get('search') !== ''
+                                    ? { kind: 'search', title: t('asset_empty_transfers_search'), hint: t('asset_empty_transfers_search_hint') }
+                                    : { kind: 'empty', title: t('asset_empty_transfers'), hint: t('asset_empty_transfers_hint') }
+                            }
                             onRowClick={(tr) => tr.asset_id && openAssetId(tr.asset_id)}
                         />
                     </div>
