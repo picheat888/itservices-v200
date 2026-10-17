@@ -16,6 +16,7 @@ import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useToastStore } from '@/stores/toast';
 import { BellOff, Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -46,6 +47,7 @@ const kindKey = (type: string | null, module: string | null) => `${type ?? ''}|$
 export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: () => void; onChangePassword: () => void }) {
     // Prefers the wording an administrator set on the Bell tab, else the bundled string.
     const t = useNotificationText();
+    const fmtN = useNumberFormat();
     const navigate = useNavigate();
     const location = useLocation();
     const ref = useRef<HTMLDivElement>(null);
@@ -290,7 +292,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                                         <span
                                             className={cn('font-semibold tabular-nums', !active && 'bg-brand/10 text-brand-ink rounded-full px-1.5')}
                                         >
-                                            {count}
+                                            {fmtN(count)}
                                         </span>
                                     )}
                                 </button>
@@ -356,7 +358,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                                 {isFetchingNextPage
                                     ? t('loading')
                                     : hasNextPage
-                                      ? t('notif_showing').replace('{shown}', String(items.length)).replace('{total}', String(matching))
+                                      ? t('notif_showing').replace('{shown}', fmtN(items.length)).replace('{total}', fmtN(matching))
                                       : (feed.data?.pages.length ?? 0) > 1
                                         ? t('notif_end')
                                         : null}

@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { AlertCircle, CheckCircle2, Download, Loader2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** One row of a bulk import the server refused, as every import endpoint reports them. */
 export interface ImportRowError {
@@ -78,6 +79,7 @@ export function ImportDialog<Row>({
     guide?: ReactNode;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const [file, setFile] = useState<File | null>(null);
     const [result, setResult] = useState<ImportPreviewResult<Row> | null>(null);
     const [errors, setErrors] = useState<ImportRowError[]>([]);
@@ -232,14 +234,14 @@ export function ImportDialog<Row>({
                             <div className="flex flex-wrap items-center gap-2 text-xs">
                                 <span className="font-semibold">{t('import_preview_title')}</span>
                                 <span className="bg-muted rounded-full px-2 py-0.5">
-                                    {t('import_preview_total')}: {result.meta.total}
+                                    {t('import_preview_total')}: {fmtN(result.meta.total)}
                                 </span>
                                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400">
-                                    {t('import_preview_valid')}: {result.meta.valid}
+                                    {t('import_preview_valid')}: {fmtN(result.meta.valid)}
                                 </span>
                                 {result.meta.invalid > 0 && (
                                     <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-red-700">
-                                        {t('import_preview_invalid')}: {result.meta.invalid}
+                                        {t('import_preview_invalid')}: {fmtN(result.meta.invalid)}
                                     </span>
                                 )}
                             </div>
@@ -256,8 +258,8 @@ export function ImportDialog<Row>({
                             {truncated && (
                                 <p className="text-muted-foreground text-xs">
                                     {t('import_preview_truncated')
-                                        .replace('{shown}', String(result.meta.shown))
-                                        .replace('{total}', String(result.meta.total))}
+                                        .replace('{shown}', fmtN(result.meta.shown ?? 0))
+                                        .replace('{total}', fmtN(result.meta.total))}
                                 </p>
                             )}
 
@@ -278,7 +280,7 @@ export function ImportDialog<Row>({
                                 className="border-destructive/20 dark:text-destructive flex items-center gap-2 border-b px-3 py-2 text-sm font-semibold text-red-700"
                             >
                                 <AlertCircle className="h-4 w-4" aria-hidden />
-                                {t('import_errors_found')} ({errors.length})
+                                {t('import_errors_found')} ({fmtN(errors.length)})
                             </div>
                             <div className="max-h-48 overflow-y-auto px-3 py-2">
                                 {errors.map((rowError) => (

@@ -12,15 +12,17 @@ import { useUiStore } from '@/stores/ui';
 import { Loader2, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useSidebarStyle } from './use-sidebar-style';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Count of hand-overs waiting for the user's acceptance, pinned to the avatar. */
 function PendingAssetsPill({ count }: { count: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     if (count <= 0) return null;
     return (
         <span className="ring-sidebar absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-700 px-1 text-[10px] font-bold text-white ring-2">
-            <span aria-hidden="true">{count}</span>
-            <span className="sr-only">{t('profile_pending_assets_badge').replace('{n}', String(count))}</span>
+            <span aria-hidden="true">{fmtN(count)}</span>
+            <span className="sr-only">{t('profile_pending_assets_badge').replace('{n}', fmtN(count))}</span>
         </span>
     );
 }

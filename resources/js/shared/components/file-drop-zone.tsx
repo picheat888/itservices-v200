@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Download, FileImage, FileText, Paperclip, UploadCloud, X } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * The file picker every upload form in the app shares: a drag-and-drop box, the
@@ -115,12 +116,13 @@ export function FileDropZone({
  */
 export function AttachmentList({ count, max, progressPct, children }: { count: number; max: number; progressPct?: number; children: ReactNode }) {
     const t = useT();
+    const fmtN = useNumberFormat();
 
     return (
         <div className="mt-3.5">
             <div className="text-brand mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold">
                 <Paperclip className="h-3.5 w-3.5" />
-                {t('attachment_count').replace('{n}', String(count)).replace('{max}', String(max))}
+                {t('attachment_count').replace('{n}', fmtN(count)).replace('{max}', fmtN(max))}
                 {progressPct != null && <span className="ml-auto">{progressPct}%</span>}
             </div>
             {/* One overall bar, outside the scroll area, so progress stays visible

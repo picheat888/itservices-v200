@@ -2,6 +2,7 @@ import { findNavItem, navGroups } from '@/app/nav';
 import { useT } from '@/lang';
 import { useNotifications } from '@/modules/notification';
 import { FlagEN, FlagTH } from '@/shared/components/flags';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
@@ -16,6 +17,7 @@ interface TopbarProps {
 
 export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { pathname } = useLocation();
     const dark = useUiStore((s) => s.dark);
     const toggleDark = useUiStore((s) => s.toggleDark);
@@ -96,7 +98,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                     notifOpen ? 'bg-accent text-brand' : 'text-muted-foreground hover:bg-accent',
                 )}
                 title={t('notif_title')}
-                aria-label={unreadCount > 0 ? `${t('notif_title')} (${unreadCount})` : t('notif_title')}
+                aria-label={unreadCount > 0 ? `${t('notif_title')} (${fmtN(unreadCount)})` : t('notif_title')}
             >
                 <Bell className="h-[18px] w-[18px]" aria-hidden />
                 {unreadCount > 0 && (
@@ -104,7 +106,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                         aria-hidden
                         className="bg-destructive text-destructive-foreground absolute top-px right-px flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold"
                     >
-                        {unreadCount > 9 ? '9+' : unreadCount}
+                        {unreadCount > 9 ? '9+' : fmtN(unreadCount)}
                     </span>
                 )}
             </button>
