@@ -1,14 +1,14 @@
 import { useT } from '@/lang';
-import { PhotoCropDialog, useDepartments, useEmployeeOptions } from '@/modules/employee';
+import { PhotoCropDialog, useDepartments, useEmployeePicker, useEmployeesByIds } from '@/modules/employee';
 import { useBrands } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
-import { SearchableSelect } from '@/shared/components/searchable-select';
+import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { cn, focusFirstError } from '@/shared/lib/utils';
-import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
+import type { AccessKind, EmailGroup, EmployeeOption, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
@@ -198,7 +198,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useAccessMutations(kind);
-    const { data: employees = [] } = useEmployeeOptions();
+    const { employees, pickerProps } = useEmployeePicker();
     const { data: departments = [] } = useDepartments();
     const { data: brands = [] } = useBrands();
     const [form, setForm] = useState<FormState>(empty);
@@ -307,17 +307,16 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         setForm((f) => ({ ...f, size_value: String(Math.max(0, (parseFloat(f.size_value) || 0) + delta)) }));
     });
 
-    const employeeOptions = useMemo(
-        () =>
-            employees.map((e) => ({
-                value: String(e.id),
-                label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
-                sub: e.code,
-                tag: e.department_id != null ? (deptTag.get(e.department_id) ?? undefined) : undefined,
-                search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.department ?? ''}`,
-            })),
-        [employees, lang, deptTag],
-    );
+    const employeeOption = (e: EmployeeOption): SearchOption => ({
+        value: String(e.id),
+        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        sub: e.code,
+        tag: e.department_id != null ? (deptTag.get(e.department_id) ?? undefined) : undefined,
+        search: '',
+    });
+    const employeeOptions = employees.map(employeeOption);
+    const { data: chosenOwners = [] } = useEmployeesByIds([form.owner_employee_id ? Number(form.owner_employee_id) : null]);
+    const chosenOwner = chosenOwners[0] ? employeeOption(chosenOwners[0]) : undefined;
     const departmentOptions = useMemo(
         () =>
             departments.map((d) => ({
@@ -468,6 +467,8 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                         value={form.owner_employee_id}
                                         onChange={(v) => set('owner_employee_id', v)}
                                         options={employeeOptions}
+                                        {...pickerProps}
+                                        selectedOption={chosenOwner}
                                         placeholder={t('access_pick_employee')}
                                     />
                                 </Field>
@@ -541,6 +542,8 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                         value={form.owner_employee_id}
                                         onChange={(v) => set('owner_employee_id', v)}
                                         options={employeeOptions}
+                                        {...pickerProps}
+                                        selectedOption={chosenOwner}
                                         placeholder={t('access_pick_employee')}
                                     />
                                 </Field>

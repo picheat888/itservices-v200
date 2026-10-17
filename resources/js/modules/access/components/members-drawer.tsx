@@ -1,5 +1,5 @@
 import { useT } from '@/lang';
-import { useDepartments, useEmployeeOptions } from '@/modules/employee';
+import { useDepartments, useEmployeePicker, useEmployeesByIds } from '@/modules/employee';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { RecordStamps } from '@/shared/components/record-stamps';
@@ -11,7 +11,7 @@ import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalReason, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
-import type { AccessKind, AccessMember } from '@/shared/types';
+import type { AccessKind, AccessMember, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
@@ -120,7 +120,6 @@ export function MembersDrawer({
 
     const kind = tgt?.kind ?? 'email-groups';
     const { data: members = [], isLoading } = useResourceMembers(kind, tgt?.id ?? null);
-    const { data: employees = [] } = useEmployeeOptions();
     const { data: departments = [] } = useDepartments();
     const { addMember, revokeMember, remove } = useAccessMutations(kind);
     // Owner tier exists for email groups (required approver) and file shares (required owner).
@@ -195,10 +194,6 @@ export function MembersDrawer({
         }
     };
 
-    // employee_id -> employee, so a member row can show its code + department tag.
-    const empById = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
-    // Resigned members/owners get a red badge — their access is likely stale.
-    const isResigned = (employeeId: number | null | undefined) => employeeId != null && empById.get(employeeId)?.status === 'resigned';
     const deptTag = useMemo(() => new Map(departments.map((d) => [d.id, d.tag])), [departments]);
 
     // Employees already on this resource — existing members plus the owner (email groups /
@@ -208,6 +203,18 @@ export function MembersDrawer({
         if (tgt?.ownerEmployeeId) ids.add(tgt.ownerEmployeeId);
         return ids;
     }, [members, tgt?.ownerEmployeeId]);
+    // employee_id -> employee for the members and owner on screen, so a row can show its photo + department tag.
+    const { data: knownEmployees = [] } = useEmployeesByIds([
+        ...members.map((m) => m.employee_id),
+        tgt?.ownerEmployeeId,
+        ownerId ? Number(ownerId) : null,
+        empId ? Number(empId) : null,
+    ]);
+    const empById = useMemo(() => new Map(knownEmployees.map((e) => [e.id, e])), [knownEmployees]);
+    // Resigned members/owners get a red badge — their access is likely stale.
+    const isResigned = (employeeId: number | null | undefined) => employeeId != null && empById.get(employeeId)?.status === 'resigned';
+    const { employees: addEmployees, pickerProps: addPickerProps } = useEmployeePicker({ exclude: [...takenIds] });
+    const { employees: ownerEmployees, pickerProps: ownerPickerProps } = useEmployeePicker();
     // Newest grant first ("YYYY-MM-DD HH:mm" sorts as text), then id
     const sortedMembers = useMemo(
         () =>
@@ -217,18 +224,17 @@ export function MembersDrawer({
             }),
         [members],
     );
-    const empOption = (filterTaken: boolean): SearchOption[] =>
-        employees
-            .filter((e) => !filterTaken || !takenIds.has(e.id))
-            .map((e) => ({
-                value: String(e.id),
-                label: e.name,
-                sub: e.code,
-                tag: e.department_id != null ? (deptTag.get(e.department_id) ?? undefined) : undefined,
-                search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.department ?? ''}`,
-            }));
-    const addOpts = useMemo(() => empOption(true), [employees, takenIds, deptTag]); // eslint-disable-line react-hooks/exhaustive-deps
-    const ownerOpts = useMemo(() => empOption(false), [employees, deptTag]); // eslint-disable-line react-hooks/exhaustive-deps
+    const empOption = (e: EmployeeOption): SearchOption => ({
+        value: String(e.id),
+        label: e.name,
+        sub: e.code,
+        tag: e.department_id != null ? (deptTag.get(e.department_id) ?? undefined) : undefined,
+        search: '',
+    });
+    const addOpts = addEmployees.map(empOption);
+    const ownerOpts = ownerEmployees.map(empOption);
+    const addChosen = empById.get(Number(empId));
+    const ownerChosen = empById.get(Number(ownerId));
 
     const levels = LEVELS[kind];
     const meta = KIND_META[kind];
@@ -371,6 +377,8 @@ export function MembersDrawer({
                                                     value={ownerId}
                                                     onChange={setOwnerId}
                                                     options={ownerOpts}
+                                                    {...ownerPickerProps}
+                                                    selectedOption={ownerChosen && empOption(ownerChosen)}
                                                     placeholder={t('access_pick_employee')}
                                                     clearable={false}
                                                 />
@@ -449,6 +457,8 @@ export function MembersDrawer({
                                                         value={empId}
                                                         onChange={setEmpId}
                                                         options={addOpts}
+                                                        {...addPickerProps}
+                                                        selectedOption={addChosen && empOption(addChosen)}
                                                         placeholder={t('access_pick_employee')}
                                                         clearable
                                                     />
