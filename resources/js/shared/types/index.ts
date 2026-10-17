@@ -824,6 +824,7 @@ export interface StockRequest {
     sku: string | null;
     item_name: string | null;
     requester_name: string;
+    unit?: string | null;
     qty: number;
     reason: string;
     status: StockRequestStatus;

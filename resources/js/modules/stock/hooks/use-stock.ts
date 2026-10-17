@@ -88,7 +88,7 @@ export function useRecordMovement() {
 }
 
 /** Server-paginated stock requests visible to the current user. meta carries pending/outstanding totals. */
-export const useStockRequests = (params: { page?: number; per_page?: number } = {}, enabled = true) =>
+export const useStockRequests = (params: { page?: number; per_page?: number; status?: string } = {}, enabled = true) =>
     useQuery({
         queryKey: [...REQUESTS, params],
         queryFn: () => stockRequestApi.list(params),

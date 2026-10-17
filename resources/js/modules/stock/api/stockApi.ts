@@ -106,7 +106,7 @@ export const stockMovementApi = {
 };
 
 export const stockRequestApi = {
-    list: (params?: { page?: number; per_page?: number }) =>
+    list: (params?: { page?: number; per_page?: number; status?: string }) =>
         http.get<Paginated<StockRequest, StockRequestPageMeta>>('/stock-requests', { params }).then((r) => r.data),
     create: (payload: StockRequestPayload) => mutate<StockRequest>('post', '/stock-requests', payload),
     approve: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/approve`),

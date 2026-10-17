@@ -37,7 +37,7 @@ class StockRequestController extends Controller
         abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
         // Actionable first (await approval → await fulfillment → done), newest within each group.
-        $query = StockRequest::with('item')
+        $query = StockRequest::with('item.unit')
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
             ->latest();
 
@@ -50,6 +50,12 @@ class StockRequestController extends Controller
         // badge and the Requests tab chip, which must not depend on the current page.
         $pending = (clone $query)->where('status', 'pending')->count();
         $outstanding = (clone $query)->whereIn('status', ['pending', 'approved'])->count();
+
+        // The status filter narrows the list only; the totals above stay across every status.
+        $status = $request->query('status');
+        if (in_array($status, ['pending', 'approved', 'fulfilled', 'rejected'], true)) {
+            $query->where('status', $status);
+        }
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);
