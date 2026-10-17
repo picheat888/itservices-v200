@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
+import { EmptyState } from '@/shared/components/empty-state';
 import { InfoHint } from '@/shared/components/info-hint';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -358,15 +359,34 @@ export function EmployeeViewDrawer({
                                     onViewProfile={onViewProfile}
                                 />
                             )}
-                            {tab === 'access' && <AccessPane access={access} loading={accessLoading} emptyText={t('emp_v_no_access')} />}
+                            {tab === 'access' && (
+                                <AccessPane
+                                    access={access}
+                                    loading={accessLoading}
+                                    empty={{ title: t('emp_empty_drawer_access'), hint: t('emp_empty_drawer_access_hint') }}
+                                />
+                            )}
                             {tab === 'assets' && (
-                                <AssetsPane assets={heldAssets} lang={lang} loading={assetsLoading} emptyText={t('emp_v_no_assets')} />
+                                <AssetsPane
+                                    assets={heldAssets}
+                                    lang={lang}
+                                    loading={assetsLoading}
+                                    empty={{ title: t('emp_empty_drawer_assets'), hint: t('emp_empty_drawer_assets_hint') }}
+                                />
                             )}
                             {tab === 'tickets' && (
-                                <TicketsPane tickets={requestedTickets} loading={ticketsLoading} emptyText={t('emp_v_no_tickets')} />
+                                <TicketsPane
+                                    tickets={requestedTickets}
+                                    loading={ticketsLoading}
+                                    empty={{ title: t('emp_empty_drawer_tickets'), hint: t('emp_empty_drawer_tickets_hint') }}
+                                />
                             )}
                             {tab === 'requests' && (
-                                <RequestsPane requests={ownedRequests} loading={requestsLoading} emptyText={t('emp_v_no_requests')} />
+                                <RequestsPane
+                                    requests={ownedRequests}
+                                    loading={requestsLoading}
+                                    empty={{ title: t('emp_empty_drawer_requests'), hint: t('emp_empty_drawer_requests_hint') }}
+                                />
                             )}
                         </div>
                     </div>
@@ -724,10 +744,7 @@ function OrgPane({
                             )}
                         </>
                     ) : (
-                        <div className="text-muted-foreground mt-4 flex items-center justify-center gap-1.5 text-xs">
-                            <Users className="h-[15px] w-[15px] opacity-40" />
-                            {t('emp_v_no_reports')}
-                        </div>
+                        <EmptyState title={t('emp_empty_drawer_reports')} hint={t('emp_empty_drawer_reports_hint')} />
                     )}
                 </div>
             </div>

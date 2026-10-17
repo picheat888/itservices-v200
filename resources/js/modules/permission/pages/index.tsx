@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { useDepartments, useEmployeesByIds, usePositions, useSections } from '@/modules/employee';
 import { PAGE_SIZES } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
+import { EmptyState } from '@/shared/components/empty-state';
 import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
@@ -146,7 +147,7 @@ export default function PermissionsPage() {
                 {tab === 'templates' && <RolesTab onDirtyChange={setRolesDirty} />}
                 {tab === 'groups' && <GroupRolesTab />}
                 {tab === 'logs' && <AuditTab />}
-                {tab === null && <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_no_tabs')}</div>}
+                {tab === null && <EmptyState kind="denied" title={t('perm_empty_no_tabs')} hint={t('perm_empty_no_tabs_hint')} />}
             </Card>
         </div>
     );
@@ -719,7 +720,9 @@ function GroupRolesTab() {
             </div>
 
             {groups.length === 0 && (
-                <div className="border-border text-muted-foreground rounded-lg border border-dashed py-12 text-center text-sm">{t('gr_empty')}</div>
+                <div className="border-border rounded-lg border border-dashed">
+                    <EmptyState title={t('perm_empty_groups')} hint={t('perm_empty_groups_hint').replace('{button}', t('gr_add'))} />
+                </div>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1080,6 +1083,7 @@ function AuditTab() {
     const user = list.get('user') || 'all';
     const sentSearch = useDebouncedSearch(search);
     const filters: AuditFilters = { search: sentSearch, category, user };
+    const hasSearchOrFilter = search !== '' || category !== 'all' || user !== 'all';
 
     const { data, isLoading } = useAuditLogs(page, pageSize, filters);
     // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
@@ -1210,8 +1214,12 @@ function AuditTab() {
                         )}
                         {!isLoading && logs.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="text-muted-foreground px-5 py-10 text-center">
-                                    {t('audit_empty')}
+                                <td colSpan={5}>
+                                    <EmptyState
+                                        kind={hasSearchOrFilter ? 'search' : 'empty'}
+                                        title={t(hasSearchOrFilter ? 'perm_empty_audit_search' : 'perm_empty_audit')}
+                                        hint={t(hasSearchOrFilter ? 'perm_empty_audit_search_hint' : 'perm_empty_audit_hint')}
+                                    />
                                 </td>
                             </tr>
                         )}

@@ -14,13 +14,9 @@ export const profile: Dict = {
     profile_account: 'Login account',
     profile_contact: 'Contact',
     profile_tab_details: 'Personal info',
-    profile_no_tickets: "You haven't reported any tickets yet.",
-    profile_no_access: 'No access recorded for you yet.',
-    profile_no_requests: "You haven't submitted any requests yet.",
     // my-assets-tab.tsx — แท็บทรัพย์สิน
     my_assets_new: 'New',
     my_assets_return_confirm: 'Send this asset back to IT? It will show as pending return until IT confirms receipt.',
-    my_assets_empty: "You don't hold any assets yet.",
     profile_assets_pending_caption: 'Waiting for you to accept',
     profile_assets_held_heading: 'My assets',
     profile_assets_col_handed_over: 'Handed over',

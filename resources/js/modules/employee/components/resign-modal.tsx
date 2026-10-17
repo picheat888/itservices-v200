@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -296,13 +297,16 @@ function HeldAssetsList({ assets, loading, failed, lang }: { assets: EmployeeHel
         );
     }
 
-    if (failed || assets.length === 0) {
+    if (failed) {
         return (
             <div className="text-muted-foreground flex min-h-65 flex-1 flex-col items-center justify-center gap-2.5 p-6 text-center text-sm">
                 <Box className="h-5 w-5" />
-                {failed ? t('resign_assets_unavailable') : t('resign_assets_none')}
+                {t('resign_assets_unavailable')}
             </div>
         );
+    }
+    if (assets.length === 0) {
+        return <EmptyState title={t('emp_empty_resign_assets')} hint={t('emp_empty_resign_assets_hint')} className="min-h-65" />;
     }
 
     return (

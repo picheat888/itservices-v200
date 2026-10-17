@@ -28,6 +28,12 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
     }, [department]);
     const view = department ?? shown;
 
+    // Each opening starts with an empty search
+    const [query, setQuery] = useState('');
+    useEffect(() => {
+        setQuery('');
+    }, [department?.id]);
+
     const { data: members = [], isLoading } = useDepartmentMembers(view?.id ?? null);
     // Member count from the clicked row
     const expected = view?.count;
@@ -91,6 +97,12 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
                     maxBodyHeight="52vh"
+                    search={{ value: query, onChange: setQuery }}
+                    empty={
+                        query
+                            ? { kind: 'search', title: t('emp_empty_members_search'), hint: t('emp_empty_members_search_hint') }
+                            : { kind: 'empty', title: t('emp_empty_dept_members'), hint: t('emp_empty_dept_members_hint') }
+                    }
                     searchPlaceholder={t('emp_search_by_position')}
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''} ${m.section ?? ''}`}
                 />

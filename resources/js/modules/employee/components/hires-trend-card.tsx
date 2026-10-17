@@ -26,7 +26,12 @@ export function HiresTrendCard({ trend, highlightLast }: { trend: { unit: BarUni
                     {highlightLast && <CurrentMonthLegend />}
                 </div>
 
-                <MonthBarChart data={trend.data} unit={trend.unit} highlightLast={highlightLast} emptyLabel={t('emp_no_hires')} />
+                <MonthBarChart
+                    data={trend.data}
+                    unit={trend.unit}
+                    highlightLast={highlightLast}
+                    empty={{ kind: 'empty', title: t('emp_empty_overview_hires_trend'), hint: t('emp_empty_overview_hires_trend_hint') }}
+                />
             </div>
         </Card>
     );

@@ -12,7 +12,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useUiStore } from '@/stores/ui';
 import { useMutationState } from '@tanstack/react-query';
-import { Check, CheckCheck, Inbox, Laptop, Loader2, Undo2 } from 'lucide-react';
+import { Check, CheckCheck, Inbox, Loader2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { HeadRow, LoadingRows, PAGE, SectionHeading, ShowAllRow, TableCard } from './profile-table';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -224,7 +224,7 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
             {/* Held */}
             <SectionHeading title={t('profile_assets_held_heading')} count={held.length} />
             {held.length === 0 ? (
-                <EmptyPane icon={Laptop} text={t('my_assets_empty')} />
+                <EmptyPane kind="empty" title={t('profile_empty_assets_held')} hint={t('profile_empty_assets_held_hint')} />
             ) : (
                 <TableCard>
                     <ColumnHeader dateLabel={t('emp_v_col_received')} />

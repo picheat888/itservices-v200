@@ -8,7 +8,6 @@ export const permission: Dict = {
     perm_groups: 'Role Groups',
     perm_audit: 'Audit logs',
     perm_audit_search: 'Search action, item or user…',
-    perm_no_tabs: 'You do not have access to any part of this page yet (Role Templates, Role Groups or Audit logs).',
     perm_load_failed: 'Could not load the permissions. Please try again.',
     perm_members: 'members',
     perm_enabled: 'permissions enabled',
@@ -38,7 +37,6 @@ export const permission: Dict = {
     gr_quick_add_dept_help: 'Click a department to add its employees to the list above.',
     gr_dept_members: 'Members in department',
     gr_note: 'Members inherit the permissions of the assigned Role Template.',
-    gr_empty: 'No role groups yet',
     gr_admin_protected: 'Only a Super admin can manage this group',
     audit_time: 'Time',
     audit_user: 'User',
@@ -48,7 +46,6 @@ export const permission: Dict = {
     audit_records: 'Records',
     audit_target: 'Target',
     audit_details: 'Details',
-    audit_empty: 'No activity yet',
     permission_level: 'Permission level',
 
     // modules/permissions/lib/permission-labels.ts — permission tree labels
@@ -339,7 +336,6 @@ export const permission: Dict = {
     perm_ui_saved: 'Saved',
     perm_ui_saving: 'Saving…',
     perm_ui_add_all: 'Add all',
-    perm_ui_no_dept_employees: 'No employees in this department',
     perm_ui_confirm_group_move: 'Confirm group move',
     perm_ui_notifications: 'Notifications',
     perm_ui_self_service_all: 'Only about their own things. No module needs to be on.',

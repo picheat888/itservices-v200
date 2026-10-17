@@ -158,7 +158,15 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                 rows={view}
                 rowKey={(s) => s.id}
                 loading={isLoading}
-                emptyState={sections.length === 0 ? t('section_empty') : undefined}
+                empty={
+                    sections.length === 0
+                        ? {
+                              kind: 'empty',
+                              title: t('emp_empty_sections_none'),
+                              hint: canAdd ? t('emp_empty_sections_none_hint').replace('{button}', t('add_section')) : null,
+                          }
+                        : { kind: 'search', title: t('emp_empty_sections_search'), hint: t('emp_empty_sections_search_hint') }
+                }
                 onRowClick={(s) => setMembersOf(s)}
                 searchPlaceholder={t('emp_sections_search')}
                 searchable={(s) => `${s.code} ${s.name} ${s.name_th ?? ''} ${s.department ?? ''} ${deptById.get(s.department_id)?.name_th ?? ''}`}

@@ -26,6 +26,12 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
     }, [position]);
     const view = position ?? shown;
 
+    // Each opening starts with an empty search
+    const [query, setQuery] = useState('');
+    useEffect(() => {
+        setQuery('');
+    }, [position?.id]);
+
     const { data: members = [], isLoading } = usePositionMembers(view?.id ?? null);
     // Member count from the clicked row
     const expected = view?.employees_count;
@@ -85,6 +91,12 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
                     maxBodyHeight="52vh"
+                    search={{ value: query, onChange: setQuery }}
+                    empty={
+                        query
+                            ? { kind: 'search', title: t('emp_empty_members_search'), hint: t('emp_empty_members_search_hint') }
+                            : { kind: 'empty', title: t('emp_empty_position_members'), hint: t('emp_empty_position_members_hint') }
+                    }
                     searchPlaceholder={t('emp_search_by_department')}
                     searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.section ?? ''}`}
                 />

@@ -398,12 +398,26 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
                             {tab === 'assets' && <MyAssetsTab assets={myAssets} loading={assetsLoading} canReturn={can('profile.return_assets')} />}
                             {tab === 'tickets' && (
-                                <TicketsPane tickets={myTickets?.data ?? []} loading={ticketsLoading} emptyText={t('profile_no_tickets')} />
+                                <TicketsPane
+                                    tickets={myTickets?.data ?? []}
+                                    loading={ticketsLoading}
+                                    empty={{ title: t('profile_empty_tickets'), hint: t('profile_empty_tickets_hint') }}
+                                />
                             )}
                             {tab === 'requests' && (
-                                <RequestsPane requests={myRequests?.data ?? []} loading={requestsLoading} emptyText={t('profile_no_requests')} />
+                                <RequestsPane
+                                    requests={myRequests?.data ?? []}
+                                    loading={requestsLoading}
+                                    empty={{ title: t('profile_empty_requests'), hint: t('profile_empty_requests_hint') }}
+                                />
                             )}
-                            {tab === 'access' && <AccessPane access={myAccess} loading={accessLoading} emptyText={t('profile_no_access')} />}
+                            {tab === 'access' && (
+                                <AccessPane
+                                    access={myAccess}
+                                    loading={accessLoading}
+                                    empty={{ title: t('profile_empty_access'), hint: t('profile_empty_access_hint') }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
