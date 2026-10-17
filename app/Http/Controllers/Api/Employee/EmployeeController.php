@@ -177,9 +177,29 @@ class EmployeeController extends Controller
      */
     public function options(Request $request): JsonResponse
     {
-        $search = $request->query('search');
+        $params = $request->validate([
+            'search' => ['nullable', 'string'],
+            'limit' => ['nullable', 'integer'],
+            'status' => ['nullable', 'string'],
+            'match' => ['nullable', 'string'],
+            'ids' => ['nullable'],
+            'exclude' => ['nullable'],
+        ]);
+        $idList = fn (mixed $value): array => collect(is_array($value) ? $value : explode(',', (string) $value))
+            ->filter(fn ($v) => is_numeric($v))->map(fn ($v) => (int) $v)->unique()->take(2000)->values()->all();
 
-        return EmployeeOptionResource::collection($this->service->pickerList(is_string($search) ? $search : null))->response();
+        $filters = [
+            'search' => $params['search'] ?? null,
+            'limit' => (int) ($params['limit'] ?? 20),
+            'status' => $params['status'] ?? null,
+            'match' => $params['match'] ?? null,
+            'exclude' => $idList($params['exclude'] ?? []),
+        ];
+        if ($request->has('ids')) {
+            $filters['ids'] = $idList($params['ids'] ?? []);
+        }
+
+        return EmployeeOptionResource::collection($this->service->pickerList($filters))->response();
     }
 
     /**
