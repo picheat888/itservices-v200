@@ -16,6 +16,7 @@ use App\Services\Report\Contract\ContractRentalsReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ use Tests\TestCase;
 class ContractRentalsReportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     /** @var array<string, Contract> */
     private array $contracts;
@@ -102,8 +104,9 @@ class ContractRentalsReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['contracts.view', 'assets.view']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('contracts');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
@@ -322,19 +325,18 @@ class ContractRentalsReportTest extends TestCase
         $this->assertSame([], $this->rowIds());
     }
 
-    public function test_needs_contracts_view(): void
+    public function test_needs_the_contract_report_switch(): void
     {
-        $viewer = $this->userWith(['assets.view']);
+        $viewer = $this->userWith(['contracts.view', 'assets.view', ...$this->reportRights('assets')]);
         $this->actingAs($viewer)->getJson('/api/reports/tabular/contracts.rentals/rows')->assertForbidden();
         $this->actingAs($viewer)->getJson('/api/reports/contracts/rentals/breakdown')->assertForbidden();
     }
 
-    /** The rows name who holds each unit and their department, which is asset data: contracts.view alone is not enough. */
-    public function test_needs_assets_view_too(): void
+    public function test_the_contract_report_switch_alone_is_enough(): void
     {
-        $viewer = $this->userWith(['contracts.view']);
-        $this->actingAs($viewer)->getJson('/api/reports/tabular/contracts.rentals/rows')->assertForbidden();
-        $this->actingAs($viewer)->getJson('/api/reports/contracts/rentals/breakdown')->assertForbidden();
+        $viewer = $this->userWith([...$this->reportRights('contracts')]);
+        $this->actingAs($viewer)->getJson('/api/reports/tabular/contracts.rentals/rows')->assertOk();
+        $this->actingAs($viewer)->getJson('/api/reports/contracts/rentals/breakdown')->assertOk();
     }
 
     public function test_the_file_carries_the_cards_as_sheets(): void

@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ use Tests\TestCase;
 class ReportHubTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     protected function setUp(): void
     {
@@ -48,8 +50,8 @@ class ReportHubTest extends TestCase
 
     public function test_a_pin_is_kept_per_user_and_flagged_in_the_catalogue(): void
     {
-        $user = $this->userWith(['assets.view']);
-        $other = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
+        $other = $this->userWith([...$this->reportRights('assets')]);
 
         $this->actingAs($user)->putJson('/api/reports/assets.overview/pin')
             ->assertOk()->assertJsonPath('data.pinned', true);
@@ -70,7 +72,7 @@ class ReportHubTest extends TestCase
     /** The hub lists pinned reports in the order they were pinned (pin_order), whatever the catalogue order. */
     public function test_the_catalogue_carries_the_order_reports_were_pinned_in(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
         $this->actingAs($user)->putJson('/api/reports/assets.warranty_expiring/pin')->assertOk();
         $this->actingAs($user)->putJson('/api/reports/assets.overview/pin')->assertOk();
 
@@ -83,7 +85,7 @@ class ReportHubTest extends TestCase
 
     public function test_only_a_report_the_reader_may_open_can_be_pinned(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
 
         $this->actingAs($user)->putJson('/api/reports/stock.valuation/pin')->assertForbidden();
         $this->actingAs($user)->putJson('/api/reports/stock.nothing/pin')->assertNotFound();
@@ -92,7 +94,7 @@ class ReportHubTest extends TestCase
 
     public function test_a_pin_on_a_report_that_lost_its_access_just_stops_showing(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
         ReportPin::create(['user_id' => $user->id, 'report_key' => 'stock.valuation']);
 
         $keys = collect($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'))->pluck('key');
@@ -104,7 +106,7 @@ class ReportHubTest extends TestCase
 
     public function test_snapshot_shows_only_tiles_whose_report_the_reader_may_open(): void
     {
-        $user = $this->userWith(['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', 'assets.view', 'stock.view']);
+        $user = $this->userWith([...$this->reportRights('tickets', 'assets', 'stock'), 'tickets.level_hardware']);
         Ticket::factory()->create(['category' => 'hardware', 'status' => 'in_progress', 'created_at' => '2026-09-10 10:00:00', 'responded_at' => '2026-09-10 11:00:00', 'sla_resolve_due_at' => '2026-09-12 10:00:00']);
         Ticket::factory()->create(['category' => 'hardware', 'status' => 'completed', 'created_at' => '2026-09-05 10:00:00', 'resolved_at' => '2026-09-06 10:00:00', 'sla_resolve_due_at' => '2026-09-07 10:00:00']);
         Ticket::factory()->create(['category' => 'hardware', 'status' => 'completed', 'created_at' => '2026-08-20 10:00:00', 'resolved_at' => '2026-08-25 10:00:00', 'sla_resolve_due_at' => '2026-08-21 10:00:00']);
@@ -143,7 +145,7 @@ class ReportHubTest extends TestCase
     /** The open-ticket tile carries how the open count moved over the period (the mockup's sparkline). */
     public function test_snapshot_open_tickets_trend_across_the_period(): void
     {
-        $user = $this->userWith(['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware']);
+        $user = $this->userWith([...$this->reportRights('tickets'), 'tickets.level_hardware']);
         // Open since before the 30 days and still open: counted at every point.
         Ticket::factory()->create(['category' => 'hardware', 'status' => 'open', 'created_at' => '2026-08-20 10:00:00']);
         // Closed on the 5th: open at the start only.
@@ -166,7 +168,7 @@ class ReportHubTest extends TestCase
 
     public function test_snapshot_period_moves_the_counted_over_time_tiles(): void
     {
-        $user = $this->userWith(['requests.view_all', 'contracts.view']);
+        $user = $this->userWith([...$this->reportRights('requests', 'contracts')]);
         $request = fn (string $status) => ServiceRequest::create([
             'type' => 'computer', 'origin' => 'direct', 'requester_name' => 'A', 'title' => 'T', 'reason' => 'R', 'status' => $status,
         ]);
@@ -198,7 +200,7 @@ class ReportHubTest extends TestCase
     /** A custom period is the reader's own from / to — both needed, in order, and not past today. */
     public function test_snapshot_custom_period_needs_a_valid_range(): void
     {
-        $user = $this->userWith(['requests.view_all']);
+        $user = $this->userWith([...$this->reportRights('requests')]);
         $get = fn (string $query) => $this->actingAs($user)->getJson('/api/reports/snapshot?'.$query);
 
         $get('period=custom&from=2026-09-01&to=2026-09-10')->assertOk()
@@ -225,7 +227,7 @@ class ReportHubTest extends TestCase
     {
         Excel::fake();
         Asset::factory()->create(['status' => 'ready']);
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
 
         $this->actingAs($user)
             ->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
@@ -239,7 +241,7 @@ class ReportHubTest extends TestCase
 
     public function test_export_refuses_a_column_the_report_does_not_have(): void
     {
-        $user = $this->userWith(['assets.view']);
+        $user = $this->userWith([...$this->reportRights('assets')]);
 
         $this->actingAs($user)->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx&columns[]=salary')->assertUnprocessable();
     }
@@ -248,7 +250,7 @@ class ReportHubTest extends TestCase
     {
         Asset::factory()->create(['status' => 'ready']);
 
-        $response = $this->actingAs($this->userWith(['assets.view']))
+        $response = $this->actingAs($this->userWith([...$this->reportRights('assets')]))
             ->exportReport('/api/reports/tabular/assets.overview/export?format=pdf&columns[]=asset_code');
 
         $response->assertOk();

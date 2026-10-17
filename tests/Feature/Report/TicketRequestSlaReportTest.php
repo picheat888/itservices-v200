@@ -15,6 +15,7 @@ use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ use Tests\TestCase;
 class TicketRequestSlaReportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private const RANGE = 'from=2026-09-01&to=2026-09-30';
 
@@ -61,7 +63,7 @@ class TicketRequestSlaReportTest extends TestCase
 
     private function reader(): User
     {
-        return $this->userWith(['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', 'tickets.level_software']);
+        return $this->userWith([...$this->reportRights('tickets'), 'tickets.level_hardware', 'tickets.level_software']);
     }
 
     /**
@@ -259,10 +261,10 @@ class TicketRequestSlaReportTest extends TestCase
         $this->assertSame([$this->set['t2']->id], array_column($rows, 'id'));
     }
 
-    public function test_it_needs_the_same_permissions_as_the_other_ticket_reports(): void
+    public function test_it_needs_the_ticket_report_switch(): void
     {
         $this->seedTickets();
-        $viewer = $this->userWith(['tickets.view_all', 'tickets.level_hardware']);
+        $viewer = $this->userWith(['tickets.module', 'tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', ...$this->reportRights('assets')]);
 
         $this->actingAs($viewer)->getJson('/api/reports/tabular/tickets.request_sla/rows')->assertForbidden();
         $this->actingAs($viewer)->getJson('/api/reports/tickets/request-sla/breakdown')->assertForbidden();

@@ -21,6 +21,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -30,6 +31,7 @@ use Tests\TestCase;
 class TicketOverviewExportTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private const QUERY = 'from=2026-09-01&to=2026-09-30';
 
@@ -43,7 +45,7 @@ class TicketOverviewExportTest extends TestCase
     private function deskMember(): User
     {
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
-        foreach (['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware'] as $permission) {
+        foreach ([...$this->reportRights('tickets'), 'tickets.level_hardware'] as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
         }
 

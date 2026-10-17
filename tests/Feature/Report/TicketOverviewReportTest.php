@@ -10,6 +10,7 @@ use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -19,6 +20,7 @@ use Tests\TestCase;
  */
 class TicketOverviewReportTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     private const RANGE = ['from' => '2026-09-01', 'to' => '2026-09-30'];
@@ -34,7 +36,7 @@ class TicketOverviewReportTest extends TestCase
     private function deskMember(array $levels = ['hardware', 'software']): User
     {
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
-        $permissions = ['tickets.view_all', 'tickets.resolve', ...array_map(fn (string $l) => "tickets.level_{$l}", $levels)];
+        $permissions = [...$this->reportRights('tickets'), ...array_map(fn (string $l) => "tickets.level_{$l}", $levels)];
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
         }

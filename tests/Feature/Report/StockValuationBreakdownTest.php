@@ -18,6 +18,7 @@ use App\Services\Report\Stock\StockValuationReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -27,6 +28,7 @@ use Tests\TestCase;
 class StockValuationBreakdownTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private int $docSeq = 0;
 
@@ -129,7 +131,7 @@ class StockValuationBreakdownTest extends TestCase
     /** @return array<string, mixed> */
     private function breakdown(string $query = ''): array
     {
-        return $this->actingAs($this->userWith(['stock.view']))
+        return $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/stock/valuation/breakdown'.($query === '' ? '' : '?'.$query))
             ->assertOk()->json('data');
     }
@@ -258,7 +260,7 @@ class StockValuationBreakdownTest extends TestCase
     public function test_breakdown_numbers_equal_the_rows_at_any_day(): void
     {
         $this->seedStock();
-        $user = $this->userWith(['stock.view']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
 
         foreach (['2026-09-25', '2026-09-21', '2026-09-15', '2026-02-01'] as $day) {
             $rows = $this->actingAs($user)->getJson("/api/reports/tabular/stock.valuation/rows?as_of={$day}&per_page=100")->assertOk()->json();
@@ -287,13 +289,13 @@ class StockValuationBreakdownTest extends TestCase
         $this->assertEqualsWithDelta(225.0, $data['warehouses'][1]['value'], 0.001);
     }
 
-    public function test_bad_filters_are_refused_and_stock_view_is_needed(): void
+    public function test_bad_filters_are_refused_and_the_stock_report_switch_is_needed(): void
     {
-        $user = $this->userWith(['stock.view']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
         $this->actingAs($user)->getJson('/api/reports/stock/valuation/breakdown?as_of=25-09-2026')->assertUnprocessable();
         $this->actingAs($user)->getJson('/api/reports/stock/valuation/breakdown?category_id=999')->assertUnprocessable();
 
-        $this->actingAs($this->userWith(['stock.view_events', 'stock.view_request']))
+        $this->actingAs($this->userWith(['stock.module', 'stock.view', 'stock.view_events', ...$this->reportRights('assets')]))
             ->getJson('/api/reports/stock/valuation/breakdown')->assertForbidden();
     }
 
@@ -312,7 +314,7 @@ class StockValuationBreakdownTest extends TestCase
     public function test_rows_are_held_items_by_value_with_the_last_move_at_the_day(): void
     {
         $this->seedStock();
-        $user = $this->userWith(['stock.view']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
 
         $past = $this->actingAs($user)->getJson('/api/reports/tabular/stock.valuation/rows?as_of=2026-09-15')->assertOk()->json('data');
         $this->assertSame(
@@ -332,7 +334,7 @@ class StockValuationBreakdownTest extends TestCase
     {
         $this->seedStock();
         $report = new StockValuationReport;
-        $user = $this->userWith(['stock.view']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
 
         $today = collect($report->exportSections($user, $report->resolveFilters([])))->keyBy('title');
         $this->assertSame(['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'รายการที่ไม่เคลื่อนไหวเกิน 90 วัน'], $today->keys()->all());
@@ -355,7 +357,7 @@ class StockValuationBreakdownTest extends TestCase
         Excel::fake();
         $this->seedStock();
 
-        $this->actingAs($this->userWith(['stock.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->exportReport('/api/reports/tabular/stock.valuation/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_stock-valuation_2026-09-25.xlsx', function (TabularReportExport $export) {

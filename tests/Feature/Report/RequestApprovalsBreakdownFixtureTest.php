@@ -13,6 +13,7 @@ use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -21,6 +22,7 @@ use Tests\TestCase;
  */
 class RequestApprovalsBreakdownFixtureTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     private const FIXTURE = __DIR__.'/../../Fixtures/request-approvals-breakdown.json';
@@ -121,7 +123,9 @@ class RequestApprovalsBreakdownFixtureTest extends TestCase
     private function viewer(): User
     {
         $role = Role::create(['key' => 'rep_fx', 'name' => 'Report Test', 'is_system' => false]);
-        RolePermission::create(['role_id' => $role->id, 'permission' => 'requests.view_all', 'allowed' => true]);
+        foreach ($this->reportRights('requests') as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
 
         return User::factory()->create(['role' => $role->key]);
     }

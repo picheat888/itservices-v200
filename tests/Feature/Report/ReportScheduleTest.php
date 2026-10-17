@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ use Tests\TestCase;
  */
 class ReportScheduleTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     private const OVERVIEW = '/api/reports/tabular/assets.overview/schedule';
@@ -106,7 +108,7 @@ class ReportScheduleTest extends TestCase
 
     public function test_a_run_replaces_the_date_filters_with_its_period_and_keeps_the_rest(): void
     {
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $schedule = $this->schedule($owner, [
             'report_key' => 'assets.transfer_history',
             'filters' => ['from' => '2026-01-01', 'to' => '2026-01-31', 'kind' => 'handover'],
@@ -120,7 +122,7 @@ class ReportScheduleTest extends TestCase
     /** The mail names what a run covers: a range, a point in time, or the state at send time. */
     public function test_the_mail_names_the_period_the_way_the_report_counts_it(): void
     {
-        $owner = $this->userWith(['assets.view', 'stock.view', 'stock.view_events']);
+        $owner = $this->userWith([...$this->reportRights('assets', 'stock')]);
         $range = $this->schedule($owner, ['report_key' => 'stock.movements']);
         $point = $this->schedule($owner, ['report_key' => 'stock.valuation']);
         $now = $this->schedule($owner, ['report_key' => 'assets.overview']);
@@ -140,7 +142,7 @@ class ReportScheduleTest extends TestCase
 
     public function test_a_schedule_is_set_from_a_report_page_with_its_filters(): void
     {
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
 
         $this->actingAs($owner)->postJson(self::OVERVIEW, [
             'format' => 'xlsx',
@@ -161,7 +163,7 @@ class ReportScheduleTest extends TestCase
 
     public function test_the_ticket_overview_is_scheduled_through_its_own_endpoint(): void
     {
-        $owner = $this->userWith(['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware']);
+        $owner = $this->userWith([...$this->reportRights('tickets'), 'tickets.level_hardware']);
 
         $this->actingAs($owner)->postJson('/api/reports/tickets/overview/schedule', [
             'from' => '2026-09-01', 'to' => '2026-09-30', 'format' => 'pdf',
@@ -171,7 +173,7 @@ class ReportScheduleTest extends TestCase
 
     public function test_a_schedule_needs_a_valid_timing_and_real_addresses(): void
     {
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $tooMany = array_map(fn ($i) => "p{$i}@example.com", range(1, ReportSchedule::MAX_RECIPIENTS + 1));
 
         $this->actingAs($owner)->postJson(self::OVERVIEW, [
@@ -189,14 +191,14 @@ class ReportScheduleTest extends TestCase
 
     public function test_only_someone_who_can_open_the_report_may_schedule_it(): void
     {
-        $this->actingAs($this->userWith(['tickets.view_all']))->postJson(self::OVERVIEW, [
+        $this->actingAs($this->userWith([...$this->reportRights('tickets')]))->postJson(self::OVERVIEW, [
             'format' => 'pdf', 'frequency' => 'daily', 'send_hour' => 7, 'recipients' => ['a@example.com'],
         ])->assertForbidden();
     }
 
     public function test_one_person_may_keep_so_many_schedules(): void
     {
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         for ($i = 0; $i < ReportSchedule::MAX_PER_USER; $i++) {
             $this->schedule($owner);
         }
@@ -211,7 +213,7 @@ class ReportScheduleTest extends TestCase
     public function test_the_sweep_sends_a_due_schedule_to_every_recipient_with_the_file_attached(): void
     {
         Asset::factory()->create(['status' => 'ready']);
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $due = $this->schedule($owner, ['recipients' => ['boss@example.com', 'auditor@partner.co.th'], 'next_run_at' => '2026-09-30 07:00:00']);
         $later = $this->schedule($owner, ['next_run_at' => '2026-10-05 07:00:00']);
 
@@ -238,7 +240,7 @@ class ReportScheduleTest extends TestCase
     public function test_the_workbook_covers_only_the_period_that_closed(): void
     {
         Excel::fake();
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $inside = AssetTransfer::create([
             'asset_id' => Asset::factory()->create()->id, 'asset_tag' => 'INK-1', 'asset_model' => 'X', 'kind' => 'handover',
             'from_owner' => 'Store', 'to_owner' => 'EMP-1', 'reason' => 'r', 'performed_by' => 'IT',
@@ -257,7 +259,7 @@ class ReportScheduleTest extends TestCase
 
     public function test_an_owner_who_lost_access_pauses_the_schedule_and_hears_about_it(): void
     {
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $schedule = $this->schedule($owner, ['next_run_at' => '2026-09-30 07:00:00']);
         RolePermission::query()->update(['allowed' => false]);
 
@@ -272,7 +274,7 @@ class ReportScheduleTest extends TestCase
 
     public function test_nothing_is_sent_while_the_email_template_is_switched_off(): void
     {
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         EmailTemplate::query()->where('key', 'report.scheduled')->update(['enabled' => false]);
         $schedule = $this->schedule($owner, ['next_run_at' => '2026-09-30 07:00:00']);
 
@@ -285,7 +287,7 @@ class ReportScheduleTest extends TestCase
     public function test_a_file_too_large_to_attach_goes_to_the_owners_exports_instead(): void
     {
         Asset::factory()->create(['status' => 'ready']);
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $schedule = $this->schedule($owner);
         $service = app(ReportScheduleService::class);
         $service->attachmentLimitBytes = 1;
@@ -306,9 +308,9 @@ class ReportScheduleTest extends TestCase
 
     public function test_the_owner_lists_edits_pauses_and_resumes_their_schedules(): void
     {
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $schedule = $this->schedule($owner);
-        $this->schedule($this->userWith(['assets.view']));
+        $this->schedule($this->userWith([...$this->reportRights('assets')]));
 
         $this->actingAs($owner)->getJson('/api/reports/schedules')->assertOk()->assertJsonCount(1, 'data');
 
@@ -323,8 +325,8 @@ class ReportScheduleTest extends TestCase
 
     public function test_nobody_else_can_touch_a_schedule(): void
     {
-        $schedule = $this->schedule($this->userWith(['assets.view']));
-        $other = $this->userWith(['assets.view']);
+        $schedule = $this->schedule($this->userWith([...$this->reportRights('assets')]));
+        $other = $this->userWith([...$this->reportRights('assets')]);
 
         $this->actingAs($other)->putJson("/api/reports/schedules/{$schedule->id}", ['active' => false])->assertNotFound();
         $this->actingAs($other)->deleteJson("/api/reports/schedules/{$schedule->id}")->assertNotFound();
@@ -335,7 +337,7 @@ class ReportScheduleTest extends TestCase
     public function test_send_now_queues_a_run_without_moving_the_regular_slot_and_delete_removes_it(): void
     {
         Queue::fake();
-        $owner = $this->userWith(['assets.view']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
         $schedule = $this->schedule($owner);
 
         $this->actingAs($owner)->postJson("/api/reports/schedules/{$schedule->id}/send-now")->assertAccepted();

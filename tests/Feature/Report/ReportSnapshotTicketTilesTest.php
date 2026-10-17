@@ -9,10 +9,12 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 class ReportSnapshotTicketTilesTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -25,7 +27,7 @@ class ReportSnapshotTicketTilesTest extends TestCase
     private function reader(): User
     {
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
-        foreach (['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware'] as $permission) {
+        foreach ([...$this->reportRights('tickets'), 'tickets.level_hardware'] as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
         }
 

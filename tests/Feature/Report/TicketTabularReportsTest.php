@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
 class TicketTabularReportsTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     /** @var array<string, mixed> */
     private array $set = [];
@@ -47,7 +49,7 @@ class TicketTabularReportsTest extends TestCase
 
     private function reader(): User
     {
-        return $this->userWith(['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', 'tickets.level_software']);
+        return $this->userWith([...$this->reportRights('tickets'), 'tickets.level_hardware', 'tickets.level_software']);
     }
 
     /** @param array<string, mixed> $attributes */
@@ -222,15 +224,15 @@ class TicketTabularReportsTest extends TestCase
 
         $this->assertSame([$this->set['t2']->id], array_column(
             $this->actingAs($user)->getJson('/api/reports/tickets/backlog/board?category=software')->assertOk()->json('data'), 'id'));
-        $this->actingAs($this->userWith(['tickets.view_all', 'tickets.level_hardware']))
+        $this->actingAs($this->userWith(['tickets.module', 'tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', ...$this->reportRights('assets')]))
             ->getJson('/api/reports/tickets/backlog/board')->assertForbidden();
     }
 
     // ── access & export ─────────────────────────────────────────────────────────────
 
-    public function test_ticket_reports_need_view_all_and_resolve(): void
+    public function test_ticket_reports_need_the_ticket_report_switch(): void
     {
-        $viewer = $this->userWith(['tickets.view_all', 'tickets.level_hardware']);
+        $viewer = $this->userWith(['tickets.module', 'tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', ...$this->reportRights('assets')]);
 
         foreach (['tickets.backlog'] as $key) {
             $this->actingAs($viewer)->getJson("/api/reports/tabular/{$key}/rows")->assertForbidden();

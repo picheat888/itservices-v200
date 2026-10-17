@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -20,6 +21,7 @@ use Tests\TestCase;
 class TabularReportEngineTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     protected function setUp(): void
     {
@@ -53,7 +55,7 @@ class TabularReportEngineTest extends TestCase
 
     public function test_definition_describes_filters_and_columns(): void
     {
-        $data = $this->actingAs($this->userWith(['contracts.view']))
+        $data = $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->getJson('/api/reports/tabular/contracts.renewals')->assertOk()->json('data');
 
         $this->assertSame('contracts.renewals', $data['key']);
@@ -71,7 +73,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Cancelled', 'end_date' => '2026-10-01', 'cancelled_at' => '2026-09-01 10:00']);
         $this->contract(['name' => 'Expired', 'end_date' => '2026-09-01', 'expired_at' => '2026-09-02 10:00']);
 
-        $body = $this->actingAs($this->userWith(['contracts.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->getJson('/api/reports/tabular/contracts.renewals/rows')->assertOk()->json();
 
         $this->assertSame([$overdue->id, $soon->id], array_column($body['data'], 'id'));
@@ -89,7 +91,7 @@ class TabularReportEngineTest extends TestCase
     {
         $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
         $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-12-10']);
-        $user = $this->userWith(['contracts.view']);
+        $user = $this->userWith([...$this->reportRights('contracts')]);
 
         $full = $this->actingAs($user)->getJson('/api/reports/tabular/contracts.renewals/rows?type=hardware')->assertOk()->json();
         $rowsOnly = $this->actingAs($user)->getJson('/api/reports/tabular/contracts.renewals/rows?type=hardware&only_rows=1')->assertOk()->json();
@@ -105,16 +107,16 @@ class TabularReportEngineTest extends TestCase
 
     public function test_summary_follows_the_report_gate_and_its_filter_rules(): void
     {
-        $this->actingAs($this->userWith(['assets.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('assets')]))
             ->getJson('/api/reports/tabular/contracts.renewals/summary')->assertForbidden();
-        $this->actingAs($this->userWith(['contracts.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->getJson('/api/reports/tabular/contracts.renewals/summary?within=45')
             ->assertUnprocessable()->assertJsonValidationErrors('within');
     }
 
     public function test_filters_narrow_and_validate(): void
     {
-        $user = $this->userWith(['contracts.view']);
+        $user = $this->userWith([...$this->reportRights('contracts')]);
         $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
         $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-12-10']);
 
@@ -127,17 +129,17 @@ class TabularReportEngineTest extends TestCase
 
     public function test_access_and_unknown_keys(): void
     {
-        $this->actingAs($this->userWith(['assets.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('assets')]))
             ->getJson('/api/reports/tabular/contracts.renewals/rows')->assertForbidden();
-        $this->actingAs($this->userWith(['contracts.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->getJson('/api/reports/tabular/nope.nothing')->assertNotFound();
-        $this->actingAs($this->userWith(['tickets.view_all', 'tickets.resolve']))
+        $this->actingAs($this->userWith([...$this->reportRights('tickets')]))
             ->getJson('/api/reports/tabular/tickets.overview')->assertNotFound();
     }
 
     public function test_definition_and_export_need_contracts_view(): void
     {
-        $limited = $this->userWith(['assets.view']);
+        $limited = $this->userWith([...$this->reportRights('assets')]);
 
         $this->actingAs($limited)->getJson('/api/reports/tabular/contracts.renewals')->assertForbidden();
         $this->actingAs($limited)->exportReport('/api/reports/tabular/contracts.renewals/export?format=xlsx')->assertForbidden();
@@ -149,7 +151,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
         $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-10-10']);
 
-        $this->actingAs($this->userWith(['contracts.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->exportReport('/api/reports/tabular/contracts.renewals/export?format=xlsx&type=hardware')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-renewals_2026-09-25.xlsx', function (TabularReportExport $export) {
@@ -162,7 +164,7 @@ class TabularReportEngineTest extends TestCase
         Excel::fake();
         $this->contract(['name' => 'Soon', 'type' => 'hardware', 'end_date' => '2026-10-15']);
 
-        $this->actingAs($this->userWith(['contracts.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->exportReport('/api/reports/tabular/contracts.renewals/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-renewals_2026-09-25.xlsx', function (TabularReportExport $export) {
@@ -181,7 +183,7 @@ class TabularReportEngineTest extends TestCase
         Excel::fake();
         $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
 
-        $this->actingAs($this->userWith(['contracts.view']))
+        $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->exportReport('/api/reports/tabular/contracts.renewals/export?format=xlsx&type=hardware')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-renewals_2026-09-25.xlsx', function (TabularReportExport $export) {
@@ -195,7 +197,7 @@ class TabularReportEngineTest extends TestCase
     {
         $this->contract(['name' => 'Soon', 'end_date' => '2026-10-15']);
 
-        $response = $this->actingAs($this->userWith(['contracts.view']))
+        $response = $this->actingAs($this->userWith([...$this->reportRights('contracts')]))
             ->exportReport('/api/reports/tabular/contracts.renewals/export?format=pdf');
 
         $response->assertOk();

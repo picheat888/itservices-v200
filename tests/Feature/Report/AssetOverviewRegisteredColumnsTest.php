@@ -10,12 +10,14 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 // "ภาพรวมของทรัพย์สิน" (assets.overview): when each asset was registered and by whom, hidden on screen until picked.
 class AssetOverviewRegisteredColumnsTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     protected function setUp(): void
     {
@@ -27,7 +29,9 @@ class AssetOverviewRegisteredColumnsTest extends TestCase
     private function viewer(): User
     {
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
-        RolePermission::create(['role_id' => $role->id, 'permission' => 'assets.view', 'allowed' => true]);
+        foreach ($this->reportRights('assets') as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
 
         return User::factory()->create(['role' => $role->key]);
     }

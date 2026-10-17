@@ -12,6 +12,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -20,6 +21,7 @@ use Tests\TestCase;
  */
 class EmployeeOverviewReportTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     private int $seq = 0;
@@ -72,7 +74,7 @@ class EmployeeOverviewReportTest extends TestCase
 
     private function breakdown(string $query = ''): array
     {
-        return $this->actingAs($this->userWith(['employees.view']))
+        return $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/employees/overview/breakdown?from=2026-01-01&to=2026-10-31'.$query)->assertOk()->json('data');
     }
 
@@ -85,7 +87,7 @@ class EmployeeOverviewReportTest extends TestCase
         $both = $this->employee('Both', ['joined_at' => '2026-02-01', 'status' => 'resigned', 'last_day' => '2026-04-30']);
         $future = $this->employee('Future', ['joined_at' => '2026-10-20']);
         $this->employee('Old', ['joined_at' => '2019-01-01']);
-        $user = $this->userWith(['employees.view']);
+        $user = $this->userWith([...$this->reportRights('employees')]);
 
         $rows = $this->actingAs($user)->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data');
 
@@ -114,7 +116,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->onboarding($joiner, 'pending');
         $this->onboarding($joiner, 'completed');
 
-        $rows = collect($this->actingAs($this->userWith(['employees.view']))
+        $rows = collect($this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data'))
             ->keyBy('movement_kind');
 
@@ -130,7 +132,7 @@ class EmployeeOverviewReportTest extends TestCase
     {
         $this->employee('OneDay', ['joined_at' => '2026-06-01', 'status' => 'resigned', 'last_day' => '2026-06-01']);
 
-        $rows = $this->actingAs($this->userWith(['employees.view']))
+        $rows = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data');
         $data = $this->breakdown();
 
@@ -143,7 +145,7 @@ class EmployeeOverviewReportTest extends TestCase
     {
         $this->employee('Joiner', ['joined_at' => '2026-03-02']);
         $this->employee('Leaver', ['status' => 'resigned', 'last_day' => '2026-05-31']);
-        $user = $this->userWith(['employees.view']);
+        $user = $this->userWith([...$this->reportRights('employees')]);
 
         $body = $this->actingAs($user)->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31&kind=left')->assertOk()->json();
 
@@ -156,13 +158,13 @@ class EmployeeOverviewReportTest extends TestCase
 
     public function test_overview_needs_employees_view(): void
     {
-        $this->actingAs($this->userWith(['assets.view']))->getJson('/api/reports/tabular/employees.overview/rows')->assertForbidden();
-        $this->actingAs($this->userWith(['assets.view']))->getJson('/api/reports/employees/overview/breakdown')->assertForbidden();
+        $this->actingAs($this->userWith([...$this->reportRights('assets')]))->getJson('/api/reports/tabular/employees.overview/rows')->assertForbidden();
+        $this->actingAs($this->userWith([...$this->reportRights('assets')]))->getJson('/api/reports/employees/overview/breakdown')->assertForbidden();
     }
 
     public function test_old_key_is_gone(): void
     {
-        $this->actingAs($this->userWith(['employees.view']))->getJson('/api/reports/tabular/employees.joiners_leavers/rows')->assertNotFound();
+        $this->actingAs($this->userWith([...$this->reportRights('employees')]))->getJson('/api/reports/tabular/employees.joiners_leavers/rows')->assertNotFound();
     }
 
     // ── breakdown ─────────────────────────────────────────────────────────────────
@@ -192,7 +194,7 @@ class EmployeeOverviewReportTest extends TestCase
 
     public function test_nobody_at_all_gives_no_rate_and_no_nan(): void
     {
-        $body = $this->actingAs($this->userWith(['employees.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json();
         $data = $this->breakdown();
 
@@ -210,7 +212,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->employee('LeftNow1', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-07-15']);
         $this->employee('LeftNow2', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-08-15']);
 
-        $body = $this->actingAs($this->userWith(['employees.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
         $trend = collect($body['summary'])->keyBy('key')['eo_left']['note']['trend'];
 
@@ -225,7 +227,7 @@ class EmployeeOverviewReportTest extends TestCase
     {
         $this->employee('Joiner', ['joined_at' => '2026-07-01']);
 
-        $body = $this->actingAs($this->userWith(['employees.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-07-01&to=2026-09-30')->assertOk()->json();
         $trend = collect($body['summary'])->keyBy('key')['eo_left']['note']['trend'];
 
@@ -237,7 +239,7 @@ class EmployeeOverviewReportTest extends TestCase
     {
         $this->employee('Stay', ['joined_at' => '2020-01-01']);
 
-        $data = $this->actingAs($this->userWith(['employees.view']))
+        $data = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/employees/overview/breakdown?from=2027-12-31&to=2026-01-01')->assertOk()->json('data');
 
         $this->assertSame('2026-10-13', $data['as_of']);
@@ -249,7 +251,7 @@ class EmployeeOverviewReportTest extends TestCase
     {
         $this->employee('Stay', ['joined_at' => '2020-01-01']);
 
-        $data = $this->actingAs($this->userWith(['employees.view']))
+        $data = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/employees/overview/breakdown?from=2027-01-01&to=2027-03-31')->assertOk()->json('data');
 
         $this->assertSame([], $data['points']);
@@ -259,7 +261,7 @@ class EmployeeOverviewReportTest extends TestCase
     public function test_long_ranges_bucket_by_quarter_then_year(): void
     {
         $this->employee('Stay', ['joined_at' => '2010-01-01']);
-        $user = $this->userWith(['employees.view']);
+        $user = $this->userWith([...$this->reportRights('employees')]);
 
         $quarter = $this->actingAs($user)->getJson('/api/reports/employees/overview/breakdown?from=2023-01-01&to=2026-10-31')->json('data');
         $year = $this->actingAs($user)->getJson('/api/reports/employees/overview/breakdown?from=2015-01-01&to=2026-10-31')->json('data');
@@ -287,7 +289,7 @@ class EmployeeOverviewReportTest extends TestCase
     {
         $this->employee('Stay', ['joined_at' => '2020-01-01']);
         $this->employee('LastOnEnd', ['joined_at' => '2020-01-01', 'status' => 'resigned', 'last_day' => '2026-09-30']);
-        $data = $this->actingAs($this->userWith(['employees.view']))
+        $data = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/employees/overview/breakdown?from=2026-01-01&to=2026-09-30')->assertOk()->json('data');
 
         $september = collect($data['points'])->last();
@@ -347,7 +349,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertSame(['date' => '2026-03-15', 'before_start' => true], ['date' => $badEvent['date'], 'before_start' => $badEvent['before_start']]);
 
         // The list shows the same leavers as the tile, without a last day where none is recorded.
-        $body = $this->actingAs($this->userWith(['employees.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31&kind=left')->assertOk()->json();
         $left = collect($body['data'])->keyBy('employee_code');
         $this->assertCount(4, $left);
@@ -366,10 +368,10 @@ class EmployeeOverviewReportTest extends TestCase
             $this->grant($e, 'All '.$e->code);
         }
 
-        $response = $this->actingAs($this->userWith(['employees.view']))
+        $response = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/employees/overview/breakdown?from=2026-01-01&to=2026-10-31')->assertOk();
         $holding = $response->json('data.holding');
-        $openItems = $this->actingAs($this->userWith(['employees.view']))
+        $openItems = $this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/employees/open-items/breakdown')->assertOk();
 
         $order = [$oldest->code, $nine->code, $ten->code, $noLastDay->code];
@@ -416,7 +418,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertSame(3, $prep['next_in_days']);
         $this->assertSame(0, $prep['started']);
 
-        $tile = collect($this->actingAs($this->userWith(['employees.view']))
+        $tile = collect($this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->json('summary'))->keyBy('key')['eo_preparing'];
         $this->assertSame(50, $tile['progress']);
         $this->assertNull($tile['share'], 'a bar without a badge');
@@ -434,7 +436,7 @@ class EmployeeOverviewReportTest extends TestCase
         $this->onboarding($completed, 'completed');
         $this->onboarding($completed, 'cancelled');
 
-        $rows = collect($this->actingAs($this->userWith(['employees.view']))
+        $rows = collect($this->actingAs($this->userWith([...$this->reportRights('employees')]))
             ->getJson('/api/reports/tabular/employees.overview/rows?from=2026-01-01&to=2026-10-31')->assertOk()->json('data'))
             ->keyBy('employee_code');
         $prep = $this->breakdown()['prep'];
@@ -509,8 +511,8 @@ class EmployeeOverviewReportTest extends TestCase
 
     public function test_access_link_flag_follows_the_access_report_permission(): void
     {
-        $plain = $this->userWith(['employees.view']);
-        $both = $this->userWith(['employees.view', 'access.overview']);
+        $plain = $this->userWith([...$this->reportRights('employees')]);
+        $both = $this->userWith([...$this->reportRights('employees', 'access')]);
 
         $this->assertFalse($this->actingAs($plain)->getJson('/api/reports/employees/overview/breakdown')->json('data.can_open_access'));
         $this->assertTrue($this->actingAs($both)->getJson('/api/reports/employees/overview/breakdown')->json('data.can_open_access'));

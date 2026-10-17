@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -26,6 +27,7 @@ use Tests\TestCase;
 class StockReportsTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
+    use GrantsReports;
 
     private int $docSeq = 0;
 
@@ -88,7 +90,7 @@ class StockReportsTest extends TestCase
         $transfer = $this->movement($item, 'transfer', 2, '2026-09-12 09:00:00', ['from_label' => 'Main', 'to_label' => 'Branch']);
         $adjust = $this->movement($item, 'adjust_down', 1, '2026-09-20 09:00:00');
 
-        $body = $this->actingAs($this->userWith(['stock.view_events']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/tabular/stock.movements/rows')->assertOk()->json();
 
         $this->assertSame([$receive->id, $issue->id, $transfer->id, $adjust->id], array_column($body['data'], 'id'));
@@ -108,7 +110,7 @@ class StockReportsTest extends TestCase
 
     public function test_movements_filter_by_range_type_warehouse_and_search(): void
     {
-        $user = $this->userWith(['stock.view_events']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
         $branch = Warehouse::create(['name' => 'Branch']);
         $ssd = $this->item(['name' => 'SSD 1TB']);
         $ram = $this->item(['name' => 'RAM 16GB']);
@@ -129,10 +131,10 @@ class StockReportsTest extends TestCase
         $this->actingAs($user)->getJson('/api/reports/tabular/stock.movements/rows?from=25-09-2026')->assertUnprocessable();
     }
 
-    public function test_movements_need_the_event_log_permission(): void
+    public function test_stock_reports_need_the_stock_report_switch(): void
     {
-        $this->actingAs($this->userWith(['stock.view']))->getJson('/api/reports/tabular/stock.movements/rows')->assertForbidden();
-        $this->actingAs($this->userWith(['stock.view_events']))->getJson('/api/reports/tabular/stock.below_min/rows')->assertForbidden();
+        $this->actingAs($this->userWith(['stock.module', 'stock.view', 'stock.view_events', ...$this->reportRights('assets')]))->getJson('/api/reports/tabular/stock.movements/rows')->assertForbidden();
+        $this->actingAs($this->userWith(['stock.module', 'stock.view', 'stock.view_events', ...$this->reportRights('assets')]))->getJson('/api/reports/tabular/stock.below_min/rows')->assertForbidden();
     }
 
     // ── stock.below_min ─────────────────────────────────────────────────────────────
@@ -147,7 +149,7 @@ class StockReportsTest extends TestCase
         $this->movement($low, 'receive', 1, '2026-09-01 09:00:00', ['unit_cost' => 40]);
         $this->movement($low, 'receive', 1, '2026-09-03 09:00:00', ['unit_cost' => 50]);
 
-        $body = $this->actingAs($this->userWith(['stock.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/tabular/stock.below_min/rows')->assertOk()->json();
 
         // Out of stock counts with or without a Min, like StockItem::status().
@@ -172,11 +174,11 @@ class StockReportsTest extends TestCase
         $this->assertEqualsWithDelta(400.0, $summary['reorder_value']['value'], 0.001);
         $this->assertEqualsWithDelta(60.0, $summary['excess_value']['value'], 0.001);
 
-        $onlyOut = $this->actingAs($this->userWith(['stock.view']))
+        $onlyOut = $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/tabular/stock.below_min/rows?status=out')->assertOk()->json('data');
         $this->assertSame([$out->id, $noMin->id], array_column($onlyOut, 'id'));
 
-        $onlyOver = $this->actingAs($this->userWith(['stock.view']))
+        $onlyOver = $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/tabular/stock.below_min/rows?status=over')->assertOk()->json('data');
         $this->assertSame([$over->id], array_column($onlyOver, 'id'));
     }
@@ -206,7 +208,7 @@ class StockReportsTest extends TestCase
         $item = $this->valuedItem();
         $this->item(['name' => 'Empty', 'current_stock' => 0]);
 
-        $body = $this->actingAs($this->userWith(['stock.view']))
+        $body = $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/tabular/stock.valuation/rows')->assertOk()->json();
 
         $this->assertSame([$item->id], array_column($body['data'], 'id'));
@@ -225,7 +227,7 @@ class StockReportsTest extends TestCase
     public function test_valuation_rebuilds_a_past_day_from_the_ledger(): void
     {
         $this->valuedItem();
-        $user = $this->userWith(['stock.view']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
         $rowAt = fn (string $day) => $this->actingAs($user)->getJson("/api/reports/tabular/stock.valuation/rows?as_of={$day}")->assertOk()->json('data.0');
 
         // 15th: 6 left of the first lot.
@@ -246,7 +248,7 @@ class StockReportsTest extends TestCase
     {
         $this->item(['name' => 'Legacy', 'current_stock' => 4, 'cost' => 25]);
 
-        $row = $this->actingAs($this->userWith(['stock.view']))
+        $row = $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->getJson('/api/reports/tabular/stock.valuation/rows?as_of=2026-09-01')->assertOk()->json('data.0');
 
         $this->assertEquals(4, $row['qty_on_hand']);
@@ -260,7 +262,7 @@ class StockReportsTest extends TestCase
         Excel::fake();
         $this->movement($this->item(), 'receive', 1, '2026-09-02 09:00:00', ['unit_cost' => 10]);
 
-        $this->actingAs($this->userWith(['stock.view_events']))
+        $this->actingAs($this->userWith([...$this->reportRights('stock')]))
             ->exportReport('/api/reports/tabular/stock.movements/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_stock-movements_2026-09-25.xlsx', function (TabularReportExport $export) {
@@ -274,7 +276,7 @@ class StockReportsTest extends TestCase
     public function test_pdf_exports_stream_a_pdf(): void
     {
         $this->valuedItem();
-        $user = $this->userWith(['stock.view', 'stock.view_events']);
+        $user = $this->userWith([...$this->reportRights('stock')]);
 
         foreach (['stock.movements', 'stock.below_min', 'stock.valuation'] as $key) {
             $response = $this->actingAs($user)->exportReport("/api/reports/tabular/{$key}/export?format=pdf");

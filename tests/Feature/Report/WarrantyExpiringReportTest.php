@@ -11,6 +11,7 @@ use App\Models\Settings\Vendor;
 use App\Models\User;
 use App\Services\Report\Asset\WarrantyExpiringReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
@@ -19,6 +20,7 @@ use Tests\TestCase;
  */
 class WarrantyExpiringReportTest extends TestCase
 {
+    use GrantsReports;
     use RefreshDatabase;
 
     /** @var array<string, Asset> */
@@ -56,8 +58,9 @@ class WarrantyExpiringReportTest extends TestCase
     }
 
     /** @param list<string> $permissions */
-    private function userWith(array $permissions = ['assets.view']): User
+    private function userWith(?array $permissions = null): User
     {
+        $permissions ??= $this->reportRights('assets');
         $role = Role::create(['key' => 'rep_'.uniqid(), 'name' => 'Report Test', 'is_system' => false]);
         foreach ($permissions as $permission) {
             RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
@@ -204,6 +207,6 @@ class WarrantyExpiringReportTest extends TestCase
 
     public function test_breakdown_needs_assets_view(): void
     {
-        $this->actingAs($this->userWith(['contracts.view']))->getJson('/api/reports/assets/warranty-expiring/breakdown')->assertForbidden();
+        $this->actingAs($this->userWith([...$this->reportRights('contracts')]))->getJson('/api/reports/assets/warranty-expiring/breakdown')->assertForbidden();
     }
 }
