@@ -181,7 +181,7 @@ function SeatTableCard({ softwares, filters, patch }: { softwares: SoftwareSeats
                 }
             />
             {softwares.length === 0 ? (
-                <CardEmpty>{t('rep_sl_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_software_seats')} hint={t('rep_empty_software_seats_hint')} />
             ) : (
                 <>
                     <div className="relative overflow-x-auto">
@@ -324,7 +324,7 @@ function LeaversCard({
         <Card ref={cardRef} className={PAIR_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_sl_leavers_title')} sub={t('rep_sl_leavers_sub')} />
             {leavers.length === 0 ? (
-                <CardEmpty>{t('rep_sl_leavers_empty')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('rep_empty_software_leavers')} hint={t('rep_empty_software_leavers_hint')} />
             ) : (
                 <Group
                     first
@@ -438,7 +438,7 @@ function RequestsCard({
         <Card ref={cardRef} className={PAIR_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_sl_requests_title')} sub={t('rep_sl_requests_sub')} />
             {requests.length === 0 ? (
-                <CardEmpty>{t('rep_sl_requests_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_software_requests')} hint={t('rep_empty_software_requests_hint')} />
             ) : (
                 <>
                     <Group

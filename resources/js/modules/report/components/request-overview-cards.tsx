@@ -176,7 +176,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                 }
             />
             {sum('submitted') + sum('completed') === 0 ? (
-                <CardEmpty>{t('rep_rqo_month_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_req_overview_month')} hint={t('rep_empty_req_overview_month_hint')} />
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <p className="sr-only">
@@ -431,7 +431,7 @@ function TypesCard({ types }: { types: Breakdown['types'] }) {
                 }
             />
             {types.length === 0 ? (
-                <CardEmpty>{t('rep_rqo_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_req_overview_types')} hint={t('rep_empty_req_overview_types_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full min-w-[36rem] table-fixed text-sm">
@@ -557,7 +557,7 @@ function DeliveryCard({ delivery }: { delivery: Breakdown['delivery'] }) {
                 }
             />
             {rows.length === 0 ? (
-                <CardEmpty>{t('rep_rqo_days_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_req_overview_delivery')} hint={t('rep_empty_req_overview_delivery_hint')} />
             ) : (
                 <>
                     <div className="relative overflow-x-auto">
@@ -654,12 +654,7 @@ function ItemsCard({ items }: { items: Breakdown['items'] }) {
                 }
             />
             {list.length === 0 ? (
-                <CardEmpty>
-                    <span className="flex flex-col gap-1">
-                        <span className="text-foreground font-medium">{t('rep_rqo_items_empty')}</span>
-                        <span>{t('rep_rqo_items_empty_sub')}</span>
-                    </span>
-                </CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_req_overview_items')} hint={t('rep_empty_req_overview_items_hint')} />
             ) : (
                 <>
                     <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 px-5 pt-3 text-xs">
@@ -764,7 +759,7 @@ function DepartmentCard({ departments }: { departments: Breakdown['departments']
                 }
             />
             {departments.length === 0 ? (
-                <CardEmpty>{t('rep_rqo_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_req_overview_departments')} hint={t('rep_empty_req_overview_departments_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full min-w-[40rem] table-fixed text-sm">

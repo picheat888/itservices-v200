@@ -9,13 +9,6 @@ export const dashboard: Dict = {
     dash_kpi_my_open: 'My open tickets',
     dash_kpi_my_assets: 'My assets',
     dash_kpi_my_closed: 'Closed this month',
-    dash_empty_tickets: 'No open tickets.',
-    dash_empty_requests: 'No requests waiting.',
-    dash_empty_window: 'No tickets opened in the last 14 days.',
-    dash_empty_workload: 'Nobody has a ticket assigned right now.',
-    dash_empty_activity: 'Nothing has happened yet.',
-    dash_empty_requests_window: 'No requests filed in this period.',
-    dash_empty_waiting: 'No requests waiting over {n} days.',
     // pages/index.tsx — คำทักทาย
     dash_hello: 'Hello, {name}',
     dash_today: '{weekday}, {date}',
@@ -106,7 +99,6 @@ export const dashboard: Dict = {
     dash_latest_n: 'Latest {n}',
     dash_today_n: '{n} today',
     dash_view_audit: 'View all in the audit log',
-    dash_empty_staff: 'No active staff yet',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     dash_empty_mine_tickets: 'No open tickets',

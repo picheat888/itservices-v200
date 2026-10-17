@@ -398,7 +398,7 @@ function ResourceTableCard({ resources, filters, patch }: { resources: Resource[
                 }
             />
             {resources.length === 0 ? (
-                <CardEmpty>{t('rep_ar_res_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_access_members_resources')} hint={t('rep_empty_access_members_resources_hint')} />
             ) : (
                 <>
                     <div className="relative overflow-x-auto">

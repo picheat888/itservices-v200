@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -19,7 +20,6 @@ import { CardHeadingSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report
 import { sharePercent, shownPieces, splitBar, type SplitPiece, stockCount, stockMoney, TileFoot, TileLegend } from './stock-parts';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Tiles = StockValuationBreakdown['tiles'];
 type Categories = StockValuationBreakdown['categories'];
@@ -255,7 +255,7 @@ function ShareCards({ data }: { data: StockValuationBreakdown }) {
                 nameHeading={t('rep_sva_col_cat')}
                 totalKey="rep_sva_cat_total"
                 rows={categories}
-                empty={<CardEmpty>{t('rep_sva_cat_empty')}</CardEmpty>}
+                empty={<CardEmpty kind="search" title={t('rep_empty_valuation_categories')} hint={t('rep_empty_valuation_categories_hint')} />}
             />
             <ShareCard
                 title={t('rep_sva_wh_title')}
@@ -264,16 +264,19 @@ function ShareCards({ data }: { data: StockValuationBreakdown }) {
                 totalKey="rep_sva_wh_total"
                 rows={warehouses}
                 empty={
-                    <CardEmpty>
-                        {data.warehouses === null ? (
-                            <span>
-                                <b className="text-foreground block font-semibold">{t('rep_sva_wh_past')}</b>
-                                {t('rep_sva_wh_past_hint')}
-                            </span>
-                        ) : (
-                            t('rep_sva_wh_empty')
-                        )}
-                    </CardEmpty>
+                    data.warehouses === null ? (
+                        <CardEmpty
+                            kind="empty"
+                            title={t('rep_empty_valuation_warehouses_past')}
+                            hint={t('rep_empty_valuation_warehouses_past_hint')}
+                        />
+                    ) : (
+                        <CardEmpty
+                            kind="search"
+                            title={t('rep_empty_valuation_warehouses_empty')}
+                            hint={t('rep_empty_valuation_warehouses_empty_hint')}
+                        />
+                    )
                 }
             />
         </div>
@@ -321,7 +324,11 @@ function DeadCard({ dead, filters, patch }: { dead: Dead; filters: TabularFilter
                 }
             />
             {rows.length === 0 ? (
-                <CardEmpty>{t('rep_sva_dead_empty').replace('{period}', t(`rep_sva_dead_${days}`))}</CardEmpty>
+                <CardEmpty
+                    kind="empty"
+                    title={t('rep_empty_valuation_dead').replace('{period}', t(`rep_sva_dead_${days}`))}
+                    hint={t('rep_empty_valuation_dead_hint')}
+                />
             ) : (
                 <>
                     <div className="relative overflow-x-auto">

@@ -8,7 +8,9 @@
  */
 import { useT } from '@/lang';
 import { DisabledReason } from '@/shared/components/disabled-reason';
+import { EmptyState } from '@/shared/components/empty-state';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -35,7 +37,6 @@ import { RailHeading, RailHeadingSkeleton, RailRowsSkeleton } from './my-exports
 import { reportStem } from './report-catalogue';
 import { tabularFilterChips, ticketFilterChips } from './schedule-filter-summary';
 import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 function ScheduleRow({ item, opens, onEdit }: { item: ReportScheduleItem; opens: boolean; onEdit: () => void }) {
     const fmt = useDateFormat();
@@ -221,7 +222,7 @@ export function ScheduledReports() {
             {isLoading ? <RailHeadingSkeleton note={false} /> : <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} />}
             {isLoading && <RailRowsSkeleton rows={2} />}
             {!isLoading && items.length === 0 && (
-                <p className="text-muted-foreground px-[18px] py-8 text-center text-sm">{t('rep_schedules_empty')}</p>
+                <EmptyState kind="empty" title={t('rep_empty_center_schedules')} hint={t('rep_empty_center_schedules_hint')} />
             )}
             {items.map((item) => (
                 <ScheduleRow

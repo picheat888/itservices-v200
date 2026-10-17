@@ -46,8 +46,8 @@ export interface ContractMonthCardProps {
     monthFoot: (month: ContractMonth) => React.ReactNode;
     /** Optional one line under the chart. */
     footer?: React.ReactNode;
-    /** What the card says when no month has anything; a generic line by default. */
-    empty?: string;
+    /** What the card says when no month has anything. */
+    empty: { title: string; hint: string };
     /** Extra classes for the card (its grid span). */
     className?: string;
 }
@@ -223,7 +223,7 @@ export function ContractMonthCard({ title, info, months, mode, rowValue, monthFo
                 }
             />
             {peak === 0 ? (
-                <Empty>{empty ?? t('rep_cmc_empty')}</Empty>
+                <Empty kind="empty" title={empty.title} hint={empty.hint} />
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <p className="sr-only">

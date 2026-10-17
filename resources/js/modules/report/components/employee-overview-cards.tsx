@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -20,7 +21,6 @@ import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { BASIS_PCT, pct } from './percent-classes';
 import { CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Patch = (next: TabularFilters) => void;
 type Point = EmployeeOverviewBreakdown['points'][number];
@@ -213,12 +213,11 @@ function HeadcountCard({ data }: { data: EmployeeOverviewBreakdown }) {
         return (
             <Card className="overflow-clip">
                 <CardTitle title={t('rep_eo_flow_title')} info={info} />
-                <CardEmpty>
-                    <span className="flex flex-col gap-1">
-                        <span className="text-foreground font-medium">{t(points.length === 0 ? 'rep_eo_flow_not_yet' : 'rep_eo_flow_empty')}</span>
-                        <span className="text-xs">{t(points.length === 0 ? 'rep_eo_flow_not_yet_sub' : 'rep_eo_flow_empty_sub')}</span>
-                    </span>
-                </CardEmpty>
+                <CardEmpty
+                    kind={points.length === 0 ? 'empty' : 'search'}
+                    title={t(points.length === 0 ? 'rep_empty_emp_overview_flow_not_yet' : 'rep_empty_emp_overview_flow_empty')}
+                    hint={t(points.length === 0 ? 'rep_empty_emp_overview_flow_not_yet_hint' : 'rep_empty_emp_overview_flow_empty_hint')}
+                />
             </Card>
         );
     }
@@ -505,7 +504,7 @@ function DepartmentCard({
         <Card ref={cardRef} className="flex flex-col overflow-clip lg:sticky lg:top-4 lg:col-span-2 xl:col-span-3" style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_eo_dept_title')} info={info} />
             {data.departments.length === 0 && data.empty_departments.length === 0 ? (
-                <CardEmpty>{t('rep_eo_dept_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_emp_overview_department')} hint={t('rep_empty_emp_overview_department_hint')} />
             ) : (
                 <div className="flex flex-1 flex-col overflow-x-auto">
                     <table className="w-full min-w-[34rem] table-fixed text-sm">
@@ -731,9 +730,7 @@ function HoldingCard({
                     }
                 />
                 {total === 0 ? (
-                    <CardEmpty>
-                        <span className="text-foreground font-medium">{t('rep_eo_holding_empty')}</span>
-                    </CardEmpty>
+                    <CardEmpty kind="clear" title={t('rep_empty_emp_overview_holding')} hint={t('rep_empty_emp_overview_holding_hint')} />
                 ) : (
                     <div className="flex min-h-0 flex-1 flex-col">
                         <h3

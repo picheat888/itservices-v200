@@ -2,6 +2,8 @@
  * Labelled horizontal bars (category counts, SLA % by priority). An optional `goal` draws a
  * marker line at that value. Widths are data-driven, hence the style prop.
  */
+import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
+
 export interface HBar {
     key: string;
     label: string;
@@ -15,15 +17,15 @@ export function HorizontalBars({
     max,
     unit = '',
     goal,
-    emptyLabel,
+    empty,
 }: {
     bars: HBar[];
     max: number;
     unit?: string;
     goal?: number;
-    emptyLabel: string;
+    empty: EmptyStateProps;
 }) {
-    if (bars.length === 0) return <div className="text-muted-foreground py-6 text-center text-sm">{emptyLabel}</div>;
+    if (bars.length === 0) return <EmptyState {...empty} />;
     const pct = (v: number) => `${Math.min(100, (v / Math.max(max, 1)) * 100)}%`;
 
     return (

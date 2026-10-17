@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { CardEmpty, CardTitle, CODE_LINK, FILL, fold, FoldToggle, heldStyle, useFoldRow } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -25,7 +26,6 @@ import {
     TILE_GRID,
     WIDE,
 } from './dash-parts';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const FOLDS = ['types'] as const;
 /** The 30-day request tiles count requests filed in the last 30 days, the list's ?filed_days=30. */
@@ -162,7 +162,11 @@ function WaitingCard({
                 sub={t('dash_n_requests').replace('{n}', fmtN(requests.waiting_total))}
             />
             {requests.waiting.length === 0 ? (
-                <CardEmpty>{t('dash_empty_waiting').replace('{n}', fmtN(requests.waiting_after_days))}</CardEmpty>
+                <CardEmpty
+                    kind="clear"
+                    title={t('dash_empty_requests_waiting').replace('{n}', fmtN(requests.waiting_after_days))}
+                    hint={t('dash_empty_requests_waiting_hint')}
+                />
             ) : (
                 <table className="w-full text-sm">
                     <thead className="text-muted-foreground text-xs">
@@ -230,7 +234,7 @@ function ByTypeCard({
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={NARROW}>
             <CardTitle level="h3" title={t('dash_by_type')} note={t('dash_last_30d')} sub={t('dash_total_requests').replace('{n}', fmtN(total))} />
             {total === 0 ? (
-                <CardEmpty>{t('dash_empty_requests_window')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('dash_empty_requests_by_type')} hint={t('dash_empty_requests_by_type_hint')} />
             ) : (
                 <ul className="flex flex-1 flex-col justify-between gap-1.5 px-5 py-3">
                     {shown.map((item, i) => (

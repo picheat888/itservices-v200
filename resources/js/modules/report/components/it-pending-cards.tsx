@@ -369,7 +369,7 @@ function HoldersCard({
                 }
             />
             {empty ? (
-                <CardEmpty>{t('rep_rqi_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_it_pending_holders')} hint={t('rep_empty_it_pending_holders_hint')} />
             ) : by === 'owner' ? (
                 <>
                     <div className="flex flex-1 flex-col gap-0.5 px-3 pt-2.5 pb-3.5">
@@ -465,7 +465,7 @@ function JoinersCard({ joiners }: { joiners: ItPendingBreakdown['joiners'] }) {
                 }
             />
             {joiners.rows.length === 0 && joiners.left_early.length === 0 ? (
-                <CardEmpty>{t('rep_rqi_jn_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_it_pending_joiners')} hint={t('rep_empty_it_pending_joiners_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">

@@ -255,7 +255,7 @@ function MonthFlowCard({ months, cardRef, heldHeight }: { months: Month[]; cardR
                 }
             />
             {sum('granted') + sum('revoked_work') + sum('revoked_leave') === 0 ? (
-                <CardEmpty>{t('rep_ac_month_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_access_overview_month')} hint={t('rep_empty_access_overview_month_hint')} />
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <p className="sr-only">
@@ -655,12 +655,11 @@ function LeaversCard({
         <Card ref={cardRef} className={GROUP_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_ac_leavers_title')} sub={t('rep_ac_leavers_sub')} />
             {leavers.people.length === 0 && leavers.owned.length === 0 ? (
-                <CardEmpty>
-                    <span className="flex flex-col gap-1">
-                        <span className="text-foreground font-medium">{t('rep_ac_leavers_empty')}</span>
-                        <span className="text-xs">{t('rep_ac_leavers_empty_sub').replace('{n}', count(leavers.resigned, lang))}</span>
-                    </span>
-                </CardEmpty>
+                <CardEmpty
+                    kind="clear"
+                    title={t('rep_empty_access_overview_leavers')}
+                    hint={t('rep_empty_access_overview_leavers_hint').replace('{n}', count(leavers.resigned, lang))}
+                />
             ) : (
                 <div className="flex flex-col">
                     <Group
@@ -743,7 +742,7 @@ function CareCard({
         <Card ref={cardRef} className={GROUP_CARD} style={heldStyle(heldHeight)}>
             <CardTitle title={t('rep_ac_care_title')} sub={t('rep_ac_care_sub')} />
             {care.owner_gone.length + care.no_owner.length + care.empty.length === 0 ? (
-                <CardEmpty>{t('rep_ac_care_none')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('rep_empty_access_overview_care')} hint={t('rep_empty_access_overview_care_hint')} />
             ) : (
                 <div className="flex flex-col">
                     <Group
@@ -862,7 +861,7 @@ function DepartmentCard({
                 }
             />
             {departments.length === 0 ? (
-                <CardEmpty>{t('rep_ac_empty')}</CardEmpty>
+                <CardEmpty kind="search" title={t('rep_empty_access_overview_department')} hint={t('rep_empty_access_overview_department_hint')} />
             ) : (
                 <div className="relative flex flex-1 flex-col overflow-x-auto">
                     <table className="w-full min-w-[36rem] table-fixed text-sm">

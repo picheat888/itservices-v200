@@ -180,7 +180,7 @@ function CategoryCard({ categories }: { categories: StockLevelsBreakdown['catego
         <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_slv_cat_title')} sub={legend} />
             {rows.length === 0 ? (
-                <CardEmpty>{t('rep_slv_cat_empty')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('rep_empty_below_min_categories')} hint={t('rep_empty_below_min_categories_hint')} />
             ) : (
                 <>
                     <ul className="space-y-2.5 px-5 py-4">

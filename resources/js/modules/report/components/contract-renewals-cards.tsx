@@ -1,16 +1,18 @@
 // "ต่ออายุและสิ้นสุดสัญญา" report: tiles, ending-by-month chart, time-left bands, the list's own cells and the closed-contracts card
 // (data: useContractRenewalsBreakdown).
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, CalendarRange, SearchX } from 'lucide-react';
+import { AlertCircle, CalendarRange } from 'lucide-react';
 import { useState } from 'react';
 import { useContractRenewalsBreakdown } from '../hooks/use-reports';
 import type { ChartTone, ContractClosedRange, ContractClosedRow, ContractRenewalBand, ContractRenewalsBreakdown, TabularFilters } from '../types';
@@ -25,7 +27,6 @@ import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -235,7 +236,7 @@ function TimeLeftCard({ data }: { data: ContractRenewalsBreakdown }) {
         <Card className="flex flex-col overflow-hidden xl:col-span-2">
             <CardTitle title={t('rep_cren_left_title')} sub={t('rep_cren_left_open').replace('{n}', count(data.open_total, lang))} />
             {data.open_total === 0 ? (
-                <Empty>{t('rep_cren_left_empty')}</Empty>
+                <Empty kind="search" title={t('rep_empty_renewals_time_left')} hint={t('rep_empty_renewals_time_left_hint')} />
             ) : (
                 <ul className="space-y-0.5 px-3 py-3">
                     {data.bands.map((band) => (
@@ -311,7 +312,7 @@ export function ContractRenewalsCards({ filters }: { filters: TabularFilters }) 
                             ),
                         })
                     }
-                    empty={t('rep_cren_month_empty')}
+                    empty={{ title: t('rep_empty_renewals_month'), hint: t('rep_empty_renewals_month_hint') }}
                 />
                 <TimeLeftCard data={data} />
             </div>
@@ -431,19 +432,14 @@ export function RenewalsEmpty({ filters, patch }: { filters: TabularFilters; pat
     const within = windowOf(filters);
 
     return (
-        <div className="flex flex-col items-center gap-3 py-4">
-            <SearchX className="text-muted-foreground/60 h-8 w-8" aria-hidden />
-            <div className="space-y-1">
-                <p className="text-foreground text-sm font-semibold">{t('rep_cren_empty').replace('{w}', windowText(t, within))}</p>
-                <p className="text-muted-foreground text-sm">{t('rep_cren_empty_hint')}</p>
-            </div>
+        <EmptyState kind="search" title={t('rep_empty_renewals_rows').replace('{w}', windowText(t, within))} hint={t('rep_empty_renewals_rows_hint')}>
             {within < 365 && (
                 <Button variant="outline" size="sm" onClick={() => patch({ within: 365 })}>
                     <CalendarRange className="h-4 w-4" />
                     {t('rep_cren_empty_widen')}
                 </Button>
             )}
-        </div>
+        </EmptyState>
     );
 }
 
@@ -597,7 +593,11 @@ export function ClosedContractsCard({ filters, patch }: { filters: TabularFilter
     return (
         <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_cren_closed_title')} info={info} sub={<ClosedRangeSegments active={closed.range} patch={patch} />} />
-            {closed.rows.length === 0 ? <Empty>{t('rep_cren_closed_none')}</Empty> : <ClosedTable key={closed.range} rows={closed.rows} />}
+            {closed.rows.length === 0 ? (
+                <Empty kind="empty" title={t('rep_empty_renewals_closed')} hint={t('rep_empty_renewals_closed_hint')} />
+            ) : (
+                <ClosedTable key={closed.range} rows={closed.rows} />
+            )}
         </Card>
     );
 }

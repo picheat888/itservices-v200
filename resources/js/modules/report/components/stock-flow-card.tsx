@@ -118,7 +118,7 @@ export function StockFlowCard({ months, to, className }: { months: StockFlowMont
                 }
             />
             {total('receive') + total('return') + total('issue') === 0 ? (
-                <CardEmpty>{t('rep_smv_flow_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_stock_movements_flow')} hint={t('rep_empty_stock_movements_flow_hint')} />
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <p className="sr-only">

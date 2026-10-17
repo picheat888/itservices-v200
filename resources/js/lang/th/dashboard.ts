@@ -9,13 +9,6 @@ export const dashboard: Dict = {
     dash_kpi_my_open: 'Ticket ที่ยังไม่ปิด',
     dash_kpi_my_assets: 'ทรัพย์สินของฉัน',
     dash_kpi_my_closed: 'ปิดแล้วเดือนนี้',
-    dash_empty_tickets: 'ไม่มี Ticket ค้าง',
-    dash_empty_requests: 'ไม่มีคำขอค้าง',
-    dash_empty_window: 'ยังไม่มี Ticket เปิดใหม่ใน 14 วันล่าสุด',
-    dash_empty_workload: 'ตอนนี้ไม่มีใครถือเคสอยู่',
-    dash_empty_activity: 'ยังไม่มีความเคลื่อนไหว',
-    dash_empty_requests_window: 'ยังไม่มีคำขอในช่วงนี้',
-    dash_empty_waiting: 'ไม่มีคำขอค้างเกิน {n} วัน',
     // pages/index.tsx — คำทักทาย
     dash_hello: 'สวัสดี {name}',
     dash_today: '{weekday}ที่ {date}',
@@ -106,7 +99,6 @@ export const dashboard: Dict = {
     dash_latest_n: '{n} รายการล่าสุด',
     dash_today_n: 'วันนี้ {n} รายการ',
     dash_view_audit: 'ดูทั้งหมดในบันทึกการตรวจสอบ',
-    dash_empty_staff: 'ยังไม่มีพนักงานที่ใช้งาน',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     dash_empty_mine_tickets: 'ไม่มี Ticket ค้าง',

@@ -16,6 +16,7 @@
  * Used by components/tabular-report-view.tsx; ChartsSkeleton holds the place while rows load.
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -154,7 +155,11 @@ function StacksCard({ chart, expanded, onToggle }: { chart: Stacks; expanded: bo
                 }
             />
             {chart.rows.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
+                <EmptyState
+                    kind="search"
+                    title={t('rep_empty_assets_overview_by_department')}
+                    hint={t('rep_empty_assets_overview_by_department_hint')}
+                />
             ) : (
                 <>
                     <div className="divide-border/60 divide-y">
@@ -219,7 +224,7 @@ function DonutSection({ chart }: { chart: Donut }) {
         <>
             <Heading title={t(chart.title_key)} sub={t('rep_chart_items').replace('{n}', formatNumber(chart.total, lang))} />
             {chart.total === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
+                <EmptyState kind="search" title={t('rep_empty_assets_overview_status')} hint={t('rep_empty_assets_overview_status_hint')} />
             ) : (
                 <div className="grid items-center gap-5 px-5 py-4 sm:grid-cols-[150px_minmax(0,1fr)]">
                     <svg viewBox="0 0 170 170" className="mx-auto h-[150px] w-[150px]" role="img" aria-label={t(chart.title_key)}>

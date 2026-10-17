@@ -163,7 +163,7 @@ function WaitingCard({ requests, className }: { requests: Requests; className?: 
                 ))}
             </ul>
             {requests.rows.length === 0 ? (
-                <CardEmpty>{t('rep_smv_wait_empty')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('rep_empty_stock_movements_waiting')} hint={t('rep_empty_stock_movements_waiting_hint')} />
             ) : (
                 <>
                     <ul ref={list} className={cn(open && 'max-h-96 overflow-y-auto overscroll-contain')}>
@@ -210,12 +210,14 @@ function RankCard({
     by,
     onSort,
     restKey,
+    empty,
 }: {
     title: string;
     rows: RankRow[];
     by: SortBy;
     onSort: (next: SortBy) => void;
     restKey: string;
+    empty: { title: string; hint: string };
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -271,12 +273,7 @@ function RankCard({
                 }
             />
             {rows.length === 0 ? (
-                <CardEmpty>
-                    <span>
-                        <b className="text-foreground block font-semibold">{t('rep_smv_rank_empty')}</b>
-                        {t('rep_smv_rank_empty_hint')}
-                    </span>
-                </CardEmpty>
+                <CardEmpty kind="empty" title={empty.title} hint={empty.hint} />
             ) : (
                 <ul className="space-y-2.5 px-5 py-4">
                     {top.map((r) => line(r.key, r.name, r.sub, r[by], false))}
@@ -319,6 +316,7 @@ function RankCards({ people, departments, filters, patch }: { people: People; de
                 by={peopleBy}
                 onSort={(next) => patch({ people_by: next })}
                 restKey="rep_smv_rest_people"
+                empty={{ title: t('rep_empty_stock_movements_people'), hint: t('rep_empty_stock_movements_people_hint') }}
             />
             <RankCard
                 title={t('rep_smv_dept_title')}
@@ -326,6 +324,7 @@ function RankCards({ people, departments, filters, patch }: { people: People; de
                 by={deptBy}
                 onSort={(next) => patch({ dept_by: next })}
                 restKey="rep_smv_rest_depts"
+                empty={{ title: t('rep_empty_stock_movements_departments'), hint: t('rep_empty_stock_movements_departments_hint') }}
             />
         </div>
     );
@@ -365,7 +364,7 @@ function CountsCard({ counts }: { counts: Counts }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_smv_cnt_title')} info={[t('rep_smv_cnt_info_scope'), t('rep_smv_cnt_info_value')]} />
             {counts.length === 0 ? (
-                <CardEmpty>{t('rep_smv_cnt_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_stock_movements_counts')} hint={t('rep_empty_stock_movements_counts_hint')} />
             ) : (
                 <>
                     <div className="relative overflow-x-auto">

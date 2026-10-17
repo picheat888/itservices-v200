@@ -8,7 +8,9 @@
  * Data: useMyExports (GET /api/reports/exports).
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { refusalText } from '@/shared/lib/api-errors';
 import { relativeTime } from '@/shared/lib/datetime';
 import { formatNumber } from '@/shared/lib/number';
@@ -26,7 +28,6 @@ import type { ReportExportItem, ReportExportStatus } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { reportStem } from './report-catalogue';
 import { reportScope } from './report-scope';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Mirrors ReportExport::KEEP_DAYS. */
 const KEEP_DAYS = 7;
@@ -302,7 +303,7 @@ export function MyExports() {
             {isLoading ? (
                 <RailRowsSkeleton />
             ) : items.length === 0 ? (
-                <p className="text-muted-foreground px-[18px] py-8 text-center text-sm">{t('rep_my_exports_empty')}</p>
+                <EmptyState kind="empty" title={t('rep_empty_center_my_exports')} hint={t('rep_empty_center_my_exports_hint')} />
             ) : (
                 items.map((item) => <ExportRow key={item.id} item={item} />)
             )}

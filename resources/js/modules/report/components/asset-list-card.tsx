@@ -7,6 +7,7 @@
  */
 import { useT } from '@/lang';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Card } from '@/shared/ui/card';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -62,7 +63,7 @@ export function AssetListCard({ chart, expanded, onToggle }: { chart: List; expa
         <Card className="flex flex-col overflow-hidden">
             <ChartHeading title={<TitleWithCount title={t(chart.title_key)} count={chart.total} />} />
             {chart.rows.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
+                <EmptyState kind="search" title={t('rep_empty_assets_overview_writeoff')} hint={t('rep_empty_assets_overview_writeoff_hint')} />
             ) : (
                 <div className="divide-border/60 divide-y">
                     {folding.shown.map((row) => (

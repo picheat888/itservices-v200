@@ -13,7 +13,9 @@
  * All of it reads useManualSlaBreakdown (TicketManualSlaReport::breakdown).
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -27,7 +29,6 @@ import { useManualSlaBreakdown } from '../hooks/use-reports';
 import type { ManualSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
 import { CountCells, GROUP, hoursText, shortMoment, SlaCells, spanText, targetText, TD, TH, type T } from './request-sla-cards';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type By = ManualSlaBreakdown['by'];
 type Group = ManualSlaBreakdown['groups'][number];
@@ -102,7 +103,7 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
                 }
             />
             {data.groups.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_ms_empty')}</div>
+                <EmptyState kind="empty" title={t('rep_empty_manual_sla_groups')} hint={t('rep_empty_manual_sla_groups_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
@@ -219,7 +220,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
         <Card className="flex flex-col overflow-hidden">
             <Heading title={t('rep_ms_late_title')} sub={late.total > 0 ? t('rep_ms_late_sub').replace('{n}', fmtN(late.total)) : undefined} />
             {late.total === 0 ? (
-                <div className="text-muted-foreground px-5 py-6 text-center text-sm">{t('rep_ms_late_none')}</div>
+                <EmptyState kind="clear" title={t('rep_empty_manual_sla_late')} hint={t('rep_empty_manual_sla_late_hint')} />
             ) : (
                 <>
                     <div className="grid grid-cols-2 gap-2 px-5 pt-4 sm:grid-cols-5">
@@ -256,7 +257,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                 />
             </div>
             {data.open.length === 0 ? (
-                <div className="text-muted-foreground py-6 text-center text-sm">{t('rep_rs_open_none')}</div>
+                <EmptyState kind="clear" title={t('rep_empty_manual_sla_open')} hint={t('rep_empty_manual_sla_open_hint')} />
             ) : (
                 <div>
                     {shown.map((o) => {
