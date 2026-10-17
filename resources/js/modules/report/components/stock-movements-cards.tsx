@@ -266,9 +266,14 @@ function RankCard({
                     {sub}
                 </small>
             </span>
-            <span role="img" aria-label={`${name} ${figure(v)}`} className={TRACK}>
-                <span className={cn('block h-full rounded-full', apart ? 'bg-muted-foreground' : FILL[MV_TONE.issue])} style={{ width: width(v) }} />
-            </span>
+            {/* The "others" row sums many people, so it carries no bar on the leader's scale. */}
+            {apart ? (
+                <span aria-hidden />
+            ) : (
+                <span aria-hidden className={TRACK}>
+                    <span className={cn('block h-full rounded-full', FILL[MV_TONE.issue])} style={{ width: width(v) }} />
+                </span>
+            )}
             <b className="text-right text-[13px] font-semibold whitespace-nowrap tabular-nums">{figure(v)}</b>
         </li>
     );
@@ -404,18 +409,10 @@ function CountsCard({ counts }: { counts: Counts }) {
                                             )}
                                         </td>
                                         <td className={cn(TD, NUM)}>
-                                            +
-                                            {stockCount(
-                                                sum((c) => c.up),
-                                                lang,
-                                            )}
+                                            <UpDown value={sum((c) => c.up)} dir="up" />
                                         </td>
                                         <td className={cn(TD, NUM)}>
-                                            −
-                                            {stockCount(
-                                                sum((c) => c.down),
-                                                lang,
-                                            )}
+                                            <UpDown value={sum((c) => c.down)} dir="down" />
                                         </td>
                                         <td className={cn(TD, NUM)}>
                                             {signedMoney(
@@ -481,7 +478,7 @@ export function StockMovementsCards({ filters }: { filters: TabularFilters }) {
             <MovementTiles tiles={data.tiles} months={data.months} />
             {/* Side by side from lg; stacked on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <StockFlowCard months={data.months} className="lg:col-span-2 xl:col-span-3" />
+                <StockFlowCard months={data.months} to={typeof filters.to === 'string' ? filters.to : null} className="lg:col-span-2 xl:col-span-3" />
                 <WaitingCard requests={data.requests} className="xl:col-span-2" />
             </div>
             <RankCards people={data.people} departments={data.departments} />
