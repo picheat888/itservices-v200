@@ -20,7 +20,7 @@ use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
- * "ต่ำกว่าขั้นต่ำและเกินขั้นสูง" (stock.below_min): out, low and over-max rows in status order, the unit price
+ * "ต่ำกว่า Min และเกิน Max" (stock.below_min): out, low and over-max rows in status order, the unit price
  * basis, the breakdown tiles and categories, the status filter and the by-category export sheet.
  */
 class StockBelowMinReportTest extends TestCase

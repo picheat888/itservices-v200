@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * "ต่ำกว่าขั้นต่ำและเกินขั้นสูง" (Report Center → Stock): every SKU out of stock, below its Min or above its Max, with
+ * "ต่ำกว่า Min และเกิน Max" (Report Center → Stock): every SKU out of stock, below its Min or above its Max, with
  * what to reorder or what sits above Max and its value. breakdown() (StockLevelsBreakdownController) feeds the tiles and the category card.
  */
 class StockBelowMinReport extends TabularReport
@@ -53,7 +53,7 @@ class StockBelowMinReport extends TabularReport
 
     public function title(): string
     {
-        return 'ต่ำกว่าขั้นต่ำและเกินขั้นสูง';
+        return 'ต่ำกว่า Min และเกิน Max';
     }
 
     public function filters(): array
