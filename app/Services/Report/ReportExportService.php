@@ -122,14 +122,16 @@ class ReportExportService
         $export->user?->notify(new ReportExportNotification($export, ReportExportNotification::FAILED));
     }
 
-    /** @return Collection<int, ReportExport> the requester's current files, newest first */
+    /** @return Collection<int, ReportExport> the requester's current files of reports they may still open, newest first */
     public function listFor(User $user): Collection
     {
         return ReportExport::query()
             ->where('user_id', $user->id)
             ->current()
             ->latest('id')
-            ->get();
+            ->get()
+            ->filter(fn (ReportExport $export) => ReportCatalogue::allows($user, $export->report_key))
+            ->values();
     }
 
     /** Queue a failed export again with the same filters and columns. */
