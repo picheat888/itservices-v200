@@ -14,6 +14,7 @@ import type { DashboardMine } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
 import { sharePieces } from '../lib/dash-math';
 import { CardLink, DashTile, LegendFooter, LIST_LIMIT, NARROW, PAIR_GRID, rowDelay, SectionHeading, TILE_GRID, WIDE } from './dash-parts';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const ACCESS_TYPES = [
     { key: 'email_group', label: 'rep_ac_type_email_group_short', fill: 'access-email' },
@@ -24,6 +25,7 @@ const ACCESS_TYPES = [
 
 export function MineSection({ mine }: { mine: DashboardMine }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const links = useDashLinks();
     const k = mine.kpi;
 
@@ -78,7 +80,7 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
                     label={t('dash_kpi_my_assets')}
                     value={k.assets}
                     footer={
-                        k.assets_pending > 0 ? t('dash_pending_handover_n').replace('{n}', String(k.assets_pending)) : t('dash_no_pending_handover')
+                        k.assets_pending > 0 ? t('dash_pending_handover_n').replace('{n}', fmtN(k.assets_pending)) : t('dash_no_pending_handover')
                     }
                 />
                 <DashTile
@@ -116,12 +118,13 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
 
 function MyTicketsCard({ mine }: { mine: DashboardMine }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const links = useDashLinks();
 
     return (
         <Card className={WIDE}>
-            <CardTitle level="h3" title={t('dash_my_tickets')} sub={t('dash_n_cases').replace('{n}', String(mine.tickets_total))} />
+            <CardTitle level="h3" title={t('dash_my_tickets')} sub={t('dash_n_cases').replace('{n}', fmtN(mine.tickets_total))} />
             {mine.tickets.length === 0 ? (
                 <CardEmpty>{t('dash_empty_tickets')}</CardEmpty>
             ) : (
@@ -169,11 +172,12 @@ function MyTicketsCard({ mine }: { mine: DashboardMine }) {
 
 function MyRequestsCard({ mine }: { mine: DashboardMine }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const links = useDashLinks();
 
     return (
         <Card className={NARROW}>
-            <CardTitle level="h3" title={t('dash_my_requests')} sub={t('dash_n_requests').replace('{n}', String(mine.requests_total))} />
+            <CardTitle level="h3" title={t('dash_my_requests')} sub={t('dash_n_requests').replace('{n}', fmtN(mine.requests_total))} />
             {mine.requests.length === 0 ? (
                 <CardEmpty>{t('dash_empty_requests')}</CardEmpty>
             ) : (

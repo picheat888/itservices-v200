@@ -10,6 +10,7 @@ import { Users } from 'lucide-react';
 import type { DashboardActivity, DashboardHr } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
 import { CardLink, HBarRow, NARROW, PAIR_GRID, rowDelay, SectionHeading, WIDE } from './dash-parts';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const FOLDS = ['departments'] as const;
 const DEPARTMENTS_TOP = 10;
@@ -70,6 +71,7 @@ function DepartmentsCard({
     heldHeight: number | null;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const scale = Math.max(1, hr.no_department, ...hr.by_department.map((d) => d.count));
     // Up to 12 show in full; more fold to the top 10.
@@ -80,8 +82,8 @@ function DepartmentsCard({
             <CardTitle
                 level="h3"
                 title={t('dash_by_department')}
-                note={t('dash_n_departments').replace('{n}', String(hr.by_department.length))}
-                sub={t('dash_active_people').replace('{n}', String(hr.headcount))}
+                note={t('dash_n_departments').replace('{n}', fmtN(hr.by_department.length))}
+                sub={t('dash_active_people').replace('{n}', fmtN(hr.headcount))}
             />
             {hr.headcount === 0 ? (
                 <CardEmpty>{t('dash_empty_staff')}</CardEmpty>
@@ -114,14 +116,15 @@ function ActivityCard({
     auditLog: string | null;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={className}>
             <CardTitle
                 level="h3"
                 title={t('dash_recent_activity')}
-                note={t('dash_latest_n').replace('{n}', String(activity.items.length))}
-                sub={t('dash_today_n').replace('{n}', String(activity.today_count))}
+                note={t('dash_latest_n').replace('{n}', fmtN(activity.items.length))}
+                sub={t('dash_today_n').replace('{n}', fmtN(activity.today_count))}
             />
             {activity.items.length === 0 ? (
                 <CardEmpty>{t('dash_empty_activity')}</CardEmpty>

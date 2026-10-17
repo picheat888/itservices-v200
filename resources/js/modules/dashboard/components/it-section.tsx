@@ -10,15 +10,17 @@ import { useDashLinks } from '../hooks/use-dash-links';
 import { DashTile, Delta, PAIR_GRID, SectionHeading, SparkFooter, TILE_GRID } from './dash-parts';
 import { OpenedPerDayCard } from './opened-per-day-card';
 import { WorkloadCard } from './workload-card';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const FOLDS = ['workload'] as const;
 
 export function ItSection({ it }: { it: DashboardIt }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const links = useDashLinks();
     const row = useFoldRow(FOLDS);
     const backlog = it.backlog.open + it.backlog.in_progress;
-    const peak = (n: number) => t('dash_peak_cases').replace('{n}', String(n));
+    const peak = (n: number) => t('dash_peak_cases').replace('{n}', fmtN(n));
     const { rate, goal } = it.sla;
     const level = rate === null ? null : slaLevel(rate, goal);
 
@@ -38,7 +40,7 @@ export function ItSection({ it }: { it: DashboardIt }) {
                     unit={t('dash_unit_cases')}
                     badge={
                         it.backlog.over_sla > 0 ? (
-                            <OverSlaBadge to={links.overSla} label={t('dash_over_sla_n').replace('{n}', String(it.backlog.over_sla))} />
+                            <OverSlaBadge to={links.overSla} label={t('dash_over_sla_n').replace('{n}', fmtN(it.backlog.over_sla))} />
                         ) : undefined
                     }
                     footer={
@@ -70,7 +72,7 @@ export function ItSection({ it }: { it: DashboardIt }) {
                     value={rate === null ? '—' : rate}
                     unit={rate === null ? undefined : '%'}
                     alert={level === 'miss' ? 'red' : level === 'near' ? 'amber' : undefined}
-                    badge={<StatusBadge tone="green">{t('dash_goal_n').replace('{n}', String(goal))}</StatusBadge>}
+                    badge={<StatusBadge tone="green">{t('dash_goal_n').replace('{n}', fmtN(goal))}</StatusBadge>}
                     meter={rate === null ? undefined : { value: rate, goal }}
                     footer={
                         <span
@@ -83,7 +85,7 @@ export function ItSection({ it }: { it: DashboardIt }) {
                                 ? t('dash_no_measured')
                                 : rate >= goal
                                   ? t('dash_goal_met')
-                                  : t('dash_below_goal').replace('{n}', String(Math.round((goal - rate) * 10) / 10))}
+                                  : t('dash_below_goal').replace('{n}', fmtN(Math.round((goal - rate) * 10) / 10))}
                         </span>
                     }
                 />

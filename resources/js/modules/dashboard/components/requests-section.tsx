@@ -25,6 +25,7 @@ import {
     TILE_GRID,
     WIDE,
 } from './dash-parts';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const FOLDS = ['types'] as const;
 /** The 30-day request tiles count requests filed in the last 30 days, the list's ?filed_days=30. */
@@ -40,6 +41,7 @@ const TYPES_TOP = 5;
 
 export function RequestsSection({ requests }: { requests: DashboardRequests }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const links = useDashLinks();
     const row = useFoldRow(FOLDS);
     const declined = requests.rejected_30d + requests.cancelled_30d;
@@ -61,7 +63,7 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
                     unit={t('dash_unit_requests')}
                     footer={
                         <SparkFooter
-                            text={t('dash_peak_requests').replace('{n}', String(requests.filed.peak))}
+                            text={t('dash_peak_requests').replace('{n}', fmtN(requests.filed.peak))}
                             values={requests.filed.series}
                             className="text-blue-500"
                         />
@@ -74,7 +76,7 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
                     value={requests.pending.count}
                     unit={t('dash_unit_requests')}
                     alert={requests.pending.count > 0 ? 'amber' : undefined}
-                    footer={requests.pending.count > 0 ? t('dash_oldest_days').replace('{n}', String(requests.pending.oldest_days)) : undefined}
+                    footer={requests.pending.count > 0 ? t('dash_oldest_days').replace('{n}', fmtN(requests.pending.oldest_days)) : undefined}
                 />
                 <DashTile
                     to={links.requestsStatus('completed', WINDOW_DAYS)}
@@ -82,7 +84,7 @@ export function RequestsSection({ requests }: { requests: DashboardRequests }) {
                     label={t('dash_completed_30d')}
                     value={requests.completed_30d}
                     unit={t('dash_unit_requests')}
-                    footer={t('dash_from_filed').replace('{n}', String(requests.filed_30d))}
+                    footer={t('dash_from_filed').replace('{n}', fmtN(requests.filed_30d))}
                 />
                 <DashTile
                     icon={CircleX}
@@ -146,6 +148,7 @@ function WaitingCard({
     heldHeight: number | null;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const links = useDashLinks();
     // Every request: the stalled set holds approval steps and IT completion steps alike.
@@ -155,11 +158,11 @@ function WaitingCard({
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={WIDE}>
             <CardTitle
                 level="h3"
-                title={t('dash_waiting_over').replace('{n}', String(requests.waiting_after_days))}
-                sub={t('dash_n_requests').replace('{n}', String(requests.waiting_total))}
+                title={t('dash_waiting_over').replace('{n}', fmtN(requests.waiting_after_days))}
+                sub={t('dash_n_requests').replace('{n}', fmtN(requests.waiting_total))}
             />
             {requests.waiting.length === 0 ? (
-                <CardEmpty>{t('dash_empty_waiting').replace('{n}', String(requests.waiting_after_days))}</CardEmpty>
+                <CardEmpty>{t('dash_empty_waiting').replace('{n}', fmtN(requests.waiting_after_days))}</CardEmpty>
             ) : (
                 <table className="w-full text-sm">
                     <thead className="text-muted-foreground text-xs">
@@ -191,7 +194,7 @@ function WaitingCard({
                                         {localPair(item.waiting_on, item.waiting_on_th, lang) ?? '—'}
                                     </td>
                                     <td className="px-5 py-2.5 text-right">
-                                        <StatusBadge tone="amber">{t('dash_n_days').replace('{n}', String(item.days))}</StatusBadge>
+                                        <StatusBadge tone="amber">{t('dash_n_days').replace('{n}', fmtN(item.days))}</StatusBadge>
                                     </td>
                                 </tr>
                             );
@@ -218,13 +221,14 @@ function ByTypeCard({
     heldHeight: number | null;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const total = requests.by_type.reduce((sum, item) => sum + item.count, 0);
     const scale = Math.max(1, ...requests.by_type.map((item) => item.count));
     const { folds, shown } = fold(requests.by_type, TYPES_TOP, open);
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={NARROW}>
-            <CardTitle level="h3" title={t('dash_by_type')} note={t('dash_last_30d')} sub={t('dash_total_requests').replace('{n}', String(total))} />
+            <CardTitle level="h3" title={t('dash_by_type')} note={t('dash_last_30d')} sub={t('dash_total_requests').replace('{n}', fmtN(total))} />
             {total === 0 ? (
                 <CardEmpty>{t('dash_empty_requests_window')}</CardEmpty>
             ) : (
