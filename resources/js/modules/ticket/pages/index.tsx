@@ -9,6 +9,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
 import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
@@ -334,30 +335,29 @@ export default function TicketsPage() {
     // Columns for the shared DataTable (All / Assigned-to-me tabs):
     // Request at · Ticket no. · Subject · Request by · Category · Priority · Status · Responsible by
     const columns: Column<Ticket>[] = [
-        // Dates, codes, names and categories keep one line; the subject is the column that gives
+        // Created
         {
             key: 'created',
+            sticky: 'left',
             header: t('ticket_request_at'),
-            className: 'text-muted-foreground',
+            className: 'text-muted-foreground whitespace-nowrap',
             width: dateWidth,
             render: (tk) => <DateTimeCell value={tk.created_at} />,
         },
         {
-            // The column that gives: it takes what the fixed columns leave (at least DataTable's floor) and truncates
+            // Flexible column
             key: 'subject',
             header: t('ticket_subject'),
-            className: 'truncate font-medium',
+            minWidth: '16rem',
+            className: 'font-medium whitespace-nowrap',
             render: (tk) => <TicketSubject ticket={tk} t={t} showNo />,
         },
         {
             key: 'requester',
             header: t('ticket_open_by'),
-            className: 'truncate',
+            className: 'whitespace-nowrap',
             width: '150px',
-            render: (tk) => {
-                const name = localPair(tk.requester_name, tk.requester_name_th, lang);
-                return <span title={name ?? undefined}>{name ?? tk.requester_code}</span>;
-            },
+            render: (tk) => <TruncText text={localPair(tk.requester_name, tk.requester_name_th, lang) ?? tk.requester_code} />,
         },
         {
             key: 'category',
@@ -388,8 +388,8 @@ export default function TicketsPage() {
         {
             key: 'status',
             header: t('status'),
-            className: 'whitespace-nowrap',
-            width: '136px',
+            className: 'overflow-hidden whitespace-nowrap',
+            width: '160px',
             render: (tk) => <TicketStatusBadge status={tk.status} t={t} />,
         },
         ...(canTake
@@ -397,8 +397,8 @@ export default function TicketsPage() {
                   {
                       key: 'sla',
                       header: t('ticket_sla'),
-                      className: 'whitespace-nowrap',
-                      width: '146px',
+                      className: 'overflow-hidden whitespace-nowrap',
+                      width: '196px',
                       // One chip: the time left against the winning target
                       render: (tk: Ticket) => <TicketSlaBadge ticket={tk} t={t} />,
                   },
@@ -407,14 +407,11 @@ export default function TicketsPage() {
         {
             key: 'assignee',
             header: t('ticket_responsible_by'),
-            // Capped, not free: one long name would otherwise widen the column for every row.
-            className: 'truncate',
+            className: 'whitespace-nowrap',
             width: '170px',
             render: (tk) =>
                 tk.assignee_name ? (
-                    <span title={localPair(tk.assignee_name, tk.assignee_name_th, lang) ?? undefined}>
-                        {localPair(tk.assignee_name, tk.assignee_name_th, lang)}
-                    </span>
+                    <TruncText text={localPair(tk.assignee_name, tk.assignee_name_th, lang)} />
                 ) : (
                     <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
                 ),

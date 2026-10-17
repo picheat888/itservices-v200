@@ -1,4 +1,5 @@
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
 import type { Ticket, TicketCategory, TicketPriority, TicketSlaState, TicketStatus, TicketWorkClass } from '@/shared/types';
 import { Cctv, Code, Laptop, MoreHorizontal, Phone, Wifi, Wrench } from 'lucide-react';
 
@@ -136,9 +137,13 @@ export function TicketSubject({ ticket, t, showNo }: { ticket: Ticket; t: T; sho
                 )}
             </span>
             <span className="min-w-0 flex-1">
-                <span className="block truncate" title={ticket.subject}>
-                    {ticket.subject}
-                </span>
+                {showNo ? (
+                    <TruncText text={ticket.subject} />
+                ) : (
+                    <span className="block truncate" title={ticket.subject}>
+                        {ticket.subject}
+                    </span>
+                )}
                 {showNo && <span className="text-muted-foreground block truncate text-[11px]">{ticket.ticket_no}</span>}
             </span>
         </span>
