@@ -90,6 +90,7 @@ class StockItemResource extends JsonResource
                 'warehouse' => $l->movement?->to_label,
                 'supplier' => $l->movement?->from_label,
                 'recorded_by' => $l->movement?->recorded_by,
+                'recorded_by_th' => $l->movement?->relationLoaded('user') ? $l->movement->user?->name_th : null,
                 'notes' => $l->movement?->notes,
             ])),
         ];

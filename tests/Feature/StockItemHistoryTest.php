@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerialEvent;
@@ -132,5 +133,21 @@ class StockItemHistoryTest extends TestCase
         $item = $this->serialItem('UPS-1');
         $user = User::factory()->create(['role' => 'admin']); // no seeded perms
         $this->actingAs($user)->getJson("/api/stock-items/{$item->id}/history")->assertForbidden();
+    }
+
+    public function test_history_names_the_recorder_in_thai_too(): void
+    {
+        $item = $this->serialItem('UPS-1');
+        $employee = Employee::create(['code' => 'EMP-H1', 'first_name' => 'Somchai', 'last_name' => 'Store', 'first_name_th' => 'สมชาย', 'last_name_th' => 'คลัง']);
+        $super = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+        $this->actingAs($super)->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-A'], 'to_label' => 'Main',
+        ])->assertCreated();
+
+        $history = $this->actingAs($super)->getJson("/api/stock-items/{$item->id}/history")->assertOk()->json('data');
+
+        $this->assertSame('สมชาย คลัง', $history['movements'][0]['recorded_by_th']);
+        $this->assertSame('สมชาย คลัง', $history['serials'][0]['events'][0]['recorded_by_th']);
+        $this->actingAs($super)->getJson("/api/stock-items/{$item->id}")->assertJsonPath('data.lots.0.recorded_by_th', 'สมชาย คลัง');
     }
 }
