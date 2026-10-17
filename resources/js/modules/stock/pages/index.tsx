@@ -8,6 +8,7 @@ import { InfoPopover } from '@/shared/components/info-popover';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
@@ -357,39 +358,41 @@ export default function StockPage() {
         {
             key: 'sku',
             header: t('stock_sku'),
-            width: '120px',
+            width: '110px',
             className: 'whitespace-nowrap',
             render: (i) => <span className="text-xs">{i.sku}</span>,
         },
         {
             key: 'name',
             header: t('stock_item'),
-            minWidth: '14rem',
+            minWidth: '7rem',
             render: (i) => (
-                <div>
-                    <div className="text-sm font-medium">{i.name}</div>
-                    <div className="text-muted-foreground text-xs">{[i.brand, i.model].filter(Boolean).join(' ') || '—'}</div>
+                <div className="min-w-0">
+                    <TruncText text={i.name} className="text-sm font-medium" />
+                    <TruncText text={[i.brand, i.model].filter(Boolean).join(' ')} className="text-muted-foreground text-xs" />
                 </div>
             ),
         },
         {
             key: 'category',
             header: t('stock_category'),
-            width: '140px',
-            hideBelow: 'lg',
+            width: '120px',
+            hideBelow: 'xl',
             render: (i) => <span className="text-sm">{localPair(i.category, i.category_th, lang) ?? '—'}</span>,
         },
         {
             key: 'bar',
             header: `${t('stock_stock')} (Min / Max)`,
-            width: '200px',
+            width: '170px',
+            hideBelow: 'xl',
             render: (i) => <StockLevelBar current={i.current_stock} min={i.min_stock} max={i.max_stock} status={i.status} />,
         },
         {
             key: 'current',
             header: t('stock_current'),
             align: 'right',
-            width: '90px',
+            width: '120px',
+            className: 'whitespace-nowrap',
             render: (i) => (
                 <div>
                     <span className="text-sm font-bold tabular-nums">{i.current_stock.toLocaleString()}</span>
@@ -397,7 +400,7 @@ export default function StockPage() {
                         <InfoPopover
                             label={t('stock_reserved_n').replace('{n}', String(i.reserved))}
                             content={t('stock_reserved_note').replace('{n}', String(Math.max(0, i.current_stock - i.reserved)))}
-                            className="text-muted-foreground block w-full text-right text-xs"
+                            className="text-muted-foreground block w-full text-right text-xs whitespace-nowrap"
                             isolate
                         >
                             {t('stock_reserved_n').replace('{n}', String(i.reserved))}
@@ -409,8 +412,8 @@ export default function StockPage() {
         {
             key: 'unit',
             header: t('stock_unit'),
-            width: '80px',
-            render: (i) => <span className="text-muted-foreground text-xs lowercase">{i.unit || '—'}</span>,
+            width: '64px',
+            render: (i) => <TruncText text={i.unit} className="text-muted-foreground text-xs lowercase" />,
         },
         {
             key: 'cost',
@@ -418,6 +421,7 @@ export default function StockPage() {
             align: 'right',
             width: '110px',
             hideBelow: 'lg',
+            className: 'whitespace-nowrap',
             render: (i) => <span className="text-xs tabular-nums">{format(i.cost)}</span>,
         },
         {
@@ -425,29 +429,31 @@ export default function StockPage() {
             header: t('stock_value'),
             align: 'right',
             width: '120px',
+            hideBelow: 'lg',
+            className: 'whitespace-nowrap',
             render: (i) => <span className="text-xs tabular-nums">{format(i.total_value)}</span>,
         },
-        { key: 'status', header: t('status'), width: '120px', render: (i) => statusBadge(i.status) },
+        { key: 'status', header: t('status'), width: '110px', className: 'whitespace-nowrap', render: (i) => statusBadge(i.status) },
         {
             key: 'last_move',
             header: t('stock_last_move'),
             width: '130px',
             className: 'whitespace-nowrap',
-            hideBelow: 'xl',
+            hideBelow: '2xl',
             render: (i) => <span className="text-muted-foreground text-xs">{i.last_move_at ? fmt.date(i.last_move_at) : '—'}</span>,
         },
         {
             key: 'warranty',
             header: t('stock_warranty'),
             width: '110px',
-            hideBelow: 'xl',
-            render: (i) => <span className="text-xs">{i.warranty ?? '—'}</span>,
+            hideBelow: '2xl',
+            render: (i) => <TruncText text={i.warranty} className="text-xs" />,
         },
         {
             key: 'actions',
             header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
-            width: '90px',
+            width: '80px',
             render: (i) => {
                 // Removable only when it holds no stock and carries no value.
                 const deletable = i.current_stock === 0 && i.total_value === 0;

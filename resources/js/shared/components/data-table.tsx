@@ -23,8 +23,8 @@ export interface Column<T> {
      * the remainder, truncating rather than pushing the others around.
      */
     width?: string;
-    /** Hide the column (header and cells) on screens narrower than this breakpoint, e.g. a tablet in portrait. */
-    hideBelow?: 'lg' | 'xl';
+    /** Hide the column (header and cells) on screens narrower than this breakpoint (lg 1024, xl 1280, 2xl 1536), e.g. a tablet in portrait. */
+    hideBelow?: 'lg' | 'xl' | '2xl';
     /** A column without a width keeps at least this much in a sized table (default 12rem); a bar or chip column can take less. */
     minWidth?: string;
 }
@@ -32,8 +32,8 @@ export interface Column<T> {
 /** The least a column without a width keeps in a sized table, unless it sets its own minWidth. */
 const FLEX_COLUMN_MIN = '12rem';
 
-const HIDE_BELOW: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell' };
-const HIDE_BELOW_COL: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-column', xl: 'hidden xl:table-column' };
+const HIDE_BELOW: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell', '2xl': 'hidden 2xl:table-cell' };
+const HIDE_BELOW_COL: Record<NonNullable<Column<unknown>['hideBelow']>, string> = { lg: 'hidden lg:table-column', xl: 'hidden xl:table-column', '2xl': 'hidden 2xl:table-column' };
 
 interface DataTableProps<T> {
     columns: Column<T>[];
@@ -202,8 +202,9 @@ export function DataTable<T>({
     };
     // One floor per breakpoint: columns hidden below lg / xl come back there and need their width counted too
     const flexFloor = floorOf(columns.filter((c) => !c.hideBelow));
-    const flexFloorLg = floorOf(columns.filter((c) => c.hideBelow !== 'xl'));
-    const flexFloorXl = floorOf(columns);
+    const flexFloorLg = floorOf(columns.filter((c) => c.hideBelow !== 'xl' && c.hideBelow !== '2xl'));
+    const flexFloorXl = floorOf(columns.filter((c) => c.hideBelow !== '2xl'));
+    const flexFloor2xl = floorOf(columns);
 
     // Keys pressed on a control inside the row (a menu, a switch) stay with that control.
     const onRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: T) => {
@@ -259,12 +260,12 @@ export function DataTable<T>({
                         fillHeight && 'h-full',
                         columns.some((c) => c.width) && 'table-fixed',
                         // A caller's own min-w-* (at any breakpoint) wins over the floor
-                        flexFloor && 'min-w-(--flex-floor) lg:min-w-(--flex-floor-lg) xl:min-w-(--flex-floor-xl)',
+                        flexFloor && 'min-w-(--flex-floor) lg:min-w-(--flex-floor-lg) xl:min-w-(--flex-floor-xl) 2xl:min-w-(--flex-floor-2xl)',
                         tableClassName,
                     )}
                     style={
                         flexFloor
-                            ? ({ '--flex-floor': flexFloor, '--flex-floor-lg': flexFloorLg ?? flexFloor, '--flex-floor-xl': flexFloorXl ?? flexFloor } as React.CSSProperties)
+                            ? ({ '--flex-floor': flexFloor, '--flex-floor-lg': flexFloorLg ?? flexFloor, '--flex-floor-xl': flexFloorXl ?? flexFloor, '--flex-floor-2xl': flexFloor2xl ?? flexFloor } as React.CSSProperties)
                             : undefined
                     }
                 >

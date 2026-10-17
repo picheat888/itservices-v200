@@ -3,6 +3,7 @@ import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -233,24 +234,23 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'reference',
             header: t('stock_doc_no'),
-            width: '130px',
+            width: '120px',
             className: 'whitespace-nowrap',
             render: (s) => <span className="text-xs font-semibold">{s.reference}</span>,
         },
         {
             key: 'created_at',
             header: t('audit_time'),
-            width: '120px',
+            width: '110px',
             className: 'whitespace-nowrap',
             render: (s) => <span className="text-muted-foreground text-xs">{fmt.date(s.created_at)}</span>,
         },
         {
             key: 'warehouse',
             header: t('stock_warehouse'),
-            width: '160px',
-            className: 'whitespace-nowrap',
+            width: '116px',
             // No specific warehouse = the count spanned every warehouse.
-            render: (s) => <span className="text-sm">{s.warehouse || t('stock_count_all_wh')}</span>,
+            render: (s) => <TruncText text={s.warehouse || t('stock_count_all_wh')} className="text-sm" />,
         },
         {
             key: 'category',
@@ -258,28 +258,28 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             width: '140px',
             className: 'whitespace-nowrap',
             hideBelow: 'lg',
-            render: (s) => <span className="text-sm">{s.category || '—'}</span>,
+            render: (s) => <TruncText text={s.category} className="text-sm" />,
         },
         {
             key: 'counted_by',
             header: t('stock_counted_by'),
             minWidth: '11rem',
             className: 'whitespace-nowrap',
-            hideBelow: 'lg',
-            render: (s) => <span className="text-sm">{s.counted_by || '—'}</span>,
+            hideBelow: 'xl',
+            render: (s) => <TruncText text={s.counted_by} className="text-sm" />,
         },
         {
             key: 'note',
             header: t('stock_notes'),
             minWidth: '12rem',
-            hideBelow: 'xl',
-            render: (s) => <span className="text-muted-foreground line-clamp-2 text-xs">{s.note || '—'}</span>,
+            hideBelow: '2xl',
+            render: (s) => <TruncText text={s.note} className="text-muted-foreground text-xs" />,
         },
         {
             key: 'progress',
             header: t('stock_count_progress'),
             align: 'right',
-            width: '100px',
+            width: '80px',
             className: 'whitespace-nowrap',
             render: (s) => (
                 <span className="text-xs tabular-nums">
@@ -290,7 +290,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'status',
             header: t('status'),
-            width: '130px',
+            width: '110px',
             className: 'whitespace-nowrap',
             render: (s) => <StatusBadge tone={statusTone(s.status)}>{t(`stock_count_${s.status}` as Parameters<typeof t>[0])}</StatusBadge>,
         },
@@ -299,6 +299,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: t('stock_count_adjust_by'),
             width: '120px',
             className: 'whitespace-nowrap',
+            hideBelow: 'lg',
             // Only committed counts carry a mode; drafts/canceled show nothing yet.
             render: (s) =>
                 s.status === 'committed' && s.adjust_mode ? (
