@@ -35,9 +35,14 @@ export function OpenedPerDayCard({
                 <CardEmpty>{t('dash_empty_window')}</CardEmpty>
             ) : (
                 <div className="flex min-h-[200px] flex-1 flex-col px-5 pt-5 pb-3">
+                    <ul className="sr-only">
+                        {volume.map((day) => (
+                            <li key={day.date}>{`${fmt.date(day.date)}: ${day.count}`}</li>
+                        ))}
+                    </ul>
                     {/* Plot */}
-                    <div className="flex flex-1 gap-2">
-                        <div className="text-muted-foreground relative w-6 shrink-0 text-[10px] tabular-nums">
+                    <div className="flex flex-1 gap-2" aria-hidden>
+                        <div className="text-muted-foreground relative w-6 shrink-0 text-[11px] tabular-nums">
                             {ticks.map((tick) => (
                                 <span key={tick} className="absolute right-0 translate-y-1/2" style={{ bottom: at(tick) }}>
                                     {tick}
@@ -62,7 +67,7 @@ export function OpenedPerDayCard({
                                         />
                                         {day.count > 0 && (
                                             <span
-                                                className="absolute inset-x-0 mb-0.5 text-center text-[10px] font-semibold tabular-nums"
+                                                className="absolute inset-x-0 mb-0.5 text-center text-[11px] font-semibold tabular-nums"
                                                 style={{ bottom: at(day.count) }}
                                             >
                                                 {day.count}
@@ -74,7 +79,7 @@ export function OpenedPerDayCard({
                         </div>
                     </div>
                     {/* Day labels: the month on the first day and where it changes */}
-                    <div className="text-muted-foreground mt-1.5 flex gap-1 pl-8 text-[10px]">
+                    <div className="text-muted-foreground mt-1.5 flex gap-1 pl-8 text-[11px]" aria-hidden>
                         {volume.map((day, i) => {
                             const dayOfMonth = Number(day.date.slice(8, 10));
                             return (

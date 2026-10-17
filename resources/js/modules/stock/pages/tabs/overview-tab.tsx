@@ -239,7 +239,7 @@ export function OverviewTab({
                                     key={w.warehouse}
                                     onClick={() => onSelectWarehouse(w.warehouse)}
                                     title={t('stock_view_items')}
-                                    className="hover:bg-accent/30 group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors"
+                                    className="hover:bg-accent/30 focus-visible:ring-ring group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                                 >
                                     <div className="flex min-w-0 items-center gap-2.5">
                                         <span
@@ -278,7 +278,7 @@ export function OverviewTab({
                                     key={c.category}
                                     onClick={() => onSelectCategory(c.category)}
                                     title={t('stock_view_items')}
-                                    className="group block w-full text-left"
+                                    className="group focus-visible:ring-ring block w-full rounded-sm text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                                 >
                                     <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
                                         <span className="group-hover:text-brand min-w-0 truncate font-medium transition-colors">

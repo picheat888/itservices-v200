@@ -113,7 +113,7 @@ export function SparkFooter({ text, values, className }: { text: React.ReactNode
 /** ▲/▼ change against an earlier figure; `upIsBad` turns a rise red (a growing backlog). */
 export function Delta({ value, upIsBad = false, label }: { value: number; upIsBad?: boolean; label?: string }) {
     const tone =
-        value === 0 ? 'text-muted-foreground' : value > 0 === upIsBad ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400';
+        value === 0 ? 'text-muted-foreground' : value > 0 === upIsBad ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400';
 
     return (
         <span className={cn('font-semibold tabular-nums', tone)}>
