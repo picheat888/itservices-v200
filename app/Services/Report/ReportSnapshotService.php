@@ -80,11 +80,11 @@ class ReportSnapshotService
             return null;
         }
 
-        $summary = $this->tickets->summary($viewer, [
-            'from' => $from, 'to' => $to, 'categories' => [], 'priority' => null, 'department_id' => null, 'assignee_id' => null, 'source' => null,
-        ]);
-        $rate = $summary['kpi']['sla_rate'];
-        $previous = $summary['previous']['sla_rate'];
+        $rate = $this->slaRateBetween($viewer, $from, $to);
+        // The window of the same length right before this one (the overview report's "previous").
+        $days = (int) $from->diffInDays($to->startOfDay()) + 1;
+        $previousTo = $from->subDay()->endOfDay();
+        $previous = $this->slaRateBetween($viewer, $previousTo->subDays($days - 1)->startOfDay(), $previousTo);
 
         return $this->tile(
             'sla_rate',
@@ -94,6 +94,22 @@ class ReportSnapshotService
             delta: $rate !== null && $previous !== null ? round($rate - $previous, 1) : null,
             trend: $this->slaTrend($viewer, $from, $to),
         );
+    }
+
+    /** Share of measured tickets opened in [from, to] resolved by their deadline, counted in SQL; null when none measured. */
+    private function slaRateBetween(User $viewer, CarbonImmutable $from, CarbonImmutable $to): ?float
+    {
+        $counts = $this->tickets->scoped($viewer, self::NO_TICKET_FILTERS)
+            ->whereBetween('created_at', [$from, $to])
+            ->where('status', 'completed')
+            ->whereNotNull('resolved_at')
+            ->whereNotNull('sla_resolve_due_at')
+            ->toBase()
+            ->selectRaw('count(*) as measured, sum(case when resolved_at <= sla_resolve_due_at then 1 else 0 end) as met')
+            ->first();
+        $measured = (int) $counts->measured;
+
+        return $measured === 0 ? null : round((int) $counts->met / $measured * 100, 1);
     }
 
     /**
@@ -114,10 +130,13 @@ class ReportSnapshotService
         $tickets = $this->tickets->scoped($viewer, self::NO_TICKET_FILTERS)
             ->where('created_at', '<=', $to)
             ->where(fn ($q) => $q->whereNull('resolved_at')->orWhere('resolved_at', '>', $from))
-            ->get(['created_at', 'resolved_at']);
+            ->toBase()
+            ->get(['created_at', 'resolved_at'])
+            ->map(fn ($t) => [strtotime($t->created_at), $t->resolved_at === null ? null : strtotime($t->resolved_at)]);
 
+        // Whole seconds on both sides, so a moment's fraction never tips the comparison.
         $openAt = fn (CarbonImmutable $moment) => $tickets
-            ->filter(fn ($t) => $t->created_at <= $moment && ($t->resolved_at === null || $t->resolved_at > $moment))
+            ->filter(fn (array $t) => $t[0] <= $moment->getTimestamp() && ($t[1] === null || $t[1] > $moment->getTimestamp()))
             ->count();
         // Up to now, not the end of today: the last point is the live count the tile shows.
         $trend = array_map($openAt, $this->trendMoments($from, $to->min(CarbonImmutable::now())));
@@ -142,15 +161,20 @@ class ReportSnapshotService
             ->where('status', 'completed')
             ->whereNotNull('resolved_at')
             ->whereNotNull('sla_resolve_due_at')
-            ->get(['created_at', 'resolved_at', 'sla_resolve_due_at']);
+            ->toBase()
+            ->get(['created_at', 'resolved_at', 'sla_resolve_due_at'])
+            ->map(fn ($t) => (object) [
+                'created' => strtotime($t->created_at),
+                'met' => strtotime($t->resolved_at) <= strtotime($t->sla_resolve_due_at),
+            ]);
 
         // TREND_POINTS equal slices of the period: slice i runs from one boundary to the next.
         $span = max(1, $to->getTimestamp() - $from->getTimestamp());
         $boundary = fn (int $i) => $from->getTimestamp() + $span * $i / self::TREND_POINTS;
         $rates = [];
         for ($i = 0; $i < self::TREND_POINTS; $i++) {
-            $slice = $completed->filter(fn ($t) => $t->created_at->getTimestamp() >= $boundary($i) && $t->created_at->getTimestamp() < $boundary($i + 1));
-            $met = $slice->filter(fn ($t) => $t->resolved_at->lte($t->sla_resolve_due_at))->count();
+            $slice = $completed->filter(fn ($t) => $t->created >= $boundary($i) && $t->created < $boundary($i + 1));
+            $met = $slice->filter(fn ($t) => $t->met)->count();
             $rates[] = $slice->isEmpty() ? null : round($met / $slice->count() * 100, 1);
         }
 
