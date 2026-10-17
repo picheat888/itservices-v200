@@ -12,6 +12,7 @@ use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\EmployeeSectionSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
 // Feature tests for the perf Access step (software, social, mail groups, file shares and memberships)
@@ -62,6 +63,11 @@ class AccessStepTest extends TestCase
                 $this->assertGreaterThanOrEqual($m->granted_at, $m->revoked_at);
                 $this->assertNotNull($m->revoked_by);
             }
+        }
+
+        // product_key is an encrypted column: a plain-text value makes the Software list answer 500
+        foreach ($db->table('softwares')->whereNotNull('product_key')->pluck('product_key') as $key) {
+            $this->assertNotSame('', Crypt::decryptString($key));
         }
 
         foreach ($db->table('softwares')->whereNotNull('seats')->get() as $s) {

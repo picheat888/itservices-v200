@@ -146,7 +146,7 @@ class Access implements PerfStep
             $sql->insert('softwares', $this->fill('softwares', [
                 'id' => $s['id'], 'code' => sprintf('SW-%04d', $s['id']), 'name' => $s['name'], 'brand_id' => $rng->pick($reg->get('brand_ids')),
                 'license_type' => SoftwareLicenseType::from($type)->value, 'seats' => $limited ? max($rng->int(5, 200), $perSoftware[$s['id']] ?? 0) : null,
-                'product_key' => $limited ? strtoupper(substr(md5($s['name'].$i), 0, 20)) : null,
+                'product_key' => null,
                 'created_at' => $s['created'], 'updated_at' => $s['created'], 'created_by' => $creator, 'updated_by' => $creator,
             ]));
             $reg->event('access.resource_created', ['type' => 'software', 'id' => $s['id'], 'name' => $s['name'], 'at' => $s['created'], 'by_user_id' => $creator]);
