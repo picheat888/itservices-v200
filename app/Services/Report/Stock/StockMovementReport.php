@@ -195,9 +195,7 @@ class StockMovementReport extends TabularReport
     private function buildBreakdown(array $filters, bool $seesRequests, bool $seesAllRequests, bool $seesCounts): array
     {
         [$from, $to] = array_map(fn (CarbonInterface $d) => CarbonImmutable::instance($d), $this->dayRange($filters));
-        $firstMonth = $to->startOfMonth()->subMonthsNoOverflow(self::MONTHS - 1);
-
-        $movements = $this->scoped($filters, $from->min($firstMonth), $to->endOfMonth())
+        $movements = $this->scoped($filters, $from, $to)
             ->toBase()->get(['stock_movements.stock_item_id', 'stock_movements.type', 'stock_movements.qty', 'stock_movements.unit_cost', 'stock_movements.moved_at'])
             ->map(fn (object $m) => [
                 'item' => (int) $m->stock_item_id,
@@ -222,8 +220,8 @@ class StockMovementReport extends TabularReport
         ]);
 
         return [
-            'tiles' => self::tiles($movements->filter(fn (array $m) => $m['at']->betweenIncluded($from, $to))),
-            'months' => self::months($movements, $firstMonth, $from, $to),
+            'tiles' => self::tiles($movements),
+            'months' => self::months($movements, $from, $to),
             'requests' => $seesAllRequests ? $this->waitingRequests($filters) : null,
             'people' => $seesRequests ? self::people($requests) : null,
             'departments' => $seesRequests ? self::departments($requests) : null,
@@ -249,21 +247,20 @@ class StockMovementReport extends TabularReport
     }
 
     /**
-     * Twelve months ending with the range's last month, whole months even past the range ends.
+     * Every month of the range, oldest first, empty ones included.
      *
      * @param  Collection<int, array{item: int, type: string, qty: int, unit_cost: ?float, at: CarbonImmutable, value: float}>  $movements
-     * @return list<array{month: string, in_range: bool, receive: int, return: int, issue: int, transfer: int, receive_value: float, issue_value: float, adjust_net: int}>
+     * @return list<array{month: string, receive: int, return: int, issue: int, transfer: int, receive_value: float, issue_value: float, adjust_net: int}>
      */
-    private static function months(Collection $movements, CarbonImmutable $firstMonth, CarbonImmutable $from, CarbonImmutable $to): array
+    private static function months(Collection $movements, CarbonImmutable $from, CarbonImmutable $to): array
     {
         $byMonth = $movements->groupBy(fn (array $m) => $m['at']->format('Y-m'));
         $months = [];
-        for ($i = 0, $month = $firstMonth; $i < self::MONTHS; $i++, $month = $month->addMonthNoOverflow()) {
+        for ($month = $from->startOfMonth(); $month->lte($to); $month = $month->addMonthNoOverflow()) {
             $rows = $byMonth->get($month->format('Y-m'), collect());
             $qty = fn (string $type) => (int) $rows->where('type', $type)->sum('qty');
             $months[] = [
                 'month' => $month->format('Y-m'),
-                'in_range' => $month->gte($from->startOfMonth()) && $month->lte($to),
                 'receive' => $qty('receive'),
                 'return' => $qty('return'),
                 'issue' => $qty('issue'),
@@ -455,7 +452,7 @@ class StockMovementReport extends TabularReport
             'rows' => array_values(array_map(fn (array $m) => [
                 DateDisplay::monthYear($m['month']), $m['receive'], $m['return'], $m['issue'], $m['transfer'],
                 $m['receive_value'], $m['issue_value'], $m['adjust_net'],
-            ], array_filter($data['months'], fn (array $m) => $m['in_range']))),
+            ], $data['months'])),
         ]];
 
         if ($data['people'] !== null) {

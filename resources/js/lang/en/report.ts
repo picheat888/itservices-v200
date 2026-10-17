@@ -1837,11 +1837,9 @@ export const report: Dict = {
     rep_smv_k_net_down: 'Net down',
     rep_smv_flow_title: 'Stock in & out by month',
     rep_smv_flow_info_halves: 'Above the line is stock coming in: received and returned. Below it is stock issued. Counted in pieces.',
-    rep_smv_flow_info_rest:
-        'Transfers do not change the total, so they are not charted. Faded bars are outside the chosen dates. Click a bar to see that month.',
+    rep_smv_flow_info_rest: 'Transfers do not change the total, so they are not charted. Click a bar to see that month.',
     rep_smv_flow_aria: 'Stock in & out by month, {from} to {to}: received {receive}, returned {return}, issued {issue} pieces',
-    rep_smv_flow_empty: 'Nothing received or issued in these 12 months',
-    rep_smv_flow_outside: 'Outside the chosen dates',
+    rep_smv_flow_empty: 'Nothing received or issued in the chosen dates',
     rep_smv_axis_in: 'In',
     rep_smv_axis_out: 'Out',
     rep_smv_pop_receive_value: 'Received value {amount}',
