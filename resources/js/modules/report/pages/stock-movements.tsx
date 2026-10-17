@@ -16,10 +16,16 @@ function TypePill({ value }: { value: unknown }) {
     const t = useT();
     const type = movementType(value);
     if (!type) return <span className="text-muted-foreground">—</span>;
-    return <StatusBadge tone={MV_META[type].tone}>{t(`stock_mv_${type}`)}</StatusBadge>;
+    const Icon = MV_META[type].icon;
+    return (
+        <StatusBadge tone={MV_META[type].tone} dot={false}>
+            <Icon className="h-3 w-3" aria-hidden />
+            {t(`stock_mv_${type}`)}
+        </StatusBadge>
+    );
 }
 
-/** Pieces with the movement's sign: in green "+", out violet "−", transfer gray. */
+/** Pieces with the movement's sign, as /stock: in green "+", out red "−", transfer gray. */
 function SignedQty({ row }: { row: Row }) {
     const lang = useUiStore((s) => s.lang);
     const type = movementType(row.type);

@@ -39,7 +39,8 @@ const TOTAL_ROW = 'bg-muted/40 border-border border-t font-semibold';
 /* ─────────────────────────── tiles ─────────────────────────── */
 
 /** The value tile's top categories: three chart tones away from the stock statuses, the rest gray. */
-const TOP_CATEGORY_FILLS = [FILL.violet, FILL.pink, FILL['access-file']];
+// Shades of the brand: a ranking, not colours that already mean something on the stock pages.
+const TOP_CATEGORY_FILLS = ['bg-brand', 'bg-brand/65', 'bg-brand/35'];
 
 /** The three most valuable categories and "อื่น ๆ" for the rest, each with its % of the value. */
 function categoryPieces(categories: Categories, total: number, t: (key: string) => string, lang: string): SplitPiece[] {
@@ -100,7 +101,7 @@ function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Cat
                 alert={tiles.dead90.count > 0 ? 'amber' : undefined}
                 badge={
                     tiles.dead90.value > 0 ? (
-                        <StatusBadge tone="amber">{t('rep_sva_k_dead_share').replace('{pct}', String(deadShare))}</StatusBadge>
+                        <StatusBadge tone="gray">{t('rep_sva_k_dead_share').replace('{pct}', String(deadShare))}</StatusBadge>
                     ) : undefined
                 }
                 footer={foot('rep_sva_items', { n: n(tiles.dead90.count) })}

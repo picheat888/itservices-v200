@@ -1,7 +1,9 @@
 // Stock report helpers: numbers, money, day counts, the tile footer and split legend, the last-move cell and the movement colours of the stock pages (MV_META), shared by the three stock reports.
 import { useT } from '@/lang';
 import { MV_META } from '@/modules/stock';
+import { InfoPopover } from '@/shared/components/info-popover';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import type { ChartTone } from '../types';
@@ -72,17 +74,31 @@ export function splitBar(pieces: SplitPiece[]) {
     return pieces.map((p) => ({ key: p.key, percent: (p.value / total) * 100, className: p.fill, title: `${p.label} ${p.text}` }));
 }
 
-/** A tile's dot legend: every piece with its figure, wrapping onto a second line. */
+/** A tile's dot legend on one line, as SummaryStrip: dots and figures stay, names cut with "…", the whole split opens in a note. */
 export function TileLegend({ pieces }: { pieces: SplitPiece[] }) {
     return (
-        <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+        <InfoPopover
+            label={pieces.map((p) => `${p.label} ${p.text}`).join(', ')}
+            className="grid min-w-0 auto-cols-[minmax(0,max-content)] grid-flow-col items-center gap-x-2.5 text-left"
+            content={
+                <div className="min-w-44 space-y-1">
+                    {pieces.map((p) => (
+                        <div key={p.key} className="flex items-center justify-between gap-4">
+                            <Swatch fill={p.fill}>{p.label}</Swatch>
+                            <b className="tabular-nums">{p.text}</b>
+                        </div>
+                    ))}
+                </div>
+            }
+        >
             {pieces.map((p) => (
-                <Swatch key={p.key} fill={p.fill}>
-                    {p.label}
-                    <b className="text-foreground font-semibold tabular-nums">{p.text}</b>
-                </Swatch>
+                <span key={p.key} className="flex min-w-0 items-center gap-1">
+                    <i aria-hidden className={cn('inline-block h-2 w-2 shrink-0 rounded-full', p.fill)} />
+                    <span className="truncate">{p.label}</span>
+                    <b className="text-foreground shrink-0 font-semibold tabular-nums">{p.text}</b>
+                </span>
             ))}
-        </span>
+        </InfoPopover>
     );
 }
 
@@ -112,10 +128,10 @@ export const MV_TONE: Record<StockMovementType, ChartTone> = {
     adjust_down: MV_META.adjust_down.tone,
 };
 
-/** Text for a signed quantity: in green, out violet, neither gray. */
+/** Text for a signed quantity, as /stock writes it: in green, out red, neither gray. */
 export const SIGN_INK = {
     in: 'text-emerald-700 dark:text-emerald-400',
-    out: 'text-violet-600 dark:text-violet-400',
+    out: 'text-destructive',
     none: 'text-muted-foreground',
 } as const;
 
