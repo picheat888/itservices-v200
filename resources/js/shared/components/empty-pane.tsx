@@ -1,13 +1,8 @@
-// The empty state of a dialog tab: an icon tile over one line of text.
+// The empty state of a dialog tab: the shared EmptyState sized for a tab body.
 import type { LucideIcon } from 'lucide-react';
+import { EmptyState, type EmptyKind } from './empty-state';
 
-export function EmptyPane({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
-    return (
-        <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
-            <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
-                <Icon className="h-6 w-6" aria-hidden />
-            </div>
-            <div className="text-sm">{text}</div>
-        </div>
-    );
+// `icon` and `text` are the old props, kept until the callers move to kind/title/hint.
+export function EmptyPane({ text, kind, title, hint }: { icon?: LucideIcon; text?: string; kind?: EmptyKind; title?: string; hint?: string | null }) {
+    return <EmptyState kind={kind} title={title ?? text ?? ''} hint={hint} className="min-h-[220px]" />;
 }

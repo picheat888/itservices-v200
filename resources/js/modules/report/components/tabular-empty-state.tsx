@@ -6,9 +6,10 @@
  * filter `patch`, so the URL and the remembered filters follow as for any other change.
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { Button } from '@/shared/ui/button';
 import { useUiStore } from '@/stores/ui';
-import { CalendarRange, FilterX, SearchX } from 'lucide-react';
+import { CalendarRange, FilterX } from 'lucide-react';
 import type { TabularDefinition, TabularFilters } from '../types';
 import { compactRange } from './report-scope';
 
@@ -61,28 +62,19 @@ export function TabularEmptyState({
     const clearNarrowing = () => onPatch(Object.fromEntries(narrowing.map((f) => [f.name, f.default])));
 
     return (
-        <div className="flex flex-col items-center gap-3 py-4">
-            <SearchX className="text-muted-foreground/60 h-8 w-8" aria-hidden />
-            <div className="space-y-1">
-                <p className="text-foreground text-sm font-semibold">{title}</p>
-                {hint && <p className="text-muted-foreground text-sm">{hint}</p>}
-            </div>
-            {(canWiden || narrowing.length > 0) && (
-                <div className="flex flex-wrap justify-center gap-2">
-                    {canWiden && (
-                        <Button variant="outline" size="sm" onClick={showLast30}>
-                            <CalendarRange className="h-4 w-4" />
-                            {t('rep_empty_last30')}
-                        </Button>
-                    )}
-                    {narrowing.length > 0 && (
-                        <Button variant="outline" size="sm" onClick={clearNarrowing}>
-                            <FilterX className="h-4 w-4" />
-                            {t('rep_empty_clear')}
-                        </Button>
-                    )}
-                </div>
+        <EmptyState kind={narrowing.length > 0 ? 'search' : 'empty'} title={title} hint={hint}>
+            {canWiden && (
+                <Button variant="outline" size="sm" onClick={showLast30}>
+                    <CalendarRange className="h-4 w-4" />
+                    {t('rep_empty_last30')}
+                </Button>
             )}
-        </div>
+            {narrowing.length > 0 && (
+                <Button variant="outline" size="sm" onClick={clearNarrowing}>
+                    <FilterX className="h-4 w-4" />
+                    {t('rep_empty_clear')}
+                </Button>
+            )}
+        </EmptyState>
     );
 }

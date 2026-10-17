@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
@@ -70,6 +71,8 @@ interface DataTableProps<T> {
     loadingAvatar?: boolean;
     /** Custom content for the empty state (defaults to a plain "No data" line). */
     emptyState?: React.ReactNode;
+    /** Props of the shared empty state shown when emptyState is not given. */
+    empty?: EmptyStateProps;
     /** Screen-reader name of the table (a visually hidden <caption>). */
     caption?: string;
     /** Extra classes for the <table> — e.g. a `min-w-[…]` so the one flexible column keeps room on a
@@ -131,6 +134,7 @@ export function DataTable<T>({
     loadingRows,
     loadingAvatar,
     emptyState,
+    empty,
     caption,
     tableClassName,
     maxBodyHeight,
@@ -370,7 +374,7 @@ export function DataTable<T>({
                         {!loading && pageRows.length === 0 && (
                             <tr>
                                 <td colSpan={columns.length} className="text-muted-foreground px-4 py-10 text-center">
-                                    {emptyState ?? t('cmn_no_data')}
+                                    {emptyState ?? <EmptyState {...(empty ?? { title: t('cmn_no_data') })} />}
                                 </td>
                             </tr>
                         )}
