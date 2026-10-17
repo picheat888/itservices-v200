@@ -570,4 +570,25 @@ class AccessControlTest extends TestCase
             $this->assertSame(['M1 Test', 'M2 Test', 'M3 Test', 'M4 Test', 'M5 Test'], array_column($row['members'], 'name'));
         }
     }
+
+    public function test_software_list_previews_five_members_and_keeps_seats_used(): void
+    {
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $sw = Software::create(['name' => 'Big suite', 'license_type' => 'subscription', 'seats' => 10]);
+        foreach (range(1, 7) as $i) {
+            $e = Employee::create(['first_name' => "M{$i}", 'last_name' => 'Test']);
+            $sw->memberships()->create(['employee_id' => $e->id, 'granted_at' => '2026-01-01', 'revoked_at' => $i === 7 ? '2026-02-01' : null]);
+        }
+
+        $row = $this->getJson('/api/software')->assertOk()->json('data.0');
+        $this->assertCount(5, $row['members']);
+        $this->assertSame(6, $row['members_count']);
+        $this->assertSame(6, $row['seats_used']);
+        $this->assertSame(['M1 Test', 'M2 Test', 'M3 Test', 'M4 Test', 'M5 Test'], array_column($row['members'], 'name'));
+        $this->assertSame(['id', 'employee_id', 'name', 'photo_url', 'purpose'], array_keys($row['members'][0]));
+
+        // The drawer reads the full list from its own endpoint
+        $this->assertCount(6, $this->getJson("/api/software/{$sw->id}/members")->assertOk()->json('data'));
+    }
 }

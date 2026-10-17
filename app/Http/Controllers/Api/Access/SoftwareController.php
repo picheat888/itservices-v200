@@ -18,11 +18,12 @@ use Illuminate\Support\Facades\Storage;
 
 class SoftwareController extends Controller
 {
-    /** List all software with their active members. */
+    /** List all software with the first few active members and the seat count. */
     public function index(): JsonResponse
     {
         return SoftwareResource::collection(
-            Software::with(['memberships' => fn ($q) => $q->active()->with('employee'), 'brand', 'creator', 'updater'])->orderBy('code')->get()
+            Software::with(['memberships' => fn ($q) => $q->active()->with('employee')->orderBy('id')->limit(SoftwareResource::PREVIEW_MEMBERS), 'brand', 'creator', 'updater'])
+                ->withCount(['memberships as members_count' => fn ($q) => $q->active()])->orderBy('code')->get()
         )->response();
     }
 

@@ -550,7 +550,7 @@ export default function AccessControlPage() {
                 );
             },
         },
-        { key: 'members', header: t('access_members'), render: (s) => <AvatarStack members={s.members ?? []} /> },
+        { key: 'members', header: t('access_members'), render: (s) => <AvatarStack members={s.members ?? []} total={s.members_count} /> },
         actionsCol<Software>(openSoftware),
     ];
 
