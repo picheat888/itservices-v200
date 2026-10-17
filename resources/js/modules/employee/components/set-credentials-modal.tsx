@@ -4,6 +4,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { localName } from '@/shared/lib/local-name';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
@@ -169,7 +170,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         onClose();
     };
 
-    const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
+    const empName = shown ? localName(shown, lang) : '';
 
     return (
         <>

@@ -3,6 +3,7 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
+import { localName } from '@/shared/lib/local-name';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
@@ -49,7 +50,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
         () =>
             departments.map((d) => ({
                 value: String(d.id),
-                label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                label: localName(d, lang),
                 sub: d.tag,
                 search: `${d.name} ${d.name_th ?? ''} ${d.tag}`,
             })),
@@ -62,7 +63,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     const submit = async (e: FormEvent) => {
         e.preventDefault();
         if (!canSave) return;
-        if (section && !(await confirmEdit({ name: lang === 'th' ? (section.name_th ?? section.name) : section.name, sub: section.code }))) return;
+        if (section && !(await confirmEdit({ name: localName(section, lang), sub: section.code }))) return;
         setError('');
         const payload = { department_id: Number(form.department_id), name: form.name.trim(), name_th: form.name_th.trim() || null };
         try {

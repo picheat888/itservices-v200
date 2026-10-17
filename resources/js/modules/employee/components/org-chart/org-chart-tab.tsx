@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { localName } from '@/shared/lib/local-name';
 import type { OrgChartNode } from '@/shared/types';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
@@ -155,7 +156,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 width: NODE_W,
                 height: NODE_H,
                 selected: selectedId === n.id,
-                ariaLabel: lang === 'th' ? (n.name_th ?? n.name) : n.name,
+                ariaLabel: localName(n, lang),
                 className:
                     'rounded-[15px] focus-visible:ring-[3px] focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 data: {

@@ -13,6 +13,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { localName } from '@/shared/lib/local-name';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
@@ -370,7 +371,7 @@ export default function EmployeesPage() {
         },
     ];
 
-    const deptName = (d: Department) => (lang === 'th' ? (d.name_th ?? d.name) : d.name);
+    const deptName = (d: Department) => localName(d, lang);
 
     // A department can only be deleted when it has no employees AND no sections.
     // Otherwise show a blocking notice (sections cascade-delete, employees unassign).
@@ -709,7 +710,7 @@ function DirectoryTab({
         { value: 'all', label: t('all_departments'), search: t('all_departments'), icon: <ToneDot tone="gray" /> },
         ...departments.map((d) => ({
             value: String(d.id),
-            label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+            label: localName(d, lang),
             sub: d.tag,
             search: `${d.name} ${d.name_th ?? ''} ${d.tag}`,
         })),
@@ -729,7 +730,7 @@ function DirectoryTab({
             render: (e) => (
                 <div className="flex items-center gap-2.5">
                     <UserAvatar name={e.name} photoUrl={e.photo_url} />
-                    <div className="font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
+                    <div className="font-medium">{localName(e, lang)}</div>
                 </div>
             ),
         },
@@ -764,11 +765,7 @@ function DirectoryTab({
                 <div onClick={(ev) => ev.stopPropagation()} className="flex justify-end">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button
-                                type="button"
-                                aria-label={`${t('actions')} ${lang === 'th' ? (e.name_th ?? e.name) : e.name}`}
-                                className={ICON_BTN}
-                            >
+                            <button type="button" aria-label={`${t('actions')} ${localName(e, lang)}`} className={ICON_BTN}>
                                 <MoreVertical aria-hidden className="h-4 w-4" />
                             </button>
                         </DropdownMenuTrigger>
@@ -1055,7 +1052,7 @@ function OverviewTab({
                                 <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
                                     <UserAvatar name={e.name} photoUrl={e.photo_url} />
                                     <div className="min-w-0 flex-1">
-                                        <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
+                                        <div className="truncate text-sm font-medium">{localName(e, lang)}</div>
                                         <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
                                             <span className="min-w-0 truncate">{e.position}</span>
                                             <span className="min-w-0 truncate">
@@ -1096,7 +1093,7 @@ function OverviewTab({
                                 <div key={d.id} className="flex items-center justify-between py-2.5">
                                     <div className="flex items-center gap-2.5">
                                         <span className="bg-muted rounded-md px-2 py-0.5 text-[11px]">{d.tag}</span>
-                                        <span className="text-sm">{lang === 'th' ? (d.name_th ?? d.name) : d.name}</span>
+                                        <span className="text-sm">{localName(d, lang)}</span>
                                     </div>
                                     <span className="text-sm font-semibold">{d.count ?? 0}</span>
                                 </div>
@@ -1116,7 +1113,7 @@ function OverviewTab({
                                 <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
                                     <UserAvatar name={e.name} />
                                     <div className="min-w-0 flex-1">
-                                        <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
+                                        <div className="truncate text-sm font-medium">{localName(e, lang)}</div>
                                         <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
                                             <span className="min-w-0 truncate">{e.position}</span>
                                             <span className="min-w-0 truncate">

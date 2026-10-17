@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -43,7 +44,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const setSort = (value: SortKey) => list.setFilter('sort', value === DEFAULT_SORT ? '' : value);
     const [membersOf, setMembersOf] = useState<Section | null>(null);
 
-    const sectionLabel = (s: Section) => (lang === 'th' ? (s.name_th ?? s.name) : s.name);
+    const sectionLabel = (s: Section) => localName(s, lang);
     const deptById = useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
     const deptLabel = (s: Section) => (lang === 'th' ? (deptById.get(s.department_id)?.name_th ?? s.department) : s.department);
 
@@ -52,7 +53,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
             { value: '', label: t('all_departments'), search: t('all_departments') },
             ...departments.map((d) => ({
                 value: String(d.id),
-                label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                label: localName(d, lang),
                 sub: d.tag,
                 search: `${d.name} ${d.name_th ?? ''} ${d.tag}`,
             })),
@@ -75,7 +76,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     // A section can only be deleted when it's empty. If it still has members,
     // show a blocking notice asking the user to move/remove them first.
     const handleDelete = (s: Section) => {
-        const name = lang === 'th' ? (s.name_th ?? s.name) : s.name;
+        const name = localName(s, lang);
         const count = s.members_count ?? 0;
         if (count > 0) {
             confirm({
@@ -97,7 +98,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
 
     const columns: Column<Section>[] = [
         { key: 'code', header: t('section_code'), render: (s) => <span className="text-muted-foreground text-xs">{s.code}</span> },
-        { key: 'name', header: t('section'), render: (s) => <span className="font-medium">{lang === 'th' ? (s.name_th ?? s.name) : s.name}</span> },
+        { key: 'name', header: t('section'), render: (s) => <span className="font-medium">{localName(s, lang)}</span> },
         { key: 'department', header: t('department'), render: (s) => <span className="text-muted-foreground">{deptLabel(s) ?? '—'}</span> },
         {
             key: 'members',

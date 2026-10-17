@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { localName } from '@/shared/lib/local-name';
 import type { Department, Employee } from '@/shared/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
@@ -33,7 +34,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
     const loadingMembers = isLoading && expected !== 0;
     const { data: sections = [], isLoading: sectionsLoading } = useSections(view?.id ?? null);
 
-    const deptName = view ? (lang === 'th' ? (view.name_th ?? view.name) : view.name) : '';
+    const deptName = view ? localName(view, lang) : '';
 
     const columns: Column<Employee>[] = [
         {
@@ -42,7 +43,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
             render: (m) => (
                 <div className="flex items-center gap-2.5">
                     <UserAvatar name={m.name} photoUrl={m.photo_url} />
-                    <span className="truncate font-medium">{lang === 'th' ? (m.name_th ?? m.name) : m.name}</span>
+                    <span className="truncate font-medium">{localName(m, lang)}</span>
                 </div>
             ),
         },
