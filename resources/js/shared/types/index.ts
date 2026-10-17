@@ -360,8 +360,11 @@ export interface AssetTransferEntry {
     /** Full name behind the code, when that end of the move was an employee. */
     from_name: string | null;
     to_name: string | null;
+    from_name_th?: string | null;
+    to_name_th?: string | null;
     reason: string | null;
     performed_by: string | null;
+    performed_by_th?: string | null;
 }
 
 /** Compact repair-ticket row shown on an asset's "งานแจ้งซ่อม" tab. */
@@ -396,6 +399,7 @@ export interface AssetTransferLog {
     to_name_th?: string | null;
     reason: string | null;
     performed_by: string | null;
+    performed_by_th?: string | null;
 }
 
 export interface AssetSummary {

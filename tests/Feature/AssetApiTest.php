@@ -980,6 +980,24 @@ class AssetApiTest extends TestCase
         $this->assertSame('สมชาย ใจดี', $found->json('data.0.to_name_th'));
     }
 
+    public function test_a_move_keeps_who_did_it_and_names_them_in_thai(): void
+    {
+        $performer = Employee::create(['code' => 'EMP-P1', 'first_name' => 'Somsri', 'last_name' => 'Admin', 'first_name_th' => 'สมศรี', 'last_name_th' => 'ดูแลระบบ']);
+        $user = User::factory()->create(['role' => 'super', 'name' => 'Somsri Admin', 'employee_id' => $performer->id]);
+        $receiver = Employee::create(['code' => 'EMP-P2', 'first_name' => 'New', 'last_name' => 'Hire', 'first_name_th' => 'พนักงาน', 'last_name_th' => 'ใหม่']);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
+        $this->actingAs($user);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'owner_employee_id' => $receiver->id, 'location_id' => Location::create(['name' => 'HQ'])->id])->assertOk();
+
+        $this->assertDatabaseHas('asset_transfers', ['asset_id' => $asset->id, 'performed_by' => 'Somsri Admin', 'performed_by_user_id' => $user->id]);
+        $this->getJson('/api/assets/transfers')->assertJsonPath('data.0.performed_by_th', 'สมศรี ดูแลระบบ');
+        $this->getJson("/api/assets/{$asset->id}")->assertJsonPath('data.transfers.0.performed_by_th', 'สมศรี ดูแลระบบ')
+            ->assertJsonPath('data.transfers.0.to_name_th', 'พนักงาน ใหม่');
+        // The performer's Thai name finds the move too
+        $this->assertCount(1, $this->getJson('/api/assets/transfers?search='.urlencode('สมศรี'))->json('data'));
+    }
+
     public function test_show_includes_transfer_history_and_related_tickets(): void
     {
         $this->actingAs($this->super());

@@ -325,6 +325,24 @@ class AssetActivityReportsTest extends TestCase
         $this->assertSame('สมชาย ใจดี', $rows[0]['to_name']['name_th']);
     }
 
+    public function test_transfer_history_names_the_performer_in_thai(): void
+    {
+        $performer = Employee::create(['code' => 'EMP-P1', 'first_name' => 'Somsri', 'last_name' => 'Admin', 'first_name_th' => 'สมศรี', 'last_name_th' => 'ดูแลระบบ']);
+        $user = User::factory()->create(['name' => 'Somsri Admin', 'employee_id' => $performer->id]);
+        $mine = $this->transfer('handover', '2026-09-10 09:00:00', ['performed_by' => 'Somsri Admin', 'performed_by_user_id' => $user->id]);
+        $this->transfer('handover', '2026-09-11 09:00:00');
+
+        $rows = $this->actingAs($this->userWith([...$this->reportRights('assets')]))
+            ->getJson('/api/reports/tabular/assets.transfer_history/rows?from=2026-09-01&to=2026-09-30&search='.urlencode('สมศรี'))->assertOk()->json('data');
+
+        $this->assertSame([$mine->id], array_column($rows, 'id'));
+        $this->assertSame(['name' => 'Somsri Admin', 'name_th' => 'สมศรี ดูแลระบบ'], $rows[0]['performed_by']);
+
+        $this->transfer('relocate', '2026-09-12 09:00:00', ['from_owner' => 'Room A', 'to_owner' => 'Room B', 'performed_by' => 'Somsri Admin', 'performed_by_user_id' => $user->id]);
+        $relocations = $this->getJson('/api/reports/assets/transfer-history/breakdown?from=2026-09-01&to=2026-09-30')->assertOk()->json('data.relocations');
+        $this->assertSame('สมศรี ดูแลระบบ', $relocations[0]['by_th']);
+    }
+
     public function test_asset_activity_reports_need_assets_view(): void
     {
         $user = $this->userWith([...$this->reportRights('employees')]);

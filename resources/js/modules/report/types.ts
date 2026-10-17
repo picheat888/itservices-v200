@@ -972,6 +972,7 @@ export interface AssetTransferBreakdown {
         to: string;
         reason: string | null;
         by: string | null;
+        by_th: string | null;
     }[];
 }
 

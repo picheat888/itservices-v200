@@ -333,10 +333,10 @@ class Assets implements PerfStep
         $t = $spec['created'];
         $reg->event('asset.registered', ['asset_id' => $id, 'code' => $code, 'model' => $model['name'], 'at' => $t, 'by_user_id' => $byId, 'by_name' => $byName]);
 
-        $transfer = function (string $kind, string $from, string $to, string $reason, CarbonImmutable $at) use ($id, $code, $model, $byName, $sql, $reg): void {
+        $transfer = function (string $kind, string $from, string $to, string $reason, CarbonImmutable $at) use ($id, $code, $model, $byId, $byName, $sql, $reg): void {
             $sql->insert('asset_transfers', $this->fill('asset_transfers', [
                 'id' => $reg->nextId('asset_transfers'), 'asset_id' => $id, 'asset_tag' => $code, 'asset_model' => $model['name'], 'kind' => $kind,
-                'from_owner' => $from, 'to_owner' => $to, 'reason' => $reason, 'performed_by' => $byName, 'created_at' => $at, 'updated_at' => $at,
+                'from_owner' => $from, 'to_owner' => $to, 'reason' => $reason, 'performed_by' => $byName, 'performed_by_user_id' => $byId, 'created_at' => $at, 'updated_at' => $at,
             ]));
         };
         $returnToPool = function (CarbonImmutable $at) use (&$s, &$where, $warehouses, $rng, $transfer, $reg, $id, $code, $byId, $byName): void {

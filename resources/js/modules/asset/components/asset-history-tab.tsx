@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import type { AssetTransferEntry } from '@/shared/types';
 import { History } from 'lucide-react';
 import { AssetEventBadge } from './asset-event-badge';
@@ -24,6 +25,7 @@ export function Party({ label, name, muted }: { label: string | null; name: stri
  */
 export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransferEntry[]; loading?: boolean }) {
     const t = useT();
+    const pairOf = useLocalPair();
 
     const columns: Column<AssetTransferEntry>[] = [
         {
@@ -32,12 +34,15 @@ export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransf
             render: (r) => <DateTimeCell value={r.date} className="text-muted-foreground" />,
         },
         { key: 'event', header: t('asset_hist_event'), render: (r) => <AssetEventBadge kind={r.kind} /> },
-        // From and To stand in their own columns so the whole trail lines up vertically —
-        // reading down one column answers "who had it before" without re-parsing each row.
-        { key: 'from', header: t('asset_hist_from'), render: (r) => <Party label={r.from_owner} name={r.from_name} muted /> },
-        { key: 'to', header: t('asset_hist_to'), render: (r) => <Party label={r.to_owner} name={r.to_name} /> },
+        // From and To in their own columns so the trail reads down
+        { key: 'from', header: t('asset_hist_from'), render: (r) => <Party label={r.from_owner} name={pairOf(r.from_name, r.from_name_th)} muted /> },
+        { key: 'to', header: t('asset_hist_to'), render: (r) => <Party label={r.to_owner} name={pairOf(r.to_name, r.to_name_th)} /> },
         { key: 'reason', header: t('asset_hist_reason'), render: (r) => <span className="text-[13px]">{r.reason ?? '—'}</span> },
-        { key: 'by', header: t('asset_hist_by'), render: (r) => <span className="text-muted-foreground text-[13px]">{r.performed_by ?? '—'}</span> },
+        {
+            key: 'by',
+            header: t('asset_hist_by'),
+            render: (r) => <span className="text-muted-foreground text-[13px]">{pairOf(r.performed_by, r.performed_by_th) ?? '—'}</span>,
+        },
     ];
 
     return (

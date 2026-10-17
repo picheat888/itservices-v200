@@ -449,7 +449,7 @@ export default function AssetsPage() {
         {
             key: 'by',
             header: t('asset_hist_by'),
-            render: (tr) => <span className="text-muted-foreground text-[13px]">{tr.performed_by ?? '—'}</span>,
+            render: (tr) => <span className="text-muted-foreground text-[13px]">{localPair(tr.performed_by, tr.performed_by_th, lang) ?? '—'}</span>,
         },
     ];
 
