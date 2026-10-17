@@ -1,4 +1,4 @@
-// Pure figures for the Dashboard tiles and charts: bar shares, a round chart axis, mixed-language names (node tests).
+// Pure figures for the Dashboard tiles and charts: bar shares and a round chart axis (node tests).
 
 export interface ShareInput {
     key: string;
@@ -39,9 +39,4 @@ export function niceAxis(max: number, lines = 4): { top: number; ticks: number[]
     }
 
     return { top: step * lines, ticks: Array.from({ length: lines + 1 }, (_, i) => i * step) };
-}
-
-/** A master-data name in the reader's language; Thai falls back to the stored name when name_th is empty. */
-export function localName(name: string, nameTh: string | null, lang: string): string {
-    return lang === 'th' && nameTh ? nameTh : name;
 }

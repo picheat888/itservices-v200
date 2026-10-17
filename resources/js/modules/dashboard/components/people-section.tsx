@@ -2,13 +2,13 @@
 import { useT } from '@/lang';
 import { CardEmpty, CardTitle, FILL, fold, FoldToggle, heldStyle, useFoldRow } from '@/modules/report';
 import { relativeTime } from '@/shared/lib/datetime';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
 import type { DashboardActivity, DashboardHr } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
-import { localName } from '../lib/dash-math';
 import { CardLink, HBarRow, NARROW, PAIR_GRID, rowDelay, SectionHeading, WIDE } from './dash-parts';
 
 const FOLDS = ['departments'] as const;
@@ -88,7 +88,7 @@ function DepartmentsCard({
             ) : (
                 <ul className="flex flex-1 flex-col justify-between gap-1.5 px-5 py-3">
                     {shown.map((d, i) => (
-                        <HBarRow key={d.id} label={localName(d.name, d.name_th, lang)} value={d.count} scale={scale} fill={FILL.violet} index={i} />
+                        <HBarRow key={d.id} label={localName(d, lang)} value={d.count} scale={scale} fill={FILL.violet} index={i} />
                     ))}
                     {hr.no_department > 0 && (
                         <HBarRow label={t('dash_no_department')} value={hr.no_department} scale={scale} fill={FILL.gray} index={shown.length} muted />
