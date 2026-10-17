@@ -230,6 +230,7 @@ class StockBelowMinReport extends TabularReport
             ->whereColumn('stock_movements.stock_item_id', 'stock_items.id')
             ->where('type', 'receive')
             ->whereNotNull('unit_cost')
+            ->where('unit_cost', '>', 0)
             ->orderByDesc('moved_at')
             ->orderByDesc('id')
             ->limit(1);

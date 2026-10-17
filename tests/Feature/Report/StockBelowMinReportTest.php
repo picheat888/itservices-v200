@@ -144,6 +144,19 @@ class StockBelowMinReportTest extends TestCase
         $this->assertSame(['out', 'out', 'low', 'low', 'over', 'over', 'over'], array_column($rows, 'status'));
     }
 
+    public function test_a_free_last_receipt_falls_back_to_the_last_priced_one(): void
+    {
+        $category = Category::create(['name' => 'Spare parts']);
+        $item = $this->item('Cable', $category, 0, 5, 10, 50);
+        $this->receipt($item, 4, 80, '2026-08-01 09:00:00');
+        $this->receipt($item, 2, 0, '2026-09-01 09:00:00');
+
+        $row = $this->rows()['data'][0];
+
+        $this->assertEqualsWithDelta(80.0, $row['unit_cost'], 0.001);
+        $this->assertSame('last_receipt', $row['unit_cost_basis']);
+    }
+
     public function test_out_and_low_rows_carry_shortfall_reorder_and_price_basis(): void
     {
         $this->seedStock();

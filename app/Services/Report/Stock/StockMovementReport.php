@@ -301,6 +301,8 @@ class StockMovementReport extends TabularReport
                 'requester_th' => $r->user?->employee?->name_th,
                 'status' => (string) $r->status,
                 'created_at' => $r->created_at?->toIso8601String(),
+                // An approved request waits to be handed out from its approval, a pending one from its filing.
+                'waiting_since' => ($r->status === 'approved' && $r->approved_at !== null ? $r->approved_at : $r->created_at)?->toIso8601String(),
             ]);
 
         return ['pending' => (int) ($perStatus['pending'] ?? 0), 'approved' => (int) ($perStatus['approved'] ?? 0), 'rows' => $rows->all()];
