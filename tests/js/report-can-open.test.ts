@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { canOpenNavItem } from '../../resources/js/modules/report/lib/can-open.ts';
 
-const allow = (...keys: string[]) => (p: string) => keys.includes(p);
+const allow =
+    (...keys: string[]) =>
+    (p: string) =>
+        keys.includes(p);
 
 test('an entry gated by a single permission needs that permission', () => {
     const assets = { permission: 'assets.module' };
