@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -624,8 +625,8 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                         </th>
                                         <td className={TD}>
                                             {c.vendor ? (
-                                                <div className="max-w-[12rem] truncate" title={c.vendor}>
-                                                    {c.vendor}
+                                                <div className="max-w-[12rem] truncate" title={localPair(c.vendor, c.vendor_th, lang) ?? undefined}>
+                                                    {localPair(c.vendor, c.vendor_th, lang)}
                                                 </div>
                                             ) : (
                                                 <span className="text-muted-foreground">—</span>

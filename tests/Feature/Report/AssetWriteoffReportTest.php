@@ -244,6 +244,17 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertSame(['label_key' => 'rep_n_wo_rented_overdue_none'], $summary['wo_rented_overdue']['note']);
     }
 
+    public function test_the_breakdown_contracts_carry_the_vendor_thai_name(): void
+    {
+        $this->seedAssets();
+        Vendor::where('name', 'Lease Vendor')->update(['name_th' => 'ผู้ให้เช่า']);
+
+        $contracts = $this->breakdown()['contracts'];
+
+        $this->assertNotEmpty($contracts);
+        $this->assertSame('ผู้ให้เช่า', $contracts[0]['vendor_th']);
+    }
+
     public function test_the_breakdown_lists_every_month_of_the_range_including_empty_ones(): void
     {
         $this->seedAssets();

@@ -547,6 +547,7 @@ export interface AssetWriteoffBreakdown {
         code: string;
         name: string | null;
         vendor: string | null;
+        vendor_th: string | null;
         end_date: string | null;
         units: number;
         returned: number;

@@ -433,7 +433,7 @@ class AssetWriteoffReport extends TabularReport
         $contracts = Contract::query()
             ->whereHas('assets')
             ->when($filters['contract_id'] ?? null, fn (Builder $q, $id) => $q->whereKey((int) $id))
-            ->with('vendor:id,name')
+            ->with('vendor:id,name,name_th')
             ->get(['id', 'code', 'name', 'vendor_id', 'end_date']);
         $assets = Asset::query()
             ->whereIn('contract_id', $contracts->modelKeys())
@@ -457,6 +457,7 @@ class AssetWriteoffReport extends TabularReport
                     'code' => (string) $contract->code,
                     'name' => $contract->name,
                     'vendor' => $contract->vendor?->name,
+                    'vendor_th' => $contract->vendor?->name_th,
                     'end_date' => $contract->end_date?->format('Y-m-d'),
                     'units' => $units->count(),
                     'returned' => $returned->count(),
