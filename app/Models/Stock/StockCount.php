@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockCount extends Model
 {
-    protected $fillable = ['reference', 'warehouse', 'category', 'status', 'adjust_mode', 'note', 'counted_by', 'committed_at'];
+    protected $fillable = ['reference', 'warehouse', 'warehouse_id', 'category', 'status', 'adjust_mode', 'note', 'counted_by', 'committed_at'];
 
     protected function casts(): array
     {
@@ -29,6 +29,7 @@ class StockCount extends Model
     protected static function booted(): void
     {
         static::creating(function (StockCount $count) {
+            $count->warehouse_id ??= Warehouse::idOf($count->warehouse);
             if (blank($count->reference)) {
                 $year = now()->year;
                 $last = static::where('reference', 'like', "SC-{$year}-%")

@@ -10,11 +10,29 @@ class StockMovement extends Model
 {
     protected $fillable = [
         'doc_no', 'type', 'stock_item_id', 'qty', 'unit_cost', 'from_label', 'to_label',
-        'reference', 'recorded_by', 'user_id', 'notes', 'moved_at',
+        'reference', 'recorded_by', 'user_id', 'notes', 'moved_at', 'from_warehouse_id', 'to_warehouse_id',
     ];
 
     /** Movement types that increase on-hand stock; the rest decrease it. */
     public const INBOUND = ['receive', 'return', 'adjust_up'];
+
+    /** Types whose from_label / to_label names a warehouse (the other side is a vendor or a person). */
+    public const FROM_WAREHOUSE = ['issue', 'transfer', 'adjust_down'];
+
+    public const TO_WAREHOUSE = ['receive', 'return', 'transfer', 'adjust_up'];
+
+    protected static function booted(): void
+    {
+        // The warehouse ids follow the labels it is written with, so a rename keeps the history attached.
+        static::creating(function (StockMovement $movement) {
+            if ($movement->from_warehouse_id === null && in_array($movement->type, self::FROM_WAREHOUSE, true)) {
+                $movement->from_warehouse_id = Warehouse::idOf($movement->from_label);
+            }
+            if ($movement->to_warehouse_id === null && in_array($movement->type, self::TO_WAREHOUSE, true)) {
+                $movement->to_warehouse_id = Warehouse::idOf($movement->to_label);
+            }
+        });
+    }
 
     protected function casts(): array
     {

@@ -2,6 +2,7 @@
 
 namespace App\Support\Perf;
 
+use App\Models\Stock\StockMovement;
 use Carbon\CarbonImmutable;
 
 /** Perf step 5: stock items and a chronological replay of receipts, requests, transfers, returns and counts. */
@@ -33,6 +34,9 @@ class Stock implements PerfStep
 
     /** @var list<string> */
     private array $warehouses = [];
+
+    /** @var array<string, int> warehouse name => id */
+    private array $warehouseIds = [];
 
     /** @var list<array{0: int, 1: string}> IT staff: user id and name */
     private array $it = [];
@@ -70,6 +74,7 @@ class Stock implements PerfStep
     {
         $this->ctx = $ctx;
         $this->warehouses = $ctx->reg->get('warehouse_names');
+        $this->warehouseIds = $ctx->reg->get('warehouse_ids');
         $employees = $ctx->reg->get('employees');
         foreach ($employees as $e) {
             if ($e['kind'] === 'it') {
@@ -291,6 +296,8 @@ class Stock implements PerfStep
         $at = $row['moved_at'];
         $this->ctx->sql->insert('stock_movements', $this->fill('stock_movements', $row + [
             'id' => $id, 'created_at' => $at, 'updated_at' => $at,
+            'from_warehouse_id' => in_array($row['type'], StockMovement::FROM_WAREHOUSE, true) ? ($this->warehouseIds[$row['from_label'] ?? ''] ?? null) : null,
+            'to_warehouse_id' => in_array($row['type'], StockMovement::TO_WAREHOUSE, true) ? ($this->warehouseIds[$row['to_label'] ?? ''] ?? null) : null,
         ]));
         $item = $this->items[$row['stock_item_id']];
         $reg->event('stock.movement', [
@@ -531,7 +538,7 @@ class Stock implements PerfStep
         $opened = $at->subDays(1)->setTime(9, 0);
 
         $this->ctx->sql->insert('stock_counts', $this->fill('stock_counts', [
-            'id' => $id, 'reference' => $reference, 'warehouse' => $this->warehouses[$wh], 'category' => null, 'status' => $draft ? 'draft' : 'committed',
+            'id' => $id, 'reference' => $reference, 'warehouse' => $this->warehouses[$wh], 'warehouse_id' => $this->warehouseIds[$this->warehouses[$wh]], 'category' => null, 'status' => $draft ? 'draft' : 'committed',
             'adjust_mode' => 'auto', 'note' => null, 'counted_by' => $by[0], 'committed_at' => $draft ? null : $at, 'created_at' => $opened, 'updated_at' => $at,
         ]));
         $reg->event('stock.count_opened', ['stock_count_id' => $id, 'reference' => $reference, 'at' => $opened, 'user_id' => $by[0], 'by_name' => $by[1], 'draft' => $draft]);

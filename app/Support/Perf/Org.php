@@ -94,13 +94,16 @@ class Org implements PerfStep
             $this->ctx->sql->insert('locations', $this->fill('locations', ['id' => $id, 'name' => $name, 'created_at' => $this->stamp(), 'updated_at' => $this->stamp()]));
             $locationIds[] = $id;
         }
+        $warehouseIds = [];
         foreach (self::WAREHOUSES as $name) {
             $id = $this->ctx->reg->nextId('warehouses');
+            $warehouseIds[$name] = $id;
             $this->ctx->sql->insert('warehouses', $this->fill('warehouses', ['id' => $id, 'name' => $name, 'description' => $name, 'created_at' => $this->stamp(), 'updated_at' => $this->stamp()]));
         }
         $this->ctx->reg->remember('location_ids', $locationIds);
         $this->ctx->reg->remember('location_names', array_combine($locationIds, self::LOCATIONS));
         $this->ctx->reg->remember('warehouse_names', self::WAREHOUSES);
+        $this->ctx->reg->remember('warehouse_ids', $warehouseIds);
     }
 
     /**
