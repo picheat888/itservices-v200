@@ -40,7 +40,7 @@ const COUNTS_SHOWN = 10;
 const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase';
 const TD = 'px-3 py-2.5 align-middle whitespace-nowrap';
 const NUM = 'text-right tabular-nums';
-const TRACK = 'dark:bg-muted block h-3 overflow-hidden rounded-full bg-slate-200';
+const TRACK = 'dark:bg-muted block h-2.5 overflow-hidden rounded-full bg-slate-200';
 
 /* ─────────────────────────── tiles ─────────────────────────── */
 
@@ -145,7 +145,7 @@ function WaitingCard({ requests, className }: { requests: Requests; className?: 
     };
     const tiles = [
         { key: 'pending', label: t('stock_rq_pending'), value: requests.pending, edge: 'border-t-amber-500' },
-        { key: 'approved', label: t('rep_smv_wait_approved'), value: requests.approved, edge: 'border-t-violet-500' },
+        { key: 'approved', label: t('rep_smv_wait_approved'), value: requests.approved, edge: 'border-t-blue-500' },
     ];
 
     return (
