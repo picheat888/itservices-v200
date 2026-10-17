@@ -8,7 +8,7 @@ use App\Services\Report\Stock\StockMovementReport;
 use Illuminate\Http\JsonResponse;
 
 /**
- * GET /api/reports/stock/movements/breakdown — what the "รับเข้าและเบิกจ่าย" page draws above its rows. The route pins
+ * GET /api/reports/stock/movements/breakdown — what the "รับเข้าและเบิกออก" page draws above its rows. The route pins
  * {key} to stock.movements, so TabularReportRequest gates and validates it like the report's rows.
  */
 class StockMovementsBreakdownController extends Controller

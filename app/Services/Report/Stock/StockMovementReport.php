@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * "รับเข้าและเบิกจ่าย" (Report Center → Stock): every stock document in the date range (last 12 months by default),
+ * "รับเข้าและเบิกออก" (Report Center → Stock): every stock document in the date range (last 12 months by default),
  * oldest first. breakdown() (StockMovementsBreakdownController) feeds the tiles, monthly flow, pending requests,
  * top requesters and count variance above the rows.
  */
@@ -52,7 +52,7 @@ class StockMovementReport extends TabularReport
 
     public function title(): string
     {
-        return 'รับเข้าและเบิกจ่าย';
+        return 'รับเข้าและเบิกออก';
     }
 
     public function filters(): array

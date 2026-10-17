@@ -20,8 +20,8 @@ use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
- * The three stock tabular reports — "รับเข้าและเบิกจ่าย" (stock.movements),
- * "ต่ำกว่าขั้นต่ำและเกินขั้นสูง" (stock.below_min) and "มูลค่าคงคลัง" (stock.valuation) — through the
+ * The three stock tabular reports — "รับเข้าและเบิกออก" (stock.movements),
+ * "ต่ำกว่า Min และเกิน Max" (stock.below_min) and "มูลค่าคงคลัง" (stock.valuation) — through the
  * generic /reports/tabular/{key} endpoints.
  */
 class StockReportsTest extends TestCase

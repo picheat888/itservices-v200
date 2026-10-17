@@ -364,9 +364,9 @@ export const report: Dict = {
     rep_opt_180d: '180 วัน',
     rep_opt_365d: '1 ปี',
     rep_domain_stock: 'คลังอะไหล่',
-    rep_stock_movements_title: 'รับเข้าและเบิกจ่าย',
+    rep_stock_movements_title: 'รับเข้าและเบิกออก',
     rep_stock_movements_desc: 'รับเข้า เบิกออก และคำขอเบิก ในช่วงวันที่ที่เลือก',
-    rep_stock_below_min_title: 'ต่ำกว่าขั้นต่ำและเกินขั้นสูง',
+    rep_stock_below_min_title: 'ต่ำกว่า Min และเกิน Max',
     rep_stock_below_min_desc: 'รายการที่หมด ต่ำกว่า Min หรือเกิน Max และมูลค่าที่ควรสั่ง',
     rep_stock_valuation_title: 'มูลค่าคงคลัง',
     rep_stock_valuation_desc: 'มูลค่าของในคลัง แยกตามหมวดและคลัง',
@@ -1811,7 +1811,7 @@ export const report: Dict = {
     rep_crent_col_vs: 'ตลอดสัญญาเทียบซื้อ',
     rep_crent_rows_title: 'รายการเครื่องตามสัญญา',
 
-    // pages/stock-movements.tsx, components/stock-movements-cards.tsx, stock-flow-card.tsx — รับเข้าและเบิกจ่าย
+    // pages/stock-movements.tsx, components/stock-movements-cards.tsx, stock-flow-card.tsx — รับเข้าและเบิกออก
     rep_smv_unit: 'ชิ้น',
     rep_smv_pcs: '{n} ชิ้น',
     rep_smv_times: '{n} ครั้ง',
@@ -1865,7 +1865,7 @@ export const report: Dict = {
     rep_smv_cnt_col_net: 'มูลค่าสุทธิ',
     rep_smv_cnt_total: 'รวม {n} รอบ',
     rep_smv_cnt_empty: 'ไม่มีรอบนับที่ยืนยันในช่วงนี้',
-    rep_smv_rows_title: 'รายการรับเข้าและเบิกจ่าย',
+    rep_smv_rows_title: 'รายการรับเข้าและเบิกออก',
     // pages/stock-valuation.tsx, components/stock-valuation-cards.tsx — มูลค่าคงคลัง
     rep_sva_unit: 'ชิ้น',
     rep_sva_k_value: 'มูลค่าคงคลัง',
@@ -1895,7 +1895,7 @@ export const report: Dict = {
     rep_sva_no_wh: 'ไม่ระบุคลัง',
     rep_sva_dead_title: 'รายการที่ไม่เคลื่อนไหว',
     rep_sva_dead_info_scope: 'รายการที่ยังมีของ และไม่มีรับเข้า เบิก คืน ย้าย หรือปรับยอดเลยตามจำนวนวันที่เลือก นับถึงวันที่ของรายงาน',
-    rep_sva_dead_info_status: 'นับทุกระดับคงเหลือ ต่างจากสถานะ "ไม่เคลื่อนไหว" ในหน้าคลังที่นับเฉพาะของที่อยู่ในเกณฑ์ Min/Max',
+    rep_sva_dead_info_status: 'นับทุกระดับคงเหลือ ต่างจากสถานะ “ไม่เคลื่อนไหว” ในหน้าคลังที่นับเฉพาะของที่อยู่ในเกณฑ์ Min/Max',
     rep_sva_dead_seg: 'ไม่เคลื่อนไหวเกิน',
     rep_sva_dead_90: '90 วัน',
     rep_sva_dead_180: '180 วัน',
@@ -1908,7 +1908,7 @@ export const report: Dict = {
     rep_sva_dead_empty: 'ไม่มีรายการที่ไม่เคลื่อนไหวเกิน {period}',
     rep_sva_days_ago: '{n} วันก่อน',
     rep_sva_rows_title: 'รายการมูลค่าคงคลัง',
-    // pages/stock-below-min.tsx, components/stock-levels-cards.tsx — ต่ำกว่าขั้นต่ำและเกินขั้นสูง
+    // pages/stock-below-min.tsx, components/stock-levels-cards.tsx — ต่ำกว่า Min และเกิน Max
     rep_slv_unit: 'รายการ',
     rep_slv_k_out_short: 'หมด',
     rep_slv_k_low_foot: 'ขาดอีก {n} ชิ้นจึงถึง Min',

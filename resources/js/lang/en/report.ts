@@ -367,7 +367,7 @@ export const report: Dict = {
     rep_domain_stock: 'Stock',
     rep_stock_movements_title: 'Stock in & out',
     rep_stock_movements_desc: 'Stock received, issued and requested in the chosen dates',
-    rep_stock_below_min_title: 'Below min & overstock',
+    rep_stock_below_min_title: 'Below Min & overstock',
     rep_stock_below_min_desc: 'Items out of stock, below Min or over Max, and what to reorder',
     rep_stock_valuation_title: 'Stock value',
     rep_stock_valuation_desc: 'What the stock is worth, by category and warehouse',
@@ -1827,7 +1827,7 @@ export const report: Dict = {
     rep_crent_col_vs: 'Whole term against buying',
     rep_crent_rows_title: 'Assets by contract',
 
-    // pages/stock-movements.tsx, components/stock-movements-cards.tsx, stock-flow-card.tsx — รับเข้าและเบิกจ่าย
+    // pages/stock-movements.tsx, components/stock-movements-cards.tsx, stock-flow-card.tsx — รับเข้าและเบิกออก
     rep_smv_unit: 'pcs',
     rep_smv_pcs: '{n} pcs',
     rep_smv_times: '{n} times',
@@ -1912,7 +1912,7 @@ export const report: Dict = {
     rep_sva_dead_title: 'Dead stock',
     rep_sva_dead_info_scope:
         'Items still in stock with no receipt, issue, return, transfer or adjustment for the chosen number of days, counted to the report date.',
-    rep_sva_dead_info_status: 'Counts every stock level, unlike the "Dead stock" status on the Stock page, which counts only items within Min/Max.',
+    rep_sva_dead_info_status: 'Counts every stock level, unlike the “Dead stock” status on the Stock page, which counts only items within Min/Max.',
     rep_sva_dead_seg: 'Not moved for over',
     rep_sva_dead_90: '90 days',
     rep_sva_dead_180: '180 days',
@@ -1925,7 +1925,7 @@ export const report: Dict = {
     rep_sva_dead_empty: 'No items unmoved for over {period}',
     rep_sva_days_ago: '{n} days ago',
     rep_sva_rows_title: 'Stock value by item',
-    // pages/stock-below-min.tsx, components/stock-levels-cards.tsx — ต่ำกว่าขั้นต่ำและเกินขั้นสูง
+    // pages/stock-below-min.tsx, components/stock-levels-cards.tsx — ต่ำกว่า Min และเกิน Max
     rep_slv_unit: 'items',
     rep_slv_k_out_short: 'Out',
     rep_slv_k_low_foot: '{n} pcs short of Min',
@@ -1938,7 +1938,7 @@ export const report: Dict = {
     rep_slv_k_excess_foot: 'At average cost',
     rep_slv_c_level: 'On hand vs Min / Max',
     rep_slv_c_price: 'Unit price',
-    rep_slv_rows_title: 'Items outside min/max',
+    rep_slv_rows_title: 'Items outside Min/Max',
     rep_slv_gap_short: 'Short {n}',
     rep_slv_gap_short_sub: 'to Min',
     rep_slv_gap_over: 'Over {n}',
@@ -1949,7 +1949,7 @@ export const report: Dict = {
     rep_slv_price_none_sub: 'Never received',
     rep_slv_value_excess: 'Excess',
     rep_slv_cat_title: 'By category',
-    rep_slv_cat_empty: 'No items outside min/max',
+    rep_slv_cat_empty: 'No items outside Min/Max',
 
     // manual-sla-cards.tsx — labels moved from the component
     report_en_gb: 'en-GB',

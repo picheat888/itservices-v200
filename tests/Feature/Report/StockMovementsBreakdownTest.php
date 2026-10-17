@@ -28,7 +28,7 @@ use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
 /**
- * "รับเข้าและเบิกจ่าย" (stock.movements) breakdown: tiles, monthly flow, pending requests, top requesters and
+ * "รับเข้าและเบิกออก" (stock.movements) breakdown: tiles, monthly flow, pending requests, top requesters and
  * departments, count variance, card gating, the lot-cost value rule, the 12-month default range and the export sheets.
  */
 class StockMovementsBreakdownTest extends TestCase
