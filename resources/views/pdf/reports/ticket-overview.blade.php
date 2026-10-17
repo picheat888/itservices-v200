@@ -36,11 +36,11 @@
 </div>
 
 <table class="kpi"><tr>
-    <td>Ticket ทั้งหมด<b>{{ $k['total'] }}</b></td>
-    <td>ปิดสำเร็จ<b>{{ $k['completed'] }}</b></td>
+    <td>Ticket ทั้งหมด<b>{{ number_format($k['total']) }}</b></td>
+    <td>ปิดสำเร็จ<b>{{ number_format($k['completed']) }}</b></td>
     <td>ปิดตาม SLA<b>{{ $k['sla_rate'] === null ? '—' : $k['sla_rate'].'%' }}</b></td>
     <td>เวลาแก้ไขโดยเฉลี่ย<b>{{ $k['avg_resolve_hours'] === null ? '—' : $k['avg_resolve_hours'].' ชม.' }}</b></td>
-    <td>ค้างอยู่ตอนนี้<b>{{ $summary['backlog']['open'] + $summary['backlog']['in_progress'] }}</b></td>
+    <td>ค้างอยู่ตอนนี้<b>{{ number_format($summary['backlog']['open'] + $summary['backlog']['in_progress']) }}</b></td>
 </tr></table>
 
 <table class="grid"><tr>
@@ -48,7 +48,7 @@
         <h2>SLA ตามความสำคัญ</h2>
         <table class="data"><thead><tr><th>ความสำคัญ</th><th>วัดได้</th><th>%</th></tr></thead><tbody>
         @foreach ($summary['sla_by_priority'] as $p)
-            <tr><td>{{ \App\Services\Report\TicketLabels::priority($p['priority']) }}</td><td>{{ $p['measured'] }}</td><td>{{ $p['rate'] ?? '—' }}</td></tr>
+            <tr><td>{{ \App\Services\Report\TicketLabels::priority($p['priority']) }}</td><td>{{ number_format($p['measured']) }}</td><td>{{ $p['rate'] ?? '—' }}</td></tr>
         @endforeach
         </tbody></table>
     </td>
@@ -56,7 +56,7 @@
         <h2>แยกตามหมวด</h2>
         <table class="data"><thead><tr><th>หมวด</th><th>จำนวน</th></tr></thead><tbody>
         @foreach ($summary['by_category'] as $c)
-            <tr><td>{{ \App\Services\Report\TicketLabels::category($c['category']) }}</td><td>{{ $c['count'] }}</td></tr>
+            <tr><td>{{ \App\Services\Report\TicketLabels::category($c['category']) }}</td><td>{{ number_format($c['count']) }}</td></tr>
         @endforeach
         </tbody></table>
     </td>
@@ -65,7 +65,7 @@
 <h2>แยกตามแผนก</h2>
 <table class="data"><thead><tr><th>แผนก</th><th>Ticket</th>@foreach ($categories as $cat)<th>{{ \App\Services\Report\TicketLabels::category($cat->value) }}</th>@endforeach<th>ยังไม่ปิด</th><th>ทัน SLA %</th></tr></thead><tbody>
 @foreach ($summary['by_department'] as $d)
-    <tr><td>{{ $d['name_th'] ?: ($d['name'] ?? 'ไม่ระบุแผนก') }}</td><td>{{ $d['count'] }}</td>@foreach ($categories as $cat)<td>{{ $d['categories'][$cat->value] ?? 0 }}</td>@endforeach<td>{{ $d['open'] }}</td><td>{{ $d['sla_rate'] ?? '—' }}</td></tr>
+    <tr><td>{{ $d['name_th'] ?: ($d['name'] ?? 'ไม่ระบุแผนก') }}</td><td>{{ number_format($d['count']) }}</td>@foreach ($categories as $cat)<td>{{ number_format($d['categories'][$cat->value] ?? 0) }}</td>@endforeach<td>{{ number_format($d['open']) }}</td><td>{{ $d['sla_rate'] ?? '—' }}</td></tr>
 @endforeach
 </tbody></table>
 
@@ -73,13 +73,13 @@
 <div class="muted">นับเคสที่ปิดในช่วงวันที่</div>
 <table class="data"><thead><tr><th>ผู้รับผิดชอบ</th><th>ทั้งหมด</th><th>ปิดสำเร็จ</th><th>ยกเลิก</th><th>เวลาแก้ไขโดยเฉลี่ย (ชม.)</th><th>ทัน SLA %</th></tr></thead><tbody>
 @foreach ($summary['by_assignee'] as $a)
-    <tr><td>{{ $a['name'] ?? '—' }}</td><td>{{ $a['total'] }}</td><td>{{ $a['completed'] }}</td><td>{{ $a['canceled'] }}</td><td>{{ $a['avg_resolve_hours'] ?? '—' }}</td><td>{{ $a['sla_rate'] ?? '—' }}</td></tr>
+    <tr><td>{{ $a['name'] ?? '—' }}</td><td>{{ number_format($a['total']) }}</td><td>{{ number_format($a['completed']) }}</td><td>{{ number_format($a['canceled']) }}</td><td>{{ $a['avg_resolve_hours'] ?? '—' }}</td><td>{{ $a['sla_rate'] ?? '—' }}</td></tr>
 @endforeach
 </tbody></table>
 
 <h2>รายการ Ticket</h2>
 @if ($truncated)
-    <div class="muted">แสดง {{ $rows->count() }} รายการล่าสุดจาก {{ $k['total'] }} — ดูทั้งหมดได้ในไฟล์ Excel</div>
+    <div class="muted">แสดง {{ number_format($rows->count()) }} รายการล่าสุดจาก {{ number_format($k['total']) }} — ดูทั้งหมดได้ในไฟล์ Excel</div>
 @endif
 <table class="data">
     <thead><tr><th>เลขที่</th><th>เรื่อง</th><th>แผนก</th><th>หมวด</th><th>ความสำคัญ</th><th>สถานะ</th><th>ผู้รับผิดชอบ</th><th>เปิดเมื่อ</th><th>ชม.</th><th>SLA</th></tr></thead>

@@ -67,7 +67,7 @@
                 <div class="report">{{ $titles[$view] }}</div>
                 <div>SKU : <strong>{{ $item['sku'] }}</strong></div>
                 <div class="muted">{{ $item['name'] }}</div>
-                @if ($view === 'summary')<div>Current : <strong>{{ $item['current_stock'] }}</strong></div>@endif
+                @if ($view === 'summary')<div>Current : <strong>{{ number_format($item['current_stock']) }}</strong></div>@endif
             </td>
         </tr>
     </table>
@@ -101,7 +101,7 @@
             <thead><tr><th>#</th><th>Doc no.</th><th>Date/time</th><th>Action</th><th>Supplier</th><th>Reference doc</th><th>Warehouse</th><th class="r">Cost</th><th class="serials">Serials</th><th class="r">Qty</th><th>Note</th></tr></thead>
             <tbody>
             @forelse ($movesOf(['receive']) as $i => $m)
-                <tr><td>{{ $i + 1 }}</td><td>{{ $m['doc_no'] ?? '—' }}</td><td>{{ $fmt($m['moved_at']) }}</td><td>{{ $mvLabel[$m['type']] ?? $m['type'] }}</td><td>{{ $m['from_label'] ?? '—' }}</td><td>{{ $m['reference'] ?? '—' }}</td><td>{{ $m['to_label'] ?? '—' }}</td><td class="r">{{ $m['unit_cost'] ?? '—' }}</td><td class="serials">{{ $serialsOf($m, 'received') }}</td><td class="r">{{ $m['qty'] }}</td><td>{{ $m['notes'] ?? '—' }}</td></tr>
+                <tr><td>{{ $i + 1 }}</td><td>{{ $m['doc_no'] ?? '—' }}</td><td>{{ $fmt($m['moved_at']) }}</td><td>{{ $mvLabel[$m['type']] ?? $m['type'] }}</td><td>{{ $m['from_label'] ?? '—' }}</td><td>{{ $m['reference'] ?? '—' }}</td><td>{{ $m['to_label'] ?? '—' }}</td><td class="r">{{ isset($m['unit_cost']) ? number_format($m['unit_cost'], 2) : '—' }}</td><td class="serials">{{ $serialsOf($m, 'received') }}</td><td class="r">{{ number_format($m['qty']) }}</td><td>{{ $m['notes'] ?? '—' }}</td></tr>
             @empty
                 <tr><td colspan="11" style="text-align:center; padding:18px;">No records</td></tr>
             @endforelse
@@ -112,7 +112,7 @@
             <thead><tr><th>#</th><th>Doc no.</th><th>Date/time</th><th>Reference doc</th><th>Action</th><th>By</th><th>Serials</th><th class="r">Qty</th><th>Note</th></tr></thead>
             <tbody>
             @forelse ($movesOf(['adjust_up', 'adjust_down']) as $i => $m)
-                <tr><td>{{ $i + 1 }}</td><td>{{ $m['doc_no'] ?? '—' }}</td><td>{{ $fmt($m['moved_at']) }}</td><td>{{ $m['reference'] ?? '—' }}</td><td>{{ $mvLabel[$m['type']] ?? $m['type'] }}</td><td>{{ ($m['recorded_by_th'] ?? null) ?: ($m['recorded_by'] ?? '—') }}</td><td>{{ $serialsOf($m, 'adjusted') }}</td><td class="r">{{ $m['qty'] }}</td><td>{{ $m['notes'] ?? '—' }}</td></tr>
+                <tr><td>{{ $i + 1 }}</td><td>{{ $m['doc_no'] ?? '—' }}</td><td>{{ $fmt($m['moved_at']) }}</td><td>{{ $m['reference'] ?? '—' }}</td><td>{{ $mvLabel[$m['type']] ?? $m['type'] }}</td><td>{{ ($m['recorded_by_th'] ?? null) ?: ($m['recorded_by'] ?? '—') }}</td><td>{{ $serialsOf($m, 'adjusted') }}</td><td class="r">{{ number_format($m['qty']) }}</td><td>{{ $m['notes'] ?? '—' }}</td></tr>
             @empty
                 <tr><td colspan="9" style="text-align:center; padding:18px;">No records</td></tr>
             @endforelse
@@ -123,7 +123,7 @@
             <thead><tr><th>#</th><th>Doc no.</th><th>Date/time</th><th>Action</th><th>From</th><th>To</th><th>By</th><th>Serials</th><th class="r">Qty</th><th>Note</th></tr></thead>
             <tbody>
             @forelse ($movesOf(['transfer']) as $i => $m)
-                <tr><td>{{ $i + 1 }}</td><td>{{ $m['doc_no'] ?? '—' }}</td><td>{{ $fmt($m['moved_at']) }}</td><td>{{ $mvLabel[$m['type']] ?? $m['type'] }}</td><td>{{ $m['from_label'] ?? '—' }}</td><td>{{ $m['to_label'] ?? '—' }}</td><td>{{ ($m['recorded_by_th'] ?? null) ?: ($m['recorded_by'] ?? '—') }}</td><td>{{ $serialsOf($m, 'transferred') }}</td><td class="r">{{ $m['qty'] }}</td><td>{{ $m['notes'] ?? '—' }}</td></tr>
+                <tr><td>{{ $i + 1 }}</td><td>{{ $m['doc_no'] ?? '—' }}</td><td>{{ $fmt($m['moved_at']) }}</td><td>{{ $mvLabel[$m['type']] ?? $m['type'] }}</td><td>{{ $m['from_label'] ?? '—' }}</td><td>{{ $m['to_label'] ?? '—' }}</td><td>{{ ($m['recorded_by_th'] ?? null) ?: ($m['recorded_by'] ?? '—') }}</td><td>{{ $serialsOf($m, 'transferred') }}</td><td class="r">{{ number_format($m['qty']) }}</td><td>{{ $m['notes'] ?? '—' }}</td></tr>
             @empty
                 <tr><td colspan="10" style="text-align:center; padding:18px;">No records</td></tr>
             @endforelse
