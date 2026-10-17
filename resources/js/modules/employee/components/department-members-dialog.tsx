@@ -104,7 +104,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                             : { kind: 'empty', title: t('emp_empty_dept_members'), hint: t('emp_empty_dept_members_hint') }
                     }
                     searchPlaceholder={t('emp_search_by_position')}
-                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''} ${m.section ?? ''}`}
+                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''} ${m.section ?? ''} ${m.section_th ?? ''}`}
                 />
             </DialogContent>
         </Dialog>

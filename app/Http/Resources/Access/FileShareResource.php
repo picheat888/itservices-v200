@@ -29,6 +29,7 @@ class FileShareResource extends JsonResource
             'owner_employee_id' => $this->owner_employee_id,
             'owner' => $this->whenLoaded('owner', fn () => $this->owner?->name),
             'owner_th' => $this->whenLoaded('owner', fn () => $this->owner?->name_th),
+            'owner_code' => $this->whenLoaded('owner', fn () => $this->owner?->code),
             'owner_photo_url' => $this->whenLoaded('owner', fn () => $this->owner?->photo_url),
             'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
                 'id' => $m->id,
