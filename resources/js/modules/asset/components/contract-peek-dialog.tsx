@@ -131,10 +131,10 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         );
 
     const assetColumns: Column<ContractLinkedAsset>[] = [
-        { key: 'asset_code', header: 'Asset ID', render: (a) => <span className="text-xs">{a.asset_code}</span> },
+        { key: 'asset_code', header: t('contract_asset_col_id'), render: (a) => <span className="text-xs">{a.asset_code}</span> },
         { key: 'name', header: t('asset_owner_name'), render: (a) => <span className="font-medium">{a.name}</span> },
         { key: 'type', header: t('asset_type'), render: (a) => localPair(a.type, a.type_th, lang) ?? '—' },
-        { key: 'serial', header: 'Serial', render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
+        { key: 'serial', header: t('contract_asset_col_serial'), render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
         { key: 'owner', header: t('asset_peek_owner'), render: (a) => a.owner ?? '—' },
         {
             key: 'status',

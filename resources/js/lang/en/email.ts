@@ -179,4 +179,12 @@ export const email: Dict = {
     email_to_stock_alert_digest: 'Stock users',
     email_when_report_scheduled: 'A report schedule comes due',
     email_to_report_scheduled: 'The addresses in the schedule',
+
+    // pages/index.tsx — editor link text and HTML check
+    email_link_text: 'link text',
+    email_html_issue_unclosed: 'Unclosed element <{tag}>.',
+    email_html_issue_stray: 'Stray end tag </{tag}>.',
+    email_html_issue_open_inside: 'End tag </{tag}> seen, but there were open elements (<{inner}> on line {n}).',
+    email_html_issue_not_allowed: 'Element <{tag}> not allowed as child of element <{parent}> in this context.',
+    email_html_issue_unsupported: 'Element <{tag}> is not supported by some email clients.',
 };

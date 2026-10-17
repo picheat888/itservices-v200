@@ -172,7 +172,6 @@ export const asset: Dict = {
     asset_inventory_table: 'Asset inventory',
     asset_select_page_group: 'Select every asset with this status on this page',
     asset_select_row: 'Select',
-    asset_open_detail: 'View details',
     asset_none_filtered: 'No assets match the search or filters',
     asset_rows_per_page: 'Rows per page',
     asset_prev_page: 'Previous page',

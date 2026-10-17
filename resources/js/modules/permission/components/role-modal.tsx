@@ -88,7 +88,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
                 </DialogHeader>
                 <div className="space-y-4">
                     <Field label={t('perm_role_name')}>
-                        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Auditor" />
+                        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('perm_role_name_ph')} />
                     </Field>
                     <div>
                         <div className="mb-2 text-sm font-medium">{t('perm_role_color')}</div>

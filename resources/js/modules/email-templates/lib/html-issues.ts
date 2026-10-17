@@ -150,22 +150,21 @@ export function findHtmlIssues(html: string): HtmlIssue[] {
     return issues.sort((a, b) => a.start - b.start);
 }
 
-/**
- * The problem in the W3C HTML validator's own wording (e.g. "Stray end tag </p>."), left
- * untranslated so it reads the same as any HTML tool and can be searched as is. The last
- * kind is not a validator check, so it borrows the same sentence shape.
- */
-export function htmlIssueMessage(issue: HtmlIssue): string {
+/** The problem as one sentence from the dictionary (`t` is the caller's translator, so this file stays free of imports). */
+export function htmlIssueMessage(issue: HtmlIssue, t: (key: string) => string): string {
     switch (issue.kind) {
         case 'unclosed':
-            return `Unclosed element <${issue.tag}>.`;
+            return t('email_html_issue_unclosed').replace('{tag}', issue.tag);
         case 'stray':
-            return `Stray end tag </${issue.tag}>.`;
+            return t('email_html_issue_stray').replace('{tag}', issue.tag);
         case 'misnested':
-            return `End tag </${issue.tag}> seen, but there were open elements (<${issue.inner}> on line ${issue.innerLine}).`;
+            return t('email_html_issue_open_inside')
+                .replace('{tag}', issue.tag)
+                .replace('{inner}', issue.inner)
+                .replace('{n}', String(issue.innerLine));
         case 'list_child':
-            return `Element <${issue.tag}> not allowed as child of element <${issue.parent}> in this context.`;
+            return t('email_html_issue_not_allowed').replace('{tag}', issue.tag).replace('{parent}', issue.parent);
         case 'unsupported':
-            return `Element <${issue.tag}> is not supported by some email clients.`;
+            return t('email_html_issue_unsupported').replace('{tag}', issue.tag);
     }
 }

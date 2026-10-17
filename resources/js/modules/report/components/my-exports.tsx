@@ -184,7 +184,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                     )}
                 </div>
                 {item.status === 'ready' && (
-                    <span className="text-muted-foreground mr-1 text-xs whitespace-nowrap">{relativeTime(madeAt, lang, '')}</span>
+                    <span className="text-muted-foreground mr-1 text-xs whitespace-nowrap">{relativeTime(madeAt, t, '')}</span>
                 )}
             </div>
         </div>

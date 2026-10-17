@@ -348,7 +348,6 @@ function ModuleChip({ label, count, selected, onSelect }: { label: string; count
 export function NotificationSettingsPane() {
     const t = useT();
     const rights = useBellRights();
-    const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useNotificationTemplates();
     const { update } = useNotificationTemplateMutations();
     // Module chip, search, page and rows-per-page live in the URL
@@ -470,7 +469,7 @@ export function NotificationSettingsPane() {
             header: t('notification_col_last_sent'),
             className: 'w-[8%] whitespace-nowrap',
             render: (n) => (
-                <span className="text-muted-foreground text-xs tabular-nums">{relativeTime(n.last_sent_at, lang, t('notification_never_sent'))}</span>
+                <span className="text-muted-foreground text-xs tabular-nums">{relativeTime(n.last_sent_at, t, t('notification_never_sent'))}</span>
             ),
         },
         {

@@ -122,7 +122,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={Zap}
-                    eyebrow="Take Case"
+                    eyebrow={view?.ticket_no}
                     title={t('ticket_take_case')}
                     code={view?.ticket_no}
                     subtitle={view ? <span className="text-muted-foreground truncate text-sm">{view.subject}</span> : undefined}

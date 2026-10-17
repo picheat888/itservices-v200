@@ -9,7 +9,6 @@ import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { useUiStore } from '@/stores/ui';
 import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useReportRights } from '../hooks/use-report-rights';
@@ -85,10 +84,9 @@ function StatusPill({ tone, children }: { tone: 'blue' | 'red'; children: React.
  */
 function LastExport({ item }: { item: ReportExportItem }) {
     const t = useT();
-    const lang = useUiStore((st) => st.lang);
     if (item.status === 'queued' || item.status === 'running') return <StatusPill tone="blue">{t('rep_last_export_building')}</StatusPill>;
     if (item.status === 'failed') return <StatusPill tone="red">{t('rep_last_export_failed')}</StatusPill>;
-    return <>{t('rep_last_export_at').replace('{t}', relativeTime(item.finished_at ?? item.created_at, lang, ''))}</>;
+    return <>{t('rep_last_export_at').replace('{t}', relativeTime(item.finished_at ?? item.created_at, t, ''))}</>;
 }
 
 /** Pin toggle at the end of a report row — outside the row's link so it never navigates. */

@@ -79,7 +79,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={UserPlus}
-                    eyebrow="Assign"
+                    eyebrow={view?.ticket_no}
                     title={t('ticket_assign')}
                     code={view?.ticket_no}
                     srDescription={t('ticket_assign')}

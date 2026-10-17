@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { bindDateFormat } from '../../resources/js/shared/lib/datetime.ts';
+import { bindDateFormat, relativeTime } from '../../resources/js/shared/lib/datetime.ts';
 
 interface Case {
     fn: string;
@@ -66,4 +66,23 @@ test('storedDateText reads a zoned instant as local time and drops a midnight ti
     assert.equal(m.storedDateText('2026-10-20', fmt), '20/10/2026');
     assert.equal(m.storedDateText('2026-10-13T07:05:00.000000Z', fmt), '13/10/2026 14:05');
     assert.equal(m.storedDateText('2026-10-13 14:05:00', fmt), '13/10/2026 14:05');
+});
+
+const relT = (k: string) =>
+    ({
+        rel_just_now: 'just now',
+        rel_minutes: '{n} min ago',
+        rel_hours: '{n} hrs ago',
+        rel_hours_one: '{n} hr ago',
+        rel_days: '{n} days ago',
+        rel_days_one: '{n} day ago',
+    })[k] ?? k;
+
+test('relativeTime words come from the dictionary', () => {
+    const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+    assert.equal(relativeTime(ago(10_000), relT, 'never'), 'just now');
+    assert.equal(relativeTime(ago(5 * 60_000), relT, 'never'), '5 min ago');
+    assert.equal(relativeTime(ago(60 * 60_000), relT, 'never'), '1 hr ago');
+    assert.equal(relativeTime(ago(3 * 86_400_000), relT, 'never'), '3 days ago');
+    assert.equal(relativeTime(null, relT, 'never'), 'never');
 });

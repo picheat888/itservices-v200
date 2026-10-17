@@ -171,7 +171,6 @@ export const asset: Dict = {
     asset_inventory_table: 'รายการทรัพย์สิน',
     asset_select_page_group: 'เลือกทุกเครื่องในหน้านี้ที่สถานะเดียวกัน',
     asset_select_row: 'เลือก',
-    asset_open_detail: 'ดูรายละเอียด',
     asset_none_filtered: 'ไม่พบทรัพย์สินที่ตรงกับการค้นหาหรือตัวกรอง',
     asset_rows_per_page: 'แสดง',
     asset_prev_page: 'หน้าก่อนหน้า',

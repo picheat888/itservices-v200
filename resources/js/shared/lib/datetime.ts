@@ -182,14 +182,15 @@ export function dateWidthSamples(config: LooseConfig, lang: string): { dates: st
     };
 }
 
-/** "5 hours ago" for lists that answer "is this in use", not "exactly when". */
-export function relativeTime(iso: string | null, lang: string, neverLabel: string): string {
+/** "5 hours ago" for lists that answer "is this in use", not "exactly when". `t` is the caller's translator. */
+export function relativeTime(iso: string | null, t: (key: string) => string, neverLabel: string): string {
     if (!iso) return neverLabel;
+    const fill = (key: string, n: number) => t(key).replace('{n}', String(n));
     const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-    if (mins < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now';
-    if (mins < 60) return lang === 'th' ? `${mins} นาทีที่แล้ว` : `${mins} min ago`;
+    if (mins < 1) return t('rel_just_now');
+    if (mins < 60) return fill('rel_minutes', mins);
     const hrs = Math.round(mins / 60);
-    if (hrs < 24) return lang === 'th' ? `${hrs} ชั่วโมงที่แล้ว` : `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
+    if (hrs < 24) return fill(hrs === 1 ? 'rel_hours_one' : 'rel_hours', hrs);
     const days = Math.round(hrs / 24);
-    return lang === 'th' ? `${days} วันที่แล้ว` : `${days} day${days > 1 ? 's' : ''} ago`;
+    return fill(days === 1 ? 'rel_days_one' : 'rel_days', days);
 }

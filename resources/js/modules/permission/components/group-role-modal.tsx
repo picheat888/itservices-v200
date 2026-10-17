@@ -190,7 +190,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                     </DialogHeader>
                     <div className="space-y-4">
                         <Field label={t('gr_name')}>
-                            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Plant 1 - Managers" />
+                            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('gr_name_ph')} />
                         </Field>
                         <Field label={t('gr_role')}>
                             <Select value={role || undefined} onValueChange={setRole}>

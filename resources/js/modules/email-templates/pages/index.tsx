@@ -326,7 +326,7 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
                         {t('email_html_line').replace('{line}', String(issue.line))}
                     </span>
                     <span className="text-foreground">
-                        <TagText text={htmlIssueMessage(issue)} />
+                        <TagText text={htmlIssueMessage(issue, t)} />
                     </span>
                 </li>
             ))}
@@ -470,6 +470,7 @@ function highlightLine(text: string, from: number, marks: HtmlIssue[]): string {
 
 /** The body editor's colour layer, one numbered line per row; a red number shows its problems on hover. */
 function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlIssue[]; layerRef: RefObject<HTMLDivElement | null> }) {
+    const t = useT();
     let offset = 0;
     const rows = value.split('\n').map((text, i) => {
         const html = highlightLine(text, offset, marks);
@@ -504,7 +505,7 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
                                 >
                                     {lineIssues.map((issue, i) => (
                                         <span key={i} className="block">
-                                            <TagText text={htmlIssueMessage(issue)} />
+                                            <TagText text={htmlIssueMessage(issue, t)} />
                                         </span>
                                     ))}
                                 </span>
@@ -536,7 +537,6 @@ function ToolBtn({ title, onClick, children }: { title: string; onClick: () => v
 export default function EmailTemplatesPage() {
     const t = useT();
     const confirm = useConfirm();
-    const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useEmailTemplates();
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
     const rights = useEmailRights();
@@ -644,7 +644,7 @@ export default function EmailTemplatesPage() {
             className: 'w-[13%]',
             hideBelow: 'lg',
             render: (tp) => (
-                <span className="text-muted-foreground text-xs whitespace-nowrap">{relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}</span>
+                <span className="text-muted-foreground text-xs whitespace-nowrap">{relativeTime(tp.last_sent_at, t, t('email_never_sent'))}</span>
             ),
         },
         {
@@ -935,7 +935,7 @@ function BodyEditor({
     const insertVar = (key: string) => insert(`{{${key}}}`);
     const insertLink = () =>
         editBody((sel) => {
-            const text = `<a href="">${sel || 'link text'}</a>`;
+            const text = `<a href="">${sel || t('email_link_text')}</a>`;
             return { text, selStart: 9, selEnd: 9 };
         });
     const insertList = () =>

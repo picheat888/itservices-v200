@@ -135,7 +135,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={MessageSquarePlus}
-                    eyebrow="Open Ticket"
+                    eyebrow={t('ticket_new_eyebrow')}
                     title={t('ticket_form_title')}
                     srDescription={t('ticket_form_title')}
                 />
@@ -241,7 +241,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                     }}
                                     disabled={created}
                                     maxLength={60}
-                                    placeholder="+66 81 234 5678 / ext. 1305"
+                                    placeholder={t('emp_phone_ph')}
                                 />
                             </Field>
                         </section>

@@ -179,4 +179,12 @@ export const email: Dict = {
     email_to_stock_alert_digest: 'ผู้ใช้งานคลังอะไหล่',
     email_when_report_scheduled: 'ถึงเวลาตามตารางส่งรายงาน',
     email_to_report_scheduled: 'อีเมลที่ระบุในตารางส่ง',
+
+    // pages/index.tsx — editor link text and HTML check
+    email_link_text: 'ข้อความลิงก์',
+    email_html_issue_unclosed: 'ไม่ได้ปิดแท็ก <{tag}>',
+    email_html_issue_stray: 'แท็กปิด </{tag}> ไม่มีแท็กเปิด',
+    email_html_issue_open_inside: 'เจอ </{tag}> แต่ <{inner}> บรรทัด {n} ยังไม่ปิด',
+    email_html_issue_not_allowed: 'ใส่ <{tag}> ไว้ใน <{parent}> ไม่ได้',
+    email_html_issue_unsupported: 'โปรแกรมอีเมลบางตัวไม่รองรับ <{tag}>',
 };

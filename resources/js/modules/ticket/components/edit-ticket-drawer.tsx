@@ -168,7 +168,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
-                <FocusDialogHeader icon={Pencil} eyebrow="Edit Ticket" title={t('ticket_edit_title')} srDescription={t('ticket_edit_sub')} />
+                <FocusDialogHeader icon={Pencil} eyebrow={ticket?.ticket_no} title={t('ticket_edit_title')} srDescription={t('ticket_edit_sub')} />
 
                 {/* Two equal columns mirroring Open Ticket: left = describe the issue, right = reach-back + evidence. */}
                 <div className="grid flex-1 grid-cols-1 content-start gap-x-10 gap-y-6 overflow-y-auto border-t px-6 py-6 sm:grid-cols-2">
@@ -241,12 +241,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                 {t('ticket_sec_contact')} <span className="text-destructive">*</span>
                             </SectionLabel>
                             <Field label={t('ticket_callback_phone')} required error={errors.phone} help={t('ticket_callback_help')}>
-                                <Input
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    maxLength={60}
-                                    placeholder="+66 81 234 5678 / ext. 1305"
-                                />
+                                <Input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={60} placeholder={t('emp_phone_ph')} />
                             </Field>
                         </section>
 

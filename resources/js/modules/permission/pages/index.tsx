@@ -731,7 +731,7 @@ function GroupRolesTab() {
                                         <span className="truncate font-semibold">{g.name}</span>
                                         {isDefault && (
                                             <span className="bg-brand/10 text-brand shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                                                Default
+                                                {t('gr_default_badge')}
                                             </span>
                                         )}
                                     </div>
@@ -1272,7 +1272,7 @@ function AuditTab() {
                                                                 ? 'bg-brand/10 text-brand'
                                                                 : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                                                         )}
-                                                        aria-label="View details"
+                                                        aria-label={t('asset_open_detail')}
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </button>

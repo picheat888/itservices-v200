@@ -145,7 +145,7 @@ export function TicketUpdateModal({
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={MessageSquarePlus}
-                    eyebrow="Progress"
+                    eyebrow={view?.ticket_no}
                     title={t('ticket_update_title')}
                     code={view?.ticket_no}
                     srDescription={t('ticket_update_title')}
