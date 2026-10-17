@@ -157,11 +157,13 @@ export function onboardingRowClass(request: Pick<ServiceRequest, 'origin' | 'can
  * also names the person it is for, because an approver reads the list before the detail.
  */
 export function requestTitle(
-    request: Pick<ServiceRequest, 'type' | 'origin'> & { requester?: { name: string } },
+    request: Pick<ServiceRequest, 'type' | 'origin'> & { requester?: { name: string; name_th?: string | null } },
     t: (key: string) => string,
+    lang: string,
 ): string {
     const service = t(REQUEST_TYPE_META[request.type].labelKey);
-    const forWhom = request.requester?.name;
+    // Same pick as localName(); inlined so node --test can load this file
+    const forWhom = request.requester ? (lang === 'th' && request.requester.name_th) || request.requester.name : null;
 
     return isOnBehalfRequest(request) && forWhom
         ? t('req_auto_title_for').replace('{service}', service).replace('{name}', forWhom)

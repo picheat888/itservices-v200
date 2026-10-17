@@ -1,7 +1,7 @@
 // localName: Thai when present, English otherwise.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { localLabel, localName, localPair, nameSearch } from '../../resources/js/shared/lib/local-name.ts';
+import { localLabel, localName, localPair, nameSearch, otherName } from '../../resources/js/shared/lib/local-name.ts';
 
 test('Thai shows name_th and falls back to name when it is empty', () => {
     assert.equal(localName({ name: 'Sales', name_th: 'ฝ่ายขาย' }, 'th'), 'ฝ่ายขาย');
@@ -33,4 +33,13 @@ test('localLabel picks label_th in Thai and falls back to label_en', () => {
     assert.equal(localLabel({ label_en: 'Laptop', label_th: '' }, 'th'), 'Laptop');
     assert.equal(localLabel({ label_en: 'Laptop', label_th: null }, 'th'), 'Laptop');
     assert.equal(localLabel({ label_en: 'Laptop', label_th: 'โน้ตบุ๊ก' }, 'en'), 'Laptop');
+});
+
+test('otherName is the name in the other language, null when missing or the same', () => {
+    assert.equal(otherName({ name: 'Somchai Jaidee', name_th: 'สมชาย ใจดี' }, 'th'), 'Somchai Jaidee');
+    assert.equal(otherName({ name: 'Somchai Jaidee', name_th: 'สมชาย ใจดี' }, 'en'), 'สมชาย ใจดี');
+    assert.equal(otherName({ name: 'Somchai Jaidee', name_th: null }, 'th'), null);
+    assert.equal(otherName({ name: 'Somchai Jaidee', name_th: '' }, 'en'), null);
+    assert.equal(otherName({ name: 'IT', name_th: 'IT' }, 'th'), null);
+    assert.equal(otherName(null, 'th'), null);
 });

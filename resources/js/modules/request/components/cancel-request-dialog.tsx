@@ -10,6 +10,7 @@ import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
+import { useUiStore } from '@/stores/ui';
 import { Ban, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRequestMutations } from '../hooks/use-requests';
@@ -24,6 +25,7 @@ export function CancelRequestDialog({
     onCancelled: () => void;
 }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { cancel } = useRequestMutations();
 
     // Keep the last request so the content stays during the close animation
@@ -82,7 +84,7 @@ export function CancelRequestDialog({
                             {formError}
                         </div>
                     )}
-                    <p className="border-border rounded-lg border px-3.5 py-2.5 text-sm font-semibold">{requestTitle(ctx, t)}</p>
+                    <p className="border-border rounded-lg border px-3.5 py-2.5 text-sm font-semibold">{requestTitle(ctx, t, lang)}</p>
                     <Field label={t('req_cancel_reason')} required error={reasonErr} name="cancel_reason">
                         <Textarea
                             autoFocus

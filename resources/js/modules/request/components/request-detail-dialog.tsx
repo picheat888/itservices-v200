@@ -171,7 +171,7 @@ function RequestDetailBody({
 
     const meta = REQUEST_TYPE_META[request.type];
     // From `type` in the reader's language; `request.title` is the server's English subject.
-    const shownTitle = requestTitle(request, t);
+    const shownTitle = requestTitle(request, t, lang);
 
     // IT sees why Complete is missing: the linked case is still open.
     const caseInFlight = request.ticket?.status === 'open' || request.ticket?.status === 'in_progress';
