@@ -25,7 +25,7 @@ class UpdateReportScheduleRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return ReportCatalogue::allows($this->user(), $this->schedule()->report_key);
+        return ReportCatalogue::canSchedule($this->user(), $this->schedule()->report_key);
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Report;
 
 use App\Http\Requests\Report\Concerns\SchedulesReport;
+use App\Support\ReportCatalogue;
 
 /**
  * "ตั้งเวลาส่ง" on the Ticket & SLA overview page: the screen's filters and a format (as an
@@ -11,6 +12,11 @@ use App\Http\Requests\Report\Concerns\SchedulesReport;
 class ScheduleTicketOverviewRequest extends ExportTicketOverviewRequest
 {
     use SchedulesReport;
+
+    public function authorize(): bool
+    {
+        return ReportCatalogue::canSchedule($this->user(), ReportCatalogue::TICKETS_OVERVIEW);
+    }
 
     /**
      * @return array<string, mixed>

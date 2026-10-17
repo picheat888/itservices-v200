@@ -68,6 +68,7 @@ class ReportScheduleController extends Controller
 
     public function destroy(Request $request, int $schedule): JsonResponse
     {
+        abort_unless((bool) $request->user()->hasPermission(ReportCatalogue::SCHEDULE), 403);
         $this->schedules->delete($this->owned($request, $schedule));
 
         return response()->json(['message' => 'success']);
@@ -77,7 +78,7 @@ class ReportScheduleController extends Controller
     public function sendNow(Request $request, int $schedule): JsonResponse
     {
         $row = $this->owned($request, $schedule);
-        abort_unless(ReportCatalogue::allows($request->user(), $row->report_key), 403);
+        abort_unless(ReportCatalogue::canSchedule($request->user(), $row->report_key), 403);
         $this->schedules->sendNow($row);
 
         return response()->json(['message' => 'success'], 202);

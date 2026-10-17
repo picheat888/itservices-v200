@@ -77,7 +77,7 @@ class ReportExportService
         $export->update(['status' => ReportExport::RUNNING, 'started_at' => now()]);
         $user = $export->user;
 
-        if ($user === null || ! ReportCatalogue::allows($user, $export->report_key)) {
+        if ($user === null || ! ReportCatalogue::canExport($user, $export->report_key)) {
             $this->fail($export, 'forbidden');
 
             return;

@@ -137,7 +137,7 @@ class ReportScheduleService
     {
         $owner = $schedule->user;
 
-        if ($owner === null || ! ReportCatalogue::allows($owner, $schedule->report_key)) {
+        if ($owner === null || ! ReportCatalogue::canSchedule($owner, $schedule->report_key)) {
             $schedule->update(['active' => false]);
             $this->finish($schedule, ReportSchedule::FAILED, 'forbidden');
 

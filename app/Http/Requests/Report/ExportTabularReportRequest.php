@@ -14,6 +14,11 @@ use Illuminate\Validation\Rule;
  */
 class ExportTabularReportRequest extends TabularReportRequest
 {
+    public function authorize(): bool
+    {
+        return ReportCatalogue::canExport($this->user(), $this->report()->key());
+    }
+
     /**
      * @return array<string, mixed>
      */
