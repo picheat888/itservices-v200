@@ -33,7 +33,7 @@ class StockCountController extends Controller
         $this->gateView($request);
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-        $paginator = StockCount::with(['countedBy', 'lines'])->latest('id')->paginate($perPage);
+        $paginator = StockCount::with(['countedBy', 'lines.item'])->latest('id')->paginate($perPage);
 
         return response()->json([
             'data' => StockCountResource::collection($paginator->items()),

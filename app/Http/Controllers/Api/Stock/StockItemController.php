@@ -48,7 +48,7 @@ class StockItemController extends Controller
 
         $query = StockItem::query()
             ->select('stock_items.*')
-            ->with(['lots', 'balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category'])
+            ->with(['lots.movement', 'balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category'])
             // Reserved = qty held by approved-but-unfulfilled requests.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
             // FIFO stock value as a sortable subquery column.
@@ -123,6 +123,9 @@ class StockItemController extends Controller
         $low = $items->filter(fn (StockItem $i) => $i->status() === 'low');
         $over = $items->filter(fn (StockItem $i) => $i->status() === 'over');
         $dead = $items->filter(fn (StockItem $i) => $i->status() === 'dead');
+
+        // The four lists render lot, balance and master names; load them once for those items only
+        $out->concat($low)->concat($over)->concat($dead)->load(['lots.movement', 'balances.warehouse', 'unit', 'warrantyType', 'brand', 'model']);
 
         // Aggregate per-warehouse totals from stock_balances so that items
         // split across multiple warehouses are counted accurately.
