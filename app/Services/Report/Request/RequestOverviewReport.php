@@ -19,6 +19,7 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\DateDisplay;
+use App\Support\SearchTerms;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -69,6 +70,7 @@ class RequestOverviewReport extends TabularReport
             ReportFilter::select('type', Options::fromLabels(self::typeKeys())),
             ReportFilter::select('department_id', Options::departments()),
             ReportFilter::select('status', Options::fromLabels(self::STATUS_KEYS)),
+            ReportFilter::search()->placeholderKey('rep_ph_requests_overview'),
         ];
     }
 
@@ -116,6 +118,11 @@ class RequestOverviewReport extends TabularReport
             ->with(['employee.department', 'requestOption', 'software', 'fileShare', 'emailGroup', 'socialPlatform',
                 'approvals' => fn ($q) => $q->where('kind', 'completion')])
             ->whereBetween('created_at', [$from, $to])
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
+                'reference', 'requester_name',
+                SearchTerms::related('employee', ['code', ...SearchTerms::personName()]),
+                fn (Builder $any, string $like, string $word) => (($types = RequestType::matching($word)) ? $any->orWhereIn('type', $types) : $any),
+            ]))
             ->orderByDesc('created_at')->orderByDesc('id');
     }
 

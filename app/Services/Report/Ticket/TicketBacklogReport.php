@@ -84,7 +84,7 @@ class TicketBacklogReport extends TabularReport
                 'due_soon' => $q->whereRaw('NOT '.self::overSlaSql())->whereRaw("{$due} <= {$soon}"),
                 default => $q->whereRaw('NOT '.self::overSlaSql())->whereRaw("({$due} IS NULL OR {$due} > {$soon})"),
             })
-            ->when($filters['search'], fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['ticket_no', 'subject']))
+            ->when($filters['search'], fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['ticket_no', 'subject', SearchTerms::related('requester', ['code', ...SearchTerms::personName()])]))
             // Most overdue first; a ticket with no deadline at all goes last.
             ->orderByRaw("CASE WHEN {$due} IS NULL THEN 1 ELSE 0 END")
             ->orderByRaw($due)

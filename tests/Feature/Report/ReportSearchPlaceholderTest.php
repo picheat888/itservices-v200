@@ -4,11 +4,14 @@
 
 namespace Tests\Feature\Report;
 
+use App\Services\Report\Access\AccessOverviewReport;
 use App\Services\Report\Access\AccessResourceMembersReport;
 use App\Services\Report\Access\SoftwareLicenseReport;
+use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
 use App\Services\Report\Employee\EmployeeOpenItemsReport;
 use App\Services\Report\Request\ItPendingRequestReport;
+use App\Services\Report\Request\RequestOverviewReport;
 use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Stock\StockMovementReport;
 use App\Services\Report\Stock\StockValuationReport;
@@ -31,6 +34,9 @@ class ReportSearchPlaceholderTest extends TestCase
         StockMovementReport::class => 'rep_ph_stock_movements',
         StockValuationReport::class => 'rep_ph_stock_items',
         StockBelowMinReport::class => 'rep_ph_stock_items',
+        AccessOverviewReport::class => 'rep_ph_access_overview',
+        RequestOverviewReport::class => 'rep_ph_requests_overview',
+        AssetOverviewReport::class => 'rep_ph_assets_overview',
     ];
 
     public function test_each_report_search_box_has_its_own_wording(): void

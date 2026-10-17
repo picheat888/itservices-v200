@@ -12,6 +12,7 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\SearchTerms;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -99,6 +100,15 @@ class AccessResourceMembersReport extends TabularReport
         });
     }
 
+    /** Search field: the resource has an active member whose code or name matches. */
+    private static function activeMember(): Closure
+    {
+        return fn (Builder $query, string $like, string $word = '') => $query->orWhereHas(
+            'memberships',
+            fn (Builder $m) => SearchTerms::anyLike($m->whereNull('revoked_at'), [SearchTerms::related('employee', ['code', ...SearchTerms::personName()])], $like, $word),
+        );
+    }
+
     /**
      * Each resource the filters keep, with its owner and what its active members are, most to do first.
      *
@@ -129,7 +139,7 @@ class AccessResourceMembersReport extends TabularReport
             $model::query()
                 ->with([...($ownable ? ['department', 'owner.department'] : []), 'memberships' => fn ($m) => $m->whereNull('revoked_at')->with('employee.department')])
                 ->when($filters['department_id'] ?? null, fn (Builder $q, $id) => $q->where('department_id', (int) $id))
-                ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['code', 'name', self::DETAIL_COLUMNS[$type]]))
+                ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, ['code', 'name', self::DETAIL_COLUMNS[$type], self::activeMember()]))
                 ->orderBy('code')->get()
                 ->each(fn (Model $r) => $rows->push($this->figuresOf($r, $type)));
         }

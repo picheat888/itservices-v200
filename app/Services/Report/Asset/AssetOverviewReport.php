@@ -11,6 +11,7 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use App\Support\DateDisplay;
+use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -98,8 +99,8 @@ class AssetOverviewReport extends TabularReport
             ReportFilter::select('source', Options::fromLabels(self::SOURCE_KEYS)),
             // "หมวดหมู่" here, as asset categories are called in Master Data; the shared label says "หมวด".
             ReportFilter::select('category_id', Options::categories())->labelKey('rep_fl_asset_category'),
-            // No free-text search: this page reads the whole picture, and finding one asset is /assets' job.
             ReportFilter::select('department_id', Options::departments()),
+            ReportFilter::search()->placeholderKey('rep_ph_assets_overview'),
         ];
     }
 
@@ -122,6 +123,11 @@ class AssetOverviewReport extends TabularReport
     public function query(User $viewer, array $filters): Builder
     {
         return $this->filtered($filters)
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
+                'assets.asset_code', 'assets.tag', 'assets.serial', 'assets.owner',
+                SearchTerms::related('brand', ['name']),
+                SearchTerms::related('ownerEmployee', ['code', ...SearchTerms::personName()]),
+            ]))
             ->with([
                 'category:id,name,name_th', 'brand:id,name', 'model:id,name', 'ownerEmployee.department:id,name,name_th',
                 'location:id,name', 'warehouse:id,name', 'contract:id,end_date,value', 'creator:id,name',
