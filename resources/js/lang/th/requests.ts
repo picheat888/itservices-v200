@@ -57,7 +57,7 @@ export const requests: Dict = {
     req_inactive: 'ปิดรับคำขอชั่วคราว',
 
     // pages/index.tsx — ตารางคำขอ
-    req_col_title: 'หัวข้อ',
+    req_col_title: 'เรื่อง',
     req_col_submitted: 'วันที่ยื่น',
     req_col_type: 'ประเภท',
     req_col_requester: 'ผู้ขอ',
@@ -127,7 +127,7 @@ export const requests: Dict = {
     req_reason_label: 'เหตุผล',
     req_requester: 'ผู้ขอ',
     req_detail_section: 'รายละเอียดคำขอ',
-    req_subject: 'หัวข้อ',
+    req_subject: 'เรื่อง',
     req_requester_name: 'ชื่อ',
     req_department: 'แผนก',
     req_emp_code: 'รหัสพนักงาน',

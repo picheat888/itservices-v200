@@ -136,7 +136,7 @@ function WaitingCard({
                 sub={t('dash_n_requests').replace('{n}', String(requests.waiting_total))}
             />
             {requests.waiting.length === 0 ? (
-                <CardEmpty>{t('dash_empty_waiting')}</CardEmpty>
+                <CardEmpty>{t('dash_empty_waiting').replace('{n}', String(requests.waiting_after_days))}</CardEmpty>
             ) : (
                 <table className="w-full text-sm">
                     <thead className="text-muted-foreground text-xs">
