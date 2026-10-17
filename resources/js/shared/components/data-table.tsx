@@ -213,8 +213,7 @@ export function DataTable<T>({
     const stickyStyle = (c: Column<T>): React.CSSProperties | undefined =>
         c.sticky ? { position: 'sticky', [c.sticky]: stickyOffset(c) } : undefined;
     // Pinned cells need their own solid background so scrolled cells do not show through
-    const stickyClass = (c: Column<T>, head: boolean) =>
-        c.sticky ? cn('bg-card border-border/60 z-[1] border-r', head && 'dark:bg-muted') : undefined;
+    const stickyClass = (c: Column<T>, head: boolean) => (c.sticky ? cn('bg-card z-[1]', head && 'dark:bg-muted') : undefined);
 
     // Fixed widths plus room for each flexible column among the columns a screen shows, so a narrow screen scrolls instead of squeezing it to 0
     const floorOf = (visible: Column<T>[]) => {
