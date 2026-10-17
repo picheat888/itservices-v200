@@ -240,7 +240,7 @@ export default function RequestsPage() {
         {
             key: 'requester',
             header: t('req_col_requester'),
-            width: '140px',
+            width: '190px',
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={r.requester.name} className="text-sm font-medium" />
@@ -257,7 +257,7 @@ export default function RequestsPage() {
         {
             key: 'department',
             header: t('req_department'),
-            width: '140px',
+            width: '190px',
             render: (r) => <TruncText text={r.requester.department} className="text-sm" />,
         },
         {
@@ -277,7 +277,7 @@ export default function RequestsPage() {
         {
             key: 'waiting',
             header: t('req_col_waiting'),
-            width: '160px',
+            width: '220px',
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
                     <div className="min-w-0">
