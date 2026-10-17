@@ -2,9 +2,9 @@ import { useT } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
-import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { PermissionCardHeader } from './permission-card-header';
+import { PermissionSwitch } from './permission-switch';
 
 /**
  * Master-row behaviour for a card:
@@ -15,30 +15,6 @@ import { PermissionCardHeader } from './permission-card-header';
  *   editable; the master just flips them all on/off at once.
  */
 export type ModuleMaster = { mode: 'key'; key: string } | { mode: 'select-all' };
-
-/** A single toggle, matching the matrix / stock-tree switch (h-5 w-9). */
-function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            disabled={locked}
-            onClick={onClick}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-brand' : 'bg-muted')}
-        >
-            <span
-                className={cn(
-                    'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                    on ? 'left-[1.125rem]' : 'left-0.5',
-                )}
-            >
-                {on && <Check className="text-brand h-2.5 w-2.5" />}
-                {locked && !on && <Lock className="text-muted-foreground h-2.5 w-2.5" />}
-            </span>
-        </button>
-    );
-}
 
 /** Brand-tinted identity band: title + subtitle on the left, master switch on the right. */
 function MasterBand({
@@ -61,7 +37,7 @@ function MasterBand({
                 <div className="text-muted-foreground text-[10.5px]">{subtitle}</div>
             </div>
             <div className="ml-auto">
-                <Switch on={on} locked={locked} onClick={onToggle} />
+                <PermissionSwitch on={on} locked={locked} onClick={onToggle} />
             </div>
         </div>
     );
@@ -92,7 +68,7 @@ function PermissionRow({
                 {comingSoon && <span className="ml-1 text-[11px] italic opacity-70">({t('coming_soon_tag')})</span>}
             </span>
             <span className="ml-auto">
-                <Switch on={on} locked={locked} onClick={onToggle} />
+                <PermissionSwitch on={on} locked={locked} onClick={onToggle} />
             </span>
         </div>
     );
