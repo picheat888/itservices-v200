@@ -2,7 +2,11 @@
 
 namespace App\Services\Report\Stock;
 
+use App\Enums\Stock\StockCountStatus;
+use App\Models\Stock\StockCount;
+use App\Models\Stock\StockCountLine;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Report\Tabular\Options;
@@ -10,18 +14,34 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use App\Support\SearchTerms;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * "ความเคลื่อนไหวรับเข้า-เบิกออก" (Report Center → Stock): every stock document inside the
- * chosen date range (this month by default), in the order it happened. A warehouse filter
- * keeps movements that left from or arrived at that warehouse.
+ * "รับเข้าและเบิกจ่าย" (Report Center → Stock): every stock document in the date range (last 12 months by default),
+ * oldest first. breakdown() (StockMovementsBreakdownController) feeds the tiles, monthly flow, pending requests,
+ * top requesters and count variance above the rows; the request and count cards need their own stock permissions.
  */
 class StockMovementReport extends TabularReport
 {
     use StockColumns;
+
+    private const MONTHS = 12;
+
+    private const REQUEST_ROWS = 500;
+
+    private const NO_DEPARTMENT_TH = 'ไม่มีแผนก';
+
+    /** @var array<string, array<string, mixed>> breakdown() per filter set and permissions */
+    private array $breakdowns = [];
+
+    /** Lot costs of the rows about to be shown, set by hydrateRows(). */
+    private ?StockCostBook $rowBook = null;
 
     public function key(): string
     {
@@ -30,13 +50,13 @@ class StockMovementReport extends TabularReport
 
     public function title(): string
     {
-        return 'ความเคลื่อนไหวรับเข้า-เบิกออก';
+        return 'รับเข้าและเบิกจ่าย';
     }
 
     public function filters(): array
     {
         return [
-            ReportFilter::date('from', today()->startOfMonth()->toDateString()),
+            ReportFilter::date('from', today()->startOfMonth()->subMonthsNoOverflow(self::MONTHS - 1)->toDateString()),
             ReportFilter::date('to', today()->toDateString()),
             ReportFilter::select('type', Options::fromLabels(self::MOVEMENT_TYPE_KEYS)),
             ReportFilter::select('warehouse_id', Options::warehouses()),
@@ -45,25 +65,47 @@ class StockMovementReport extends TabularReport
         ];
     }
 
+    /**
+     * Movements between two moments, narrowed by warehouse (left from or arrived at it) and item category.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function scoped(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
+    {
+        $warehouse = $this->warehouseName($filters);
+
+        return StockMovement::query()
+            ->whereBetween('moved_at', [$from, $to])
+            ->when($warehouse !== null, fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('from_label', $warehouse)->orWhere('to_label', $warehouse)))
+            ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)));
+    }
+
+    /** @param  array<string, mixed>  $filters */
+    private function warehouseName(array $filters): ?string
+    {
+        $id = $filters['warehouse_id'] ?? null;
+
+        return $id ? (string) Warehouse::query()->whereKey((int) $id)->value('name') : null;
+    }
+
     public function query(User $viewer, array $filters): Builder
     {
         [$from, $to] = $this->dayRange($filters);
 
-        return StockMovement::query()
+        return $this->scoped($filters, $from, $to)
             ->with(['item' => fn ($q) => $q->select('id', 'sku', 'name', 'category_id', 'unit_id')->with(self::ITEM_RELATIONS)])
-            ->whereBetween('moved_at', [$from, $to])
             ->when($filters['type'], fn (Builder $q, string $type) => $q->where('type', $type))
-            ->when($filters['warehouse_id'], function (Builder $q, $id) {
-                $name = Warehouse::query()->whereKey((int) $id)->value('name');
-                $q->where(fn (Builder $w) => $w->where('from_label', $name)->orWhere('to_label', $name));
-            })
-            ->when($filters['category_id'], fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)))
             ->when($filters['search'], fn (Builder $q, string $search) => SearchTerms::apply($q, $search, [
                 'doc_no', 'reference',
                 SearchTerms::related('item', ['sku', 'name']),
             ]))
             ->orderBy('moved_at')
             ->orderBy('id');
+    }
+
+    public function hydrateRows(Collection $rows, User $viewer, array $filters): void
+    {
+        $this->rowBook = StockCostBook::forItems($rows->pluck('stock_item_id'));
     }
 
     public function columns(): array
@@ -74,14 +116,27 @@ class StockMovementReport extends TabularReport
             ReportColumn::enum('type', 'ประเภท', fn (StockMovement $m) => $m->type, self::MOVEMENT_TYPE_KEYS, self::MOVEMENT_TYPE_TH),
             ...$this->itemColumns(fn (StockMovement $m) => $m->item),
             ReportColumn::number('qty', 'จำนวน', fn (StockMovement $m) => $m->qty),
-            // Only receipts carry a cost on the movement; the rest draw from FIFO lots.
             ReportColumn::money('unit_cost', 'ต้นทุน/หน่วย', fn (StockMovement $m) => $m->unit_cost),
-            ReportColumn::money('line_value', 'มูลค่า', fn (StockMovement $m) => $m->unit_cost === null ? null : $m->qty * (float) $m->unit_cost),
+            ReportColumn::money('line_value', 'มูลค่า', fn (StockMovement $m) => $this->lineValue($m)),
             ReportColumn::text('from_label', 'จาก', fn (StockMovement $m) => $m->from_label),
             ReportColumn::text('to_label', 'ไปยัง', fn (StockMovement $m) => $m->to_label),
             ReportColumn::text('reference', 'อ้างอิง', fn (StockMovement $m) => $m->reference),
             ReportColumn::text('recorded_by', 'ผู้บันทึก', fn (StockMovement $m) => $m->recorded_by),
         ];
+    }
+
+    /** Receipts at their own cost; everything else at the item's average lot cost on its day. */
+    private function lineValue(StockMovement $movement): float
+    {
+        $book = $this->rowBook ?? StockCostBook::forItems([$movement->stock_item_id]);
+        $unitCost = $movement->unit_cost === null ? null : (float) $movement->unit_cost;
+
+        return round(self::movementValue($book, (int) $movement->stock_item_id, $movement->type, (int) $movement->qty, $unitCost, $movement->moved_at), 2);
+    }
+
+    private static function movementValue(StockCostBook $book, int $itemId, string $type, int $qty, ?float $unitCost, CarbonInterface $at): float
+    {
+        return $type === 'receive' && $unitCost !== null ? $qty * $unitCost : $qty * $book->averageAt($itemId, $at);
     }
 
     public function summary(Builder $query, array $filters): array
@@ -95,5 +150,321 @@ class StockMovementReport extends TabularReport
             ReportSummary::make('qty_out', 'จำนวนออก', (int) $bare()->whereNotIn('type', [...StockMovement::INBOUND, 'transfer'])->sum('qty'), 'amber'),
             ReportSummary::make('receive_value', 'มูลค่ารับเข้า', round((float) $bare()->where('type', 'receive')->sum(DB::raw('qty * COALESCE(unit_cost, 0)')), 2), format: 'money'),
         ];
+    }
+
+    /**
+     * What the page draws above the rows: range + warehouse + category, never the type. Codes, numbers and stored
+     * names only. requests / people / departments need stock.view_request, counts stock.view_count (null otherwise).
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{tiles: array<string, array{qty: int, value: float, times: int}>, months: list<array<string, mixed>>, requests: ?array<string, mixed>, people: ?list<array<string, mixed>>, departments: ?list<array<string, mixed>>, counts: ?list<array<string, mixed>>}
+     */
+    public function breakdown(?User $viewer, array $filters): array
+    {
+        $seesRequests = (bool) $viewer?->hasPermission('stock.view_request');
+        $seesCounts = (bool) $viewer?->hasPermission('stock.view_count');
+
+        return $this->breakdowns[md5(serialize([$filters, $seesRequests, $seesCounts]))] ??= $this->buildBreakdown($filters, $seesRequests, $seesCounts);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private function buildBreakdown(array $filters, bool $seesRequests, bool $seesCounts): array
+    {
+        [$from, $to] = array_map(fn (CarbonInterface $d) => CarbonImmutable::instance($d), $this->dayRange($filters));
+        $firstMonth = $to->startOfMonth()->subMonthsNoOverflow(self::MONTHS - 1);
+
+        $movements = $this->scoped($filters, $from->min($firstMonth), $to->endOfMonth())
+            ->toBase()->get(['stock_movements.stock_item_id', 'stock_movements.type', 'stock_movements.qty', 'stock_movements.unit_cost', 'stock_movements.moved_at'])
+            ->map(fn (object $m) => [
+                'item' => (int) $m->stock_item_id,
+                'type' => (string) $m->type,
+                'qty' => (int) $m->qty,
+                'unit_cost' => $m->unit_cost === null ? null : (float) $m->unit_cost,
+                'at' => CarbonImmutable::parse($m->moved_at),
+            ]);
+        $fulfilled = $seesRequests ? $this->fulfilledRequests($filters, $from, $to) : collect();
+        $counts = $seesCounts ? $this->committedCounts($filters, $from, $to) : collect();
+
+        $book = StockCostBook::forItems([
+            ...$movements->pluck('item'),
+            ...$fulfilled->pluck('stock_item_id'),
+            ...$counts->flatMap(fn (StockCount $c) => $c->lines->pluck('stock_item_id')),
+        ]);
+        $movements = $movements->map(fn (array $m) => $m + ['value' => self::movementValue($book, $m['item'], $m['type'], $m['qty'], $m['unit_cost'], $m['at'])]);
+        $requests = $fulfilled->map(fn (StockRequest $r) => [
+            'request' => $r,
+            'qty' => (int) $r->qty,
+            'value' => $r->qty * $book->averageAt((int) $r->stock_item_id, $r->fulfilled_at),
+        ]);
+
+        return [
+            'tiles' => self::tiles($movements->filter(fn (array $m) => $m['at']->betweenIncluded($from, $to))),
+            'months' => self::months($movements, $firstMonth, $from, $to),
+            'requests' => $seesRequests ? $this->waitingRequests($filters) : null,
+            'people' => $seesRequests ? self::people($requests) : null,
+            'departments' => $seesRequests ? self::departments($requests) : null,
+            'counts' => $seesCounts ? self::countRows($counts, $book) : null,
+        ];
+    }
+
+    /**
+     * Pieces, value and documents per movement type.
+     *
+     * @param  Collection<int, array{item: int, type: string, qty: int, unit_cost: ?float, at: CarbonImmutable, value: float}>  $movements
+     * @return array<string, array{qty: int, value: float, times: int}>
+     */
+    private static function tiles(Collection $movements): array
+    {
+        $tiles = [];
+        foreach (array_keys(self::MOVEMENT_TYPE_KEYS) as $type) {
+            $ofType = $movements->where('type', $type);
+            $tiles[$type] = ['qty' => (int) $ofType->sum('qty'), 'value' => round((float) $ofType->sum('value'), 2), 'times' => $ofType->count()];
+        }
+
+        return $tiles;
+    }
+
+    /**
+     * Twelve months ending with the range's last month, whole months even past the range ends.
+     *
+     * @param  Collection<int, array{item: int, type: string, qty: int, unit_cost: ?float, at: CarbonImmutable, value: float}>  $movements
+     * @return list<array{month: string, in_range: bool, receive: int, return: int, issue: int, transfer: int, receive_value: float, issue_value: float, adjust_net: int}>
+     */
+    private static function months(Collection $movements, CarbonImmutable $firstMonth, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $byMonth = $movements->groupBy(fn (array $m) => $m['at']->format('Y-m'));
+        $months = [];
+        for ($i = 0, $month = $firstMonth; $i < self::MONTHS; $i++, $month = $month->addMonthNoOverflow()) {
+            $rows = $byMonth->get($month->format('Y-m'), collect());
+            $qty = fn (string $type) => (int) $rows->where('type', $type)->sum('qty');
+            $months[] = [
+                'month' => $month->format('Y-m'),
+                'in_range' => $month->gte($from->startOfMonth()) && $month->lte($to),
+                'receive' => $qty('receive'),
+                'return' => $qty('return'),
+                'issue' => $qty('issue'),
+                'transfer' => $qty('transfer'),
+                'receive_value' => round((float) $rows->where('type', 'receive')->sum('value'), 2),
+                'issue_value' => round((float) $rows->where('type', 'issue')->sum('value'), 2),
+                'adjust_net' => $qty('adjust_up') - $qty('adjust_down'),
+            ];
+        }
+
+        return $months;
+    }
+
+    /**
+     * Requests waiting today, whatever the range: counts per status and the oldest first.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{pending: int, approved: int, rows: list<array{reference: ?string, item_name: ?string, sku: ?string, qty: int, unit: ?string, requester: string, status: string, created_at: ?string}>}
+     */
+    private function waitingRequests(array $filters): array
+    {
+        $waiting = StockRequest::query()
+            ->whereIn('status', ['pending', 'approved'])
+            ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)));
+        $perStatus = (clone $waiting)->toBase()->selectRaw('status, COUNT(*) AS total')->groupBy('status')->pluck('total', 'status');
+
+        $rows = (clone $waiting)
+            ->with(['item:id,sku,name,unit_id', 'item.unit:id,name', 'user:id,name'])
+            ->orderBy('created_at')->orderBy('id')
+            ->limit(self::REQUEST_ROWS)
+            ->get()
+            ->map(fn (StockRequest $r) => [
+                'reference' => $r->reference,
+                'item_name' => $r->item?->name,
+                'sku' => $r->item?->sku,
+                'qty' => (int) $r->qty,
+                'unit' => $r->item?->unit?->name,
+                'requester' => (string) ($r->user?->name ?? $r->requester_name),
+                'status' => (string) $r->status,
+                'created_at' => $r->created_at?->toIso8601String(),
+            ]);
+
+        return ['pending' => (int) ($perStatus['pending'] ?? 0), 'approved' => (int) ($perStatus['approved'] ?? 0), 'rows' => $rows->all()];
+    }
+
+    /**
+     * Requests handed out within the range, with the requester's department.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, StockRequest>
+     */
+    private function fulfilledRequests(array $filters, CarbonImmutable $from, CarbonImmutable $to): Collection
+    {
+        return StockRequest::query()
+            ->whereBetween('fulfilled_at', [$from, $to])
+            ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)))
+            ->with(['user:id,name,employee_id', 'user.employee:id,department_id', 'user.employee.department:id,name,name_th'])
+            ->get(['id', 'stock_item_id', 'user_id', 'requester_name', 'qty', 'fulfilled_at']);
+    }
+
+    /**
+     * One row per requester; the page sorts by the chosen metric.
+     *
+     * @param  Collection<int, array{request: StockRequest, qty: int, value: float}>  $requests
+     * @return list<array{user_id: ?int, name: string, department_id: ?int, department: ?string, department_th: ?string, qty: int, value: float, times: int}>
+     */
+    private static function people(Collection $requests): array
+    {
+        return $requests
+            ->groupBy(fn (array $r) => self::personKey($r['request']))
+            ->map(function (Collection $group) {
+                $request = $group->first()['request'];
+                $department = $request->user?->employee?->department;
+
+                return [
+                    'user_id' => $request->user_id,
+                    'name' => (string) ($request->user?->name ?? $request->requester_name),
+                    'department_id' => $department?->id,
+                    'department' => $department?->name,
+                    'department_th' => $department?->name_th,
+                    'qty' => (int) $group->sum('qty'),
+                    'value' => round((float) $group->sum('value'), 2),
+                    'times' => $group->count(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * One row per requester department, no department as its own row (department_id null).
+     *
+     * @param  Collection<int, array{request: StockRequest, qty: int, value: float}>  $requests
+     * @return list<array{department_id: ?int, name: ?string, name_th: ?string, people: int, qty: int, value: float, times: int}>
+     */
+    private static function departments(Collection $requests): array
+    {
+        return $requests
+            ->groupBy(fn (array $r) => (string) $r['request']->user?->employee?->department_id)
+            ->map(function (Collection $group) {
+                $department = $group->first()['request']->user?->employee?->department;
+
+                return [
+                    'department_id' => $department?->id,
+                    'name' => $department?->name,
+                    'name_th' => $department?->name_th,
+                    'people' => $group->map(fn (array $r) => self::personKey($r['request']))->unique()->count(),
+                    'qty' => (int) $group->sum('qty'),
+                    'value' => round((float) $group->sum('value'), 2),
+                    'times' => $group->count(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /** The account, or the stored name when the account is gone. */
+    private static function personKey(StockRequest $request): string
+    {
+        return $request->user_id !== null ? 'u'.$request->user_id : 'n'.$request->requester_name;
+    }
+
+    /**
+     * Committed counts in the range at the chosen warehouse, their lines narrowed to the category; a count with no
+     * line in the category drops out.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, StockCount>
+     */
+    private function committedCounts(array $filters, CarbonImmutable $from, CarbonImmutable $to): Collection
+    {
+        $warehouse = $this->warehouseName($filters);
+        $category = $filters['category_id'] ?? null;
+
+        return StockCount::query()
+            ->where('status', StockCountStatus::Committed->value)
+            ->whereBetween('committed_at', [$from, $to])
+            ->when($warehouse !== null, fn (Builder $q) => $q->where('warehouse', $warehouse))
+            ->with(['lines:id,stock_count_id,stock_item_id,system_qty,counted_qty', 'lines.item:id,category_id'])
+            ->orderByDesc('committed_at')->orderByDesc('id')
+            ->get(['id', 'reference', 'warehouse', 'committed_at'])
+            ->each(fn (StockCount $c) => $c->setRelation('lines', $c->lines->filter(
+                fn (StockCountLine $l) => ! $category || (int) $l->item?->category_id === (int) $category,
+            )->values()))
+            ->filter(fn (StockCount $c) => ! $category || $c->lines->isNotEmpty())
+            ->values();
+    }
+
+    /**
+     * Lines that differ, pieces up and down, net value at the average lot cost on the commit day; newest first.
+     *
+     * @param  Collection<int, StockCount>  $counts
+     * @return list<array{reference: string, warehouse: ?string, committed_at: ?string, lines: int, up: int, down: int, net_value: float}>
+     */
+    private static function countRows(Collection $counts, StockCostBook $book): array
+    {
+        return $counts->map(function (StockCount $count) use ($book) {
+            $differing = $count->lines->filter(fn (StockCountLine $l) => (int) $l->variance() !== 0);
+
+            return [
+                'reference' => (string) $count->reference,
+                'warehouse' => $count->warehouse,
+                'committed_at' => $count->committed_at?->toIso8601String(),
+                'lines' => $differing->count(),
+                'up' => (int) $differing->sum(fn (StockCountLine $l) => max(0, (int) $l->variance())),
+                'down' => (int) $differing->sum(fn (StockCountLine $l) => max(0, -(int) $l->variance())),
+                'net_value' => round((float) $differing->sum(fn (StockCountLine $l) => $l->variance() * $book->averageAt((int) $l->stock_item_id, $count->committed_at)), 2),
+            ];
+        })->all();
+    }
+
+    /**
+     * The cards as sheets: months in the range, requesters and departments by value, count variance. A sheet the
+     * viewer may not see is left out.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
+     */
+    public function exportSections(User $viewer, array $filters): array
+    {
+        $data = $this->breakdown($viewer, $filters);
+        $byValue = fn (array $rows) => collect($rows)->sortByDesc('value')->values()->all();
+
+        $sections = [[
+            'title' => 'รับเข้าและเบิกออกรายเดือน',
+            'headings' => ['เดือน', 'รับเข้า (ชิ้น)', 'คืนของ (ชิ้น)', 'เบิกออก (ชิ้น)', 'ย้ายคลัง (ชิ้น)', 'มูลค่ารับเข้า', 'มูลค่าเบิกออก', 'ปรับยอดสุทธิ (ชิ้น)'],
+            'rows' => array_values(array_map(fn (array $m) => [
+                DateDisplay::monthYear($m['month']), $m['receive'], $m['return'], $m['issue'], $m['transfer'],
+                $m['receive_value'], $m['issue_value'], $m['adjust_net'],
+            ], array_filter($data['months'], fn (array $m) => $m['in_range']))),
+        ]];
+
+        if ($data['people'] !== null) {
+            $sections[] = [
+                'title' => 'ผู้ขอเบิกสูงสุด',
+                'headings' => ['ผู้ขอเบิก', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
+                'rows' => array_map(fn (array $p) => [
+                    $p['name'], $p['department_id'] === null ? self::NO_DEPARTMENT_TH : ($p['department_th'] ?: $p['department']),
+                    $p['value'], $p['qty'], $p['times'],
+                ], $byValue($data['people'])),
+            ];
+            $sections[] = [
+                'title' => 'แผนกที่เบิกสูงสุด',
+                'headings' => ['แผนก', 'คน', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
+                'rows' => array_map(fn (array $d) => [
+                    $d['department_id'] === null ? self::NO_DEPARTMENT_TH : ($d['name_th'] ?: $d['name']),
+                    $d['people'], $d['value'], $d['qty'], $d['times'],
+                ], $byValue($data['departments'])),
+            ];
+        }
+
+        if ($data['counts'] !== null) {
+            $sections[] = [
+                'title' => 'ส่วนต่างจากการนับสต็อก',
+                'headings' => ['รอบนับ', 'คลัง', 'ยืนยันเมื่อ', 'รายการที่มีส่วนต่าง', 'ปรับเพิ่ม', 'ปรับลด', 'มูลค่าสุทธิ'],
+                'rows' => array_map(fn (array $c) => [
+                    $c['reference'], $c['warehouse'], DateDisplay::dateTime($c['committed_at']),
+                    $c['lines'], $c['up'], $c['down'], $c['net_value'],
+                ], $data['counts']),
+            ];
+        }
+
+        return $sections;
     }
 }

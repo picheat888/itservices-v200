@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\Report\RequestApprovalsBreakdownController;
 use App\Http\Controllers\Api\Report\RequestItPendingBreakdownController;
 use App\Http\Controllers\Api\Report\RequestOverviewBreakdownController;
 use App\Http\Controllers\Api\Report\SoftwareLicenseBreakdownController;
+use App\Http\Controllers\Api\Report\StockMovementsBreakdownController;
 use App\Http\Controllers\Api\Report\TabularReportController;
 use App\Http\Controllers\Api\Report\TicketBacklogBoardController;
 use App\Http\Controllers\Api\Report\TicketManualSlaBreakdownController;
@@ -150,6 +151,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/requests/overview/breakdown', RequestOverviewBreakdownController::class)->defaults('key', 'requests.overview')->name('api.reports.requests.overview.breakdown');
     // "คำขอที่รอ IT ส่งมอบ" — age groups, owners, types and new joiners above its rows.
     Route::get('reports/requests/it-pending/breakdown', RequestItPendingBreakdownController::class)->defaults('key', 'requests.it_pending')->name('api.reports.requests.it-pending.breakdown');
+    // "รับเข้าและเบิกจ่าย" — tiles, flow by month, pending requests, top requesters and count variance above its rows.
+    Route::get('reports/stock/movements/breakdown', StockMovementsBreakdownController::class)->defaults('key', 'stock.movements')->name('api.reports.stock.movements.breakdown');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/tabular/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
