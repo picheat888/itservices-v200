@@ -373,7 +373,7 @@ export function DataTable<T>({
                             ))}
                         {!loading && pageRows.length === 0 && (
                             <tr>
-                                <td colSpan={columns.length} className="text-muted-foreground px-4 py-10 text-center">
+                                <td colSpan={columns.length} className={cn('text-muted-foreground px-4 text-center', emptyState ? 'py-10' : 'py-0')}>
                                     {emptyState ?? <EmptyState {...(empty ?? { title: t('cmn_no_data') })} />}
                                 </td>
                             </tr>

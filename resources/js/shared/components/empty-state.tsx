@@ -1,7 +1,7 @@
 // The one empty state of the app: an icon for why it is empty, a title and a hint, centred in its card.
-import type { ReactNode } from 'react';
-import { CircleCheck, Inbox, Lock, MousePointerClick, SearchX, type LucideIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import { CircleCheck, Inbox, Lock, MousePointerClick, SearchX, type LucideIcon } from 'lucide-react';
+import { Children, type ReactNode } from 'react';
 
 export type EmptyKind = 'empty' | 'search' | 'denied' | 'pick' | 'clear';
 
@@ -23,7 +23,7 @@ export function EmptyState({ kind = 'empty', title, hint, children, className }:
             <Icon className="text-muted-foreground/60 mb-2 h-8 w-8" aria-hidden />
             <p className="text-foreground text-sm font-medium text-balance">{title}</p>
             {hint && <p className="text-muted-foreground max-w-sm text-xs text-balance">{hint}</p>}
-            {children && <div className="mt-3 flex flex-wrap justify-center gap-2">{children}</div>}
+            {Children.toArray(children).length > 0 && <div className="mt-3 flex flex-wrap justify-center gap-2">{children}</div>}
         </div>
     );
 }
