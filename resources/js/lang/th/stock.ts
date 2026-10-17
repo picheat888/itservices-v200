@@ -241,7 +241,7 @@ export const stock: Dict = {
     stock_to: 'ไปยัง',
     stock_to_warehouse: 'คลังปลายทาง',
     stock_events_from: 'จาก (คลัง/ผู้ขาย)',
-    stock_events_to: 'ไปยัง (คลัง/ผู้เบิก)',
+    stock_events_to: 'ไปยัง (คลัง/ผู้ขอ)',
     stock_notes: 'หมายเหตุ',
     stock_unit_cost_short: 'ต้นทุน/หน่วย',
     stock_approver: 'ผู้อนุมัติ',
