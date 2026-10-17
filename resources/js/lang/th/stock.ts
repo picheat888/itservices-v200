@@ -327,8 +327,6 @@ export const stock: Dict = {
     stock_empty_requests_fulfil_serials_hint: 'เลือกคลังอื่นด้านบน',
     stock_empty_audit: 'ยังไม่มีรอบนับสต็อก',
     stock_empty_audit_hint: 'กด "{button}" เพื่อเริ่มรอบแรก',
-    stock_empty_audit_search: 'ไม่พบรอบนับที่ตรงกับตัวกรอง',
-    stock_empty_audit_search_hint: 'ลองล้างตัวกรองบางรายการ',
     stock_empty_audit_new_count_skus: 'ไม่มีของในคลังหรือหมวดนี้',
     stock_empty_audit_new_count_skus_hint: 'เลือกคลังหรือหมวดอื่น',
     stock_empty_audit_new_count_skus_search: 'ไม่พบสินค้าที่ตรงกับคำค้น',
