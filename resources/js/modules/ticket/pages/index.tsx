@@ -3,7 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
-import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
+import { OverviewHeader, useOverviewPeriod, type PeriodOptions } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -44,6 +44,9 @@ import {
 import { TicketOverviewTiles } from '../components/ticket-overview-tiles';
 import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
+
+// This year and 30 days by default; no all-time view, and a custom range is at most a year
+const TICKET_PERIOD: PeriodOptions = { allowAll: false, year: true, fallback: 30, maxDays: 365 };
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'all', 'mine', 'my'] as const;
@@ -168,8 +171,8 @@ export default function TicketsPage() {
     // No sorting by a column this reader is not shown.
     const sortOptions = SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due'));
     const sort = pickAllowed(list.get('sort'), sortOptions) || DEFAULT_SORT;
-    // Dashboard window, in the URL (?range=7|30|90|custom with ?from&to); all time by default.
-    const [range, setRange] = useOverviewPeriod();
+    // Dashboard window, in the URL (?range=7|30|90|year|custom with ?from&to); 30 days by default.
+    const [range, setRange] = useOverviewPeriod(TICKET_PERIOD);
 
     const [takeTicket, setTakeTicket] = useState<Ticket | null>(null);
     const [forwardTicket, setForwardTicket] = useState<Ticket | null>(null);
@@ -434,7 +437,7 @@ export default function TicketsPage() {
                 {tab === 'overview' && canOverview && (
                     <div className="p-5">
                         {/* Window selector stays put while the numbers below reload. */}
-                        <OverviewHeader value={range} onChange={setRange} />
+                        <OverviewHeader value={range} onChange={setRange} options={TICKET_PERIOD} />
 
                         {summaryLoading ? (
                             <TicketOverviewBodySkeleton />

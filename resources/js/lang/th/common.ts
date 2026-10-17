@@ -168,6 +168,8 @@ export const common: Dict = {
     // overview-period.tsx — หัวแท็บภาพรวม ช่วงเวลา
     period_days: '{n} วัน',
     period_custom: 'กำหนดเอง',
+    period_this_year: 'ปีนี้',
+    period_max_days: 'กำหนดเองได้ไม่เกิน {n} วัน',
     period_unit_day: 'วัน',
     period_unit_week: 'สัปดาห์',
     period_unit_month: 'เดือน',

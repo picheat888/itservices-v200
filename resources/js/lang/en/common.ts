@@ -168,6 +168,8 @@ export const common: Dict = {
     // overview-period.tsx — Overview tab period buttons
     period_days: '{n} days',
     period_custom: 'Custom',
+    period_this_year: 'This year',
+    period_max_days: 'A custom range can be at most {n} days',
     period_unit_day: 'day',
     period_unit_week: 'week',
     period_unit_month: 'month',
