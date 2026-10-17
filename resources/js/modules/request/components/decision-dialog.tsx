@@ -106,7 +106,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                                     ))}
                                 </span>
                             )}
-                            {step ?? requestTitle(ctx.request, t)}
+                            {step ?? requestTitle(ctx.request, t, lang)}
                         </DialogDescription>
                     </div>
                     <span className="text-muted-foreground shrink-0 text-xs">{ctx.request.reference}</span>
@@ -133,7 +133,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                                 </span>
                                 {onBehalf && <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone}>{t(REQUEST_ONBOARDING_BADGE.labelKey)}</StatusBadge>}
                             </div>
-                            <p className="mt-1 text-sm font-semibold">{requestTitle(ctx.request, t)}</p>
+                            <p className="mt-1 text-sm font-semibold">{requestTitle(ctx.request, t, lang)}</p>
                         </div>
 
                         <dl className="grid grid-cols-[minmax(96px,max-content)_1fr] gap-x-3 gap-y-1.5">

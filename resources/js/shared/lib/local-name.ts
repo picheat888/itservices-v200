@@ -8,6 +8,13 @@ export function localName(item: Named | null | undefined, lang: string): string 
     return (lang === 'th' && item.name_th) || item.name;
 }
 
+/** The name in the other language, or null when there is none or it reads the same. */
+export function otherName(item: Named | null | undefined, lang: string): string | null {
+    if (!item) return null;
+    const other = lang === 'th' ? item.name : item.name_th;
+    return other && other !== localName(item, lang) ? other : null;
+}
+
 /** Search text that matches both languages. */
 export const nameSearch = (item: Named): string => `${item.name} ${item.name_th ?? ''}`.trim();
 

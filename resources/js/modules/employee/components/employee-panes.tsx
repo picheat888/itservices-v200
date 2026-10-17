@@ -12,6 +12,7 @@ import { isOnBehalfRequest, REQUEST_ONBOARDING_BADGE, REQUEST_STATUS_META, REQUE
 import { cn } from '@/shared/lib/utils';
 import type { EmployeeAccess, EmployeeAccessRow } from '@/shared/types';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Folder, Globe, Inbox, Laptop, Mail, Package, Shield, Tag, Ticket, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
 import { HELD_STATUS_META } from '../lib/held-assets';
@@ -352,6 +353,7 @@ export function TicketsPane({
 /** Requests tab: read-only table of requests this employee owns; rows stay unclickable (Request permission not required here). */
 export function RequestsPane({ requests, loading, emptyText }: { requests: EmployeeServiceRequest[]; loading?: boolean; emptyText: string }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     if (requests.length === 0 && !loading) {
         return <EmptyPane icon={Inbox} text={emptyText} />;
     }
@@ -373,7 +375,7 @@ export function RequestsPane({ requests, loading, emptyText }: { requests: Emplo
             render: (r) => (
                 <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-xs font-medium">{requestTitle(r, t)}</span>
+                        <span className="truncate text-xs font-medium">{requestTitle(r, t, lang)}</span>
                         {isOnBehalfRequest(r) && (
                             <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} dot={false} className="shrink-0">
                                 {t(REQUEST_ONBOARDING_BADGE.labelKey)}

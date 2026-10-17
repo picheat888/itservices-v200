@@ -260,7 +260,7 @@ export default function RequestsPage() {
                     <div className="flex min-w-0 items-center gap-2.5">
                         <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                         <div className="min-w-0 flex-1">
-                            <TruncText text={requestTitle(r, t)} className="text-sm font-medium" />
+                            <TruncText text={requestTitle(r, t, lang)} className="text-sm font-medium" />
                             <TruncText text={r.reason} className="text-muted-foreground text-xs" />
                         </div>
                     </div>
@@ -495,7 +495,7 @@ export default function RequestsPage() {
                                                     <button type="button" onClick={() => openDetail(r)} className={ROW_BUTTON}>
                                                         {r.fields_display[0]
                                                             ? `${t(REQUEST_TYPE_META[r.type].labelKey)}: ${headlineValue(r, lang)}`
-                                                            : requestTitle(r, t)}
+                                                            : requestTitle(r, t, lang)}
                                                     </button>
                                                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
                                                         <span className="truncate">{localName(r.requester, lang)}</span>
@@ -573,7 +573,7 @@ export default function RequestsPage() {
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
                                                     <button type="button" onClick={() => openDetail(r)} className={ROW_BUTTON}>
-                                                        {requestTitle(r, t)}
+                                                        {requestTitle(r, t, lang)}
                                                     </button>
                                                     <div className="text-muted-foreground flex min-w-0 gap-x-3 text-xs">
                                                         <span className="truncate">{activityLine(r, t, lang)}</span>

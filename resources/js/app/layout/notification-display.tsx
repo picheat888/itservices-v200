@@ -4,6 +4,7 @@ import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { requestTitle } from '@/shared/lib/request-meta';
 import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import {
     ArrowRightLeft,
     Boxes,
@@ -203,9 +204,10 @@ export function notificationTitle(n: AppNotification, t: Translate): string {
                   {
                       type: n.data.request_type as ServiceRequestType,
                       origin: (n.data.origin ?? 'direct') as ServiceRequest['origin'],
-                      requester: n.data.requester_name ? { name: n.data.requester_name } : undefined,
+                      requester: n.data.requester_name ? { name: n.data.requester_name, name_th: n.data.requester_name_th ?? null } : undefined,
                   },
                   t,
+                  useUiStore.getState().lang,
               )
             : // Older bells without a type: the stored title is all there is.
               (n.data.title ?? '');
