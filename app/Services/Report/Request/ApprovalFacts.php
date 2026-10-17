@@ -3,6 +3,7 @@
 namespace App\Services\Report\Request;
 
 use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,26 +32,158 @@ final class ApprovalFacts
      */
     public static function steps(array $filters, Carbon $since, Carbon $to): Collection
     {
+        return self::withPeople(self::universe($filters, $since, $to))->get();
+    }
+
+    /**
+     * The steps the report can ever look at, ordered by id: the same rows steps() loads, before any relation.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<RequestApproval>
+     */
+    private static function universe(array $filters, Carbon $since, Carbon $to): Builder
+    {
+        return self::inScope($filters)
+            ->where(fn (Builder $q) => $q->whereBetween('became_current_at', [$since, $to])
+                ->orWhere('status', 'current')
+                ->orWhereHas('request', fn (Builder $r) => $r->whereBetween('created_at', [$since, $to])
+                    ->orWhereBetween('rejected_at', [$since, $to])
+                    ->orWhereBetween('cancelled_at', [$since, $to])));
+    }
+
+    /**
+     * Approval steps and IT's not-delivered steps of the filtered requests. Each card adds its own condition; those
+     * the range test above would pass anyway (became current in it, current now, request filed or ended in it) skip it.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<RequestApproval>
+     */
+    private static function inScope(array $filters): Builder
+    {
         // A step always has its request (foreign key), so only a type or department filter needs the join
         $scoped = ($filters['type'] ?? null) || ($filters['department_id'] ?? null);
 
         return RequestApproval::query()
             ->select(self::STEP_COLUMNS)
-            ->with([
-                'request:id,reference,type,status,employee_id,requester_name,department_name,email_group_id,file_share_id,created_at,rejected_at,cancelled_at,cancel_reason,cancelled_by_name',
-                'approver:id,code,first_name,last_name,status,last_day,department_id', 'approver.department:id,name,name_th', 'approver.user:id,employee_id',
-                'actedBy:id,employee_id', 'actedBy.employee:id,code,department_id', 'actedBy.employee.department:id,name,name_th',
-            ])
             ->where(fn (Builder $q) => $q->where('kind', 'approval')
                 ->orWhere(fn (Builder $c) => $c->where('kind', 'completion')->where('status', 'rejected')))
             ->when($scoped, fn (Builder $q) => $q->whereHas('request', fn (Builder $r) => self::scopeRequests($r, $filters)))
-            ->where(fn (Builder $q) => $q->whereBetween('became_current_at', [$since, $to])
-                ->orWhere('status', 'current')
-                ->orWhereHas('request', fn (Builder $r) => $r->whereBetween('created_at', [$since, $to])
-                    ->orWhereBetween('rejected_at', [$since, $to])
-                    ->orWhereBetween('cancelled_at', [$since, $to])))
-            ->orderBy('id')
-            ->get();
+            ->orderBy('id');
+    }
+
+    // The step's request columns the report reads
+    private const REQUEST_COLUMNS = 'request:id,reference,type,status,employee_id,requester_name,department_name,email_group_id,file_share_id,created_at,rejected_at,cancelled_at,cancel_reason,cancelled_by_name';
+
+    /**
+     * @param  Builder<RequestApproval>  $query
+     * @return Builder<RequestApproval>
+     */
+    private static function withPeople(Builder $query): Builder
+    {
+        return $query->with([
+            self::REQUEST_COLUMNS,
+            'approver:id,code,first_name,last_name,status,last_day,department_id', 'approver.department:id,name,name_th', 'approver.user:id,employee_id',
+            'actedBy:id,employee_id', 'actedBy.employee:id,code,department_id', 'actedBy.employee.department:id,name,name_th',
+        ]);
+    }
+
+    /**
+     * Approval steps waiting on a pending request now, whenever they reached the approver.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, RequestApproval>
+     */
+    public static function waitingSteps(array $filters, Carbon $since, Carbon $to): Collection
+    {
+        return self::withPeople(self::inScope($filters)
+            ->where('kind', 'approval')->where('status', 'current')
+            ->whereHas('request', fn (Builder $r) => $r->where('status', 'pending')))->get();
+    }
+
+    /**
+     * The steps of requests that were rejected or withdrawn in the range, for endings().
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, RequestApproval>
+     */
+    public static function endedSteps(array $filters, Carbon $since, Carbon $to): Collection
+    {
+        return self::withPeople(self::inScope($filters)
+            ->whereHas('request', fn (Builder $r) => $r->whereIn('status', ['rejected', 'cancelled'])
+                ->where(fn (Builder $d) => $d->whereBetween('rejected_at', [$since, $to])->orWhereBetween('cancelled_at', [$since, $to]))))->get();
+    }
+
+    /**
+     * Steps skipped at submit on requests filed in the range (with their request only).
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, RequestApproval>
+     */
+    public static function skippedSteps(array $filters, Carbon $since, Carbon $to): Collection
+    {
+        return self::inScope($filters)->with(self::REQUEST_COLUMNS)
+            ->where('status', 'skipped')
+            ->whereHas('request', fn (Builder $r) => $r->whereBetween('created_at', [$since, $to]))->get();
+    }
+
+    /**
+     * Which of these requests have an approval step that was not skipped.
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  list<int>  $requestIds
+     * @return array<int, true>
+     */
+    public static function decidedRequests(array $filters, Carbon $since, Carbon $to, array $requestIds): array
+    {
+        $decided = [];
+        foreach (array_chunk($requestIds, 2000) as $chunk) {
+            $ids = self::universe($filters, $since, $to)->reorder()
+                ->where('kind', 'approval')->where(fn (Builder $q) => $q->where('status', '!=', 'skipped')->orWhereNull('status'))
+                ->select('service_request_id')->whereIn('service_request_id', $chunk)->distinct()->pluck('service_request_id');
+            foreach ($ids as $id) {
+                $decided[(int) $id] = true;
+            }
+        }
+
+        return $decided;
+    }
+
+    /**
+     * Approval steps that reached somebody in the range and were decided or still hold a pending request, as plain
+     * rows (no models) with their whole-day wait and the ids to look the person up by.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{key: string, status: string, waiting: bool, days: int, approver_employee_id: ?int, approver_department_id: ?int, acted_by_user_id: ?int, acted_by_name: ?string}>
+     */
+    public static function reachedRows(array $filters, Carbon $from, Carbon $to, ?string $approver): array
+    {
+        $today = self::dayNumber(now());
+        $rows = self::inScope($filters)
+            ->where('kind', 'approval')->whereBetween('became_current_at', [$from, $to])
+            ->where(fn (Builder $q) => $q->whereIn('status', ['approved', 'rejected'])
+                ->orWhere(fn (Builder $w) => $w->where('status', 'current')->whereHas('request', fn (Builder $r) => $r->where('status', 'pending'))))
+            ->select(['id', 'label', 'approver_employee_id', 'approver_name', 'approver_department_id', 'status', 'acted_by_user_id', 'acted_by_name', 'became_current_at', 'acted_at'])
+            ->toBase()->get();
+
+        $out = [];
+        foreach ($rows as $r) {
+            $key = (string) ($r->acted_by_name ?? $r->approver_name ?? $r->label ?? '');
+            if ($approver !== null && $key !== $approver) {
+                continue;
+            }
+            $out[] = [
+                'key' => $key,
+                'status' => (string) $r->status,
+                'waiting' => $r->status === 'current',
+                'days' => max(0, ($r->acted_at === null ? $today : self::dayOf($r->acted_at)) - self::dayOf($r->became_current_at)),
+                'approver_employee_id' => $r->approver_employee_id === null ? null : (int) $r->approver_employee_id,
+                'approver_department_id' => $r->approver_department_id === null ? null : (int) $r->approver_department_id,
+                'acted_by_user_id' => $r->acted_by_user_id === null ? null : (int) $r->acted_by_user_id,
+                'acted_by_name' => $r->acted_by_name,
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -182,14 +315,20 @@ final class ApprovalFacts
 
     private static function computeBlocked(RequestApproval $step): ?string
     {
-        if ($step->approver_employee_id === null || $step->approver === null) {
+        return $step->approver_employee_id === null ? null : self::blockedOf($step->approver);
+    }
+
+    /** Why nobody can act for this approver: they have left, or have no login; null when they can, or there is no one. */
+    public static function blockedOf(?Employee $approver): ?string
+    {
+        if ($approver === null) {
             return null;
         }
-        if ($step->approver->hasLeft()) {
+        if ($approver->hasLeft()) {
             return 'left';
         }
 
-        return $step->approver->user === null ? 'no_account' : null;
+        return $approver->user === null ? 'no_account' : null;
     }
 
     /**
@@ -206,14 +345,25 @@ final class ApprovalFacts
     private static function computePerson(RequestApproval $step): array
     {
         $employee = $step->acted_by_user_id !== null ? $step->actedBy?->employee : $step->approver;
+
+        return self::personOf($employee, $step->acted_by_user_id !== null || $step->acted_by_name !== null, self::key($step));
+    }
+
+    /**
+     * The person cell for a resolved employee (null when there is none); `hasAccount` is whether somebody signed in to decide it.
+     *
+     * @return array{name: string, code: ?string, department: array{name: string, name_th: ?string}|null, kind: string}
+     */
+    public static function personOf(?Employee $employee, bool $hasAccount, string $key): array
+    {
         $kind = match (true) {
             $employee !== null => 'person',
-            $step->acted_by_user_id !== null || $step->acted_by_name !== null => 'unlinked_account',
+            $hasAccount => 'unlinked_account',
             default => 'group_step',
         };
 
         return [
-            'name' => self::key($step),
+            'name' => $key,
             'code' => $employee?->code,
             'department' => $employee?->department ? ['name' => $employee->department->name, 'name_th' => $employee->department->name_th] : null,
             'kind' => $kind,
@@ -306,32 +456,6 @@ final class ApprovalFacts
     {
         return $steps->filter(fn (RequestApproval $s) => self::status($s) === 'skipped' && self::within($s->request?->getAttributes()['created_at'] ?? null, $from, $to))->values();
     }
-
-    /**
-     * How many of these requests had every approval step skipped.
-     *
-     * @param  Collection<int, RequestApproval>  $all
-     * @param  list<int>  $requestIds
-     */
-    public static function unapproved(Collection $all, array $requestIds): int
-    {
-        self::$decided ??= new \WeakMap;
-        if (! isset(self::$decided[$all])) {
-            $decided = [];
-            foreach ($all as $step) {
-                if (self::isApproval($step) && self::status($step) !== 'skipped') {
-                    $decided[$step->service_request_id] = true;
-                }
-            }
-            self::$decided[$all] = $decided;
-        }
-        $decided = self::$decided[$all];
-
-        return count(array_filter($requestIds, fn (int $id) => ! isset($decided[$id])));
-    }
-
-    /** @var \WeakMap<Collection, array<int, true>>|null */
-    private static ?\WeakMap $decided = null;
 
     /** Mean of whole days, one decimal; null when there is nothing to average. */
     public static function average(Collection $steps): ?float

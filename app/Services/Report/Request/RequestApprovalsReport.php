@@ -285,18 +285,18 @@ class RequestApprovalsReport extends TabularReport
     {
         [$from, $to] = $this->dayRange($filters);
         $approver = $filters['approver'] ?? null;
-        $steps = $this->steps($filters, $from, $to);
-        $reached = ApprovalFacts::reached($steps, $from, $to, $approver);
-        $skipped = ApprovalFacts::skipped($steps, $from, $to);
+        // Each card loads only the steps it reads: waiting, ended requests, skipped steps, and plain rows for the approvers
+        $reached = ApprovalFacts::reachedRows($filters, $from, $to, $approver);
+        $skipped = ApprovalFacts::skippedSteps($filters, $from, $to);
         $departments = Department::query()
-            ->whereIn('id', $steps->pluck('approver_department_id')->filter()->unique()->values())
+            ->whereIn('id', collect($reached)->pluck('approver_department_id')->merge($skipped->pluck('approver_department_id'))->filter()->unique()->values())
             ->get(['id', 'name', 'name_th'])->keyBy('id');
 
         return [
-            'stuck' => $this->stuck(ApprovalFacts::waitingNow($steps, $approver)),
+            'stuck' => $this->stuck(ApprovalFacts::waitingNow(ApprovalFacts::waitingSteps($filters, $from, $to), $approver)),
             'approvers' => $this->approvers($reached, $departments),
-            'endings' => $this->endings(ApprovalFacts::endings($steps, $from, $to, $approver)),
-            'skips' => $this->skips($steps, $skipped, $departments),
+            'endings' => $this->endings(ApprovalFacts::endings(ApprovalFacts::endedSteps($filters, $from, $to), $from, $to, $approver)),
+            'skips' => $this->skips($skipped, $departments, fn (array $ids) => count(array_diff_key(array_flip($ids), ApprovalFacts::decidedRequests($filters, $from, $to, $ids)))),
         ];
     }
 
@@ -335,45 +335,68 @@ class RequestApprovalsReport extends TabularReport
     /**
      * One row per approver over the steps reached in the range, slowest average first; group steps and unlinked accounts last.
      *
-     * @param  Collection<int, RequestApproval>  $reached
+     * @param  list<array<string, mixed>>  $reached  ApprovalFacts::reachedRows()
      * @param  Collection<int, Department>  $departments
      * @return array{rows: list<array<string, mixed>>, total: array<string, mixed>}
      */
-    private function approvers(Collection $reached, Collection $departments): array
+    private function approvers(array $reached, Collection $departments): array
     {
-        $summarise = function (Collection $set): array {
-            $waiting = $set->filter(fn (RequestApproval $s) => ApprovalFacts::isWaiting($s));
-            $oldest = $waiting->isEmpty() ? null : $waiting->map(fn (RequestApproval $s) => ApprovalFacts::days($s))->max();
+        $summarise = function (array $set): array {
+            $days = array_column($set, 'days');
+            $waitingDays = array_column(array_filter($set, fn (array $r) => $r['waiting']), 'days');
+            $oldest = $waitingDays === [] ? null : max($waitingDays);
 
             return [
-                'steps' => $set->count(),
-                'approved' => $set->filter(fn (RequestApproval $s) => ApprovalFacts::status($s) === 'approved')->count(),
-                'rejected' => $set->filter(fn (RequestApproval $s) => ApprovalFacts::status($s) === 'rejected')->count(),
-                'waiting' => $waiting->count(),
-                'avg_days' => ApprovalFacts::average($set),
-                'max_days' => $set->map(fn (RequestApproval $s) => ApprovalFacts::days($s))->max(),
+                'steps' => count($set),
+                'approved' => count(array_filter($set, fn (array $r) => $r['status'] === 'approved')),
+                'rejected' => count(array_filter($set, fn (array $r) => $r['status'] === 'rejected')),
+                'waiting' => count($waitingDays),
+                'avg_days' => $days === [] ? null : round(array_sum($days) / count($days), 1),
+                'max_days' => $days === [] ? null : max($days),
                 'oldest_waiting_days' => $oldest,
                 'oldest_age_band' => $oldest === null ? null : self::ageBand($oldest),
             ];
         };
 
-        $rows = $reached->groupBy(fn (RequestApproval $s) => ApprovalFacts::key($s))
-            ->map(function (Collection $set, string $key) use ($summarise, $departments) {
-                $named = $set->first(fn (RequestApproval $s) => ApprovalFacts::person($s)['kind'] === 'person') ?? $set->first();
-                $person = ApprovalFacts::person($named);
-                $flags = $set->filter(fn (RequestApproval $s) => ApprovalFacts::isWaiting($s))->map(fn (RequestApproval $s) => ApprovalFacts::blockedBecause($s))->filter();
-                $group = $departments->get($named->approver_department_id);
+        // The people the steps name, read once
+        $approverIds = array_values(array_unique(array_filter(array_column($reached, 'approver_employee_id'))));
+        $userIds = array_values(array_unique(array_filter(array_column($reached, 'acted_by_user_id'))));
+        $approvers = Employee::query()->select(['id', 'code', 'first_name', 'last_name', 'status', 'last_day', 'department_id'])
+            ->with(['department:id,name,name_th', 'user:id,employee_id'])->whereIn('id', $approverIds)->get()->keyBy('id');
+        $actors = User::query()->select(['id', 'employee_id'])
+            ->with(['employee:id,code,department_id', 'employee.department:id,name,name_th'])->whereIn('id', $userIds)->get()->keyBy('id');
+        $employeeOf = fn (array $r): ?Employee => $r['acted_by_user_id'] !== null ? $actors->get($r['acted_by_user_id'])?->employee : $approvers->get($r['approver_employee_id']);
+        $personOf = fn (array $r): array => ApprovalFacts::personOf($employeeOf($r), $r['acted_by_user_id'] !== null || $r['acted_by_name'] !== null, $r['key']);
+
+        $byKey = [];
+        foreach ($reached as $row) {
+            $byKey[$row['key']][] = $row;
+        }
+
+        $rows = collect($byKey)
+            ->map(function (array $set, string|int $key) use ($summarise, $departments, $personOf, $approvers) {
+                $named = null;
+                foreach ($set as $candidate) {
+                    if ($personOf($candidate)['kind'] === 'person') {
+                        $named = $candidate;
+                        break;
+                    }
+                }
+                $named ??= $set[0];
+                $person = $personOf($named);
+                $flags = array_filter(array_map(fn (array $r) => $r['waiting'] ? ApprovalFacts::blockedOf($approvers->get($r['approver_employee_id'])) : null, $set));
+                $group = $departments->get($named['approver_department_id']);
 
                 return [
-                    'key' => $key,
+                    'key' => (string) $key,
                     'name' => $person['name'],
                     'code' => $person['code'],
                     'department' => $person['kind'] === 'group_step' ? ($group ? ['name' => $group->name, 'name_th' => $group->name_th] : null) : $person['department'],
                     'kind' => $person['kind'],
                     'apart' => $person['kind'] !== 'person',
-                    'left' => ($named->approver?->hasLeft() ?? false) || $flags->contains('left'),
+                    'left' => ($approvers->get($named['approver_employee_id'])?->hasLeft() ?? false) || in_array('left', $flags, true),
                     // Only while they still hold a step nobody else can decide.
-                    'no_account' => $flags->contains('no_account'),
+                    'no_account' => in_array('no_account', $flags, true),
                 ] + $summarise($set);
             })
             ->sortBy([
@@ -417,12 +440,12 @@ class RequestApprovalsReport extends TabularReport
     /**
      * Every skip reason, zeros included, with the names its "สิ่งที่ควรดู" sentence needs.
      *
-     * @param  Collection<int, RequestApproval>  $all
      * @param  Collection<int, RequestApproval>  $skipped
      * @param  Collection<int, Department>  $departments
+     * @param  callable(list<int>): int  $unapproved  how many of these requests had every approval step skipped
      * @return list<array<string, mixed>>
      */
-    private function skips(Collection $all, Collection $skipped, Collection $departments): array
+    private function skips(Collection $skipped, Collection $departments, callable $unapproved): array
     {
         $requests = $skipped->pluck('request')->unique('id');
         $groups = EmailGroup::query()->whereIn('id', $requests->pluck('email_group_id')->filter()->unique()->values())->get(['id', 'code', 'name', 'owner_employee_id'])->keyBy('id');
@@ -453,7 +476,7 @@ class RequestApprovalsReport extends TabularReport
                 'steps' => $set->count(),
                 'requests' => count($requestIds),
                 'labels' => $set->countBy('label')->sortDesc()->all(),
-                'unapproved_requests' => ApprovalFacts::unapproved($all, $requestIds),
+                'unapproved_requests' => $unapproved($requestIds),
                 'top_requesters' => $set->countBy(fn (RequestApproval $s) => (string) $s->request->requester_name)
                     ->map(fn (int $n, string $name) => ['name' => $name, 'count' => $n])
                     ->sortBy([fn ($a, $b) => $b['count'] <=> $a['count'], fn ($a, $b) => strcmp($a['name'], $b['name'])])
