@@ -6,6 +6,8 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SerialToggle } from '@/shared/components/serial-toggle';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useLocalName } from '@/shared/hooks/use-local-name';
+import { nameSearch } from '@/shared/lib/local-name';
 import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
@@ -55,6 +57,7 @@ function itemToForm(item: StockItem): StockItemPayload {
  */
 export function StockItemModal({ open, item, onClose }: { open: boolean; item?: StockItem | null; onClose: () => void }) {
     const t = useT();
+    const nameOf = useLocalName();
     const confirmEdit = useConfirmEdit();
     const { create, update } = useStockItemMutations();
     const { data: categories = [] } = useCategories();
@@ -158,7 +161,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                             <SearchableSelect
                                 value={form.category_id != null ? String(form.category_id) : ''}
                                 onChange={(v) => set('category_id', v ? Number(v) : null)}
-                                options={categories.map((c) => ({ value: String(c.id), label: c.name, search: c.name }))}
+                                options={categories.map((c) => ({ value: String(c.id), label: nameOf(c), search: nameSearch(c) }))}
                             />
                         </Field>
                         <Field label={t('stock_unit')}>

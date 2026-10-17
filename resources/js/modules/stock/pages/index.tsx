@@ -9,8 +9,10 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
+import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
+import { nameSearch } from '@/shared/lib/local-name';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -228,6 +230,7 @@ function AlertCard({
 
 export default function StockPage() {
     const t = useT();
+    const nameOf = useLocalName();
     const confirm = useConfirm();
     const filterIds = { cat: useId(), wh: useId(), status: useId(), sort: useId() };
     // Every gate on this page lives under the stock.* prefix.
@@ -619,7 +622,7 @@ export default function StockPage() {
                                                             search: t('stock_all_categories'),
                                                             icon: <ToneDot tone="gray" />,
                                                         },
-                                                        ...categories.map((c) => ({ value: c.name, label: c.name, search: c.name })),
+                                                        ...categories.map((c) => ({ value: c.name, label: nameOf(c), search: nameSearch(c) })),
                                                     ]}
                                                 />
                                             </div>
