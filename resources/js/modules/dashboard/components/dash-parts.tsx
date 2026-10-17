@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { KpiTile, Sparkline } from '@/modules/report';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { rowDelay } from '@/shared/lib/row-in';
 import { cn } from '@/shared/lib/utils';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
@@ -83,14 +84,15 @@ export interface LegendItem {
 
 /** The legend under a tile's bar: dot, label, and the count in ink. */
 export function LegendFooter({ items }: { items: LegendItem[] }) {
+    const fmtN = useNumberFormat();
     return (
-        <span className="flex gap-x-2.5 overflow-hidden" title={items.map((item) => `${item.label} ${item.value}`).join(', ')}>
+        <span className="flex gap-x-2.5 overflow-hidden" title={items.map((item) => `${item.label} ${fmtN(item.value)}`).join(', ')}>
             {items.map((item) => {
                 const body = (
                     <>
                         <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', item.dot)} />
                         {item.label}
-                        <span className="text-foreground font-semibold tabular-nums">{item.value}</span>
+                        <span className="text-foreground font-semibold tabular-nums">{fmtN(item.value)}</span>
                     </>
                 );
                 return item.to ? (
@@ -124,12 +126,13 @@ export function SparkFooter({ text, values, className }: { text: React.ReactNode
 
 /** ▲/▼ change against an earlier figure; `upIsBad` turns a rise red (a growing backlog). */
 export function Delta({ value, upIsBad = false, label }: { value: number; upIsBad?: boolean; label?: string }) {
+    const fmtN = useNumberFormat();
     const tone =
         value === 0 ? 'text-muted-foreground' : value > 0 === upIsBad ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400';
 
     return (
         <span className={cn('font-semibold tabular-nums', tone)}>
-            {value > 0 ? '▲' : value < 0 ? '▼' : '±'} {Math.abs(value)}
+            {value > 0 ? '▲' : value < 0 ? '▼' : '±'} {fmtN(Math.abs(value))}
             {label && <span className="text-muted-foreground ml-1 font-normal">{label}</span>}
         </span>
     );
@@ -138,6 +141,7 @@ export function Delta({ value, upIsBad = false, label }: { value: number; upIsBa
 /** Footer link that leaves the card for the full list: left-aligned brand text, chevron at the end. */
 export function CardLink({ to, total, shown, label }: { to: To; total: number; shown: number; label?: string }) {
     const t = useT();
+    const fmtN = useNumberFormat();
 
     return (
         <Link
@@ -145,7 +149,7 @@ export function CardLink({ to, total, shown, label }: { to: To; total: number; s
             state={stateFor(to)}
             className="border-border/60 text-brand hover:bg-accent focus-visible:ring-ring mt-auto flex items-center justify-between gap-2 border-t border-dashed px-5 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
-            {label ?? (total > shown ? t('dash_view_all_n').replace('{n}', String(total)) : t('dash_view_all'))}
+            {label ?? (total > shown ? t('dash_view_all_n').replace('{n}', fmtN(total)) : t('dash_view_all'))}
             <ChevronRight aria-hidden className="h-4 w-4 shrink-0" />
         </Link>
     );
@@ -171,6 +175,7 @@ export function HBarRow({
     muted?: boolean;
     to?: To | null;
 }) {
+    const fmtN = useNumberFormat();
     const body = (
         <>
             <span className={cn('w-32 shrink-0 truncate text-sm', strong && 'font-semibold', muted && 'text-muted-foreground')} title={label}>
@@ -179,7 +184,7 @@ export function HBarRow({
             <span className="dark:bg-muted h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
                 <span className={cn('block h-full rounded-full', fill)} style={{ width: `${scale > 0 ? (value / scale) * 100 : 0}%` }} />
             </span>
-            <span className="w-8 shrink-0 text-right text-sm font-semibold tabular-nums">{value}</span>
+            <span className="min-w-8 shrink-0 text-right text-sm font-semibold tabular-nums">{fmtN(value)}</span>
         </>
     );
 

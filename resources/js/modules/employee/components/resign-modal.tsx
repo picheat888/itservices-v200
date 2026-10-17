@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
@@ -25,6 +26,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const fmtN = useNumberFormat();
     const { resign } = useEmployeeMutations();
     const confirm = useConfirm();
     const [reason, setReason] = useState('');
@@ -184,7 +186,8 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                                 {pageCount > 1 && (
                                     <div className="border-border text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-sm">
                                         <span>
-                                            {start + 1}&ndash;{Math.min(start + ASSETS_PER_PAGE, heldAssets.length)} {t('emp_of')} {heldAssets.length}
+                                            {fmtN(start + 1)}&ndash;{fmtN(Math.min(start + ASSETS_PER_PAGE, heldAssets.length))} {t('emp_of')}{' '}
+                                            {fmtN(heldAssets.length)}
                                         </span>
                                         <div className="flex items-center gap-1.5">
                                             <button
@@ -197,7 +200,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                                                 <ChevronLeft className="h-4 w-4" />
                                             </button>
                                             <span className="text-foreground px-1 font-medium">
-                                                {safePage} / {pageCount}
+                                                {fmtN(safePage)} / {fmtN(pageCount)}
                                             </span>
                                             <button
                                                 type="button"

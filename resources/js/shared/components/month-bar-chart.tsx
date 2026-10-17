@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 
 /** One column of the chart. `month` is the column's start: 'YYYY-MM-DD' (day, week), 'YYYY-MM' or 'YYYY'. */
@@ -36,6 +37,7 @@ export function MonthBarChart({
     highlightLast?: boolean;
 }) {
     const fmt = useDateFormat();
+    const fmtN = useNumberFormat();
     const max = Math.max(1, ...data.map((d) => d.count));
     const lastIndex = highlightLast ? data.length - 1 : -1;
     // A run of zeroes is not a chart. Twelve empty bars read as something broken, so say
@@ -73,7 +75,7 @@ export function MonthBarChart({
                                     now ? 'text-brand' : 'text-muted-foreground',
                                 )}
                             >
-                                {d.count}
+                                {fmtN(d.count)}
                             </span>
                         </div>
                         <div className="text-center text-[10.5px] whitespace-nowrap">

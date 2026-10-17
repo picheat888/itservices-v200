@@ -11,6 +11,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/datetime';
@@ -1065,6 +1066,7 @@ function AuditTab() {
     const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const fmtN = useNumberFormat();
     const [expandedId, setExpandedId] = useState<number | null>(null);
     // Search, filters, page and rows-per-page live in the URL (?search, category, user, page, per).
     const list = useListParams();
@@ -1313,7 +1315,7 @@ function AuditTab() {
 
                 <div className="flex items-center gap-3">
                     <span>
-                        {from}–{to} {translate(lang, 'perm_ui_of')} {total}
+                        {fmtN(from)}–{fmtN(to)} {translate(lang, 'perm_ui_of')} {fmtN(total)}
                     </span>
                     <div className="flex items-center gap-1">
                         <button
@@ -1325,7 +1327,7 @@ function AuditTab() {
                             <ChevronLeft aria-hidden className="h-4 w-4" />
                         </button>
                         <span className="text-foreground px-1 font-medium">
-                            {page} / {totalPages}
+                            {fmtN(page)} / {fmtN(totalPages)}
                         </span>
                         <button
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

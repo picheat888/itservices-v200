@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { CardEmpty, CardTitle, FILL, heldStyle } from '@/modules/report';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import type { DailyCount } from '../api/dashboardApi';
@@ -19,6 +20,7 @@ export function OpenedPerDayCard({
 }) {
     const t = useT();
     const fmt = useDateFormat();
+    const fmtN = useNumberFormat();
     const total = volume.reduce((sum, day) => sum + day.count, 0);
     const { top, ticks } = niceAxis(Math.max(0, ...volume.map((day) => day.count)));
     const at = (value: number) => `${(value / top) * 100}%`;
@@ -29,7 +31,7 @@ export function OpenedPerDayCard({
                 level="h3"
                 title={t('dash_opened_per_day')}
                 note={t('dash_last_14d')}
-                sub={t('dash_total_cases').replace('{n}', String(total))}
+                sub={t('dash_total_cases').replace('{n}', fmtN(total))}
             />
             {total === 0 ? (
                 <CardEmpty>{t('dash_empty_window')}</CardEmpty>
@@ -37,7 +39,7 @@ export function OpenedPerDayCard({
                 <div className="flex min-h-[200px] flex-1 flex-col px-5 pt-5 pb-3">
                     <ul className="sr-only">
                         {volume.map((day) => (
-                            <li key={day.date}>{`${fmt.date(day.date)}: ${day.count}`}</li>
+                            <li key={day.date}>{`${fmt.date(day.date)}: ${fmtN(day.count)}`}</li>
                         ))}
                     </ul>
                     {/* Plot */}
@@ -45,7 +47,7 @@ export function OpenedPerDayCard({
                         <div className="text-muted-foreground relative w-6 shrink-0 text-[11px] tabular-nums">
                             {ticks.map((tick) => (
                                 <span key={tick} className="absolute right-0 translate-y-1/2" style={{ bottom: at(tick) }}>
-                                    {tick}
+                                    {fmtN(tick)}
                                 </span>
                             ))}
                         </div>
@@ -60,7 +62,7 @@ export function OpenedPerDayCard({
                             ))}
                             <div className="absolute inset-0 flex gap-1">
                                 {volume.map((day) => (
-                                    <div key={day.date} className="relative h-full flex-1" title={`${fmt.date(day.date)}: ${day.count}`}>
+                                    <div key={day.date} className="relative h-full flex-1" title={`${fmt.date(day.date)}: ${fmtN(day.count)}`}>
                                         <div
                                             className={cn('absolute inset-x-0 bottom-0 mx-auto max-w-7 rounded-t', FILL.blue)}
                                             style={{ height: at(day.count) }}
@@ -70,7 +72,7 @@ export function OpenedPerDayCard({
                                                 className="absolute inset-x-0 mb-0.5 text-center text-[11px] font-semibold tabular-nums"
                                                 style={{ bottom: at(day.count) }}
                                             >
-                                                {day.count}
+                                                {fmtN(day.count)}
                                             </span>
                                         )}
                                     </div>

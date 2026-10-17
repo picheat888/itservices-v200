@@ -1,3 +1,4 @@
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { useEffect, useRef } from 'react';
 
@@ -38,6 +39,7 @@ export function PageTabs<T extends string>({
     onChange: (id: T) => void;
     className?: string;
 }) {
+    const fmtN = useNumberFormat();
     // One row that scrolls sideways when it runs out of room (a tablet in portrait), rather
     // than wrapping into a second row that reads as a second set of tabs. The active tab is
     // kept in view, so a deep link to the last tab doesn't open on a tab you can't see.
@@ -70,7 +72,7 @@ export function PageTabs<T extends string>({
                         {tb.label}
                         {tb.count != null && tb.count > 0 && (
                             <span title={tb.countTitle} className={cn('rounded-full px-1.5 py-0.5 text-[11px]', TONES[tb.tone ?? 'muted'])}>
-                                {tb.count.toLocaleString('en-US')}
+                                {fmtN(tb.count)}
                             </span>
                         )}
                         {/* bottom-0, not -bottom-px: the strip scrolls, so anything below its edge is clipped. */}
