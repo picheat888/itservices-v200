@@ -233,6 +233,8 @@ export const report: Dict = {
 
     // components/schedule-report-dialog.tsx — schedule dialog
     rep_schedule: 'ตั้งเวลาส่ง',
+    rep_no_export_right: 'คุณไม่มีสิทธิ์ส่งออกไฟล์',
+    rep_no_schedule_right: 'คุณไม่มีสิทธิ์ตั้งเวลาส่งรายงาน',
     rep_schedule_eyebrow: 'ส่งรายงานทางอีเมลอัตโนมัติ',
     rep_schedule_frequency: 'ความถี่',
     rep_schedule_freq_daily: 'รายวัน',

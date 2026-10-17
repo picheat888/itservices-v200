@@ -19,6 +19,7 @@ import { PeriodSwitch } from '../components/period-switch';
 import { byDomainOrder, ReportCatalogue, ReportCatalogueSkeleton, reportStem } from '../components/report-catalogue';
 import { ScheduledReports } from '../components/scheduled-reports';
 import { SnapshotStrip } from '../components/snapshot-strip';
+import { useReportRights } from '../hooks/use-report-rights';
 import { useReportCatalogue } from '../hooks/use-reports';
 import { useSnapshotRange } from '../hooks/use-snapshot-range';
 import type { ReportDomain } from '../types';
@@ -27,6 +28,7 @@ type Chip = ReportDomain | 'all';
 
 export default function ReportsPage() {
     const t = useT();
+    const { seesMyExports } = useReportRights();
     const { data: reports = [], isLoading } = useReportCatalogue();
     // Search (?search) and module chip (?domain) live in the URL; a domain this user has no report in reads as all
     const list = useListParams();
@@ -116,7 +118,7 @@ export default function ReportsPage() {
                 </div>
 
                 <aside className="space-y-4">
-                    <MyExports />
+                    {seesMyExports && <MyExports />}
                     <ScheduledReports />
                 </aside>
             </div>

@@ -7,6 +7,7 @@
  * (GET /api/reports/schedules).
  */
 import { useT } from '@/lang';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
@@ -18,6 +19,7 @@ import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { CalendarClock, Clock, Mail, Pencil, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useReportRights } from '../hooks/use-report-rights';
 import {
     useDeleteSchedule,
     useReportCatalogue,
@@ -41,6 +43,8 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
     const update = useUpdateSchedule();
     const remove = useDeleteSchedule();
     const sendNow = useSendScheduleNow();
+    const { canSchedule } = useReportRights();
+    const noRight = canSchedule ? null : t('rep_no_schedule_right');
     const title = t(`rep_${reportStem(item.report_key)}_title`);
 
     const toast = (message: string, tone: 'success' | 'error') => useToastStore.getState().push(message, tone);
@@ -103,7 +107,14 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                     {title}
                 </div>
                 <div className="flex justify-end" title={t('rep_schedules_active')}>
-                    <Switch checked={item.active} onChange={onToggle} disabled={update.isPending} aria-label={t('rep_schedules_active')} />
+                    <DisabledReason reason={noRight} label={t('rep_schedules_active')}>
+                        <Switch
+                            checked={item.active}
+                            onChange={onToggle}
+                            disabled={update.isPending || !canSchedule}
+                            aria-label={t('rep_schedules_active')}
+                        />
+                    </DisabledReason>
                 </div>
 
                 <div
@@ -115,37 +126,45 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                 </div>
                 {/* Icons only — the name and the tooltip say what each does. */}
                 <div className="-my-1 -mr-1.5 flex items-center justify-end">
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onSendNow}
-                        disabled={!item.active || sendNow.isPending}
-                        aria-label={t('rep_schedules_send_now')}
-                        title={t('rep_schedules_send_now')}
-                        className="text-brand hover:text-brand h-7 w-7"
-                    >
-                        <Send className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onEdit}
-                        aria-label={t('rep_schedules_edit')}
-                        title={t('rep_schedules_edit')}
-                        className={iconButton}
-                    >
-                        <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onDelete}
-                        aria-label={t('rep_schedules_delete')}
-                        title={t('rep_schedules_delete')}
-                        className={cn(iconButton, 'hover:text-destructive')}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <DisabledReason reason={noRight} label={t('rep_schedules_send_now')}>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={onSendNow}
+                            disabled={!item.active || sendNow.isPending || !canSchedule}
+                            aria-label={t('rep_schedules_send_now')}
+                            title={canSchedule ? t('rep_schedules_send_now') : undefined}
+                            className="text-brand hover:text-brand h-7 w-7"
+                        >
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </DisabledReason>
+                    <DisabledReason reason={noRight} label={t('rep_schedules_edit')}>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={onEdit}
+                            disabled={!canSchedule}
+                            aria-label={t('rep_schedules_edit')}
+                            title={canSchedule ? t('rep_schedules_edit') : undefined}
+                            className={iconButton}
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    </DisabledReason>
+                    <DisabledReason reason={noRight} label={t('rep_schedules_delete')}>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={onDelete}
+                            disabled={!canSchedule}
+                            aria-label={t('rep_schedules_delete')}
+                            title={canSchedule ? t('rep_schedules_delete') : undefined}
+                            className={cn(iconButton, 'hover:text-destructive')}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </DisabledReason>
                 </div>
 
                 <div className={cn('text-foreground/75 truncate text-xs', !item.active && 'opacity-60')}>{when}</div>

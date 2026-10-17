@@ -363,10 +363,11 @@ export function useExportTabular() {
 const isBuilding = (item: ReportExportItem) => item.status === 'queued' || item.status === 'running';
 
 /** Polls every few seconds only while a file is still waiting or being built. */
-export const useMyExports = () =>
+export const useMyExports = (enabled = true) =>
     useQuery({
         queryKey: REPORT_EXPORTS_KEY,
         queryFn: reportApi.myExports,
+        enabled,
         refetchInterval: (query) => (query.state.data?.some(isBuilding) ? 3000 : false),
     });
 
