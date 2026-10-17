@@ -5,6 +5,7 @@ import { DataTable, PAGE_SIZES, type Column } from '@/shared/components/data-tab
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -405,7 +406,7 @@ export default function AssetsPage() {
     const [recallAsset, setRecallAsset] = useState<Asset | null>(null);
 
     const [period, setPeriod] = useOverviewPeriod();
-    const { data: summary, isLoading: summaryLoading } = useAssetSummary(period);
+    const { data: summary, isLoading: summaryLoading, isError: summaryFailed, refetch: refetchSummary } = useAssetSummary(period);
     const {
         data: listData,
         isLoading,
@@ -672,7 +673,8 @@ export default function AssetsPage() {
                     </div>
                 )}
                 {tab === 'overview' && summaryLoading && <AssetOverviewSkeleton />}
-                {tab === 'overview' && !summaryLoading && (
+                {tab === 'overview' && !summaryLoading && !summary && summaryFailed && <LoadFailedPanel onRetry={() => refetchSummary()} />}
+                {tab === 'overview' && !summaryLoading && summary && (
                     <div className="space-y-6 px-5 pb-5">
                         {/* Summary stats live on the Overview tab. */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

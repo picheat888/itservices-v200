@@ -33,8 +33,9 @@ class RequestsBlock
         $approved = ServiceRequest::where('status', RequestStatus::Approved->value)->get(['id', 'created_at', 'approved_at']);
         $ages = $approved->countBy(fn (ServiceRequest $r) => $this->ageBucket($r->approved_at ?? $r->created_at, $now));
         $pending = ServiceRequest::where('status', RequestStatus::Pending->value);
+        // Filed in the window and now in that state, so each figure is the Requests list under filed_days=30
         $completed = ServiceRequest::where('status', RequestStatus::Completed->value)
-            ->where('completed_at', '>=', $since)
+            ->where('created_at', '>=', $since)
             ->get(['id', 'created_at', 'completed_at']);
         $waiting = $this->stalled->waitingSteps();
 
@@ -52,8 +53,8 @@ class RequestsBlock
             ],
             'filed_30d' => ServiceRequest::where('created_at', '>=', $since)->count(),
             'completed_30d' => $completed->count(),
-            'rejected_30d' => ServiceRequest::where('status', RequestStatus::Rejected->value)->where('rejected_at', '>=', $since)->count(),
-            'cancelled_30d' => ServiceRequest::where('status', RequestStatus::Cancelled->value)->where('cancelled_at', '>=', $since)->count(),
+            'rejected_30d' => ServiceRequest::where('status', RequestStatus::Rejected->value)->where('created_at', '>=', $since)->count(),
+            'cancelled_30d' => ServiceRequest::where('status', RequestStatus::Cancelled->value)->where('created_at', '>=', $since)->count(),
             'avg_days_to_complete' => $completed->isEmpty()
                 ? null
                 : round((float) $completed->avg(fn (ServiceRequest $r) => $r->created_at->diffInMinutes($r->completed_at, true) / 1440), 1),

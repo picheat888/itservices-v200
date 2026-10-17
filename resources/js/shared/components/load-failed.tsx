@@ -17,3 +17,12 @@ export function LoadFailed({ onRetry }: { onRetry: () => void }) {
         </span>
     );
 }
+
+/** LoadFailed centred where an overview's cards would be, so a failed summary never reads as zeros. */
+export function LoadFailedPanel({ onRetry }: { onRetry: () => void }) {
+    return (
+        <div className="flex justify-center px-5 py-12">
+            <LoadFailed onRetry={onRetry} />
+        </div>
+    );
+}

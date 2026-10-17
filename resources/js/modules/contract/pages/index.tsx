@@ -4,6 +4,7 @@ import { useCurrency } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover } from '@/shared/components/info-popover';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -121,7 +122,7 @@ export default function ContractsPage() {
     const [newlyCreated, setNewlyCreated] = useState<Contract | null>(null);
     const newlyCreatedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const { data: summary } = useContractSummary();
+    const { data: summary, isError: summaryFailed, refetch: refetchSummary } = useContractSummary();
     // The list endpoint's `tab` param doubles as the status filter: '' → all contracts,
     // 'expiring'/'expired' → the matching backend filter.
     const listEnabledTab = statusFilter || 'all';
@@ -322,7 +323,11 @@ export default function ContractsPage() {
                 />
 
                 {tab === 'overview' ? (
-                    <OverviewTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
+                    !summary && summaryFailed ? (
+                        <LoadFailedPanel onRetry={() => refetchSummary()} />
+                    ) : (
+                        <OverviewTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
+                    )
                 ) : (
                     <div className="space-y-3 p-5">
                         <div className="flex flex-wrap items-center gap-2">

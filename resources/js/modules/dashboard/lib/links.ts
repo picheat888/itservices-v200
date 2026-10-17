@@ -20,7 +20,8 @@ export function dashLinks(can: Can, linkedEmployee: boolean) {
         myTickets: can('tickets.my') ? '/tickets?tab=my' : null,
         pickup: desk ? '/tickets?tab=all&status=open' : null,
         approvals: requests ? '/requests?tab=approvals' : null,
-        awaitingIt: oversee ? '/requests?tab=all&status=approved' : null,
+        // The IT queue tab for completers (the tile counts every approved request, as the queue does)
+        awaitingIt: can('requests.complete') ? '/requests?tab=queue' : oversee ? '/requests?tab=all&status=approved' : null,
         expiring: can('contracts.module') ? '/contracts?tab=all&status=expiring' : null,
         // Profile drawer sections, each behind the rule the drawer uses
         myRequests: can('requests.submit') ? `${PROFILE}requests` : null,
@@ -30,12 +31,16 @@ export function dashLinks(can: Can, linkedEmployee: boolean) {
         request: (id: number) => (requests ? `/requests?view=${id}` : null),
         ticketsHome: tickets ? '/tickets' : null,
         ticketsAll: desk ? '/tickets?tab=all' : null,
+        overSla: desk ? '/tickets?tab=all&sla=over_sla' : null,
         // The overview report on the window the SLA tiles count
         slaReport: (from: string, to: string) =>
             can('reports.module') && can('reports.tickets') ? `/reports/tickets-overview?from=${from}&to=${to}` : null,
         requestsHome: requests ? '/requests' : null,
         requestsAll: oversee ? '/requests?tab=all' : null,
-        requestsStatus: (status: string) => (oversee ? `/requests?tab=all&status=${status}` : null),
+        // Request figures carry the filed window they count, so the list holds exactly those requests
+        requestsStatus: (status: string, filedDays?: number) =>
+            oversee ? `/requests?tab=all&status=${status}${filedDays ? `&filed_days=${filedDays}` : ''}` : null,
+        requestsFiled: (from: string, to: string) => (oversee ? `/requests?tab=all&filed_from=${from}&filed_to=${to}` : null),
         employeesHome: can('employees.module') ? '/employees' : null,
         auditLog: can('system.manage_permissions') && can('system.view_audit') ? '/permissions?tab=logs' : null,
     };
