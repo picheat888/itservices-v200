@@ -30,7 +30,7 @@ import {
 import { FILL, PIECE_INK } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
-import { niceMax } from './weekly-ticket-chart';
+import { axisTop } from './weekly-ticket-chart';
 
 type Lang = 'th' | 'en';
 type Month = AssetTransferBreakdown['months'][number];
@@ -108,12 +108,6 @@ function FlowLegend({ months }: { months: Month[] }) {
             ))}
         </span>
     );
-}
-
-/** A tidy axis top at or above the value whose half is a whole number: 11 → 12, 3 → 4, 41 → 50. */
-function axisTop(value: number): number {
-    const steps = [4, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 60, 80, 100];
-    return steps.find((s) => s >= value) ?? niceMax(value);
 }
 
 function MonthFlowCard({ months }: { months: Month[] }) {

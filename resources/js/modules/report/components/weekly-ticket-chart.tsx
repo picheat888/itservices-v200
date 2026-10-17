@@ -21,6 +21,12 @@ export function niceMax(value: number): number {
     return Math.max(unit, Math.ceil(value / unit) * unit);
 }
 
+/** A tidy axis top at or above the value whose half is a whole number: 11 → 12, 3 → 4, 41 → 50. */
+export function axisTop(value: number): number {
+    const steps = [4, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 60, 80, 100];
+    return steps.find((s) => s >= value) ?? niceMax(value);
+}
+
 /** Rough width of one character of the 10.5px axis text, in chart units. */
 const CHAR_WIDTH = 6.4;
 
