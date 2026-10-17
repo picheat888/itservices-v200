@@ -62,6 +62,7 @@ import { RequestDetailDialog } from '../components/request-detail-dialog';
 import { WorkflowMini } from '../components/workflow-mini';
 import { useRequests } from '../hooks/use-requests';
 import { canFileAnyRequest } from '../lib/submit-types';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** What last happened to a request, as a sentence ("Approved by X"); the event alone when nobody is attached. */
 function activityLine(request: ServiceRequest, t: (key: string) => string, lang: string): string {
@@ -113,6 +114,7 @@ const fieldLabel = (htmlFor: string, icon: ReactNode, label: string) => (
  */
 export default function RequestsPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { can } = useAuth();
     const canSubmit = canFileAnyRequest(can);
@@ -426,8 +428,8 @@ export default function RequestsPage() {
                                     label={t('req_kpi_awaiting')}
                                     value={String(meta?.awaiting_me ?? 0)}
                                     onClick={() => switchTab('approvals')}
-                                    sub={t('req_kpi_awaiting_of_short').replace('{n}', String(meta?.pending ?? 0))}
-                                    footerTitle={t('req_kpi_awaiting_of').replace('{n}', String(meta?.pending ?? 0))}
+                                    sub={t('req_kpi_awaiting_of_short').replace('{n}', fmtN(meta?.pending ?? 0))}
+                                    footerTitle={t('req_kpi_awaiting_of').replace('{n}', fmtN(meta?.pending ?? 0))}
                                     loading={kpiLoading}
                                 />
                                 <StatCard
@@ -739,13 +741,14 @@ function DashCard({
     action?: ReactNode;
     children: ReactNode;
 }) {
+    const fmtN = useNumberFormat();
     return (
         <Card className="overflow-hidden">
             <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
                 <Icon className="text-muted-foreground h-4 w-4" />
                 <h2 className="text-sm font-semibold">{title}</h2>
                 {count != null && (
-                    <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-1.5 py-0.5 text-[11px]">{count}</span>
+                    <span className="bg-muted text-foreground/65 dark:text-muted-foreground rounded-full px-1.5 py-0.5 text-[11px]">{fmtN(count)}</span>
                 )}
                 {action}
             </div>

@@ -49,6 +49,7 @@ import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 import { CONTRACT_TYPE_TONE } from '../tones';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'all'] as const;
@@ -67,12 +68,13 @@ const LIST_KEYS = ['search', 'type', 'status', 'sort', 'page'];
 /** Days-remaining cell: gray when cancelled/expired, blue far out, amber inside the reminder window, red once overdue. */
 function DaysCell({ days, inReminder, status }: { days: number; inReminder: boolean; status: ContractStatus }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
     if (days === 0) return <StatusBadge tone="red">{t('contract_due_today')}</StatusBadge>;
-    if (days < 0) return <StatusBadge tone="red">{t('contract_days_overdue_short').replace('{n}', String(-days))}</StatusBadge>;
-    if (inReminder) return <StatusBadge tone="amber">{t('contract_days_many').replace('{n}', String(days))}</StatusBadge>;
-    return <StatusBadge tone="blue">{t('contract_days_short').replace('{n}', String(days))}</StatusBadge>;
+    if (days < 0) return <StatusBadge tone="red">{t('contract_days_overdue_short').replace('{n}', fmtN(-days))}</StatusBadge>;
+    if (inReminder) return <StatusBadge tone="amber">{t('contract_days_many').replace('{n}', fmtN(days))}</StatusBadge>;
+    return <StatusBadge tone="blue">{t('contract_days_short').replace('{n}', fmtN(days))}</StatusBadge>;
 }
 
 export default function ContractsPage() {
@@ -624,6 +626,7 @@ function OverviewTab({
     onSelect: (id: number) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const { formatCompact } = useCurrency();
     const lang = useUiStore((s) => s.lang);
@@ -773,8 +776,8 @@ function OverviewTab({
                                     c.days === 0
                                         ? t('contract_due_today')
                                         : c.days < 0
-                                          ? t('contract_timeline_expired_ago').replace('{n}', String(-c.days))
-                                          : t('contract_days_many').replace('{n}', String(c.days));
+                                          ? t('contract_timeline_expired_ago').replace('{n}', fmtN(-c.days))
+                                          : t('contract_days_many').replace('{n}', fmtN(c.days));
                                 return (
                                     <InfoPopover
                                         key={c.id}
@@ -865,7 +868,7 @@ function OverviewTab({
                                 className="hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                             >
                                 <span className="flex h-9 w-16 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
-                                    {t('contract_days_short').replace('{n}', String(c.days))}
+                                    {t('contract_days_short').replace('{n}', fmtN(c.days))}
                                 </span>
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-medium">{c.name}</div>

@@ -18,6 +18,7 @@ import { useContractMutations } from '../hooks/use-contracts';
 import { ContractAssetsTab } from './contract-assets-tab';
 import { ContractAttachmentsTab } from './contract-attachments-tab';
 import { ContractCancelDialog } from './contract-cancel-dialog';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Icon per contract type — mirrors the icons used by the Edit wizard's type cards. */
 const TYPE_ICON: Record<ContractType, LucideIcon> = {
@@ -64,6 +65,7 @@ export function ContractDetailDrawer({
     canDelete: boolean;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
@@ -95,7 +97,7 @@ export function ContractDetailDrawer({
                 variant: 'warn',
                 hideCancel: true,
                 title: t('contract_cannot_close_title'),
-                description: t('contract_cannot_close_desc').replace('{n}', String(pending.length)),
+                description: t('contract_cannot_close_desc').replace('{n}', fmtN(pending.length)),
                 confirmText: t('contract_got_it'),
             });
             return false;
@@ -179,10 +181,10 @@ export function ContractDetailDrawer({
             {days === 0
                 ? t('contract_due_today')
                 : days < 0
-                  ? t('contract_days_overdue').replace('{n}', String(-days))
+                  ? t('contract_days_overdue').replace('{n}', fmtN(-days))
                   : c.in_reminder
-                    ? t('contract_expires_in').replace('{n}', String(days))
-                    : t('contract_days_left').replace('{n}', String(days))}
+                    ? t('contract_expires_in').replace('{n}', fmtN(days))
+                    : t('contract_days_left').replace('{n}', fmtN(days))}
         </StatusBadge>
     );
 
@@ -262,7 +264,7 @@ export function ContractDetailDrawer({
                                             value={(() => {
                                                 const monthsText = t(
                                                     c.duration_months === 1 ? 'contract_months_one' : 'contract_months_many',
-                                                ).replace('{n}', String(c.duration_months));
+                                                ).replace('{n}', fmtN(c.duration_months));
                                                 const daysText = t(c.duration_days === 1 ? 'contract_days_one' : 'contract_days_many').replace(
                                                     '{n}',
                                                     String(c.duration_days),
@@ -326,7 +328,7 @@ export function ContractDetailDrawer({
                                                         : 'border-border text-muted-foreground line-through',
                                                 )}
                                             >
-                                                {t('contract_notify_chip').replace('{n}', String(n.d))}
+                                                {t('contract_notify_chip').replace('{n}', fmtN(n.d))}
                                                 <span className="sr-only"> ({t(n.on ? 'contract_notify_on' : 'contract_notify_off')})</span>
                                             </span>
                                         ))}
@@ -334,7 +336,7 @@ export function ContractDetailDrawer({
                                 </div>
                                 <KV
                                     label={t('contract_reminder_threshold')}
-                                    value={c.reminder_days ? t('contract_reminder_days_before').replace('{n}', String(c.reminder_days)) : '—'}
+                                    value={c.reminder_days ? t('contract_reminder_days_before').replace('{n}', fmtN(c.reminder_days)) : '—'}
                                 />
                             </div>
                         )}

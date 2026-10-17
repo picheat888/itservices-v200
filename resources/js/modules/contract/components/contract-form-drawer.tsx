@@ -25,6 +25,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 25 * 1024 * 1024; // 25MB
@@ -149,6 +150,7 @@ export function ContractFormDrawer({
 }) {
     const fmt = useDateFormat();
     const t = useT();
+    const fmtN = useNumberFormat();
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
@@ -780,7 +782,7 @@ export function ContractFormDrawer({
                                                             : 'border-border text-muted-foreground hover:bg-accent',
                                                     )}
                                                 >
-                                                    {t('contract_days_many').replace('{n}', String(d))}
+                                                    {t('contract_days_many').replace('{n}', fmtN(d))}
                                                 </button>
                                             );
                                         })}
@@ -869,7 +871,7 @@ export function ContractFormDrawer({
                                                 )}
                                             </div>
                                             <div className="border-border text-muted-foreground border-t px-3 py-1.5 text-xs">
-                                                {t('contract_link_assets_selected').replace('{n}', String(form.asset_ids.length))}
+                                                {t('contract_link_assets_selected').replace('{n}', fmtN(form.asset_ids.length))}
                                             </div>
                                         </div>
                                     </Field>
@@ -915,7 +917,7 @@ export function ContractFormDrawer({
                                     {isHardware && (
                                         <ReviewRow
                                             k={t('contract_link_assets')}
-                                            v={t('contract_review_assets_linked').replace('{n}', String(form.asset_ids.length))}
+                                            v={t('contract_review_assets_linked').replace('{n}', fmtN(form.asset_ids.length))}
                                         />
                                     )}
                                     <ReviewRow
@@ -978,9 +980,10 @@ export function ContractFormDrawer({
 /** Per-step heading: small step number, bold title, muted subtitle. `title` / `sub` arrive already translated. */
 function StepHead({ num, title, sub }: { num: number; title: string; sub: string }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     return (
         <div>
-            <p className="text-brand text-xs font-bold tracking-wide uppercase">{t('contract_step_n').replace('{n}', String(num))}</p>
+            <p className="text-brand text-xs font-bold tracking-wide uppercase">{t('contract_step_n').replace('{n}', fmtN(num))}</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight">{title}</h2>
             <p className="text-muted-foreground mt-1 text-sm">{sub}</p>
         </div>

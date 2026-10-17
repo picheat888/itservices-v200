@@ -15,6 +15,7 @@ import { useMutationState } from '@tanstack/react-query';
 import { Check, CheckCheck, Inbox, Laptop, Loader2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { HeadRow, LoadingRows, PAGE, SectionHeading, ShowAllRow, TableCard } from './profile-table';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Accepted rows hold their place this long after the last accept finishes
 const SETTLE_MS = 3000;
@@ -64,6 +65,7 @@ function InlineSerial({ asset }: { asset: Asset }) {
 
 export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; loading: boolean; canReturn: boolean }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
@@ -111,7 +113,7 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
         confirm({
             variant: 'edit',
             title: t('profile_assets_accept_all'),
-            description: t('profile_assets_accept_all_confirm').replace('{n}', String(pending.length)),
+            description: t('profile_assets_accept_all_confirm').replace('{n}', fmtN(pending.length)),
             confirmText: t('profile_assets_accept_all'),
             action: () => Promise.all(pending.filter((a) => !acceptingIds.includes(a.id)).map((a) => acceptOne(a.id))).then(() => undefined),
         });
@@ -135,7 +137,7 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
                     <div className="flex items-center gap-2 border-b border-emerald-500/25 bg-emerald-500/10 px-4 py-2 text-[13px] font-extrabold text-emerald-700 dark:text-emerald-400">
                         <Inbox className="h-4 w-4 shrink-0" aria-hidden />
                         {t('profile_assets_pending_caption')}
-                        <span className="font-bold">{pending.length}</span>
+                        <span className="font-bold">{fmtN(pending.length)}</span>
                         {pending.length > 1 && (
                             <Button
                                 size="sm"

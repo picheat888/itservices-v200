@@ -1,3 +1,4 @@
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { DataTable, type Column } from '@/shared/components/data-table';
@@ -328,6 +329,7 @@ export function NotificationSettingsStats() {
 
 /** One module filter chip with its count. */
 function ModuleChip({ label, count, selected, onSelect }: { label: string; count: number; selected: boolean; onSelect: () => void }) {
+    const fmtN = useNumberFormat();
     return (
         <button
             type="button"
@@ -339,7 +341,7 @@ function ModuleChip({ label, count, selected, onSelect }: { label: string; count
             )}
         >
             {label}
-            <span className="font-semibold tabular-nums">{count}</span>
+            <span className="font-semibold tabular-nums">{fmtN(count)}</span>
         </button>
     );
 }

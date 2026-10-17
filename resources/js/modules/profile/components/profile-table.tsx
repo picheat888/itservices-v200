@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Rows shown before "show all"
 export const PAGE = 5;
@@ -20,10 +21,11 @@ export function HeadRow({ grid, children }: { grid: string; children: React.Reac
 }
 
 export function SectionHeading({ title, count, action }: { title: string; count: number; action?: React.ReactNode }) {
+    const fmtN = useNumberFormat();
     return (
         <div className="flex items-center gap-2">
             <span className="text-sm font-bold">{title}</span>
-            <span className="text-muted-foreground text-xs">{count}</span>
+            <span className="text-muted-foreground text-xs">{fmtN(count)}</span>
             {action && <span className="ml-auto">{action}</span>}
         </div>
     );
@@ -66,6 +68,7 @@ export function LoadingRows({ rows = 3 }: { rows?: number }) {
 
 export function ShowAllRow({ total, expanded, onToggle }: { total: number; expanded: boolean; onToggle: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     if (total <= PAGE) return null;
     const Icon = expanded ? ChevronUp : ChevronDown;
     return (
@@ -76,7 +79,7 @@ export function ShowAllRow({ total, expanded, onToggle }: { total: number; expan
             className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-semibold transition-colors"
         >
             <Icon className="h-3.5 w-3.5" aria-hidden />
-            {expanded ? t('profile_assets_show_less') : t('profile_assets_show_all').replace('{n}', String(total - PAGE))}
+            {expanded ? t('profile_assets_show_less') : t('profile_assets_show_all').replace('{n}', fmtN(total - PAGE))}
         </button>
     );
 }
