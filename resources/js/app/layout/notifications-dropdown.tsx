@@ -29,16 +29,15 @@ const NOTIF_TABS: { id: string; label: string }[] = [{ id: 'all', label: 'notif_
 /** Scrolling and sliding honour the reader's reduced-motion setting. */
 const smooth = (): ScrollBehavior => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
 
-/** Up/Down (and Home/End) move between the tray's rows. */
-function moveBetweenRows(e: React.KeyboardEvent<HTMLElement>) {
-    const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
-    if (!keys.includes(e.key)) return;
-    const rows = [...(e.currentTarget.closest('#notif-tray')?.querySelectorAll<HTMLElement>('[data-notif-row]') ?? [])];
-    const at = rows.indexOf(e.currentTarget);
-    const next = e.key === 'Home' ? rows[0] : e.key === 'End' ? rows[rows.length - 1] : rows[at + (e.key === 'ArrowDown' ? 1 : -1)];
-    if (!next) return;
+/** Up/Down/Home/End from a row (or its X) move to another row; true when the key was one of them. */
+function moveBetweenRows(e: React.KeyboardEvent<HTMLElement>, row: HTMLElement | null): boolean {
+    if (!row || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return false;
     e.preventDefault();
-    next.focus();
+    const rows = [...(row.closest('#notif-tray')?.querySelectorAll<HTMLElement>('[data-notif-row]') ?? [])];
+    const at = rows.indexOf(row);
+    const next = e.key === 'Home' ? rows[0] : e.key === 'End' ? rows[rows.length - 1] : rows[at + (e.key === 'ArrowDown' ? 1 : -1)];
+    next?.focus();
+    return true;
 }
 
 /** The kind the server counts and filters by: payload type, plus the imitated module on a test sample. */
@@ -58,6 +57,8 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
     const [tab, setTab] = useState('all');
     // Ids mid-dismiss: play the slide-out/collapse animation, then actually remove.
     const [dismissing, setDismissing] = useState<Set<string>>(new Set());
+    // WAI-ARIA roving tabindex: the list is one Tab stop; this row holds it (the first row until one is focused).
+    const [rovingId, setRovingId] = useState<string | null>(null);
 
     // Close and hand focus back to the bell (keyboard users keep their place).
     const close = useCallback(
@@ -304,10 +305,16 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                         <EmptyPane icon={BellOff} text={t('notif_empty')} />
                     ) : (
                         <TooltipProvider delayDuration={400}>
+                            {/* How the keyboard moves in the list, read once when a row gets focus */}
+                            <span id="notif-keys-hint" className="sr-only">
+                                {t('notif_keys_hint')}
+                            </span>
                             {items.map((n) => (
                                 <NotificationRow
                                     key={n.id}
                                     notification={n}
+                                    tabbable={n.id === (items.some((i) => i.id === rovingId) ? rovingId : items[0]?.id)}
+                                    onFocusRow={() => setRovingId(n.id)}
                                     leaving={dismissing.has(n.id)}
                                     onOpen={() => handleClick(n)}
                                     onDismiss={(rowEl) => handleDismiss(n.id, rowEl)}
@@ -341,11 +348,15 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
 /** One tray row: the whole row opens it, the X beside it dismisses; a cut title shows in full on hover or focus. */
 function NotificationRow({
     notification: n,
+    tabbable,
+    onFocusRow,
     leaving,
     onOpen,
     onDismiss,
 }: {
     notification: AppNotification;
+    tabbable: boolean;
+    onFocusRow: () => void;
     leaving: boolean;
     onOpen: () => void;
     onDismiss: (rowEl: HTMLElement | null) => void;
@@ -353,6 +364,7 @@ function NotificationRow({
     const t = useNotificationText();
     const titleRef = useRef<HTMLDivElement>(null);
     const openRef = useRef<HTMLButtonElement>(null);
+    const dismissRef = useRef<HTMLButtonElement>(null);
     const [tipOpen, setTipOpen] = useState(false);
     const { Icon, color, bg } = iconMeta(n);
     const title = notificationTitle(n, t);
@@ -383,8 +395,21 @@ function NotificationRow({
                         ref={openRef}
                         type="button"
                         data-notif-row
+                        tabIndex={tabbable ? 0 : -1}
+                        aria-describedby="notif-keys-hint"
+                        aria-keyshortcuts="ArrowUp ArrowDown Home End ArrowRight Delete"
+                        onFocus={onFocusRow}
                         onClick={onOpen}
-                        onKeyDown={moveBetweenRows}
+                        onKeyDown={(e) => {
+                            if (moveBetweenRows(e, e.currentTarget)) return;
+                            if (e.key === 'ArrowRight') {
+                                e.preventDefault();
+                                dismissRef.current?.focus();
+                            } else if (e.key === 'Delete') {
+                                e.preventDefault();
+                                onDismiss(openRef.current);
+                            }
+                        }}
                         className="focus-visible:after:ring-brand min-w-0 flex-1 cursor-pointer text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-hidden focus-visible:after:ring-2 focus-visible:after:ring-inset"
                     >
                         {/* One line of title, two of body: the same shape a toast uses */}
@@ -408,8 +433,17 @@ function NotificationRow({
                     {n.created_at_iso ? relativeTime(n.created_at_iso, lang, '') : n.created_at}
                 </time>
                 <button
+                    ref={dismissRef}
                     type="button"
+                    tabIndex={-1}
                     onClick={() => onDismiss(openRef.current)}
+                    onKeyDown={(e) => {
+                        if (moveBetweenRows(e, openRef.current)) return;
+                        if (e.key === 'ArrowLeft') {
+                            e.preventDefault();
+                            openRef.current?.focus();
+                        }
+                    }}
                     aria-label={t('notif_dismiss')}
                     title={t('notif_dismiss')}
                     className="text-muted-foreground hover:bg-accent hover:text-foreground relative z-10 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9 [@media(pointer:coarse)]:opacity-100"

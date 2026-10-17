@@ -9,6 +9,7 @@ export const notification: Dict = {
     notif_empty: 'No notifications',
     notif_dismiss: 'Dismiss',
     notif_dismiss_failed: 'Could not dismiss this notification. Try again.',
+    notif_keys_hint: 'Use the up and down arrows to move between notifications, the right arrow to reach Dismiss, and Delete to dismiss.',
     notif_unread: 'unread',
     notif_load_more: 'Load more',
     notif_group_system: 'Other',
