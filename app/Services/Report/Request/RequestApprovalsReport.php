@@ -5,6 +5,7 @@ namespace App\Services\Report\Request;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
@@ -346,8 +347,8 @@ class RequestApprovalsReport extends TabularReport
 
             return [
                 'steps' => $set->count(),
-                'approved' => $set->filter(fn (RequestApproval $s) => $s->status->value === 'approved')->count(),
-                'rejected' => $set->filter(fn (RequestApproval $s) => $s->status->value === 'rejected')->count(),
+                'approved' => $set->filter(fn (RequestApproval $s) => ApprovalFacts::status($s) === 'approved')->count(),
+                'rejected' => $set->filter(fn (RequestApproval $s) => ApprovalFacts::status($s) === 'rejected')->count(),
                 'waiting' => $waiting->count(),
                 'avg_days' => ApprovalFacts::average($set),
                 'max_days' => $set->map(fn (RequestApproval $s) => ApprovalFacts::days($s))->max(),
@@ -442,7 +443,7 @@ class RequestApprovalsReport extends TabularReport
 
         $out = [];
         foreach (self::SKIP_REASONS as $reason) {
-            $set = $skipped->filter(fn (RequestApproval $s) => $s->skip_reason?->value === $reason)->values();
+            $set = $skipped->filter(fn (RequestApproval $s) => ApprovalFacts::skipReason($s) === $reason)->values();
             $requestIds = $set->pluck('service_request_id')->unique()->values()->all();
             $own = $set->pluck('request')->unique('id');
             $resources = $own->map($resourceOf)->filter()->unique('key')->values();
@@ -459,7 +460,7 @@ class RequestApprovalsReport extends TabularReport
                     ->take(3)->values()->all(),
                 'ownerless_resources' => $reason === 'no_resource_owner' ? $names($resources->filter(fn (array $x) => $x['owner_employee_id'] === null)) : [],
                 'managerless_requesters' => $reason === 'no_manager'
-                    ? $own->map(fn (ServiceRequest $r) => $r->employee)->filter(fn ($e) => $e !== null && $e->status?->value === 'active' && $e->manager_id === null)
+                    ? $this->requesters($own)->filter(fn ($e) => $e !== null && $e->status?->value === 'active' && $e->manager_id === null)
                         ->unique('id')->map(fn ($e) => ['name' => $e->name, 'code' => $e->code])->values()->all()
                     : [],
                 'resources' => $reason === 'requester_is_owner' ? $names($resources) : [],
@@ -478,6 +479,20 @@ class RequestApprovalsReport extends TabularReport
         }
 
         return $out;
+    }
+
+    /**
+     * The employees behind these requests, in request order (null where the row is gone).
+     *
+     * @param  Collection<int, ServiceRequest>  $requests
+     * @return Collection<int, Employee|null>
+     */
+    private function requesters(Collection $requests): Collection
+    {
+        $employees = Employee::query()->whereIn('id', $requests->pluck('employee_id')->filter()->unique()->values())
+            ->get(['id', 'code', 'first_name', 'last_name', 'status', 'manager_id'])->keyBy('id');
+
+        return $requests->map(fn (ServiceRequest $r) => $employees->get($r->employee_id));
     }
 
     // ── export ──────────────────────────────────────────────────────────────────────

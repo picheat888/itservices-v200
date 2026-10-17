@@ -17,6 +17,12 @@ final class ApprovalFacts
 {
     use RequestLabels;
 
+    // The step columns the report reads
+    private const STEP_COLUMNS = [
+        'id', 'service_request_id', 'position', 'kind', 'label', 'approver_employee_id', 'approver_name', 'approver_department_id',
+        'approver_position_ids', 'status', 'note', 'skip_reason', 'acted_by_user_id', 'acted_by_name', 'became_current_at', 'acted_at',
+    ];
+
     /**
      * Approval steps and IT's not-delivered steps that matter between `since` and `to`, plus every step waiting now.
      *
@@ -25,16 +31,19 @@ final class ApprovalFacts
      */
     public static function steps(array $filters, Carbon $since, Carbon $to): Collection
     {
+        // A step always has its request (foreign key), so only a type or department filter needs the join
+        $scoped = ($filters['type'] ?? null) || ($filters['department_id'] ?? null);
+
         return RequestApproval::query()
+            ->select(self::STEP_COLUMNS)
             ->with([
                 'request:id,reference,type,status,employee_id,requester_name,department_name,email_group_id,file_share_id,created_at,rejected_at,cancelled_at,cancel_reason,cancelled_by_name',
-                'request.employee:id,code,first_name,last_name,status,manager_id',
                 'approver:id,code,first_name,last_name,status,last_day,department_id', 'approver.department:id,name,name_th', 'approver.user:id,employee_id',
                 'actedBy:id,employee_id', 'actedBy.employee:id,code,department_id', 'actedBy.employee.department:id,name,name_th',
             ])
             ->where(fn (Builder $q) => $q->where('kind', 'approval')
                 ->orWhere(fn (Builder $c) => $c->where('kind', 'completion')->where('status', 'rejected')))
-            ->whereHas('request', fn (Builder $r) => self::scopeRequests($r, $filters))
+            ->when($scoped, fn (Builder $q) => $q->whereHas('request', fn (Builder $r) => self::scopeRequests($r, $filters)))
             ->where(fn (Builder $q) => $q->whereBetween('became_current_at', [$since, $to])
                 ->orWhere('status', 'current')
                 ->orWhereHas('request', fn (Builder $r) => $r->whereBetween('created_at', [$since, $to])
@@ -77,36 +86,92 @@ final class ApprovalFacts
         return $slot[$name];
     }
 
+    /**
+     * What the report asks of a step, read once from its raw columns (no enum or Carbon objects).
+     *
+     * @return array{key: string, kind: ?string, status: ?string, approval: bool, days: ?int, waiting: bool}
+     */
+    private static function facts(RequestApproval $step): array
+    {
+        return self::once($step, 'facts', function () use ($step) {
+            $a = $step->getAttributes();
+            $request = $step->request?->getAttributes();
+            $kind = self::plain($a['kind'] ?? null);
+            $status = self::plain($a['status'] ?? null);
+            $days = null;
+            if (($a['became_current_at'] ?? null) !== null) {
+                $end = $a['acted_at'] ?? ($status === 'waiting' ? ($request['cancelled_at'] ?? null) : null);
+                $days = max(0, ($end === null ? self::dayNumber(now()) : self::dayOf($end)) - self::dayOf($a['became_current_at']));
+            }
+
+            return [
+                'key' => (string) ($a['acted_by_name'] ?? $a['approver_name'] ?? $a['label'] ?? ''),
+                'kind' => $kind,
+                'status' => $status,
+                'approval' => $kind === 'approval',
+                'days' => $days,
+                'waiting' => $kind === 'approval' && $status === 'current' && self::plain($request['status'] ?? null) === 'pending',
+            ];
+        });
+    }
+
+    // An enum column's value, however the attribute is held
+    private static function plain(mixed $value): mixed
+    {
+        return $value instanceof \BackedEnum ? $value->value : $value;
+    }
+
+    /** The stored moment as a timestamp, null when empty. */
+    private static function stamp(mixed $moment): ?int
+    {
+        if ($moment === null) {
+            return null;
+        }
+
+        return is_string($moment) ? strtotime($moment) : $moment->getTimestamp();
+    }
+
+    /** Whether a stored moment falls between two moments, ends included (Carbon::between). */
+    private static function within(mixed $moment, Carbon $from, Carbon $to): bool
+    {
+        $at = self::stamp($moment);
+
+        return $at !== null && $at >= $from->getTimestamp() + ($from->micro > 0 ? 1 : 0) && $at <= $to->getTimestamp();
+    }
+
     /** Who a step is on: whoever decided it, else the named approver holding it, else the step's own label. */
     public static function key(RequestApproval $step): string
     {
-        return self::once($step, 'key', fn () => (string) ($step->acted_by_name ?? $step->approver_name ?? $step->label));
+        return self::facts($step)['key'];
     }
 
     public static function isApproval(RequestApproval $step): bool
     {
-        return $step->kind->value === 'approval';
+        return self::facts($step)['approval'];
+    }
+
+    /** The step's status value (approved, rejected, current, waiting, skipped…). */
+    public static function status(RequestApproval $step): ?string
+    {
+        return self::facts($step)['status'];
+    }
+
+    /** The step's skip reason value, null when it was not skipped. */
+    public static function skipReason(RequestApproval $step): ?string
+    {
+        return self::plain($step->getAttributes()['skip_reason'] ?? null);
     }
 
     /** Whole days a step took: to its decision, to the withdrawal that ended its wait, or to today while it waits. */
     public static function days(RequestApproval $step): ?int
     {
-        return self::once($step, 'days', function () use ($step) {
-            if ($step->became_current_at === null) {
-                return null;
-            }
-            $end = $step->acted_at
-                ?? ($step->status->value === 'waiting' ? $step->request?->cancelled_at : null)
-                ?? now();
-
-            return max(0, self::wholeDays($step->became_current_at, $end));
-        });
+        return self::facts($step)['days'];
     }
 
     /** A step still holding a pending request. */
     public static function isWaiting(RequestApproval $step): bool
     {
-        return self::once($step, 'waiting', fn () => self::isApproval($step) && $step->status->value === 'current' && $step->request?->status->value === 'pending');
+        return self::facts($step)['waiting'];
     }
 
     /** Why nobody can act on a waiting step — its named approver has left, or has no login — or null. */
@@ -164,8 +229,8 @@ final class ApprovalFacts
     public static function reached(Collection $steps, Carbon $from, Carbon $to, ?string $approver): Collection
     {
         return $steps->filter(fn (RequestApproval $s) => self::isApproval($s)
-            && $s->became_current_at?->between($from, $to)
-            && (in_array($s->status->value, ['approved', 'rejected'], true) || self::isWaiting($s))
+            && self::within($s->getAttributes()['became_current_at'] ?? null, $from, $to)
+            && (in_array(self::status($s), ['approved', 'rejected'], true) || self::isWaiting($s))
             && ($approver === null || self::key($s) === $approver))->values();
     }
 
@@ -188,18 +253,28 @@ final class ApprovalFacts
      */
     public static function endings(Collection $steps, Carbon $from, Carbon $to, ?string $approver): array
     {
+        $byRequest = [];
+        foreach ($steps as $step) {
+            $byRequest[$step->service_request_id][] = $step;
+        }
+
         $out = [];
-        foreach ($steps->groupBy('service_request_id') as $own) {
+        foreach ($byRequest as $list) {
             /** @var ServiceRequest $request */
-            $request = $own->first()->request;
-            $status = $request->status->value;
-            if ($status === 'rejected' && $request->rejected_at?->between($from, $to)) {
-                $step = $own->first(fn (RequestApproval $s) => self::isApproval($s) && $s->status->value === 'rejected');
+            $request = $list[0]->request;
+            $raw = $request->getAttributes();
+            $status = self::plain($raw['status'] ?? null);
+            if ($status !== 'rejected' && $status !== 'cancelled') {
+                continue;
+            }
+            $own = collect($list);
+            if ($status === 'rejected' && self::within($raw['rejected_at'] ?? null, $from, $to)) {
+                $step = $own->first(fn (RequestApproval $s) => self::isApproval($s) && self::status($s) === 'rejected');
                 if ($step !== null) {
                     $out[] = ['request' => $request, 'outcome' => 'rejected', 'step' => $step, 'by' => self::key($step), 'reason' => $step->note, 'at' => $request->rejected_at, 'match' => self::key($step)];
                 }
             }
-            if ($status === 'cancelled' && $request->cancelled_at?->between($from, $to)) {
+            if ($status === 'cancelled' && self::within($raw['cancelled_at'] ?? null, $from, $to)) {
                 $closed = $own->first(fn (RequestApproval $s) => ! self::isApproval($s));
                 if ($closed !== null) {
                     $out[] = ['request' => $request, 'outcome' => 'not_delivered', 'step' => $closed, 'by' => self::key($closed), 'reason' => $closed->note, 'at' => $request->cancelled_at, 'match' => self::key($closed)];
@@ -207,7 +282,7 @@ final class ApprovalFacts
                     continue;
                 }
                 // The step the requester stopped waiting on goes back to "waiting" and keeps its clock.
-                $stood = $own->filter(fn (RequestApproval $s) => self::isApproval($s) && $s->status->value === 'waiting' && $s->became_current_at !== null)
+                $stood = $own->filter(fn (RequestApproval $s) => self::isApproval($s) && self::status($s) === 'waiting' && ($s->getAttributes()['became_current_at'] ?? null) !== null)
                     ->sortByDesc('position')->first();
                 if ($stood !== null) {
                     $out[] = ['request' => $request, 'outcome' => 'withdrawn', 'step' => $stood, 'by' => $request->cancelled_by_name, 'reason' => $request->cancel_reason, 'at' => $request->cancelled_at, 'match' => self::key($stood)];
@@ -229,7 +304,7 @@ final class ApprovalFacts
      */
     public static function skipped(Collection $steps, Carbon $from, Carbon $to): Collection
     {
-        return $steps->filter(fn (RequestApproval $s) => $s->status->value === 'skipped' && $s->request?->created_at?->between($from, $to))->values();
+        return $steps->filter(fn (RequestApproval $s) => self::status($s) === 'skipped' && self::within($s->request?->getAttributes()['created_at'] ?? null, $from, $to))->values();
     }
 
     /**
@@ -240,11 +315,23 @@ final class ApprovalFacts
      */
     public static function unapproved(Collection $all, array $requestIds): int
     {
-        $byRequest = $all->filter(fn (RequestApproval $s) => self::isApproval($s))->groupBy('service_request_id');
+        self::$decided ??= new \WeakMap;
+        if (! isset(self::$decided[$all])) {
+            $decided = [];
+            foreach ($all as $step) {
+                if (self::isApproval($step) && self::status($step) !== 'skipped') {
+                    $decided[$step->service_request_id] = true;
+                }
+            }
+            self::$decided[$all] = $decided;
+        }
+        $decided = self::$decided[$all];
 
-        return count(array_filter($requestIds, fn (int $id) => $byRequest->get($id, collect())
-            ->every(fn (RequestApproval $s) => $s->status->value === 'skipped')));
+        return count(array_filter($requestIds, fn (int $id) => ! isset($decided[$id])));
     }
+
+    /** @var \WeakMap<Collection, array<int, true>>|null */
+    private static ?\WeakMap $decided = null;
 
     /** Mean of whole days, one decimal; null when there is nothing to average. */
     public static function average(Collection $steps): ?float
