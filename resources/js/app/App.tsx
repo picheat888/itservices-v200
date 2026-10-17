@@ -159,18 +159,7 @@ function App() {
                         <Route
                             path="reports"
                             element={
-                                <RequirePermission
-                                    anyOf={[
-                                        'tickets.view_all',
-                                        'assets.view',
-                                        'contracts.view',
-                                        'stock.view',
-                                        'stock.view_events',
-                                        'requests.view_all',
-                                        'employees.view',
-                                        'access.software_view',
-                                    ]}
-                                >
+                                <RequirePermission anyOf={['reports.module']}>
                                     <ReportDateScope>
                                         <ReportsPage />
                                     </ReportDateScope>
@@ -199,18 +188,7 @@ function App() {
                         <Route
                             path="reports/:slug"
                             element={
-                                <RequirePermission
-                                    anyOf={[
-                                        'tickets.view_all',
-                                        'assets.view',
-                                        'contracts.view',
-                                        'stock.view',
-                                        'stock.view_events',
-                                        'requests.view_all',
-                                        'employees.view',
-                                        'access.software_view',
-                                    ]}
-                                >
+                                <RequirePermission anyOf={['reports.module']}>
                                     <UnknownReportPage />
                                 </RequirePermission>
                             }

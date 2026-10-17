@@ -54,11 +54,11 @@ test('my requests open the profile drawer list, never every request in the syste
 });
 
 test('the SLA tiles open the overview report on the same 30 days', () => {
-    const desk = new Set(['tickets.view_all', 'tickets.resolve']);
+    const reader = new Set(['reports.module', 'reports.tickets']);
     assert.equal(
-        dashLinks((p) => desk.has(p), false).slaReport('2026-09-18', '2026-10-17'),
+        dashLinks((p) => reader.has(p), false).slaReport('2026-09-18', '2026-10-17'),
         '/reports/tickets-overview?from=2026-09-18&to=2026-10-17',
     );
-    // The report needs both rights.
-    assert.equal(dashLinks((p) => p === 'tickets.view_all', false).slaReport('2026-09-18', '2026-10-17'), null);
+    // Workspace ticket rights do not open the report.
+    assert.equal(dashLinks((p) => p === 'tickets.view_all' || p === 'tickets.resolve', false).slaReport('2026-09-18', '2026-10-17'), null);
 });

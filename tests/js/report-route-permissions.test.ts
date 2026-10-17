@@ -36,6 +36,9 @@ test('every report page asks for every permission its report requires', () => {
     assert.equal(pages.size, server.size);
 });
 
-test('the rentals report also needs assets.view', () => {
-    assert.deepEqual(pageGates().get('contracts-rentals'), ['assets.view', 'contracts.view']);
+test('every report page asks for the master and its own domain switch only', () => {
+    for (const [path, allOf] of pageGates()) {
+        const domain = path.split('-')[0];
+        assert.deepEqual(allOf, ['reports.module', `reports.${domain}`].sort(), path);
+    }
 });

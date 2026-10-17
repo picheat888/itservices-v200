@@ -452,7 +452,7 @@ export default function TicketsPage() {
                                 {summary && (
                                     <TicketOverviewTiles
                                         summary={summary}
-                                        canOpenReport={isIT}
+                                        canOpenReport={has('reports.module') && has('reports.tickets')}
                                         onOpenOverSla={() => changeTab('all', { sla: 'over_sla' })}
                                         onOpenWaiting={() => changeTab('all', { status: 'open' })}
                                     />
