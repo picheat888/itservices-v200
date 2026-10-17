@@ -7,6 +7,7 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -87,10 +88,11 @@ function Pager({
     onPage: (p: number) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     return (
         <div className="border-border bg-muted/20 flex items-center justify-between border-t px-3 py-2">
             <span className="text-muted-foreground text-[11px] tabular-nums">
-                {page * perPage + 1}–{Math.min((page + 1) * perPage, total)} / {total}
+                {fmtN(page * perPage + 1)}–{fmtN(Math.min((page + 1) * perPage, total))} / {fmtN(total)}
             </span>
             <div className="flex items-center gap-2">
                 <button
@@ -103,7 +105,7 @@ function Pager({
                     <ChevronLeft className="h-4 w-4" aria-hidden />
                 </button>
                 <span className="text-xs tabular-nums">
-                    {page + 1}/{pageCount}
+                    {fmtN(page + 1)}/{fmtN(pageCount)}
                 </span>
                 <button
                     type="button"

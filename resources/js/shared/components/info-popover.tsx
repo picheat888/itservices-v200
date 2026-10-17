@@ -1,5 +1,6 @@
 // Shared note on a figure: opens on hover, tap (iPad) or Enter/Space, so touch and keyboard reach it too.
 // A click can run onActivate instead (e.g. open the record) while a tap still shows the note.
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -183,13 +184,14 @@ export function InfoPopover({
 
 /** One row of a chart's note: a mark, the words, the number on the right (same shape as the report's). */
 export function NoteRow({ mark, text, value, muted }: { mark?: React.ReactNode; text: React.ReactNode; value: React.ReactNode; muted?: boolean }) {
+    const fmtN = useNumberFormat();
     return (
         <div className={cn('flex items-center justify-between gap-4', muted && 'text-muted-foreground')}>
             <span className="inline-flex min-w-0 items-center gap-1.5">
                 {mark}
                 <span className="truncate">{text}</span>
             </span>
-            <b className={cn('tabular-nums', muted && 'font-normal')}>{value}</b>
+            <b className={cn('tabular-nums', muted && 'font-normal')}>{typeof value === 'number' ? fmtN(value) : value}</b>
         </div>
     );
 }

@@ -1,6 +1,7 @@
 // Shared report card pieces: list folding, card pager, card headings, title with count, master-data label, stacked bar, month label, swatch.
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { bindDateFormat } from '@/shared/lib/datetime';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
@@ -43,14 +44,13 @@ const PAGER_BUTTON =
 /** "1–10 จาก 14 ‹ 1 / 2 ›" under a paged card; hidden at one page. */
 export function CardPager({ page, total, pageSize, onPage }: { page: number; total: number; pageSize: number; onPage: (next: number) => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
+    const fmtN = useNumberFormat();
     const pages = Math.ceil(total / pageSize);
     if (pages <= 1) return null;
-    const n = (v: number) => v.toLocaleString(lang === 'th' ? 'th-TH' : 'en-US');
     const range = t('rep_chart_pager')
-        .replace('{from}', n((page - 1) * pageSize + 1))
-        .replace('{to}', n(Math.min(page * pageSize, total)))
-        .replace('{total}', n(total));
+        .replace('{from}', fmtN((page - 1) * pageSize + 1))
+        .replace('{to}', fmtN(Math.min(page * pageSize, total)))
+        .replace('{total}', fmtN(total));
 
     return (
         <div className="text-muted-foreground mt-auto flex items-center justify-end gap-2 px-4 pt-2 pb-3 text-xs">
@@ -61,7 +61,7 @@ export function CardPager({ page, total, pageSize, onPage }: { page: number; tot
                 <ChevronLeft aria-hidden className="h-4 w-4" />
             </button>
             <b className="text-foreground font-semibold tabular-nums">
-                {page} / {pages}
+                {fmtN(page)} / {fmtN(pages)}
             </b>
             <button type="button" aria-label={t('page_next')} disabled={page >= pages} onClick={() => onPage(page + 1)} className={PAGER_BUTTON}>
                 <ChevronRight aria-hidden className="h-4 w-4" />

@@ -5,6 +5,7 @@
  */
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { TicketOverviewSummary } from '../types';
 import { fitAxisFont, labelStep, weekDays } from './axis-labels';
@@ -46,6 +47,7 @@ export function WeeklyTicketChart({ weeks, range }: ChartProps) {
 function WeeklyBars({ weeks, range }: ChartProps) {
     const t = useT();
     const { dayMonth, month } = useDateFormat();
+    const fmtN = useNumberFormat();
     const box = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
 
@@ -129,11 +131,11 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                     <g key={v}>
                         <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} className="stroke-border" strokeWidth={1} />
                         <text x={PAD.l - 8} y={y(v) + 3.5} textAnchor="end" className="fill-muted-foreground text-[10.5px]">
-                            {v}
+                            {fmtN(v)}
                         </text>
                         {/* Right axis: the backlog line's own scale, same three gridlines. */}
                         <text x={W - PAD.r + 8} y={y(v) + 3.5} className="fill-red-500 text-[10.5px]">
-                            {(backlogMax / 2) * i}
+                            {fmtN((backlogMax / 2) * i)}
                         </text>
                     </g>
                 ))}

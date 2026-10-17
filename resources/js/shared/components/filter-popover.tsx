@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
@@ -63,6 +64,7 @@ export function FilterPopover({
     children: (close: () => void) => ReactNode;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -227,7 +229,7 @@ export function FilterPopover({
                         {resultCount !== undefined && (
                             <div className="border-border/60 flex items-center gap-2 border-t px-3.5 py-2.5">
                                 <span role="status" aria-live="polite" className="text-muted-foreground text-xs">
-                                    {t('filter_found')} <span className="text-foreground text-[13px] font-bold">{resultCount}</span>{' '}
+                                    {t('filter_found')} <span className="text-foreground text-[13px] font-bold">{fmtN(resultCount)}</span>{' '}
                                     {t('filter_items')}
                                 </span>
                                 <button

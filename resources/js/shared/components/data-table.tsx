@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -141,6 +142,7 @@ export function DataTable<T>({
     search,
 }: DataTableProps<T>) {
     const t = useT();
+    const fmtN = useNumberFormat();
     // The box keeps its own text (a URL-backed value lands a tick late and would jump the caret).
     const [query, setOwnQuery] = useState(search?.value ?? '');
     useEffect(() => {
@@ -459,7 +461,7 @@ export function DataTable<T>({
                     {/* Right: range summary sits next to the page navigation. */}
                     <div className="flex items-center gap-3">
                         <span>
-                            {total === 0 ? 0 : start + 1}–{Math.min(start + pageSize, total)} {t('cmn_of')} {total}
+                            {fmtN(total === 0 ? 0 : start + 1)}–{fmtN(Math.min(start + pageSize, total))} {t('cmn_of')} {fmtN(total)}
                         </span>
                         <div className="flex items-center gap-1">
                             <button
@@ -471,7 +473,7 @@ export function DataTable<T>({
                                 <ChevronLeft aria-hidden className="h-4 w-4" />
                             </button>
                             <span className="text-foreground px-1 font-medium">
-                                {safePage} / {pageCount}
+                                {fmtN(safePage)} / {fmtN(pageCount)}
                             </span>
                             <button
                                 onClick={() => setPage(Math.min(pageCount, safePage + 1))}

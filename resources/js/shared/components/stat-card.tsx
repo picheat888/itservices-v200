@@ -1,9 +1,11 @@
 // The one KPI card of the app (module Overview tabs, Dashboard, reports): label + icon, the figure, an optional
 // meter / split bar / small chart, one footer line; alert tints, loading at its real size, clickable as a whole.
+import { formatStatValue } from '@/shared/lib/number';
 import { slaLevel, type SlaLevel } from '@/shared/lib/sla-level';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { useUiStore } from '@/stores/ui';
 import type { LucideIcon } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 
@@ -30,13 +32,6 @@ const ALERT = {
 } as const;
 
 const METER_FILL: Record<SlaLevel, string> = { met: 'bg-emerald-500', near: 'bg-amber-500', miss: 'bg-red-500' };
-
-/** A plain count reads with thousands separators; anything else is shown as given. */
-function shown(value: ReactNode): ReactNode {
-    if (typeof value === 'number') return value.toLocaleString('en-US');
-    if (typeof value === 'string' && /^-?\d{4,}$/.test(value)) return Number(value).toLocaleString('en-US');
-    return value;
-}
 
 export interface StatCardProps {
     label: string;
@@ -98,6 +93,7 @@ export function StatCard({
     size = 'default',
     className,
 }: StatCardProps) {
+    const lang = useUiStore((s) => s.lang);
     const compact = size === 'compact';
     const level = alert === true ? 'amber' : alert || null;
     const line = footer ?? sub;
@@ -164,7 +160,7 @@ export function StatCard({
                     {/* Figure */}
                     <div className={cn('flex items-end justify-between gap-3', !compact && 'mt-2')}>
                         <div className={cn('font-bold tabular-nums', compact ? 'text-2xl' : 'text-3xl', tone && VALUE_INK[tone])}>
-                            {shown(value)}
+                            {formatStatValue(value, lang)}
                             {unit && <span className="text-muted-foreground ml-1 text-sm font-medium">{unit}</span>}
                         </div>
                         {aside}
