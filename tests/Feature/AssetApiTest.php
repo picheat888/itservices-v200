@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\Contract\Contract;
+use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
@@ -1602,5 +1603,37 @@ class AssetApiTest extends TestCase
 
         $this->assertDatabaseHas('assets', ['id' => $asset->id]);
         $this->assertDatabaseHas('asset_transfers', ['id' => $transfer->id]);
+    }
+
+    /** @return list<int> */
+    private function searchIds(string $search): array
+    {
+        $rows = $this->getJson('/api/assets?per_page=100&search='.urlencode($search))->assertOk()->json('data');
+
+        return array_column($rows, 'id');
+    }
+
+    public function test_inventory_search_finds_brand_holder_department_location_and_contract(): void
+    {
+        $this->actingAs($this->super());
+        $dell = Brand::firstOrCreate(['name' => 'Dell']);
+        $finance = Department::create(['code' => 'DEP-FN', 'tag' => 'FN', 'name' => 'Finance', 'name_th' => 'การเงิน']);
+        $holder = Employee::create(['code' => 'EMP-H1', 'first_name' => 'Holder', 'last_name' => 'One', 'department_id' => $finance->id]);
+        $contract = Contract::create([
+            'code' => 'CT-2026-077', 'vendor_id' => $this->vendorId('SearchVendor'), 'name' => 'Lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => 100, 'billing_cycle' => 'monthly',
+        ]);
+        $byBrand = Asset::factory()->create(['brand_id' => Brand::firstOrCreate(['name' => 'Lenovo'])->id, 'owner' => null]);
+        $byDepartment = Asset::factory()->create(['brand_id' => $dell->id, 'owner' => null, 'owner_employee_id' => $holder->id]);
+        $byLocation = Asset::factory()->create(['brand_id' => $dell->id, 'owner' => null, 'location_id' => Location::create(['name' => 'อาคาร 2'])->id]);
+        $byContract = Asset::factory()->create(['brand_id' => $dell->id, 'owner' => null, 'contract_id' => $contract->id]);
+        Asset::factory()->create(['brand_id' => $dell->id, 'owner' => null]);
+
+        $this->assertSame([$byBrand->id], $this->searchIds('Lenovo'));
+        $this->assertSame([$byDepartment->id], $this->searchIds('การเงิน'));
+        $this->assertSame([$byDepartment->id], $this->searchIds('Finance Holder'));
+        $this->assertSame([$byDepartment->id], $this->searchIds('EMP-H1'));
+        $this->assertSame([$byLocation->id], $this->searchIds('อาคาร 2'));
+        $this->assertSame([$byContract->id], $this->searchIds('CT-2026-077'));
     }
 }
