@@ -1,6 +1,7 @@
 import type { AppNotification } from '@/modules/notification';
 import { PROFILE_ASSETS_SEARCH } from '@/modules/profile';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
+import { formatNumber } from '@/shared/lib/number';
 import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { requestTitle } from '@/shared/lib/request-meta';
 import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
@@ -38,6 +39,8 @@ import type { NavigateFunction } from 'react-router-dom';
  * and the pop-up toaster so the two always render the same icon, colour, title,
  * message, and navigation target for a given notification.
  */
+
+const fmtN = (value: number): string => formatNumber(value, useUiStore.getState().lang);
 
 /** Translator signature (matches the function returned by useT). */
 type Translate = (key: string) => string;
@@ -258,10 +261,10 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     if (n.data.type === 'test') return t(n.data.source_key ?? '');
     if (n.data.type === 'contract_expiring') {
         return (n.data.days_remaining ?? 0) <= 0
-            ? t('notif_contract_expired').replaceAll('{days}', () => String(Math.abs(n.data.days_remaining ?? 0)))
-            : t('notif_contract_expiring').replaceAll('{days}', () => String(n.data.days_remaining));
+            ? t('notif_contract_expired').replaceAll('{days}', () => fmtN(Math.abs(n.data.days_remaining ?? 0)))
+            : t('notif_contract_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
     }
-    if (n.data.type === 'password_expiring') return t('notif_password_expiring').replaceAll('{days}', () => String(n.data.days_remaining ?? 0));
+    if (n.data.type === 'password_expiring') return t('notif_password_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
     if (n.data.type === 'report_schedule') return t('notif_report_schedule_failed');
     if (n.data.type === 'report_export')
         return t(n.data.subtype === 'failed' ? 'notif_report_export_failed' : 'notif_report_export_ready').replaceAll('{format}', () =>
@@ -293,7 +296,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
                 .replaceAll('{actor}', () => n.data.actor_name ?? '—')
                 .replaceAll('{remark}', () => n.data.remark ?? '')
                 .replaceAll('{ticket}', () => n.data.ticket_no ?? '—')
-                .replaceAll('{days}', () => String(n.data.stalled_days ?? 0))
+                .replaceAll('{days}', () => fmtN(n.data.stalled_days ?? 0))
         );
     }
     if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
@@ -306,15 +309,15 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     // Names the count: "has assets to hand back" alone does not say whether this is one
     // machine to collect or a trolley's worth.
     if (n.data.type === 'asset_offboarding') {
-        return t('notif_asset_offboarding').replaceAll('{count}', () => String(n.data.count ?? 0));
+        return t('notif_asset_offboarding').replaceAll('{count}', () => fmtN(n.data.count ?? 0));
     }
     // Says how much is waiting and which kind, because "still holds access" alone does not
     // tell the reader whether this is one revoke or an afternoon's work.
     if (n.data.type === 'access_offboarding') {
         return t('notif_access_offboarding')
-            .replaceAll('{grants}', () => String(n.data.grants ?? 0))
-            .replaceAll('{owned}', () => String(n.data.owned ?? 0))
-            .replaceAll('{total}', () => String(n.data.total ?? 0));
+            .replaceAll('{grants}', () => fmtN(n.data.grants ?? 0))
+            .replaceAll('{owned}', () => fmtN(n.data.owned ?? 0))
+            .replaceAll('{total}', () => fmtN(n.data.total ?? 0));
     }
     if (n.data.subtype === 'offboarding') return t('notif_resigned');
     if (n.data.subtype === 'departure') return t('notif_departure');

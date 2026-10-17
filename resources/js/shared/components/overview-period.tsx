@@ -9,6 +9,7 @@ import { Gauge } from 'lucide-react';
 import { useState } from 'react';
 
 import { PRESETS, readOverviewPeriod, spanDays, type OverviewPeriod, type PeriodOptions } from '@/shared/lib/overview-period-core';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export { overviewPeriodKey, overviewPeriodParams, periodReachesToday, readOverviewPeriod, spanDays } from '@/shared/lib/overview-period-core';
 export type { OverviewPeriod, PeriodOptions } from '@/shared/lib/overview-period-core';
@@ -41,6 +42,7 @@ export function OverviewPeriodSelect({
     options?: PeriodOptions;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const custom = typeof value === 'object';
     const [tooLong, setTooLong] = useState(false);
@@ -71,7 +73,7 @@ export function OverviewPeriodSelect({
                         }}
                         className={cn(SEGMENT, segmentTone(value === d))}
                     >
-                        {d === 'all' ? t('all') : d === 'year' ? t('period_this_year') : t('period_days').replace('{n}', String(d))}
+                        {d === 'all' ? t('all') : d === 'year' ? t('period_this_year') : t('period_days').replace('{n}', fmtN(d))}
                     </button>
                 ))}
                 <DateRangeInput from={custom ? value.from : ''} to={custom ? value.to : ''} align="end" onChange={pickRange}>
@@ -82,7 +84,7 @@ export function OverviewPeriodSelect({
             </div>
             {tooLong && options?.maxDays != null && (
                 <p role="alert" className="text-xs text-red-700 dark:text-red-400">
-                    {t('period_max_days').replace('{n}', String(options.maxDays))}
+                    {t('period_max_days').replace('{n}', fmtN(options.maxDays))}
                 </p>
             )}
         </div>

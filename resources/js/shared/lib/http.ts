@@ -1,4 +1,5 @@
 import { translate } from '@/lang';
+import { formatNumber } from '@/shared/lib/number';
 import { redirectToLogin } from '@/shared/lib/login-redirect';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
@@ -104,7 +105,7 @@ http.interceptors.response.use(
             const loggedIn = !!queryClient.getQueryData(ME_KEY);
             if (loggedIn) {
                 const wait = retryAfter ?? 5;
-                useToastStore.getState().push(translate(useUiStore.getState().lang, 'err_throttle_toast').replace('{n}', String(wait)), 'warning');
+                useToastStore.getState().push(translate(useUiStore.getState().lang, 'err_throttle_toast').replace('{n}', formatNumber(wait, useUiStore.getState().lang)), 'warning');
             } else {
                 showError('rate-limit', retryAfter);
             }

@@ -1,6 +1,8 @@
 /**
  * Helpers for reading Laravel API error responses on the client.
  */
+import { formatNumber } from '@/shared/lib/number';
+import { useUiStore } from '@/stores/ui';
 import { useToastStore } from '@/stores/toast';
 
 interface ApiErrorShape {
@@ -39,7 +41,7 @@ export function serverMessage(error: unknown): string | undefined {
 export function toastDeleteError(error: unknown, t: (key: string) => string, bodyKey = 'md_in_use', titleKey = 'md_in_use_title'): void {
     const res = (error as { response?: { status?: number; data?: { count?: number } } })?.response;
     if (res?.status === 409) {
-        useToastStore.getState().push(t(bodyKey).replace('{count}', String(res.data?.count ?? 0)), 'error', t(titleKey));
+        useToastStore.getState().push(t(bodyKey).replace('{count}', formatNumber(res.data?.count ?? 0, useUiStore.getState().lang)), 'error', t(titleKey));
     } else {
         useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
     }

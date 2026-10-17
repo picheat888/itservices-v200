@@ -1,3 +1,4 @@
+import { formatNumber } from '@/shared/lib/number';
 import { translate } from '@/lang';
 import { Button } from '@/shared/ui/button';
 import { useAppErrorStore, type AppErrorKind } from '@/stores/app-error';
@@ -24,7 +25,7 @@ export function AppErrorScreen() {
     if (!kind) return null;
 
     const { icon: Icon, title, message } = COPY[kind];
-    const detail = kind === 'rate-limit' && retryAfter ? translate(lang, 'err_retry_after').replace('{n}', String(retryAfter)) : null;
+    const detail = kind === 'rate-limit' && retryAfter ? translate(lang, 'err_retry_after').replace('{n}', formatNumber(retryAfter, lang)) : null;
 
     return (
         <div className="bg-background fixed inset-0 z-[200] flex flex-col items-center justify-center gap-5 px-6 text-center">
