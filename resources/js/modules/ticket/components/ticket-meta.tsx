@@ -114,17 +114,7 @@ export function TicketSlaBadge({ ticket, t, className }: { ticket: Ticket; t: T;
     );
 }
 
-/**
- * A ticket's subject as a table cell, with a wrench for one that has gone out to a technician.
- *
- * The mark belongs on the case rather than on its clock: the SLA column counts against the repair
- * target already, so a chip there explained a countdown that was not wrong. Here it answers a
- * different question — which of these are away being repaired — read straight down the column,
- * and names who has it on hover.
- *
- * The slot is rendered on every row, empty or not, so the subjects keep one left edge and the
- * marks read as a column of their own instead of shunting the text they belong to.
- */
+/** A ticket's subject as a table cell; a wrench slot (kept on every row) marks a case out with a technician. */
 export function TicketSubject({ ticket, t, showNo }: { ticket: Ticket; t: T; showNo?: boolean }) {
     const repair = ticket.work_class && ticket.work_class !== 'standard' ? ticket.work_class : null;
     return (

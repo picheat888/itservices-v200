@@ -332,8 +332,7 @@ export default function TicketsPage() {
               }
             : { title: t('ticket_empty_list_all'), hint: t('ticket_empty_list_all_hint') };
 
-    // Columns for the shared DataTable (All / Assigned-to-me tabs):
-    // Request at · Ticket no. · Subject · Request by · Category · Priority · Status · Responsible by
+    // Columns for the shared DataTable (All / Assigned-to-me tabs)
     const columns: Column<Ticket>[] = [
         // Created
         {

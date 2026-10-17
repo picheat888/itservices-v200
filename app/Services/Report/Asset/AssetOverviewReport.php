@@ -105,9 +105,7 @@ class AssetOverviewReport extends TabularReport
     }
 
     /**
-     * Every asset the filters keep, bare — no eager loads, no order — for the list and for every
-     * count above it, so the tiles, the cards and the list always agree. Columns are qualified:
-     * the counts join employees, departments, categories, warehouses and locations onto it.
+     * The filters every count and the list share; the search narrows only the list (query()).
      *
      * @param  array<string, mixed>  $filters
      */
