@@ -136,6 +136,15 @@ class StockValuationBreakdownTest extends TestCase
 
     // ── today ───────────────────────────────────────────────────────────────────────
 
+    public function test_unit_is_its_own_column_after_the_quantity(): void
+    {
+        $keys = array_column(app(StockValuationReport::class)->definition()['columns'], 'key');
+        $at = array_search('qty_on_hand', $keys, true);
+
+        $this->assertSame(['qty_on_hand', 'unit'], array_slice($keys, $at, 2));
+        $this->assertNotContains('unit', array_slice($keys, 0, $at));
+    }
+
     public function test_tiles_today_count_held_out_and_dead_stock(): void
     {
         $this->seedStock();

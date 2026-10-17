@@ -7,17 +7,10 @@ import type { TabularFilters } from '../types';
 
 type Row = Record<string, unknown>;
 
-/** The unit is drawn beside the quantity, not in a column of its own. */
-const INNER = ['unit'];
-
 function QtyCell({ row }: { row: Row }) {
     const lang = useUiStore((s) => s.lang);
     if (typeof row.qty_on_hand !== 'number') return <span className="text-muted-foreground">—</span>;
-    return (
-        <span className="tabular-nums">
-            {stockCount(row.qty_on_hand, lang)} {typeof row.unit === 'string' ? row.unit : ''}
-        </span>
-    );
+    return <span className="tabular-nums">{stockCount(row.qty_on_hand, lang)}</span>;
 }
 
 function MoneyCell({ value, strong }: { value: unknown; strong?: boolean }) {
@@ -41,7 +34,6 @@ export default function StockValuationReportPage() {
             extras={{
                 tiles: 4,
                 hideSummary: true,
-                innerColumns: INNER,
                 beforeTable: ({ filters }) => <StockValuationCards filters={filters} />,
                 rowsTitle: 'rep_sva_rows_title',
                 renderCell: valuationCell,
