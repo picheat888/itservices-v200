@@ -12,7 +12,7 @@ import { TabularReportView } from '../components/tabular-report-view';
 type Row = Record<string, unknown>;
 
 /** Drawn inside another cell (SKU and category under the name, unit beside the figures, Min/Max on the bar, the two label codes). */
-const INNER = ['sku', 'category', 'unit', 'min_stock', 'max_stock', 'unit_cost_basis', 'value_kind'];
+const INNER = ['sku', 'category', 'min_stock', 'max_stock', 'unit_cost_basis', 'value_kind'];
 
 const STATUSES: StockItemStatus[] = ['ok', 'low', 'out', 'over', 'dead'];
 
@@ -55,17 +55,13 @@ function StatusCell({ value }: { value: unknown }) {
     return <StatusBadge tone={STOCK_STATUS_TONE[status]}>{t(`stock_st_${status}`)}</StatusBadge>;
 }
 
-/** On-hand and unit above the stock page's Min/Max bar. */
+/** The stock page's Min/Max bar. */
 function LevelCell({ row }: { row: Row }) {
-    const lang = useUiStore((s) => s.lang);
     const status = statusOf(row.status);
     if (typeof row.qty_on_hand !== 'number' || !status) return <Dash />;
 
     return (
         <span className="block min-w-36">
-            <span className="text-muted-foreground mb-1.5 block text-[13px]">
-                <b className="text-foreground text-sm font-semibold tabular-nums">{stockCount(row.qty_on_hand, lang)}</b> {text(row.unit)}
-            </span>
             <StockLevelBar current={row.qty_on_hand} min={num(row.min_stock)} max={num(row.max_stock)} status={status} />
         </span>
     );
@@ -122,7 +118,7 @@ function ValueCell({ row }: { row: Row }) {
 function levelCell(key: string, row: Row) {
     if (key === 'item_name') return <ItemCell row={row} />;
     if (key === 'status') return <StatusCell value={row.status} />;
-    if (key === 'qty_on_hand') return <LevelCell row={row} />;
+    if (key === 'level') return <LevelCell row={row} />;
     if (key === 'gap') return <GapCell row={row} />;
     if (key === 'reorder_qty') return <ReorderCell row={row} />;
     if (key === 'unit_cost') return <PriceCell row={row} />;

@@ -182,6 +182,20 @@ class StockBelowMinReportTest extends TestCase
         $this->assertEqualsWithDelta(180.0, $keyboard['value'], 0.001);
     }
 
+    public function test_on_hand_and_unit_are_their_own_columns_after_the_level_bar(): void
+    {
+        $this->seedStock();
+        $keys = array_column(app(StockBelowMinReport::class)->definition()['columns'], 'key');
+        $at = array_search('status', $keys, true);
+
+        $this->assertSame(['status', 'level', 'qty_on_hand', 'unit'], array_slice($keys, $at, 4));
+        $this->assertNotContains('unit', array_slice($keys, 0, $at));
+
+        $mouse = collect($this->rows()['data'])->firstWhere('item_name', 'Mouse');
+        $this->assertSame('5 – 10', $mouse['level']);
+        $this->assertEquals(2, $mouse['qty_on_hand']);
+    }
+
     public function test_over_rows_carry_excess_at_the_average_cost(): void
     {
         $this->seedStock();
