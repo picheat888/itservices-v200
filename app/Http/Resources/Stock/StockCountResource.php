@@ -16,6 +16,7 @@ class StockCountResource extends JsonResource
             'reference' => $this->reference,
             'warehouse' => $this->warehouse,
             'category' => $this->category,
+            'category_th' => null,
             'status' => $this->status?->value,
             'adjust_mode' => $this->adjust_mode?->value,
             'note' => $this->note,

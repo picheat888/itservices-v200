@@ -160,7 +160,7 @@ class TicketOverviewReportService
 
     private function withRowRelations(Builder $query): Builder
     {
-        return $query->with(['requester.department:id,name,name_th', 'assignee:id,name']);
+        return $query->with(['requester.department:id,name,name_th', 'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th']);
     }
 
     /**
@@ -442,7 +442,7 @@ class TicketOverviewReportService
      * here. Most closed first.
      *
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
-     * @return list<array{assignee_id: int, name: ?string, total: int, completed: int, canceled: int, avg_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
+     * @return list<array{assignee_id: int, name: ?string, name_th: ?string, total: int, completed: int, canceled: int, avg_resolve_hours: ?float, sla_measured: int, sla_met: int, sla_rate: ?float}>
      */
     private function byAssignee(User $viewer, array $filters): array
     {
@@ -450,7 +450,7 @@ class TicketOverviewReportService
             ->whereNotNull('assignee_id')
             ->whereIn('status', [TicketStatus::Completed->value, TicketStatus::Canceled->value])
             ->whereBetween('resolved_at', [$filters['from'], $filters['to']])
-            ->with('assignee:id,name')
+            ->with(['assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th'])
             ->get(['id', 'assignee_id', 'status', 'created_at', 'resolved_at', 'sla_resolve_due_at']);
 
         return $tickets->groupBy('assignee_id')
@@ -460,6 +460,7 @@ class TicketOverviewReportService
                 return [
                     'assignee_id' => $id,
                     'name' => $group->first()->assignee?->name,
+                    'name_th' => $group->first()->assignee?->name_th,
                     // Every case they closed in the range, completed or canceled.
                     'total' => $group->count(),
                     'completed' => $completed->count(),

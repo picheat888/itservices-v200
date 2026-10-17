@@ -533,6 +533,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
 /** One resolved step of the preview timeline. */
 function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => string }) {
+    const lang = useUiStore((s) => s.lang);
     const skipped = row.status === 'skipped';
     const queue = row.actor_type === 'it_staff';
     const owner = row.actor_type === 'owner' && row.approver_employee_id === null && !skipped;
@@ -552,7 +553,12 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
             </span>
             <div className="min-w-0">
                 <div className="text-sm font-semibold">
-                    {queue ? t('wf_actor_it') : (row.approver_name ?? (candidates.length > 0 ? candidates.join(', ') : row.label))}
+                    {queue
+                        ? t('wf_actor_it')
+                        : (localPair(row.approver_name, row.approver_name_th, lang) ??
+                          (candidates.length > 0
+                              ? candidates.map((name, i) => localPair(name, row.approver_candidates_th?.[i], lang)).join(', ')
+                              : row.label))}
                 </div>
                 <div className="text-muted-foreground text-xs">
                     {skipped

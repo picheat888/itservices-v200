@@ -156,6 +156,7 @@ export interface TicketOverviewSummary {
     by_assignee: {
         assignee_id: number;
         name: string | null;
+        name_th?: string | null;
         /** completed + canceled in the range */
         total: number;
         completed: number;
@@ -440,6 +441,7 @@ export interface BacklogBoardTicket {
     status: string | null;
     assignee_id: number | null;
     assignee: string | null;
+    assignee_th?: string | null;
     department: { name: string | null; name_th: string | null } | null;
     /** "YYYY-MM-DD HH:mm" — the deadline it runs against now. */
     due_at: string | null;
@@ -492,7 +494,7 @@ export interface ManualSlaBreakdown {
     /** The dimension the groups split by. */
     by: 'category' | 'priority' | 'work_class' | 'assignee';
     /** One line per group; `key` is the dimension's value ('none' = not set), `label` names an assignee. */
-    groups: Array<RequestSlaTally & { key: string; label: string | null }>;
+    groups: Array<RequestSlaTally & { key: string; label: string | null; label_th?: string | null }>;
     overall: RequestSlaTally;
     /** Live tickets already past their SLA, most overdue first. */
     open: {
@@ -500,6 +502,7 @@ export interface ManualSlaBreakdown {
         ticket_no: string;
         category: string | null;
         assignee: string | null;
+        assignee_th?: string | null;
         due_kind: 'response' | 'resolve';
         due_at: string | null;
         over_hours: number | null;
@@ -1139,6 +1142,7 @@ export interface ItPendingGroup {
     /** A user id, 'none' (ticket with nobody on it) or 'no_ticket'. */
     key: string;
     name: string | null;
+    name_th?: string | null;
     total: number;
     in_progress: number;
     open: number;

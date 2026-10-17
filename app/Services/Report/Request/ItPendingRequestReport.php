@@ -203,7 +203,7 @@ class ItPendingRequestReport extends TabularReport
     private function waiting(array $filters): Collection
     {
         return $this->waitingQuery($filters)
-            ->with(['ticket:id,status,assignee_id', 'ticket.assignee:id,name'])
+            ->with(['ticket:id,status,assignee_id', 'ticket.assignee:id,name,employee_id', 'ticket.assignee.employee:id,first_name,last_name,first_name_th,last_name_th'])
             ->get()
             ->map(function (ServiceRequest $r) {
                 $days = $this->waitingDays($r);
@@ -216,6 +216,7 @@ class ItPendingRequestReport extends TabularReport
                     'band' => self::ageBand($days),
                     'owner' => $this->owner($r),
                     'owner_name' => $r->ticket?->assignee?->name,
+                    'owner_name_th' => $r->ticket?->assignee?->name_th,
                     'ticket_status' => $r->ticket?->status?->value,
                 ];
             });
@@ -278,7 +279,7 @@ class ItPendingRequestReport extends TabularReport
      * Who holds the waiting requests: named staff by most waiting, then nobody yet and no ticket (always listed).
      *
      * @param  Collection<int, array<string, mixed>>  $waiting
-     * @return list<array{key: string, name: ?string, total: int, in_progress: int, open: int, bands: array<string, int>, oldest_days: ?int}>
+     * @return list<array{key: string, name: ?string, name_th: ?string, total: int, in_progress: int, open: int, bands: array<string, int>, oldest_days: ?int}>
      */
     private function byAssignee(Collection $waiting): array
     {
@@ -286,6 +287,7 @@ class ItPendingRequestReport extends TabularReport
         $line = fn (string $key, Collection $rows) => [
             'key' => $key,
             'name' => $rows->first()['owner_name'] ?? null,
+            'name_th' => $rows->first()['owner_name_th'] ?? null,
             'total' => $rows->count(),
             'in_progress' => $rows->where('ticket_status', 'in_progress')->count(),
             'open' => $rows->where('ticket_status', 'open')->count(),

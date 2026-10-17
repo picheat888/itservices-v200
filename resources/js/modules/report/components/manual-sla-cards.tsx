@@ -14,6 +14,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -37,8 +38,8 @@ const BACKLOG_HREF = '/reports/tickets-backlog?source=manual&sla=over_sla';
 const SLA_SETTINGS_HREF = '/settings?tab=tickets';
 
 /** A group's name on the page: the dimension's own wording, a person's name, or "not set". */
-function groupName(t: T, by: By, group: Pick<Group, 'key' | 'label'>): string {
-    if (by === 'assignee') return group.key === 'none' ? t('rep_opt_unassigned') : (group.label ?? group.key);
+function groupName(t: T, by: By, group: Pick<Group, 'key' | 'label' | 'label_th'>, lang: string): string {
+    if (by === 'assignee') return group.key === 'none' ? t('rep_opt_unassigned') : (localPair(group.label, group.label_th, lang) ?? group.key);
     if (by === 'priority') return group.key === 'none' ? t('rep_ms_prio_none') : t(`ticket_prio_${group.key}`);
     if (by === 'work_class') return t(`rep_ms_work_${group.key}`);
     return t(`ticket_cat_${group.key}`);
@@ -177,7 +178,7 @@ function GroupsCard({ data, filters, patch }: { data: ManualSlaBreakdown; filter
                                                     group.key === 'none' && 'text-muted-foreground',
                                                 )}
                                             >
-                                                {groupName(t, by, group)}
+                                                {groupName(t, by, group, lang)}
                                             </button>
                                         </th>
                                         {line(group)}
@@ -281,7 +282,7 @@ function LateAndOpenCard({ data }: { data: ManualSlaBreakdown }) {
                                     {t('rep_rs_open_due')
                                         .replace('{kind}', t(`rep_due_kind_${o.due_kind}`))
                                         .replace('{at}', shortMoment(o.due_at, lang))}
-                                    {o.assignee && <span className="ml-3">{o.assignee}</span>}
+                                    {o.assignee && <span className="ml-3">{localPair(o.assignee, o.assignee_th, lang)}</span>}
                                 </span>
                             </div>
                         );

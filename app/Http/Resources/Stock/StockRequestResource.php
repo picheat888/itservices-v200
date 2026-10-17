@@ -29,9 +29,11 @@ class StockRequestResource extends JsonResource
             'reason' => $this->reason,
             'status' => $this->status,
             'approver_name' => $this->approver_name,
+            'approver_name_th' => null,
             'approved_at' => $this->approved_at?->toDateTimeString(),
             'fulfilled_at' => $this->fulfilled_at?->toDateTimeString(),
             'fulfilled_by' => $this->fulfilled_by,
+            'fulfilled_by_th' => null,
             'rejected_at' => $this->rejected_at?->toDateTimeString(),
             'created_at' => $this->created_at?->toDateTimeString(),
             // Approve / Reject shown to this reader: they hold stock.approve, it is still

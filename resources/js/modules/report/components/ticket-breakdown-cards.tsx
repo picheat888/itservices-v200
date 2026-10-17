@@ -186,6 +186,7 @@ const STAFF_SERIES: ChartSeries[] = [
 
 export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaGoal: number }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
 
     const columns: Column<StaffRow>[] = [
         {
@@ -193,7 +194,10 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
             header: t('rep_col_staff'),
             width: '200px',
             className: 'truncate whitespace-nowrap',
-            render: (r) => <span title={r.name ?? undefined}>{r.name ?? '—'}</span>,
+            render: (r) => {
+                const name = localPair(r.name, r.name_th, lang);
+                return <span title={name ?? undefined}>{name ?? '—'}</span>;
+            },
         },
         {
             key: 'split',

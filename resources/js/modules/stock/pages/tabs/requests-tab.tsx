@@ -183,7 +183,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 const decidedAt = r.approved_at ?? r.rejected_at;
                 return (
                     <div className="min-w-0">
-                        <TruncText text={r.approver_name} className="text-sm" />
+                        <TruncText text={pairOf(r.approver_name, r.approver_name_th)} className="text-sm" />
                         {decidedAt && <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(decidedAt)}</div>}
                     </div>
                 );
@@ -195,7 +195,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             width: '170px',
             render: (r) => (
                 <div className="min-w-0">
-                    <TruncText text={r.fulfilled_by} className="text-sm" />
+                    <TruncText text={pairOf(r.fulfilled_by, r.fulfilled_by_th)} className="text-sm" />
                     {r.fulfilled_at && <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(r.fulfilled_at)}</div>}
                 </div>
             ),

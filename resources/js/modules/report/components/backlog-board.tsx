@@ -11,6 +11,7 @@
  */
 import { useT } from '@/lang';
 import { toneDots } from '@/shared/components/status-badge';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -155,6 +156,7 @@ export function BacklogSlaSegments({ filters, patch }: { filters: TabularFilters
 
 function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
     const t = useT();
+    const pairOf = useLocalPair();
     const canOpen = useCanOpen();
     const href = `/tickets?view=${ticket.id}`;
     const priority = ticket.priority ? t(priorityKey(ticket.priority)) : t('rep_prio_none');
@@ -170,7 +172,7 @@ function TicketCard({ ticket }: { ticket: BacklogBoardTicket }) {
                         ticket.assignee ? 'text-muted-foreground' : 'font-semibold text-amber-600 dark:text-amber-400',
                     )}
                 >
-                    {ticket.assignee ?? t('rep_opt_unassigned')}
+                    {pairOf(ticket.assignee, ticket.assignee_th) ?? t('rep_opt_unassigned')}
                 </span>
             </span>
         </>

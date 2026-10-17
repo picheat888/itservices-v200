@@ -259,7 +259,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: t('stock_category'),
             width: '160px',
             className: 'whitespace-nowrap',
-            render: (s) => <TruncText text={s.category} className="text-sm" />,
+            render: (s) => <TruncText text={localPair(s.category, s.category_th ?? catTh.get(s.category ?? ''), lang)} className="text-sm" />,
         },
         {
             key: 'counted_by',
