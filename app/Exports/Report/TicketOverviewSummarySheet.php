@@ -7,13 +7,15 @@ use App\Services\Report\TicketLabels;
 use App\Support\DateDisplay;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
 
 /**
  * "สรุป" sheet of the ticket report workbook: headline numbers and the breakdowns, down to
  * every department by category and every IT staff member, as the page shows them.
  */
-class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
+class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithEvents, WithTitle
 {
     /** @param array<string, mixed> $summary */
     public function __construct(private array $summary) {}
@@ -21,6 +23,30 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
     public function title(): string
     {
         return 'สรุป';
+    }
+
+    /**
+     * Whole-number cells (counts) group thousands; averages and rates keep their own look. Cells stay numeric.
+     *
+     * @return array<class-string, callable>
+     */
+    public function registerEvents(): array
+    {
+        return [AfterSheet::class => function (AfterSheet $event): void {
+            $row = 0;
+            foreach ($this->array() as $cells) {
+                // The writer leaves out empty rows, so they take no line in the sheet.
+                if ($cells === []) {
+                    continue;
+                }
+                $row++;
+                foreach (array_values($cells) as $c => $value) {
+                    if (is_int($value)) {
+                        $event->sheet->getDelegate()->getStyle([$c + 1, $row])->getNumberFormat()->setFormatCode('#,##0');
+                    }
+                }
+            }
+        }];
     }
 
     /**
