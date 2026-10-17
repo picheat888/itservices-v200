@@ -29,6 +29,7 @@ export const requests: Dict = {
     requests_tab_overview: 'Overview',
     requests_tab_list: 'Requests',
     requests_tab_approvals: 'Waiting for me',
+    requests_tab_queue: 'Waiting for IT',
 
     // pages/index.tsx — KPI cards
     req_kpi_awaiting: 'Waiting for you',
