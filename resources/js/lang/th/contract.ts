@@ -207,7 +207,7 @@ export const contract: Dict = {
     contract_assets_empty: 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน',
     contract_asset_col_id: 'รหัสทรัพย์สิน',
     contract_asset_col_name: 'ชื่อ',
-    contract_asset_col_serial: 'หมายเลขซีเรียล',
+    contract_asset_col_serial: 'Serial',
     contract_asset_col_owner: 'ผู้ถือครอง',
 
     // contract-attachments-tab.tsx — preview toolbar

@@ -28,7 +28,6 @@ export const stock: Dict = {
     stock_history: 'History',
     stock_history_title: 'SKU history',
     stock_history_movements: 'Movement timeline',
-    stock_history_serials: 'Serial history',
     stock_history_print: 'Print',
     stock_history_pdf: 'PDF',
     stock_history_no_events: 'No events',

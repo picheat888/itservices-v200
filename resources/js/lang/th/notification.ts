@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const notification: Dict = {
-    notifications: 'Email & Notification',
+    notifications: 'อีเมลและการแจ้งเตือน',
     notif_title: 'การแจ้งเตือน',
     notif_all: 'ทั้งหมด',
     notif_mark_all: 'อ่านแล้วทั้งหมด',
@@ -19,7 +19,7 @@ export const notification: Dict = {
     notif_report_export_ready: 'ไฟล์ {format} พร้อมแล้ว ดาวน์โหลดได้ที่ "ไฟล์ส่งออกของฉัน"',
     notif_report_export_failed: 'สร้างไฟล์ {format} ไม่สำเร็จ ลองใหม่ได้ที่ "ไฟล์ส่งออกของฉัน"',
     notif_report_schedule_failed: 'ส่งรายงานตามเวลาไม่สำเร็จ ตรวจสอบได้ที่หน้ารายงาน',
-    notif_cred_required: 'ยังไม่มีบัญชีเข้าใช้งาน ตั้ง Username และ Password ให้',
+    notif_cred_required: 'ยังไม่มีบัญชีเข้าใช้งาน ตั้งชื่อผู้ใช้และรหัสผ่านให้',
     notif_resigned: 'ลาออกแล้ว ปิดบัญชีและเรียกคืนทรัพย์สิน',
     notif_departure: 'ลาออกแล้ว ตรวจสอบงานที่ผ่านพนักงานคนนี้',
     notif_access_offboarding: 'ลาออกแล้ว แต่ยังมีสิทธิ์อยู่ {total} รายการ',
@@ -112,7 +112,7 @@ export const notification: Dict = {
     notification_toggle: 'เปิดใช้',
     notification_reset_confirm_title: 'คืนค่าข้อความมาตรฐาน?',
     notification_reset_confirm_desc: 'ข้อความภาษาอังกฤษและภาษาไทยที่แก้ไว้จะถูกแทนที่ด้วยข้อความมาตรฐาน',
-    notification_col_id: 'ID',
+    notification_col_id: 'รหัส',
     notification_lang_en: 'EN',
     notification_lang_th: 'TH',
     notification_empty_none: 'ยังไม่มีการแจ้งเตือน',

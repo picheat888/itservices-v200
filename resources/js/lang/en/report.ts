@@ -1965,5 +1965,4 @@ export const report: Dict = {
     rep_slv_cat_empty: 'No items outside Min/Max',
 
     // manual-sla-cards.tsx — labels moved from the component
-    report_en_gb: 'en-GB',
 };
