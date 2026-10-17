@@ -36,8 +36,6 @@ class StockMovementsBreakdownTest extends TestCase
     use ExportsReports, RefreshDatabase;
     use GrantsReports;
 
-    private const ALL = ['stock.view_request', 'stock.approve', 'stock.view_count'];
-
     private int $docSeq = 0;
 
     /** @var array<string, mixed> */
@@ -173,7 +171,7 @@ class StockMovementsBreakdownTest extends TestCase
     /** @return array<string, mixed> */
     private function breakdown(string $query = '', ?array $permissions = null): array
     {
-        $permissions ??= [...$this->reportRights('stock'), ...self::ALL];
+        $permissions ??= $this->reportRights('stock');
 
         return $this->actingAs($this->userWith($permissions))
             ->getJson('/api/reports/stock/movements/breakdown'.($query === '' ? '' : '?'.$query))
@@ -327,44 +325,23 @@ class StockMovementsBreakdownTest extends TestCase
 
     // ── gating, filters, permission ─────────────────────────────────────────────────
 
-    public function test_cards_the_viewer_may_not_see_are_null(): void
+    public function test_every_card_is_shown_to_a_stock_report_reader(): void
     {
         $this->seedStock();
 
-        $eventsOnly = $this->breakdown('', [...$this->reportRights('stock')]);
-        $this->assertNotEmpty($eventsOnly['tiles']);
-        $this->assertCount(12, $eventsOnly['months']);
-        $this->assertNull($eventsOnly['requests']);
-        $this->assertNull($eventsOnly['people']);
-        $this->assertNull($eventsOnly['departments']);
-        $this->assertNull($eventsOnly['counts']);
+        $reader = $this->breakdown('', $this->reportRights('stock'));
 
-        // A requester sees the ranks but not everyone's waiting requests, as on /stock.
-        $requester = $this->breakdown('', [...$this->reportRights('stock'), 'stock.view_request', 'stock.request']);
-        $this->assertNull($requester['requests']);
-        $this->assertNotNull($requester['people']);
-        $this->assertNotNull($requester['departments']);
-        $this->assertNull($requester['counts']);
-
-        foreach (['stock.approve', 'stock.fulfill'] as $permission) {
-            $handler = $this->breakdown('', [...$this->reportRights('stock'), 'stock.view_request', $permission]);
-            $this->assertNotNull($handler['requests'], $permission);
-            $this->assertNotNull($handler['people'], $permission);
-        }
-
-        $countsToo = $this->breakdown('', [...$this->reportRights('stock'), 'stock.view_count']);
-        $this->assertNull($countsToo['requests']);
-        $this->assertCount(2, $countsToo['counts']);
-
-        $super = User::factory()->create(['role' => 'super']);
-        $all = $this->actingAs($super)->getJson('/api/reports/stock/movements/breakdown')->assertOk()->json('data');
-        $this->assertNotNull($all['requests']);
-        $this->assertNotNull($all['counts']);
+        $this->assertNotEmpty($reader['tiles']);
+        $this->assertCount(12, $reader['months']);
+        $this->assertNotNull($reader['requests']);
+        $this->assertNotNull($reader['people']);
+        $this->assertNotNull($reader['departments']);
+        $this->assertCount(2, $reader['counts']);
     }
 
     public function test_bad_filters_are_refused_and_the_report_permission_is_needed(): void
     {
-        $user = $this->userWith([...$this->reportRights('stock'), ...self::ALL]);
+        $user = $this->userWith($this->reportRights('stock'));
         $this->actingAs($user)->getJson('/api/reports/stock/movements/breakdown?from=25-09-2026')->assertUnprocessable();
         $this->actingAs($user)->getJson('/api/reports/stock/movements/breakdown?warehouse_id=999')->assertUnprocessable();
         $this->actingAs($user)->getJson('/api/reports/stock/movements/breakdown?type=lost')->assertUnprocessable();
@@ -408,7 +385,7 @@ class StockMovementsBreakdownTest extends TestCase
         $this->seedStock();
         // No unit_cost: valued at the average lot cost of 21 Sep (150).
         $this->movement($this->s['ssd'], 'receive', 4, '2026-09-21 10:00:00', ['to_label' => 'Main']);
-        $user = $this->userWith([...$this->reportRights('stock'), ...self::ALL]);
+        $user = $this->userWith($this->reportRights('stock'));
 
         $body = $this->actingAs($user)->getJson('/api/reports/tabular/stock.movements/rows?type=receive')->assertOk()->json();
         $summary = collect($body['summary'])->keyBy('key')['receive_value']['value'];
@@ -453,17 +430,15 @@ class StockMovementsBreakdownTest extends TestCase
 
     // ── export ──────────────────────────────────────────────────────────────────────
 
-    public function test_export_sections_follow_the_card_permissions(): void
+    public function test_export_sections_carry_every_card(): void
     {
         $this->seedStock();
         $report = new StockMovementReport;
         $titles = fn (array $permissions) => array_column($report->exportSections($this->userWith($permissions), $report->resolveFilters([])), 'title');
 
-        $this->assertSame(['รับเข้าและเบิกออกรายเดือน'], $titles([...$this->reportRights('stock')]));
-        $this->assertSame(['รับเข้าและเบิกออกรายเดือน', 'ส่วนต่างจากการนับสต็อก'], $titles([...$this->reportRights('stock'), 'stock.view_count']));
-        $this->assertSame(['รับเข้าและเบิกออกรายเดือน', 'ผู้ขอเบิกสูงสุด', 'แผนกที่เบิกสูงสุด', 'ส่วนต่างจากการนับสต็อก'], $titles([...$this->reportRights('stock'), ...self::ALL]));
+        $this->assertSame(['รับเข้าและเบิกออกรายเดือน', 'ผู้ขอเบิกสูงสุด', 'แผนกที่เบิกสูงสุด', 'ส่วนต่างจากการนับสต็อก'], $titles($this->reportRights('stock')));
 
-        $sections = collect((new StockMovementReport)->exportSections($this->userWith([...$this->reportRights('stock'), ...self::ALL]), $report->resolveFilters(['from' => '2026-08-01', 'to' => '2026-09-30'])))->keyBy('title');
+        $sections = collect((new StockMovementReport)->exportSections($this->userWith($this->reportRights('stock')), $report->resolveFilters(['from' => '2026-08-01', 'to' => '2026-09-30'])))->keyBy('title');
         $this->assertCount(2, $sections['รับเข้าและเบิกออกรายเดือน']['rows']);
         $this->assertSame(['Suda', 'สมชาย ใจดี', 'Nobody'], array_column($sections['ผู้ขอเบิกสูงสุด']['rows'], 0));
         $this->assertSame('บุคคล', $sections['ผู้ขอเบิกสูงสุด']['rows'][0][1]);
@@ -482,7 +457,7 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertExportStored('Report_stock-movements_2026-09-25.xlsx', function (TabularReportExport $export) {
             $rows = collect($export->sheets())->first(fn (object $s) => $s instanceof TabularRowsSheet);
 
-            return array_column($export->sections, 'title') === ['รับเข้าและเบิกออกรายเดือน']
+            return array_column($export->sections, 'title') === ['รับเข้าและเบิกออกรายเดือน', 'ผู้ขอเบิกสูงสุด', 'แผนกที่เบิกสูงสุด', 'ส่วนต่างจากการนับสต็อก']
                 && $rows !== null
                 && in_array('มูลค่า', $rows->headings(), true);
         });

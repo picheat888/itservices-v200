@@ -154,46 +154,34 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->assertSame(1, $data['by_issue']['bad_dates']);
     }
 
-    public function test_account_group_is_withheld_without_set_credentials(): void
+    public function test_account_group_is_shown_to_any_employee_report_reader(): void
     {
         $leaver = $this->employee('Leaver', ['status' => 'resigned', 'last_day' => '2026-09-30']);
         User::factory()->create(['employee_id' => $leaver->id, 'username' => 'leaver.acct']);
         User::factory()->create(['username' => 'fresh.acct', 'must_change_password' => true]);
+        $reader = $this->userWith($this->reportRights('employees'));
 
-        $plain = $this->userWith([...$this->reportRights('employees')]);
-        $creds = $this->userWith([...$this->reportRights('employees'), 'employees.set_credentials']);
+        $breakdown = $this->actingAs($reader)->getJson('/api/reports/employees/open-items/breakdown')->assertOk();
+        $this->assertContains('acct', $breakdown->json('data.groups'));
+        $this->assertSame(['left' => 1, 'must_change' => 1, 'expired' => 0], $breakdown->json('data.acct.by_kind'));
+        $this->assertSame(2, $breakdown->json('data.acct.accounts'));
 
-        $hidden = $this->actingAs($plain)->getJson('/api/reports/employees/open-items/breakdown')->assertOk();
-        $this->assertArrayNotHasKey('acct', $hidden->json('data'));
-        $this->assertNotContains('acct', $hidden->json('data.groups'));
-        $this->assertStringNotContainsString('leaver.acct', $hidden->getContent());
-        $this->assertStringNotContainsString('fresh.acct', $hidden->getContent());
-        $rows = $this->actingAs($plain)->getJson('/api/reports/tabular/employees.open_items/rows?group=acct')->assertOk();
-        $this->assertSame([], $rows->json('data'));
-        $all = $this->actingAs($plain)->getJson('/api/reports/tabular/employees.open_items/rows')->assertOk();
-        $this->assertNotContains('acct', array_column($all->json('data'), 'group'));
-        $this->assertStringNotContainsString('leaver.acct', $all->getContent());
-
-        $acct = $this->actingAs($creds)->getJson('/api/reports/employees/open-items/breakdown')->assertOk()->json('data.acct');
-        $this->assertSame(['left' => 1, 'must_change' => 1, 'expired' => 0], $acct['by_kind']);
-        $this->assertSame(2, $acct['accounts']);
+        $rows = $this->actingAs($reader)->getJson('/api/reports/tabular/employees.open_items/rows?group=acct')->assertOk();
+        $this->assertStringContainsString('leaver.acct', $rows->getContent());
     }
 
-    public function test_searching_a_username_does_not_reveal_accounts_to_a_viewer_without_set_credentials(): void
+    public function test_searching_a_username_finds_the_account(): void
     {
         $leaver = $this->employee('Leaver', ['status' => 'resigned', 'last_day' => '2026-09-30']);
         Asset::factory()->create(['owner_employee_id' => $leaver->id, 'owner' => null]);
         User::factory()->create(['employee_id' => $leaver->id, 'username' => 'leaver.acct']);
 
-        $this->assertSame(0, $this->breakdown('?search=leaver.acct')['asset']['people']);
-        $creds = $this->userWith([...$this->reportRights('employees'), 'employees.set_credentials']);
-        $found = $this->actingAs($creds)->getJson('/api/reports/employees/open-items/breakdown?search=leaver.acct')->json('data');
-        $this->assertSame(1, $found['asset']['people']);
+        $this->assertSame(1, $this->breakdown('?search=leaver.acct')['asset']['people']);
     }
 
     public function test_expired_passwords_count_only_when_the_policy_is_on(): void
     {
-        $creds = $this->userWith([...$this->reportRights('employees'), 'employees.set_credentials']);
+        $creds = $this->userWith($this->reportRights('employees'));
         $creds->forceFill(['password_changed_at' => now()])->save();
         User::factory()->create(['username' => 'stale', 'password_changed_at' => '2026-01-01', 'must_change_password' => false]);
 
@@ -209,7 +197,7 @@ class EmployeeOpenItemsReportTest extends TestCase
 
     public function test_a_never_changed_password_counts_as_expired_like_the_login_check(): void
     {
-        $creds = $this->userWith([...$this->reportRights('employees'), 'employees.set_credentials']);
+        $creds = $this->userWith($this->reportRights('employees'));
         $creds->forceFill(['password_changed_at' => now()])->save();
         User::factory()->create(['username' => 'never.changed', 'password_changed_at' => null, 'must_change_password' => false]);
         AppSetting::put('password_expiry_days', '90');
@@ -283,18 +271,18 @@ class EmployeeOpenItemsReportTest extends TestCase
 
         $data = $this->breakdown();
 
-        $this->assertSame(['asset', 'access', 'data'], $data['groups']);
+        $this->assertSame(['asset', 'access', 'acct', 'data'], $data['groups']);
         $this->assertSame(0, $data['asset']['people']);
         $this->assertNull($data['asset']['oldest_days']);
         $this->assertNull($data['access']['oldest_days']);
         $this->assertSame([], $data['asset']['rows']);
     }
 
-    public function test_group_filter_narrows_the_rows_for_a_viewer_with_set_credentials(): void
+    public function test_group_filter_narrows_the_rows(): void
     {
         $this->employee('Bare');
         User::factory()->create(['username' => 'fresh.acct', 'must_change_password' => true]);
-        $creds = $this->userWith([...$this->reportRights('employees'), 'employees.set_credentials']);
+        $creds = $this->userWith($this->reportRights('employees'));
 
         $rows = $this->actingAs($creds)->getJson('/api/reports/tabular/employees.open_items/rows?group=acct')->assertOk()->json('data');
 
@@ -309,7 +297,7 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->actingAs($this->userWith([...$this->reportRights('employees')]))->getJson('/api/reports/tabular/employees.leaver_assets/rows')->assertNotFound();
     }
 
-    public function test_files_carry_account_rows_only_for_a_viewer_with_set_credentials(): void
+    public function test_files_carry_account_rows_for_any_employee_report_reader(): void
     {
         Excel::fake();
         $leaver = $this->employee('Leaver', ['status' => 'resigned', 'last_day' => '2026-09-30']);
@@ -319,16 +307,7 @@ class EmployeeOpenItemsReportTest extends TestCase
         $kinds = fn (TabularReportExport $export) => $export->rows->pluck('grp')->all();
         $tiles = fn (TabularReportExport $export) => array_map(fn ($s) => $s->key, $export->summary);
 
-        $this->actingAs($this->userWith([...$this->reportRights('employees')]))->exportReport('/api/reports/tabular/employees.open_items/export?format=xlsx')->assertAccepted();
-        $this->assertExportStored($file, function (TabularReportExport $export) use ($kinds, $tiles) {
-            $this->assertSame(['asset'], $kinds($export));
-            $this->assertNotContains('open_accounts', $tiles($export));
-
-            return true;
-        });
-
-        $creds = $this->userWith([...$this->reportRights('employees'), 'employees.set_credentials']);
-        $this->actingAs($creds)->exportReport('/api/reports/tabular/employees.open_items/export?format=xlsx')->assertAccepted();
+        $this->actingAs($this->userWith($this->reportRights('employees')))->exportReport('/api/reports/tabular/employees.open_items/export?format=xlsx')->assertAccepted();
         $this->assertExportStored($file, function (TabularReportExport $export) use ($kinds, $tiles) {
             $this->assertSame(['asset', 'acct'], $kinds($export));
             $this->assertContains('open_accounts', $tiles($export));
