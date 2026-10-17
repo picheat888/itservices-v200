@@ -67,12 +67,12 @@ class TicketDigestService
 
             $this->email->sendTemplate('ticket.weekly_digest', $user->email, [
                 'user.first_name' => strtok((string) $user->name, ' '),
-                'digest.open_count' => (string) $open->count(),
+                'digest.open_count' => number_format($open->count()),
                 'digest.open_table' => $this->openTable($open),
-                'digest.working_count' => (string) $working->count(),
+                'digest.working_count' => number_format($working->count()),
                 'digest.working_table' => $this->workingTable($working),
                 // Both lists together — waiting to be taken plus still being worked on — for the subject line.
-                'digest.total' => (string) ($open->count() + $working->count()),
+                'digest.total' => number_format($open->count() + $working->count()),
             ], rtrim((string) config('app.url'), '/').'/tickets?tab=all', 'Open the case list', $user->name);
 
             $sent['recipients']++;
@@ -90,7 +90,7 @@ class TicketDigestService
             EmailTable::text((string) $t->subject),
             EmailTable::text($t->category?->label() ?? '-'),
             EmailTable::text((string) ($t->requester?->name ?? '-'), 32),
-            (string) $this->daysOpen($t),
+            number_format((int) $this->daysOpen($t)),
         ])->values()->all();
 
         return EmailTable::render(self::HEADERS_OPEN, $rows, self::NUMERIC, self::WIDTHS);
@@ -104,7 +104,7 @@ class TicketDigestService
             EmailTable::text((string) $t->subject),
             EmailTable::text($t->category?->label() ?? '-'),
             EmailTable::text((string) ($t->assignee?->name ?? '-'), 32),
-            (string) $this->daysOpen($t),
+            number_format((int) $this->daysOpen($t)),
         ])->values()->all();
 
         return EmailTable::render(self::HEADERS_WORKING, $rows, self::NUMERIC, self::WIDTHS);

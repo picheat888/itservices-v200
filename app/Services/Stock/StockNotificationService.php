@@ -75,7 +75,7 @@ class StockNotificationService
             'over' => 'stock.overstock_alert',
         };
         $this->emailEach($recipients, $templateKey, $this->itemVars($item) + [
-            'stock.qty' => (string) $item->current_stock,
+            'stock.qty' => number_format((float) $item->current_stock),
         ], $this->stockUrl('items'), 'View stock items');
 
         $log->last_alerted_on = $today;
@@ -176,7 +176,7 @@ class StockNotificationService
             // shelf — the same variable name carries a different figure than it does in the
             // alerts above. Worth knowing before writing {{stock.qty}} into a request mail
             // next to {{stock.min}}, where it reads as a comparison and is not one.
-            'stock.qty' => (string) $request->qty,
+            'stock.qty' => number_format((float) $request->qty),
             'stock.request_no' => (string) $request->reference,
             'stock.request_by' => (string) ($request->requester_name ?: '-'),
             // Free text the requester typed, landing in an HTML email: escaped, and its line
@@ -214,8 +214,8 @@ class StockNotificationService
         return [
             'stock.sku' => (string) $item->sku,
             'stock.name' => (string) $item->name,
-            'stock.min' => (string) $item->min_stock,
-            'stock.max' => (string) $item->max_stock,
+            'stock.min' => number_format((float) $item->min_stock),
+            'stock.max' => number_format((float) $item->max_stock),
         ];
     }
 
@@ -287,7 +287,7 @@ class StockNotificationService
 
         if ($alertItems->isNotEmpty()) {
             $this->emailEach($this->recipients('stock.module'), 'stock.alert_digest', [
-                'count' => (string) $alertItems->count(),
+                'count' => number_format($alertItems->count()),
                 'stock.summary_table' => $this->buildAlertSummary($alertItems),
                 'stock.items_table' => $this->buildAlertRows($alertItems),
             ], $this->stockUrl('items'), 'View stock items');
@@ -297,7 +297,7 @@ class StockNotificationService
         if ($waiting->isNotEmpty()) {
             // Only whoever can approve — the rest of the module cannot clear this list.
             $this->emailEach($this->recipients('stock.approve'), 'stock.request_approval_needed', [
-                'count' => (string) $waiting->count(),
+                'count' => number_format($waiting->count()),
                 'stock.request_summary_table' => $this->buildRequestSummary($waiting),
                 'stock.requests_table' => $this->buildRequestRows($waiting),
             ], $this->stockUrl('requests'), 'Review requests');
@@ -353,7 +353,7 @@ class StockNotificationService
         $counts = $rows->countBy(fn (array $row) => $row['type']);
 
         $table = collect(self::ALERT_LABELS)
-            ->map(fn (string $label, string $type) => [$label, (string) ($counts[$type] ?? 0)])
+            ->map(fn (string $label, string $type) => [$label, number_format((int) ($counts[$type] ?? 0))])
             ->values()->all();
 
         return EmailTable::render(self::SUMMARY_HEADERS, $table, [1], self::SUMMARY_WIDTHS);
@@ -377,9 +377,9 @@ class StockNotificationService
                 // text() escapes: SKUs and item names are typed by hand.
                 EmailTable::text((string) $item->sku, 20),
                 EmailTable::text((string) $item->name, 40),
-                (string) (int) $item->current_stock,
-                (string) (int) $item->min_stock,
-                (string) (int) $item->max_stock,
+                number_format((int) $item->current_stock),
+                number_format((int) $item->min_stock),
+                number_format((int) $item->max_stock),
                 EmailTable::text(self::ALERT_LABELS[$row['type']] ?? $row['type']),
             ];
         })->values()->all();
@@ -421,7 +421,7 @@ class StockNotificationService
         $counts = $requests->countBy(fn (StockRequest $request) => (string) $request->status);
 
         $rows = collect(self::REQUEST_STATUS_LABELS)
-            ->map(fn (string $label, string $status) => [$label, (string) ($counts[$status] ?? 0)])
+            ->map(fn (string $label, string $status) => [$label, number_format((int) ($counts[$status] ?? 0))])
             ->values()->all();
 
         return EmailTable::render(self::REQUEST_SUMMARY_HEADERS, $rows, [1], self::REQUEST_SUMMARY_WIDTHS);
@@ -444,7 +444,7 @@ class StockNotificationService
                 DateDisplay::emailDate($request->created_at),
                 // Escaped: the item name is typed by hand. The quantity rides with it because
                 // a request for one and a request for fifty are not the same decision.
-                EmailTable::text(($item?->name ?? '-').' ×'.(int) $request->qty, 44),
+                EmailTable::text(($item?->name ?? '-').' ×'.number_format((int) $request->qty), 44),
                 EmailTable::text(self::REQUEST_STATUS_LABELS[$request->status] ?? (string) $request->status),
             ];
         })->values()->all();
