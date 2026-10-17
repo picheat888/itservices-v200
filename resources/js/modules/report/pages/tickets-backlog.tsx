@@ -43,8 +43,8 @@ export default function TicketsBacklogReportPage() {
         <TabularReportView
             reportKey="tickets.backlog"
             extras={{
-                // SLA has its own segments at the head of the bar; search is off this page for now.
-                hiddenFilters: ['sla', 'search'],
+                // SLA has its own segments at the head of the bar
+                hiddenFilters: ['sla'],
                 filterLead: ({ filters, patch }) => <BacklogSlaSegments filters={filters} patch={patch} />,
                 beforeTable: ({ filters, patch }) => <BacklogBoardCards filters={filters} patch={patch} />,
                 rowsTitle: backlogRowsTitle,
