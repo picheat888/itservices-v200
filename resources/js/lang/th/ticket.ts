@@ -38,7 +38,7 @@ export const ticket: Dict = {
     ticket_in_progress: 'กำลังดำเนินการ',
     ticket_completed: 'เสร็จสิ้น',
     ticket_canceled: 'ยกเลิก',
-    ticket_search: 'ค้นหาเลขที่ Ticket, หัวข้อ หรือผู้แจ้ง…',
+    ticket_search: 'ค้นหาเลขที่ Ticket, หัวข้อ, ผู้แจ้ง, ผู้รับผิดชอบ หรือทรัพย์สิน…',
     ticket_asset_search: 'ค้นหารหัส, Tag, Serial หรือผู้ถือครอง…',
     ticket_all: 'ทั้งหมด',
     ticket_subject: 'หัวข้อ',

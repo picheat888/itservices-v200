@@ -177,7 +177,10 @@ class TicketController extends Controller
 
         SearchTerms::apply($query, $request->query('search'), [
             'ticket_no', 'subject',
-            SearchTerms::related('requester', SearchTerms::personName()),
+            SearchTerms::related('requester', ['code', ...SearchTerms::personName()]),
+            SearchTerms::related('assignee', ['name', SearchTerms::related('employee', SearchTerms::personName())]),
+            SearchTerms::related('relatedAsset', ['asset_code', 'tag']),
+            SearchTerms::related('serviceRequest', ['reference']),
         ]);
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
