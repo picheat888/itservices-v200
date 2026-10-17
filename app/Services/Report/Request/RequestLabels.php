@@ -46,10 +46,26 @@ trait RequestLabels
     // Days since 1970-01-01 of the moment's own calendar date, without building Carbon copies
     private static function dayNumber(CarbonInterface $at): int
     {
-        $year = $at->year - ($at->month <= 2 ? 1 : 0);
+        return self::civilDays($at->year, $at->month, $at->day);
+    }
+
+    // Day number of a stored moment ('Y-m-d H:i:s' text) or of a Carbon, without building one
+    private static function dayOf(mixed $moment): int
+    {
+        if (is_string($moment)) {
+            return self::civilDays((int) substr($moment, 0, 4), (int) substr($moment, 5, 2), (int) substr($moment, 8, 2));
+        }
+
+        return self::dayNumber($moment);
+    }
+
+    // Days since 1970-01-01 of a calendar date
+    private static function civilDays(int $year, int $month, int $day): int
+    {
+        $year -= $month <= 2 ? 1 : 0;
         $era = intdiv($year >= 0 ? $year : $year - 399, 400);
         $yearOfEra = $year - $era * 400;
-        $dayOfYear = intdiv(153 * ($at->month + ($at->month > 2 ? -3 : 9)) + 2, 5) + $at->day - 1;
+        $dayOfYear = intdiv(153 * ($month + ($month > 2 ? -3 : 9)) + 2, 5) + $day - 1;
         $dayOfEra = $yearOfEra * 365 + intdiv($yearOfEra, 4) - intdiv($yearOfEra, 100) + $dayOfYear;
 
         return $era * 146097 + $dayOfEra - 719468;
