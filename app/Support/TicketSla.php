@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketSlaClock;
 use App\Enums\Ticket\TicketStatus;
+use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
@@ -226,7 +227,6 @@ class TicketSla
 
     public static function targetFor(Ticket $ticket): array
     {
-        $rules = self::rules();
         // Builder::value() ใช้ cast ของโมเดล ทั้งสองทางจึงคืน enum ได้ — บีบเป็นสตริงตรงนี้
         // เพราะนั่นคือสิ่งที่ match_value เก็บ
         $requestType = $ticket->relationLoaded('serviceRequest')
@@ -234,18 +234,30 @@ class TicketSla
             : $ticket->serviceRequest()->value('type');
         $requestType = $requestType instanceof BackedEnum ? (string) $requestType->value : $requestType;
 
+        return self::targetForValues($requestType, $ticket->category?->value, $ticket->work_class?->value, $ticket->priority?->value);
+    }
+
+    /**
+     * targetFor() from a ticket's plain column values, for callers that read rows without models.
+     *
+     * @return array{hours: int, scope: ?SlaScope, value: ?string, clock: TicketSlaClock}
+     */
+    public static function targetForValues(?string $requestType, ?string $category, ?string $workClassValue, ?string $priority): array
+    {
+        $rules = self::rules();
+
         // เป้าหมายงานซ่อมอยู่ที่ "คู่" ของประเภทเคสกับคนที่ทำ ไม่ใช่ที่คลาสลำพัง — เปลี่ยน
         // mainboard ที่ส่งช่างนอกกับเดินสายเน็ตเวิร์กที่ส่งช่างนอก เป็นงานคนละความยาวกัน
         //
         // งานปกติไม่เข้ากฎไหนเลย ซึ่งคือสิ่งที่ทำให้ scope นี้ชนะลำดับบนสุดได้โดยไม่แอบทับเงียบ ๆ
-        $workClass = $ticket->work_class?->isRepair() && $ticket->category !== null
-            ? self::workClassKey($ticket->category->value, $ticket->work_class->value)
+        $workClass = $workClassValue !== null && TicketWorkClass::from($workClassValue)->isRepair() && $category !== null
+            ? self::workClassKey($category, $workClassValue)
             : null;
 
         $candidates = [
             SlaScope::WorkClass->value => $workClass,
             SlaScope::RequestType->value => $requestType,
-            SlaScope::Priority->value => $ticket->priority?->value,
+            SlaScope::Priority->value => $priority,
         ];
 
         foreach (SlaScope::precedence() as $scope) {
@@ -259,7 +271,7 @@ class TicketSla
         // ไม่มีอะไรตั้งไว้สำหรับเคสนี้: ค่าเริ่มต้นตาม priority และ medium เมื่อยังไม่มี priority
         // รายงานเป็น scope null เพราะไม่มีใครเลือกมัน — และนับด้วยเวลาทำการ ซึ่งคือพฤติกรรมเดิม
         return [
-            'hours' => self::resolveHours($ticket->priority?->value),
+            'hours' => self::resolveHours($priority),
             'scope' => null,
             'value' => null,
             'clock' => TicketSlaClock::Business,
@@ -477,6 +489,12 @@ class TicketSla
             return null;
         }
 
+        return $from->copy()->setTimestamp(self::walkLocalSeconds($local, $minutes) - $offset);
+    }
+
+    /** The working-time walk on local-clock seconds: where $minutes of working time from $local ends. */
+    private static function walkLocalSeconds(int $local, int $minutes): int
+    {
         $plan = self::businessPlan();
         $cursor = self::openAtOrAfter($local, $plan);
         $remaining = max(0, $minutes);
@@ -492,7 +510,27 @@ class TicketSla
             $cursor = self::openAtOrAfter($end, $plan);
         }
 
-        return $from->copy()->setTimestamp($cursor - $offset);
+        return $cursor;
+    }
+
+    /**
+     * addMinutesOn() on whole-second Unix timestamps, without Carbon in the loop. Zones with clock
+     * changes and instants before 1970 take the Carbon path, so the answer is always the same.
+     */
+    public static function addMinutesToTimestamp(int $from, int $minutes, TicketSlaClock $clock): int
+    {
+        if ($clock === TicketSlaClock::Calendar) {
+            return $from + max(0, $minutes) * 60;
+        }
+
+        $zone = date_default_timezone_get();
+        $fixed = self::$fixedOffsetZones[$zone] ??= count((new \DateTimeZone($zone))->getTransitions(946684800, 4102444800)) === 1;
+        $offset = $fixed ? (int) date('Z', $from) : 0;
+        if (! $fixed || $from + $offset < 0) {
+            return self::addBusinessMinutes(Carbon::createFromTimestamp($from, $zone), $minutes)->getTimestamp();
+        }
+
+        return self::walkLocalSeconds($from + $offset, $minutes) - $offset;
     }
 
     /** Working minutes elapsed between two instants (0 when $to precedes $from). */

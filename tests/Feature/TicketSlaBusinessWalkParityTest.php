@@ -4,6 +4,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Ticket\TicketSlaClock;
 use App\Support\TicketSla;
 use Carbon\Carbon;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -54,6 +55,33 @@ class TicketSlaBusinessWalkParityTest extends TestCase
                 TicketSla::addBusinessMinutes($from->copy(), $minutes)->toIso8601String(),
                 "{$from->toIso8601String()} + {$minutes} min",
             );
+        }
+    }
+
+    /** @param array<string, mixed> $hours */
+    #[DataProvider('configs')]
+    public function test_timestamp_variant_matches_add_minutes_on_on_both_clocks(array $hours, string $zone): void
+    {
+        TicketSla::flush();
+        (new ReflectionClass(TicketSla::class))->getProperty('hoursMemo')->setValue(null, $hours);
+        $previous = date_default_timezone_get();
+        date_default_timezone_set($zone);
+
+        try {
+            mt_srand(20261018);
+            for ($n = 0; $n < 400; $n++) {
+                $at = mt_rand(1_600_000_000, 1_800_000_000);
+                $minutes = [0, 1, 59, 240, 1440, mt_rand(0, 60 * 400), mt_rand(0, 60 * 2000)][mt_rand(0, 6)];
+                foreach ([TicketSlaClock::Business, TicketSlaClock::Calendar] as $clock) {
+                    $this->assertSame(
+                        TicketSla::addMinutesOn(Carbon::createFromTimestamp($at, $zone), $minutes, $clock)->getTimestamp(),
+                        TicketSla::addMinutesToTimestamp($at, $minutes, $clock),
+                        "{$at} + {$minutes} min on {$clock->value}",
+                    );
+                }
+            }
+        } finally {
+            date_default_timezone_set($previous);
         }
     }
 }
