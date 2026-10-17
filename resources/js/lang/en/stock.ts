@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const stock: Dict = {
-    stock_title: 'IT Stock & Inventory',
+    stock_title: 'Stock',
     stock_subtitle: 'Manage stock, movements and min/max alerts across warehouses.',
     stock_new_item: 'New stock item',
     stock_new_sku: 'New SKU',
