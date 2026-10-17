@@ -28,9 +28,10 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
 
     // Each opening starts with an empty search
     const [query, setQuery] = useState('');
+    const openId = position?.id ?? null;
     useEffect(() => {
-        setQuery('');
-    }, [position?.id]);
+        if (openId !== null) setQuery('');
+    }, [openId]);
 
     const { data: members = [], isLoading } = usePositionMembers(view?.id ?? null);
     // Member count from the clicked row

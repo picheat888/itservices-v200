@@ -30,9 +30,10 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
 
     // Each opening starts with an empty search
     const [query, setQuery] = useState('');
+    const openId = department?.id ?? null;
     useEffect(() => {
-        setQuery('');
-    }, [department?.id]);
+        if (openId !== null) setQuery('');
+    }, [openId]);
 
     const { data: members = [], isLoading } = useDepartmentMembers(view?.id ?? null);
     // Member count from the clicked row
