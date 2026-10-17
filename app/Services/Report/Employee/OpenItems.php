@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Open items of "สรุปเรื่องค้างของพนักงาน" as of today: one UNION (query()) feeds both the cards and the
- * file rows. Accounts are selected only for a viewer with employees.set_credentials.
+ * file rows.
  */
 final class OpenItems
 {
@@ -36,32 +36,17 @@ final class OpenItems
 
     public const ACCOUNT_KIND_TH = ['left' => 'เจ้าของบัญชีลาออกแล้ว', 'must_change' => 'ยังไม่ได้เปลี่ยนรหัสผ่านครั้งแรก', 'expired' => 'รหัสผ่านหมดอายุ'];
 
-    public static function canSeeAccounts(User $viewer): bool
-    {
-        return (bool) $viewer->hasPermission('employees.set_credentials');
-    }
-
-    /**
-     * The groups this viewer may see, in card order.
-     *
-     * @return list<string>
-     */
-    public static function groupsFor(User $viewer): array
-    {
-        return array_values(array_filter(self::GROUPS, fn (string $g) => $g !== 'acct' || self::canSeeAccounts($viewer)));
-    }
-
     /**
      * Every open item as one flat row: id, grp, grp_rank, employee_id, ref_id (asset / grant / user id),
      * kind, kind_rank, last_day, code.
      */
-    public static function query(User $viewer, ?int $departmentId, ?string $search, ?string $group = null): Builder
+    public static function query(?int $departmentId, ?string $search, ?string $group = null): Builder
     {
-        $match = SearchTerms::normalize($search) !== '' ? self::matchingEmployees($search, self::canSeeAccounts($viewer)) : null;
+        $match = SearchTerms::normalize($search) !== '' ? self::matchingEmployees($search) : null;
         $like = $match !== null ? SearchTerms::like(SearchTerms::normalize($search)) : null;
 
         $selects = [];
-        foreach (self::groupsFor($viewer) as $name) {
+        foreach (self::GROUPS as $name) {
             if ($group === null || $group === $name) {
                 array_push($selects, ...self::selects($name, $departmentId, $match, $like));
             }
@@ -80,33 +65,32 @@ final class OpenItems
     }
 
     /**
-     * The cards' data: groups the viewer may see, each with its people and rows.
+     * The cards' data: every group, each with its people and rows.
      *
      * @return array<string, mixed>
      */
-    public static function collect(User $viewer, ?int $departmentId, ?string $search): array
+    public static function collect(?int $departmentId, ?string $search): array
     {
-        $rows = self::query($viewer, $departmentId, $search)->get();
+        $rows = self::query($departmentId, $search)->get();
         self::hydrate($rows);
         $by = $rows->groupBy('grp');
-        $groups = self::groupsFor($viewer);
 
         $asset = self::assetGroup($by->get('asset', collect()));
         $access = self::accessGroup($by->get('access', collect()));
         $data = self::dataGroup($by->get('data', collect()));
-        $acct = in_array('acct', $groups, true) ? self::accountGroup($by->get('acct', collect())) : null;
+        $acct = self::accountGroup($by->get('acct', collect()));
 
         $people = $rows->whereNotNull('employee_id')->pluck('employee_id')->unique()->count()
             + $rows->where('grp', 'acct')->whereNull('employee_id')->count();
 
-        return array_filter([
-            'groups' => $groups,
+        return [
+            'groups' => self::GROUPS,
             'people_total' => $people,
             'asset' => $asset,
             'access' => $access,
             'acct' => $acct,
             'data' => $data,
-        ], fn ($v) => $v !== null);
+        ];
     }
 
     /**
@@ -418,25 +402,23 @@ final class OpenItems
     // ── search ──────────────────────────────────────────────────────────────────────
 
     /**
-     * Employees a search finds by code / name words, asset code or serial, or (credentials only) username; bindings, % _ ! literal.
+     * Employees a search finds by code / name words, asset code or serial, or username; bindings, % _ ! literal.
      *
      * @return Builder<Employee>
      */
-    private static function matchingEmployees(string $search, bool $withUsernames): Builder
+    private static function matchingEmployees(string $search): Builder
     {
         $whole = SearchTerms::like(SearchTerms::normalize($search));
         $nameFields = ['employees.code', ...SearchTerms::personName('employees.')];
 
-        $query = Employee::query()->select('employees.id')->where(function (Builder $w) use ($search, $nameFields, $whole, $withUsernames) {
+        $query = Employee::query()->select('employees.id')->where(function (Builder $w) use ($search, $nameFields, $whole) {
             $w->where(fn (Builder $names) => SearchTerms::apply($names, $search, $nameFields))
                 ->orWhereIn('employees.id', SearchTerms::anyLike(
                     Asset::query()->select('owner_employee_id')->whereNotNull('owner_employee_id'), ['asset_code', 'serial'], $whole,
-                ));
-            if ($withUsernames) {
-                $w->orWhereIn('employees.id', SearchTerms::anyLike(
+                ))
+                ->orWhereIn('employees.id', SearchTerms::anyLike(
                     User::query()->select('employee_id')->whereNotNull('employee_id'), ['username'], $whole,
                 ));
-            }
         });
 
         return $query;

@@ -27,9 +27,6 @@ class EmployeeOpenItemsReport extends TabularReport
         'acct' => 'rep_ef_group_acct', 'data' => 'rep_ef_group_data',
     ];
 
-    /** Whether the viewer of the query just built may see accounts — summary() has no viewer of its own. */
-    private bool $withAccounts = false;
-
     public function key(): string
     {
         return 'employees.open_items';
@@ -56,9 +53,7 @@ class EmployeeOpenItemsReport extends TabularReport
 
     public function query(User $viewer, array $filters): Builder
     {
-        $this->withAccounts = OpenItems::canSeeAccounts($viewer);
-
-        return OpenItems::query($viewer, $this->departmentId($filters), $filters['search'] ?? null, $filters['group'] ?? null);
+        return OpenItems::query($this->departmentId($filters), $filters['search'] ?? null, $filters['group'] ?? null);
     }
 
     /**
@@ -69,7 +64,7 @@ class EmployeeOpenItemsReport extends TabularReport
      */
     public function breakdown(User $viewer, array $filters): array
     {
-        return OpenItems::collect($viewer, $this->departmentId($filters), $filters['search'] ?? null);
+        return OpenItems::collect($this->departmentId($filters), $filters['search'] ?? null);
     }
 
     /** @param Collection<int, Model> $rows */
@@ -106,9 +101,7 @@ class EmployeeOpenItemsReport extends TabularReport
             ReportSummary::make('open_assets', 'ทรัพย์สินค้างคืน', $people('asset'), 'red'),
             ReportSummary::make('open_access', 'สิทธิ์ค้างถอน', $people('access'), 'red'),
         ];
-        if ($this->withAccounts) {
-            $tiles[] = ReportSummary::make('open_accounts', 'บัญชีเข้าใช้งาน', $rows->where('grp', 'acct')->count(), 'amber');
-        }
+        $tiles[] = ReportSummary::make('open_accounts', 'บัญชีเข้าใช้งาน', $rows->where('grp', 'acct')->count(), 'amber');
         $tiles[] = ReportSummary::make('open_data', 'ข้อมูลไม่ครบ', $people('data'), 'amber');
 
         return $tiles;

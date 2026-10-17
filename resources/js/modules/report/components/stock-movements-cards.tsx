@@ -1,6 +1,5 @@
 // Stock in & out report cards: tiles, monthly flow, waiting requests, top requesters and departments, count variance (data: useStockMovementsBreakdown).
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localName } from '@/shared/lib/local-name';
@@ -438,48 +437,34 @@ function CountsCard({ counts }: { counts: Counts }) {
 
 /* ─────────────────────────── the page's cards ─────────────────────────── */
 
-/** Which cards this viewer gets, by the same permissions as StockMovementReport::breakdown(). */
-function useCardAccess() {
-    const { can } = useAuth();
-    const ranks = can('stock.view_request');
-    return { requests: ranks && (can('stock.approve') || can('stock.fulfill')), ranks, counts: can('stock.view_count') };
-}
-
 function CardsSkeleton() {
-    const access = useCardAccess();
     return (
         <div className="space-y-4" aria-hidden>
             <KpiRowSkeleton count={5} className={summaryColumns(5)} />
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <Card className={cn('overflow-hidden', access.requests ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-3 xl:col-span-5')}>
+                <Card className="overflow-hidden lg:col-span-2 xl:col-span-3">
                     <CardHeadingSkeleton />
                     <ChartSkeleton />
                 </Card>
-                {access.requests && (
-                    <Card className="overflow-hidden xl:col-span-2">
-                        <CardHeadingSkeleton />
-                        <BarRowsSkeleton rows={5} />
-                    </Card>
-                )}
+                <Card className="overflow-hidden xl:col-span-2">
+                    <CardHeadingSkeleton />
+                    <BarRowsSkeleton rows={5} />
+                </Card>
             </div>
-            {access.ranks && (
-                <div className="grid gap-3 lg:grid-cols-2">
-                    <Card className="overflow-hidden">
-                        <CardHeadingSkeleton />
-                        <BarRowsSkeleton rows={6} />
-                    </Card>
-                    <Card className="overflow-hidden">
-                        <CardHeadingSkeleton />
-                        <BarRowsSkeleton rows={6} />
-                    </Card>
-                </div>
-            )}
-            {access.counts && (
+            <div className="grid gap-3 lg:grid-cols-2">
                 <Card className="overflow-hidden">
                     <CardHeadingSkeleton />
-                    <TableRowsSkeleton rows={4} />
+                    <BarRowsSkeleton rows={6} />
                 </Card>
-            )}
+                <Card className="overflow-hidden">
+                    <CardHeadingSkeleton />
+                    <BarRowsSkeleton rows={6} />
+                </Card>
+            </div>
+            <Card className="overflow-hidden">
+                <CardHeadingSkeleton />
+                <TableRowsSkeleton rows={4} />
+            </Card>
         </div>
     );
 }
@@ -496,11 +481,11 @@ export function StockMovementsCards({ filters }: { filters: TabularFilters }) {
             <MovementTiles tiles={data.tiles} months={data.months} />
             {/* Side by side from lg; stacked on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                <StockFlowCard months={data.months} className={data.requests ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-3 xl:col-span-5'} />
-                {data.requests && <WaitingCard requests={data.requests} className="xl:col-span-2" />}
+                <StockFlowCard months={data.months} className="lg:col-span-2 xl:col-span-3" />
+                <WaitingCard requests={data.requests} className="xl:col-span-2" />
             </div>
-            {data.people && data.departments && <RankCards people={data.people} departments={data.departments} />}
-            {data.counts && <CountsCard counts={data.counts} />}
+            <RankCards people={data.people} departments={data.departments} />
+            <CountsCard counts={data.counts} />
         </div>
     );
 }

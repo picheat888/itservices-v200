@@ -1275,9 +1275,9 @@ export type OpenItemsGroup = 'asset' | 'access' | 'acct' | 'data';
 export type OpenItemsAccountKind = 'left' | 'must_change' | 'expired';
 export type DataIssueKey = 'mgr_left' | 'no_mgr' | 'no_email' | 'no_dept' | 'no_sec' | 'no_pos' | 'bad_dates';
 
-/** What the "สรุปเรื่องค้างของพนักงาน" page draws; `acct` is present only for a viewer with employees.set_credentials. */
+/** What the "สรุปเรื่องค้างของพนักงาน" page draws. */
 export interface EmployeeOpenItemsBreakdown {
-    /** The groups this viewer may see, in card order. */
+    /** Every group, in card order. */
     groups: OpenItemsGroup[];
     people_total: number;
     asset: {
@@ -1300,7 +1300,7 @@ export interface EmployeeOpenItemsBreakdown {
         oldest_days: number | null;
         rows: (OpenItemsPerson & { grants: { type: AccessType; name: string }[] })[];
     };
-    acct?: {
+    acct: {
         accounts: number;
         by_kind: Record<OpenItemsAccountKind, number>;
         expiry_days: number;
@@ -1353,35 +1353,45 @@ export interface StockWaitingRequest {
     created_at: string | null;
 }
 
-/** GET /reports/stock/movements/breakdown — StockMovementReport::breakdown(); null sections are hidden from this viewer. */
+/** GET /reports/stock/movements/breakdown — StockMovementReport::breakdown(). */
 export interface StockMovementsBreakdown {
     tiles: Record<import('@/shared/types').StockMovementType, { qty: number; value: number; times: number }>;
     /** 12 months ending with the range's end month. */
     months: StockFlowMonth[];
-    /** As of today, oldest first; needs stock.view_request and stock.approve or stock.fulfill. `rows` stop at 500, the counts do not. */
-    requests: { pending: number; approved: number; rows: StockWaitingRequest[] } | null;
-    /** Fulfilled requests in the range per requester, unsorted; needs stock.view_request. */
-    people:
-        | {
-              user_id: number | null;
-              name: string;
-              name_th: string | null;
-              department_id: number | null;
-              department: string | null;
-              department_th: string | null;
-              qty: number;
-              value: number;
-              times: number;
-          }[]
-        | null;
-    /** The same per department (department_id null = no department), unsorted; needs stock.view_request. */
-    departments:
-        | { department_id: number | null; name: string | null; name_th: string | null; people: number; qty: number; value: number; times: number }[]
-        | null;
-    /** Committed counts in the range, newest first; `lines` = lines that differ; needs stock.view_count. */
-    counts:
-        | { reference: string; warehouse: string | null; committed_at: string | null; lines: number; up: number; down: number; net_value: number }[]
-        | null;
+    /** As of today, oldest first. `rows` stop at 500, the counts do not. */
+    requests: { pending: number; approved: number; rows: StockWaitingRequest[] };
+    /** Fulfilled requests in the range per requester, unsorted. */
+    people: {
+        user_id: number | null;
+        name: string;
+        name_th: string | null;
+        department_id: number | null;
+        department: string | null;
+        department_th: string | null;
+        qty: number;
+        value: number;
+        times: number;
+    }[];
+    /** The same per department (department_id null = no department), unsorted. */
+    departments: {
+        department_id: number | null;
+        name: string | null;
+        name_th: string | null;
+        people: number;
+        qty: number;
+        value: number;
+        times: number;
+    }[];
+    /** Committed counts in the range, newest first; `lines` = lines that differ. */
+    counts: {
+        reference: string;
+        warehouse: string | null;
+        committed_at: string | null;
+        lines: number;
+        up: number;
+        down: number;
+        net_value: number;
+    }[];
 }
 
 /** GET /reports/stock/valuation/breakdown — StockValuationReport::breakdown(). */

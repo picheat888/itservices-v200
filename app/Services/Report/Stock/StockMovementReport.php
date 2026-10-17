@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * "รับเข้าและเบิกจ่าย" (Report Center → Stock): every stock document in the date range (last 12 months by default),
  * oldest first. breakdown() (StockMovementsBreakdownController) feeds the tiles, monthly flow, pending requests,
- * top requesters and count variance above the rows; the request and count cards need their own stock permissions.
+ * top requesters and count variance above the rows.
  */
 class StockMovementReport extends TabularReport
 {
@@ -38,7 +38,7 @@ class StockMovementReport extends TabularReport
 
     private const NO_DEPARTMENT_TH = 'ไม่มีแผนก';
 
-    /** @var array<string, array<string, mixed>> breakdown() per filter set and permissions */
+    /** @var array<string, array<string, mixed>> breakdown() per filter set */
     private array $breakdowns = [];
 
     /** Lot costs of the rows about to be shown, set by hydrateRows(). */
@@ -172,27 +172,21 @@ class StockMovementReport extends TabularReport
 
     /**
      * What the page draws above the rows: range + warehouse + category, never the type. Codes, numbers and stored
-     * names only. people / departments need stock.view_request; requests (everyone's) also need stock.approve or
-     * stock.fulfill, as the /stock request list; counts need stock.view_count (null otherwise).
+     * names only.
      *
      * @param  array<string, mixed>  $filters
-     * @return array{tiles: array<string, array{qty: int, value: float, times: int}>, months: list<array<string, mixed>>, requests: ?array<string, mixed>, people: ?list<array<string, mixed>>, departments: ?list<array<string, mixed>>, counts: ?list<array<string, mixed>>}
+     * @return array{tiles: array<string, array{qty: int, value: float, times: int}>, months: list<array<string, mixed>>, requests: array<string, mixed>, people: list<array<string, mixed>>, departments: list<array<string, mixed>>, counts: list<array<string, mixed>>}
      */
     public function breakdown(?User $viewer, array $filters): array
     {
-        $seesRequests = (bool) $viewer?->hasPermission('stock.view_request');
-        $seesAllRequests = $seesRequests && ($viewer->hasPermission('stock.approve') || $viewer->hasPermission('stock.fulfill'));
-        $seesCounts = (bool) $viewer?->hasPermission('stock.view_count');
-
-        return $this->breakdowns[md5(serialize([$filters, $seesRequests, $seesAllRequests, $seesCounts]))]
-            ??= $this->buildBreakdown($filters, $seesRequests, $seesAllRequests, $seesCounts);
+        return $this->breakdowns[md5(serialize($filters))] ??= $this->buildBreakdown($filters);
     }
 
     /**
      * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    private function buildBreakdown(array $filters, bool $seesRequests, bool $seesAllRequests, bool $seesCounts): array
+    private function buildBreakdown(array $filters): array
     {
         [$from, $to] = array_map(fn (CarbonInterface $d) => CarbonImmutable::instance($d), $this->dayRange($filters));
         $movements = $this->scoped($filters, $from, $to)
@@ -204,8 +198,8 @@ class StockMovementReport extends TabularReport
                 'unit_cost' => $m->unit_cost === null ? null : (float) $m->unit_cost,
                 'at' => CarbonImmutable::parse($m->moved_at),
             ]);
-        $fulfilled = $seesRequests ? $this->fulfilledRequests($filters, $from, $to) : collect();
-        $counts = $seesCounts ? $this->committedCounts($filters, $from, $to) : collect();
+        $fulfilled = $this->fulfilledRequests($filters, $from, $to);
+        $counts = $this->committedCounts($filters, $from, $to);
 
         $book = StockCostBook::forItems([
             ...$movements->pluck('item'),
@@ -222,10 +216,10 @@ class StockMovementReport extends TabularReport
         return [
             'tiles' => self::tiles($movements),
             'months' => self::months($movements, $from, $to),
-            'requests' => $seesAllRequests ? $this->waitingRequests($filters) : null,
-            'people' => $seesRequests ? self::people($requests) : null,
-            'departments' => $seesRequests ? self::departments($requests) : null,
-            'counts' => $seesCounts ? self::countRows($counts, $book) : null,
+            'requests' => $this->waitingRequests($filters),
+            'people' => self::people($requests),
+            'departments' => self::departments($requests),
+            'counts' => self::countRows($counts, $book),
         ];
     }
 
@@ -435,8 +429,7 @@ class StockMovementReport extends TabularReport
     }
 
     /**
-     * The cards as sheets: months in the range, requesters and departments by value, count variance. A sheet the
-     * viewer may not see is left out.
+     * The cards as sheets: months in the range, requesters and departments by value, count variance.
      *
      * @param  array<string, mixed>  $filters
      * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
@@ -455,35 +448,31 @@ class StockMovementReport extends TabularReport
             ], $data['months'])),
         ]];
 
-        if ($data['people'] !== null) {
-            $sections[] = [
-                'title' => 'ผู้ขอเบิกสูงสุด',
-                'headings' => ['ผู้ขอเบิก', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
-                'rows' => array_map(fn (array $p) => [
-                    $p['name_th'] ?: $p['name'], $p['department_id'] === null ? self::NO_DEPARTMENT_TH : ($p['department_th'] ?: $p['department']),
-                    $p['value'], $p['qty'], $p['times'],
-                ], $byValue($data['people'])),
-            ];
-            $sections[] = [
-                'title' => 'แผนกที่เบิกสูงสุด',
-                'headings' => ['แผนก', 'คน', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
-                'rows' => array_map(fn (array $d) => [
-                    $d['department_id'] === null ? self::NO_DEPARTMENT_TH : ($d['name_th'] ?: $d['name']),
-                    $d['people'], $d['value'], $d['qty'], $d['times'],
-                ], $byValue($data['departments'])),
-            ];
-        }
+        $sections[] = [
+            'title' => 'ผู้ขอเบิกสูงสุด',
+            'headings' => ['ผู้ขอเบิก', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
+            'rows' => array_map(fn (array $p) => [
+                $p['name_th'] ?: $p['name'], $p['department_id'] === null ? self::NO_DEPARTMENT_TH : ($p['department_th'] ?: $p['department']),
+                $p['value'], $p['qty'], $p['times'],
+            ], $byValue($data['people'])),
+        ];
+        $sections[] = [
+            'title' => 'แผนกที่เบิกสูงสุด',
+            'headings' => ['แผนก', 'คน', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
+            'rows' => array_map(fn (array $d) => [
+                $d['department_id'] === null ? self::NO_DEPARTMENT_TH : ($d['name_th'] ?: $d['name']),
+                $d['people'], $d['value'], $d['qty'], $d['times'],
+            ], $byValue($data['departments'])),
+        ];
 
-        if ($data['counts'] !== null) {
-            $sections[] = [
-                'title' => 'ส่วนต่างจากการนับสต็อก',
-                'headings' => ['รอบนับ', 'คลัง', 'ยืนยันเมื่อ', 'รายการที่มีส่วนต่าง', 'ปรับเพิ่ม', 'ปรับลด', 'มูลค่าสุทธิ'],
-                'rows' => array_map(fn (array $c) => [
-                    $c['reference'], $c['warehouse'], DateDisplay::dateTime($c['committed_at']),
-                    $c['lines'], $c['up'], $c['down'], $c['net_value'],
-                ], $data['counts']),
-            ];
-        }
+        $sections[] = [
+            'title' => 'ส่วนต่างจากการนับสต็อก',
+            'headings' => ['รอบนับ', 'คลัง', 'ยืนยันเมื่อ', 'รายการที่มีส่วนต่าง', 'ปรับเพิ่ม', 'ปรับลด', 'มูลค่าสุทธิ'],
+            'rows' => array_map(fn (array $c) => [
+                $c['reference'], $c['warehouse'], DateDisplay::dateTime($c['committed_at']),
+                $c['lines'], $c['up'], $c['down'], $c['net_value'],
+            ], $data['counts']),
+        ];
 
         return $sections;
     }
