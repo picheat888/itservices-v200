@@ -102,7 +102,7 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::enum('take_sla', 'รับเคสทัน SLA', fn (Ticket $t) => self::takeState($t), self::SLA_KEYS, self::SLA_TH),
             ReportColumn::dateTime('closed_at', 'ปิดเคสเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Completed ? $t->resolved_at : null),
             ReportColumn::enum('close_sla', 'ปิดทัน SLA', fn (Ticket $t) => self::closeState($t), self::SLA_KEYS, self::SLA_TH),
-            ReportColumn::number('fix_hours', 'เวลาปิดเคส (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed ? TicketMetrics::resolveHours($t) : null),
+            ReportColumn::number('fix_hours', 'เวลาปิดเคส (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed ? TicketMetrics::resolveHours($t) : null, 1),
             // The Excel sheet only ("ข้อมูลดิบ") — every field for working the cases over in a spreadsheet.
             ReportColumn::text('subject', 'เรื่อง', fn (Ticket $t) => $t->subject)->sheetOnly(),
             ReportColumn::text('description', 'รายละเอียด', fn (Ticket $t) => $t->description === null ? null : trim($t->description))->sheetOnly(),
@@ -115,12 +115,12 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::dateTime('response_due_at', 'วันที่ครบกำหนด SLA รับเคส', fn (Ticket $t) => $t->sla_response_due_at)->sheetOnly(),
             ReportColumn::number('take_hours', 'รอคนรับ (ชม.)', fn (Ticket $t) => $t->responded_at === null || $t->created_at === null
                 ? null
-                : round($t->created_at->diffInMinutes($t->responded_at, true) / 60, 2))->sheetOnly(),
+                : round($t->created_at->diffInMinutes($t->responded_at, true) / 60, 2), 2)->sheetOnly(),
             ReportColumn::dateTime('resolve_due_at', 'วันที่ครบกำหนด SLA ปิดเคส', fn (Ticket $t) => $t->sla_resolve_due_at)->sheetOnly(),
             // From taking the case to closing it — with รอคนรับ, it makes up เวลาปิดเคส.
             ReportColumn::number('work_hours', 'ลงมือแก้ (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->responded_at !== null && $t->resolved_at !== null
                 ? round($t->responded_at->diffInMinutes($t->resolved_at, true) / 60, 2)
-                : null)->sheetOnly(),
+                : null, 2)->sheetOnly(),
         ];
     }
 

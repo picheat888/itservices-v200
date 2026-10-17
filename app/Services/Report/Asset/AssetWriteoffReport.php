@@ -134,7 +134,7 @@ class AssetWriteoffReport extends TabularReport
             ReportColumn::text('warehouse', 'คลัง', fn (Asset $a) => $a->warehouse?->name)->hiddenByDefault(),
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date)->hiddenByDefault(),
             // How long it served: bought to written off, in years (bought assets only).
-            ReportColumn::number('age_years', 'อายุใช้งาน (ปี)', fn (Asset $a) => self::ageYears($a) === null ? null : round(self::ageYears($a), 1)),
+            ReportColumn::number('age_years', 'อายุใช้งาน (ปี)', fn (Asset $a) => self::ageYears($a) === null ? null : round(self::ageYears($a), 1), 1),
             ReportColumn::enum('warranty', 'ประกันตอนตัดจำหน่าย', fn (Asset $a) => self::warrantyState($a), self::WARRANTY_KEYS, self::WARRANTY_TH),
             // The page writes "เหลือ N เดือน" from this; null unless the warranty still ran.
             ReportColumn::number('warranty_months', 'ประกันเหลือ (เดือน)', fn (Asset $a) => self::warrantyMonthsLeft($a))->hiddenByDefault(),

@@ -73,8 +73,11 @@ function CellValue({ column, value }: { column: TabularColumnDef; value: unknown
             const formatted = formatNumber(Number(value), lang, { decimals: 2 });
             return <span className={cn(Number(value) === 0 && ZERO)}>{formatted}</span>;
         }
-        case 'number':
-            return <span className={cn(Number(value) === 0 && ZERO)}>{value === null || value === undefined ? '—' : String(value)}</span>;
+        case 'number': {
+            if (value === null || value === undefined) return <>—</>;
+            const formatted = formatNumber(Number(value), lang, { decimals: column.decimals ?? 0 });
+            return <span className={cn(Number(value) === 0 && ZERO)}>{formatted}</span>;
+        }
         case 'date':
             return <span className="text-xs">{fmt.date(value as string | null)}</span>;
         case 'datetime':
