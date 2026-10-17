@@ -13,7 +13,9 @@
  * picked one is highlighted among the rest rather than left alone.
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -27,7 +29,6 @@ import { useRequestSlaBreakdown } from '../hooks/use-reports';
 import type { RequestSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
 import { reportDates } from './chart-parts';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formatLiveNumber } from './report-scope';
 
 export type T = (key: string) => string;
@@ -46,7 +47,9 @@ export function oneDecimal(value: number, lang: 'th' | 'en'): string {
 /** "9.7 ชม." / "20 นาที" — an average time under an hour reads in minutes. */
 export function hoursText(t: T, lang: 'th' | 'en', hours: number | null): string {
     if (hours === null) return '—';
-    return hours < 1 ? t('rep_rs_minutes').replace('{n}', formatNumber(Math.round(hours * 60), lang)) : `${oneDecimal(hours, lang)} ${t('rep_hours')}`;
+    return hours < 1
+        ? t('rep_rs_minutes').replace('{n}', formatNumber(Math.round(hours * 60), lang))
+        : `${oneDecimal(hours, lang)} ${t('rep_hours')}`;
 }
 
 /** "25 วัน" / "5 ชม." — the same rule as the time-left pills. */
@@ -142,7 +145,7 @@ function TypesCard({ data, filters, patch }: { data: RequestSlaBreakdown; filter
                 }
             />
             {data.types.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_rs_empty')}</div>
+                <EmptyState kind="empty" title={t('rep_empty_request_sla_types')} hint={t('rep_empty_request_sla_types_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
@@ -260,7 +263,7 @@ function OpenCard({ data }: { data: RequestSlaBreakdown }) {
                 sub={data.open.length > 0 ? t('rep_rs_open_sub').replace('{n}', fmtN(data.open.length)) : undefined}
             />
             {data.open.length === 0 ? (
-                <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_rs_open_none')}</div>
+                <EmptyState kind="clear" title={t('rep_empty_request_sla_open')} hint={t('rep_empty_request_sla_open_hint')} />
             ) : (
                 <div>
                     {shown.map((o) => {

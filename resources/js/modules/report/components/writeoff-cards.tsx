@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -37,7 +38,6 @@ import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton 
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { niceMax } from './weekly-ticket-chart';
 import { YearsTip } from './years-tip';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -174,7 +174,7 @@ function MonthCard({ months, to }: { months: Month[]; to: string | null }) {
                 }
             />
             {total === 0 ? (
-                <Empty>{t('rep_wo_empty')}</Empty>
+                <Empty kind="empty" title={t('rep_empty_writeoffs_month')} hint={t('rep_empty_writeoffs_month_hint')} />
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <p className="sr-only">
@@ -344,7 +344,7 @@ function ReasonsCard({ reasons }: { reasons: AssetWriteoffBreakdown['reasons'] }
         <Card className="flex flex-col overflow-hidden xl:col-span-2">
             <CardTitle title={t('rep_wo_reason_title')} sub={<Legend series={SOURCES} />} />
             {reasons.length === 0 ? (
-                <Empty>{t('rep_wo_empty')}</Empty>
+                <Empty kind="empty" title={t('rep_empty_writeoffs_reasons')} hint={t('rep_empty_writeoffs_reasons_hint')} />
             ) : (
                 <>
                     <ul className="space-y-3 px-5 py-4">
@@ -404,7 +404,7 @@ function CategoryCard({ categories, totals }: { categories: Category[]; totals: 
         <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_wo_cat_title')} info={t('rep_wo_cat_sub')} sub={<Legend series={BANDS} />} />
             {categories.length === 0 ? (
-                <Empty>{t('rep_wo_empty')}</Empty>
+                <Empty kind="empty" title={t('rep_empty_writeoffs_categories')} hint={t('rep_empty_writeoffs_categories_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
@@ -569,7 +569,7 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                 }
             />
             {contracts.length === 0 ? (
-                <Empty>{t('rep_wo_ct_empty')}</Empty>
+                <Empty kind="empty" title={t('rep_empty_writeoffs_contracts')} hint={t('rep_empty_writeoffs_contracts_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">

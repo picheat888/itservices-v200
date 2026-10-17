@@ -9,11 +9,12 @@
  * Server decides visibility (GET /api/reports → ReportCatalogue) and remembers pins.
  */
 import { useT } from '@/lang';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { EmptyState } from '@/shared/components/empty-state';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
-import { LineChart, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useMemo } from 'react';
 import { MyExports } from '../components/my-exports';
 import { PeriodSwitch } from '../components/period-switch';
@@ -72,11 +73,12 @@ export default function ReportsPage() {
                     {isLoading ? (
                         <ReportCatalogueSkeleton />
                     ) : reports.length === 0 ? (
-                        <div className="border-border flex flex-col items-center rounded-xl border border-dashed py-16 text-center">
-                            <LineChart className="text-muted-foreground h-10 w-10" />
-                            <div className="mt-3 font-medium">{t('rep_empty_title')}</div>
-                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">{t('rep_empty_sub')}</p>
-                        </div>
+                        <EmptyState
+                            kind="denied"
+                            title={t('rep_empty_center_none')}
+                            hint={t('rep_empty_center_none_hint')}
+                            className="border-border rounded-xl border border-dashed"
+                        />
                     ) : (
                         <>
                             <div className="space-y-3.5">
@@ -111,7 +113,7 @@ export default function ReportsPage() {
                                 </div>
                             </div>
                             {visible.length === 0 ? (
-                                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_match')}</div>
+                                <EmptyState kind="search" title={t('rep_empty_center_search')} hint={t('rep_empty_center_search_hint')} />
                             ) : (
                                 // Quick access on the plain view only; filtered or searched, pinned ones lead their group.
                                 <ReportCatalogue reports={visible} showPinned={domain === 'all' && query.trim() === ''} range={range} />

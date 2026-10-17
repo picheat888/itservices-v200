@@ -1,6 +1,7 @@
 // Contract overview report cards: tiles, bills by month, yearly cost by type and cycle, cost by vendor (data: useContractOverviewBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair, otherName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -17,7 +18,6 @@ import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Lang = 'th' | 'en';
 type Vendor = ContractOverviewBreakdown['vendors'][number];
@@ -138,7 +138,7 @@ function BillsCard({ data }: { data: ContractOverviewBreakdown }) {
             mode="money"
             rowValue={(item) => contractMoney(item.amount, lang)}
             monthFoot={monthFoot}
-            empty={t('rep_cov_month_empty')}
+            empty={{ title: t('rep_empty_contracts_overview_month'), hint: t('rep_empty_contracts_overview_month_hint') }}
             footer={
                 big &&
                 rich(
@@ -232,7 +232,7 @@ function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
 
 /* ─────────────────────────── by vendor ─────────────────────────── */
 
-function VendorCard({ vendors, total, monthly }: { vendors: Vendor[]; total: number; monthly: number }) {
+function VendorCard({ vendors, total, monthly, narrowed }: { vendors: Vendor[]; total: number; monthly: number; narrowed: boolean }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const sum = (pick: (v: Vendor) => number) => vendors.reduce((s, v) => s + pick(v), 0);
@@ -250,7 +250,15 @@ function VendorCard({ vendors, total, monthly }: { vendors: Vendor[]; total: num
         <Card className="overflow-hidden">
             <CardTitle title={t('rep_cov_vendor_title')} />
             {vendors.length === 0 ? (
-                <Empty>{t('rep_cov_empty')}</Empty>
+                narrowed ? (
+                    <Empty kind="search" title={t('rep_empty_contracts_overview_vendors')} hint={t('rep_empty_contracts_overview_vendors_hint')} />
+                ) : (
+                    <Empty
+                        kind="empty"
+                        title={t('rep_empty_contracts_overview_vendors_top')}
+                        hint={t('rep_empty_contracts_overview_vendors_top_hint')}
+                    />
+                )
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
@@ -390,7 +398,12 @@ export function ContractOverviewCards({ filters }: { filters: TabularFilters }) 
                 <BillsCard data={data} />
                 <TypeCard data={data} />
             </div>
-            <VendorCard vendors={data.vendors} total={data.yearly_total} monthly={data.tiles.monthly} />
+            <VendorCard
+                vendors={data.vendors}
+                total={data.yearly_total}
+                monthly={data.tiles.monthly}
+                narrowed={Boolean(filters.type || filters.vendor_id || filters.billing_cycle)}
+            />
         </div>
     );
 }

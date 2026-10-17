@@ -10,8 +10,10 @@
  * Hours left follow TicketBacklogReport: negative = past due; inside 24 h = due soon.
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { toneDots } from '@/shared/components/status-badge';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -26,7 +28,6 @@ import { fold, FoldToggle, InfoMark, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
 import { TICKET_PRIORITY_TONE } from './ticket-badges';
 import { categoryKey, priorityKey } from './ticket-labels';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export type SlaState = 'over_sla' | 'due_soon' | 'on_track';
 
@@ -247,7 +248,7 @@ function DueBoard({ tickets }: { tickets: BacklogBoardTicket[] }) {
                                         <b className={cn('text-lg', lane.count)}>{fmtN(items.length)}</b>
                                     </div>
                                     {items.length === 0 ? (
-                                        <span className="text-muted-foreground py-2 text-xs">{t('rep_bl_none')}</span>
+                                        <EmptyState kind="empty" title={t('rep_empty_backlog_board_lane')} className="min-h-0 py-3" />
                                     ) : (
                                         folding.shown.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
                                     )}
@@ -386,7 +387,7 @@ function Owners({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]; fi
                 }
             />
             {tickets.length === 0 ? (
-                <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_bl_empty')}</div>
+                <EmptyState kind="search" title={t('rep_empty_backlog_owners')} hint={t('rep_empty_backlog_owners_hint')} />
             ) : (
                 <div className="space-y-0.5 px-3 py-2">
                     {/* Names the right-hand count, as in "ค้างตามหมวด". */}
@@ -444,7 +445,7 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
                 }
             />
             {rows.length === 0 ? (
-                <div className="text-muted-foreground py-8 text-center text-sm">{t('rep_bl_empty')}</div>
+                <EmptyState kind="search" title={t('rep_empty_backlog_categories')} hint={t('rep_empty_backlog_categories_hint')} />
             ) : (
                 <div className="space-y-0.5 px-3 py-2">
                     {/* Names the right-hand count, as the staff card's "ทั้งหมด" column. */}

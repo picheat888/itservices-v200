@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { AssetStatusBadge } from '@/modules/asset';
 import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
+import { type EmptyStateProps } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { localName } from '@/shared/lib/local-name';
@@ -150,7 +151,7 @@ function TopicTable<T>({
     columns: Column<T>[];
     rows: T[];
     rowKey: (row: T) => string | number;
-    empty: string;
+    empty: EmptyStateProps;
 }) {
     const { get, setParams } = useListParams();
     const pageKey = `${topic}_page`;
@@ -164,7 +165,7 @@ function TopicTable<T>({
             columns={columns}
             rows={rows}
             rowKey={rowKey}
-            emptyState={empty}
+            empty={empty}
             tableClassName="min-w-[44rem]"
             hidePagination={rows.length === 0}
             paging={{
@@ -178,7 +179,10 @@ function TopicTable<T>({
 }
 
 /** What an empty card says: that the filters leave nothing, or that the topic is all clear. */
-const emptyText = (t: (key: string) => string, narrowed: boolean, clear: string) => (narrowed ? t('rep_ef_empty_filtered') : clear);
+const emptyOf = (t: (key: string) => string, narrowed: boolean, topic: 'asset' | 'access' | 'account' | 'data'): EmptyStateProps =>
+    narrowed
+        ? { kind: 'search', title: t('rep_empty_open_items_filtered'), hint: t('rep_empty_open_items_filtered_hint') }
+        : { kind: 'clear', title: t(`rep_empty_open_items_${topic}_clear`), hint: t(`rep_empty_open_items_${topic}_clear_hint`) };
 
 /* ─────────────────────────── assets ─────────────────────────── */
 
@@ -253,7 +257,7 @@ export function AssetCard({ group, narrowed }: { group: EmployeeOpenItemsBreakdo
                 columns={columns}
                 rows={group.rows}
                 rowKey={(r) => r.id}
-                empty={emptyText(t, narrowed, t('rep_ef_asset_all_clear'))}
+                empty={emptyOf(t, narrowed, 'asset')}
             />
         </TopicCard>
     );
@@ -318,7 +322,7 @@ export function AccessCard({ group, narrowed }: { group: EmployeeOpenItemsBreakd
                 columns={columns}
                 rows={group.rows}
                 rowKey={(r) => r.id}
-                empty={emptyText(t, narrowed, t('rep_ef_access_clear'))}
+                empty={emptyOf(t, narrowed, 'access')}
             />
         </TopicCard>
     );
@@ -379,7 +383,7 @@ export function AccountCard({ group, narrowed }: { group: NonNullable<EmployeeOp
                 columns={columns}
                 rows={group.rows}
                 rowKey={(r) => r.user_id}
-                empty={emptyText(t, narrowed, t('rep_ef_acct_none'))}
+                empty={emptyOf(t, narrowed, 'account')}
             />
         </TopicCard>
     );
@@ -463,7 +467,7 @@ export function DataCard({ group, narrowed }: { group: EmployeeOpenItemsBreakdow
                 columns={columns}
                 rows={group.rows}
                 rowKey={(r) => r.id}
-                empty={emptyText(t, narrowed, t('rep_ef_data_none'))}
+                empty={emptyOf(t, narrowed, 'data')}
             />
         </TopicCard>
     );

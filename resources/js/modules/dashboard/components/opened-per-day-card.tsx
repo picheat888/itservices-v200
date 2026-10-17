@@ -34,7 +34,7 @@ export function OpenedPerDayCard({
                 sub={t('dash_total_cases').replace('{n}', fmtN(total))}
             />
             {total === 0 ? (
-                <CardEmpty>{t('dash_empty_window')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('dash_empty_it_opened_per_day')} hint={t('dash_empty_it_opened_per_day_hint')} />
             ) : (
                 <div className="flex min-h-[200px] flex-1 flex-col px-5 pt-5 pb-3">
                     <ul className="sr-only">

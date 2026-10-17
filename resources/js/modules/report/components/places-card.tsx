@@ -16,6 +16,7 @@
  * Drawn by tabular-charts.tsx across the page — ready stock by warehouse, then shared use by location.
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -280,7 +281,11 @@ export function PlacesCard({ chart, expanded, onToggle }: { chart: Places; expan
                 }
             />
             {chart.rows.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
+                <EmptyState
+                    kind="search"
+                    title={t(chart.key === 'warehouse' ? 'rep_empty_assets_overview_in_store' : 'rep_empty_assets_overview_in_common')}
+                    hint={t(chart.key === 'warehouse' ? 'rep_empty_assets_overview_in_store_hint' : 'rep_empty_assets_overview_in_common_hint')}
+                />
             ) : (
                 <>
                     {/* Columns while a handful show; opened past TOP_PLACES, one line per place. */}

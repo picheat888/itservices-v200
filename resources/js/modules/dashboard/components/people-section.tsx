@@ -1,6 +1,7 @@
 // Dashboard "พนักงานและกิจกรรม": active staff per department and the latest audit-log entries.
 import { useT } from '@/lang';
 import { CardEmpty, CardTitle, FILL, fold, FoldToggle, heldStyle, useFoldRow } from '@/modules/report';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { relativeTime } from '@/shared/lib/datetime';
 import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
@@ -10,7 +11,6 @@ import { Users } from 'lucide-react';
 import type { DashboardActivity, DashboardHr } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
 import { CardLink, HBarRow, NARROW, PAIR_GRID, rowDelay, SectionHeading, WIDE } from './dash-parts';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const FOLDS = ['departments'] as const;
 const DEPARTMENTS_TOP = 10;
@@ -86,7 +86,7 @@ function DepartmentsCard({
                 sub={t('dash_active_people').replace('{n}', fmtN(hr.headcount))}
             />
             {hr.headcount === 0 ? (
-                <CardEmpty>{t('dash_empty_staff')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('dash_empty_people_by_department')} hint={t('dash_empty_people_by_department_hint')} />
             ) : (
                 <ul className="flex flex-1 flex-col justify-between gap-1.5 px-5 py-3">
                     {shown.map((d, i) => (
@@ -127,7 +127,7 @@ function ActivityCard({
                 sub={t('dash_today_n').replace('{n}', fmtN(activity.today_count))}
             />
             {activity.items.length === 0 ? (
-                <CardEmpty>{t('dash_empty_activity')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('dash_empty_people_activity')} hint={t('dash_empty_people_activity_hint')} />
             ) : (
                 <ul className="divide-border/60 flex flex-1 flex-col justify-between divide-y px-5 py-1">
                     {activity.items.map((item, i) => (

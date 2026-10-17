@@ -134,6 +134,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             rows={data?.data ?? []}
             rowKey={(r) => r.id}
             loading={isLoading || isFetching}
+            empty={{ kind: 'search', title: t('rep_empty_tickets_overview_rows'), hint: t('rep_empty_tickets_overview_rows_hint') }}
             // Fixed columns 1,200px + a ~230px subject; narrower screens scroll sideways
             tableClassName="min-w-[1430px]"
             server={{ ...list.table.paging, total: data?.meta.total ?? 0 }}

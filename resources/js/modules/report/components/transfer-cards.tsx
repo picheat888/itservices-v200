@@ -30,10 +30,10 @@ import {
     shortYear,
 } from './chart-parts';
 import { FILL, PIECE_INK } from './chart-tones';
+import { formatLiveNumber } from './report-scope';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { axisTop } from './weekly-ticket-chart';
-import { formatLiveNumber } from './report-scope';
 
 type Lang = 'th' | 'en';
 type Month = AssetTransferBreakdown['months'][number];
@@ -180,7 +180,7 @@ function MonthFlowCard({ months }: { months: Month[] }) {
                 }
             />
             {out + inn === 0 ? (
-                <CardEmpty>{t('rep_th_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_transfers_month')} hint={t('rep_empty_transfers_month_hint')} />
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <p className="sr-only">
@@ -410,7 +410,7 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
                 sub={relocations.length > 0 ? t('rep_th_reloc_count').replace('{n}', count(relocations.length, lang)) : undefined}
             />
             {relocations.length === 0 ? (
-                <CardEmpty>{t('rep_th_reloc_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_transfers_relocations')} hint={t('rep_empty_transfers_relocations_hint')} />
             ) : (
                 <>
                     <div className="relative overflow-x-auto">
@@ -592,7 +592,7 @@ function WaitingCard({ waiting }: { waiting: Waiting[] }) {
         <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_th_wait_title')} sub={t('rep_th_wait_sub')} />
             {waiting.length === 0 ? (
-                <CardEmpty>{t('rep_th_wait_empty')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('rep_empty_transfers_waiting')} hint={t('rep_empty_transfers_waiting_hint')} />
             ) : (
                 <>
                     <WaitingGroup title={t('rep_th_wait_accept')} rows={accept} status="pending_acceptance" first />
@@ -667,7 +667,7 @@ function AcceptanceCard({ acceptance: a }: { acceptance: AssetTransferBreakdown[
         <Card className="flex flex-col overflow-hidden">
             <CardTitle title={t('rep_th_acc_title')} sub={n('rep_th_acc_sub', { n: a.to_people })} />
             {a.to_people === 0 ? (
-                <CardEmpty>{t('rep_th_acc_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_transfers_acceptance')} hint={t('rep_empty_transfers_acceptance_hint')} />
             ) : (
                 <>
                     <ul className="grid grid-cols-2 gap-2 px-5 pt-4 pb-3 sm:grid-cols-3 md:grid-cols-5">
@@ -748,7 +748,7 @@ function WarehouseCard({ warehouses }: { warehouses: AssetTransferBreakdown['war
                 }
             />
             {warehouses.length === 0 ? (
-                <CardEmpty>{t('rep_th_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_transfers_warehouses')} hint={t('rep_empty_transfers_warehouses_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
@@ -867,7 +867,7 @@ function DepartmentCard({ departments, shared }: { departments: AssetTransferBre
                 sub={t('rep_th_dept_sub').replace('{n}', count(departments.length, lang)).replace('{m}', count(total, lang))}
             />
             {rows.length === 0 && shared === 0 ? (
-                <CardEmpty>{t('rep_th_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_transfers_departments')} hint={t('rep_empty_transfers_departments_hint')} />
             ) : (
                 <BarList rows={rows} apart={{ key: 'shared', name: t('rep_th_dept_shared'), value: shared }} />
             )}
@@ -892,7 +892,11 @@ function CategoryCard({ categories }: { categories: AssetTransferBreakdown['cate
                 title={t('rep_th_cat_title')}
                 sub={t('rep_th_cat_sub').replace('{n}', count(categories.length, lang)).replace('{m}', count(total, lang))}
             />
-            {rows.length === 0 ? <CardEmpty>{t('rep_th_empty')}</CardEmpty> : <BarList rows={rows} />}
+            {rows.length === 0 ? (
+                <CardEmpty kind="empty" title={t('rep_empty_transfers_categories')} hint={t('rep_empty_transfers_categories_hint')} />
+            ) : (
+                <BarList rows={rows} />
+            )}
         </Card>
     );
 }

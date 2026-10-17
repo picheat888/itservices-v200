@@ -1,6 +1,8 @@
 // "การอนุมัติคำขอ" report cards and row cells: waiting now and why, approvers, ended requests, skipped steps (data: useRequestApprovalsBreakdown).
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -33,7 +35,6 @@ import { FILL } from './chart-tones';
 import { CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { shortDate } from './transfer-cards';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Lang = 'th' | 'en';
 
@@ -145,7 +146,11 @@ function StuckColumn({
                 <b className="text-foreground tabular-nums">{t('rep_rqa_n_requests').replace('{n}', count(rows.length, lang))}</b>
             </h3>
             {rows.length === 0 ? (
-                <p className="text-muted-foreground px-5 py-3 text-sm">{t(`rep_rqa_stuck_empty_${group}`)}</p>
+                <EmptyState
+                    kind={group === 'no_account' ? 'clear' : 'empty'}
+                    title={t(`rep_empty_approvals_stuck_${group}`)}
+                    hint={t(`rep_empty_approvals_stuck_${group}_hint`)}
+                />
             ) : (
                 <>
                     <ul className="xl:contents">
@@ -199,7 +204,7 @@ function StuckCard({ stuck }: { stuck: RequestApprovalsBreakdown['stuck'] }) {
         <Card className="overflow-hidden">
             <CardTitle title={t('rep_rqa_stuck_title')} info={t('rep_rqa_stuck_note')} />
             {total === 0 ? (
-                <CardEmpty>{t('rep_rqa_stuck_none')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('rep_empty_approvals_stuck')} hint={t('rep_empty_approvals_stuck_hint')} />
             ) : (
                 // Four columns on a wide screen; one under another on a tablet, each still folding at three.
                 <div className="grid grid-cols-1 items-start xl:grid-cols-4 xl:items-stretch">
@@ -342,7 +347,7 @@ function ApproversCard({ approvers, filtered }: { approvers: RequestApprovalsBre
                 }
             />
             {approvers.rows.length === 0 ? (
-                <CardEmpty>{t('rep_rqa_appr_empty')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('rep_empty_approvals_approvers')} hint={t('rep_empty_approvals_approvers_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full min-w-[44rem] table-fixed text-sm">
@@ -511,7 +516,7 @@ function EndingsCard({ endings }: { endings: RequestApprovalsBreakdown['endings'
                 }
             />
             {rows.length === 0 ? (
-                <CardEmpty>{t(`rep_rqa_end_empty_${outcome ?? 'all'}`)}</CardEmpty>
+                <CardEmpty kind="empty" title={t(`rep_rqa_end_empty_${outcome ?? 'all'}`)} hint={t('rep_empty_approvals_endings_hint')} />
             ) : (
                 <>
                     <div className="border-border grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 border-b px-5 py-3">

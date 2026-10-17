@@ -4,6 +4,7 @@
  * Hand-rolled SVG, 640 units wide, growing taller to fill the height its parent gives it.
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useLayoutEffect, useRef, useState } from 'react';
@@ -37,7 +38,7 @@ export function WeeklyTicketChart({ weeks, range }: ChartProps) {
     const t = useT();
     const empty = weeks.length === 0 || weeks.every((w) => w.opened === 0 && w.closed === 0 && !w.backlog);
     if (empty) {
-        return <div className="text-muted-foreground py-16 text-center text-sm">{t('rep_weekly_empty')}</div>;
+        return <EmptyState kind="empty" title={t('rep_empty_tickets_overview_weekly')} hint={t('rep_empty_tickets_overview_weekly_hint')} />;
     }
 
     return <WeeklyBars weeks={weeks} range={range} />;

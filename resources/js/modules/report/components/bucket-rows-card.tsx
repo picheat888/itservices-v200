@@ -7,6 +7,8 @@
  * Drawn under the status donut by tabular-charts.tsx; SplitLegend is shared with places-card.tsx.
  */
 import { useT } from '@/lang';
+import { EmptyState } from '@/shared/components/empty-state';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
@@ -15,7 +17,6 @@ import { Box, MoreHorizontal } from 'lucide-react';
 import type { ChartSeries, TabularChart } from '../types';
 import { ChartHeading, fold, FoldToggle, StackBar, useChartLabel } from './chart-parts';
 import { FILL } from './chart-tones';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Buckets = Extract<TabularChart, { type: 'buckets' }>;
 
@@ -106,7 +107,7 @@ export function BucketsSection({
                 }
             />
             {chart.rows.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
+                <EmptyState kind="search" title={t('rep_empty_assets_overview_by_category')} hint={t('rep_empty_assets_overview_by_category_hint')} />
             ) : (
                 <div className="space-y-4 px-5 py-4">
                     {folding.shown.map((row, i) => (

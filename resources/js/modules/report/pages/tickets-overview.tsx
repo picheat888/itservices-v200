@@ -7,6 +7,7 @@
 import { useT } from '@/lang';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -39,7 +40,6 @@ import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
 import { useReportDialog } from '../hooks/use-report-rights';
 import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Tile alert per SLA level against the goal: within 10 points amber, further off red. */
 const SLA_ALERT: Record<SlaLevel, 'red' | 'amber' | false> = { met: false, near: 'amber', miss: 'red' };
@@ -133,7 +133,8 @@ export default function TicketOverviewReportPage() {
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));
     // 90% closed within … hours: the average tile's footer when there is no earlier figure, its hover text otherwise
-    const p90 = data?.kpi.p90_resolve_hours == null ? undefined : t('rep_kpi_p90').replace('{n}', fmtN(data.kpi.p90_resolve_hours, { maxDecimals: 1 }));
+    const p90 =
+        data?.kpi.p90_resolve_hours == null ? undefined : t('rep_kpi_p90').replace('{n}', fmtN(data.kpi.p90_resolve_hours, { maxDecimals: 1 }));
 
     // Client-side range check runs before any request; server errors (403/422/other) are
     // reported once the request comes back. Either way the skeleton never spins forever.
@@ -244,7 +245,9 @@ export default function TicketOverviewReportPage() {
                             alert={data.kpi.sla_rate === null ? false : SLA_ALERT[slaLevel(data.kpi.sla_rate, data.sla_goal)]}
                             meter={data.kpi.sla_rate === null ? undefined : { value: data.kpi.sla_rate, goal: data.sla_goal }}
                             footer={
-                                data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', fmtN(data.previous.sla_rate, { maxDecimals: 1 }))
+                                data.previous.sla_rate === null
+                                    ? undefined
+                                    : t('rep_vs_previous_sla').replace('{n}', fmtN(data.previous.sla_rate, { maxDecimals: 1 }))
                             }
                         />
                         <KpiTile
@@ -333,10 +336,7 @@ export default function TicketOverviewReportPage() {
                         {/* One card, as in the design: SLA by priority, backlog age, then tickets by category. */}
                         <Card className="flex flex-col overflow-hidden">
                             {/* The goal is Settings → SLA (TicketSla::goalPercent), the marker drawn on each bar. */}
-                            <SectionHeading
-                                title={t('rep_sla_priority_title')}
-                                sub={t('rep_sla_priority_sub').replace('{n}', fmtN(data.sla_goal))}
-                            />
+                            <SectionHeading title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub').replace('{n}', fmtN(data.sla_goal))} />
                             <HorizontalBars
                                 bars={data.sla_by_priority.map((p) => ({
                                     key: p.priority,
@@ -347,7 +347,10 @@ export default function TicketOverviewReportPage() {
                                 max={100}
                                 unit="%"
                                 goal={data.sla_goal}
-                                emptyLabel={t('rep_no_data')}
+                                empty={{
+                                    title: t('rep_empty_tickets_overview_sla_priority'),
+                                    hint: t('rep_empty_tickets_overview_sla_priority_hint'),
+                                }}
                             />
                             <SectionHeading
                                 className="border-t"
@@ -364,7 +367,11 @@ export default function TicketOverviewReportPage() {
                                     tone: 'bg-chart-soft-blue',
                                 }))}
                                 max={Math.max(1, ...data.by_category.map((c) => c.count))}
-                                emptyLabel={t('rep_no_data')}
+                                empty={{
+                                    kind: 'search',
+                                    title: t('rep_empty_tickets_overview_by_category'),
+                                    hint: t('rep_empty_tickets_overview_by_category_hint'),
+                                }}
                             />
                         </Card>
                     </div>

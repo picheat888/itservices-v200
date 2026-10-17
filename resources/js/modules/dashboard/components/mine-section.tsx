@@ -4,6 +4,7 @@ import { CardEmpty, CardTitle, CODE_LINK, FILL } from '@/modules/report';
 import { TICKET_STATUS_META } from '@/modules/ticket';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { REQUEST_STATUS_META } from '@/shared/lib/request-meta';
 import { Card } from '@/shared/ui/card';
@@ -14,7 +15,6 @@ import type { DashboardMine } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
 import { sharePieces } from '../lib/dash-math';
 import { CardLink, DashTile, LegendFooter, LIST_LIMIT, NARROW, PAIR_GRID, rowDelay, SectionHeading, TILE_GRID, WIDE } from './dash-parts';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const ACCESS_TYPES = [
     { key: 'email_group', label: 'rep_ac_type_email_group_short', fill: 'access-email' },
@@ -126,7 +126,7 @@ function MyTicketsCard({ mine }: { mine: DashboardMine }) {
         <Card className={WIDE}>
             <CardTitle level="h3" title={t('dash_my_tickets')} sub={t('dash_n_cases').replace('{n}', fmtN(mine.tickets_total))} />
             {mine.tickets.length === 0 ? (
-                <CardEmpty>{t('dash_empty_tickets')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('dash_empty_mine_tickets')} hint={t('dash_empty_mine_tickets_hint')} />
             ) : (
                 <table className="w-full text-sm">
                     <thead className="text-muted-foreground text-xs">
@@ -179,7 +179,7 @@ function MyRequestsCard({ mine }: { mine: DashboardMine }) {
         <Card className={NARROW}>
             <CardTitle level="h3" title={t('dash_my_requests')} sub={t('dash_n_requests').replace('{n}', fmtN(mine.requests_total))} />
             {mine.requests.length === 0 ? (
-                <CardEmpty>{t('dash_empty_requests')}</CardEmpty>
+                <CardEmpty kind="clear" title={t('dash_empty_mine_requests')} hint={t('dash_empty_mine_requests_hint')} />
             ) : (
                 <table className="w-full text-sm">
                     <thead className="text-muted-foreground text-xs">

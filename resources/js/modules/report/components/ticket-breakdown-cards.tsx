@@ -18,6 +18,8 @@
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { EmptyState } from '@/shared/components/empty-state';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
@@ -29,7 +31,6 @@ import { CARD_HEADING_TINT } from './card-heading';
 import { fold, FoldToggle, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
 import { categoryKey } from './ticket-labels';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Rows a list shows before folding, as the asset report's department chart. */
 const TOP_ROWS = 10;
@@ -150,7 +151,11 @@ export function DepartmentStacksCard({ rows, slaGoal }: { rows: DepartmentRow[];
                 }
             />
             {rows.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_data')}</div>
+                <EmptyState
+                    kind="search"
+                    title={t('rep_empty_tickets_overview_by_department')}
+                    hint={t('rep_empty_tickets_overview_by_department_hint')}
+                />
             ) : (
                 // The five columns need room; a phone scrolls them sideways rather than crushing the bar.
                 <div className="relative overflow-x-auto">
@@ -254,7 +259,16 @@ export function StaffPerformanceCard({ rows, slaGoal }: { rows: StaffRow[]; slaG
             />
             {/* Inset in the card and paged like the "รายการ Ticket" table below it. */}
             <div className="p-5">
-                <DataTable columns={columns} rows={rows} rowKey={(r) => r.assignee_id} emptyState={t('rep_no_data')} />
+                <DataTable
+                    columns={columns}
+                    rows={rows}
+                    rowKey={(r) => r.assignee_id}
+                    empty={{
+                        kind: 'search',
+                        title: t('rep_empty_tickets_overview_by_assignee'),
+                        hint: t('rep_empty_tickets_overview_by_assignee_hint'),
+                    }}
+                />
             </div>
         </Card>
     );

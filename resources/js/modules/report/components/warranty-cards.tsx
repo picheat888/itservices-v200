@@ -15,11 +15,11 @@ import { useAssetWarrantyBreakdown } from '../hooks/use-reports';
 import type { AssetWarrantyBreakdown, ChartTone, TabularFilters, WarrantyGroupFigures, WarrantyStatus } from '../types';
 import { type BarPiece, barTop, CardTitle, CODE_LINK, CountBar, CardEmpty as Empty, monthLabel, shortYear, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
+import { formatLiveNumber } from './report-scope';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
 import { DaysLeftBadge } from './tabular-cell';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { niceMax } from './weekly-ticket-chart';
-import { formatLiveNumber } from './report-scope';
 
 type T = (key: string) => string;
 type Lang = 'th' | 'en';
@@ -175,7 +175,7 @@ function MonthCard({ months }: { months: Month[] }) {
                 }
             />
             {total === 0 ? (
-                <Empty>{t('rep_wty_month_empty')}</Empty>
+                <Empty kind="empty" title={t('rep_empty_warranty_month')} hint={t('rep_empty_warranty_month_hint')} />
             ) : (
                 <div className="flex flex-1 flex-col px-5 pt-4 pb-3">
                     <p className="sr-only">
@@ -334,7 +334,7 @@ function TimeLeftCard({ bands }: { bands: AssetWarrantyBreakdown['bands'] }) {
                 }
             />
             {total === 0 ? (
-                <Empty>{t('rep_wty_empty')}</Empty>
+                <Empty kind="search" title={t('rep_empty_warranty_time_left')} hint={t('rep_empty_warranty_time_left_hint')} />
             ) : (
                 <>
                     <ul className="space-y-3 px-5 py-4">
@@ -434,7 +434,7 @@ function CategoryCard({ data, patch }: { data: AssetWarrantyBreakdown; patch: Pa
         <Card className="overflow-hidden">
             <CardTitle title={t('rep_wty_cat_title')} info={t('rep_wty_cat_sub')} sub={<Legend pieces={periodPieces(t, within, PERIOD_ZERO)} />} />
             {categories.length === 0 ? (
-                <Empty>{t('rep_wty_empty')}</Empty>
+                <Empty kind="search" title={t('rep_empty_warranty_categories')} hint={t('rep_empty_warranty_categories_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">
@@ -544,7 +544,7 @@ function VendorCard({ data }: { data: AssetWarrantyBreakdown }) {
                 sub={<Legend pieces={periodPieces(t, within, PERIOD_ZERO)} />}
             />
             {vendors.length === 0 ? (
-                <Empty>{t('rep_wty_empty')}</Empty>
+                <Empty kind="search" title={t('rep_empty_warranty_vendors')} hint={t('rep_empty_warranty_vendors_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">

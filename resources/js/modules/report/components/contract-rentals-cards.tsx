@@ -295,7 +295,7 @@ function ContractsCard({ data }: { data: ContractRentalsBreakdown }) {
                 sub={used.length > 0 ? <StatusLegend used={used} /> : undefined}
             />
             {data.contracts.length === 0 ? (
-                <Empty>{t('rep_crent_ct_empty')}</Empty>
+                <Empty kind="search" title={t('rep_empty_rentals_contracts')} hint={t('rep_empty_rentals_contracts_hint')} />
             ) : (
                 <>
                     <div className="relative overflow-x-auto">
@@ -403,7 +403,7 @@ function ModelsCard({ models }: { models: ModelRow[] }) {
         <Card className="overflow-hidden">
             <CardTitle title={t('rep_crent_vs_title')} info={[t('rep_crent_vs_info1'), t('rep_crent_vs_info2')]} note={t('rep_crent_vs_note')} />
             {models.length === 0 ? (
-                <Empty>{t('rep_crent_vs_empty')}</Empty>
+                <Empty kind="search" title={t('rep_empty_rentals_models')} hint={t('rep_empty_rentals_models_hint')} />
             ) : (
                 <div className="relative overflow-x-auto">
                     <table className="w-full text-sm">

@@ -1,13 +1,13 @@
 // Dashboard IT card "ภาระงานของทีม": the unassigned queue first, then each person's in-progress cases; folds after 10.
 import { useT } from '@/lang';
 import { CardEmpty, CardTitle, FILL, fold, FoldToggle, heldStyle, Swatch } from '@/modules/report';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import type { DashboardIt } from '../api/dashboardApi';
 import { useDashLinks } from '../hooks/use-dash-links';
 import { HBarRow, NARROW } from './dash-parts';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const WORKLOAD_TOP = 10;
 
@@ -47,7 +47,7 @@ export function WorkloadCard({
                 }
             />
             {total === 0 ? (
-                <CardEmpty>{t('dash_empty_workload')}</CardEmpty>
+                <CardEmpty kind="empty" title={t('dash_empty_it_workload')} hint={t('dash_empty_it_workload_hint')} />
             ) : (
                 <ul className="flex flex-1 flex-col justify-between gap-1.5 px-5 py-3">
                     <HBarRow label={t('dash_no_assignee')} value={it.unassigned} scale={scale} fill={FILL.blue} index={0} strong to={links.pickup} />
