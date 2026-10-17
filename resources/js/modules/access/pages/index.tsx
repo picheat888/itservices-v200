@@ -544,7 +544,7 @@ export default function AccessControlPage() {
         {
             key: 'members',
             header: t('access_members'),
-            width: '140px',
+            width: '164px',
             render: (g) => <AvatarStack members={g.members ?? []} total={g.members_count} />,
         },
         { key: 'department', header: t('access_department'), width: '180px', render: (g) => <TruncText text={deptLabel(g)} /> },
@@ -570,7 +570,7 @@ export default function AccessControlPage() {
         {
             key: 'members',
             header: t('access_members'),
-            width: '140px',
+            width: '164px',
             render: (s) => <AvatarStack members={s.members ?? []} total={s.members_count} />,
         },
         actionsCol<FileShare>(openFileShare),
@@ -584,7 +584,7 @@ export default function AccessControlPage() {
             render: (p) => <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} />,
         },
         { key: 'policy', header: t('access_policy'), width: '200px', render: (p) => <TruncText text={p.policy} /> },
-        { key: 'members', header: t('access_members'), width: '140px', render: (p) => <AvatarStack members={p.members ?? []} /> },
+        { key: 'members', header: t('access_members'), width: '164px', render: (p) => <AvatarStack members={p.members ?? []} /> },
         actionsCol<SocialPlatform>(openSocial),
     ];
 
@@ -632,7 +632,7 @@ export default function AccessControlPage() {
         {
             key: 'members',
             header: t('access_members'),
-            width: '140px',
+            width: '164px',
             render: (s) => <AvatarStack members={s.members ?? []} total={s.members_count} />,
         },
         actionsCol<Software>(openSoftware),
