@@ -13,6 +13,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 
 /**
@@ -170,11 +171,49 @@ class TicketOverviewReportService
     public function slaFor(User $viewer, CarbonImmutable $from, CarbonImmutable $to, ?string $source = null): array
     {
         $filters = self::resolveFilters(['from' => $from->toDateString(), 'to' => $to->toDateString(), 'source' => $source]);
-        $completed = $this->inRange($viewer, $filters)
-            ->where('status', TicketStatus::Completed->value)
-            ->get(['id', 'resolved_at', 'sla_resolve_due_at']);
+        $row = $this->measuredSlaQuery($viewer, $filters)->first();
 
-        return $this->slaCounts($completed);
+        return $this->slaCountsFromTotals((int) ($row->measured ?? 0), (int) ($row->met ?? 0));
+    }
+
+    /**
+     * slaFor() for the whole window and for each ticket source, from one query.
+     *
+     * @return array<string, array{sla_measured: int, sla_met: int, sla_rate: ?float}> keyed by "all" and each source
+     */
+    public function slaForSources(User $viewer, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $filters = self::resolveFilters(['from' => $from->toDateString(), 'to' => $to->toDateString()]);
+        $rows = $this->measuredSlaQuery($viewer, $filters)->addSelect('source')->groupBy('source')->get();
+
+        $totals = ['all' => [0, 0]];
+        foreach ($rows as $row) {
+            $totals[(string) $row->source] = [(int) $row->measured, (int) $row->met];
+            $totals['all'] = [$totals['all'][0] + (int) $row->measured, $totals['all'][1] + (int) $row->met];
+        }
+
+        return array_map(fn (array $t) => $this->slaCountsFromTotals($t[0], $t[1]), $totals);
+    }
+
+    /**
+     * Completed tickets with an end time and a deadline: how many, and how many were on time.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function measuredSlaQuery(User $viewer, array $filters): QueryBuilder
+    {
+        return $this->inRange($viewer, $filters)
+            ->where('status', TicketStatus::Completed->value)
+            ->whereNotNull('resolved_at')
+            ->whereNotNull('sla_resolve_due_at')
+            ->toBase()
+            ->selectRaw('count(*) as measured, sum(case when resolved_at <= sla_resolve_due_at then 1 else 0 end) as met');
+    }
+
+    /** @return array{sla_measured: int, sla_met: int, sla_rate: ?float} */
+    private function slaCountsFromTotals(int $measured, int $met): array
+    {
+        return ['sla_measured' => $measured, 'sla_met' => $met, 'sla_rate' => $this->rate($met, $measured)];
     }
 
     /**

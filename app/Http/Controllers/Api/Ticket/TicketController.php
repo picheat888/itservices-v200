@@ -377,7 +377,8 @@ class TicketController extends Controller
         $from = CarbonImmutable::parse($start->toDateString());
         $to = CarbonImmutable::parse($end->toDateString());
         $days = (int) $from->diffInDays($to) + 1;
-        $all = $report->slaFor($viewer, $from, $to);
+        $sources = $report->slaForSources($viewer, $from, $to);
+        $all = $sources['all'];
         $previous = $report->slaFor($viewer, $from->subDays($days), $from->subDay())['sla_rate'];
 
         return [
@@ -388,8 +389,8 @@ class TicketController extends Controller
             'measured' => $all['sla_measured'],
             'rate' => $all['sla_rate'],
             'delta_pts' => $all['sla_rate'] === null || $previous === null ? null : round($all['sla_rate'] - $previous, 1),
-            'request_rate' => $report->slaFor($viewer, $from, $to, TicketSource::AutoRequest->value)['sla_rate'],
-            'manual_rate' => $report->slaFor($viewer, $from, $to, TicketSource::Manual->value)['sla_rate'],
+            'request_rate' => $sources[TicketSource::AutoRequest->value]['sla_rate'] ?? null,
+            'manual_rate' => $sources[TicketSource::Manual->value]['sla_rate'] ?? null,
         ];
     }
 
