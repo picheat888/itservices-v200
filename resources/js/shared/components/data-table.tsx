@@ -264,7 +264,8 @@ export function DataTable<T>({
             <div
                 ref={bodyRef}
                 className={cn(
-                    'border-border rounded-xl border',
+                    // relative: absolute children (sr-only headers) stay inside the scroll box instead of widening <main>
+                    'border-border relative rounded-xl border',
                     // Too wide: scroll sideways; fits: clip (not a scroll box) so the header can stick to the page
                     fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-auto' : fitsWidth ? 'overflow-clip' : 'overflow-x-auto',
                 )}
