@@ -9,7 +9,7 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
-import { localLabel } from '@/shared/lib/local-name';
+import { localLabel, localName } from '@/shared/lib/local-name';
 import { REQUEST_BLOCK_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { RequestFieldSchema, ServiceRequest, ServiceRequestType } from '@/shared/types';
@@ -490,7 +490,7 @@ export function RequestCreateDialog({
 
                                 <div className="border-border divide-border/70 divide-y overflow-hidden rounded-lg border">
                                     <ReviewRow k={t('req_filter_type')} v={t(REQUEST_TYPE_META[type].labelKey)} />
-                                    <ReviewRow k={t('req_requester_label')} v={user?.name ?? ''} />
+                                    <ReviewRow k={t('req_requester_label')} v={(user && localName(user, lang)) ?? ''} />
                                     {schema
                                         .filter((f) => (fields[f.key] ?? '') !== '')
                                         .map((f) => (

@@ -261,7 +261,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                         <div className="mb-2 flex items-center justify-between">
                                             <span className="text-muted-foreground text-xs font-medium">
                                                 {t('gr_dept_members')}:{' '}
-                                                {departments.find((d) => d.id === expandedDeptId)?.[lang === 'th' ? 'name_th' : 'name'] ?? ''}
+                                                {localName(departments.find((d) => d.id === expandedDeptId) ?? null, lang) ?? ''}
                                             </span>
                                             {deptMembers.length > 0 && (
                                                 <button
