@@ -270,6 +270,10 @@ class StockValuationBreakdownTest extends TestCase
             $this->assertSame($summary['total']['value'], $tiles['held'], $day);
             $this->assertSame($summary['qty_total']['value'], $tiles['qty'], $day);
             $this->assertEqualsWithDelta($summary['stock_value']['value'], $tiles['value'], 0.001, $day);
+            // The file headline carries every tile the page shows.
+            $this->assertSame($summary['out']['value'], $tiles['out'], $day);
+            $this->assertSame($summary['dead90_count']['value'], $tiles['dead90']['count'], $day);
+            $this->assertEqualsWithDelta($summary['dead90_value']['value'], $tiles['dead90']['value'], 0.001, $day);
             $this->assertEqualsWithDelta(array_sum(array_column($rows['data'], 'stock_value')), $tiles['value'], 0.001, $day);
         }
     }

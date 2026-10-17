@@ -19,10 +19,8 @@ use App\Support\DateDisplay;
 use App\Support\SearchTerms;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * "รับเข้าและเบิกจ่าย" (Report Center → Stock): every stock document in the date range (last 12 months by default),
@@ -145,34 +143,22 @@ class StockMovementReport extends TabularReport
         return $type === 'receive' && $unitCost !== null ? $qty * $unitCost : $qty * $book->averageAt($itemId, $at);
     }
 
+    /** The file headline repeats the page tiles (range, warehouse, category), plus the rows the file holds. */
     public function summary(Builder $query, array $filters): array
     {
-        $bare = fn () => (clone $query)->setEagerLoads([])->reorder();
+        $tiles = $this->breakdown(null, $filters)['tiles'];
 
         return [
-            ReportSummary::make('total', 'ทั้งหมด', $bare()->count()),
-            ReportSummary::make('qty_in', 'จำนวนเข้า', (int) $bare()->whereIn('type', StockMovement::INBOUND)->sum('qty'), 'green'),
+            ReportSummary::make('total', 'ทั้งหมด', (clone $query)->setEagerLoads([])->reorder()->count()),
+            ReportSummary::make('receive_qty', 'รับเข้า (ชิ้น)', $tiles['receive']['qty'], 'green'),
+            ReportSummary::make('receive_value', 'มูลค่ารับเข้า', $tiles['receive']['value'], format: 'money'),
+            ReportSummary::make('issue_qty', 'เบิกออก (ชิ้น)', $tiles['issue']['qty']),
+            ReportSummary::make('issue_value', 'มูลค่าเบิกออก', $tiles['issue']['value'], format: 'money'),
+            ReportSummary::make('return_qty', 'คืนของ (ชิ้น)', $tiles['return']['qty']),
             // Transfers move stock between warehouses without changing the total.
-            ReportSummary::make('qty_out', 'จำนวนออก', (int) $bare()->whereNotIn('type', [...StockMovement::INBOUND, 'transfer'])->sum('qty'), 'amber'),
-            ReportSummary::make('receive_value', 'มูลค่ารับเข้า', round($this->receiveValue($bare), 2), format: 'money'),
+            ReportSummary::make('transfer_qty', 'ย้ายคลัง (ชิ้น)', $tiles['transfer']['qty']),
+            ReportSummary::make('adjust_net', 'ปรับยอดสุทธิ (ชิ้น)', $tiles['adjust_up']['qty'] - $tiles['adjust_down']['qty']),
         ];
-    }
-
-    /** Receipts at their own cost, cost-less ones at the average lot cost of their day, as the rows and tiles. */
-    private function receiveValue(Closure $bare): float
-    {
-        $costed = (float) $bare()->where('type', 'receive')->whereNotNull('unit_cost')->sum(DB::raw('qty * unit_cost'));
-        $costless = $bare()->where('type', 'receive')->whereNull('unit_cost')->toBase()
-            ->get(['stock_movements.stock_item_id', 'stock_movements.qty', 'stock_movements.moved_at']);
-        if ($costless->isEmpty()) {
-            return $costed;
-        }
-
-        $book = StockCostBook::forItems($costless->pluck('stock_item_id'));
-
-        return $costed + (float) $costless->sum(
-            fn (object $m) => (int) $m->qty * $book->averageAt((int) $m->stock_item_id, CarbonImmutable::parse($m->moved_at)),
-        );
     }
 
     /**
@@ -445,7 +431,7 @@ class StockMovementReport extends TabularReport
     }
 
     /**
-     * The cards as sheets: months in the range, requesters and departments by value, count variance.
+     * The cards as sheets: months in the range, waiting requests, requesters and departments by value, count variance.
      *
      * @param  array<string, mixed>  $filters
      * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
@@ -464,6 +450,14 @@ class StockMovementReport extends TabularReport
             ], $data['months'])),
         ]];
 
+        $sections[] = [
+            'title' => 'คำขอเบิกที่ค้าง',
+            'headings' => ['เลขที่', 'รายการ', 'SKU', 'จำนวน', 'ผู้ขอ', 'สถานะ', 'รอตั้งแต่'],
+            'rows' => array_map(fn (array $r) => [
+                $r['reference'], $r['item_name'], $r['sku'], $r['qty'], $r['requester_th'] ?: $r['requester'],
+                $r['status'] === 'approved' ? 'อนุมัติแล้ว รอจ่าย' : 'รออนุมัติ', DateDisplay::dateTime($r['waiting_since']),
+            ], $data['requests']['rows']),
+        ];
         $sections[] = [
             'title' => 'ผู้ขอเบิกสูงสุด',
             'headings' => ['ผู้ขอเบิก', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
