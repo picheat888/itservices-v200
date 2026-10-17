@@ -13,6 +13,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
+use App\Notifications\RequestWorkflowNotification;
 use App\Services\Sidebar\SidebarBadgeService;
 use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
@@ -217,6 +218,11 @@ class RequestPermissionKeysTest extends TestCase
         $log = AuditLog::where('action', 'Cancelled service request')->sole();
         $this->assertSame($it->id, $log->user_id);
         $this->assertSame("{$request->reference} (for the owner)", $log->target);
+
+        // The waiting approver hears who cancelled, not "the requester"
+        $bell = $this->latestRequestBell($this->supUser);
+        $this->assertSame('cancelled_for_owner', $bell['subtype']);
+        $this->assertSame($it->name, $bell['actor_name']);
     }
 
     public function test_the_owner_cancelling_is_logged_without_the_note(): void
@@ -226,6 +232,13 @@ class RequestPermissionKeysTest extends TestCase
         $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertOk();
 
         $this->assertSame($request->reference, AuditLog::where('action', 'Cancelled service request')->sole()->target);
+        $this->assertSame('cancelled', $this->latestRequestBell($this->supUser)['subtype']);
+    }
+
+    /** @return array<string, mixed> */
+    private function latestRequestBell(User $user): array
+    {
+        return $user->notifications()->where('type', RequestWorkflowNotification::class)->latest('updated_at')->firstOrFail()->data;
     }
 
     public function test_seeing_every_request_is_not_the_right_to_cancel_one(): void

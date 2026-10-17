@@ -438,7 +438,7 @@ class RequestService
         });
 
         $request->refresh()->load('approvals');
-        $this->notifications->cancelled($request, $wasCurrent);
+        $this->notifications->cancelled($request, $wasCurrent, $request->isOwnedOrFiledBy($actor) ? null : $actor);
 
         return $request;
     }

@@ -162,22 +162,21 @@ class RequestNotificationService
         ]);
     }
 
-    /** Replace the waiting approver's action bell with a cancellation notice. */
-    public function cancelled(ServiceRequest $request, ?RequestApproval $wasCurrent): void
+    /** Replace the waiting approver's action bell with a cancellation notice; $forOwnerBy names who cancelled for the owner. */
+    public function cancelled(ServiceRequest $request, ?RequestApproval $wasCurrent, ?User $forOwnerBy = null): void
     {
-        // Whoever the step waited on hears that it no longer does — the whole group when it
-        // waited on one, exactly as notifyApprover told them all it was waiting.
+        // The whole group when the step waited on one
         $group = $this->groupApprovers($wasCurrent);
         $recipients = $group->isNotEmpty() ? $group : collect([$this->approverUser($wasCurrent)])->filter();
         if ($recipients->isEmpty()) {
             return;
         }
 
-        $this->sendBell(
-            $recipients,
-            new RequestWorkflowNotification($request, 'cancelled', $wasCurrent?->label, $request->requester_name),
-            ['service_request_id' => $request->id],
-        );
+        $notification = $forOwnerBy === null
+            ? new RequestWorkflowNotification($request, 'cancelled', $wasCurrent?->label, $request->requester_name)
+            : new RequestWorkflowNotification($request, 'cancelled_for_owner', $wasCurrent?->label, $forOwnerBy->name);
+
+        $this->sendBell($recipients, $notification, ['service_request_id' => $request->id]);
     }
 
     /** Bell + email one resolved approver that a step waits on them. */
