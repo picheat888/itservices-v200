@@ -61,10 +61,26 @@ final class ApprovalFacts
                 ->orWhere(fn (Builder $n) => $n->whereDoesntHave('employee')->where('department_name', $departmentName))));
     }
 
+    /** @var \WeakMap<RequestApproval, array<string, mixed>>|null */
+    private static ?\WeakMap $memo = null;
+
+    // One answer per step per request: the report asks the same question of a step many times
+    private static function once(RequestApproval $step, string $name, callable $compute): mixed
+    {
+        self::$memo ??= new \WeakMap;
+        $slot = self::$memo[$step] ?? [];
+        if (! array_key_exists($name, $slot)) {
+            $slot[$name] = $compute();
+            self::$memo[$step] = $slot;
+        }
+
+        return $slot[$name];
+    }
+
     /** Who a step is on: whoever decided it, else the named approver holding it, else the step's own label. */
     public static function key(RequestApproval $step): string
     {
-        return (string) ($step->acted_by_name ?? $step->approver_name ?? $step->label);
+        return self::once($step, 'key', fn () => (string) ($step->acted_by_name ?? $step->approver_name ?? $step->label));
     }
 
     public static function isApproval(RequestApproval $step): bool
@@ -75,24 +91,31 @@ final class ApprovalFacts
     /** Whole days a step took: to its decision, to the withdrawal that ended its wait, or to today while it waits. */
     public static function days(RequestApproval $step): ?int
     {
-        if ($step->became_current_at === null) {
-            return null;
-        }
-        $end = $step->acted_at
-            ?? ($step->status->value === 'waiting' ? $step->request?->cancelled_at : null)
-            ?? now();
+        return self::once($step, 'days', function () use ($step) {
+            if ($step->became_current_at === null) {
+                return null;
+            }
+            $end = $step->acted_at
+                ?? ($step->status->value === 'waiting' ? $step->request?->cancelled_at : null)
+                ?? now();
 
-        return max(0, self::wholeDays($step->became_current_at, $end));
+            return max(0, self::wholeDays($step->became_current_at, $end));
+        });
     }
 
     /** A step still holding a pending request. */
     public static function isWaiting(RequestApproval $step): bool
     {
-        return self::isApproval($step) && $step->status->value === 'current' && $step->request?->status->value === 'pending';
+        return self::once($step, 'waiting', fn () => self::isApproval($step) && $step->status->value === 'current' && $step->request?->status->value === 'pending');
     }
 
     /** Why nobody can act on a waiting step — its named approver has left, or has no login — or null. */
     public static function blockedBecause(RequestApproval $step): ?string
+    {
+        return self::once($step, 'blocked', fn () => self::computeBlocked($step));
+    }
+
+    private static function computeBlocked(RequestApproval $step): ?string
     {
         if ($step->approver_employee_id === null || $step->approver === null) {
             return null;
@@ -110,6 +133,12 @@ final class ApprovalFacts
      * @return array{name: string, code: ?string, department: array{name: string, name_th: ?string}|null, kind: string}
      */
     public static function person(RequestApproval $step): array
+    {
+        return self::once($step, 'person', fn () => self::computePerson($step));
+    }
+
+    /** @return array{name: string, code: ?string, department: array{name: string, name_th: ?string}|null, kind: string} */
+    private static function computePerson(RequestApproval $step): array
     {
         $employee = $step->acted_by_user_id !== null ? $step->actedBy?->employee : $step->approver;
         $kind = match (true) {

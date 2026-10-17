@@ -40,7 +40,19 @@ trait RequestLabels
     /** Whole days from one moment to another by their dates (same day = 0); negative when `to` is earlier. */
     private static function wholeDays(CarbonInterface $from, CarbonInterface $to): int
     {
-        return (int) $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay(), false);
+        return self::dayNumber($to) - self::dayNumber($from);
+    }
+
+    // Days since 1970-01-01 of the moment's own calendar date, without building Carbon copies
+    private static function dayNumber(CarbonInterface $at): int
+    {
+        $year = $at->year - ($at->month <= 2 ? 1 : 0);
+        $era = intdiv($year >= 0 ? $year : $year - 399, 400);
+        $yearOfEra = $year - $era * 400;
+        $dayOfYear = intdiv(153 * ($at->month + ($at->month > 2 ? -3 : 9)) + 2, 5) + $at->day - 1;
+        $dayOfEra = $yearOfEra * 365 + intdiv($yearOfEra, 4) - intdiv($yearOfEra, 100) + $dayOfYear;
+
+        return $era * 146097 + $dayOfEra - 719468;
     }
 
     /**
