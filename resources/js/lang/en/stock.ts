@@ -151,6 +151,7 @@ export const stock: Dict = {
     stock_tab_lots: 'Lots',
     stock_tab_serials: 'Serials',
     stock_reserved_n: '{n} reserved',
+    stock_reserved_note: 'Held for approved requests that are not fulfilled yet. {n} left to request.',
     stock_free_n: '{n} free',
     stock_brand_model: 'Brand / Model',
     stock_last_move: 'Last move',
