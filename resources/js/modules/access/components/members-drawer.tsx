@@ -9,6 +9,7 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useLocalName } from '@/shared/hooks/use-local-name';
 import { refusalReason, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember, EmployeeOption } from '@/shared/types';
@@ -100,6 +101,7 @@ export function MembersDrawer({
     onEdit?: (target: MemberTarget) => void;
 }) {
     const t = useT();
+    const nameOf = useLocalName();
     const confirm = useConfirm();
     // Retain the last granted flags while the dialog animates closed (the parent passes
     // false once target goes null; without this the footer/actions blink out mid-exit).
@@ -226,7 +228,7 @@ export function MembersDrawer({
     );
     const empOption = (e: EmployeeOption): SearchOption => ({
         value: String(e.id),
-        label: e.name,
+        label: nameOf(e),
         sub: e.code,
         tag: e.department_id != null ? (deptTag.get(e.department_id) ?? undefined) : undefined,
         search: '',

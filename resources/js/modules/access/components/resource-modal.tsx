@@ -7,6 +7,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalReason } from '@/shared/lib/api-errors';
+import { localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, EmployeeOption, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -309,7 +310,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
 
     const employeeOption = (e: EmployeeOption): SearchOption => ({
         value: String(e.id),
-        label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+        label: localName(e, lang),
         sub: e.code,
         tag: e.department_id != null ? (deptTag.get(e.department_id) ?? undefined) : undefined,
         search: '',
@@ -321,7 +322,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         () =>
             departments.map((d) => ({
                 value: String(d.id),
-                label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                label: localName(d, lang),
                 sub: d.tag,
                 search: `${d.name} ${d.name_th ?? ''} ${d.tag}`,
             })),
