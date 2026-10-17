@@ -31,7 +31,7 @@ export const profile: Dict = {
     profile_empty_assets_held: 'คุณยังไม่ได้ถือครองทรัพย์สิน',
     profile_empty_assets_held_hint: 'ทรัพย์สินที่ส่งมอบให้คุณจะแสดงที่นี่',
     profile_empty_tickets: 'คุณยังไม่เคยแจ้ง Ticket',
-    profile_empty_tickets_hint: 'แจ้งปัญหา IT ได้จากปุ่มเปิด Ticket',
+    profile_empty_tickets_hint: 'แจ้งปัญหา IT ได้จากปุ่ม{button}',
     profile_empty_requests: 'คุณยังไม่เคยยื่นคำขอ',
     profile_empty_requests_hint: 'ยื่นคำขอได้ที่หน้าคำขอ',
     profile_empty_access: 'ยังไม่มีสิทธิ์เข้าถึงที่บันทึกไว้ให้คุณ',

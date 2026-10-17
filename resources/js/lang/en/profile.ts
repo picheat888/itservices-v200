@@ -31,7 +31,7 @@ export const profile: Dict = {
     profile_empty_assets_held: 'You hold no assets',
     profile_empty_assets_held_hint: 'Assets handed to you show here.',
     profile_empty_tickets: 'You have not filed a ticket',
-    profile_empty_tickets_hint: 'Report an IT problem with "Open ticket".',
+    profile_empty_tickets_hint: 'Report an IT problem with "{button}".',
     profile_empty_requests: 'You have not submitted a request',
     profile_empty_requests_hint: 'Submit one on the Requests page.',
     profile_empty_access: 'No access recorded for you yet',

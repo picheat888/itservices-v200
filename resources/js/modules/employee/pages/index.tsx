@@ -519,6 +519,7 @@ export default function EmployeesPage() {
                         <DirectoryTab
                             departments={departments}
                             canAdd={canAdd}
+                            canImport={canImport}
                             canEdit={canEdit}
                             isSuperViewer={isSuper}
                             canResetPassword={canResetPassword}
@@ -675,6 +676,7 @@ const isDirStatus = (v: string): v is (typeof DIR_STATUSES)[number] => (DIR_STAT
 interface DirectoryTabProps {
     departments: Department[];
     canAdd: boolean;
+    canImport: boolean;
     canEdit: boolean;
     isSuperViewer: boolean;
     canResetPassword: boolean;
@@ -692,6 +694,7 @@ interface DirectoryTabProps {
 function DirectoryTab({
     departments,
     canAdd,
+    canImport,
     canEdit,
     isSuperViewer,
     canResetPassword,
@@ -926,7 +929,7 @@ function DirectoryTab({
                         : {
                               kind: 'empty',
                               title: t('emp_empty_directory'),
-                              hint: canAdd ? t('emp_empty_directory_hint').replace('{button}', t('add_employee')) : null,
+                              hint: canAdd && canImport ? t('emp_empty_directory_hint').replace('{button}', t('add_employee')) : null,
                           }
                 }
             />
