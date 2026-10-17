@@ -3,6 +3,7 @@ import { type Column, DataTable } from '@/shared/components/data-table';
 import { EmptyPane } from '@/shared/components/empty-pane';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { cn } from '@/shared/lib/utils';
 import { type StockMovementType } from '@/shared/types';
 import { History } from 'lucide-react';
@@ -18,6 +19,7 @@ type Move = {
     from_label: string | null;
     to_label: string | null;
     recorded_by: string | null;
+    recorded_by_th?: string | null;
     moved_at: string | null;
 };
 
@@ -25,6 +27,7 @@ type Move = {
 export function StockMovementsTab({ itemId }: { itemId: number }) {
     const t = useT();
     const fmt = useDateFormat();
+    const pairOf = useLocalPair();
     const { data: history, isLoading } = useStockItemHistory(itemId);
     const moves = (history?.movements ?? []) as Move[];
     const typeLabel = (type: StockMovementType) => t(`stock_mv_${type}` as Parameters<typeof t>[0]);
@@ -69,7 +72,11 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
             header: `${t('stock_from')} → ${t('stock_to')}`,
             render: (m) => <span className="text-xs">{[m.from_label, m.to_label].filter(Boolean).join(' → ') || '—'}</span>,
         },
-        { key: 'recorded_by', header: t('stock_by'), render: (m) => <span className="text-xs">{m.recorded_by ?? '—'}</span> },
+        {
+            key: 'recorded_by',
+            header: t('stock_by'),
+            render: (m) => <span className="text-xs">{pairOf(m.recorded_by, m.recorded_by_th) ?? '—'}</span>,
+        },
     ];
 
     if (!isLoading && moves.length === 0) {
@@ -85,7 +92,7 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
                 rows={moves}
                 rowKey={(m) => m.id}
                 searchPlaceholder={t('stock_movements_search')}
-                searchable={(m) => `${m.doc_no ?? ''} ${m.recorded_by ?? ''}`}
+                searchable={(m) => `${m.doc_no ?? ''} ${m.recorded_by ?? ''} ${m.recorded_by_th ?? ''}`}
             />
         </div>
     );

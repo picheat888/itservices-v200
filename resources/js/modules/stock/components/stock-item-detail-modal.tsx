@@ -394,7 +394,9 @@ export function StockItemDetailModal({
                                                                                 <Meta label={t('stock_reference')}>{l.reference || '—'}</Meta>
                                                                                 <Meta label={t('stock_warehouse')}>{l.warehouse || '—'}</Meta>
                                                                                 <Meta label={t('stock_supplier')}>{l.supplier || '—'}</Meta>
-                                                                                <Meta label={t('stock_by')}>{l.recorded_by || '—'}</Meta>
+                                                                                <Meta label={t('stock_by')}>
+                                                                                    {localPair(l.recorded_by, l.recorded_by_th, lang) || '—'}
+                                                                                </Meta>
                                                                                 <Meta label={t('stock_serial_received')}>
                                                                                     {fmt.date(l.received_at)}
                                                                                 </Meta>

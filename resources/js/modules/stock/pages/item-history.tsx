@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
+import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
@@ -201,6 +202,7 @@ function CategoryView({
     fmt: FormatDateTime;
     formatMoney: (value: number) => string;
 }) {
+    const pairOf = useLocalPair();
     const meta = VIEW_META[view];
     const ev = VIEW_FILTER[view].event;
     const action = (m: Movement) => t(`stock_mv_${m.type}` as Parameters<typeof t>[0]);
@@ -234,7 +236,7 @@ function CategoryView({
             fmt(m.moved_at),
             action(m),
             m.from_label ?? '—',
-            m.recorded_by ?? '—',
+            pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
             m.to_label ?? '—',
             m.reference ?? '—',
             serialCell(m),
@@ -286,7 +288,7 @@ function CategoryView({
             fmt(m.moved_at),
             m.reference ?? '—',
             action(m),
-            m.recorded_by ?? '—',
+            pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
             serialCell(m),
             qtyCell(m),
             m.notes ?? '—',
@@ -312,7 +314,7 @@ function CategoryView({
             action(m),
             m.from_label ?? '—',
             m.to_label ?? '—',
-            m.recorded_by ?? '—',
+            pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
             serialCell(m),
             qtyCell(m),
             m.notes ?? '—',

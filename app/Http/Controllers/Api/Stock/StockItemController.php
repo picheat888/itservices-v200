@@ -201,7 +201,7 @@ class StockItemController extends Controller
         $this->gateView($request);
 
         $stockItem->load([
-            'lots' => fn ($q) => $q->with('movement')->orderBy('received_at')->orderBy('id'),
+            'lots' => fn ($q) => $q->with('movement.user.employee:id,first_name_th,last_name_th')->orderBy('received_at')->orderBy('id'),
             'serials' => fn ($q) => $q->with('warehouse')->orderBy('serial'),
             'balances' => fn ($q) => $q->with('warehouse')->orderBy('warehouse_id'),
             'unit',
@@ -292,11 +292,12 @@ class StockItemController extends Controller
     private function buildHistory(StockItem $stockItem): array
     {
         $stockItem->load([
-            'movements',
+            'movements.user.employee:id,first_name_th,last_name_th',
             'lots' => fn ($q) => $q->latest('received_at'),
             'lots.movement',
             'serials.warehouse',
             'serials.events.movement',
+            'serials.events.user.employee:id,first_name_th,last_name_th',
         ]);
 
         $lotSerials = $stockItem->serials->groupBy('stock_movement_id');
@@ -319,6 +320,7 @@ class StockItemController extends Controller
                 'to_label' => $m->to_label,
                 'reference' => $m->reference,
                 'recorded_by' => $m->recorded_by,
+                'recorded_by_th' => $m->user?->name_th,
                 'notes' => $m->notes,
                 'moved_at' => $m->moved_at?->toIso8601String(),
             ])->values(),
@@ -340,6 +342,7 @@ class StockItemController extends Controller
                     'doc_no' => $e->movement?->doc_no,
                     'reference' => $e->reference,
                     'recorded_by' => $e->recorded_by,
+                    'recorded_by_th' => $e->user?->name_th,
                     'from_label' => $e->from_label,
                     'to_label' => $e->to_label,
                 ])->values(),
