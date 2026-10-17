@@ -1170,6 +1170,8 @@ export interface ServiceRequest {
         user_id: number | null;
         name: string;
         department: string | null;
+        name_th?: string | null;
+        department_th?: string | null;
         code?: string | null;
         position?: string | null;
         photo_url?: string | null;
@@ -1181,7 +1183,7 @@ export interface ServiceRequest {
     ticket?: { id: number; ticket_no: string; status: string | null; assignee: string | null } | null;
     approvals?: RequestApproval[];
     /** Compact chain summary for table rows (WorkflowMini). */
-    progress: { total: number; done: number; current_label: string | null; current_approver: string | null };
+    progress: { total: number; done: number; current_label: string | null; current_approver: string | null; current_approver_th?: string | null };
     can_approve: boolean;
     can_cancel: boolean;
     can_complete: boolean;
