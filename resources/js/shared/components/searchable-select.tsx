@@ -38,6 +38,10 @@ export function SearchableSelect({
     active = false,
     preferDown = false,
     maxRows,
+    onSearch,
+    onOpenChange,
+    loading = false,
+    selectedOption,
     id,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
@@ -56,6 +60,14 @@ export function SearchableSelect({
     preferDown?: boolean;
     /** Show at most this many options before the list scrolls. */
     maxRows?: number;
+    /** Async mode: the parent supplies already-filtered options for the typed text, so none are filtered here. */
+    onSearch?: (query: string) => void;
+    /** Async mode: told when the menu opens or closes, so the parent fetches only while it is open. */
+    onOpenChange?: (open: boolean) => void;
+    /** Async mode: a fetch for the typed text is in flight. */
+    loading?: boolean;
+    /** Async mode: shown on the trigger when the chosen value is not among the current options. */
+    selectedOption?: SearchOption;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
     'aria-invalid'?: boolean;
@@ -81,8 +93,9 @@ export function SearchableSelect({
     const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
 
-    const selected = options.find((o) => o.value === value);
-    const filtered = q ? options.filter((o) => o.search.toLowerCase().includes(q.toLowerCase())) : options;
+    const isAsync = onSearch !== undefined;
+    const selected = options.find((o) => o.value === value) ?? (selectedOption?.value === value ? selectedOption : undefined);
+    const filtered = q && !isAsync ? options.filter((o) => o.search.toLowerCase().includes(q.toLowerCase())) : options;
     // Reserve the leading icon slot on every row when at least one option supplies one,
     // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
     const hasIcons = options.some((o) => o.icon !== undefined);
@@ -95,6 +108,16 @@ export function SearchableSelect({
             setKeyboardNav(false);
         }
     }, [open]);
+
+    // Async mode: report the menu state and the typed text to the parent
+    useEffect(() => {
+        onOpenChange?.(open);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+    useEffect(() => {
+        onSearch?.(q);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [q]);
 
     // Close when clicking outside both the trigger and the (possibly portaled) menu.
     useEffect(() => {
@@ -250,7 +273,7 @@ export function SearchableSelect({
             e.stopPropagation();
             e.preventDefault();
             const option = filtered[Math.min(activeIndex, filtered.length - 1)];
-            if (option && (keyboardNav || q)) {
+            if (option && !(isAsync && loading) && (keyboardNav || q)) {
                 choose(option);
             }
             return;
@@ -292,7 +315,17 @@ export function SearchableSelect({
                 className="overflow-y-auto py-1"
                 style={{ maxHeight: rowsMaxH ? Math.min(listMaxH, rowsMaxH) : listMaxH }}
             >
-                {filtered.length === 0 && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
+                {isAsync && loading && filtered.length === 0 && (
+                    <div className="space-y-2 px-3 py-2" aria-busy>
+                        {[0, 1, 2].map((i) => (
+                            <div key={i} className="flex items-center gap-2.5">
+                                <div className="bg-muted h-7 w-7 shrink-0 animate-pulse rounded-full" />
+                                <div className="bg-muted h-4 w-3/5 animate-pulse rounded" />
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {!(isAsync && loading) && filtered.length === 0 && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
                 {filtered.map((o, index) => (
                     <button
                         key={o.value}

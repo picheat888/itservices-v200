@@ -6,7 +6,7 @@ import { employeeApi, type EmployeePayload, type UpdateCredentialsPayload } from
 import { DEPT, EMP, EMP_OPTIONS } from './query-keys';
 
 /** Slim employee list for pickers and lookups — used by every picker outside the directory table. */
-export const useEmployeeOptions = () => useQuery({ queryKey: EMP_OPTIONS, queryFn: employeeApi.options });
+export const useEmployeeOptions = () => useQuery({ queryKey: EMP_OPTIONS, queryFn: () => employeeApi.options({ limit: 100 }) });
 
 export const useEmployeeSummary = (period: OverviewPeriod = 'all', enabled = true) =>
     useQuery({
