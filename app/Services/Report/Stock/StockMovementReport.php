@@ -65,8 +65,8 @@ class StockMovementReport extends TabularReport
             ReportFilter::select('category_id', Options::categories()),
             ReportFilter::search(),
             // How each rank card sorts (value, pieces or times); the page keeps it in the URL.
-            ReportFilter::select('people_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->viewOnly(),
-            ReportFilter::select('dept_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->viewOnly(),
+            ReportFilter::select('people_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->labelKey('rep_smv_sort_by')->viewOnly(),
+            ReportFilter::select('dept_by', Options::fromLabels(self::RANK_BY_KEYS), 'value')->labelKey('rep_smv_sort_by')->viewOnly(),
         ];
     }
 
