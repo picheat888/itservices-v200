@@ -1052,6 +1052,8 @@ export interface AccessIssueItem {
     kind: AccessKind;
     id: number;
     name: string | null;
+    /** Thai name of the holder / owner on a governance row (the English one is `employee`). */
+    employee_th?: string | null;
 }
 
 /* ============= Request + Workflow modules ============= */

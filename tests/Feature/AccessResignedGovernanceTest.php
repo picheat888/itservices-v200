@@ -70,6 +70,22 @@ class AccessResignedGovernanceTest extends TestCase
         $this->assertSame(3, $gov['resigned_holders']);
     }
 
+    public function test_leaver_rows_carry_the_thai_name(): void
+    {
+        $leaver = $this->leaver();
+        $leaver->update(['first_name_th' => 'ลา', 'last_name_th' => 'ออก']);
+        $group = EmailGroup::create(['code' => 'EG-3', 'name' => 'Group three', 'email' => 'three@x.test', 'owner_employee_id' => $leaver->id]);
+        AccessMembership::create([
+            'resource_type' => (new EmailGroup)->getMorphClass(), 'resource_id' => $group->id,
+            'employee_id' => $leaver->id, 'granted_at' => now(),
+        ]);
+
+        $gov = $this->governance();
+
+        $this->assertSame('ลา ออก', $gov['issues']['resigned'][0]['employee_th']);
+        $this->assertSame('ลา ออก', $gov['issues']['no_owner'][0]['employee_th']);
+    }
+
     public function test_a_resource_owned_by_a_leaver_needs_a_new_owner(): void
     {
         $leaver = $this->leaver();
