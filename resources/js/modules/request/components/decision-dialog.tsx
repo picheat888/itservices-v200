@@ -14,6 +14,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Loader2, X } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { useRequestMutations } from '../hooks/use-requests';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export type DecisionAction = 'approve' | 'reject';
 
@@ -30,6 +31,7 @@ function SlipRow({ label, children }: { label: string; children: React.ReactNode
 /** Approve / reject modal: a remark is required to reject, optional to approve; the footer names who is notified next. */
 export function DecisionDialog({ request, action, onClose }: { request: ServiceRequest | null; action: DecisionAction | null; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { approve, reject } = useRequestMutations();
 
@@ -59,7 +61,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
     // "Step 2 of 3": by position among the approval rungs (skipped ones included), as the row's progress ticks count.
     const rungs = (ctx.request.approvals ?? []).filter((a) => a.kind === 'approval');
     const stepIndex = rungs.findIndex((a) => a.status === 'current') + 1;
-    const step = stepIndex > 0 ? t('req_decide_step').replace('{n}', String(stepIndex)).replace('{total}', String(rungs.length)) : null;
+    const step = stepIndex > 0 ? t('req_decide_step').replace('{n}', fmtN(stepIndex)).replace('{total}', fmtN(rungs.length)) : null;
 
     const meta = REQUEST_TYPE_META[ctx.request.type];
     const onBehalf = isOnBehalfRequest(ctx.request);

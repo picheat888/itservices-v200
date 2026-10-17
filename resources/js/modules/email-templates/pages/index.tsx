@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Sample values for {{variables}} in the preview; mirrors EmailTemplateController::sampleVars().
 const SAMPLE_VARS: Record<string, string> = {
@@ -238,12 +239,13 @@ function TagText({ text }: { text: string }) {
 /** One fixed-height line under the body editor: HTML sound or not; the full list opens on click. */
 function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const triggerRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
     // The list portals into the dialog, or its clicks are dead.
     const [container, setContainer] = useState<HTMLElement | null>(null);
     const total = (
-        <span className="text-muted-foreground ml-auto text-xs tabular-nums">{t('email_html_line_count').replace('{count}', String(lineCount))}</span>
+        <span className="text-muted-foreground ml-auto text-xs tabular-nums">{t('email_html_line_count').replace('{count}', fmtN(lineCount))}</span>
     );
 
     if (issues.length === 0) {
@@ -298,7 +300,7 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-700 dark:text-red-400" aria-hidden />
                         <span className="font-semibold">{t('email_html_bad')}</span>
                         <span className="text-muted-foreground ml-auto tabular-nums">
-                            {issues.length === 1 ? t('email_html_count_one') : t('email_html_count').replace('{count}', String(issues.length))}
+                            {issues.length === 1 ? t('email_html_count_one') : t('email_html_count').replace('{count}', fmtN(issues.length))}
                         </span>
                     </div>
                     <div className="max-h-60 overflow-y-auto px-3">
@@ -315,6 +317,7 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
 /** The first few HTML mistakes, one per line; "and N more" shows the rest. */
 function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const [showAll, setShowAll] = useState(false);
     const shown = showAll ? issues : issues.slice(0, limit);
     const hidden = issues.length - shown.length;
@@ -324,7 +327,7 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
             {shown.map((issue, i) => (
                 <li key={i} className="grid grid-cols-[3.75rem_minmax(0,1fr)] gap-2 py-1.5">
                     <span className="text-xs text-red-700 tabular-nums dark:text-red-400">
-                        {t('email_html_line').replace('{line}', String(issue.line))}
+                        {t('email_html_line').replace('{line}', fmtN(issue.line))}
                     </span>
                     <span className="text-foreground">
                         <TagText text={htmlIssueMessage(issue, t)} />
@@ -334,7 +337,7 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
             {hidden > 0 && (
                 <li className="py-1.5">
                     <button type="button" onClick={() => setShowAll(true)} className="text-brand-ink underline-offset-2 hover:underline">
-                        {t('email_html_more').replace('{count}', String(hidden))}
+                        {t('email_html_more').replace('{count}', fmtN(hidden))}
                     </button>
                 </li>
             )}

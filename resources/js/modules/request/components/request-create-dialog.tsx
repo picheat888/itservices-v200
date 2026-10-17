@@ -27,6 +27,7 @@ import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Lo
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { type RequestTypeOption } from '../api/requestApi';
 import { useRequestMutations, useRequestOptions } from '../hooks/use-requests';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const LAST_STEP = 2;
 
@@ -55,6 +56,7 @@ export function RequestCreateDialog({
     onCreated?: (request: ServiceRequest) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { user } = useAuth();
     const { data: options } = useRequestOptions(open);
@@ -147,7 +149,7 @@ export function RequestCreateDialog({
         // Mirrors RequestSchemas::attachmentsRequired
         if (selected?.attachments_required && files.length === 0) e.files = t('req_attach_needed');
         if (files.reduce((sum, f) => sum + f.size, 0) > MAX_TOTAL_BYTES) {
-            e.files = t('req_attach_too_large').replace('{mb}', String(Math.round(MAX_TOTAL_BYTES / 1048576)));
+            e.files = t('req_attach_too_large').replace('{mb}', fmtN(Math.round(MAX_TOTAL_BYTES / 1048576)));
         }
         return e;
     };
@@ -447,8 +449,8 @@ export function RequestCreateDialog({
                                     <FileDropZone
                                         accept={acceptExtensions}
                                         hint={t('req_attach_types')
-                                            .replace('{size}', String(Math.round(attachLimits.max_size_kb / 1024)))
-                                            .replace('{max}', String(attachLimits.max_files))}
+                                            .replace('{size}', fmtN(Math.round(attachLimits.max_size_kb / 1024)))
+                                            .replace('{max}', fmtN(attachLimits.max_files))}
                                         compact={files.length > 0}
                                         onPick={addFiles}
                                     />
@@ -497,7 +499,7 @@ export function RequestCreateDialog({
                                             <ReviewRow key={f.key} k={fieldLabel(f)} v={displayValue(f, fields[f.key], lang, options?.sources)} />
                                         ))}
                                     {files.length > 0 && (
-                                        <ReviewRow k={t('req_attach_section')} v={t('req_attach_review').replace('{n}', String(files.length))} />
+                                        <ReviewRow k={t('req_attach_section')} v={t('req_attach_review').replace('{n}', fmtN(files.length))} />
                                     )}
                                     {/* Reason, full width */}
                                     <div className="odd:bg-muted/30 px-4 py-2.5">

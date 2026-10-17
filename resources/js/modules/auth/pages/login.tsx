@@ -12,6 +12,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, LogOut, Moon, Sun, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const LANGUAGES: { code: Lang; label: string }[] = [
     { code: 'en', label: 'EN' },
@@ -22,6 +23,7 @@ const noticeReason = (reason: string | null): SignedOutReason | null => (reason 
 
 export default function LoginPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     useDocumentTitle('login_title');
     const brandName = useUiStore((s) => s.brandName);
     const brandSub = useUiStore((s) => s.brandSub);
@@ -104,8 +106,8 @@ export default function LoginPage() {
             }
             const wait =
                 seconds >= 60
-                    ? t('login_time_minutes').replace('{n}', String(Math.ceil(seconds / 60)))
-                    : t('login_time_seconds').replace('{n}', String(seconds));
+                    ? t('login_time_minutes').replace('{n}', fmtN(Math.ceil(seconds / 60)))
+                    : t('login_time_seconds').replace('{n}', fmtN(seconds));
 
             return t('login_err_throttled').replace('{time}', wait);
         }

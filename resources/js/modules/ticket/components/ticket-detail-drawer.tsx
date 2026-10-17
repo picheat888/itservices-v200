@@ -32,6 +32,7 @@ import {
 import { useEffect, useState } from 'react';
 import type { ResolveMode } from './resolve-ticket-modal';
 import { TICKET_WORK_CLASS_META, TicketPriorityBadge, TicketSlaBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
+import { formatNumber } from '@/shared/lib/number';
 
 /**
  * One-line label/value row for the rail's compact sections (SLA, dates).
@@ -164,13 +165,14 @@ function SpineStep({
  * would be an approximation standing where an exact figure belongs.
  */
 function slaTargetAmount(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
+    const lang = useUiStore.getState().lang;
     if (target.clock === 'calendar') {
         return target.hours % 24 === 0
-            ? t('ticket_sla_target_days').replace('{n}', String(target.hours / 24))
-            : t('ticket_sla_target_hours_calendar').replace('{n}', String(target.hours));
+            ? t('ticket_sla_target_days').replace('{n}', formatNumber(target.hours / 24, lang))
+            : t('ticket_sla_target_hours_calendar').replace('{n}', formatNumber(target.hours, lang));
     }
 
-    return t('ticket_sla_target_hours').replace('{n}', String(target.hours));
+    return t('ticket_sla_target_hours').replace('{n}', formatNumber(target.hours, lang));
 }
 
 /**

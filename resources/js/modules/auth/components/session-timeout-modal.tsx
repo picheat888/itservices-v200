@@ -6,6 +6,8 @@ import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Clock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { BlockingDialog } from './blocking-dialog';
+import { formatNumber } from '@/shared/lib/number';
+import { useUiStore } from '@/stores/ui';
 
 interface Props {
     secondsLeft: number;
@@ -26,9 +28,10 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /** Time left in words for a screen reader, e.g. "เหลือเวลาอีก 1 นาที 15 วินาที". */
 function spokenLeft(t: ReturnType<typeof useT>, seconds: number): string {
+    const lang = useUiStore.getState().lang;
     const words = {
-        minutes: (n: number) => (n === 1 ? t('session_one_minute') : t('login_time_minutes').replace('{n}', String(n))),
-        seconds: (n: number) => (n === 1 ? t('session_one_second') : t('login_time_seconds').replace('{n}', String(n))),
+        minutes: (n: number) => (n === 1 ? t('session_one_minute') : t('login_time_minutes').replace('{n}', formatNumber(n, lang))),
+        seconds: (n: number) => (n === 1 ? t('session_one_second') : t('login_time_seconds').replace('{n}', formatNumber(n, lang))),
     };
     return t('session_time_left').replace('{time}', spokenTime(seconds, words));
 }

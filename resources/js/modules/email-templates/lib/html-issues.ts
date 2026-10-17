@@ -1,3 +1,5 @@
+import { formatNumber } from '@/shared/lib/number';
+import { useUiStore } from '@/stores/ui';
 /**
  * Mistakes in a template's hand-written HTML, for the editor's warning line.
  *
@@ -161,7 +163,7 @@ export function htmlIssueMessage(issue: HtmlIssue, t: (key: string) => string): 
             return t('email_html_issue_open_inside')
                 .replace('{tag}', issue.tag)
                 .replace('{inner}', issue.inner)
-                .replace('{n}', String(issue.innerLine));
+                .replace('{n}', formatNumber(issue.innerLine, useUiStore.getState().lang));
         case 'list_child':
             return t('email_html_issue_not_allowed').replace('{tag}', issue.tag).replace('{parent}', issue.parent);
         case 'unsupported':

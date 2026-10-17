@@ -81,6 +81,7 @@ export function TicketOverviewTiles({
     onOpenWaiting: () => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const fmt = useNumberFormat();
     const sla = summary.period_sla;
     const live = summary.backlog_open + summary.backlog_in_progress;
@@ -123,7 +124,7 @@ export function TicketOverviewTiles({
             />
             <ReportLink href={reportHref}>
                 <StatCard
-                    label={t('ticket_tile_sla').replace('{goal}', String(sla.goal))}
+                    label={t('ticket_tile_sla').replace('{goal}', fmtN(sla.goal))}
                     icon={Gauge}
                     value={pct(sla.rate)}
                     tone={sla.rate == null ? undefined : SLA_TONE[slaLevel(sla.rate, sla.goal)]}

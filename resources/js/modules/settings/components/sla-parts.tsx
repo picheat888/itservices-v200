@@ -6,6 +6,7 @@ import { AlertCircle, CornerDownRight } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { TicketSlaClock } from '../api/settingsApi';
 import { SegmentedRadio } from './segmented-radio';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export const SLA_LABEL = 'mb-1.5 block text-sm leading-none font-medium';
 export const SLA_ERROR_BORDER = 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25';
@@ -189,6 +190,7 @@ export interface SlaError {
 /** Errors found on Save, each linking to its field; re-keyed per attempt so it shakes and takes focus again. */
 export function ErrorSummary({ errors, attempt }: { errors: SlaError[]; attempt: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -204,7 +206,7 @@ export function ErrorSummary({ errors, attempt }: { errors: SlaError[]; attempt:
         >
             <p className="flex items-center gap-2 font-semibold">
                 <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
-                {t('set_sla_errors_title').replace('{n}', String(errors.length))}
+                {t('set_sla_errors_title').replace('{n}', fmtN(errors.length))}
             </p>
             <ul className="mt-1 list-disc space-y-0.5 pl-10">
                 {errors.map((e) => (
@@ -241,10 +243,11 @@ const LINE = 'text-foreground hover:bg-background -mx-2 flex min-h-7 items-cente
 
 function FixBadge({ count }: { count: number }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     if (count === 0) return null;
     return (
         <span className="bg-destructive/10 dark:text-destructive w-max rounded-full px-2 text-xs font-semibold text-red-700">
-            {count > 1 ? t('set_sla_fix_n').replace('{n}', String(count)) : t('set_sla_fix')}
+            {count > 1 ? t('set_sla_fix_n').replace('{n}', fmtN(count)) : t('set_sla_fix')}
         </span>
     );
 }
