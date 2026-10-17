@@ -1,6 +1,7 @@
 // Resource members report cards: type segments, File Share space, the resource table, the picked resource's owner strip and review sheet (data: useAccessMembersBreakdown).
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { DisabledReason } from '@/shared/components/disabled-reason';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUiStore } from '@/stores/ui';
 import { Download, FileText, Folder, Globe, Loader2, type LucideIcon, Package, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useReportRights } from '../hooks/use-report-rights';
 import { useAccessMembersBreakdown, useAccessReviewSheet } from '../hooks/use-reports';
 import type { AccessMemberKind, AccessMembersBreakdown, AccessMembersResource, AccessType, ChartTone, TabularFilters } from '../types';
 import {
@@ -678,6 +680,7 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
 function ReviewSheetDialog({ sheet, open, onOpenChange }: { sheet: Sheet; open: boolean; onOpenChange: (open: boolean) => void }) {
     const t = useT();
     const download = useAccessReviewSheet();
+    const { canExport } = useReportRights();
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -698,10 +701,12 @@ function ReviewSheetDialog({ sheet, open, onOpenChange }: { sheet: Sheet; open: 
                         <Button variant="ghost" onClick={() => onOpenChange(false)}>
                             {t('rep_dialog_cancel')}
                         </Button>
-                        <Button onClick={() => download.mutate(`${sheet.type}:${sheet.id}`)} disabled={download.isPending}>
-                            {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                            {t('rep_ar_sheet_download')}
-                        </Button>
+                        <DisabledReason reason={canExport ? null : t('rep_no_export_right')} label={t('rep_ar_sheet_download')}>
+                            <Button onClick={() => download.mutate(`${sheet.type}:${sheet.id}`)} disabled={download.isPending || !canExport}>
+                                {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                {t('rep_ar_sheet_download')}
+                            </Button>
+                        </DisabledReason>
                     </span>
                 </DialogFooter>
             </DialogContent>

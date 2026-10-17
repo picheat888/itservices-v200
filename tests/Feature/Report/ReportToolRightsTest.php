@@ -102,6 +102,17 @@ class ReportToolRightsTest extends TestCase
         $this->actingAs($owner)->postJson("/api/reports/exports/{$export->id}/retry")->assertForbidden();
     }
 
+    public function test_my_exports_hide_files_of_a_report_the_owner_can_no_longer_open(): void
+    {
+        $owner = $this->userWith(['reports.module', 'reports.assets', 'reports.export']);
+        $export = $this->readyExport($owner);
+        RolePermission::where('permission', 'reports.assets')->update(['allowed' => false]);
+
+        $this->actingAs($owner)->getJson('/api/reports/exports')->assertOk()->assertJsonCount(0, 'data');
+        $this->actingAs($owner)->get("/api/reports/exports/{$export->id}/download")->assertNotFound();
+        $this->actingAs($owner)->deleteJson("/api/reports/exports/{$export->id}")->assertOk();
+    }
+
     public function test_a_queued_export_fails_when_the_owner_lost_the_export_right(): void
     {
         $owner = $this->userWith(['reports.module', 'reports.assets', 'reports.export']);

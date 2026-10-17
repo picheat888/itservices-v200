@@ -250,6 +250,14 @@ class AccessResourceMembersReportTest extends TestCase
         $this->actingAs($partial)->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertForbidden();
     }
 
+    public function test_the_review_sheet_pdf_needs_the_export_right(): void
+    {
+        $reader = $this->userWith(['reports.module', 'reports.access']);
+
+        $this->actingAs($reader)->getJson('/api/reports/access/resource-members/breakdown?resource='.$this->pick('fs1'))->assertOk();
+        $this->actingAs($reader)->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertForbidden();
+    }
+
     /** The data each render of a PDF view received, so the test can render it to HTML. */
     private function capturePdfView(string $view): \ArrayObject
     {

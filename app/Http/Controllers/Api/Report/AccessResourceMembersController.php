@@ -8,6 +8,7 @@ use App\Models\Settings\AppSetting;
 use App\Services\Report\Access\AccessResourceMembersReport;
 use App\Support\DateDisplay;
 use App\Support\DocumentName;
+use App\Support\ReportCatalogue;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -31,6 +32,8 @@ class AccessResourceMembersController extends Controller
 
     public function sheet(TabularReportRequest $request): StreamedResponse
     {
+        abort_unless((bool) $request->user()->hasPermission(ReportCatalogue::EXPORT), 403);
+
         /** @var AccessResourceMembersReport $report */
         $report = $request->report();
         $sheet = $report->sheet($request->filters()) ?? abort(404);

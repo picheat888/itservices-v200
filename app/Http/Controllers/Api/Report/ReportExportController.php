@@ -34,7 +34,8 @@ class ReportExportController extends Controller
         $this->mayReadExports($request);
         $row = $this->owned($request, $export);
         abort_unless(
-            $row->status === ReportExport::READY && $row->file_path !== null && Storage::disk('local')->exists($row->file_path),
+            ReportCatalogue::allows($request->user(), $row->report_key)
+            && $row->status === ReportExport::READY && $row->file_path !== null && Storage::disk('local')->exists($row->file_path),
             404
         );
 
