@@ -236,6 +236,7 @@ export const report: Dict = {
     rep_schedule: 'Schedule',
     rep_no_export_right: 'You cannot export files',
     rep_no_schedule_right: 'You cannot schedule reports',
+    rep_no_report_right: 'You can no longer open this report',
     rep_schedule_eyebrow: 'Email this report automatically',
     rep_schedule_frequency: 'How often',
     rep_schedule_freq_daily: 'Daily',
@@ -1949,4 +1950,7 @@ export const report: Dict = {
     rep_slv_value_excess: 'Excess',
     rep_slv_cat_title: 'By category',
     rep_slv_cat_empty: 'No items outside min/max',
+
+    // manual-sla-cards.tsx — labels moved from the component
+    report_en_gb: 'en-GB',
 };
