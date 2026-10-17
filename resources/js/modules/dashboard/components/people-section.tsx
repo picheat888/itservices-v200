@@ -139,7 +139,7 @@ function ActivityCard({
                                 </div>
                                 {item.actor && <div className="text-muted-foreground truncate text-xs">{item.actor}</div>}
                             </div>
-                            <span className="text-muted-foreground shrink-0 text-xs">{relativeTime(item.at, t, '')}</span>
+                            <span className="text-muted-foreground shrink-0 text-xs">{relativeTime(item.at, t, '', fmtN)}</span>
                         </li>
                     ))}
                 </ul>

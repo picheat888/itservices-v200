@@ -348,6 +348,7 @@ function ModuleChip({ label, count, selected, onSelect }: { label: string; count
 /** The Notification tab of Email & Notifications: every in-app alert, reworded or switched off per row. */
 export function NotificationSettingsPane() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const rights = useBellRights();
     const { data, isLoading } = useNotificationTemplates();
     const { update } = useNotificationTemplateMutations();
@@ -470,7 +471,9 @@ export function NotificationSettingsPane() {
             header: t('notification_col_last_sent'),
             className: 'w-[8%] whitespace-nowrap',
             render: (n) => (
-                <span className="text-muted-foreground text-xs tabular-nums">{relativeTime(n.last_sent_at, t, t('notification_never_sent'))}</span>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                    {relativeTime(n.last_sent_at, t, t('notification_never_sent'), fmtN)}
+                </span>
             ),
         },
         {

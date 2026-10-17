@@ -80,9 +80,16 @@ const relT = (k: string) =>
 
 test('relativeTime words come from the dictionary', () => {
     const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-    assert.equal(relativeTime(ago(10_000), relT, 'never'), 'just now');
-    assert.equal(relativeTime(ago(5 * 60_000), relT, 'never'), '5 min ago');
-    assert.equal(relativeTime(ago(60 * 60_000), relT, 'never'), '1 hr ago');
-    assert.equal(relativeTime(ago(3 * 86_400_000), relT, 'never'), '3 days ago');
-    assert.equal(relativeTime(null, relT, 'never'), 'never');
+    assert.equal(relativeTime(ago(10_000), relT, 'never', String), 'just now');
+    assert.equal(relativeTime(ago(5 * 60_000), relT, 'never', String), '5 min ago');
+    assert.equal(relativeTime(ago(60 * 60_000), relT, 'never', String), '1 hr ago');
+    assert.equal(relativeTime(ago(3 * 86_400_000), relT, 'never', String), '3 days ago');
+    assert.equal(relativeTime(null, relT, 'never', String), 'never');
+});
+
+test('relativeTime counts through the caller number format', () => {
+    const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+    const grouped = (n: number) => n.toLocaleString('en-US');
+    assert.equal(relativeTime(ago(1200 * 86_400_000), relT, 'never', grouped), '1,200 days ago');
+    assert.equal(relativeTime(ago(5 * 60_000), relT, 'never', grouped), '5 min ago');
 });
