@@ -150,7 +150,7 @@ class TicketRequestSlaReport extends TabularReport
 
     public function summary(Builder $query, array $filters): array
     {
-        $tally = self::tally((clone $query)->setEagerLoads([])->get());
+        $tally = TicketSlaFacts::tally(TicketSlaFacts::load(clone $query), takeFromCompleted: true);
         $goal = TicketSla::goalPercent();
 
         return [
@@ -194,24 +194,23 @@ class TicketRequestSlaReport extends TabularReport
      */
     public function breakdown(User $viewer, array $filters): array
     {
-        $tickets = $this->query($viewer, [...$filters, 'request_type' => null])->get();
-        $byType = $tickets->groupBy(fn (Ticket $t) => $t->serviceRequest?->type?->value ?? 'other');
+        $facts = TicketSlaFacts::load($this->query($viewer, [...$filters, 'request_type' => null]), withRequestType: true);
 
-        $types = $byType
-            ->map(fn (Collection $group, string $type) => ['type' => $type, ...self::tally($group)])
+        $types = collect($facts)
+            ->groupBy(fn (array $f) => $f['type'] ?? 'other')
+            ->map(fn (Collection $group, string $type) => ['type' => $type, ...TicketSlaFacts::tally($group->all(), takeFromCompleted: true)])
             ->sortBy([['total', 'desc'], ['type', 'asc']])
             ->values()
             ->all();
 
-        $open = $tickets
-            ->filter(fn (Ticket $t) => self::isOverNow($t))
-            ->map(fn (Ticket $t) => [
-                'id' => $t->id,
-                'ticket_no' => $t->ticket_no,
-                'request_type' => $t->serviceRequest?->type?->value,
-                'due_kind' => $t->status === TicketStatus::Open && $t->responded_at === null ? 'response' : 'resolve',
-                'due_at' => TicketMetrics::activeDue($t)?->format('Y-m-d H:i'),
-                'over_hours' => ($due = TicketMetrics::activeDue($t)) === null ? null : round($due->diffInMinutes(now(), true) / 60, 1),
+        $open = collect($facts)
+            ->filter(fn (array $f) => $f['over'])
+            ->map(fn (array $f) => [
+                'id' => $f['id'],
+                'ticket_no' => $f['no'],
+                'request_type' => $f['type'],
+                'due_kind' => $f['status'] === TicketStatus::Open->value && $f['taken'] === null ? 'response' : 'resolve',
+                ...array_slice(TicketSlaFacts::overLine($f), 2),
             ])
             ->sortByDesc('over_hours')
             ->values()
@@ -221,7 +220,7 @@ class TicketRequestSlaReport extends TabularReport
 
         return [
             'types' => $types,
-            'overall' => self::tally($tickets),
+            'overall' => TicketSlaFacts::tally($facts, takeFromCompleted: true),
             'empty_types' => array_values(array_diff(array_map(fn (RequestType $t) => $t->value, RequestType::cases()), $present)),
             'open' => $open,
             'rules' => self::slaRules(),
@@ -252,43 +251,6 @@ class TicketRequestSlaReport extends TabularReport
             ],
             'rows' => $rows,
         ]];
-    }
-
-    /**
-     * Counts and averages over a set of tickets — the one tally the summary tiles, the per-type
-     * lines and the file all read.
-     *
-     * @param  Collection<int, Ticket>  $tickets
-     * @return array{total: int, completed: int, canceled: int, open: int, take_met: int, take_total: int, close_met: int, close_total: int, take_avg_hours: ?float, fix_avg_hours: ?float, over_now: int, over_untaken: int, over_taken: int}
-     */
-    private static function tally(Collection $tickets): array
-    {
-        $take = $tickets->map(fn (Ticket $t) => self::takeState($t));
-        $close = $tickets->map(fn (Ticket $t) => self::closeState($t));
-        // Every time on the page is averaged over the completed cases, so the tile's parts add up and
-        // the per-type table's take time is the tile's.
-        $takeHours = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->responded_at !== null)
-            // Unrounded until the average, so a 20-minute take still reads 20 minutes (not 0.3 h = 18).
-            ->map(fn (Ticket $t) => self::once($t, 'takeHours', fn () => $t->created_at->diffInMinutes($t->responded_at, true) / 60));
-        $fixHours = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed)
-            ->map(fn (Ticket $t) => self::once($t, 'fixHours', fn () => TicketMetrics::resolveHours($t)))
-            ->filter(fn (?float $h) => $h !== null);
-
-        return [
-            'total' => $tickets->count(),
-            'completed' => $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed)->count(),
-            'canceled' => $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Canceled)->count(),
-            'open' => $tickets->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::live(), true))->count(),
-            'take_met' => $take->filter(fn (?string $s) => $s === 'met')->count(),
-            'take_total' => $take->filter(fn (?string $s) => $s === 'met' || $s === 'missed')->count(),
-            'close_met' => $close->filter(fn (?string $s) => $s === 'met')->count(),
-            'close_total' => $close->filter(fn (?string $s) => $s === 'met' || $s === 'missed')->count(),
-            'take_avg_hours' => $takeHours->isEmpty() ? null : round($takeHours->avg(), 2),
-            'fix_avg_hours' => $fixHours->isEmpty() ? null : round($fixHours->avg(), 1),
-            'over_now' => $tickets->filter(fn (Ticket $t) => self::isOverNow($t))->count(),
-            'over_untaken' => $take->filter(fn (?string $s) => $s === 'over')->count(),
-            'over_taken' => $close->filter(fn (?string $s) => $s === 'over')->count(),
-        ];
     }
 
     /**
@@ -328,12 +290,6 @@ class TicketRequestSlaReport extends TabularReport
             && ! ($ticket->status === TicketStatus::Open && $ticket->responded_at === null);
 
         return $resolveRunning && $ticket->sla_resolve_due_at !== null && $ticket->sla_resolve_due_at->lt(now()) ? 'over' : null;
-    }
-
-    /** Still open and already past an SLA — not taken in time, or taken but not closed in time. */
-    private static function isOverNow(Ticket $ticket): bool
-    {
-        return self::takeState($ticket) === 'over' || self::closeState($ticket) === 'over';
     }
 
     private static function percent(int $part, int $whole): ?int
