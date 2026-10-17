@@ -11,7 +11,7 @@ import { TabularReportView } from '../components/tabular-report-view';
 
 type Row = Record<string, unknown>;
 
-/** Drawn inside another cell (SKU and category under the name, unit beside the figures, Min/Max on the bar, the two label codes). */
+/** Drawn inside another cell (SKU and category under the name, Min/Max on the bar, the two label codes). */
 const INNER = ['sku', 'category', 'min_stock', 'max_stock', 'unit_cost_basis', 'value_kind'];
 
 const STATUSES: StockItemStatus[] = ['ok', 'low', 'out', 'over', 'dead'];
@@ -70,10 +70,7 @@ function LevelCell({ row }: { row: Row }) {
 function GapCell({ row }: { row: Row }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const fill = (key: string) =>
-        t(key)
-            .replace('{n}', stockCount(num(row.gap), lang))
-            .replace('{unit}', text(row.unit));
+    const fill = (key: string) => t(key).replace('{n}', stockCount(num(row.gap), lang));
     if (row.status === 'over') return <Figure main={fill('rep_slv_gap_over')} sub={t('rep_slv_gap_over_sub')} />;
     if (num(row.min_stock) <= 0) return <Figure main={<Dash />} sub={t('rep_slv_gap_no_min')} />;
     return (
@@ -89,7 +86,7 @@ function ReorderCell({ row }: { row: Row }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     if (row.status === 'over') return <Figure main={<span className="text-muted-foreground">{t('rep_slv_reorder_none')}</span>} sub={null} />;
-    return <Figure main={`${stockCount(num(row.reorder_qty), lang)} ${text(row.unit)}`} sub={t('rep_slv_reorder_sub')} />;
+    return <Figure main={stockCount(num(row.reorder_qty), lang)} sub={t('rep_slv_reorder_sub')} />;
 }
 
 /** The unit price and where it came from: last receipt, set cost, average cost or none. */
