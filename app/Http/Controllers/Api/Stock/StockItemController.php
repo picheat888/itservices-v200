@@ -145,6 +145,7 @@ class StockItemController extends Controller
 
         $byCategory = $items->groupBy(fn (StockItem $i) => $i->category?->name)->map(fn ($group, $name) => [
             'category' => $name ?: '—',
+            'category_th' => $group->first()->category?->name_th,
             'skus' => $group->count(),
             'units' => $group->sum('current_stock'),
         ])->sortByDesc('units')->values();
