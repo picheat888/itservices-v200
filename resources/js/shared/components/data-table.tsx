@@ -193,13 +193,17 @@ export function DataTable<T>({
 
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
     const hideClass = (c: Column<T>) => (c.hideBelow ? HIDE_BELOW[c.hideBelow] : undefined);
-    // Columns always shown: fixed widths plus room for each flexible one, so a narrow screen scrolls instead of squeezing it to 0
-    const shown = columns.filter((c) => !c.hideBelow);
-    const flexible = shown.filter((c) => !c.width);
-    const flexFloor =
-        !fillHeight && columns.some((c) => c.width) && flexible.length > 0
-            ? `calc(${[...shown.filter((c) => c.width).map((c) => c.width), ...flexible.map((c) => c.minWidth ?? FLEX_COLUMN_MIN)].join(' + ')})`
+    // Fixed widths plus room for each flexible column among the columns a screen shows, so a narrow screen scrolls instead of squeezing it to 0
+    const floorOf = (visible: Column<T>[]) => {
+        const flexible = visible.filter((c) => !c.width);
+        return !fillHeight && columns.some((c) => c.width) && flexible.length > 0
+            ? `calc(${[...visible.filter((c) => c.width).map((c) => c.width), ...flexible.map((c) => c.minWidth ?? FLEX_COLUMN_MIN)].join(' + ')})`
             : undefined;
+    };
+    // One floor per breakpoint: columns hidden below lg / xl come back there and need their width counted too
+    const flexFloor = floorOf(columns.filter((c) => !c.hideBelow));
+    const flexFloorLg = floorOf(columns.filter((c) => c.hideBelow !== 'xl'));
+    const flexFloorXl = floorOf(columns);
 
     // Keys pressed on a control inside the row (a menu, a switch) stay with that control.
     const onRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: T) => {
@@ -255,10 +259,14 @@ export function DataTable<T>({
                         fillHeight && 'h-full',
                         columns.some((c) => c.width) && 'table-fixed',
                         // A caller's own min-w-* (at any breakpoint) wins over the floor
-                        flexFloor && 'min-w-(--flex-floor)',
+                        flexFloor && 'min-w-(--flex-floor) lg:min-w-(--flex-floor-lg) xl:min-w-(--flex-floor-xl)',
                         tableClassName,
                     )}
-                    style={flexFloor ? ({ '--flex-floor': flexFloor } as React.CSSProperties) : undefined}
+                    style={
+                        flexFloor
+                            ? ({ '--flex-floor': flexFloor, '--flex-floor-lg': flexFloorLg ?? flexFloor, '--flex-floor-xl': flexFloorXl ?? flexFloor } as React.CSSProperties)
+                            : undefined
+                    }
                 >
                     {caption && <caption className="sr-only">{caption}</caption>}
                     {columns.some((c) => c.width) && (
@@ -283,10 +291,11 @@ export function DataTable<T>({
                             {columns.map((c) => (
                                 <th
                                     key={c.key}
+                                    title={typeof c.header === 'string' ? c.header : undefined}
                                     className={cn(
                                         // A header is one label; broken across lines it reads as
                                         // several and makes the header row taller than every data row.
-                                        'text-muted-foreground px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase',
+                                        'text-muted-foreground px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide overflow-hidden text-ellipsis whitespace-nowrap uppercase',
                                         alignClass(c.align),
                                         hideClass(c),
                                     )}
