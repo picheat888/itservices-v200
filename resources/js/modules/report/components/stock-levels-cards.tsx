@@ -4,15 +4,14 @@ import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { useStockLevelsBreakdown } from '../hooks/use-reports';
 import type { StockLevelsBreakdown, TabularFilters } from '../types';
-import { CardEmpty, CardTitle, InfoMark, rich, Swatch } from './chart-parts';
+import { CardEmpty, CardPager, CardTitle, InfoMark, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, KpiRowSkeleton } from './report-skeletons';
-import { stockCount, stockMoney } from './stock-parts';
+import { stockCount, stockMoney, TileFoot } from './stock-parts';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
@@ -30,8 +29,6 @@ const LEVELS: { key: Level; fill: string }[] = [
 ];
 
 const TRACK = 'dark:bg-muted block h-3 overflow-hidden rounded-full bg-slate-200';
-const PAGER_BUTTON =
-    'border-border bg-background hover:bg-accent focus-visible:ring-ring flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40';
 
 /* ─────────────────────────── tiles ─────────────────────────── */
 
@@ -40,7 +37,7 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
     const lang = useUiStore((s) => s.lang);
     const n = (v: number) => stockCount(v, lang);
     const unit = t('rep_slv_unit');
-    const foot = (template: string, bold: Record<string, string>) => <span className="block truncate">{rich(t(template), bold)}</span>;
+    const foot = (template: string, bold: Record<string, string>) => <TileFoot template={template} bold={bold} />;
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
@@ -65,11 +62,7 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
                 value={stockMoney(tiles.reorder.value, lang)}
                 footer={foot('rep_slv_k_reorder_foot', { n: n(tiles.reorder.items) })}
             />
-            <KpiTile
-                label={t('rep_slv_k_excess')}
-                value={stockMoney(tiles.excess_value, lang)}
-                footer={<span className="block truncate">{t('rep_slv_k_excess_foot')}</span>}
-            />
+            <KpiTile label={t('rep_slv_k_excess')} value={stockMoney(tiles.excess_value, lang)} footer={foot('rep_slv_k_excess_foot', {})} />
         </div>
     );
 }
@@ -105,35 +98,6 @@ export function StockLevelsLegend({ filters }: { filters: TabularFilters }) {
 }
 
 /* ─────────────────────────── by category ─────────────────────────── */
-
-/** "1–10 จาก 14 ‹ 1 / 2 ›" under the card; hidden at one page. */
-function CardPager({ page, total, onPage }: { page: number; total: number; onPage: (next: number) => void }) {
-    const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const pages = Math.ceil(total / PAGE_SIZE);
-    if (pages <= 1) return null;
-    const range = t('rep_slv_pager')
-        .replace('{from}', stockCount((page - 1) * PAGE_SIZE + 1, lang))
-        .replace('{to}', stockCount(Math.min(page * PAGE_SIZE, total), lang))
-        .replace('{total}', stockCount(total, lang));
-
-    return (
-        <div className="text-muted-foreground mt-auto flex items-center justify-end gap-2 px-4 pt-2 pb-3 text-xs">
-            <span aria-live="polite" className="tabular-nums">
-                {range}
-            </span>
-            <button type="button" aria-label={t('page_prev')} disabled={page <= 1} onClick={() => onPage(page - 1)} className={PAGER_BUTTON}>
-                <ChevronLeft aria-hidden className="h-4 w-4" />
-            </button>
-            <b className="text-foreground font-semibold tabular-nums">
-                {page} / {pages}
-            </b>
-            <button type="button" aria-label={t('page_next')} disabled={page >= pages} onClick={() => onPage(page + 1)} className={PAGER_BUTTON}>
-                <ChevronRight aria-hidden className="h-4 w-4" />
-            </button>
-        </div>
-    );
-}
 
 interface CategoryRow {
     key: string;
@@ -171,7 +135,7 @@ function CategoryCard({ categories }: { categories: StockLevelsBreakdown['catego
     const [page, setPage] = useState(1);
     const rows: CategoryRow[] = categories.map((c) => ({
         key: String(c.category_id ?? 'none'),
-        name: localPair(c.name, c.name_th, lang) ?? t('rep_slv_no_cat'),
+        name: localPair(c.name, c.name_th, lang) ?? t('rep_wo_no_category'),
         counts: { out: c.out, low: c.low, over: c.over },
         total: c.out + c.low + c.over,
     }));
@@ -200,7 +164,7 @@ function CategoryCard({ categories }: { categories: StockLevelsBreakdown['catego
                             <CategoryLine key={r.key} row={r} scale={scale} />
                         ))}
                     </ul>
-                    <CardPager page={current} total={rows.length} onPage={setPage} />
+                    <CardPager page={current} total={rows.length} pageSize={PAGE_SIZE} onPage={setPage} />
                 </>
             )}
         </Card>

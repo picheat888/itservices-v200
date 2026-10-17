@@ -6,14 +6,13 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { useStockValuationBreakdown } from '../hooks/use-reports';
 import type { StockValuationBreakdown, TabularFilters } from '../types';
-import { CardEmpty, CardTitle, fold, FoldToggle, rich } from './chart-parts';
+import { CardEmpty, CardPager, CardTitle, fold, FoldToggle } from './chart-parts';
 import { KpiTile } from './kpi-tile';
 import { CardHeadingSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
-import { stockCount, stockMoney } from './stock-parts';
+import { stockCount, stockMoney, TileFoot } from './stock-parts';
 import { summaryColumns } from './summary-strip';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
@@ -33,8 +32,6 @@ const TH = 'text-muted-foreground px-3 py-2 text-[11.5px] font-semibold tracking
 const TD = 'px-3 py-2.5 align-middle whitespace-nowrap';
 const NUM = 'text-right tabular-nums';
 const TOTAL_ROW = 'bg-muted/40 border-border border-t font-semibold';
-const PAGER_BUTTON =
-    'border-border bg-background hover:bg-accent focus-visible:ring-ring flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40';
 
 /* ─────────────────────────── tiles ─────────────────────────── */
 
@@ -44,7 +41,7 @@ function ValueTiles({ tiles, asOf }: { tiles: Tiles; asOf: string }) {
     const fmt = useDateFormat();
     const n = (v: number) => stockCount(v, lang);
     const deadShare = tiles.value > 0 ? Math.round((tiles.dead90.value / tiles.value) * 100) : 0;
-    const foot = (template: string, bold: Record<string, string>) => <span className="block truncate">{rich(t(template), bold)}</span>;
+    const foot = (template: string, bold: Record<string, string>) => <TileFoot template={template} bold={bold} />;
 
     return (
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(4))}>
@@ -83,35 +80,6 @@ interface ShareRow {
     items: number;
     qty: number;
     value: number;
-}
-
-/** "1–10 จาก 14 ‹ 1 / 2 ›" under a share card; hidden at one page. */
-function CardPager({ page, total, onPage }: { page: number; total: number; onPage: (next: number) => void }) {
-    const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const pages = Math.ceil(total / PAGE_SIZE);
-    if (pages <= 1) return null;
-    const range = t('rep_sva_pager')
-        .replace('{from}', stockCount((page - 1) * PAGE_SIZE + 1, lang))
-        .replace('{to}', stockCount(Math.min(page * PAGE_SIZE, total), lang))
-        .replace('{total}', stockCount(total, lang));
-
-    return (
-        <div className="text-muted-foreground mt-auto flex items-center justify-end gap-2 px-4 pt-2 pb-3 text-xs">
-            <span aria-live="polite" className="tabular-nums">
-                {range}
-            </span>
-            <button type="button" aria-label={t('page_prev')} disabled={page <= 1} onClick={() => onPage(page - 1)} className={PAGER_BUTTON}>
-                <ChevronLeft aria-hidden className="h-4 w-4" />
-            </button>
-            <b className="text-foreground font-semibold tabular-nums">
-                {page} / {pages}
-            </b>
-            <button type="button" aria-label={t('page_next')} disabled={page >= pages} onClick={() => onPage(page + 1)} className={PAGER_BUTTON}>
-                <ChevronRight aria-hidden className="h-4 w-4" />
-            </button>
-        </div>
-    );
 }
 
 /** A share of the card's total: brand bar and the percent beside it. */
@@ -211,7 +179,7 @@ function ShareCard({
                             </tfoot>
                         </table>
                     </div>
-                    <CardPager page={current} total={rows.length} onPage={setPage} />
+                    <CardPager page={current} total={rows.length} pageSize={PAGE_SIZE} onPage={setPage} />
                 </>
             )}
         </Card>
@@ -223,7 +191,7 @@ function ShareCards({ data }: { data: StockValuationBreakdown }) {
     const lang = useUiStore((s) => s.lang);
     const categories: ShareRow[] = data.categories.map((c) => ({
         key: String(c.category_id ?? 'none'),
-        name: localPair(c.name, c.name_th, lang) ?? t('rep_sva_no_cat'),
+        name: localPair(c.name, c.name_th, lang) ?? t('rep_wo_no_category'),
         items: c.items,
         qty: c.qty,
         value: c.value,
@@ -353,7 +321,7 @@ function DeadCard({ dead }: { dead: Dead }) {
                                             </span>
                                             <small className="text-muted-foreground block truncate text-xs">{d.sku}</small>
                                         </th>
-                                        <td className={TD}>{localPair(d.category, d.category_th, lang) ?? t('rep_sva_no_cat')}</td>
+                                        <td className={TD}>{localPair(d.category, d.category_th, lang) ?? t('rep_wo_no_category')}</td>
                                         <td className={cn(TD, NUM)}>
                                             {stockCount(d.qty, lang)} {d.unit ?? ''}
                                         </td>

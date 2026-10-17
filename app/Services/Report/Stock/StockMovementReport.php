@@ -18,6 +18,7 @@ use App\Support\DateDisplay;
 use App\Support\SearchTerms;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -148,13 +149,31 @@ class StockMovementReport extends TabularReport
             ReportSummary::make('qty_in', 'จำนวนเข้า', (int) $bare()->whereIn('type', StockMovement::INBOUND)->sum('qty'), 'green'),
             // Transfers move stock between warehouses without changing the total.
             ReportSummary::make('qty_out', 'จำนวนออก', (int) $bare()->whereNotIn('type', [...StockMovement::INBOUND, 'transfer'])->sum('qty'), 'amber'),
-            ReportSummary::make('receive_value', 'มูลค่ารับเข้า', round((float) $bare()->where('type', 'receive')->sum(DB::raw('qty * COALESCE(unit_cost, 0)')), 2), format: 'money'),
+            ReportSummary::make('receive_value', 'มูลค่ารับเข้า', round($this->receiveValue($bare), 2), format: 'money'),
         ];
+    }
+
+    /** Receipts at their own cost, cost-less ones at the average lot cost of their day, as the rows and tiles. */
+    private function receiveValue(Closure $bare): float
+    {
+        $costed = (float) $bare()->where('type', 'receive')->whereNotNull('unit_cost')->sum(DB::raw('qty * unit_cost'));
+        $costless = $bare()->where('type', 'receive')->whereNull('unit_cost')->toBase()
+            ->get(['stock_movements.stock_item_id', 'stock_movements.qty', 'stock_movements.moved_at']);
+        if ($costless->isEmpty()) {
+            return $costed;
+        }
+
+        $book = StockCostBook::forItems($costless->pluck('stock_item_id'));
+
+        return $costed + (float) $costless->sum(
+            fn (object $m) => (int) $m->qty * $book->averageAt((int) $m->stock_item_id, CarbonImmutable::parse($m->moved_at)),
+        );
     }
 
     /**
      * What the page draws above the rows: range + warehouse + category, never the type. Codes, numbers and stored
-     * names only. requests / people / departments need stock.view_request, counts stock.view_count (null otherwise).
+     * names only. people / departments need stock.view_request; requests (everyone's) also need stock.approve or
+     * stock.fulfill, as the /stock request list; counts need stock.view_count (null otherwise).
      *
      * @param  array<string, mixed>  $filters
      * @return array{tiles: array<string, array{qty: int, value: float, times: int}>, months: list<array<string, mixed>>, requests: ?array<string, mixed>, people: ?list<array<string, mixed>>, departments: ?list<array<string, mixed>>, counts: ?list<array<string, mixed>>}
@@ -162,16 +181,18 @@ class StockMovementReport extends TabularReport
     public function breakdown(?User $viewer, array $filters): array
     {
         $seesRequests = (bool) $viewer?->hasPermission('stock.view_request');
+        $seesAllRequests = $seesRequests && ($viewer->hasPermission('stock.approve') || $viewer->hasPermission('stock.fulfill'));
         $seesCounts = (bool) $viewer?->hasPermission('stock.view_count');
 
-        return $this->breakdowns[md5(serialize([$filters, $seesRequests, $seesCounts]))] ??= $this->buildBreakdown($filters, $seesRequests, $seesCounts);
+        return $this->breakdowns[md5(serialize([$filters, $seesRequests, $seesAllRequests, $seesCounts]))]
+            ??= $this->buildBreakdown($filters, $seesRequests, $seesAllRequests, $seesCounts);
     }
 
     /**
      * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    private function buildBreakdown(array $filters, bool $seesRequests, bool $seesCounts): array
+    private function buildBreakdown(array $filters, bool $seesRequests, bool $seesAllRequests, bool $seesCounts): array
     {
         [$from, $to] = array_map(fn (CarbonInterface $d) => CarbonImmutable::instance($d), $this->dayRange($filters));
         $firstMonth = $to->startOfMonth()->subMonthsNoOverflow(self::MONTHS - 1);
@@ -203,7 +224,7 @@ class StockMovementReport extends TabularReport
         return [
             'tiles' => self::tiles($movements->filter(fn (array $m) => $m['at']->betweenIncluded($from, $to))),
             'months' => self::months($movements, $firstMonth, $from, $to),
-            'requests' => $seesRequests ? $this->waitingRequests($filters) : null,
+            'requests' => $seesAllRequests ? $this->waitingRequests($filters) : null,
             'people' => $seesRequests ? self::people($requests) : null,
             'departments' => $seesRequests ? self::departments($requests) : null,
             'counts' => $seesCounts ? self::countRows($counts, $book) : null,
@@ -260,7 +281,7 @@ class StockMovementReport extends TabularReport
      * Requests waiting today, whatever the range: counts per status and the oldest first.
      *
      * @param  array<string, mixed>  $filters
-     * @return array{pending: int, approved: int, rows: list<array{reference: ?string, item_name: ?string, sku: ?string, qty: int, unit: ?string, requester: string, status: string, created_at: ?string}>}
+     * @return array{pending: int, approved: int, rows: list<array{reference: ?string, item_name: ?string, sku: ?string, qty: int, unit: ?string, requester: string, requester_th: ?string, status: string, created_at: ?string}>}
      */
     private function waitingRequests(array $filters): array
     {
@@ -270,7 +291,7 @@ class StockMovementReport extends TabularReport
         $perStatus = (clone $waiting)->toBase()->selectRaw('status, COUNT(*) AS total')->groupBy('status')->pluck('total', 'status');
 
         $rows = (clone $waiting)
-            ->with(['item:id,sku,name,unit_id', 'item.unit:id,name', 'user:id,name'])
+            ->with(['item:id,sku,name,unit_id', 'item.unit:id,name', 'user:id,name,employee_id', 'user.employee:id,first_name_th,last_name_th'])
             ->orderBy('created_at')->orderBy('id')
             ->limit(self::REQUEST_ROWS)
             ->get()
@@ -281,6 +302,7 @@ class StockMovementReport extends TabularReport
                 'qty' => (int) $r->qty,
                 'unit' => $r->item?->unit?->name,
                 'requester' => (string) ($r->user?->name ?? $r->requester_name),
+                'requester_th' => $r->user?->employee?->name_th,
                 'status' => (string) $r->status,
                 'created_at' => $r->created_at?->toIso8601String(),
             ]);
@@ -299,7 +321,7 @@ class StockMovementReport extends TabularReport
         return StockRequest::query()
             ->whereBetween('fulfilled_at', [$from, $to])
             ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)))
-            ->with(['user:id,name,employee_id', 'user.employee:id,department_id', 'user.employee.department:id,name,name_th'])
+            ->with(['user:id,name,employee_id', 'user.employee:id,department_id,first_name_th,last_name_th', 'user.employee.department:id,name,name_th'])
             ->get(['id', 'stock_item_id', 'user_id', 'requester_name', 'qty', 'fulfilled_at']);
     }
 
@@ -307,7 +329,7 @@ class StockMovementReport extends TabularReport
      * One row per requester; the page sorts by the chosen metric.
      *
      * @param  Collection<int, array{request: StockRequest, qty: int, value: float}>  $requests
-     * @return list<array{user_id: ?int, name: string, department_id: ?int, department: ?string, department_th: ?string, qty: int, value: float, times: int}>
+     * @return list<array{user_id: ?int, name: string, name_th: ?string, department_id: ?int, department: ?string, department_th: ?string, qty: int, value: float, times: int}>
      */
     private static function people(Collection $requests): array
     {
@@ -320,6 +342,7 @@ class StockMovementReport extends TabularReport
                 return [
                     'user_id' => $request->user_id,
                     'name' => (string) ($request->user?->name ?? $request->requester_name),
+                    'name_th' => $request->user?->employee?->name_th,
                     'department_id' => $department?->id,
                     'department' => $department?->name,
                     'department_th' => $department?->name_th,
@@ -440,7 +463,7 @@ class StockMovementReport extends TabularReport
                 'title' => 'ผู้ขอเบิกสูงสุด',
                 'headings' => ['ผู้ขอเบิก', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
                 'rows' => array_map(fn (array $p) => [
-                    $p['name'], $p['department_id'] === null ? self::NO_DEPARTMENT_TH : ($p['department_th'] ?: $p['department']),
+                    $p['name_th'] ?: $p['name'], $p['department_id'] === null ? self::NO_DEPARTMENT_TH : ($p['department_th'] ?: $p['department']),
                     $p['value'], $p['qty'], $p['times'],
                 ], $byValue($data['people'])),
             ];

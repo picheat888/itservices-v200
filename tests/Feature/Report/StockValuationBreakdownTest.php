@@ -329,10 +329,16 @@ class StockValuationBreakdownTest extends TestCase
         $this->assertSame(['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'รายการที่ไม่เคลื่อนไหวเกิน 90 วัน'], $today->keys()->all());
         $this->assertSame(['อะไหล่', 'สาย'], array_column($today['มูลค่าตามหมวด']['rows'], 0));
         $this->assertSame(['Main', 'Branch'], array_column($today['มูลค่าตามคลัง']['rows'], 0));
+        $this->assertSame([87.6, 12.4], array_column($today['มูลค่าตามหมวด']['rows'], 4));
         $this->assertSame(['HDD 2TB', 'LAN cable'], array_column($today['รายการที่ไม่เคลื่อนไหวเกิน 90 วัน']['rows'], 1));
 
         $past = array_column((new StockValuationReport)->exportSections($user, $report->resolveFilters(['as_of' => '2026-09-15'])), 'title');
         $this->assertSame(['มูลค่าตามหมวด', 'รายการที่ไม่เคลื่อนไหวเกิน 90 วัน'], $past);
+
+        // HDD off the shelves: the warehouse share is of the warehouses' 1,050, not the 1,210 in the tile.
+        StockBalance::query()->where('stock_item_id', $this->s['hdd']->id)->delete();
+        $shelved = collect((new StockValuationReport)->exportSections($user, $report->resolveFilters([])))->keyBy('title');
+        $this->assertSame([64.3, 35.7], array_column($shelved['มูลค่าตามคลัง']['rows'], 4));
     }
 
     public function test_xlsx_export_carries_the_section_sheets_and_the_last_move_column(): void

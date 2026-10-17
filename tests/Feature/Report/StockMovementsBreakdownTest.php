@@ -34,7 +34,7 @@ class StockMovementsBreakdownTest extends TestCase
 {
     use ExportsReports, RefreshDatabase;
 
-    private const ALL = ['stock.view_events', 'stock.view_request', 'stock.view_count'];
+    private const ALL = ['stock.view_events', 'stock.view_request', 'stock.approve', 'stock.view_count'];
 
     private int $docSeq = 0;
 
@@ -143,10 +143,10 @@ class StockMovementsBreakdownTest extends TestCase
 
         $it = Department::create(['name' => 'Information Technology', 'name_th' => 'ไอที', 'tag' => 'IT']);
         $hr = Department::create(['name' => 'Human Resources', 'name_th' => 'บุคคล', 'tag' => 'HR']);
-        $employee = fn (string $code, Department $d) => Employee::create([
-            'code' => $code, 'first_name' => $code, 'last_name' => 'Test', 'department_id' => $d->id, 'status' => 'active',
+        $employee = fn (string $code, Department $d, array $thai = []) => Employee::create([
+            'code' => $code, 'first_name' => $code, 'last_name' => 'Test', 'department_id' => $d->id, 'status' => 'active', ...$thai,
         ]);
-        $somchai = $this->userWith([], ['name' => 'Somchai', 'employee_id' => $employee('EMP-1', $it)->id]);
+        $somchai = $this->userWith([], ['name' => 'Somchai', 'employee_id' => $employee('EMP-1', $it, ['first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี'])->id]);
         $suda = $this->userWith([], ['name' => 'Suda', 'employee_id' => $employee('EMP-2', $hr)->id]);
         $nobody = $this->userWith([], ['name' => 'Nobody']);
 
@@ -251,10 +251,11 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertSame(['pending', 'approved', 'pending'], array_column($requests['rows'], 'status'));
         $this->assertSame(['LAN cable', 'SSD 1TB', 'SSD 1TB'], array_column($requests['rows'], 'item_name'));
         $first = $requests['rows'][0];
-        $this->assertSame(['reference', 'item_name', 'sku', 'qty', 'unit', 'requester', 'status', 'created_at'], array_keys($first));
+        $this->assertSame(['reference', 'item_name', 'sku', 'qty', 'unit', 'requester', 'requester_th', 'status', 'created_at'], array_keys($first));
         $this->assertSame(2, $first['qty']);
         $this->assertSame('pcs', $first['unit']);
         $this->assertSame('Suda', $first['requester']);
+        $this->assertSame([null, null, 'สมชาย ใจดี'], array_column($requests['rows'], 'requester_th'));
         $this->assertTrue(CarbonImmutable::parse($first['created_at'])->equalTo(CarbonImmutable::parse('2026-09-01 09:00:00')));
 
         $parts = $this->breakdown('category_id='.$this->s['parts']->id)['requests'];
@@ -274,6 +275,9 @@ class StockMovementsBreakdownTest extends TestCase
         // 2 @100 on 10 Sep + 1 @150 on 22 Sep
         $this->assertEquals(['qty' => 3, 'value' => 350, 'times' => 2], collect($people['Somchai'])->only('qty', 'value', 'times')->all());
         $this->assertSame($this->s['somchai']->id, $people['Somchai']['user_id']);
+        $this->assertSame('สมชาย ใจดี', $people['Somchai']['name_th']);
+        $this->assertNull($people['Suda']['name_th']);
+        $this->assertNull($people['Nobody']['name_th']);
         $this->assertSame('Information Technology', $people['Somchai']['department']);
         $this->assertEquals(['qty' => 3, 'value' => 450, 'times' => 1], collect($people['Suda'])->only('qty', 'value', 'times')->all());
         $this->assertEquals(['qty' => 4, 'value' => 120, 'times' => 1], collect($people['Nobody'])->only('qty', 'value', 'times')->all());
@@ -332,10 +336,18 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertNull($eventsOnly['departments']);
         $this->assertNull($eventsOnly['counts']);
 
-        $requestsToo = $this->breakdown('', ['stock.view_events', 'stock.view_request']);
-        $this->assertNotNull($requestsToo['requests']);
-        $this->assertNotNull($requestsToo['people']);
-        $this->assertNull($requestsToo['counts']);
+        // A requester sees the ranks but not everyone's waiting requests, as on /stock.
+        $requester = $this->breakdown('', ['stock.view_events', 'stock.view_request', 'stock.request']);
+        $this->assertNull($requester['requests']);
+        $this->assertNotNull($requester['people']);
+        $this->assertNotNull($requester['departments']);
+        $this->assertNull($requester['counts']);
+
+        foreach (['stock.approve', 'stock.fulfill'] as $permission) {
+            $handler = $this->breakdown('', ['stock.view_events', 'stock.view_request', $permission]);
+            $this->assertNotNull($handler['requests'], $permission);
+            $this->assertNotNull($handler['people'], $permission);
+        }
 
         $countsToo = $this->breakdown('', ['stock.view_events', 'stock.view_count']);
         $this->assertNull($countsToo['requests']);
@@ -388,6 +400,23 @@ class StockMovementsBreakdownTest extends TestCase
         $this->assertNull($rows['issue@2026-09-10']['unit_cost']);
     }
 
+    public function test_a_receipt_without_a_cost_has_one_value_in_the_summary_rows_and_tiles(): void
+    {
+        $this->seedStock();
+        // No unit_cost: valued at the average lot cost of 21 Sep (150).
+        $this->movement($this->s['ssd'], 'receive', 4, '2026-09-21 10:00:00', ['to_label' => 'Main']);
+        $user = $this->userWith(self::ALL);
+
+        $body = $this->actingAs($user)->getJson('/api/reports/tabular/stock.movements/rows?type=receive')->assertOk()->json();
+        $summary = collect($body['summary'])->keyBy('key')['receive_value']['value'];
+        $rows = array_sum(array_column($body['data'], 'line_value'));
+        $tiles = $this->breakdown()['tiles']['receive']['value'];
+
+        $this->assertEqualsWithDelta(3600.0, $summary, 0.001);
+        $this->assertEqualsWithDelta($summary, $rows, 0.001);
+        $this->assertEqualsWithDelta($summary, $tiles, 0.001);
+    }
+
     public function test_the_cost_book_falls_back_from_lots_to_the_oldest_lot_to_the_item_cost(): void
     {
         $this->seedStock();
@@ -433,7 +462,7 @@ class StockMovementsBreakdownTest extends TestCase
 
         $sections = collect((new StockMovementReport)->exportSections($this->userWith(self::ALL), $report->resolveFilters(['from' => '2026-08-01', 'to' => '2026-09-30'])))->keyBy('title');
         $this->assertCount(2, $sections['รับเข้าและเบิกออกรายเดือน']['rows']);
-        $this->assertSame(['Suda', 'Somchai', 'Nobody'], array_column($sections['ผู้ขอเบิกสูงสุด']['rows'], 0));
+        $this->assertSame(['Suda', 'สมชาย ใจดี', 'Nobody'], array_column($sections['ผู้ขอเบิกสูงสุด']['rows'], 0));
         $this->assertSame('บุคคล', $sections['ผู้ขอเบิกสูงสุด']['rows'][0][1]);
         $this->assertSame('ไม่มีแผนก', $sections['แผนกที่เบิกสูงสุด']['rows'][2][0]);
         $this->assertSame(['SC-2026-001', 'SC-2026-002'], array_column($sections['ส่วนต่างจากการนับสต็อก']['rows'], 0));
