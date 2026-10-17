@@ -55,7 +55,7 @@ class ContractController extends Controller
 
         SearchTerms::apply($query, $request->query('search'), [
             'code', 'name', 'details',
-            SearchTerms::related('vendor', ['name']),
+            SearchTerms::related('vendor', ['name', 'name_th']),
         ]);
 
         if ($request->filled('type')) {
@@ -124,6 +124,7 @@ class ContractController extends Controller
             ->groupBy(fn ($c) => $c->vendor?->name)
             ->map(fn ($group, $vendor) => [
                 'vendor' => $vendor,
+                'vendor_th' => $group->first()->vendor?->name_th,
                 'amount' => round($group->sum(fn ($c) => $c->annualValue())),
             ])
             ->sortByDesc('amount')
@@ -140,6 +141,7 @@ class ContractController extends Controller
                 'code' => $c->code,
                 'name' => $c->name,
                 'vendor' => $c->vendor?->name,
+                'vendor_th' => $c->vendor?->name_th,
                 'end' => $c->end_date->toDateString(),
                 'days' => $c->daysRemaining(),
                 // Mirror the Action-queue logic: amber dot = inside the contract's
@@ -156,6 +158,7 @@ class ContractController extends Controller
                 'code' => $c->code,
                 'name' => $c->name,
                 'vendor' => $c->vendor?->name,
+                'vendor_th' => $c->vendor?->name_th,
                 'days' => $c->daysRemaining(),
             ])
             ->values();

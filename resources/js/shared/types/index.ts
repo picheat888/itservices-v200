@@ -185,6 +185,7 @@ export interface ContractLinkedAsset {
     asset_code: string;
     name: string;
     type: string | null;
+    type_th?: string | null;
     serial: string | null;
     status: string | null;
     /** Went back to the lessor rather than written off for a reason. */
@@ -205,6 +206,7 @@ export interface Contract {
     id: number;
     code: string;
     vendor: string;
+    vendor_th?: string | null;
     vendor_id: number | null;
     name: string;
     details: string | null;
@@ -251,9 +253,18 @@ export interface ContractSummary {
     overdue: number;
     cancelled: number;
     annual_value: string;
-    top_vendors: { vendor: string; amount: number }[];
-    timeline: { id: number; code: string; name: string; vendor: string; end: string; days: number; in_reminder: boolean }[];
-    action_queue: { id: number; code: string; name: string; vendor: string; days: number }[];
+    top_vendors: { vendor: string; vendor_th?: string | null; amount: number }[];
+    timeline: {
+        id: number;
+        code: string;
+        name: string;
+        vendor: string;
+        vendor_th?: string | null;
+        end: string;
+        days: number;
+        in_reminder: boolean;
+    }[];
+    action_queue: { id: number; code: string; name: string; vendor: string; vendor_th?: string | null; days: number }[];
 }
 
 // Assets Management module

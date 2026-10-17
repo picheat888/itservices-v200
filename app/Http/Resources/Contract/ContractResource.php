@@ -25,6 +25,7 @@ class ContractResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'vendor' => $this->vendor?->name,
+            'vendor_th' => $this->vendor?->name_th,
             'vendor_id' => $this->vendor_id,
             'name' => $this->name,
             'details' => $this->details,
@@ -65,6 +66,7 @@ class ContractResource extends JsonResource
                 'asset_code' => $a->asset_code,
                 'name' => trim(($a->brand?->name ?? '').' '.($a->model?->name ?? '')) ?: $a->category?->name,
                 'type' => $a->type,
+                'type_th' => $a->category?->name_th,
                 'serial' => $a->serial,
                 'status' => $a->status?->value,
                 // Went back to the lessor (a kind of write-off) rather than written off for a reason.

@@ -5,11 +5,13 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { useUiStore } from '@/stores/ui';
 import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, RotateCcw, SquarePen, Trash2, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
@@ -63,6 +65,7 @@ export function ContractDetailDrawer({
 }) {
     const t = useT();
     const fmt = useDateFormat();
+    const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const { expire, reactivate, remove } = useContractMutations();
     const [tab, setTab] = useState<TabId>('overview');
@@ -199,7 +202,7 @@ export function ContractDetailDrawer({
                         eyebrow={t('contract_eyebrow')}
                         title={c.name || c.details || ''}
                         code={c.code}
-                        srDescription={c.vendor}
+                        srDescription={localPair(c.vendor, c.vendor_th, lang) ?? undefined}
                         titleSuffix={daysBadge}
                         headerRight={
                             <div className="flex flex-col items-end gap-1">
@@ -232,7 +235,7 @@ export function ContractDetailDrawer({
                                             <KV label={t('contract_type')} value={t(`contract_type_${c.type}`)} />
                                         </div>
                                         <KV label={t('contract_code')} value={c.code} />
-                                        <KV label={t('contract_vendor')} value={c.vendor} />
+                                        <KV label={t('contract_vendor')} value={localPair(c.vendor, c.vendor_th, lang)} />
                                         <KV label={t('contract_name')} value={c.name} />
                                         <div className="sm:col-span-3">
                                             <KV label={t('contract_details')} value={c.details || '—'} />
