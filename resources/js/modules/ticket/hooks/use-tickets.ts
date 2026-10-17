@@ -1,7 +1,9 @@
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
+import { normalizeSearch, useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import type { TicketPriority, TicketWorkClass } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { ticketApi, type CreateTicketPayload, type TicketListParams, type UpdateTicketPayload } from '../api/ticketApi';
 
 const SUMMARY = ['tickets-summary'] as const;
@@ -47,6 +49,23 @@ export const useTicketRequesterAssets = (ticketId?: number | null) =>
         queryFn: () => ticketApi.requesterAssets(ticketId!),
         enabled: !!ticketId,
     });
+
+/** Any asset by typing, for the Take Case picker (tickets.resolve); asks the server only while the list is open. */
+export function useTicketAssetPicker(enabled: boolean) {
+    const [term, setTerm] = useState('');
+    const [open, setOpen] = useState(false);
+    const search = useDebouncedSearch(term);
+    const query = useQuery({
+        queryKey: ['tickets-asset-options', search],
+        queryFn: () => ticketApi.assetOptions(search),
+        enabled: enabled && open,
+        placeholderData: (prev) => prev,
+        staleTime: 30_000,
+    });
+    const pending = normalizeSearch(term) !== search || query.isFetching;
+    const pickerProps = useMemo(() => ({ onSearch: setTerm, onOpenChange: setOpen, loading: pending }), [pending]);
+    return { assets: query.data ?? [], pickerProps };
+}
 
 // The Tickets badge ("needs my attention") now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.

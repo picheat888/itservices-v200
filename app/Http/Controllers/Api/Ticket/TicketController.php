@@ -67,6 +67,31 @@ class TicketController extends Controller
     }
 
     /**
+     * Any asset, found by typing, for the Take Case picker. Same gate as requesterAssets
+     * (tickets.resolve, not assets.view) and the same search as the asset list; 20 at a time.
+     */
+    public function assetOptions(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
+
+        $query = Asset::query()->with('model')->latest('id');
+        SearchTerms::apply($query, $request->query('search'), [
+            'asset_code', 'tag', 'serial',
+            SearchTerms::related('model', ['name']),
+            'owner',
+            SearchTerms::related('ownerEmployee', ['code', ...SearchTerms::personName()]),
+        ]);
+
+        $assets = $query->limit(20)->get()->map(fn (Asset $a) => [
+            'id' => $a->id,
+            'asset_code' => $a->asset_code,
+            'model' => $a->model?->name,
+        ]);
+
+        return response()->json(['data' => $assets]);
+    }
+
+    /**
      * Ticket categories the user's Level keys grant (tickets.level_*). Staff-side
      * visibility, taking, target lists and alerts are all scoped to these — strict:
      * an empty list means no cases at all.

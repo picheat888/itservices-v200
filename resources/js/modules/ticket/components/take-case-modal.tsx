@@ -1,5 +1,4 @@
 import { useT } from '@/lang';
-import { useAssets } from '@/modules/asset';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -14,7 +13,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { Loader2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useTicketMutations, useTicketRequesterAssets } from '../hooks/use-tickets';
+import { useTicketAssetPicker, useTicketMutations, useTicketRequesterAssets } from '../hooks/use-tickets';
 import { TICKET_PRIORITY_META } from './ticket-meta';
 
 const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
@@ -54,7 +53,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     const view = ticket ?? shown;
 
     const isAssetBacked = view != null && ASSET_BACKED.includes(view.category);
-    const { data: assetData } = useAssets({ page: 1, per_page: 50, search: '' });
+    const { assets: foundAssets, pickerProps: assetPickerProps } = useTicketAssetPicker(isAssetBacked);
     // The requester's own devices — offered as one-click chips, and merged to the
     // top of the search select so a chip-picked asset always renders its label.
     const { data: ownAssets } = useTicketRequesterAssets(isAssetBacked ? view?.id : null);
@@ -66,23 +65,30 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
             search: `${a.asset_code} ${a.model ?? ''}`,
         }));
         const ownIds = new Set(own.map((o) => o.value));
-        const rest = (assetData?.data ?? [])
+        const rest = foundAssets
             .map((a) => ({
                 value: String(a.id),
                 label: a.asset_code,
                 hint: a.model ?? undefined,
-                search: `${a.asset_code} ${a.model}`,
+                search: `${a.asset_code} ${a.model ?? ''}`,
             }))
             .filter((o) => !ownIds.has(o.value));
 
         return [...own, ...rest];
-    }, [assetData, ownAssets]);
+    }, [foundAssets, ownAssets]);
+    // The chosen asset keeps its label when a later search no longer lists it
+    const [pickedAsset, setPickedAsset] = useState<(typeof assetOptions)[number] | null>(null);
+    const pickAsset = (value: string) => {
+        setAssetId(value);
+        setPickedAsset(assetOptions.find((o) => o.value === value) ?? null);
+    };
 
     useEffect(() => {
         if (ticket) {
             setPriority('medium');
             setNote('');
             setAssetId('');
+            setPickedAsset(null);
             setFormError('');
         }
     }, [ticket]);
@@ -191,8 +197,10 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                                 )}
                                 <SearchableSelect
                                     value={assetId}
-                                    onChange={setAssetId}
+                                    onChange={pickAsset}
                                     options={assetOptions}
+                                    selectedOption={pickedAsset ?? undefined}
+                                    {...assetPickerProps}
                                     placeholder={t('ticket_no_related_asset')}
                                     clearable
                                 />
