@@ -6,6 +6,7 @@ use App\Enums\Ticket\TicketStatus;
 use App\Models\Ticket\Ticket;
 use App\Services\Report\TicketMetrics;
 use Illuminate\Support\Collection;
+use WeakMap;
 
 /**
  * The per-ticket SLA verdicts and the tally over a set of tickets that the SLA summary reports
@@ -33,13 +34,13 @@ trait TicketSlaVerdicts
         $close = $tickets->map(fn (Ticket $t) => self::closeState($t));
         $takeHours = $tickets->filter(fn (Ticket $t) => in_array(self::takeState($t), ['met', 'missed'], true))
             // Unrounded until the average, so a 20-minute take still reads 20 minutes (not 0.3 h = 18).
-            ->map(fn (Ticket $t) => $t->created_at->diffInMinutes($t->responded_at, true) / 60);
+            ->map(fn (Ticket $t) => self::once($t, 'takeHours', fn () => $t->created_at->diffInMinutes($t->responded_at, true) / 60));
         $fixHours = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed)
-            ->map(fn (Ticket $t) => TicketMetrics::resolveHours($t))
+            ->map(fn (Ticket $t) => self::once($t, 'fixHours', fn () => TicketMetrics::resolveHours($t)))
             ->filter(fn (?float $h) => $h !== null);
         // From taking the case to closing it, over the completed cases taken.
         $workHours = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->responded_at !== null && $t->resolved_at !== null)
-            ->map(fn (Ticket $t) => $t->responded_at->diffInMinutes($t->resolved_at, true) / 60);
+            ->map(fn (Ticket $t) => self::once($t, 'workHours', fn () => $t->responded_at->diffInMinutes($t->resolved_at, true) / 60));
 
         return [
             'total' => $tickets->count(),
@@ -60,7 +61,7 @@ trait TicketSlaVerdicts
     }
 
     /** 'met' | 'missed' once taken; 'over' while untaken past its response deadline; else null. */
-    private static function takeState(Ticket $ticket): ?string
+    private static function computeTake(Ticket $ticket): ?string
     {
         $due = $ticket->sla_response_due_at;
         if ($due === null) {
@@ -74,7 +75,7 @@ trait TicketSlaVerdicts
     }
 
     /** 'met' | 'missed' for a completed case; 'over' for a taken live case past its resolve deadline; else null. */
-    private static function closeState(Ticket $ticket): ?string
+    private static function computeClose(Ticket $ticket): ?string
     {
         if ($ticket->status === TicketStatus::Completed) {
             return match (TicketMetrics::slaState($ticket, now())) {
@@ -99,5 +100,31 @@ trait TicketSlaVerdicts
     private static function percent(int $part, int $whole): ?int
     {
         return $whole === 0 ? null : (int) round($part / $whole * 100);
+    }
+
+    /** @var WeakMap<Ticket, array<string, mixed>>|null */
+    private static ?WeakMap $memo = null;
+
+    // One answer per ticket per request: the tiles, the groups and the late list all ask the same question of it
+    private static function once(Ticket $ticket, string $name, callable $compute): mixed
+    {
+        self::$memo ??= new WeakMap;
+        $slot = self::$memo[$ticket] ?? [];
+        if (! array_key_exists($name, $slot)) {
+            $slot[$name] = $compute();
+            self::$memo[$ticket] = $slot;
+        }
+
+        return $slot[$name];
+    }
+
+    private static function takeState(Ticket $ticket): ?string
+    {
+        return self::once($ticket, 'take', fn () => self::computeTake($ticket));
+    }
+
+    private static function closeState(Ticket $ticket): ?string
+    {
+        return self::once($ticket, 'close', fn () => self::computeClose($ticket));
     }
 }
