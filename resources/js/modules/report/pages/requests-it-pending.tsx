@@ -1,6 +1,7 @@
 // "คำขอที่รอ IT ส่งมอบ" report page (/reports/requests-it-pending): shared tabular body + ItPendingCards + its own list cells.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { REQUEST_ONBOARDING_BADGE, REQUEST_ONBOARDING_ROW } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -34,8 +35,8 @@ function RequesterCell({ row }: { row: Row }) {
     const lang = useUiStore((s) => s.lang);
     const name = str(row.requester);
     const department = row.department as { name?: string; name_th?: string | null } | null;
-    const sub = [str(row.requester_code), department ? (lang === 'th' && department.name_th) || department.name || null : null].filter(
-        (s): s is string => Boolean(s),
+    const sub = [str(row.requester_code), department ? localPair(department.name, department.name_th, lang) || null : null].filter((s): s is string =>
+        Boolean(s),
     );
     return (
         <div className="min-w-0">

@@ -3,6 +3,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
@@ -33,7 +34,7 @@ function shortMoment(value: string, lang: string): string {
 function noteText(t: (key: string) => string, lang: string, note: NonNullable<SummaryItem['note']>): string {
     // Words, then named numbers, so a {n} among them is not read as the duration below.
     let text = Object.entries(note.texts ?? {}).reduce(
-        (s, [name, value]) => s.replaceAll(`{${name}}`, typeof value === 'string' ? value : (lang === 'th' && value.name_th) || value.name),
+        (s, [name, value]) => s.replaceAll(`{${name}}`, typeof value === 'string' ? value : localName(value, lang)),
         t(note.label_key),
     );
     text = Object.entries(note.values ?? {}).reduce((s, [name, value]) => s.replaceAll(`{${name}}`, value.toLocaleString()), text);

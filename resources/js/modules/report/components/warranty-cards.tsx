@@ -1,6 +1,7 @@
 // Warranty report cards: soon / expired segments, by month, time left, by category and by vendor (data: useAssetWarrantyBreakdown).
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
+import { localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -420,7 +421,7 @@ function CategoryCard({ data, patch }: { data: AssetWarrantyBreakdown; patch: Pa
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { categories, category_totals: totals, within } = data;
-    const label = (c: Category) => (c.category_id === null ? t('rep_wty_no_category') : (lang === 'th' && c.name_th) || c.name || '');
+    const label = (c: Category) => (c.category_id === null ? t('rep_wty_no_category') : localPair(c.name, c.name_th, lang) || '');
     // "และอีก N เครื่อง" narrows the list to that category's assets due in the window.
     const showList = (next: TabularFilters) => {
         patch({ ...next, state: 'soon' });
@@ -565,7 +566,7 @@ function VendorCard({ data }: { data: AssetWarrantyBreakdown }) {
                         <tbody>
                             {vendors.map((v) => {
                                 const todo = vendorTodo(t, lang, within, v);
-                                const name = v.vendor_id === null ? t('rep_wty_no_vendor') : (lang === 'th' && v.name_th) || v.name || '';
+                                const name = v.vendor_id === null ? t('rep_wty_no_vendor') : localPair(v.name, v.name_th, lang) || '';
                                 // Assets with no vendor sit apart, under a dashed rule.
                                 const apart = v.vendor_id === null && vendors.length > 1;
                                 return (

@@ -11,6 +11,7 @@
 import { useT } from '@/lang';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
+import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { DateRangeInput } from '@/shared/ui/date-range-input';
@@ -130,7 +131,7 @@ export function TicketReportFilterBar({
                         onChange={(v) => onChange({ department_id: v === ALL ? null : Number(v) })}
                         options={withAll(
                             (options?.departments ?? []).map((d) => {
-                                const label = (lang === 'th' && d.name_th) || d.name;
+                                const label = localName(d, lang);
                                 // Departments store mixed TH/EN names — search both.
                                 return { value: String(d.id), label, search: `${d.name} ${d.name_th ?? ''}` };
                             }),

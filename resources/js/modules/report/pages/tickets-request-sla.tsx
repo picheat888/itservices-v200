@@ -9,6 +9,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { useUiStore } from '@/stores/ui';
 import { oneDecimal, RequestSlaCards } from '../components/request-sla-cards';
 import { TabularReportView } from '../components/tabular-report-view';
@@ -34,7 +35,7 @@ type Label = { name?: string; name_th?: string | null } | null;
 /** The person behind the request, with their employee code and department under the name. */
 function RequesterCell({ row }: { row: Record<string, unknown> }) {
     const lang = useUiStore((s) => s.lang);
-    const pick = (label: Label) => (label ? (lang === 'th' && label.name_th) || label.name || null : null);
+    const pick = (label: Label) => (label ? localPair(label.name, label.name_th, lang) || null : null);
     const name = pick(row.requester as Label);
     if (!name) return <span className="text-muted-foreground">—</span>;
     const sub = [typeof row.requester_code === 'string' ? row.requester_code : null, pick(row.department as Label)].filter((s): s is string =>

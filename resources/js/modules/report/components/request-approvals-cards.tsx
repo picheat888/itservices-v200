@@ -1,6 +1,7 @@
 // "การอนุมัติคำขอ" report cards and row cells: waiting now and why, approvers, ended requests, skipped steps (data: useRequestApprovalsBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -37,7 +38,7 @@ type Lang = 'th' | 'en';
 const BAND_TONE: Record<RequestAgeBand, 'red' | 'amber' | 'gray'> = { over_7: 'red', days_4_7: 'amber', upto_3: 'gray' };
 
 /** A master-data name in the reader's language. */
-const labelOf = (l: ChartLabel | null, lang: Lang) => (l ? (lang === 'th' && l.name_th) || l.name : null);
+const labelOf = (l: ChartLabel | null, lang: Lang) => (l ? localPair(l.name, l.name_th, lang) : null);
 
 /* ─────────────────────────── shared pieces ─────────────────────────── */
 

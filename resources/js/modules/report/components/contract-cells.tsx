@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { CONTRACT_TYPE_TONE } from '@/modules/contract';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -26,7 +27,7 @@ export function ContractCode({ id, code }: { id: number; code: string }) {
 /** The contract's name with its vendor under it; long ones wrap to a second line instead of hiding behind "…". */
 export function ContractNameCell({ name, vendor }: { name: string | null; vendor: { name: string | null; name_th?: string | null } | null }) {
     const lang = useUiStore((s) => s.lang);
-    const vendorName = vendor ? (lang === 'th' && vendor.name_th) || vendor.name : null;
+    const vendorName = vendor ? localPair(vendor.name, vendor.name_th, lang) : null;
     return (
         <div className="max-w-[18rem] min-w-[12rem] whitespace-normal">
             <div className="line-clamp-2 font-medium break-words">{name || '—'}</div>

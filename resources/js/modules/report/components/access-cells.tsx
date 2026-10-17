@@ -1,6 +1,7 @@
 // List cells the access reports share: the holder, the resource, its type, the level, and the grant's status (pages/access-*.tsx).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -89,7 +90,7 @@ export function StatusCell({ row }: { row: AccessRow }) {
                     className="inline-flex whitespace-nowrap"
                     title={
                         isLabel(department)
-                            ? t('rep_ac_cross_of').replace('{dept}', (lang === 'th' && department.name_th) || department.name || '')
+                            ? t('rep_ac_cross_of').replace('{dept}', localPair(department.name, department.name_th, lang) || '')
                             : undefined
                     }
                 >
@@ -130,7 +131,7 @@ export function StatusCell({ row }: { row: AccessRow }) {
 export function DepartmentCell({ row }: { row: AccessRow }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const name = (v: unknown) => (isLabel(v) ? (lang === 'th' && v.name_th) || v.name : null);
+    const name = (v: unknown) => (isLabel(v) ? localPair(v.name, v.name_th, lang) : null);
     const own = name(row.department);
     if (!own) return <None />;
     const theirs = row.status === 'cross' ? name(row.resource_department) : null;

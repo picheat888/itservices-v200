@@ -1,6 +1,7 @@
 // Contract overview report cards: tiles, bills by month, yearly cost by type and cycle, cost by vendor (data: useContractOverviewBreakdown).
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair, otherName } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -29,9 +30,9 @@ const count = (n: number, lang: Lang) => n.toLocaleString(lang === 'th' ? 'th-TH
 /** A vendor's name in the reader's language first, the other one under it. */
 function vendorNames(t: (key: string) => string, lang: Lang, v: Pick<Vendor, 'vendor_id' | 'name' | 'name_th'>) {
     if (v.vendor_id === null) return { main: t('rep_cov_no_vendor'), sub: null };
-    const main = (lang === 'th' && v.name_th) || v.name || '';
-    const other = lang === 'th' ? v.name : v.name_th;
-    return { main, sub: other && other !== main ? other : null };
+    const main = localPair(v.name, v.name_th, lang) || '';
+    const other = otherName({ name: v.name ?? '', name_th: v.name_th }, lang);
+    return { main, sub: other };
 }
 
 /* ─────────────────────────── tiles ─────────────────────────── */

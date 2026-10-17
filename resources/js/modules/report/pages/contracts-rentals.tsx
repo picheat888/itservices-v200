@@ -1,6 +1,7 @@
 // "สัญญาเช่าและทรัพย์สิน" report page (/reports/contracts-rentals): shared tabular body + scope segments, tiles, cards and its own list cells.
 import { useT } from '@/lang';
 import { AssetStatusBadge } from '@/modules/asset';
+import { localPair } from '@/shared/lib/local-name';
 import type { AssetStatus } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import { ContractRentalsCards, LeftPill, RentalsListSegments, RentalsScopeSegments, SourcePill } from '../components/contract-rentals-cards';
@@ -17,7 +18,7 @@ function ModelCell({ row }: { row: Row }) {
     const lang = useUiStore((s) => s.lang);
     const text = [str(row.brand), str(row.model)].filter(Boolean).join(' ');
     const category = row.category as Label;
-    const sub = category ? (lang === 'th' && category.name_th) || category.name : null;
+    const sub = category ? localPair(category.name, category.name_th, lang) : null;
 
     return (
         <div className="min-w-0">
@@ -35,7 +36,7 @@ function HolderCell({ row }: { row: Row }) {
     const holder = str(row.holder);
     if (!holder) return <span className="text-muted-foreground">—</span>;
     const department = row.department as Label;
-    const sub = department ? (lang === 'th' && department.name_th) || department.name : null;
+    const sub = department ? localPair(department.name, department.name_th, lang) : null;
 
     return (
         <div className="min-w-0">

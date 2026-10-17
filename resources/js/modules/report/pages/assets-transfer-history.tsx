@@ -45,7 +45,7 @@ function AssetCell({ row, patch }: { row: Row; patch: Patch }) {
     const canOpen = useCanOpen();
     const href = row._links?.asset_code;
     const code = String(row.asset_code ?? '');
-    const category = isLabel(row.category) ? (lang === 'th' && row.category.name_th) || row.category.name : null;
+    const category = isLabel(row.category) ? localPair(row.category.name, row.category.name_th, lang) : null;
     const model = [str(row.brand), str(row.model)].filter(Boolean).join(' ');
     const what = [model, category].filter((s): s is string => Boolean(s));
     const moves = num(row.asset_moves) ?? 0;

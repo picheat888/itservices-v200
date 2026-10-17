@@ -10,6 +10,7 @@
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { localPair } from '@/shared/lib/local-name';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { ManualSlaCards } from '../components/manual-sla-cards';
@@ -61,7 +62,7 @@ function RequesterCell({ row }: { row: Row }) {
     const lang = useUiStore((s) => s.lang);
     const named = (v: unknown) => {
         const n = v as { name?: string | null; name_th?: string | null } | null;
-        return (lang === 'th' && n?.name_th) || n?.name || null;
+        return localPair(n?.name, n?.name_th, lang);
     };
     const name = named(row.requester);
     const dept = named(row.department);

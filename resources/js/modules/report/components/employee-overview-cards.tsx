@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -14,7 +15,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useEmployeeOverviewBreakdown } from '../hooks/use-reports';
 import type { AccessType, EmployeeOverviewBreakdown, EmployeeOverviewCounts, TabularFilters } from '../types';
 import { ACCESS_TYPES, DaysOut, GroupRow, heldStyle, NUM, Segments, TD, TH, TypeDot, TypeLabel, useFoldRow } from './access-overview-cards';
-import { count, deptName, type Lang, localName } from './access-parts';
+import { count, type Lang } from './access-parts';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { BASIS_PCT, pct } from './percent-classes';
 import { CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -527,7 +528,7 @@ function DepartmentCard({
                             {shown.map((d) => {
                                 const key = String(d.id ?? 'none');
                                 const isOpen = open[key] ?? singleDepartment;
-                                const name = localName(d, lang) ?? t('rep_ac_no_department');
+                                const name = localPair(d.name, d.name_th, lang) ?? t('rep_ac_no_department');
                                 return (
                                     <DeptRows
                                         key={key}
@@ -619,7 +620,7 @@ function DeptRows({
                 row.sections.map((s) => (
                     <tr key={s.id ?? 'none'} className="border-border/60 border-b text-[13px]">
                         <th scope="row" className={cn(TD, 'pl-10 text-left font-normal', s.name === null && 'text-muted-foreground')}>
-                            <span className="line-clamp-2">{localName(s, lang) ?? t('rep_eo_no_section')}</span>
+                            <span className="line-clamp-2">{localPair(s.name, s.name_th, lang) ?? t('rep_eo_no_section')}</span>
                         </th>
                         <Cells s={s} total={total} />
                     </tr>
@@ -767,7 +768,7 @@ function HoldingCard({
                                                 </span>
                                             }
                                             sub={[
-                                                deptName(r.department, lang) ?? t('rep_ac_no_department'),
+                                                localName(r.department, lang) ?? t('rep_ac_no_department'),
                                                 <DaysOut key="days" days={r.days_out} />,
                                             ]}
                                             chips={r.grants.map((g) => (
@@ -840,7 +841,11 @@ type Row = Record<string, unknown> & { _links?: Record<string, string> };
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
 const named = (v: unknown, lang: Lang) =>
-    typeof v === 'string' ? v : v && typeof v === 'object' && 'name' in v ? localName(v as Named, lang) : null;
+    typeof v === 'string'
+        ? v
+        : v && typeof v === 'object' && 'name' in v
+          ? localPair((v as NonNullable<Named>).name, (v as NonNullable<Named>).name_th, lang)
+          : null;
 
 function Dash() {
     return <span className="text-muted-foreground">—</span>;

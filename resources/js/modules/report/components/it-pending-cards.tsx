@@ -4,6 +4,7 @@ import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -513,8 +514,8 @@ function JoinerRow({ joiner, types, left, apart }: { joiner: ItPendingJoiner; ty
     const t = useT();
     const f = useFormat();
     const canOpen = useCanOpen();
-    const name = (f.lang === 'th' && joiner.name_th) || joiner.name;
-    const department = joiner.department ? (f.lang === 'th' && joiner.department.name_th) || joiner.department.name : null;
+    const name = localName(joiner, f.lang);
+    const department = joiner.department ? localPair(joiner.department.name, joiner.department.name_th, f.lang) : null;
     const href = `/employees?view=${joiner.employee_id}`;
     const startNote =
         left && joiner.last_day

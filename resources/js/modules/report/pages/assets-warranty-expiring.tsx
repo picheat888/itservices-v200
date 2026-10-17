@@ -1,4 +1,5 @@
 // "ประกันใกล้หมดอายุ" report page (/reports/assets-warranty-expiring): shared tabular body + WarrantyCards + its own list cells.
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { TabularReportView } from '../components/tabular-report-view';
@@ -28,7 +29,7 @@ function HolderCell({ row }: { row: Row }) {
     // "Name (CODE)" for an employee; a shared-use label has no code
     const [, name = holder, code = null] = holder.match(/^(.*) \(([^()]+)\)$/) ?? [];
     const department = row.department as { name?: string; name_th?: string | null } | null;
-    const sub = [code, department ? (lang === 'th' && department.name_th) || department.name : null].filter((s): s is string => Boolean(s));
+    const sub = [code, department ? localPair(department.name, department.name_th, lang) : null].filter((s): s is string => Boolean(s));
 
     return (
         <div className="min-w-0">

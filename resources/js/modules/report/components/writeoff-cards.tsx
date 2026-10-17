@@ -396,7 +396,7 @@ function ShortLifeWarning() {
 function CategoryCard({ categories, totals }: { categories: Category[]; totals: AssetWriteoffBreakdown['category_totals'] }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const label = (c: Category) => (c.name === null ? t('rep_wo_no_category') : (lang === 'th' && c.name_th) || c.name);
+    const label = (c: Category) => (c.name === null ? t('rep_wo_no_category') : localPair(c.name, c.name_th, lang));
 
     return (
         <Card className="flex flex-col overflow-hidden">

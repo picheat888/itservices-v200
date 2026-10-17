@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { bindDateFormat } from '@/shared/lib/datetime';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info } from 'lucide-react';
@@ -126,7 +127,7 @@ export function TitleWithCount({ title, count }: { title: string; count: number 
 export function useChartLabel() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    return (label: ChartLabel | null) => (label && ((lang === 'th' && label.name_th) || label.name)) || t('rep_no_data');
+    return (label: ChartLabel | null) => localPair(label?.name ?? null, label?.name_th, lang) || t('rep_no_data');
 }
 
 /** Stacked bar with each count over its piece; `scale` is what a full-width bar stands for. */
