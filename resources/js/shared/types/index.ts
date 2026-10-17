@@ -236,6 +236,8 @@ export interface Contract {
     notes: string | null;
     attachments: ContractAttachment[];
     linked_assets: ContractLinkedAsset[];
+    /** How many assets are linked; the list sends a count instead of the rows. */
+    assets_count?: number;
     cancelled_at: string | null;
     expired_at: string | null;
     cancel_reason: string | null;

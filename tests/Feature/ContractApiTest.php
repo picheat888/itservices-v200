@@ -88,7 +88,7 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.linked_assets.0.status', 'deployed');
     }
 
-    /** The list shows no assets or attachments, so it does not load them for every row. */
+    /** The list shows no assets or attachments, only how many assets are linked. */
     public function test_the_list_leaves_out_assets_and_attachments(): void
     {
         $this->actingAs($this->super());
@@ -102,7 +102,9 @@ class ContractApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.code', 'CT-LEAN-1')
             ->assertJsonPath('data.0.linked_assets', [])
-            ->assertJsonPath('data.0.attachments', []);
+            ->assertJsonPath('data.0.attachments', [])
+            // The column counts them instead
+            ->assertJsonPath('data.0.assets_count', 1);
     }
 
     /** The timeline axis runs from two months back to nine months ahead; nothing outside it may be sent. */

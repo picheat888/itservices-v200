@@ -39,7 +39,8 @@ class ContractController extends Controller
         $this->gateView($request);
 
         $query = Contract::query()
-            ->with('vendor');
+            ->with('vendor')
+            ->withCount('assets');
 
         // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
         match ($request->query('sort', 'end_asc')) {

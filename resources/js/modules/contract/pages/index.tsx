@@ -10,11 +10,11 @@ import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
-import { useMediaQuery } from '@/shared/hooks/use-media-query';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -176,8 +176,7 @@ export default function ContractsPage() {
     const totalRows = meta?.total ?? 0;
     usePageInRange(list, meta?.last_page);
     // Below lg (tablet portrait) the start date drops out so the rest keeps room
-    const wide = useMediaQuery('(min-width: 1024px)');
-    const columns = useContractColumns(newlyCreated?.id ?? null, wide);
+    const columns = useContractColumns(newlyCreated?.id ?? null);
     const tableRows = newlyCreated ? [newlyCreated, ...rows.filter((r) => r.id !== newlyCreated.id)] : rows;
 
     // Switch tab and mirror it in the URL (?tab=); the All tab's list keys are cleared in the same write.
@@ -468,7 +467,6 @@ export default function ContractsPage() {
                             loadingRows={rows.length || 8}
                             caption={t('contracts_title')}
                             emptyState={<div className="text-muted-foreground py-12 text-center text-sm">{t('contract_none')}</div>}
-                            tableClassName={wide ? 'min-w-[1260px]' : 'min-w-[1000px]'}
                             server={{ ...list.table.paging, total: totalRows }}
                         />
                     </div>
@@ -520,71 +518,81 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
 const NEW_ROW = 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12';
 
 /** Columns of the All-tab table; the pinned new contract carries a "New" badge. */
-function useContractColumns(newId: number | null, wide: boolean): Column<Contract>[] {
+function useContractColumns(newId: number | null): Column<Contract>[] {
     const t = useT();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
-    const columns: (Column<Contract> | false)[] = [
+    return [
         {
             key: 'code',
+            sticky: 'left',
             header: t('contract_code'),
-            width: wide ? '150px' : '130px',
+            width: '150px',
+            className: 'whitespace-nowrap',
             render: (c) => (
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <div className="flex items-center gap-2">
                     <span className="text-muted-foreground text-xs">{c.code}</span>
                     {c.id === newId && <StatusBadge tone="green">{t('contract_badge_new')}</StatusBadge>}
                 </div>
             ),
         },
         {
-            key: 'details',
-            header: t('contract_details'),
+            key: 'name',
+            header: t('contract_name'),
+            minWidth: '16rem',
             render: (c) => (
-                <div className="line-clamp-2 break-words" title={c.details || undefined}>
-                    {c.details || <span className="text-muted-foreground">—</span>}
+                <div className="min-w-0">
+                    <TruncText text={c.name} className="font-medium" />
+                    <TruncText text={c.details} className="text-muted-foreground text-xs" />
                 </div>
             ),
         },
         {
             key: 'vendor',
             header: t('contract_vendor'),
-            width: wide ? '220px' : '160px',
-            render: (c) => (
-                <div className="line-clamp-2 font-medium break-words" title={localPair(c.vendor, c.vendor_th, lang) ?? undefined}>
-                    {localPair(c.vendor, c.vendor_th, lang)}
-                </div>
-            ),
+            width: '200px',
+            render: (c) => <TruncText text={localPair(c.vendor, c.vendor_th, lang)} />,
         },
         {
             key: 'type',
             header: t('contract_type'),
-            width: wide ? '130px' : '115px',
+            width: '130px',
+            className: 'whitespace-nowrap',
             render: (c) => <StatusBadge tone={CONTRACT_TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>,
         },
-        wide && {
-            key: 'start',
-            header: t('contract_start'),
-            width: '110px',
-            className: 'whitespace-nowrap text-xs',
-            render: (c) => fmt.date(c.start),
-        },
+        { key: 'start', header: t('contract_start'), width: '110px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.start) },
         { key: 'end', header: t('contract_end'), width: '110px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.end) },
         {
             key: 'days',
             header: t('contract_days_remaining'),
-            width: '120px',
+            width: '160px',
+            className: 'whitespace-nowrap',
             render: (c) => <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />,
         },
-        { key: 'value', header: t('contract_value'), width: '130px', className: 'whitespace-nowrap text-xs', render: (c) => c.value_display },
-        // The days chip already says cancelled / expired / overdue, so tablets drop the status column
-        wide && {
+        { key: 'value', header: t('contract_value'), width: '140px', className: 'whitespace-nowrap text-xs', render: (c) => c.value_display },
+        {
+            key: 'total',
+            header: t('contract_total_value'),
+            width: '140px',
+            className: 'whitespace-nowrap text-xs',
+            render: (c) => c.total_value_display ?? '—',
+        },
+        {
+            key: 'assets',
+            header: t('contract_link_assets'),
+            align: 'right',
+            width: '110px',
+            className: 'whitespace-nowrap text-xs tabular-nums',
+            render: (c) => (c.assets_count ?? 0).toLocaleString(),
+        },
+        {
             key: 'status',
             header: t('status'),
-            width: '110px',
+            width: '120px',
+            className: 'whitespace-nowrap',
             render: (c) => <ContractStatusBadge status={c.status} days={c.days_remaining} />,
         },
     ];
-    return columns.filter((c): c is Column<Contract> => c !== false);
 }
 
 function ContractStatusBadge({ status, days }: { status: ContractStatus; days: number }) {

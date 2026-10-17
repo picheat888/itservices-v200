@@ -60,6 +60,7 @@ class ContractResource extends JsonResource
                 'url' => $a->url(),
                 'created_at' => SystemTime::date($a->created_at),
             ])->all(), []),
+            'assets_count' => $this->whenCounted('assets'),
             // Assets linked to this contract (only attached when eager-loaded).
             'linked_assets' => $this->whenLoaded('assets', fn () => $this->assets->map(fn (Asset $a) => [
                 'id' => $a->id,
