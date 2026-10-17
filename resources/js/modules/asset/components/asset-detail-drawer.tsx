@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { refusalReason } from '@/shared/lib/api-errors';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -209,7 +210,7 @@ export function AssetDetailDrawer({
                                     </span>
                                 )}
                                 <span className="bg-accent text-muted-foreground shrink-0 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
-                                    {a.type}
+                                    {localPair(a.type, a.type_th, lang)}
                                 </span>
                                 <span
                                     className={cn(
@@ -325,7 +326,7 @@ export function AssetDetailDrawer({
                                     <SectionLabel>{t('asset_information')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                         <div className="sm:col-span-3">
-                                            <KV label={t('asset_type')} value={a.type} />
+                                            <KV label={t('asset_type')} value={localPair(a.type, a.type_th, lang)} />
                                         </div>
                                         <KV label={t('asset_brand')} value={a.brand} />
                                         <KV label={t('asset_model')} value={a.model} />
@@ -335,7 +336,7 @@ export function AssetDetailDrawer({
                                         {!rented && (
                                             <>
                                                 <KV label={t('asset_purchase_date')} value={fmt.date(a.purchase_date)} />
-                                                <KV label={t('asset_supplier')} value={a.supplier} />
+                                                <KV label={t('asset_supplier')} value={localPair(a.supplier, a.supplier_th, lang)} />
                                                 <KV label={t('asset_value')} value={a.value_display} />
                                                 <KV
                                                     label={t('asset_warranty_end')}
@@ -366,9 +367,9 @@ export function AssetDetailDrawer({
                                     <SectionLabel>{t('asset_ownership')}</SectionLabel>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                         <KV label={t('asset_employee_id')} value={a.owner} />
-                                        <KV label={t('asset_owner_name')} value={a.owner_name} />
+                                        <KV label={t('asset_owner_name')} value={localPair(a.owner_name, a.owner_name_th, lang)} />
                                         <KV label={t('asset_position')} value={a.owner_position} />
-                                        <KV label={t('asset_dept')} value={a.department} />
+                                        <KV label={t('asset_dept')} value={localPair(a.department, a.department_th, lang)} />
                                         <KV label={t('asset_location')} value={a.location} />
                                         <KV label={t('asset_owned_since')} value={fmt.date(a.owned_since)} />
                                     </div>

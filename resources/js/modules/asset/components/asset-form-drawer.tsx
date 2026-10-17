@@ -3,7 +3,7 @@ import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useW
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { localName, nameSearch } from '@/shared/lib/local-name';
+import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -177,10 +177,10 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         () =>
             contracts.map((c) => ({
                 value: String(c.id),
-                label: `${c.code} - ${c.vendor ?? ''}`,
-                search: `${c.code} ${c.vendor ?? ''} ${c.details ?? ''}`,
+                label: `${c.code} - ${localPair(c.vendor, c.vendor_th, lang) ?? ''}`,
+                search: `${c.code} ${c.vendor ?? ''} ${c.vendor_th ?? ''} ${c.details ?? ''}`,
             })),
-        [contracts],
+        [contracts, lang],
     );
 
     const submit = async () => {

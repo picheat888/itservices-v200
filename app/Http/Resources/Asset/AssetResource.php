@@ -51,10 +51,12 @@ class AssetResource extends JsonResource
             // Display name of the holder: the employee's full name in employee mode,
             // else the free-text shared label, else null (pool).
             'owner_name' => $this->owner_employee_id ? $this->ownerEmployee?->name : $this->owner,
+            'owner_name_th' => $this->owner_employee_id ? $this->ownerEmployee?->name_th : null,
             // Job title + department of the holding employee (read from the employee;
             // null for pool / shared assets that have no employee).
             'owner_position' => $this->ownerEmployee?->position?->title,
             'department' => $this->ownerEmployee?->department?->name,
+            'department_th' => $this->ownerEmployee?->department?->name_th,
             'location' => $this->location?->name,
             'location_id' => $this->location_id,
             'warehouse' => $this->warehouse?->name,
@@ -62,6 +64,7 @@ class AssetResource extends JsonResource
             'value' => $value,
             'value_display' => $this->valueDisplay($value),
             'supplier' => $vendor?->name,
+            'supplier_th' => $vendor?->name_th,
             'vendor_id' => $rented ? $contract?->vendor_id : $this->vendor_id,
             'purchase_date' => $this->purchase_date?->toDateString(),
             'warranty_end' => $this->warranty_end?->toDateString(),

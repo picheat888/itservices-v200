@@ -16,7 +16,7 @@ import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
-import { localName } from '@/shared/lib/local-name';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
@@ -831,7 +831,7 @@ export default function AssetsPage() {
                                                     </button>
                                                 </td>
                                                 <td className="px-3 py-2 font-medium">{a.model}</td>
-                                                <td className="px-3 py-2">{a.owner_name}</td>
+                                                <td className="px-3 py-2">{localPair(a.owner_name, a.owner_name_th, lang)}</td>
                                                 <td className="px-3 py-2">
                                                     <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                 </td>
@@ -1267,12 +1267,18 @@ export default function AssetsPage() {
                                                     <td className="max-w-[12rem] px-4 py-2.5">
                                                         {a.owner_name ? (
                                                             <>
-                                                                <div className="truncate" title={a.owner_name}>
-                                                                    {a.owner_name}
+                                                                <div
+                                                                    className="truncate"
+                                                                    title={localPair(a.owner_name, a.owner_name_th, lang) ?? undefined}
+                                                                >
+                                                                    {localPair(a.owner_name, a.owner_name_th, lang)}
                                                                 </div>
                                                                 {a.department && (
-                                                                    <div className="text-muted-foreground truncate text-xs" title={a.department}>
-                                                                        {a.department}
+                                                                    <div
+                                                                        className="text-muted-foreground truncate text-xs"
+                                                                        title={localPair(a.department, a.department_th, lang) ?? undefined}
+                                                                    >
+                                                                        {localPair(a.department, a.department_th, lang)}
                                                                     </div>
                                                                 )}
                                                             </>

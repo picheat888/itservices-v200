@@ -104,6 +104,7 @@ class AssetController extends Controller
                 'id' => $c->id,
                 'code' => $c->code,
                 'vendor' => $c->vendor?->name,
+                'vendor_th' => $c->vendor?->name_th,
                 'details' => $c->details,
             ]);
 

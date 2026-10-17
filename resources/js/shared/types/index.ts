@@ -284,10 +284,12 @@ export interface Asset {
     owner_employee_id: number | null;
     /** Display name of the holder: employee full name, shared label, or null (pool). */
     owner_name: string | null;
+    owner_name_th?: string | null;
     /** Job title of the holding employee (null for pool / shared assets). */
     owner_position: string | null;
     /** Department of the holding employee (read from the employee; null for pool / shared). */
     department: string | null;
+    department_th?: string | null;
     location: string | null;
     location_id: number | null;
     warehouse: string | null;
@@ -295,6 +297,7 @@ export interface Asset {
     value: number;
     value_display: string;
     supplier: string | null;
+    supplier_th?: string | null;
     vendor_id: number | null;
     purchase_date: string | null;
     warranty_end: string | null;
