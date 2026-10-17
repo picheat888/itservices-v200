@@ -3,7 +3,8 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
-import { DASH_STYLES } from '../components/dash-parts';
+import { localPair } from '@/shared/lib/local-name';
+import { useUiStore } from '@/stores/ui';
 import { DashboardSkeleton } from '../components/dashboard-skeleton';
 import { ItSection } from '../components/it-section';
 import { MineSection } from '../components/mine-section';
@@ -14,6 +15,7 @@ import { useDashboardSummary } from '../hooks/use-dashboard';
 
 export default function DashboardPage() {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { user } = useAuth();
     const fmt = useDateFormat();
     const { data, isLoading, isError, refetch } = useDashboardSummary();
@@ -23,9 +25,8 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8">
-            <style>{DASH_STYLES}</style>
             <header>
-                <h1 className="text-2xl font-bold">{t('dash_hello').replace('{name}', user?.name ?? '')}</h1>
+                <h1 className="text-2xl font-bold">{t('dash_hello').replace('{name}', localPair(user?.name, user?.name_th, lang) ?? '')}</h1>
                 <p className="text-muted-foreground text-sm">{t('dash_today').replace('{weekday}', weekday).replace('{date}', fmt.date(today))}</p>
             </header>
             {isError && !data ? (

@@ -26,6 +26,7 @@ import {
     REQUEST_TYPES,
     requestTitle,
 } from '@/shared/lib/request-meta';
+import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
@@ -475,15 +476,16 @@ export default function RequestsPage() {
                                         </div>
                                     </div>
                                 ) : (
-                                    queue.map((r) => {
+                                    queue.map((r, i) => {
                                         const Icon = REQUEST_TYPE_META[r.type].icon;
                                         return (
                                             <div
                                                 key={r.id}
                                                 className={cn(
-                                                    'hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
+                                                    'row-in hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
                                                     onboardingRowClass(r),
                                                 )}
+                                                style={rowDelay(i)}
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
@@ -558,12 +560,13 @@ export default function RequestsPage() {
                                     <p className="text-muted-foreground px-3 py-8 text-center text-sm">{t('req_recent_empty')}</p>
                                 )}
                                 {!isLoading &&
-                                    rows.map((r) => {
+                                    rows.map((r, i) => {
                                         const Icon = REQUEST_TYPE_META[r.type].icon;
                                         return (
                                             <div
                                                 key={r.id}
-                                                className="hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
+                                                className="row-in hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
+                                                style={rowDelay(i)}
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">

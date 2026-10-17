@@ -76,7 +76,7 @@ function Tile({
                 </span>
             </div>
             <div className="mt-2 flex items-end justify-between gap-3">
-                <div className={cn('text-3xl font-bold', valueTone)}>{value}</div>
+                <div className={cn('text-3xl font-bold tabular-nums', valueTone)}>{value}</div>
                 {chart}
             </div>
             <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 text-xs">{hint}</div>

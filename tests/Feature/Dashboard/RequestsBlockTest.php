@@ -91,6 +91,8 @@ class RequestsBlockTest extends TestCase
         $this->assertSame(2, $block['waiting_total']);
         $this->assertSame(['RQ-2026-0102', 'RQ-2026-0101'], array_column($block['waiting'], 'reference'));
         $this->assertSame('Somsak', $block['waiting'][0]['waiting_on']);
+        // A step with no employee record has no Thai name to offer
+        $this->assertNull($block['waiting'][0]['waiting_on_th']);
         $this->assertSame(9, $block['waiting'][0]['days']);
     }
 

@@ -21,6 +21,7 @@ import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { localName, localPair } from '@/shared/lib/local-name';
+import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
@@ -712,10 +713,14 @@ export default function AssetsPage() {
                                     </div>
                                 </div>
                                 <div className="space-y-4 p-5">
-                                    {typeBars.map((b) => (
+                                    {typeBars.map((b, i) => (
                                         // One line per type: icon + name, the bar with each bucket's count over its
                                         // piece, then the total — name and total sit level with the bar itself.
-                                        <div key={b.type} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3">
+                                        <div
+                                            key={b.type}
+                                            className="row-in grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3"
+                                            style={rowDelay(i)}
+                                        >
                                             <div className="flex min-w-0 items-center gap-2 text-sm leading-none" title={typeLabel(b)}>
                                                 {b.type === OTHER_TYPES ? (
                                                     <MoreHorizontal className="text-muted-foreground h-4 w-4 shrink-0" />

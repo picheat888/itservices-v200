@@ -15,6 +15,11 @@ const VALUE_INK = {
     green: 'text-emerald-700 dark:text-emerald-400',
 } as const;
 
+/** SLA level against its goal: met, within 10 points, or further off (the Tickets overview's tiers). */
+export type SlaLevel = 'met' | 'near' | 'miss';
+export const slaLevel = (rate: number, goal: number): SlaLevel => (rate >= goal ? 'met' : rate >= goal - 10 ? 'near' : 'miss');
+const METER_FILL: Record<SlaLevel, string> = { met: 'bg-emerald-500', near: 'bg-amber-500', miss: 'bg-red-500' };
+
 export function KpiTile({
     label,
     hint,
@@ -84,7 +89,7 @@ export function KpiTile({
             {meter && (
                 <div className="dark:bg-muted relative h-1.5 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
                     <div
-                        className={cn('h-full rounded-full', meter.value >= meter.goal ? 'bg-emerald-500' : 'bg-red-500')}
+                        className={cn('h-full rounded-full', METER_FILL[slaLevel(meter.value, meter.goal)])}
                         style={{ width: `${Math.min(100, Math.max(0, meter.value))}%` }}
                     />
                     <div className="bg-foreground/60 absolute inset-y-0 w-0.5" style={{ left: `${meter.goal}%` }} />

@@ -68,6 +68,7 @@ export interface SeriesFigure {
 export interface WorkloadRow {
     assignee_id: number;
     name: string | null;
+    name_th?: string | null;
     open: number;
 }
 
@@ -90,6 +91,7 @@ export interface WaitingRequestRow {
     reference: string;
     title: string;
     waiting_on: string | null;
+    waiting_on_th?: string | null;
     days: number;
 }
 

@@ -3,6 +3,7 @@ import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { localPair } from '@/shared/lib/local-name';
+import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { AccessIssueItem, AccessKind, AccessSummary } from '@/shared/types';
@@ -387,7 +388,7 @@ export function AccessOverview({
     const gov = data.governance;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 tabular-nums">
             {header}
             {/* KPI row — one card per channel (count + the period's net change) */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -627,7 +628,8 @@ export function AccessOverview({
                                     <tr
                                         key={`${r.kind}-${r.name}-${i}`}
                                         onClick={() => onOpenResource(r.kind, r.id)}
-                                        className="border-border/60 hover:bg-muted/40 cursor-pointer border-b last:border-0"
+                                        className="row-in border-border/60 hover:bg-muted/40 cursor-pointer border-b last:border-0"
+                                        style={rowDelay(i)}
                                     >
                                         <td className="px-5 py-2.5">
                                             <div className="flex items-center gap-2.5">

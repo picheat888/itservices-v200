@@ -43,13 +43,14 @@ class MineBlock
                 'approvals' => $this->approvals($user->employee),
                 'pending_acceptance' => $this->pendingAcceptance($employeeId),
             ],
-            'tickets' => (clone $openTickets)->with('assignee')->latest('id')->limit(self::LIST_LIMIT)->get()
+            'tickets' => (clone $openTickets)->with('assignee.employee')->latest('id')->limit(self::LIST_LIMIT)->get()
                 ->map(fn (Ticket $ticket) => [
                     'id' => $ticket->id,
                     'ticket_no' => $ticket->ticket_no,
                     'subject' => $ticket->subject,
                     'status' => $ticket->status?->value,
                     'assignee_name' => $ticket->assignee?->name,
+                    'assignee_name_th' => $ticket->assignee?->name_th,
                 ])->all(),
             'tickets_total' => (clone $openTickets)->count(),
             'requests' => (clone $requests)->latest('id')->limit(self::LIST_LIMIT)->get()

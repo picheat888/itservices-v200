@@ -3,6 +3,7 @@ import { OverviewHeader } from '@/shared/components/overview-period';
 import { StatCard } from '@/shared/components/stat-card';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localPair } from '@/shared/lib/local-name';
+import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -235,13 +236,14 @@ export function OverviewTab({
                             <h2 className={PANEL_TITLE}>{t('stock_by_warehouse')}</h2>
                         </div>
                         <div className={PANEL_LIST}>
-                            {summary.by_warehouse.map((w) => (
+                            {summary.by_warehouse.map((w, i) => (
                                 <button
                                     type="button"
                                     key={w.warehouse}
+                                    style={rowDelay(i)}
                                     onClick={() => onSelectWarehouse(w.warehouse)}
                                     title={t('stock_view_items')}
-                                    className="hover:bg-accent/30 focus-visible:ring-ring group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                                    className="row-in hover:bg-accent/30 focus-visible:ring-ring group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                                 >
                                     <div className="flex min-w-0 items-center gap-2.5">
                                         <span
@@ -274,13 +276,14 @@ export function OverviewTab({
                             <h2 className={PANEL_TITLE}>{t('stock_by_category')}</h2>
                         </div>
                         <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto overscroll-contain p-4">
-                            {summary.by_category.map((c) => (
+                            {summary.by_category.map((c, i) => (
                                 <button
                                     type="button"
                                     key={c.category}
+                                    style={rowDelay(i)}
                                     onClick={() => onSelectCategory(c.category)}
                                     title={t('stock_view_items')}
-                                    className="group focus-visible:ring-ring block w-full rounded-sm text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                                    className="row-in group focus-visible:ring-ring block w-full rounded-sm text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                                 >
                                     <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
                                         <span className="group-hover:text-brand min-w-0 truncate font-medium transition-colors">

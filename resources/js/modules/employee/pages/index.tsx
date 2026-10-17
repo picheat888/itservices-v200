@@ -15,6 +15,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
+import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
@@ -1020,12 +1021,12 @@ function OverviewTab({
                                 .replace('{total}', String(total))}
                             className="bg-secondary my-4 flex h-3 w-full overflow-hidden rounded-full"
                         >
-                            <span className="bg-brand block h-full" style={{ width: `${statusPct.active}%` }} />
+                            <span className="block h-full bg-emerald-500" style={{ width: `${statusPct.active}%` }} />
                             <span className="bg-destructive block h-full" style={{ width: `${statusPct.resigned}%` }} />
                         </div>
                         <div className="flex gap-5">
                             <span className="text-muted-foreground flex items-center gap-2 text-[12.5px]">
-                                <i className="bg-brand h-2.5 w-2.5 rounded-full" />
+                                <i className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                                 {t('emp_status_active')} <b className="text-foreground font-semibold">{summary?.active ?? 0}</b>
                             </span>
                             <span className="text-muted-foreground flex items-center gap-2 text-[12.5px]">
@@ -1089,8 +1090,8 @@ function OverviewTab({
                         {[...departments]
                             .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
                             .slice(0, DASH_DEPT_LIMIT)
-                            .map((d) => (
-                                <div key={d.id} className="flex items-center justify-between py-2.5">
+                            .map((d, i) => (
+                                <div key={d.id} className="row-in flex items-center justify-between py-2.5" style={rowDelay(i)}>
                                     <div className="flex items-center gap-2.5">
                                         <span className="bg-muted rounded-md px-2 py-0.5 text-[11px]">{d.tag}</span>
                                         <span className="text-sm">{localName(d, lang)}</span>

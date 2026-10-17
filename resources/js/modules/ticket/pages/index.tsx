@@ -15,6 +15,7 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
+import { rowDelay } from '@/shared/lib/row-in';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
@@ -742,10 +743,11 @@ function TicketTable({
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((tk) => (
+                    {rows.map((tk, i) => (
                         <tr
                             key={tk.id}
-                            className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
+                            className="row-in border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
+                            style={rowDelay(i)}
                             onClick={() => onRow(tk)}
                         >
                             <td className="text-muted-foreground px-4 py-2.5 text-xs whitespace-nowrap">{tk.ticket_no}</td>
