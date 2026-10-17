@@ -8,6 +8,7 @@ export const notification: Dict = {
     notif_clear_all: 'ลบทั้งหมด',
     notif_empty: 'ไม่มีการแจ้งเตือน',
     notif_dismiss: 'ปิดรายการนี้',
+    notif_dismiss_failed: 'ปิดรายการนี้ไม่สำเร็จ ลองอีกครั้ง',
     notif_unread: 'ยังไม่ได้อ่าน',
     notif_load_more: 'โหลดเพิ่ม',
     notif_group_system: 'อื่น ๆ',

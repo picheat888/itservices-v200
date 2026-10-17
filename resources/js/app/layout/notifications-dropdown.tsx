@@ -8,10 +8,12 @@ import {
     useNotifications,
     useNotificationText,
 } from '@/modules/notification';
+import { LoadFailed } from '@/shared/components/load-failed';
 import { cn } from '@/shared/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
+import { useToastStore } from '@/stores/toast';
 import { Loader2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTitle, openNotificationTarget } from './notification-display';
 
@@ -36,9 +38,38 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
     // Ids mid-dismiss: play the slide-out/collapse animation, then actually remove.
     const [dismissing, setDismissing] = useState<Set<string>>(new Set());
 
-    const handleDismiss = (id: string) => {
+    // Close and hand focus back to the bell (keyboard users keep their place).
+    const close = useCallback(
+        (returnFocus: boolean) => {
+            onClose();
+            if (returnFocus) document.querySelector<HTMLElement>('[data-notif-btn]')?.focus();
+        },
+        [onClose],
+    );
+
+    const handleDismiss = (id: string, rowEl: HTMLElement | null) => {
+        if (dismissing.has(id)) return;
+        // Focus moves to the next row (or the one before) before this one collapses.
+        const rows = [...(ref.current?.querySelectorAll<HTMLElement>('[data-notif-row]') ?? [])];
+        const at = rowEl ? rows.indexOf(rowEl) : -1;
+        const neighbour = rows[at + 1] ?? rows[at - 1];
+        neighbour?.focus();
         setDismissing((prev) => new Set(prev).add(id));
-        window.setTimeout(() => dismiss.mutate(id), 220);
+        window.setTimeout(
+            () =>
+                dismiss.mutate(id, {
+                    // The cache rolls the row back; show it again and say why.
+                    onError: () => {
+                        setDismissing((prev) => {
+                            const next = new Set(prev);
+                            next.delete(id);
+                            return next;
+                        });
+                        useToastStore.getState().push(t('notif_dismiss_failed'), 'error');
+                    },
+                }),
+            220,
+        );
     };
 
     const unread = data?.unread ?? 0;
@@ -78,11 +109,11 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest('[data-notif-btn]')) {
-                onClose();
+                close(false);
             }
         };
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') close(true);
         };
         window.addEventListener('mousedown', handler);
         window.addEventListener('keydown', onKey);
@@ -90,7 +121,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
             window.removeEventListener('mousedown', handler);
             window.removeEventListener('keydown', onKey);
         };
-    }, [onClose]);
+    }, [close]);
 
     // The mouse wheel scrolls the one-row tab strip sideways (non-passive, so the page stays put).
     useEffect(() => {
@@ -111,15 +142,19 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
         // The password warning opens the shell's Change password dialog (?dialog=password), not a page.
         if (n.data.type === 'password_expiring') {
             onChangePassword();
+            close(false);
         } else {
             openNotificationTarget(navigate, n, location.search);
+            close(true);
         }
-        onClose();
     };
 
     return (
         <div
             ref={ref}
+            id="notif-tray"
+            role="dialog"
+            aria-labelledby="notif-tray-title"
             className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 absolute top-[4.5rem] right-4 z-50 w-[440px] max-w-[calc(100vw-2rem)] origin-top-right duration-150 ease-out motion-reduce:animate-none"
         >
             {/* Caret aimed back at the bell */}
@@ -128,15 +163,17 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
             <div className="border-border bg-popover relative overflow-hidden rounded-xl border shadow-lg">
                 <div className="border-border flex items-center justify-between border-b px-4 py-3">
                     <div>
-                        <div className="text-sm font-semibold">{t('notif_title')}</div>
-                        {unread > 0 && (
-                            <div className="text-muted-foreground text-xs">
-                                {unread} {t('notif_unread')}
-                            </div>
-                        )}
+                        <h2 id="notif-tray-title" className="text-sm font-semibold">
+                            {t('notif_title')}
+                        </h2>
+                        {/* Announced when the unread count changes (mark all read, a dismiss) */}
+                        <div role="status" className={cn('text-muted-foreground text-xs', unread === 0 && 'sr-only')}>
+                            {unread > 0 && `${unread} ${t('notif_unread')}`}
+                        </div>
                     </div>
                     <div className="flex items-center gap-1">
                         <button
+                            type="button"
                             onClick={() => markAllRead.mutate()}
                             disabled={unread === 0 || markAllRead.isPending}
                             className="text-brand-ink hover:bg-accent rounded-md px-2 py-1 text-xs font-medium disabled:opacity-40"
@@ -144,7 +181,8 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                             {t('notif_mark_all')}
                         </button>
                         <button
-                            onClick={onClose}
+                            type="button"
+                            onClick={() => close(true)}
                             aria-label={t('close')}
                             className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
                         >
@@ -199,6 +237,10 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                                 </div>
                             </div>
                         ))
+                    ) : feed.isError && items.length === 0 ? (
+                        <div className="px-4 py-10 text-center">
+                            <LoadFailed onRetry={() => feed.refetch()} />
+                        </div>
                     ) : items.length === 0 ? (
                         <div className="text-muted-foreground py-12 text-center text-sm">{t('notif_empty')}</div>
                     ) : (
@@ -209,7 +251,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                                     notification={n}
                                     leaving={dismissing.has(n.id)}
                                     onOpen={() => handleClick(n)}
-                                    onDismiss={() => handleDismiss(n.id)}
+                                    onDismiss={(rowEl) => handleDismiss(n.id, rowEl)}
                                 />
                             ))}
                         </TooltipProvider>
@@ -222,7 +264,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                                 type="button"
                                 onClick={() => feed.fetchNextPage()}
                                 disabled={feed.isFetchingNextPage}
-                                className="text-brand-ink hover:bg-accent focus-visible:ring-brand/40 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:opacity-60"
+                                className="text-brand-ink hover:bg-accent focus-visible:ring-brand inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:opacity-60"
                             >
                                 {feed.isFetchingNextPage && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />}
                                 {feed.isFetchingNextPage ? t('loading') : t('notif_load_more')}
@@ -235,7 +277,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
     );
 }
 
-/** One tray row; when its title is cut short, hovering or focusing the row shows the full title under it. */
+/** One tray row: the whole row opens it, the X beside it dismisses; a cut title shows in full on hover or focus. */
 function NotificationRow({
     notification: n,
     leaving,
@@ -245,10 +287,11 @@ function NotificationRow({
     notification: AppNotification;
     leaving: boolean;
     onOpen: () => void;
-    onDismiss: () => void;
+    onDismiss: (rowEl: HTMLElement | null) => void;
 }) {
     const t = useNotificationText();
     const titleRef = useRef<HTMLDivElement>(null);
+    const openRef = useRef<HTMLButtonElement>(null);
     const [tipOpen, setTipOpen] = useState(false);
     const { Icon, color, bg } = iconMeta(n);
     const title = notificationTitle(n, t);
@@ -260,51 +303,50 @@ function NotificationRow({
     };
 
     return (
-        <Tooltip open={tipOpen} onOpenChange={openTip}>
-            <TooltipTrigger asChild>
-                <div
-                    tabIndex={0}
-                    onClick={onOpen}
-                    onKeyDown={(e) => {
-                        if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
-                        e.preventDefault();
-                        onOpen();
-                    }}
-                    className={cn(
-                        'group border-border/60 hover:bg-accent/50 focus-visible:ring-brand/40 flex cursor-pointer gap-3 overflow-hidden border-b px-4 py-3 transition-all duration-200 ease-out focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset',
-                        !n.read && 'bg-brand/[0.04]',
-                        leaving ? 'max-h-0 translate-x-8 !border-b-0 !py-0 opacity-0' : 'max-h-32',
-                    )}
-                >
-                    <div className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full', n.read ? 'bg-muted' : bg)}>
-                        <Icon className={cn('h-[18px] w-[18px]', n.read ? 'text-muted-foreground' : color)} aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1">
+        <div
+            className={cn(
+                'group border-border/60 hover:bg-accent/50 relative flex gap-3 overflow-hidden border-b px-4 py-3 transition-all duration-200 ease-out',
+                !n.read && 'bg-brand/[0.04]',
+                leaving ? 'max-h-0 translate-x-8 !border-b-0 !py-0 opacity-0' : 'max-h-32',
+            )}
+        >
+            <div className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full', n.read ? 'bg-muted' : bg)}>
+                <Icon className={cn('h-[18px] w-[18px]', n.read ? 'text-muted-foreground' : color)} aria-hidden />
+            </div>
+            <Tooltip open={tipOpen} onOpenChange={openTip}>
+                <TooltipTrigger asChild>
+                    {/* The button's ::after covers the whole row, so a click anywhere opens it */}
+                    <button
+                        ref={openRef}
+                        type="button"
+                        data-notif-row
+                        onClick={onOpen}
+                        className="focus-visible:after:ring-brand min-w-0 flex-1 cursor-pointer text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-hidden focus-visible:after:ring-2 focus-visible:after:ring-inset"
+                    >
                         {/* One line of title, two of body: the same shape a toast uses */}
                         <div ref={titleRef} className={cn('line-clamp-1 text-sm leading-snug', !n.read && 'font-semibold')}>
+                            {!n.read && <span className="sr-only">{t('notif_unread')}: </span>}
                             {title}
                         </div>
                         <div className="text-muted-foreground mt-0.5 line-clamp-2 text-xs leading-relaxed">{notificationMessage(n, t)}</div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                        <span className="text-muted-foreground text-xs">{n.created_at}</span>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onDismiss();
-                            }}
-                            aria-label={t('notif_dismiss')}
-                            title={t('notif_dismiss')}
-                            className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
-                        >
-                            <X className="h-3.5 w-3.5" aria-hidden />
-                        </button>
-                    </div>
-                </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="start" alignOffset={60} sideOffset={-6} className="max-w-[340px] text-xs leading-relaxed">
-                {title}
-            </TooltipContent>
-        </Tooltip>
+                    </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="start" sideOffset={-6} className="max-w-[340px] text-xs leading-relaxed">
+                    {title}
+                </TooltipContent>
+            </Tooltip>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="text-muted-foreground text-xs">{n.created_at}</span>
+                <button
+                    type="button"
+                    onClick={() => onDismiss(openRef.current)}
+                    aria-label={t('notif_dismiss')}
+                    title={t('notif_dismiss')}
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground relative z-10 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                </button>
+            </div>
+        </div>
     );
 }
