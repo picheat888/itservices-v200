@@ -278,7 +278,7 @@ function RequestDetailBody({
                             </Link>
                         ) : (
                             <EmptyState
-                                className="border-border/80 rounded-xl border border-dashed"
+                                className="border-border/80 min-h-0 rounded-xl border border-dashed py-4"
                                 title={request.auto_ticket && request.status === 'pending' ? t('req_auto_ticket_note') : t('req_no_ticket')}
                             />
                         )}
@@ -342,7 +342,7 @@ function RequestAttachments({ request, onPreview }: { request: ServiceRequest; o
     if (attachments.length === 0) {
         return (
             <EmptyState
-                className="border-border/80 rounded-xl border border-dashed"
+                className="border-border/80 min-h-0 rounded-xl border border-dashed py-4"
                 title={t('req_empty_detail_attachments')}
                 hint={t('req_empty_detail_attachments_hint')}
             />
