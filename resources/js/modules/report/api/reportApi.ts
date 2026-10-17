@@ -30,6 +30,9 @@ import type {
     ScheduleInput,
     SnapshotRange,
     SoftwareLicenseBreakdown,
+    StockLevelsBreakdown,
+    StockMovementsBreakdown,
+    StockValuationBreakdown,
     TabularDefinition,
     TabularFilters,
     TabularHeadline,
@@ -132,6 +135,22 @@ export const reportApi = {
         http
             .get<{ data: ContractRentalsBreakdown }>('/reports/contracts/rentals/breakdown', { params: tabularParams(filters) })
             .then((r) => r.data.data),
+
+    /** "รับเข้าและเบิกจ่าย": tiles, 12 months in and out, waiting requests, top requesters and count variance. */
+    stockMovementsBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: StockMovementsBreakdown }>('/reports/stock/movements/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "มูลค่าคงคลัง": tiles, value by category and by warehouse, and dead stock at the chosen day. */
+    stockValuationBreakdown: (filters: TabularFilters) =>
+        http
+            .get<{ data: StockValuationBreakdown }>('/reports/stock/valuation/breakdown', { params: tabularParams(filters) })
+            .then((r) => r.data.data),
+
+    /** "ต่ำกว่าขั้นต่ำและเกินขั้นสูง": tiles and items outside min/max by category. */
+    stockLevelsBreakdown: (filters: TabularFilters) =>
+        http.get<{ data: StockLevelsBreakdown }>('/reports/stock/below-min/breakdown', { params: tabularParams(filters) }).then((r) => r.data.data),
 
     /** "ประกันใกล้หมดอายุ": the next 12 months, time left, and the categories and vendors in periods. */
     assetWarrantyBreakdown: (filters: TabularFilters) =>

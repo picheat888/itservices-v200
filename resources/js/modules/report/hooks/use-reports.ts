@@ -174,6 +174,44 @@ export const useContractRentalsBreakdown = (filters: TabularFilters) =>
         retry: noRetryOn4xx,
     });
 
+/** Filters without the ones that narrow only the rows table, so typing a search does not refetch the cards. */
+function cardFilters(filters: TabularFilters, rowsOnly: string[]): TabularFilters {
+    return Object.fromEntries(Object.entries(filters).filter(([key]) => !rowsOnly.includes(key)));
+}
+
+/** "รับเข้าและเบิกจ่าย" — keyed without the type and search filters, which narrow only the rows. */
+export const useStockMovementsBreakdown = (filters: TabularFilters) => {
+    const scope = cardFilters(filters, ['type', 'search']);
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'stock.movements', 'breakdown', scope],
+        queryFn: () => reportApi.stockMovementsBreakdown(scope),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
+/** "มูลค่าคงคลัง" — keyed without the search, which narrows only the rows. */
+export const useStockValuationBreakdown = (filters: TabularFilters) => {
+    const scope = cardFilters(filters, ['search']);
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'stock.valuation', 'breakdown', scope],
+        queryFn: () => reportApi.stockValuationBreakdown(scope),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
+/** "ต่ำกว่าขั้นต่ำและเกินขั้นสูง" — keyed without the status and search filters, which narrow only the rows. */
+export const useStockLevelsBreakdown = (filters: TabularFilters) => {
+    const scope = cardFilters(filters, ['status', 'search']);
+    return useQuery({
+        queryKey: ['reports', 'tabular', 'stock.below_min', 'breakdown', scope],
+        queryFn: () => reportApi.stockLevelsBreakdown(scope),
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+};
+
 /** "ภาพรวมคำขอ" — every filter of the page shapes its cards. */
 export const useRequestOverviewBreakdown = (filters: TabularFilters) =>
     useQuery({
