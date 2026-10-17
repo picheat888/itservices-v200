@@ -9,6 +9,7 @@ use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AuditDetailTest extends TestCase
@@ -65,6 +66,20 @@ class AuditDetailTest extends TestCase
         $this->getJson('/api/audit-logs')
             ->assertOk()
             ->assertJsonPath('meta.users.0', 'Boss');
+    }
+
+    public function test_audit_actor_list_is_distinct_sorted_and_user_name_is_indexed(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        foreach (['Zed', 'Amy', 'Zed', 'Amy'] as $name) {
+            AuditLog::create(['user_name' => $name, 'action' => 'Created brand']);
+        }
+
+        $this->getJson('/api/audit-logs')
+            ->assertOk()
+            ->assertJsonPath('meta.users', ['Amy', 'Zed']);
+
+        $this->assertContains('audit_user_name_idx', array_column(Schema::getIndexes('audit_logs'), 'name'));
     }
 
     public function test_changes_helper_resolves_foreign_keys_to_labels(): void
