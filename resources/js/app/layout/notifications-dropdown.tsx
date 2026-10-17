@@ -29,14 +29,15 @@ const NOTIF_TABS: { id: string; label: string }[] = [{ id: 'all', label: 'notif_
 /** Scrolling and sliding honour the reader's reduced-motion setting. */
 const smooth = (): ScrollBehavior => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
 
-/** Up/Down/Home/End from a row (or its X) move to another row; true when the key was one of them. */
-function moveBetweenRows(e: React.KeyboardEvent<HTMLElement>, row: HTMLElement | null): boolean {
+/** Up/Down/Home/End from a row (or its X) move to another row; Down on the last row asks for older ones. True when the key was one of them. */
+function moveBetweenRows(e: React.KeyboardEvent<HTMLElement>, row: HTMLElement | null, onReachEnd: () => void): boolean {
     if (!row || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return false;
     e.preventDefault();
     const rows = [...(row.closest('#notif-tray')?.querySelectorAll<HTMLElement>('[data-notif-row]') ?? [])];
     const at = rows.indexOf(row);
     const next = e.key === 'Home' ? rows[0] : e.key === 'End' ? rows[rows.length - 1] : rows[at + (e.key === 'ArrowDown' ? 1 : -1)];
-    next?.focus();
+    if (next) next.focus();
+    else if (e.key === 'ArrowDown') onReachEnd();
     return true;
 }
 
@@ -50,6 +51,8 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
     const location = useLocation();
     const ref = useRef<HTMLDivElement>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+    const endRef = useRef<HTMLDivElement>(null);
     const { data } = useNotifications();
     const markRead = useMarkRead();
     const markAllRead = useMarkAllRead();
@@ -140,6 +143,23 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
         // A refetch after a dismiss can shift a row onto the next page; show it once.
         return (feed.data?.pages ?? []).flatMap((page) => page.data).filter((n) => !seen.has(n.id) && seen.add(n.id));
     }, [feed.data]);
+
+    // Older rows load as the list end scrolls into view (or Down is pressed on the last row).
+    const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = feed;
+    const loadOlder = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    useEffect(() => {
+        const end = endRef.current;
+        if (!end || !hasNextPage || isFetchNextPageError) return;
+        const observer = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && loadOlder(), {
+            root: listRef.current,
+            rootMargin: '0px 0px 160px 0px',
+        });
+        observer.observe(end);
+        return () => observer.disconnect();
+    }, [hasNextPage, isFetchNextPageError, loadOlder, items.length]);
+    const matching = feed.data?.pages[feed.data.pages.length - 1]?.matching ?? items.length;
 
     // A tab that emptied out (its last row dismissed) falls back to All.
     useEffect(() => {
@@ -281,6 +301,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                 )}
 
                 <div
+                    ref={listRef}
                     id="notif-tray-list"
                     role={showChips ? 'tabpanel' : undefined}
                     aria-labelledby={showChips ? `notif-tab-${tab}` : undefined}
@@ -315,6 +336,7 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                                     notification={n}
                                     tabbable={n.id === (items.some((i) => i.id === rovingId) ? rovingId : items[0]?.id)}
                                     onFocusRow={() => setRovingId(n.id)}
+                                    onReachEnd={loadOlder}
                                     leaving={dismissing.has(n.id)}
                                     onOpen={() => handleClick(n)}
                                     onDismiss={(rowEl) => handleDismiss(n.id, rowEl)}
@@ -323,22 +345,25 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
                         </TooltipProvider>
                     )}
 
-                    {/* The next page of this tab */}
-                    {feed.hasNextPage && (
-                        <div className="px-4 py-2.5 text-center">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => feed.fetchNextPage()}
-                                disabled={feed.isFetchingNextPage}
-                                className="text-brand-ink h-8 text-xs [@media(pointer:coarse)]:h-10"
-                            >
-                                {feed.isFetchingNextPage && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />}
-                                {feed.isFetchingNextPage ? t('loading') : t('notif_load_more')}
-                            </Button>
-                        </div>
-                    )}
+                    {/* List end: how much is shown, loading, the end, or a retry; the marker below triggers the next page */}
+                    {items.length > 0 &&
+                        (isFetchNextPageError ? (
+                            <div className="px-4 py-3 text-center">
+                                <LoadFailed onRetry={() => fetchNextPage()} />
+                            </div>
+                        ) : (
+                            <div role="status" className="text-muted-foreground flex items-center justify-center gap-1.5 px-4 py-3 text-xs">
+                                {isFetchingNextPage && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />}
+                                {isFetchingNextPage
+                                    ? t('loading')
+                                    : hasNextPage
+                                      ? t('notif_showing').replace('{shown}', String(items.length)).replace('{total}', String(matching))
+                                      : (feed.data?.pages.length ?? 0) > 1
+                                        ? t('notif_end')
+                                        : null}
+                            </div>
+                        ))}
+                    <div ref={endRef} aria-hidden className="h-px" />
                 </div>
             </div>
         </div>
@@ -350,6 +375,7 @@ function NotificationRow({
     notification: n,
     tabbable,
     onFocusRow,
+    onReachEnd,
     leaving,
     onOpen,
     onDismiss,
@@ -357,6 +383,7 @@ function NotificationRow({
     notification: AppNotification;
     tabbable: boolean;
     onFocusRow: () => void;
+    onReachEnd: () => void;
     leaving: boolean;
     onOpen: () => void;
     onDismiss: (rowEl: HTMLElement | null) => void;
@@ -401,7 +428,7 @@ function NotificationRow({
                         onFocus={onFocusRow}
                         onClick={onOpen}
                         onKeyDown={(e) => {
-                            if (moveBetweenRows(e, e.currentTarget)) return;
+                            if (moveBetweenRows(e, e.currentTarget, onReachEnd)) return;
                             if (e.key === 'ArrowRight') {
                                 e.preventDefault();
                                 dismissRef.current?.focus();
@@ -438,7 +465,7 @@ function NotificationRow({
                     tabIndex={-1}
                     onClick={() => onDismiss(openRef.current)}
                     onKeyDown={(e) => {
-                        if (moveBetweenRows(e, openRef.current)) return;
+                        if (moveBetweenRows(e, openRef.current, onReachEnd)) return;
                         if (e.key === 'ArrowLeft') {
                             e.preventDefault();
                             openRef.current?.focus();
