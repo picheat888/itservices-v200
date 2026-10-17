@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
  * Bell (database) notification for every service-request transition. The
  * subtype tells the SPA which message to render:
  * submitted | waiting | ready_to_complete | approved_step | approved_final |
- * rejected | completed | cancelled | blocked_no_account
+ * rejected | completed | cancelled | cancelled_for_owner | blocked_no_account
  *
  * `waiting` is only ever an approval rung — a person who has to decide. The IT
  * queue gets `ready_to_complete` instead: nobody there decides anything, they

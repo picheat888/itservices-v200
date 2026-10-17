@@ -283,6 +283,16 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
+                'key' => 'notif_request_cancelled_for_owner',
+                'module' => 'requests',
+                'name' => 'Request cancelled for the requester',
+                'trigger' => 'Someone else cancels a pending request for the requester',
+                'audience' => 'The approver it was waiting on',
+                'message_en' => 'Cancelled by {actor} for the requester',
+                'message_th' => '{actor} ยกเลิกคำขอแทนผู้ขอแล้ว',
+                'enabled' => true,
+            ],
+            [
                 'key' => 'notif_request_blocked_no_account',
                 'module' => 'requests',
                 'name' => 'Approver has no login',
