@@ -169,7 +169,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         },
         {
             key: 'decided',
-            header: t('stock_decided_by'),
+            header: t('stock_approver'),
             width: '170px',
             hideBelow: 'lg',
             render: (r) => {
