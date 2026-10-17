@@ -170,6 +170,17 @@ class TicketTabularReportsTest extends TestCase
         $this->assertSame([$this->set['t2']->id], $ids('category=software'));
     }
 
+    public function test_backlog_search_finds_a_ticket_by_number(): void
+    {
+        $this->seedTickets();
+        $user = $this->reader();
+        $number = $this->set['t2']->ticket_no;
+
+        $rows = $this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows?search='.urlencode($number))->assertOk()->json('data');
+
+        $this->assertSame([$this->set['t2']->id], array_column($rows, 'id'));
+    }
+
     public function test_backlog_assignee_filter_and_the_unassigned_queue(): void
     {
         $this->seedTickets();
