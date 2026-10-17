@@ -74,10 +74,11 @@ class PdfNumberFormatTest extends TestCase
                 return [
                     ReportColumn::text('code', 'Code', fn (Model $m) => $m->getAttribute('code')),
                     ReportColumn::number('qty', 'Qty', fn (Model $m) => $m->getAttribute('qty')),
+                    ReportColumn::number('hours', 'Hours', fn (Model $m) => $m->getAttribute('hours'), 1),
                 ];
             }
         };
-        $row = (new class extends Model {})->forceFill(['code' => 'DOC-20261', 'qty' => 4321]);
+        $row = (new class extends Model {})->forceFill(['code' => 'DOC-20261', 'qty' => 4321, 'hours' => 1234]);
 
         $html = view('pdf.reports.tabular', [
             'report' => $report,
@@ -88,6 +89,7 @@ class PdfNumberFormatTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('4,321', $html);
+        $this->assertStringContainsString('1,234.0', $html);
         $this->assertStringContainsString('12,345', $html);
         $this->assertStringContainsString('6,789', $html);
         $this->assertStringContainsString('DOC-20261', $html);

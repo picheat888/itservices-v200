@@ -233,6 +233,8 @@ export interface TabularColumnDef {
     labels?: Record<string, string>;
     /** Starts hidden in the column picker (ReportColumn::hiddenByDefault) until the reader shows it. */
     hidden?: boolean;
+    /** number columns only: decimal places, as in the PDF and Excel. */
+    decimals?: number;
 }
 
 export interface TabularDefinition {

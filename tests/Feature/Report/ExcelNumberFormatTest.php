@@ -2,11 +2,15 @@
 
 namespace Tests\Feature\Report;
 
+use App\Enums\Ticket\TicketStatus;
 use App\Exports\Report\TabularRowsSheet;
 use App\Exports\Report\TabularSummarySheet;
 use App\Exports\Report\TicketOverviewSummarySheet;
+use App\Models\Ticket\Ticket;
 use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Tabular\ReportSummary;
+use App\Services\Report\Ticket\TicketBacklogReport;
+use App\Services\Report\Ticket\TicketManualSlaReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Excel as ExcelWriter;
@@ -42,6 +46,32 @@ class ExcelNumberFormatTest extends TestCase
         }
         $this->assertContains('money', $types);
         $this->assertContains('number', $types);
+    }
+
+    public function test_fractional_hours_columns_keep_one_decimal_in_excel(): void
+    {
+        $ticket = Ticket::factory()->create([
+            'category' => 'hardware',
+            'status' => TicketStatus::Completed,
+            'created_at' => '2026-09-01 08:00:00',
+            'resolved_at' => '2026-09-01 13:30:00',
+        ]);
+        $report = app(TicketManualSlaReport::class);
+
+        $worksheet = $this->readSheet(new TabularRowsSheet($report, collect([$ticket])));
+
+        $keys = array_map(fn ($column) => $column->key, $report->sheetColumns());
+        $cell = Coordinate::stringFromColumnIndex(array_search('fix_hours', $keys, true) + 1).'2';
+        $this->assertEquals(5.5, $worksheet->getCell($cell)->getValue());
+        $this->assertSame('#,##0.0', $worksheet->getStyle($cell)->getNumberFormat()->getFormatCode());
+    }
+
+    public function test_hours_left_keeps_one_decimal_in_excel(): void
+    {
+        $formats = (new TabularRowsSheet(app(TicketBacklogReport::class), collect()))->columnFormats();
+        $keys = array_map(fn ($column) => $column->key, app(TicketBacklogReport::class)->sheetColumns());
+
+        $this->assertSame('#,##0.0', $formats[Coordinate::stringFromColumnIndex(array_search('hours_left', $keys, true) + 1)]);
     }
 
     public function test_summary_sheet_formats_tile_values_by_kind_and_keeps_them_numeric(): void

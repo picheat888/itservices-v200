@@ -86,7 +86,7 @@
                 <td>{{ match (true) {
                     $column->type === 'money' && $cell !== null => number_format($cell, 2),
                     $column->type === 'days_left' && $cell < 0 => 'เลยมา '.$group(abs($cell)).' วัน',
-                    in_array($column->type, ['number', 'days_left', 'hours_left'], true) && $cell !== null => $group($cell),
+                    in_array($column->type, ['number', 'days_left', 'hours_left'], true) && $cell !== null => number_format($cell, $column->decimals()),
                     default => $cell,
                 } }}</td>
             @endforeach

@@ -122,7 +122,7 @@ class AssetTransferHistoryReport extends TabularReport
             ReportColumn::enum('outcome', 'ผลหลังส่ง', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['outcome'] ?? null, self::OUTCOME_KEYS, self::OUTCOME_TH)
                 ->labelKey('rep_c_th_outcome'),
             // Hours to the acceptance, the wait so far, or from the return request to the return.
-            ReportColumn::number('outcome_hours', 'ผลหลังส่ง (ชม.)', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['hours'] ?? null)->hiddenByDefault(),
+            ReportColumn::number('outcome_hours', 'ผลหลังส่ง (ชม.)', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['hours'] ?? null, 1)->hiddenByDefault(),
             ReportColumn::text('reason', 'เหตุผล', fn (AssetTransfer $t) => $t->reason),
             ReportColumn::localized('performed_by', 'ผู้ดำเนินการ', fn (AssetTransfer $t) => ['name' => $t->performed_by, 'name_th' => $t->performer?->name_th]),
         ];

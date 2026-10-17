@@ -35,7 +35,7 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithColumnForm
     }
 
     /**
-     * Counts, days and hours group thousands; money shows two decimals. Cells stay numeric.
+     * Counts, days and hours group thousands and keep the column's decimals; money shows two. Cells stay numeric.
      *
      * @return array<string, string>
      */
@@ -45,7 +45,7 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithColumnForm
         foreach ($this->report->sheetColumns() as $i => $column) {
             $format = match ($column->type) {
                 'money' => '#,##0.00',
-                'number', 'days_left', 'hours_left' => '#,##0',
+                'number', 'days_left', 'hours_left' => $column->decimals() > 0 ? '#,##0.'.str_repeat('0', $column->decimals()) : '#,##0',
                 default => null,
             };
             if ($format !== null) {

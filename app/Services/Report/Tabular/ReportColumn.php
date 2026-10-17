@@ -50,6 +50,14 @@ final class ReportColumn
     /** Whether the page's column picker starts with this column hidden (the reader can show it). */
     private bool $hiddenByDefault = false;
 
+    /** Decimal places a number shows on the page, in the PDF and in Excel (0 = whole numbers). */
+    private int $decimals = 0;
+
+    public function decimals(): int
+    {
+        return $this->decimals;
+    }
+
     /**
      * Start this column hidden on the page — detail most readers skip (a serial, the warehouse)
      * or a value another cell already draws. The API rows still carry it, the picker can show it,
@@ -123,9 +131,12 @@ final class ReportColumn
         return new self($key, $heading, 'localized', $resolve);
     }
 
-    public static function number(string $key, string $heading, Closure $resolve): self
+    public static function number(string $key, string $heading, Closure $resolve, int $decimals = 0): self
     {
-        return new self($key, $heading, 'number', $resolve);
+        $column = new self($key, $heading, 'number', $resolve);
+        $column->decimals = $decimals;
+
+        return $column;
     }
 
     public static function money(string $key, string $heading, Closure $resolve): self
@@ -154,7 +165,10 @@ final class ReportColumn
     /** The resolver returns hours to a deadline (negative = past it); the page shows it as "เกิน 3 วัน" / "อีก 5 ชม.". */
     public static function hoursLeft(string $key, string $heading, Closure $resolve): self
     {
-        return new self($key, $heading, 'hours_left', $resolve);
+        $column = new self($key, $heading, 'hours_left', $resolve);
+        $column->decimals = 1;
+
+        return $column;
     }
 
     /**
@@ -196,7 +210,7 @@ final class ReportColumn
     }
 
     /**
-     * @return array{key: string, type: string, label_key: string, labels?: array<string, string>, link?: string, hidden?: true}
+     * @return array{key: string, type: string, label_key: string, labels?: array<string, string>, link?: string, hidden?: true, decimals?: int}
      */
     public function toArray(): array
     {
@@ -206,6 +220,9 @@ final class ReportColumn
         }
         if ($this->hiddenByDefault) {
             $column['hidden'] = true;
+        }
+        if ($this->type === 'number' && $this->decimals > 0) {
+            $column['decimals'] = $this->decimals;
         }
         if ($this->type === 'enum') {
             $column['labels'] = $this->labelKeys;
