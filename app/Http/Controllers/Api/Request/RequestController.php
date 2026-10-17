@@ -13,6 +13,7 @@ use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
+use App\Services\Request\RequestPeriodStats;
 use App\Services\Request\RequestService;
 use App\Support\OverviewPeriod;
 use App\Support\SearchTerms;
@@ -39,7 +40,7 @@ class RequestController extends Controller
     // ticket.assignee: the trail says who is working the case, not just that one exists.
     private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position', 'attachments'];
 
-    public function __construct(private readonly RequestService $service) {}
+    public function __construct(private readonly RequestService $service, private readonly RequestPeriodStats $periodStats) {}
 
     /**
      * Visibility: view_all (or super) sees everything; everyone else sees the
@@ -263,15 +264,8 @@ class RequestController extends Controller
             ->where('status', ApprovalStatus::Current->value)
             ->where('kind', WorkflowStepKind::Approval->value)
             ->count();
-        // Filed in the period: counts by status, and the mean days from submit to the final
-        // decision (PHP-side for cross-database portability).
-        $filed = $period->apply($visible(ServiceRequest::query()), 'created_at')
-            ->get(['status', 'created_at', 'approved_at', 'rejected_at']);
-        $filedCount = fn (RequestStatus $status) => $filed->where('status', $status)->count();
-        $cycles = $filed
-            ->whereIn('status', [RequestStatus::Approved, RequestStatus::Rejected, RequestStatus::Completed])
-            ->map(fn (ServiceRequest $r) => ($r->approved_at ?? $r->rejected_at)?->diffInMinutes($r->created_at, true))
-            ->filter(fn ($minutes) => $minutes !== null);
+        // Filed in the period: counts by status and mean days to a decision.
+        $filed = $this->periodStats->for($period->apply($visible(ServiceRequest::query()), 'created_at'));
 
         return [
             'total' => $paginator->total(),
@@ -285,14 +279,7 @@ class RequestController extends Controller
             'cancelled' => (int) ($counts[RequestStatus::Cancelled->value] ?? 0),
             'awaiting_me' => $awaitingMe,
             'to_complete' => $canComplete ? (int) ($counts[RequestStatus::Approved->value] ?? 0) : 0,
-            'period' => [
-                'pending' => $filedCount(RequestStatus::Pending),
-                'approved' => $filedCount(RequestStatus::Approved),
-                'rejected' => $filedCount(RequestStatus::Rejected),
-                'completed' => $filedCount(RequestStatus::Completed),
-                'cancelled' => $filedCount(RequestStatus::Cancelled),
-                'avg_cycle_days' => $cycles->isEmpty() ? null : round($cycles->avg() / 1440, 1),
-            ],
+            'period' => $filed,
         ];
     }
 }
