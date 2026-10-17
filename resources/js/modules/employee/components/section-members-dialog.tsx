@@ -30,9 +30,10 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     // Each opening starts with an empty search
     const [query, setQuery] = useState('');
+    const openId = section?.id ?? null;
     useEffect(() => {
-        setQuery('');
-    }, [section?.id]);
+        if (openId !== null) setQuery('');
+    }, [openId]);
 
     const { data: members = [], isLoading } = useSectionMembers(view?.id ?? null);
     // Member count from the clicked row
