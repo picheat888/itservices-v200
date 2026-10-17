@@ -480,7 +480,7 @@ export default function AccessControlPage() {
     const egColumns: Column<EmailGroup>[] = [
         { key: 'name', header: t('access_name'), render: (g) => <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} /> },
         { key: 'owner', header: t('access_owner'), render: (g) => <OwnerCell owner={g.owner} photoUrl={g.owner_photo_url} /> },
-        { key: 'members', header: t('access_members'), render: (g) => <AvatarStack members={g.members ?? []} /> },
+        { key: 'members', header: t('access_members'), render: (g) => <AvatarStack members={g.members ?? []} total={g.members_count} /> },
         { key: 'department', header: t('access_department'), render: (g) => g.department ?? '—' },
         actionsCol<EmailGroup>(openEmailGroup),
     ];
@@ -501,7 +501,12 @@ export default function AccessControlPage() {
         },
         { key: 'owner', header: t('access_owner'), className: 'w-[18%]', render: (s) => <OwnerCell owner={s.owner} photoUrl={s.owner_photo_url} /> },
         { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => s.department ?? '—' },
-        { key: 'members', header: t('access_members'), className: 'w-[16%]', render: (s) => <AvatarStack members={s.members ?? []} /> },
+        {
+            key: 'members',
+            header: t('access_members'),
+            className: 'w-[16%]',
+            render: (s) => <AvatarStack members={s.members ?? []} total={s.members_count} />,
+        },
         { ...actionsCol<FileShare>(openFileShare), className: 'w-[8%]' },
     ];
 
