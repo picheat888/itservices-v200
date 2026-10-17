@@ -3,6 +3,7 @@ import { Field } from '@/shared/components/field';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { serverMessage } from '@/shared/lib/api-errors';
+import { localName, localPair } from '@/shared/lib/local-name';
 import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_ONBOARDING_BADGE, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
@@ -141,11 +142,17 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                                     <span>{lang === 'th' ? row.value_th || row.value : row.value}</span>
                                 </SlipRow>
                             ))}
-                            <SlipRow label={t('req_requester')}>{ctx.request.requester.name}</SlipRow>
-                            {ctx.request.requester.department && <SlipRow label={t('req_department')}>{ctx.request.requester.department}</SlipRow>}
+                            <SlipRow label={t('req_requester')}>{localName(ctx.request.requester, lang)}</SlipRow>
+                            {ctx.request.requester.department && (
+                                <SlipRow label={t('req_department')}>
+                                    {localPair(ctx.request.requester.department, ctx.request.requester.department_th, lang)}
+                                </SlipRow>
+                            )}
                             {/* A new hire has no account: the filer answers for it */}
                             {onBehalf && ctx.request.submitted_by?.name && (
-                                <SlipRow label={t('req_submitted_by')}>{ctx.request.submitted_by.name}</SlipRow>
+                                <SlipRow label={t('req_submitted_by')}>
+                                    {localPair(ctx.request.submitted_by.name, ctx.request.submitted_by.name_th, lang)}
+                                </SlipRow>
                             )}
                             <SlipRow label={t('req_reason_label')}>
                                 <span className="whitespace-pre-wrap">{ctx.request.reason}</span>
@@ -173,7 +180,9 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                         <p className="text-muted-foreground mr-auto text-xs leading-relaxed sm:pr-4">
                             {t('req_decide_notify_next').replace(
                                 '{name}',
-                                remainingApprovals[0]?.approver_name ?? remainingApprovals[0]?.label ?? '',
+                                localPair(remainingApprovals[0]?.approver_name, remainingApprovals[0]?.approver_name_th, lang) ??
+                                    remainingApprovals[0]?.label ??
+                                    '',
                             )}
                         </p>
                     )}

@@ -29,6 +29,7 @@ class RequestApprovalResource extends JsonResource
             'status' => $this->status?->value,
             'approver_employee_id' => $this->approver_employee_id,
             'approver_name' => $this->approver_name,
+            'approver_name_th' => $this->relationLoaded('approver') ? $this->approver?->name_th : null,
             // A department step open to a group has no name to show: the reader is told
             // which department is holding it, and at which positions, so "waiting on" says
             // something rather than sitting blank.
@@ -65,6 +66,7 @@ class RequestApprovalResource extends JsonResource
             // one exists, which is why it is not written onto the row at submit time.
             'awaiting_account' => $this->awaitsAnAccount(),
             'acted_by_name' => $this->acted_by_name,
+            'acted_by_name_th' => $this->actorNameTh(),
             'became_current_at' => $this->became_current_at?->toDateTimeString(),
             'acted_at' => $this->acted_at?->toDateTimeString(),
         ];
@@ -87,5 +89,11 @@ class RequestApprovalResource extends JsonResource
         return $this->relationLoaded('approver')
             ? $this->approver !== null && $this->approver->user === null
             : ! User::where('employee_id', $this->approver_employee_id)->exists();
+    }
+
+    /** Thai name of whoever signed this row, from their live employee record; null when not loaded or none. */
+    public function actorNameTh(): ?string
+    {
+        return $this->relationLoaded('actedBy') && $this->actedBy?->relationLoaded('employee') ? $this->actedBy->employee?->name_th : null;
     }
 }
