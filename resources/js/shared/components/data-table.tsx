@@ -61,6 +61,10 @@ interface DataTableProps<T> {
     rowClassName?: (row: T) => string | undefined;
     /** Detail drawn in a full-width row under a row (an expanded row); null or undefined draws nothing. */
     renderExpanded?: (row: T) => React.ReactNode;
+    /** The id of a row's expanded detail row, for the expand button's aria-controls. */
+    expandedRowId?: (row: T) => string;
+    /** With onRowClick: false keeps rows out of the Tab order, for rows whose own button is the stop (default true). */
+    focusableRows?: boolean;
     /** Hide the built-in pagination bar — use when the parent handles server-side pagination */
     hidePagination?: boolean;
     /** Content rendered on the right of the search row (e.g. an Add button). */
@@ -133,6 +137,8 @@ export function DataTable<T>({
     isRowClickable,
     rowClassName,
     renderExpanded,
+    expandedRowId,
+    focusableRows = true,
     hidePagination,
     actions,
     filters,
@@ -391,17 +397,17 @@ export function DataTable<T>({
                             pageRows.map((row) => {
                                 const clickable = !!onRowClick && (isRowClickable?.(row) ?? true);
                                 const expanded = renderExpanded?.(row);
+                                const rowStop = clickable && focusableRows;
                                 return (
                                     <Fragment key={rowKey(row)}>
                                         <tr
                                             onClick={clickable ? () => onRowClick?.(row) : undefined}
                                             data-row-click={clickable ? '' : undefined}
                                             // Clickable rows are reachable by Tab and open on Enter / Space.
-                                            tabIndex={clickable ? 0 : undefined}
-                                            onKeyDown={clickable ? (e) => onRowKeyDown(e, row) : undefined}
+                                            tabIndex={rowStop ? 0 : undefined}
+                                            onKeyDown={rowStop ? (e) => onRowKeyDown(e, row) : undefined}
                                             className={cn(
-                                                // border-b-0 on the last row, NOT border-0: the latter zeroes every
-                                                // side, which silently ate the left accent a rowClassName had set.
+                                                // last:border-b-0, never border-0 (keeps a rowClassName left accent)
                                                 'border-border/60 border-b last:border-b-0',
                                                 clickable &&
                                                     'row-hover focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
@@ -425,7 +431,7 @@ export function DataTable<T>({
                                             ))}
                                         </tr>
                                         {expanded != null && expanded !== false && (
-                                            <tr className="border-border/60 border-b last:border-b-0">
+                                            <tr id={expandedRowId?.(row)} className="border-border/60 border-b last:border-b-0">
                                                 <td colSpan={columns.length} className="p-0">
                                                     {/* Pinned to the visible scroller width, like the empty state */}
                                                     <div className="sticky left-0 box-border w-[100cqw] max-w-full">{expanded}</div>
