@@ -84,7 +84,7 @@ export const workflow: Dict = {
     wf_actor_it: 'ทีม IT',
     wf_preset_supervisor_head: 'Supervisor / Head',
     wf_preset_manager_asst: 'Manager / Asst. Manager',
-    wf_preset_department_manager: 'ผู้จัดการแผนก',
+    wf_preset_department_manager: 'Department Manager',
     wf_preset_vice_president: 'Vice President',
     wf_test_with: 'ทดสอบกับ:',
     wf_preview_loading: 'กำลังหาผู้อนุมัติ…',
