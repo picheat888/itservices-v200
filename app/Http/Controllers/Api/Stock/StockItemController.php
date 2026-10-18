@@ -8,19 +8,15 @@ use App\Http\Resources\Stock\StockItemResource;
 use App\Http\Resources\Stock\StockMovementResource;
 use App\Http\Resources\Stock\StockReorderItemResource;
 use App\Models\AuditLog;
-use App\Models\Settings\AppSetting;
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
-use App\Support\DateDisplay;
-use App\Support\DocumentName;
+use App\Services\Stock\StockHistoryService;
 use App\Support\SearchTerms;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -228,126 +224,28 @@ class StockItemController extends Controller
     }
 
     /** Full audit history for one SKU: movement timeline + lots + per-serial event timelines. */
-    public function history(Request $request, StockItem $stockItem): JsonResponse
+    public function history(Request $request, StockItem $stockItem, StockHistoryService $histories): JsonResponse
     {
         $this->gateView($request);
 
-        return response()->json(['data' => $this->buildHistory($stockItem)]);
+        return response()->json(['data' => $histories->build($stockItem)]);
     }
 
-    /** Stream an A4 PDF of one history view (summary|issue|receive|adjust|transfer). */
-    public function historyPdf(Request $request, StockItem $stockItem): StreamedResponse
+    /** Stream an A4 PDF of one history view (StockHistoryService::VIEWS; anything else prints the summary). */
+    public function historyPdf(Request $request, StockItem $stockItem, StockHistoryService $histories): StreamedResponse
     {
         $this->gateView($request);
 
-        $view = $request->query('v', 'summary');
-        if (! in_array($view, ['summary', 'issue', 'receive', 'adjust', 'transfer'], true)) {
-            $view = 'summary';
-        }
-
-        // Pure nested arrays for the Blade (no Collection surprises in array_filter, etc.).
-        $history = json_decode(json_encode($this->buildHistory($stockItem)), true);
-
-        // Logo → base64 data URI so dompdf needs no remote/chroot access for the image.
-        $logo = null;
-        $logoPath = AppSetting::get('logo_path');
-        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
-            $logo = 'data:'.Storage::disk('public')->mimeType($logoPath).';base64,'.base64_encode(Storage::disk('public')->get($logoPath));
-        }
-
-        $pdf = Pdf::loadView('pdf.stock-history', [
-            'history' => $history,
-            'view' => $view,
-            'logo' => $logo,
-            'company' => AppSetting::get('company_name', 'ABCD Electric Company'),
-            'legalName' => AppSetting::get('legal_name'),
-            'address' => AppSetting::get('address'),
-            'taxId' => AppSetting::get('tax_id'),
-            'printedBy' => $request->user()?->name ?? '',
-            // An English document, so English month names.
-            'printedAt' => DateDisplay::dateTime(now(), null, 'en'),
-            'dateConfig' => DateDisplay::config(),
-        ])->setPaper('a4', $view === 'summary' ? 'portrait' : 'landscape');
+        $file = $histories->pdf($stockItem, (string) $request->query('v', 'summary'), $request->user());
 
         // dompdf v3's own stream() returns a buffered Illuminate Response; the tests read the
         // body via streamedContent(), so wrap the rendered bytes in a real StreamedResponse.
-        $bytes = $pdf->output();
-        // Standard system-wide filename: StockHistory_<View>_<SKU>_<YYYY-MM-DD>.pdf.
-        $filename = DocumentName::make('StockHistory', [ucfirst($view), $stockItem->sku]);
-
-        return new StreamedResponse(function () use ($bytes) {
-            echo $bytes;
+        return new StreamedResponse(function () use ($file) {
+            echo $file['bytes'];
         }, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $filename, 'history.pdf'),
+            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $file['filename'], 'history.pdf'),
         ]);
-    }
-
-    /**
-     * Assemble the full audit history for one SKU: movement timeline, FIFO lots, and
-     * per-serial event timelines. Shared by the JSON endpoint and the PDF export.
-     *
-     * @return array<string, mixed>
-     */
-    private function buildHistory(StockItem $stockItem): array
-    {
-        $stockItem->load([
-            'movements.user.employee:id,first_name_th,last_name_th',
-            'lots' => fn ($q) => $q->latest('received_at'),
-            'lots.movement',
-            'serials.warehouse',
-            'serials.events.movement',
-            'serials.events.user.employee:id,first_name_th,last_name_th',
-        ]);
-
-        $lotSerials = $stockItem->serials->groupBy('stock_movement_id');
-
-        return [
-            'item' => [
-                'id' => $stockItem->id,
-                'sku' => $stockItem->sku,
-                'name' => $stockItem->name,
-                'current_stock' => $stockItem->current_stock,
-                'track_serial' => (bool) $stockItem->track_serial,
-            ],
-            'movements' => $stockItem->movements->map(fn ($m) => [
-                'id' => $m->id,
-                'doc_no' => $m->doc_no,
-                'type' => $m->type,
-                'qty' => $m->qty,
-                'unit_cost' => $m->unit_cost,
-                'from_label' => $m->from_label,
-                'to_label' => $m->to_label,
-                'reference' => $m->reference,
-                'recorded_by' => $m->recorded_by,
-                'recorded_by_th' => $m->user?->name_th,
-                'notes' => $m->notes,
-                'moved_at' => $m->moved_at?->toIso8601String(),
-            ])->values(),
-            'lots' => $stockItem->lots->map(fn ($l) => [
-                'unit_cost' => $l->unit_cost,
-                'qty_received' => $l->qty_received,
-                'qty_remaining' => $l->qty_remaining,
-                'received_at' => $l->received_at?->toIso8601String(),
-                'doc_no' => $l->movement?->doc_no,
-                'serials' => ($lotSerials[$l->stock_movement_id] ?? collect())->pluck('serial')->values(),
-            ])->values(),
-            'serials' => $stockItem->serials->map(fn ($s) => [
-                'serial' => $s->serial,
-                'status' => $s->status,
-                'warehouse' => $s->warehouse?->name,
-                'events' => $s->events->map(fn ($e) => [
-                    'event' => $e->event,
-                    'occurred_at' => $e->occurred_at?->toIso8601String(),
-                    'doc_no' => $e->movement?->doc_no,
-                    'reference' => $e->reference,
-                    'recorded_by' => $e->recorded_by,
-                    'recorded_by_th' => $e->user?->name_th,
-                    'from_label' => $e->from_label,
-                    'to_label' => $e->to_label,
-                ])->values(),
-            ])->values(),
-        ];
     }
 
     /** Update a stock item. */
