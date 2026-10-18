@@ -15,6 +15,7 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { Briefcase, Check, LayoutDashboard, Loader2, Lock, Pencil, PencilLine, Plus, Save, Search, Shield, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -39,6 +40,7 @@ import { STOCK_COUNT, StockPermissionTree } from '../components/stock-permission
 import { TICKET_COUNT, TicketPermissionTree } from '../components/ticket-permission-tree';
 import { WORKFLOW_COUNT, WorkflowPermissionTree } from '../components/workflow-permission-tree';
 import { usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from '../hooks/use-permissions';
+import { rebaseDraft, specEdges } from '../lib/draft-rebase';
 import { countGranted, hiddenHitCount, specKeys, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { isRoleChanged, permissionRefusalText } from '../lib/refusal';
@@ -229,12 +231,35 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
             return params;
         });
 
+    // An unknown or deleted ?role= leaves the URL (replace), so the bare URL means the first role again
+    const roleParam = searchParams.get('role');
+    const unknownRoleParam = data !== undefined && roleParam !== null && !roles.some((r) => r.value === roleParam);
+    useEffect(() => {
+        if (!unknownRoleParam) return;
+        setSearchParams(
+            (prev) => {
+                const params = new URLSearchParams(prev);
+                params.delete('role');
+                return params;
+            },
+            { replace: true },
+        );
+    }, [unknownRoleParam, setSearchParams]);
+
     // Retired keys a role still holds stay out of the draft so the save passes server validation
     const catalogKeys = useMemo(
         () => new Set(Object.entries(data?.catalog ?? {}).flatMap(([module, actions]) => actions.map((action) => `${module}.${action}`))),
         [data],
     );
     const heldKeys = (r: RoleRow) => new Set(r.permissions.filter((p) => catalogKeys.has(p)));
+    // Master/view rules of every card, for rebasing a draft onto a newer stored set
+    const draftEdges = useMemo(() => {
+        const catalogGroups = Object.entries(data?.catalog ?? {}).map(([module, actions]) => ({
+            module,
+            keys: actions.map((a) => `${module}.${a}`),
+        }));
+        return [...catalogGroups, ...ADMIN_GROUPS].flatMap((group) => specEdges(cardSpec(group).spec));
+    }, [data]);
 
     /** Delete a role template, or say up front why the API would refuse it. */
     const handleDeleteRole = (r: RoleRow) => {
@@ -278,24 +303,30 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         return () => onDirtyChange(false);
     }, [dirty, onDirtyChange]);
 
-    // Seed the draft and its version for a newly selected role; a refetch only re-seeds while nothing is unsaved
+    // The stored set the draft stands on and its version (sent with the save)
     const seededFor = useRef<string | null>(null);
+    const seedKeys = useRef<Set<string>>(new Set());
     const draftVersion = useRef('');
-    const adoptVersion = useRef(false);
-    useEffect(() => {
-        if (!role) return;
-        if (seededFor.current === role.value && dirty) {
-            // After a 409 the reload brings the stored side; the kept draft saves against it
-            if (adoptVersion.current) draftVersion.current = role.version;
-            adoptVersion.current = false;
+    /** A newly selected role seeds the draft; a newer version of the same role rebases the unsaved changes onto it. */
+    const adoptStored = (stored: RoleRow) => {
+        const keys = heldKeys(stored);
+        if (seededFor.current !== stored.value) {
+            seededFor.current = stored.value;
+            seedKeys.current = keys;
+            draftVersion.current = stored.version;
+            setDraft(keys);
             return;
         }
-        seededFor.current = role.value;
-        draftVersion.current = role.version;
-        adoptVersion.current = false;
-        setDraft(heldKeys(role));
+        if (draftVersion.current === stored.version) return;
+        const seed = seedKeys.current;
+        seedKeys.current = keys;
+        draftVersion.current = stored.version;
+        setDraft((prev) => rebaseDraft(prev, seed, keys, draftEdges));
+    };
+    useEffect(() => {
+        if (role) adoptStored(role);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [role?.value, data]);
+    }, [role?.value, role?.version]);
 
     // The saved notice follows the ✓ beat; a tab left mid-beat drops it
     const doneTimer = useRef<number | undefined>(undefined);
@@ -380,20 +411,26 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         setSaveStep('saving');
         try {
             const fresh = await update.mutateAsync({ role: role.value, permissions: [...draft], version: draftVersion.current });
-            // The draft takes the stored set, so the refetch guard sees nothing unsaved
+            // The draft takes the stored set, so nothing reads as unsaved
             const stored = fresh.roles.find((r) => r.value === role.value);
             if (stored) {
+                const keys = heldKeys(stored);
+                seedKeys.current = keys;
                 draftVersion.current = stored.version;
-                setDraft(heldKeys(stored));
+                setDraft(keys);
             }
         } catch (err: unknown) {
+            if (isRoleChanged(err)) {
+                // Someone else saved this role: rebase onto the latest, then the reader reviews and saves again
+                const { data: latest } = await refetch();
+                const stored = latest?.roles.find((r) => r.value === role.value);
+                if (stored) adoptStored(stored);
+                setSaveStep('idle');
+                useToastStore.getState().push(t('perm_refusal_role_changed'), 'warning');
+                return;
+            }
             setSaveError(permissionRefusalText(err, t));
             setSaveStep('confirm');
-            // Someone else saved this role: reload it, keeping the draft
-            if (isRoleChanged(err)) {
-                adoptVersion.current = true;
-                void refetch();
-            }
             return;
         }
         // Same beat as the shared confirm's success check, then the saved notice
@@ -679,7 +716,7 @@ function RoleRowActions({ role, onEdit, onDelete, className }: { role: RoleRow; 
                 onClick={onEdit}
                 title={`${t('edit')} ${role.label}`}
                 aria-label={`${t('edit')} ${role.label}`}
-                className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
+                className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9"
             >
                 <Pencil className="h-3.5 w-3.5" aria-hidden />
             </button>
@@ -688,7 +725,7 @@ function RoleRowActions({ role, onEdit, onDelete, className }: { role: RoleRow; 
                 onClick={onDelete}
                 title={`${t('delete')} ${role.label}`}
                 aria-label={`${t('delete')} ${role.label}`}
-                className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
+                className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9"
             >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
             </button>
