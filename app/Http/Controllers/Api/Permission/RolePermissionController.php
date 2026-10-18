@@ -18,6 +18,38 @@ use Illuminate\Validation\Rule;
 
 class RolePermissionController extends Controller
 {
+    /** Blocks a non-super caller from editing the role they use themselves. */
+    private function guardOwnRole(Request $request, int $roleId): void
+    {
+        $caller = $request->user();
+        if ($caller->isSuper() || (int) $caller->role_id !== $roleId) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => 'You cannot change the permissions of your own role.',
+            'code' => 'own_access',
+        ], 403));
+    }
+
+    /**
+     * Blocks a non-super caller from granting a key they do not hold.
+     *
+     * @param  array<int, string>  $addedKeys
+     */
+    private function guardGrantCeiling(Request $request, array $addedKeys): void
+    {
+        $caller = $request->user();
+        if ($caller->isSuper() || array_diff($addedKeys, $caller->permissions()) === []) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => 'You can only grant permissions you hold yourself.',
+            'code' => 'grant_ceiling',
+        ], 403));
+    }
+
     public function index(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
@@ -74,6 +106,7 @@ class RolePermissionController extends Controller
         abort_if($roleModel === null, 404);
         abort_if(UserRole::isSuperKey($roleModel->key), 422, 'Administrator permissions cannot be changed.');
         $roleId = $roleModel->id;
+        $this->guardOwnRole($request, $roleId);
 
         $data = $request->validate([
             'permissions' => ['present', 'array'],
@@ -92,10 +125,12 @@ class RolePermissionController extends Controller
         $granted = Permissions::normalizeNotifications($granted);
         $granted = Permissions::normalizeReports($granted);
 
-        // Snapshot current permissions before overwriting to compute the diff.
+        // Current keys, for the ceiling and the audit diff
         $before = RolePermission::where('role_id', $roleId)->where('allowed', true)->pluck('permission')->all();
+        $added = array_values(array_diff($granted, $before));
+        $this->guardGrantCeiling($request, $added);
 
-        // Upsert in bulk instead of N individual updateOrCreate calls.
+        // Bulk upsert
         $grantedSet = array_flip($granted);
         $upsertRows = array_map(fn ($key) => [
             'role_id' => $roleId,
@@ -105,7 +140,6 @@ class RolePermissionController extends Controller
 
         RolePermission::upsert($upsertRows, ['role_id', 'permission'], ['allowed']);
 
-        $added = array_values(array_diff($granted, $before));
         $removed = array_values(array_diff($before, $granted));
 
         AuditLog::record(

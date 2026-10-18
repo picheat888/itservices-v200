@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Support\RoleKeys;
@@ -185,6 +186,51 @@ class GroupRoleController extends Controller
     }
 
     /**
+     * Blocks a non-super caller from adding or removing their own employee, or changing the role of a group they sit in.
+     *
+     * @param  array<int>  $changedEmployeeIds  employees the write adds or removes
+     * @param  array<int>  $currentEmployeeIds  the group's members before the write
+     */
+    private function guardOwnAccess(Request $request, array $changedEmployeeIds, array $currentEmployeeIds = [], bool $roleChanges = false): void
+    {
+        $caller = $request->user();
+        if ($caller->isSuper()) {
+            return;
+        }
+
+        $ownEmployeeIds = $caller->linkedEmployeeIds();
+        $touchesOwnAccess = array_intersect($ownEmployeeIds, $changedEmployeeIds) !== []
+            || ($roleChanges && array_intersect($ownEmployeeIds, $currentEmployeeIds) !== []);
+        if (! $touchesOwnAccess) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => 'You cannot change your own role group membership or its role.',
+            'code' => 'own_access',
+        ], 403));
+    }
+
+    /** Blocks a non-super caller from handing out a role that holds permissions they do not. */
+    private function guardGrantCeiling(Request $request, ?Role $role, bool $handsRoleOut): void
+    {
+        $caller = $request->user();
+        if ($caller->isSuper() || $role === null || ! $handsRoleOut) {
+            return;
+        }
+
+        $roleKeys = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
+        if (array_diff($roleKeys, $caller->permissions()) === []) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => 'You can only hand out a role whose permissions you hold yourself.',
+            'code' => 'grant_ceiling',
+        ], 403));
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function present(GroupRole $g): array
@@ -224,7 +270,9 @@ class GroupRoleController extends Controller
         $this->guardSuperGroup($request, null, $role?->key);
 
         $employeeIds = $data['employee_ids'] ?? [];
+        $this->guardOwnAccess($request, $employeeIds);
         $this->guardProtectedMembers($request, $employeeIds);
+        $this->guardGrantCeiling($request, $role, $employeeIds !== []);
 
         $group = SuperAdmins::keepAtLeastOne(function () use ($data, $role, $employeeIds) {
             $group = GroupRole::create(['name' => $data['name'], 'role_id' => $role?->id]);
@@ -249,8 +297,13 @@ class GroupRoleController extends Controller
 
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
         $newEmployeeIds = $data['employee_ids'] ?? [];
+        $addedEmployeeIds = array_values(array_diff($newEmployeeIds, $oldEmployeeIds));
         $removedEmployeeIds = array_values(array_diff($oldEmployeeIds, $newEmployeeIds));
+        $roleChanges = (int) $groupRole->role_id !== (int) $role?->id;
+
+        $this->guardOwnAccess($request, [...$addedEmployeeIds, ...$removedEmployeeIds], $oldEmployeeIds, $roleChanges);
         $this->guardProtectedMembers($request, array_values(array_unique([...$newEmployeeIds, ...$removedEmployeeIds])));
+        $this->guardGrantCeiling($request, $role, $addedEmployeeIds !== [] || ($roleChanges && $newEmployeeIds !== []));
 
         $before = [];
 
@@ -276,6 +329,7 @@ class GroupRoleController extends Controller
         $this->guardSuperGroup($request, $groupRole->role?->key);
 
         $memberIds = $groupRole->employees->pluck('id')->all();
+        $this->guardOwnAccess($request, $memberIds);
         $this->guardProtectedMembers($request, $memberIds);
         $name = $groupRole->name;
 
@@ -312,6 +366,7 @@ class GroupRoleController extends Controller
                 'code' => 'default_group_super',
             ], 422));
         }
+        $this->guardGrantCeiling($request, $group?->role, true);
 
         AppSetting::put('default_employee_group_id', $groupId);
         AuditLog::record('Set default role group', $group?->name ?? '(none)', subject: $group);
