@@ -30,6 +30,6 @@ class ContractAttachment extends Model
     /** Authenticated URL the browser can open/download the file from. */
     public function url(): string
     {
-        return route('files.contract-attachment', $this);
+        return route('files.contract-attachment', $this, false);
     }
 }

@@ -46,7 +46,7 @@ class Software extends Model
             return null;
         }
 
-        return route('files.software-logo', ['software' => $this, 'v' => substr(sha1($this->logo_path), 0, 8)]);
+        return route('files.software-logo', ['software' => $this, 'v' => substr(sha1($this->logo_path), 0, 8)], false);
     }
 
     protected static function booted(): void

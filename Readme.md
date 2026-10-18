@@ -6208,3 +6208,8 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `GenerateReportExport` และ `SendScheduledReport` ตั้ง `memory_limit` เป็น `GenerateReportExport::MEMORY_LIMIT` (4G) ก่อนสร้างไฟล์ ค่ากลางของ PHP ยัง 512M
 - วัดจริง: ประวัติโอนย้ายและรับคืน (973 แถว 127 หน้า) ใช้ 2.2GB ใช้เวลา ~70 วินาที สร้างผ่านในโปรเซส 512M ที่ยกเพดานแล้ว; เทส `ReportJobMemoryLimitTest`
 - ยังค้าง: ลดแถวใน PDF, แยกคิว Export ออกจากคิวอีเมล, หัว/ท้ายกระดาษ (ดู `forward-session.md`)
+
+## URL ไฟล์เป็น path แบบ relative (Chrome Issues: "Mixed content") (2026-10-18)
+- เปิดเว็บผ่าน HTTPS แล้ว Chrome เตือน Mixed content ที่รูปพนักงาน (`photo?v=…` ถูก "Automatically upgraded") เพราะ URL ไฟล์สร้างด้วย `route()` แบบเต็ม ซึ่งยึด scheme ที่ server เห็น (http หลัง proxy / tunnel)
+- URL ไฟล์ทั้ง 6 แบบ (รูปพนักงาน, โลโก้ Software / Social, ไฟล์แนบสัญญา / คำขอ / Ticket) เปลี่ยนเป็น path (`route(..., false)`) ใช้แค่ในหน้าเว็บของแอปเอง (ไม่มีในอีเมล / PDF) เบราว์เซอร์จึงเรียกด้วย scheme และ host เดียวกับหน้าเว็บ
+- เทส `RelativeFileUrlsTest` (2 ข้อ); เทสที่เกี่ยวกับไฟล์ / ผู้ใช้ / Access / สัญญา / คำขอ / Ticket 1,291 ข้อผ่าน

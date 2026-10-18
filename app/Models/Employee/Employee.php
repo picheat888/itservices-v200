@@ -77,7 +77,7 @@ class Employee extends Model
             return null;
         }
 
-        return route('files.employee-photo', ['employee' => $this, 'v' => substr(sha1($this->photo_path), 0, 8)]);
+        return route('files.employee-photo', ['employee' => $this, 'v' => substr(sha1($this->photo_path), 0, 8)], false);
     }
 
     protected function casts(): array
