@@ -34,7 +34,7 @@ export function auditEventLabel(action: string, t: Translate): string {
 }
 
 // Detail keys with no audit_field_* word, read with words the app already has
-const DETAIL_KEY_WORDS: Record<string, string> = { from: 'asset_hist_from', permissions: 'permissions' };
+const DETAIL_KEY_WORDS: Record<string, string> = { from: 'asset_hist_from', permissions: 'permissions', employee: 'transfer_mode_employee' };
 
 /** The field label in the reader's language; a column with no key shows as stored. */
 export function auditFieldText(field: string, t: Translate, subjectType?: string | null): string {
