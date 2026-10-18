@@ -15,6 +15,7 @@ use App\Support\DateDisplay;
 use App\Support\Refusal;
 use App\Support\ReportCatalogue;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -27,19 +28,21 @@ use Throwable;
  * (every 5 minutes) hands each due one to SendScheduledReport and moves it to its next slot;
  * the job calls `run()`, which builds the file for the period that slot closes (date filters
  * replaced, every other filter kept), mails it to each recipient as an attachment in the
- * `report.scheduled` template, and records how it went. The report is built as the owner
+ * `report.scheduled` template (recipients with an account also get a sign-in download link; the
+ * file stays 30 days as the owner's export), and records how it went. The report is built as the owner
  * sees it, and only while they may still open it — a schedule whose owner lost access pauses
  * itself and says so, rather than keep mailing data nobody is entitled to any more.
  */
 class ReportScheduleService
 {
-    /** Larger files are not attached; the owner gets them in "ไฟล์ส่งออกของฉัน" instead (10 MB — well under Gmail and Exchange caps). */
+    /** Larger files are not attached; recipients with an account use the download link (10 MB, under Gmail and Exchange caps). */
     public int $attachmentLimitBytes = 10 * 1024 * 1024;
 
     public function __construct(
         private TabularReportExporter $tabular,
         private TicketOverviewExporter $ticketOverview,
         private EmailNotificationService $mail,
+        private ReportExportService $exports,
     ) {}
 
     /** @return Collection<int, ReportSchedule> the owner's schedules, newest first */
@@ -151,38 +154,45 @@ class ReportScheduleService
             $file = $this->write($schedule, $owner, $period, $directory);
             $size = Storage::disk('local')->exists($file['path']) ? Storage::disk('local')->size($file['path']) : 0;
             $tooLarge = $size > $this->attachmentLimitBytes;
+            $expires = now()->addDays(ReportExport::KEEP_DAYS);
+            $accounts = $this->recipientAccounts($schedule);
 
-            $rendered = $this->mail->renderTemplate('report.scheduled', [
+            $vars = [
                 'report.name' => e(ReportCatalogue::title($schedule->report_key)),
                 'report.period' => e($this->periodLabel($schedule, $period, $runAt)),
                 'report.rows' => e(number_format($file['rows'])),
                 'report.frequency' => e($this->frequencyLabel($schedule)),
                 'report.owner' => e($owner->name),
-                'report.attachment_note' => e($tooLarge
-                    ? 'The file ('.round($size / 1048576, 1).' MB) is too large to attach. '.$owner->name.' can download it from My exports on the Report Center.'
-                    : 'The report file is attached.'),
-            ]);
+            ];
+            $forAccounts = $this->mail->renderTemplate('report.scheduled', $vars + ['report.attachment_note' => e($this->accountNote($tooLarge, $size, $expires))]);
+            $forOthers = $this->mail->renderTemplate('report.scheduled', $vars + ['report.attachment_note' => e($this->outsideNote($tooLarge, $size, $owner, $expires))]);
 
-            if ($rendered === null) {
+            if ($forAccounts === null || $forOthers === null) {
                 $this->finish($schedule, ReportSchedule::FAILED, 'template_disabled');
 
                 return;
             }
 
+            $export = $this->keepRun($schedule, $owner, $file, $size, $expires, array_keys($accounts));
             if ($tooLarge) {
-                $this->handOverToOwner($schedule, $owner, $file, $size);
+                $owner->notify(new ReportExportNotification($export, ReportExportNotification::READY));
             }
+            $link = $this->exports->downloadUrl($export);
 
             $failures = 0;
             foreach ($schedule->recipients as $recipient) {
+                $hasAccount = isset($accounts[mb_strtolower($recipient)]);
+                $rendered = $hasAccount ? $forAccounts : $forOthers;
                 $sent = $this->mail->deliver(
                     $recipient,
                     $rendered['subject'],
                     $rendered['html'],
                     'report.scheduled',
+                    actionUrl: $hasAccount ? $link : null,
+                    actionLabel: $hasAccount ? 'Download file' : null,
                     eyebrow: $rendered['eyebrow'],
-                    attachmentPath: $tooLarge ? null : $file['path'],
-                    attachmentName: $tooLarge ? null : $file['name'],
+                    attachmentPath: $tooLarge ? null : $export->file_path,
+                    attachmentName: $tooLarge ? null : $export->file_name,
                 );
                 $failures += $sent ? 0 : 1;
             }
@@ -266,12 +276,13 @@ class ReportScheduleService
     }
 
     /**
-     * A file too large to mail goes to the owner's "ไฟล์ส่งออกของฉัน" instead, as if they
-     * had exported it themselves — with the same 7 days and the same bell.
+     * Every run's file stays 30 days as an export of the owner ("ไฟล์ส่งออกของฉัน"); the recipients
+     * with an account ($sharedWith) may open it from the emailed link too.
      *
      * @param  array{name: string, path: string, rows: int}  $file
+     * @param  list<string>  $sharedWith  lower-cased account emails
      */
-    private function handOverToOwner(ReportSchedule $schedule, User $owner, array $file, int $size): void
+    private function keepRun(ReportSchedule $schedule, User $owner, array $file, int $size, CarbonInterface $expires, array $sharedWith): ReportExport
     {
         $export = ReportExport::create([
             'user_id' => $owner->id,
@@ -279,19 +290,55 @@ class ReportScheduleService
             'format' => $schedule->format,
             'filters' => $schedule->filters,
             'columns' => $schedule->columns,
+            'shared_with' => $sharedWith,
             'status' => ReportExport::READY,
             'file_name' => $file['name'],
             'rows_count' => $file['rows'],
             'size_bytes' => $size,
             'started_at' => now(),
             'finished_at' => now(),
-            'expires_at' => now()->addDays(ReportExport::KEEP_DAYS),
+            'expires_at' => $expires,
         ]);
         $path = "report-exports/{$export->id}/{$file['name']}";
         Storage::disk('local')->move($file['path'], $path);
         $export->update(['file_path' => $path]);
 
-        $owner->notify(new ReportExportNotification($export, ReportExportNotification::READY));
+        return $export;
+    }
+
+    /**
+     * Recipients who have an account that may open the report: they get the download link.
+     *
+     * @return array<string, User> lower-cased email → account
+     */
+    private function recipientAccounts(ReportSchedule $schedule): array
+    {
+        $emails = array_values(array_unique(array_map('mb_strtolower', $schedule->recipients ?? [])));
+        if ($emails === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($emails), '?'));
+
+        return User::query()->with('employee')->whereRaw("LOWER(email) IN ({$placeholders})", $emails)->get()
+            ->filter(fn (User $user) => ReportCatalogue::allows($user, $schedule->report_key) && ! $user->employee?->hasLeft())
+            ->keyBy(fn (User $user) => mb_strtolower((string) $user->email))
+            ->all();
+    }
+
+    private function accountNote(bool $tooLarge, int $size, CarbonInterface $expires): string
+    {
+        $until = DateDisplay::date($expires, null, 'en');
+
+        return $tooLarge
+            ? 'The file ('.round($size / 1048576, 1)." MB) is too large to attach. Download it with the button below until {$until}; you will be asked to sign in first."
+            : "The report file is attached. You can also download it with the button below until {$until}; you will be asked to sign in first.";
+    }
+
+    private function outsideNote(bool $tooLarge, int $size, User $owner, CarbonInterface $expires): string
+    {
+        return $tooLarge
+            ? 'The file ('.round($size / 1048576, 1)." MB) is too large to attach. Please ask {$owner->name} for it; they can download it from My exports on the Report Center until ".DateDisplay::date($expires, null, 'en').'.'
+            : 'The report file is attached.';
     }
 
     /** @param  array{from: CarbonImmutable, to: CarbonImmutable}  $period */

@@ -38,11 +38,15 @@ class ReportExportController extends Controller
         return Storage::disk('local')->download($file['path'], $file['name']);
     }
 
-    /** The link in the "file ready" email: signed, and only for the signed-in owner. */
+    /** The link in a report email: signed, for the signed-in owner or a scheduled run's recipient account. */
     public function downloadFromEmail(Request $request, int $export): StreamedResponse
     {
-        $this->mayReadExports($request);
-        $file = $this->exports->fileFor($this->owned($request, $export), $request->user(), 'email');
+        $row = ReportExport::query()->current()->findOrFail($export);
+        // The owner needs the export rights; a scheduled run's recipient only the report itself (fileFor)
+        if ($row->user_id === $request->user()->id) {
+            $this->mayReadExports($request);
+        }
+        $file = $this->exports->fileFor($row, $request->user(), 'email');
         abort_if($file === null, 404);
 
         return Storage::disk('local')->download($file['path'], $file['name']);

@@ -126,14 +126,14 @@ class ReportExportService
     }
 
     /**
-     * The ready file of an export, for its owner while they may still open the report; null
-     * otherwise. Every download is written to the audit log with where it came from.
+     * The ready file of an export, for its owner (or a scheduled run's recipient account) while they
+     * may still open the report; null otherwise. Every download is written to the audit log.
      *
      * @return array{path: string, name: string}|null
      */
     public function fileFor(ReportExport $export, User $user, string $via): ?array
     {
-        $ready = $export->user_id === $user->id
+        $ready = ($export->user_id === $user->id || $export->isSharedWith($user))
             && ReportCatalogue::allows($user, $export->report_key)
             && $export->status === ReportExport::READY
             && $export->file_path !== null
