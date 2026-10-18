@@ -104,11 +104,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     const [error, setError] = React.useState<React.ReactNode>(null);
     const resolver = React.useRef<((v: boolean) => void) | null>(null);
     const cancelRef = React.useRef<HTMLButtonElement>(null);
-    const descId = React.useId();
     const entityId = React.useId();
+    const descRef = React.useRef<HTMLParagraphElement>(null);
     // Opened without a trigger: remember what had focus so closing returns there.
     const returnFocus = React.useRef<HTMLElement | null>(null);
     const contentRef = React.useRef<HTMLDivElement>(null);
+    const hasEntity = !!opts?.entity;
+    // The entity box is read with the description: added to Radix's own description id once the dialog node exists
+    const attachContent = (node: HTMLDivElement | null) => {
+        contentRef.current = node;
+        const desc = descRef.current;
+        if (node && desc) node.setAttribute('aria-describedby', hasEntity ? `${desc.id} ${entityId}` : desc.id);
+    };
 
     const settle = React.useCallback((result: boolean) => {
         resolver.current?.(result);
@@ -180,9 +187,8 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 }}
             >
                 <DialogContent
-                    ref={contentRef}
+                    ref={attachContent}
                     className="max-w-md gap-4"
-                    aria-describedby={opts?.entity ? `${descId} ${entityId}` : descId}
                     onCloseAutoFocus={(e) => {
                         e.preventDefault();
                         const target = returnFocus.current;
@@ -207,7 +213,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                         </span>
                         <div className="min-w-0 flex-1 space-y-1.5 pt-0.5 text-left">
                             <DialogTitle className="text-lg">{opts?.title ?? defaults.title}</DialogTitle>
-                            <DialogDescription id={descId} className="leading-relaxed whitespace-pre-line">
+                            <DialogDescription ref={descRef} className="leading-relaxed whitespace-pre-line">
                                 {opts?.description ?? defaults.description}
                             </DialogDescription>
                         </div>

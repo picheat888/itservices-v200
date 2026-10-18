@@ -63,7 +63,8 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
+            {/* Title and labelled fields say it all: no description, stated explicitly (Radix / WAI-ARIA) */}
+            <DialogContent aria-describedby={undefined}>
                 <DialogHeader>
                     <DialogTitle>{position ? t('edit_position') : t('add_position')}</DialogTitle>
                 </DialogHeader>

@@ -74,7 +74,8 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
+            {/* Title and labelled fields say it all: no description, stated explicitly (Radix / WAI-ARIA) */}
+            <DialogContent aria-describedby={undefined}>
                 <DialogHeader>
                     <DialogTitle>{department ? t('edit_department') : t('add_department')}</DialogTitle>
                 </DialogHeader>
