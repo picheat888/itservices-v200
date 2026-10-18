@@ -5,7 +5,7 @@ const REFUSAL_KEYS: Record<string, string> = {
     last_super_admin: 'perm_refusal_last_super_admin',
     own_access: 'perm_refusal_own_access',
     grant_ceiling: 'perm_refusal_grant_ceiling',
-    // TODO(wording): role_changed → perm_refusal_role_changed once approved; the server's message shows until then
+    role_changed: 'perm_refusal_role_changed',
 };
 
 export function refusalKey(code: unknown): string | undefined {
