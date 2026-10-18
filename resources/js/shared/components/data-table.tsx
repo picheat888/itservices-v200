@@ -386,6 +386,7 @@ export function DataTable<T>({
                                 <tr
                                     key={rowKey(row)}
                                     onClick={() => onRowClick?.(row)}
+                                    data-row-click={onRowClick ? '' : undefined}
                                     // Clickable rows are reachable by Tab and open on Enter / Space.
                                     tabIndex={onRowClick ? 0 : undefined}
                                     onKeyDown={onRowClick ? (e) => onRowKeyDown(e, row) : undefined}
