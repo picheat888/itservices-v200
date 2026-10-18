@@ -10,6 +10,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\Permissions;
+use App\Support\RoleKeys;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -72,9 +73,10 @@ class RolePermissionController extends Controller
     public function update(Request $request, string $role): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-        abort_if(UserRole::isSuperKey($role), 422, 'Administrator permissions cannot be changed.');
-        $roleId = Role::where('key', $role)->value('id');
-        abort_if($roleId === null, 404);
+        $roleModel = RoleKeys::find($role);
+        abort_if($roleModel === null, 404);
+        abort_if(UserRole::isSuperKey($roleModel->key), 422, 'Administrator permissions cannot be changed.');
+        $roleId = $roleModel->id;
 
         $data = $request->validate([
             'permissions' => ['present', 'array'],
@@ -111,7 +113,7 @@ class RolePermissionController extends Controller
 
         AuditLog::record(
             'Updated permissions',
-            Role::where('key', $role)->value('name') ?? $role,
+            $roleModel->name ?? $roleModel->key,
             ['added' => $added, 'removed' => $removed],
         );
 
