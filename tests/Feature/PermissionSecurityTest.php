@@ -953,4 +953,124 @@ class PermissionSecurityTest extends TestCase
         $this->assertTrue($this->isMember($ordinary, $own));
         $this->assertSame('boss', $ordinary->fresh()->role->key);
     }
+
+    private function memberLabel(Employee $employee): string
+    {
+        $employee->refresh();
+
+        return "{$employee->name} ({$employee->code})";
+    }
+
+    private function accountOf(Employee $employee): User
+    {
+        return User::where('employee_id', $employee->id)->firstOrFail();
+    }
+
+    private function lastAuditFor(string $action): AuditLog
+    {
+        return AuditLog::where('action', $action)->latest('id')->firstOrFail();
+    }
+
+    public function test_group_update_audits_members_and_the_role_changes_they_cause(): void
+    {
+        $this->roleWith('boss');
+        $this->roleWith('basic');
+        $basics = GroupRole::create(['name' => 'Basics', 'role' => 'basic']);
+        AppSetting::put('default_employee_group_id', (string) $basics->id);
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $tom = $this->staffEmployee('Tom', $ordinary);
+        $una = $this->staffEmployee('Una', $basics);
+        $this->accountOf($una)->update(['role' => 'basic']);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'boss', 'employee_ids' => [$sam->id, $una->id]])
+            ->assertOk();
+
+        $details = $this->lastAuditFor('Updated role group')->details;
+        $this->assertSame([$this->memberLabel($una)], $details['added']);
+        $this->assertSame([$this->memberLabel($tom)], $details['removed']);
+        $this->assertEqualsCanonicalizing([
+            ['name' => $this->accountOf($sam)->name, 'from' => 'Staff', 'to' => 'Boss'],
+            ['name' => $this->accountOf($tom)->name, 'from' => 'Staff', 'to' => 'Basic'],
+            ['name' => $this->accountOf($una)->name, 'from' => 'Basic', 'to' => 'Boss'],
+        ], $details['role_changes']);
+        $this->assertSame(['from' => 'Staff', 'to' => 'Boss'], $details['changes']['role_id']);
+
+        // Unchanged accounts are left out
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'boss', 'employee_ids' => [$sam->id]])
+            ->assertOk();
+
+        $details = $this->lastAuditFor('Updated role group')->details;
+        $this->assertArrayNotHasKey('added', $details);
+        $this->assertSame([$this->memberLabel($una)], $details['removed']);
+        $this->assertSame([['name' => $this->accountOf($una)->name, 'from' => 'Boss', 'to' => 'Basic']], $details['role_changes']);
+        $this->assertArrayNotHasKey('changes', $details);
+    }
+
+    public function test_a_rename_alone_audits_no_member_details(): void
+    {
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary Team', 'role' => 'staff', 'employee_ids' => [$sam->id]])
+            ->assertOk();
+
+        $this->assertSame(
+            ['changes' => ['name' => ['from' => 'Ordinary', 'to' => 'Ordinary Team']]],
+            $this->lastAuditFor('Updated role group')->details,
+        );
+    }
+
+    public function test_group_store_audits_the_initial_members_and_their_role_changes(): void
+    {
+        $this->roleWith('boss');
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $kim = Employee::create(['first_name' => 'Kim', 'last_name' => 'Nologin', 'email' => 'kim@inaba.co.th']);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->postJson('/api/group-roles', ['name' => 'Bosses', 'role' => 'boss', 'employee_ids' => [$sam->id, $kim->id]])
+            ->assertCreated();
+
+        $details = $this->lastAuditFor('Created role group')->details;
+        $this->assertEqualsCanonicalizing([$this->memberLabel($sam), $this->memberLabel($kim)], $details['added']);
+        $this->assertArrayNotHasKey('removed', $details);
+        $this->assertSame([['name' => $this->accountOf($sam)->name, 'from' => 'Staff', 'to' => 'Boss']], $details['role_changes']);
+    }
+
+    public function test_group_destroy_audits_the_members_and_their_fallback_role_changes(): void
+    {
+        $this->roleWith('boss');
+        $this->roleWith('basic');
+        $basics = GroupRole::create(['name' => 'Basics', 'role' => 'basic']);
+        AppSetting::put('default_employee_group_id', (string) $basics->id);
+        $bosses = GroupRole::create(['name' => 'Bosses', 'role' => 'boss']);
+        $sam = $this->staffEmployee('Sam', $bosses);
+        $this->accountOf($sam)->update(['role' => 'boss']);
+        $kim = Employee::create(['first_name' => 'Kim', 'last_name' => 'Nologin', 'email' => 'kim@inaba.co.th']);
+        $bosses->employees()->attach($kim->id);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->deleteJson("/api/group-roles/{$bosses->id}")->assertOk();
+
+        $details = $this->lastAuditFor('Deleted role group')->details;
+        $this->assertEqualsCanonicalizing([$this->memberLabel($sam), $this->memberLabel($kim)], $details['removed']);
+        $this->assertSame([['name' => $this->accountOf($sam)->name, 'from' => 'Boss', 'to' => 'Basic']], $details['role_changes']);
+        $this->assertSame('Bosses', $details['snapshot']['name']);
+        $this->assertTrue($this->isMember($basics, $sam));
+    }
+
+    public function test_permission_save_still_writes_its_audit_row(): void
+    {
+        $this->roleWith('clerk', 'system.view_audit');
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_groups']])->assertOk();
+
+        $audit = $this->lastAuditFor('Updated permissions');
+        $this->assertSame('Clerk', $audit->target);
+        $this->assertSame(['added' => ['system.manage_groups'], 'removed' => ['system.view_audit']], $audit->details);
+    }
 }

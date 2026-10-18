@@ -18,11 +18,19 @@ export interface PermissionMatrix {
     roles: RoleRow[];
 }
 
+export interface AuditRoleChange {
+    name: string;
+    from: string | null;
+    to: string | null;
+}
+
 export interface AuditDetails {
-    /** Permission keys that were added */
+    /** Permission keys that were added, or member names on a role group entry */
     added?: string[];
-    /** Permission keys that were removed */
+    /** Permission keys that were removed, or member names on a role group entry */
     removed?: string[];
+    /** Login accounts whose role a role group write changed */
+    role_changes?: AuditRoleChange[];
     /** Previous value name */
     from?: string;
     /** New value name */

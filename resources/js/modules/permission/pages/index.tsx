@@ -54,6 +54,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { AccessPermissionTree } from '../components/access-permission-tree';
 import { AssetPermissionTree } from '../components/asset-permission-tree';
+import { AuditMemberChanges } from '../components/audit-member-changes';
 import { CenteredAlert } from '../components/centered-alert';
 import { ContractPermissionTree } from '../components/contract-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
@@ -79,6 +80,7 @@ import {
 } from '../hooks/use-permissions';
 import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
+import { splitAuditEntries } from '../lib/audit-members';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
@@ -842,7 +844,8 @@ function GroupRolesTab() {
 function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; lang: Lang; lookups: AuditLookups }) {
     const t = useT();
     const fmt = useDateFormat();
-    const hasPermDiff = (details.added?.length ?? 0) > 0 || (details.removed?.length ?? 0) > 0;
+    const { permissionsAdded, permissionsRemoved, membersAdded, membersRemoved } = splitAuditEntries(details);
+    const hasPermDiff = permissionsAdded.length > 0 || permissionsRemoved.length > 0;
     const hasRoleChange = details.from !== undefined || details.to !== undefined;
     const changeEntries = Object.entries(details.changes ?? {});
 
@@ -908,13 +911,13 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
             )}
             {hasPermDiff && (
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
-                    {(details.added ?? []).length > 0 && (
+                    {permissionsAdded.length > 0 && (
                         <div className="min-w-0">
                             <div className="mb-1 text-[11px] font-semibold tracking-wide text-emerald-600 uppercase dark:text-emerald-400">
                                 {translate(lang, 'perm_ui_log_added')}
                             </div>
                             <div className="flex flex-wrap gap-1">
-                                {(details.added ?? []).map((key) => {
+                                {permissionsAdded.map((key) => {
                                     const [mod, act] = key.split('.');
                                     return (
                                         <span
@@ -929,13 +932,13 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                             </div>
                         </div>
                     )}
-                    {(details.removed ?? []).length > 0 && (
+                    {permissionsRemoved.length > 0 && (
                         <div className="min-w-0">
                             <div className="mb-1 text-[11px] font-semibold tracking-wide text-rose-500 uppercase dark:text-rose-400">
                                 {translate(lang, 'perm_ui_log_removed')}
                             </div>
                             <div className="flex flex-wrap gap-1">
-                                {(details.removed ?? []).map((key) => {
+                                {permissionsRemoved.map((key) => {
                                     const [mod, act] = key.split('.');
                                     return (
                                         <span
@@ -952,6 +955,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                     )}
                 </div>
             )}
+            <AuditMemberChanges membersAdded={membersAdded} membersRemoved={membersRemoved} roleChanges={details.role_changes ?? []} />
             {/* The records a bulk action touched. The row above says "5 assets"; this is which
                 five, so the log answers the question without opening five other screens. */}
             {(details.items ?? []).length > 0 && (
@@ -1138,6 +1142,7 @@ function AuditTab() {
         return (
             (d.added?.length ?? 0) > 0 ||
             (d.removed?.length ?? 0) > 0 ||
+            (d.role_changes?.length ?? 0) > 0 ||
             d.from !== undefined ||
             d.to !== undefined ||
             Object.keys(d.changes ?? {}).length > 0 ||
