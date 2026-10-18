@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { PhotoCropDialog, useDepartments, useEmployeePicker, useEmployeesByIds } from '@/modules/employee';
 import { useBrands } from '@/modules/settings';
+import { ColorSwatchPicker } from '@/shared/components/color-swatch-picker';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
@@ -594,24 +595,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                     {logoError}
                                 </p>
                             )}
-                            <Field label={t('access_color')}>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="color"
-                                        value={form.color || '#6366f1'}
-                                        onChange={(e) => set('color', e.target.value)}
-                                        aria-label={t('access_color')}
-                                        className="border-input bg-background focus-visible:ring-brand/40 h-10 w-12 shrink-0 rounded-md border p-1 focus-visible:ring-[3px] focus-visible:outline-hidden"
-                                    />
-                                    <Input
-                                        value={form.color}
-                                        onChange={(e) => set('color', e.target.value)}
-                                        placeholder={t('access_ph_color')}
-                                        aria-label={t('access_color_hex')}
-                                        spellCheck={false}
-                                    />
-                                </div>
-                            </Field>
+                            <ColorSwatchPicker label={t('access_color')} showLabel value={form.color} onChange={(hex) => set('color', hex)} />
                             <Field label={t('access_policy')}>
                                 <Input value={form.policy} onChange={(e) => set('policy', e.target.value)} />
                             </Field>

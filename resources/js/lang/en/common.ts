@@ -209,6 +209,14 @@ export const common: Dict = {
     err_retry_after: 'Try again in about {n} seconds.',
     err_throttle_toast: 'Too many requests. Wait about {n} seconds and try again.',
 
+    // color-swatch-picker.tsx — colour names and the custom colour button
+    color_blue: 'Blue',
+    color_green: 'Green',
+    color_orange: 'Orange',
+    color_violet: 'Violet',
+    color_pink: 'Pink',
+    color_custom: 'Custom colour',
+
     // calendar.tsx — month navigation
     cal_prev: 'Previous',
     cal_next: 'Next',
