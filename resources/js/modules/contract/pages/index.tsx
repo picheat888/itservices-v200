@@ -539,7 +539,7 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
     );
 }
 
-const NEW_ROW = 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12';
+const NEW_ROW = 'animate-in fade-in bg-(--row-tint) duration-500 [--row-tint:color-mix(in_oklab,var(--color-emerald-500)_8%,transparent)]';
 
 /** Columns of the All-tab table; the pinned new contract carries a "New" badge. */
 function useContractColumns(

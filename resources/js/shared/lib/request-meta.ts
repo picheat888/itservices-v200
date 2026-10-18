@@ -103,11 +103,8 @@ export function isOnBehalfRequest(request: Pick<ServiceRequest, 'origin'>): bool
 /** Tone + label for the on-behalf marker, so the badge reads the same everywhere. */
 export const REQUEST_ONBOARDING_BADGE = { tone: 'violet' as const, labelKey: 'req_origin_onboarding' };
 
-/**
- * Row tint for an on-behalf request. Tint only: the violet badge already names it,
- * and a third marker (a left edge rule) said the same thing a third time.
- */
-export const REQUEST_ONBOARDING_ROW = 'bg-violet-500/[0.05]';
+/** Row tint for an on-behalf request, through --row-tint so pinned table cells share it. */
+export const REQUEST_ONBOARDING_ROW = 'bg-(--row-tint) [--row-tint:color-mix(in_oklab,var(--color-violet-500)_5%,transparent)]';
 
 /**
  * How Reject looks everywhere the decision is still being CHOSEN — the queue card, the

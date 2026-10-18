@@ -456,6 +456,19 @@
     animation: row-in 0.3s ease-out both;
 }
 
+/* Table rows: a clickable row tints on hover / keyboard focus through --row-tint */
+.row-hover:hover,
+.row-hover:focus-visible {
+    --row-tint: color-mix(in oklab, var(--color-accent) 50%, transparent);
+    background-color: var(--row-tint);
+}
+
+/* Pinned table cell: solid card so scrolled cells do not show through, with its row's tint on top */
+.pin-cell {
+    background-color: var(--color-card);
+    background-image: linear-gradient(var(--row-tint, transparent), var(--row-tint, transparent));
+}
+
 @media (prefers-reduced-motion: reduce) {
     .animate-shake {
         animation-duration: 0.01ms;
