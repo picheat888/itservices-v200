@@ -6,15 +6,13 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName } from '@/shared/lib/local-name';
-import { searchLabel } from '@/shared/lib/search-words';
 import { Checkbox } from '@/shared/ui/checkbox';
-import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { groupRoleApi, type GroupMember } from '../api/permissionApi';
 import { useGroupCandidates } from '../hooks/use-permissions';
-import { PaneHeader, PanePager, PaneRow, PaneSkeleton } from './group-pane';
+import { PaneHeader, PanePager, PaneRow, PaneSearch, PaneSkeleton } from './group-pane';
 
 const ALL = '__all__';
 
@@ -90,18 +88,14 @@ export function GroupMemberPicker({
     return (
         <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="gr-pick-title">
             <PaneHeader id="gr-pick-title" title={t('gr_pick_title')} meta={t('gr_pick_hint')}>
-                <Input
-                    type="search"
+                <PaneSearch
                     name="group-pick-search"
-                    autoComplete="off"
                     value={search}
-                    onChange={(e) => {
-                        setSearch(e.target.value);
+                    placeholder={t('gr_pick_search')}
+                    onChange={(value) => {
+                        setSearch(value);
                         setPage(1);
                     }}
-                    placeholder={t('gr_pick_search')}
-                    aria-label={searchLabel(t('gr_pick_search'))}
-                    className="min-w-0 flex-1 text-ellipsis"
                 />
                 <div className="w-[46%] shrink-0">
                     <SearchableSelect

@@ -1,9 +1,11 @@
 // Pieces both panes of the Role Group dialog share, so "Add members" and "Current members" line up row for row.
 import { useT } from '@/lang';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
+import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 /** Title line, then one line of controls. */
@@ -15,6 +17,35 @@ export function PaneHeader({ id, title, meta, children }: { id: string; title: s
                 <span className="text-muted-foreground text-[13px] font-normal">{meta}</span>
             </div>
             <div className="flex gap-2">{children}</div>
+        </div>
+    );
+}
+
+/** Search box of a pane, with the magnifier like the DataTable search. */
+export function PaneSearch({
+    name,
+    value,
+    placeholder,
+    onChange,
+}: {
+    name: string;
+    value: string;
+    placeholder: string;
+    onChange: (value: string) => void;
+}) {
+    return (
+        <div className="relative min-w-0 flex-1">
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" aria-hidden />
+            <Input
+                type="search"
+                name={name}
+                autoComplete="off"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                aria-label={searchLabel(placeholder)}
+                className="pl-9 text-ellipsis"
+            />
         </div>
     );
 }
