@@ -49,6 +49,7 @@ class RoleReferenceTest extends TestCase
         // always sends the master alongside any child, so include it here.
         $this->actingAs($actor)->putJson('/api/permissions/hr', [
             'permissions' => ['employees.module', 'employees.view'],
+            'version' => $hr->permissionsVersion(),
         ])->assertOk();
 
         $this->assertDatabaseHas('role_permissions', [

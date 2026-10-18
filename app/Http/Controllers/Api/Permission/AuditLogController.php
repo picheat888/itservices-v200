@@ -5,20 +5,42 @@ namespace App\Http\Controllers\Api\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Support\SearchTerms;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class AuditLogController extends Controller
 {
-    /** Action verb prefixes grouped into filterable categories. */
+    /** Action verb prefixes per category, matched in this order: an action belongs to the first category it matches. */
     private const CATEGORY_VERBS = [
+        'auth' => ['Signed', 'Changed own', 'Updated own'],
         'created' => ['Created', 'Registered', 'Submitted', 'Opened', 'Uploaded', 'Imported'],
         'updated' => ['Updated', 'Renewed', 'Set', 'Changed', 'Reset', 'Recorded', 'Transferred', 'Took', 'Assigned', 'Cancelled'],
         'deleted' => ['Deleted', 'Removed'],
         'workflow' => ['Approved', 'Rejected', 'Accepted', 'Received', 'Committed', 'Fulfilled', 'Completed', 'Resolved', 'Stock'],
-        'auth' => ['Signed', 'Changed own', 'Updated own'],
     ];
+
+    /** Keeps actions that start with one of the category's verbs and with none of an earlier category's. */
+    private function whereCategory(Builder $query, string $category): void
+    {
+        $earlierVerbs = [];
+        foreach (self::CATEGORY_VERBS as $key => $verbs) {
+            if ($key === $category) {
+                break;
+            }
+            $earlierVerbs = [...$earlierVerbs, ...$verbs];
+        }
+
+        $query->where(function (Builder $w) use ($category) {
+            foreach (self::CATEGORY_VERBS[$category] as $verb) {
+                $w->orWhere('action', 'like', "{$verb}%");
+            }
+        });
+        foreach ($earlierVerbs as $verb) {
+            $query->where('action', 'not like', "{$verb}%");
+        }
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -38,14 +60,8 @@ class AuditLogController extends Controller
 
         SearchTerms::apply($query, $filters['search'] ?? null, ['action', 'target', 'user_name']);
 
-        // Category filter (created / updated / deleted / workflow / auth).
-        $verbs = self::CATEGORY_VERBS[$filters['category'] ?? ''] ?? null;
-        if ($verbs) {
-            $query->where(function ($w) use ($verbs) {
-                foreach ($verbs as $verb) {
-                    $w->orWhere('action', 'like', "{$verb}%");
-                }
-            });
+        if ($category = $filters['category'] ?? null) {
+            $this->whereCategory($query, $category);
         }
 
         // Actor filter.

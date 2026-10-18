@@ -104,6 +104,12 @@ class PermissionSecurityTest extends TestCase
             ->all();
     }
 
+    /** The version token a permission save must send for the role as stored now. */
+    private function permissionsVersion(string $roleKey): string
+    {
+        return RoleKeys::find($roleKey)->permissionsVersion();
+    }
+
     /**
      * A non-super manage_groups caller whose login belongs to a fresh employee.
      *
@@ -167,7 +173,7 @@ class PermissionSecurityTest extends TestCase
     {
         $this->actingAs($this->userWith('system.manage_roles'));
 
-        $this->putJson('/api/permissions/super', ['permissions' => ['system.manage_roles']])
+        $this->putJson('/api/permissions/super', ['permissions' => ['system.manage_roles'], 'version' => $this->permissionsVersion('super')])
             ->assertUnprocessable();
     }
 
@@ -290,7 +296,7 @@ class PermissionSecurityTest extends TestCase
         $this->actingAs($this->userWith('system.manage_roles'));
         $superId = Role::where('key', 'super')->value('id');
 
-        $this->putJson('/api/permissions/SUPER', ['permissions' => ['system.manage_roles']])
+        $this->putJson('/api/permissions/SUPER', ['permissions' => ['system.manage_roles'], 'version' => $this->permissionsVersion('super')])
             ->assertNotFound();
 
         $this->assertDatabaseMissing('role_permissions', ['role_id' => $superId]);
@@ -703,7 +709,7 @@ class PermissionSecurityTest extends TestCase
 
         // own_access wins over grant_ceiling
         foreach ([['system.manage_roles'], ['system.manage_roles', 'system.manage_groups'], []] as $permissions) {
-            $this->putJson('/api/permissions/staff', ['permissions' => $permissions])
+            $this->putJson('/api/permissions/staff', ['permissions' => $permissions, 'version' => $this->permissionsVersion('staff')])
                 ->assertForbidden()
                 ->assertJsonPath('code', 'own_access');
         }
@@ -718,7 +724,7 @@ class PermissionSecurityTest extends TestCase
         $this->actingAs($this->userWith('system.manage_roles'));
         $auditBefore = AuditLog::count();
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.view_audit', 'system.manage_groups']])
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.view_audit', 'system.manage_groups'], 'version' => $this->permissionsVersion('clerk')])
             ->assertForbidden()
             ->assertJsonPath('code', 'grant_ceiling');
 
@@ -731,10 +737,10 @@ class PermissionSecurityTest extends TestCase
         $this->roleWith('clerk', 'system.manage_permissions', 'system.view_audit', 'system.manage_groups');
         $this->actingAs($this->userWith('system.manage_roles'));
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.view_audit', 'system.manage_roles']])->assertOk();
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.view_audit', 'system.manage_roles'], 'version' => $this->permissionsVersion('clerk')])->assertOk();
         $this->assertSame(['system.manage_permissions', 'system.manage_roles', 'system.view_audit'], $this->allowedKeys('clerk'));
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => []])->assertOk();
+        $this->putJson('/api/permissions/clerk', ['permissions' => [], 'version' => $this->permissionsVersion('clerk')])->assertOk();
         $this->assertSame([], $this->allowedKeys('clerk'));
     }
 
@@ -745,7 +751,7 @@ class PermissionSecurityTest extends TestCase
 
         $all = ['system.manage_groups', 'system.manage_permissions', 'system.manage_roles', 'system.view_audit'];
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => $all])->assertOk();
+        $this->putJson('/api/permissions/clerk', ['permissions' => $all, 'version' => $this->permissionsVersion('clerk')])->assertOk();
 
         $this->assertSame($all, $this->allowedKeys('clerk'));
     }
@@ -1566,7 +1572,7 @@ class PermissionSecurityTest extends TestCase
         $this->roleWith('clerk', 'system.manage_permissions', 'system.view_audit');
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.manage_groups']])->assertOk();
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.manage_groups'], 'version' => $this->permissionsVersion('clerk')])->assertOk();
 
         $audit = $this->lastAuditFor('Updated permissions');
         $this->assertSame('Clerk', $audit->target);
@@ -1655,7 +1661,7 @@ class PermissionSecurityTest extends TestCase
         $this->roleWith('clerk');
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_groups', 'system.view_audit', 'tickets.module']])
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_groups', 'system.view_audit', 'tickets.module'], 'version' => $this->permissionsVersion('clerk')])
             ->assertOk();
 
         $this->assertSame(['tickets.module'], $this->allowedKeys('clerk'));

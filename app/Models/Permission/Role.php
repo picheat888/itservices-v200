@@ -28,6 +28,25 @@ class Role extends Model
         return array_values(array_intersect($allowed, Permissions::all()));
     }
 
+    /** Token for the stored permission set, so a save made from an older copy can be refused. */
+    public function permissionsVersion(): string
+    {
+        return self::versionOf($this->allowedKeys());
+    }
+
+    /**
+     * The version token of a set of permission keys (order does not matter).
+     *
+     * @param  array<int, string>  $keys
+     */
+    public static function versionOf(array $keys): string
+    {
+        $keys = array_values(array_unique(array_intersect($keys, Permissions::all())));
+        sort($keys);
+
+        return sha1(implode(',', $keys));
+    }
+
     /**
      * Count users that belong to this role (resolved via role_id FK).
      */
