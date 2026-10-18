@@ -521,8 +521,6 @@ export const permission: Dict = {
     perm_ui_log_workflow: 'Approvals and stock',
     perm_ui_log_auth: 'Auth',
     perm_ui_all_users: 'All users',
-    perm_ui_rows_per_page: 'Rows per page',
-    perm_ui_of: 'of',
     perm_ui_request_notify_hint:
         'Who hears about the completion queue. Separate from who may work it, so a manager can follow it without closing anything.',
     perm_ui_request_types: 'Types they can file',
@@ -567,7 +565,7 @@ export const permission: Dict = {
     perm_lock_needs: 'Turn on {name} first',
     perm_search_none_hint: 'Try other words.',
 
-    // modules/permission/lib/audit-format.ts — audit log event names
+    // modules/permission/lib/audit-words.ts — audit log event names
     audit_ev_signed_in: 'Signed in',
     audit_ev_signed_out: 'Signed out',
     audit_ev_updated_own_profile: 'Updated own profile',

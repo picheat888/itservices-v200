@@ -41,12 +41,14 @@ const MODULE_ICON: Record<string, LucideIcon> = {
 
 /** Header strip of every permission card: module identity left, granted count right (orange while unsaved). */
 export function PermissionCardHeader({
+    headingId,
     module,
     on,
     total,
     changed,
     lang,
 }: {
+    headingId?: string;
     module: string;
     on: number;
     total: number;
@@ -57,10 +59,10 @@ export function PermissionCardHeader({
 
     return (
         <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between gap-2 rounded-t-[inherit] border-b px-3.5 py-2.5')}>
-            <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
-                {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+            <h3 id={headingId} className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
+                {Icon && <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />}
                 <span className="truncate">{moduleLabel(module, lang)}</span>
-            </span>
+            </h3>
             <span
                 className={cn(
                     'shrink-0 text-xs font-bold tabular-nums',

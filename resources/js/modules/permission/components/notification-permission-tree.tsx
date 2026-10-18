@@ -73,6 +73,7 @@ export function NotificationPermissionTree({
         info: info(key, lang),
         on: has(key) && masterOn,
         locked: isSuper || !masterOn,
+        lockedBy: label(MASTER, lang),
         onToggle: () => toggle(key),
     });
 

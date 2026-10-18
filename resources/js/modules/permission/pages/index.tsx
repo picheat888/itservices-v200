@@ -1,6 +1,7 @@
 import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { EmptyState } from '@/shared/components/empty-state';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ListSkeleton } from '@/shared/components/skeletons';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -43,14 +44,14 @@ import { usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from 
 import { rebaseDraft, specEdges } from '../lib/draft-rebase';
 import { countGranted, hiddenHitCount, specKeys, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
-import { isRoleChanged, permissionRefusalText } from '../lib/refusal';
+import { isRoleChanged } from '../lib/refusal';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
 const TABS = ['templates', 'groups', 'logs'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 // URL keys of the Logs and Role Groups lists; cleared when the tab changes.
-const TAB_LIST_KEYS = ['search', 'category', 'user', 'page', 'role', 'sort', 'view', 'add'];
+const TAB_LIST_KEYS = ['search', 'category', 'user', 'page', 'per', 'role', 'sort', 'view', 'add'];
 
 /** Permission each tab's own endpoints require. */
 const TAB_PERMISSION: Record<Tab, string> = {
@@ -87,20 +88,7 @@ export default function PermissionsPage() {
             </div>
 
             <Card className="overflow-clip p-0">
-                <div className="border-border flex gap-1 border-b px-3 pt-1">
-                    {tabs.map((tb) => (
-                        <button
-                            key={tb.id}
-                            onClick={() => changeTab(tb.id)}
-                            className={cn(
-                                '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                                tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
-                            )}
-                        >
-                            {tb.label}
-                        </button>
-                    ))}
-                </div>
+                {tab !== null && <PageTabs tabs={tabs} active={tab} onChange={changeTab} />}
 
                 {tab === 'templates' && <RolesTab onDirtyChange={setRolesDirty} />}
                 {tab === 'groups' && <GroupRolesTab />}
@@ -217,7 +205,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     // Save flow: centred confirm (count frozen at open), ✓ flash, then the saved notice
     const [saveStep, setSaveStep] = useState<'idle' | 'confirm' | 'saving' | 'done'>('idle');
     const [pending, setPending] = useState(0);
-    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveError, setSaveError] = useState<unknown>(null);
     const [saved, setSaved] = useState<{ label: string; members: number } | null>(null);
 
     const roles = data?.roles ?? [];
@@ -332,6 +320,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const doneTimer = useRef<number | undefined>(undefined);
     useEffect(() => () => window.clearTimeout(doneTimer.current), []);
     const pickerId = useId();
+    const roleHeading = useRef<HTMLHeadingElement>(null);
 
     // A refused or failed load says so
     if (isError) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
@@ -429,7 +418,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                 useToastStore.getState().push(t('perm_refusal_role_changed'), 'warning');
                 return;
             }
-            setSaveError(permissionRefusalText(err, t));
+            setSaveError(err);
             setSaveStep('confirm');
             return;
         }
@@ -501,7 +490,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     };
 
     return (
-        <PermissionViewProvider value={{ changed: (key) => changedKeys.has(key), query, hiddenHits: (module) => hiddenHits.get(module) ?? 0 }}>
+        <PermissionViewProvider
+            value={{ changed: (key) => changedKeys.has(key), query, hiddenHits: (module) => hiddenHits.get(module) ?? 0, superRole: role.is_super }}
+        >
             <div className="border-border flex items-center justify-between border-b p-3">
                 <span className="text-muted-foreground text-sm">{translate(lang, 'perm_ui_all_templates')}</span>
                 <Button onClick={() => setRoleModal({ open: true, role: null })}>
@@ -528,7 +519,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 className="flex min-w-0 flex-1 items-center gap-2 py-3.5 pl-4 text-left"
                             >
                                 <RoleBar color={r.color} className="h-6" />
-                                <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand')}>{r.label}</span>
+                                <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand-ink')}>{r.label}</span>
                             </button>
                             {!r.is_system && (
                                 <RoleRowActions
@@ -546,7 +537,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                     {/* Role header: sticks while the cards scroll, so Save is always in reach */}
                     <div className="bg-card border-border sticky top-[var(--sticky-top,0px)] z-10 mb-4 flex flex-wrap items-center justify-between gap-3 border-b py-4">
                         <div className="min-w-0">
-                            <div className="hidden text-lg font-bold lg:block">{role.label}</div>
+                            <h2 ref={roleHeading} tabIndex={-1} className="sr-only text-lg font-bold focus:outline-none lg:not-sr-only lg:block">
+                                {role.label}
+                            </h2>
                             {/* Below lg: the role list as a picker, with the chosen role's edit and delete */}
                             <div className="mb-1 flex items-center gap-1 lg:hidden">
                                 <label htmlFor={pickerId} className="sr-only">
@@ -626,7 +619,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 <div key={section.label}>
                                     <div className="border-border mb-3 flex items-center gap-2 border-b pb-1.5">
                                         <SectionIcon className="text-muted-foreground h-4 w-4" />
-                                        <span className="text-foreground text-sm font-bold">{t(section.label)}</span>
+                                        <h2 className="text-foreground text-sm font-bold">{t(section.label)}</h2>
                                         <span
                                             className={cn(
                                                 'text-muted-foreground ml-auto text-xs tabular-nums',
@@ -641,7 +634,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 </div>
                             );
                         })}
-                        {sectionViews.length === 0 && <EmptyState kind="search" title={t('perm_search_none').replace('{q}', query.trim())} />}
+                        {sectionViews.length === 0 && (
+                            <EmptyState kind="search" title={t('perm_search_none').replace('{q}', query.trim())} hint={t('perm_search_none_hint')} />
+                        )}
                     </div>
                 </div>
             </div>
@@ -653,6 +648,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                 icon={PencilLine}
                 title={t('perm_confirm_title')}
                 busy={saveStep === 'saving' || saveStep === 'done'}
+                error={saveError}
+                returnFocus={() => roleHeading.current}
                 onClose={() => setSaveStep('idle')}
                 actions={
                     <>
@@ -679,17 +676,13 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
             >
                 <span className="block">{t('perm_confirm_role').replace('{name}', role.label)}</span>
                 <span className="block">{t('perm_confirm_count').replace('{n}', fmtN(pending))}</span>
-                {saveError && (
-                    <span role="alert" className="text-destructive mt-2 block">
-                        {saveError}
-                    </span>
-                )}
             </CenteredAlert>
 
             <CenteredAlert
                 open={saved !== null}
                 icon={ShieldCheck}
                 title={t('perm_saved_title')}
+                returnFocus={() => roleHeading.current}
                 onClose={() => setSaved(null)}
                 actions={
                     <Button className="w-full font-semibold" onClick={() => setSaved(null)}>

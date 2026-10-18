@@ -86,6 +86,7 @@ export function EmployeePermissionTree({
         label: label(key, lang),
         on: has(key) && masterOn,
         locked: isSuper || !masterOn,
+        lockedBy: label(MASTER, lang),
         onToggle: () => toggle(key),
     });
 
@@ -122,6 +123,7 @@ export function EmployeePermissionTree({
                                             aria={`${label(group.view, lang)} ${label(child, lang)}`}
                                             on={has(child) && viewOn}
                                             locked={isSuper || !viewOn}
+                                            lockedBy={label(group.view, lang)}
                                             onToggle={() => toggle(child)}
                                         />
                                     ))}

@@ -104,6 +104,7 @@ export function RequestPermissionTree({
         info: info(key, lang),
         on: has(key) && masterOn,
         locked: isSuper || !masterOn,
+        lockedBy: label(MASTER, lang),
         onToggle: () => toggle(key),
     });
 
@@ -140,6 +141,7 @@ export function RequestPermissionTree({
                                             info={info(child, lang)}
                                             on={has(child) && viewOn}
                                             locked={isSuper || !viewOn}
+                                            lockedBy={label(group.view, lang)}
                                             onToggle={() => toggle(child)}
                                         />
                                     ))}
@@ -159,6 +161,7 @@ export function RequestPermissionTree({
                                     info={info(key, lang)}
                                     on={has(key) && masterOn}
                                     locked={isSuper || !masterOn}
+                                    lockedBy={label(MASTER, lang)}
                                     onToggle={() => toggle(key)}
                                 />
                             ))}
