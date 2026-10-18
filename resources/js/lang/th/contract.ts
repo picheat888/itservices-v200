@@ -145,11 +145,9 @@ export const contract: Dict = {
     contract_err_end_before_start: 'ต้องไม่ก่อนวันเริ่ม',
     contract_err_notify_required: 'เลือกอย่างน้อย 1 ช่วง',
 
-    // pages/index.tsx — alert banners
-    contract_banner_expiring_one: 'สัญญาใกล้หมดอายุ {n} สัญญา',
-    contract_banner_expiring_many: 'สัญญาใกล้หมดอายุ {n} สัญญา',
-    contract_banner_overdue_one: 'สัญญาเกินกำหนด {n} สัญญา',
-    contract_banner_overdue_many: 'สัญญาเกินกำหนด {n} สัญญา',
+    // pages/index.tsx — alert buttons
+    contract_alert_expiring: 'ใกล้หมดอายุ {n} สัญญา',
+    contract_alert_overdue: 'เกินกำหนด {n} สัญญา',
 
     // pages/index.tsx — filters and sort
     contract_filter_all_types: 'ทุกประเภท',

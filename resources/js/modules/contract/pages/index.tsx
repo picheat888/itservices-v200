@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCurrency } from '@/modules/settings';
+import { AlertButton } from '@/shared/components/alert-button';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
@@ -82,6 +83,7 @@ function DaysCell({ days, inReminder, status }: { days: number; inReminder: bool
 
 export default function ContractsPage() {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { can } = useAuth();
     const canCreate = can('contracts.create');
     const canEdit = can('contracts.edit');
@@ -245,8 +247,6 @@ export default function ContractsPage() {
     };
 
     const maxVendor = summary?.top_vendors?.[0]?.amount ?? 1;
-    // Whether either alert banner is showing — used to tighten the gap (≈10px) above the table.
-    const hasBanners = !!summary?.expiring || !!summary?.overdue;
 
     // Set filters (type/status/sort ≠ default) — drives the FilterPopover count badge.
     const activeFilterCount = (typeFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
@@ -263,7 +263,29 @@ export default function ContractsPage() {
                     <h1 className="text-2xl font-bold">{t('contracts_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('contracts_sub')}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    {!!summary?.expiring && (
+                        <AlertButton
+                            tone="amber"
+                            icon={AlertTriangle}
+                            iconClassName={BANNER_BLINK}
+                            pressed={tab === 'all' && statusFilter === 'expiring'}
+                            onClick={() => showAllWithStatus(statusFilter === 'expiring' ? '' : 'expiring')}
+                        >
+                            {t('contract_alert_expiring').replace('{n}', fmtN(summary.expiring))}
+                        </AlertButton>
+                    )}
+                    {!!summary?.overdue && (
+                        <AlertButton
+                            tone="red"
+                            icon={AlertOctagon}
+                            iconClassName={BANNER_BLINK}
+                            pressed={tab === 'all' && statusFilter === 'expired'}
+                            onClick={() => showAllWithStatus(statusFilter === 'expired' ? '' : 'expired')}
+                        >
+                            {t('contract_alert_overdue').replace('{n}', fmtN(summary.overdue))}
+                        </AlertButton>
+                    )}
                     {canCreate && (
                         <Button onClick={openCreate}>
                             <Plus className="h-4 w-4" />
@@ -272,66 +294,6 @@ export default function ContractsPage() {
                     )}
                 </div>
             </div>
-
-            {hasBanners && (
-                <div className="mb-2.5 space-y-2.5">
-                    {!!summary?.expiring && (
-                        <div className="rounded-md bg-amber-50 p-4 dark:bg-amber-500/10">
-                            <div className="flex">
-                                <div className="shrink-0">
-                                    <AlertTriangle className={cn(BANNER_BLINK, 'h-5 w-5 text-amber-500 dark:text-amber-400')} aria-hidden />
-                                </div>
-                                <div className="ml-3 flex-1 md:flex md:items-center md:justify-between">
-                                    <p className="text-foreground text-sm font-medium">
-                                        {t(summary.expiring === 1 ? 'contract_banner_expiring_one' : 'contract_banner_expiring_many').replace(
-                                            '{n}',
-                                            String(summary.expiring),
-                                        )}
-                                    </p>
-                                    <p className="mt-3 text-sm md:mt-0 md:ml-6">
-                                        <button
-                                            type="button"
-                                            onClick={() => showAllWithStatus('expiring')}
-                                            className="inline-flex min-h-6 items-center gap-1 font-medium whitespace-nowrap text-amber-800 hover:text-amber-600 dark:text-amber-300 dark:hover:text-amber-200"
-                                        >
-                                            {t('contract_label_review')}
-                                            <span aria-hidden="true">→</span>
-                                        </button>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {!!summary?.overdue && (
-                        <div className="rounded-md bg-red-50 p-4 dark:bg-red-500/10">
-                            <div className="flex">
-                                <div className="shrink-0">
-                                    <AlertOctagon className={cn(BANNER_BLINK, 'h-5 w-5 text-red-500 dark:text-red-400')} aria-hidden />
-                                </div>
-                                <div className="ml-3 flex-1 md:flex md:items-center md:justify-between">
-                                    <p className="text-foreground text-sm font-medium">
-                                        {t(summary.overdue === 1 ? 'contract_banner_overdue_one' : 'contract_banner_overdue_many').replace(
-                                            '{n}',
-                                            String(summary.overdue),
-                                        )}
-                                    </p>
-                                    <p className="mt-3 text-sm md:mt-0 md:ml-6">
-                                        <button
-                                            type="button"
-                                            onClick={() => showAllWithStatus('expired')}
-                                            className="inline-flex min-h-6 items-center gap-1 font-medium whitespace-nowrap text-red-800 hover:text-red-600 dark:text-red-300 dark:hover:text-red-200"
-                                        >
-                                            {t('contract_label_review')}
-                                            <span aria-hidden="true">→</span>
-                                        </button>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
 
             <Card className="overflow-clip">
                 <PageTabs<Tab>

@@ -146,11 +146,9 @@ export const contract: Dict = {
     contract_err_end_before_start: "Can't be before the start date",
     contract_err_notify_required: 'Select at least one',
 
-    // pages/index.tsx — alert banners
-    contract_banner_expiring_one: '{n} contract expiring soon',
-    contract_banner_expiring_many: '{n} contracts expiring soon',
-    contract_banner_overdue_one: '{n} contract overdue',
-    contract_banner_overdue_many: '{n} contracts overdue',
+    // pages/index.tsx — alert buttons
+    contract_alert_expiring: '{n} expiring soon',
+    contract_alert_overdue: '{n} overdue',
 
     // pages/index.tsx — filters and sort
     contract_filter_all_types: 'All types',
