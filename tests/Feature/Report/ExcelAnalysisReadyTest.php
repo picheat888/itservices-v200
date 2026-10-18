@@ -5,6 +5,7 @@
 
 namespace Tests\Feature\Report;
 
+use App\Exports\Report\TabularGlossarySheet;
 use App\Exports\Report\TabularSectionSheet;
 use App\Models\Asset\Asset;
 use App\Models\Employee\Department;
@@ -14,10 +15,12 @@ use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
+use App\Services\Report\Asset\AssetWriteoffReport;
 use App\Services\Report\Request\RequestApprovalsReport;
 use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\TabularReportExporter;
+use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
@@ -187,6 +190,26 @@ class ExcelAnalysisReadyTest extends TestCase
 
         $this->assertContains('approver_kind_th', $keys);
         $this->assertNotContains('approver_kind', $keys);
+    }
+
+    /** Money, days-left and hours-left figures are worked out by the system, so the glossary says how. */
+    public function test_every_calculated_money_and_time_column_is_explained_in_the_glossary(): void
+    {
+        foreach (array_keys(ReportCatalogue::definitions()) as $key) {
+            $report = ReportCatalogue::tabular($key);
+            if ($report === null) {
+                continue;
+            }
+            foreach ($report->sheetColumns() as $column) {
+                if (in_array($column->type, ['money', 'days_left', 'hours_left'], true)) {
+                    $this->assertNotSame('', $report->columnMeaning($column), "{$key} / {$column->key}");
+                }
+            }
+        }
+
+        $glossary = collect((new TabularGlossarySheet(app(AssetWriteoffReport::class)))->array())->keyBy(1);
+        $this->assertStringContainsString('30.44', $glossary['ประกันเหลือ (เดือน)'][3]);
+        $this->assertStringNotContainsString('—', $glossary['ประกันตอนตัดจำหน่าย'][2]);
     }
 
     public function test_a_section_sheet_writes_dates_as_dates_and_keeps_zeros(): void

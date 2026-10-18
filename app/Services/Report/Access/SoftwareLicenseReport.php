@@ -221,6 +221,18 @@ class SoftwareLicenseReport extends TabularReport
             ->orderBy('employees.first_name')->orderBy('employees.last_name');
     }
 
+    /** @return array<string, string> */
+    protected function meanings(): array
+    {
+        return [
+            'status' => 'ถอนแล้ว = ถอนสิทธิ์แล้ว, ผู้ลาออกยังถือ = ยังไม่ถอนและผู้ถือลาออกโดยพ้นวันทำงานวันสุดท้ายแล้วหรือไม่ได้บันทึกวันสุดท้าย, ใช้งาน = ยังถือ License และยังทำงานอยู่',
+            'left_days' => 'จำนวนวันจากวันทำงานวันสุดท้ายถึงวันที่ส่งออก ว่าง = ยังไม่ลาออก หรือไม่ได้บันทึกวันสุดท้าย',
+            'license_type' => 'ประเภท License ของซอฟต์แวร์ตามทะเบียน: ซื้อขาด, รายเดือน/รายปี, ฟรี, Open Source ว่าง = ไม่ได้ระบุ',
+            'publisher' => 'ยี่ห้อผู้ผลิตของซอฟต์แวร์ตามทะเบียน',
+            'revoked_by' => 'ชื่อบัญชีผู้ใช้ที่กดถอนสิทธิ์ ว่าง = ยังไม่ถอน',
+        ];
+    }
+
     protected function hasRowId(): bool
     {
         return true;

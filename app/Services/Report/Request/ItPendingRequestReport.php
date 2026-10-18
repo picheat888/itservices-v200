@@ -110,6 +110,17 @@ class ItPendingRequestReport extends TabularReport
             ->orderBy('id');
     }
 
+    /** @return array<string, string> */
+    protected function meanings(): array
+    {
+        return [
+            'origin' => 'ยื่นเอง = ผู้ขอยื่นคำขอให้ตัวเอง, พนักงานใหม่ = ยื่นแทนพนักงานใหม่จากหน้าเพิ่มพนักงาน ก่อนพนักงานมีบัญชีของตัวเอง',
+            'waiting_days' => 'จำนวนวันตามปฏิทินจากวันที่อนุมัติครบถึงวันที่ส่งออก (อนุมัติวันนี้ = 0)',
+            'age_band' => 'กลุ่มของรอมาแล้ว (วัน): ไม่เกิน 3 วัน = 0 ถึง 3 วัน, 4–7 วัน, เกิน 7 วัน = 8 วันขึ้นไป',
+            'ticket_status' => 'สถานะของ Ticket ที่เปิดจากคำขอนี้: เปิด, กำลังดำเนินการ, เสร็จสิ้น, ยกเลิก ว่าง = ยังไม่มี Ticket',
+        ];
+    }
+
     public function columns(): array
     {
         return [

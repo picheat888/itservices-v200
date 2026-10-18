@@ -117,6 +117,16 @@ class WarrantyExpiringReport extends TabularReport
             ->orderBy('assets.id');
     }
 
+    /** @return array<string, string> */
+    protected function meanings(): array
+    {
+        return [
+            'days_left' => 'จำนวนวันจากวันที่ส่งออกถึงวันหมดประกัน ติดลบ = หมดประกันมาแล้ว (มุมมองหมดแล้ว)',
+            'value' => 'ราคาซื้อของทรัพย์สินตามที่บันทึกไว้ (รายงานนี้มีเฉพาะทรัพย์สินที่ซื้อ ไม่รวมประกันตลอดอายุและที่ตัดจำหน่ายแล้ว)',
+            'holder' => 'ผู้ถือปัจจุบันในรูปแบบ ชื่อ (รหัสพนักงาน) ถ้าเป็นส่วนกลางแสดงชื่อการใช้งานส่วนกลางที่บันทึกไว้ ว่าง = ไม่มีผู้ถือ เช่นอยู่ในคลัง',
+        ];
+    }
+
     public function columns(): array
     {
         return [

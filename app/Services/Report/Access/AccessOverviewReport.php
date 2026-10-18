@@ -93,6 +93,18 @@ class AccessOverviewReport extends TabularReport
             ->orderBy('access_memberships.resource_type')->orderBy('access_memberships.id');
     }
 
+    /** @return array<string, string> */
+    protected function meanings(): array
+    {
+        return [
+            'level' => 'Read = อ่านอย่างเดียว, Read/Write = อ่านและเขียน (ระดับของ File Share), สมาชิก = สิทธิ์ที่ไม่มีระดับ เช่นสมาชิก Email Group',
+            'status' => 'ถอนแล้ว = ถอนสิทธิ์แล้ว, ผู้ลาออกยังถือ = ยังไม่ถอนและผู้ถือลาออกโดยพ้นวันทำงานวันสุดท้ายแล้วหรือไม่ได้บันทึกวันสุดท้าย, ใช้งาน (ข้ามแผนก) = แผนกผู้ถือต่างจากแผนกของ Resource (เฉพาะ Email Group และ File Share), ใช้งาน = กรณีอื่น',
+            'left_days' => 'จำนวนวันจากวันทำงานวันสุดท้ายถึงวันที่ส่งออก ว่าง = ยังไม่ลาออก หรือไม่ได้บันทึกวันสุดท้าย',
+            'resource_detail' => 'ที่อยู่ของ Resource: Email Group = อีเมลกลุ่ม, File Share = Path, Social / Internet = URL, Software = ยี่ห้อผู้ผลิต',
+            'revoked_by' => 'ชื่อบัญชีผู้ใช้ที่กดถอนสิทธิ์ ว่าง = ยังไม่ถอน',
+        ];
+    }
+
     protected function hasRowId(): bool
     {
         return true;
