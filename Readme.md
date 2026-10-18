@@ -6338,3 +6338,14 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ลิงก์ในอีเมล (`files.report-export`) เปิดได้เฉพาะเจ้าของ หรือผู้รับที่อยู่ใน `shared_with` ของรอบนั้นและเปิดรายงานได้ คนอื่นได้ 404; ทุกการดาวน์โหลดบันทึก audit log
 - เทส `ReportScheduleTest` (+2: ลิงก์ของผู้รับที่มีบัญชี / ไม่มีบัญชี / ไม่มีสิทธิ์ / หมดอายุ 30 วัน, ไฟล์ใหญ่); เทสรายงาน อีเมล และการแจ้งเตือน 657 ข้อผ่าน
 - ข้อสังเกต: รายงานที่ส่งบ่อย (รายวัน) จะมีไฟล์ในหน้าไฟล์ส่งออกของผู้ตั้งรายงานเพิ่มวันละ 1 ไฟล์ ไฟล์หมดอายุถูกลบตามรอบ `reports:prune-exports`
+
+## ตรวจ Autofill ทุกช่องกรอก + security review (2026-10-19)
+ตรวจทุกโมดูลด้วย agent 8 ตัว แล้วแก้ 3 รอบ
+- **รอบ 1 ความปลอดภัย** (`a7ade6c2`):
+  - อีเมล: หัวเรื่อง Ticket ชื่อคน ชื่อ/Tag ทรัพย์สิน และชื่อ SKU เคยใส่ลงเนื้ออีเมล HTML โดยไม่ escape ทำให้ผู้แจ้งใส่ลิงก์หลอกในหัวเรื่องแล้วระบบส่งถึงทีม IT ได้ ตอนนี้ทุกค่าที่พิมพ์ผ่าน `e()` ใน TicketService, TicketDigestService, ContractDigestService, AssetService, StockNotificationService (หัวเรื่องอีเมลยังเป็นข้อความปกติ เพราะ `sendTemplate` decode entity อยู่แล้ว) — เทส `TicketEmailEscapingTest`
+  - Product key ของ Software ไม่ใช้ `type=password` แล้ว (Chrome เคยเติมรหัส login ของแอดมินลงไป และชวนบันทึก key ลงตัวจัดการรหัสผ่าน) เป็นช่องข้อความ ซ่อนด้วย `-webkit-text-security` + attribute ให้ password manager ข้าม
+  - หน้า login: ปิด autocapitalize / autocorrect / spellcheck ทั้งสองช่อง (รหัสที่กดดูจะไม่ถูกส่งไปตัวตรวจคำออนไลน์); ฟอร์มเปลี่ยนรหัสใช้อีเมลแทน username ที่ซ่อนไว้ ถ้าบัญชีไม่มี username
+- **รอบ 2 autofill** (`7f5a03e7`, 44 ไฟล์): ช่องค้นหาใน SearchableSelect / SearchSelect / DataTable / IconPicker และช่องค้นหาประจำหน้า เป็น `autocomplete="off"`; ข้อมูลของคนอื่น (Vendor, SMTP from, ข้อมูลบริษัท, ผู้รับรายงาน, อีเมลที่ขอเปิดใหม่, Access) ไม่ถูกเติมด้วยข้อมูลของผู้ใช้เอง; เบอร์ติดต่อกลับของ Ticket เป็น `type=tel autocomplete=tel`; รหัส Serial เลขสัญญา จำนวนเงิน และ master data เป็น off; step label ของ workflow ไม่ใส่ off เพื่อให้ datalist ขึ้นใน Firefox
+- **รอบ 3 ช่องจำนวนคลังอะไหล่** (`8794faf6`): จำนวนรับเข้า/คืน/โอน, จำนวนแถว serial, จำนวนที่ขอเบิก, จำนวนที่จัดสรร, min/max ของ SKU เปลี่ยนจาก `type=number` เป็นช่องตัวเลขจำนวนเต็ม (`digitsOnly`) ล้อหน้านับสต็อก — เลื่อนเมาส์แล้วค่าไม่เปลี่ยน, พิมพ์ทศนิยมไม่ได้, ช่องโอนลบให้ว่างได้
+- ข้อจำกัด: Firefox ไม่รองรับ `-webkit-text-security` ทุกรุ่น ช่อง Product key อาจแสดงเป็นข้อความ (key ไม่ใช่รหัสผ่านของผู้ใช้)
+- ยังไม่แก้ (รอผู้ใช้ตัดสินใจ): ผู้มีสิทธิ์ `employees.reset_password` ตั้งรหัสผ่านให้บัญชีที่มีสิทธิ์สูงกว่าตัวเองได้ (กันเฉพาะ super admin) ดู `forward-session.md`
