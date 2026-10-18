@@ -43,6 +43,8 @@ export interface AuditDetails {
     items?: string[];
     /** Anything else worth recording about the action, as raw key → value. */
     facts?: Record<string, string>;
+    /** The row as it stood when it was deleted (AuditLog::recordDeleted), foreign keys as names. */
+    snapshot?: Record<string, unknown>;
 }
 
 export interface AuditEntry {
@@ -50,6 +52,8 @@ export interface AuditEntry {
     user_name: string | null;
     action: string;
     target: string | null;
+    /** Morph alias or class name of the record the entry is about. */
+    subject_type: string | null;
     details: AuditDetails | null;
     created_at: string;
 }

@@ -1,20 +1,12 @@
-// Human-readable formatting for audit-log diffs. Entries are stored with raw DB
-// column names and foreign-key ids (e.g. `position_id: 5 → 12`); these helpers
-// turn those into friendly labels and resolved entity names at display time, so
-// historical logs become readable without rewriting stored data.
+// Readable audit-log diffs: raw column names become labels and older foreign-key ids become names, at display time.
 
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
+import { auditFieldText } from './audit-words';
 
-/**
- * Maps a raw DB column name to a friendly label. The labels live in
- * lang/<locale>/permissions.ts under keys `audit_field_<column>`; this resolves
- * them and falls back to the raw column name when no label exists.
- */
-export function auditFieldLabel(field: string, lang: Lang): string {
-    const k = `audit_field_${field}`;
-    const v = translate(lang, k);
-    return v === k ? field : v;
+/** A column's label (audit_field_<column>, owner by subject type), or the raw column name when it has none. */
+export function auditFieldLabel(field: string, lang: Lang, subjectType?: string | null): string {
+    return auditFieldText(field, (key) => translate(lang, key), subjectType);
 }
 
 /** Reference maps (id → display name) used to resolve foreign-key ids in diffs. */
