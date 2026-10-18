@@ -30,6 +30,8 @@ export function InfoPopover({
     inactive = false,
     disabled = false,
     doubleTapInRow = false,
+    shown = false,
+    hideFromReaders = false,
 }: {
     /** What a screen reader hears for the trigger. */
     label: string;
@@ -59,9 +61,13 @@ export function InfoPopover({
     disabled?: boolean;
     /** Inside a clickable row ([data-row-click]): a tap shows the note, a double tap opens the row. */
     doubleTapInRow?: boolean;
+    /** Keeps the note open while true, e.g. while the control it describes has keyboard focus. */
+    shown?: boolean;
+    /** Button mode: hide the trigger from assistive tech, for a note a control already reads. */
+    hideFromReaders?: boolean;
 }) {
     const [openState, setOpen] = useState(false);
-    const open = openState && !inactive;
+    const open = (openState || shown) && !inactive;
     const [place, setPlace] = useState<Side>(side);
     const closing = useRef<number | null>(null);
     const openedByHover = useRef(false);
@@ -185,6 +191,7 @@ export function InfoPopover({
                         ref={trigger as React.RefObject<HTMLButtonElement>}
                         type="button"
                         tabIndex={tabbable ? undefined : -1}
+                        aria-hidden={hideFromReaders || undefined}
                         aria-label={label}
                         {...triggerProps}
                     >

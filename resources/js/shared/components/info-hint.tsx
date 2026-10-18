@@ -3,12 +3,27 @@ import { InfoPopover } from '@/shared/components/info-popover';
 import { cn } from '@/shared/lib/utils';
 import { Info } from 'lucide-react';
 
-/** `tabbable={false}`: a control already reads the hint (aria-describedby), so the (i) stays for pointer and touch only. */
-export function InfoHint({ text, className, tabbable = true }: { text: string; className?: string; tabbable?: boolean }) {
+/**
+ * `tabbable={false}`: a control already reads the hint (aria-describedby), so the (i) stays for pointer and
+ * touch only and is hidden from screen readers; `shown` opens it while that control has keyboard focus.
+ */
+export function InfoHint({
+    text,
+    className,
+    tabbable = true,
+    shown = false,
+}: {
+    text: string;
+    className?: string;
+    tabbable?: boolean;
+    shown?: boolean;
+}) {
     return (
         <InfoPopover
             openOnFocus
             tabbable={tabbable}
+            hideFromReaders={!tabbable}
+            shown={shown}
             label={text}
             // Newlines in a hint are meant: one line per thing a permission grants
             content={<span className="leading-relaxed whitespace-pre-line">{text}</span>}
