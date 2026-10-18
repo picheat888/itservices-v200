@@ -76,8 +76,7 @@ class GroupRoleController extends Controller
      */
     private function fallbackOrphansToDefault(GroupRole $fromGroup, array $removedEmployeeIds): void
     {
-        $defaultId = (int) AppSetting::get('default_employee_group_id', 0);
-        $defaultGroup = $defaultId ? GroupRole::find($defaultId) : null;
+        $defaultGroup = GroupRole::defaultForNewEmployees();
 
         foreach ($removedEmployeeIds as $empId) {
             $employee = Employee::find($empId);
@@ -245,9 +244,16 @@ class GroupRoleController extends Controller
         ]);
 
         $groupId = $data['group_id'] ?? null;
-        AppSetting::put('default_employee_group_id', $groupId);
+        $group = $groupId ? GroupRole::with('role')->find($groupId) : null;
 
-        $group = $groupId ? GroupRole::find($groupId) : null;
+        if ($group && UserRole::isSuperKey($group->role?->key)) {
+            abort(response()->json([
+                'message' => 'The Administrator group cannot be the default group for new employees.',
+                'code' => 'default_group_super',
+            ], 422));
+        }
+
+        AppSetting::put('default_employee_group_id', $groupId);
         AuditLog::record('Set default role group', $group?->name ?? '(none)', subject: $group);
 
         return $this->index($request);

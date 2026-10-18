@@ -14,7 +14,6 @@ use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
-use App\Models\Settings\AppSetting;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Notifications\AccessOffboardingNotification;
@@ -334,21 +333,10 @@ class EmployeeService
         return $employee->load(['department', 'position']);
     }
 
-    /**
-     * The Role Group new employees are put into — whichever one an Admin marked as the
-     * default on the Permission page — or null when none is marked.
-     *
-     * The single place that setting is read: create() puts the person in this group, and
-     * defaultRoleForNewEmployee() takes the role from it. Two readers resolving it their
-     * own way is how the Add Employee form ended up displaying an unrelated
-     * `default_employee_role` setting that nothing applied, agreeing with reality only by
-     * accident.
-     */
+    /** The Role Group new employees are put into (never a super-role group), or null. */
     private function defaultGroupForNewEmployee(): ?GroupRole
     {
-        $groupId = (int) AppSetting::get('default_employee_group_id', 0);
-
-        return $groupId ? GroupRole::with('role')->find($groupId) : null;
+        return GroupRole::defaultForNewEmployees();
     }
 
     /**
