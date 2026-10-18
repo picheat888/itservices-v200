@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\CompanyProfile;
 use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -89,7 +90,7 @@ class PdfNumberFormatTest extends TestCase
             'summary' => [ReportSummary::make('total', 'Total', 12345)],
             'sections' => [['title' => 'S', 'headings' => ['A', 'B'], 'rows' => [['CT-2026', 6789]]]],
             'scope' => [], 'rows' => collect([$row]), 'truncated' => false, 'total' => 1,
-            'company' => 'Acme', 'printedBy' => 'Admin', 'printedAt' => '2026-10-18',
+            'company' => CompanyProfile::get(), 'documentNo' => null, 'printedBy' => 'Admin', 'printedAt' => '2026-10-18',
         ])->render();
 
         $this->assertStringContainsString('4,321', $html);
@@ -98,5 +99,67 @@ class PdfNumberFormatTest extends TestCase
         $this->assertStringContainsString('6,789', $html);
         $this->assertStringContainsString('DOC-20261', $html);
         $this->assertStringContainsString('CT-2026', $html);
+    }
+
+    public function test_tabular_pdf_prints_document_facts_tile_context_and_sign_off(): void
+    {
+        $report = new class extends TabularReport
+        {
+            public function key(): string
+            {
+                return 'test.context';
+            }
+
+            public function title(): string
+            {
+                return 'Test';
+            }
+
+            public function filters(): array
+            {
+                return [];
+            }
+
+            public function query(User $viewer, array $filters): Builder
+            {
+                throw new \LogicException('not used');
+            }
+
+            public function columns(): array
+            {
+                return [ReportColumn::daysLeft('left', 'เหลือ (วัน)', fn (Model $m) => $m->getAttribute('left'))];
+            }
+        };
+        $summary = [
+            ReportSummary::make('total', 'ทั้งหมด', 602)->withSplit([
+                ['key' => 'open', 'label_key' => 'rep_k_open', 'tone' => 'soft-blue', 'value' => 179],
+                ['key' => 'in_progress', 'label_key' => 'rep_k_in_progress', 'tone' => 'soft-amber', 'value' => 423],
+            ]),
+            ReportSummary::make('over_sla', 'เกิน SLA', 351, 'soft-red')->withShareOf(602)->withNote(['label_key' => 'rep_bl_note_most_overdue', 'hours' => 465.3]),
+            ReportSummary::make('eo_working', 'ทำงานอยู่', 800)->withNote(['label_key' => 'rep_n_eo_from_start', 'trend' => [
+                'direction' => 'down', 'label_key' => 'rep_n_eo_from_start', 'values' => ['delta' => 45], 'up_is_good' => true,
+            ]]),
+        ];
+        $row = (new class extends Model {})->forceFill(['left' => now()->subDays(12)]);
+
+        $html = view('pdf.reports.tabular', [
+            'report' => $report, 'summary' => $summary,
+            'sections' => [['title' => 'S', 'headings' => ['เลขที่', 'เหลือ (วัน)', 'ทัน SLA (%)'], 'rows' => [['CT-1', -922, 81]]]],
+            'scope' => [['ตัวกรอง', 'ไม่ได้กรอง']], 'rows' => collect([$row]), 'truncated' => false, 'total' => 1,
+            'company' => CompanyProfile::get(), 'documentNo' => 'RPT-261018-0042', 'printedBy' => 'Admin', 'printedAt' => '18 ต.ค. 2569 20:34',
+        ])->render();
+
+        $this->assertStringContainsString('เลขที่เอกสาร RPT-261018-0042', $html);
+        $this->assertStringContainsString('ข้อมูล ณ 18 ต.ค. 2569 20:34', $html);
+        $this->assertStringContainsString('รอรับเคส 179, กำลังดำเนินการ 423', $html);
+        $this->assertStringContainsString('58%', $html);
+        $this->assertStringContainsString('เกินนานสุด 19 วัน', $html);
+        $this->assertStringContainsString('−45 จากต้นช่วง', $html);
+        $this->assertStringContainsString('เลยมา 922 วัน', $html);
+        $this->assertStringContainsString('81%', $html);
+        $this->assertStringContainsString('เลยมา 12 วัน', $html);
+        $this->assertStringContainsString('1 รายการ', $html);
+        $this->assertStringContainsString('ผู้ตรวจทาน', $html);
+        $this->assertStringContainsString('ผู้อนุมัติ', $html);
     }
 }

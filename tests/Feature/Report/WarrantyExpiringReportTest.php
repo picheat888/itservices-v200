@@ -10,6 +10,7 @@ use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\User;
 use App\Services\Report\Asset\WarrantyExpiringReport;
+use App\Support\CompanyProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
@@ -196,7 +197,7 @@ class WarrantyExpiringReportTest extends TestCase
         $html = view('pdf.reports.tabular', [
             'report' => $report, 'summary' => [], 'sections' => [], 'scope' => $report->scopeLines($filters),
             'rows' => $rows, 'truncated' => false, 'total' => $rows->count(),
-            'company' => '', 'printedBy' => $viewer->name, 'printedAt' => '',
+            'company' => CompanyProfile::get(), 'documentNo' => null, 'printedBy' => $viewer->name, 'printedAt' => '',
         ])->render();
 
         $this->assertStringContainsString('แสดง: หมดแล้ว', $html);

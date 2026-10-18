@@ -23,6 +23,7 @@ class ReportExportResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'document_no' => $this->documentNo(),
             'report_key' => $this->report_key,
             'format' => $this->format,
             'status' => $this->status,

@@ -251,9 +251,10 @@ class ReportScheduleService
     private function write(ReportSchedule $schedule, User $owner, array $period, string $directory): array
     {
         $input = $this->filtersFor($schedule, $period);
+        $documentNo = sprintf('SCH-%s-%04d', now()->format('ymd'), $schedule->id);
 
         if ($schedule->report_key === ReportCatalogue::TICKETS_OVERVIEW) {
-            return $this->ticketOverview->store($owner, TicketOverviewReportService::resolveFilters($input), $schedule->format, $directory);
+            return $this->ticketOverview->store($owner, TicketOverviewReportService::resolveFilters($input), $schedule->format, $directory, $documentNo);
         }
 
         $report = ReportCatalogue::tabular($schedule->report_key)?->showOnly($schedule->columns);
@@ -261,7 +262,7 @@ class ReportScheduleService
             throw new \RuntimeException("Unknown report [{$schedule->report_key}]");
         }
 
-        return $this->tabular->store($report, $owner, $report->resolveFilters($input), $schedule->format, $directory);
+        return $this->tabular->store($report, $owner, $report->resolveFilters($input), $schedule->format, $directory, $documentNo);
     }
 
     /**

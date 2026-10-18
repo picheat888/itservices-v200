@@ -37,6 +37,7 @@
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
         .tot { text-align: right; margin-top: 6px; color: #333; }
+        @page { margin: 30px 34px 46px; }
         table.sign { width: 100%; margin-top: 34px; }
         table.sign td { width: 50%; text-align: center; padding: 0 20px; }
         .line { border-bottom: 1px dotted #111; height: 26px; margin-bottom: 4px; }

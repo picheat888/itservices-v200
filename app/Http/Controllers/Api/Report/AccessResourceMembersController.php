@@ -4,14 +4,14 @@ namespace App\Http\Controllers\Api\Report;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\TabularReportRequest;
-use App\Models\Settings\AppSetting;
 use App\Services\Report\Access\AccessResourceMembersReport;
+use App\Support\CompanyProfile;
 use App\Support\DateDisplay;
 use App\Support\DocumentName;
+use App\Support\PdfFooter;
 use App\Support\ReportCatalogue;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -38,20 +38,19 @@ class AccessResourceMembersController extends Controller
         $report = $request->report();
         $sheet = $report->sheet($request->filters()) ?? abort(404);
 
-        $logo = null;
-        $logoPath = AppSetting::get('logo_path');
-        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
-            $logo = 'data:'.Storage::disk('public')->mimeType($logoPath).';base64,'.base64_encode(Storage::disk('public')->get($logoPath));
-        }
-
-        $bytes = Pdf::loadView('pdf.reports.access-review-sheet', [
+        $company = CompanyProfile::get();
+        $printedBy = $request->user()?->name ?? '';
+        $printedAt = DateDisplay::dateTime(now());
+        $pdf = Pdf::loadView('pdf.reports.access-review-sheet', [
             'sheet' => $sheet,
-            'logo' => $logo,
-            'company' => AppSetting::get('company_name', 'ABCD Electric Company'),
-            'printedBy' => $request->user()?->name ?? '',
-            'printedAt' => DateDisplay::dateTime(now()),
+            'logo' => $company['logo'],
+            'company' => CompanyProfile::issuer($company),
+            'printedBy' => $printedBy,
+            'printedAt' => $printedAt,
             'dateConfig' => DateDisplay::config(),
-        ])->setPaper('a4', 'portrait')->output();
+        ])->setPaper('a4', 'portrait');
+        PdfFooter::stamp($pdf, $company['app_name'], "พิมพ์โดย {$printedBy} เมื่อ {$printedAt}", 'หน้า {PAGE_NUM} / {PAGE_COUNT}');
+        $bytes = $pdf->output();
         $filename = DocumentName::make('AccessReview', [(string) $sheet['code']]);
 
         return new StreamedResponse(function () use ($bytes) {

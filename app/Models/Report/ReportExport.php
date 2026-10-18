@@ -48,6 +48,12 @@ class ReportExport extends Model
         ];
     }
 
+    /** The number printed on the file and kept on this row: RPT-<yymmdd it was asked for>-<id>. */
+    public function documentNo(): string
+    {
+        return sprintf('RPT-%s-%04d', $this->created_at->format('ymd'), $this->id);
+    }
+
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
