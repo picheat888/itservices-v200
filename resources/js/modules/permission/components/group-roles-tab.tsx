@@ -10,7 +10,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { toRecordId } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -144,7 +144,6 @@ export function GroupRolesTab() {
         { value: ALL, label: t('all'), search: t('all') },
         ...(matrix?.roles ?? []).map((r) => ({ value: r.value, label: r.label, search: r.label })),
     ];
-    const sortOptions = SORTS.map((s) => ({ value: s, label: t(`gr_sort_${s}`), search: t(`gr_sort_${s}`) }));
     const filterCount = (roleFilter ? 1 : 0) + (sort !== 'default_first' ? 1 : 0);
     const fieldLabel = (htmlFor: string, icon: React.ReactNode, label: string) => (
         <label htmlFor={htmlFor} className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
@@ -164,17 +163,27 @@ export function GroupRolesTab() {
                             value={roleFilter || ALL}
                             onChange={(v) => list.setFilter('role', v === ALL ? '' : v)}
                             options={roleOptions}
+                            searchPlaceholder={t('gr_role_search')}
                         />
                     </div>
                     <div>
                         {fieldLabel('gr-filter-sort', <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />, t('order_by'))}
-                        <SearchableSelect
-                            id="gr-filter-sort"
-                            active={sort !== 'default_first'}
-                            value={sort}
-                            onChange={(v) => list.setFilter('sort', v === 'default_first' ? '' : v)}
-                            options={sortOptions}
-                        />
+                        <Select value={sort} onValueChange={(v) => list.setFilter('sort', v === 'default_first' ? '' : v)}>
+                            <SelectTrigger
+                                id="gr-filter-sort"
+                                className={cn(sort !== 'default_first' && 'border-brand/50 bg-brand/5 text-brand font-medium')}
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            {/* The menu is portaled outside the filter panel: keep its clicks and keys from closing the panel */}
+                            <SelectContent onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                                {SORTS.map((s) => (
+                                    <SelectItem key={s} value={s}>
+                                        {t(`gr_sort_${s}`)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             )}
@@ -230,7 +239,12 @@ export function GroupRolesTab() {
                     {groups.map((g) => {
                         const offReason = defaultOffReason(g);
                         return offReason ? (
-                            <SelectItem key={g.id} value={String(g.id)} aria-disabled className="text-muted-foreground items-start">
+                            <SelectItem
+                                key={g.id}
+                                value={String(g.id)}
+                                aria-disabled
+                                className="text-muted-foreground focus:text-muted-foreground items-start"
+                            >
                                 <span className="flex min-w-0 flex-col">
                                     {g.name}
                                     <span className="max-w-56 text-xs">{offReason}</span>

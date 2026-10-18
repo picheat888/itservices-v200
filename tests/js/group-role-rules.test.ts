@@ -58,6 +58,7 @@ const words: Record<string, string> = {
     gr_where_group: 'they move to {name}',
     gr_where_none: 'no group, {role} role',
     gr_confirm_remove: 'Remove {n} people ({where})',
+    gr_confirm_remove_one: 'Remove 1 person ({where})',
 };
 const tr = (key: string) => words[key] ?? key;
 
@@ -68,6 +69,11 @@ test('leavers go to the default group first, else to the base role', () => {
 
 test('with no default group and no base role label the destination is unknown', () => {
     assert.equal(leaversWhere(tr, null, ''), null);
-    assert.equal(removeLine(tr, '2', null, ''), 'Remove 2 people');
-    assert.equal(removeLine(tr, '2', null, 'User'), 'Remove 2 people (no group, User role)');
+    assert.equal(removeLine(tr, 2, '2', null, ''), 'Remove 2 people');
+    assert.equal(removeLine(tr, 2, '2', null, 'User'), 'Remove 2 people (no group, User role)');
+});
+
+test('one leaver reads in the singular', () => {
+    assert.equal(removeLine(tr, 1, '1', 'Staff group', ''), 'Remove 1 person (they move to Staff group)');
+    assert.equal(removeLine(tr, 1, '1', null, ''), 'Remove 1 person');
 });

@@ -36,8 +36,8 @@ export function leaversWhere(t: Translate, defaultGroupName: string | null, base
 }
 
 /** Confirm line for people taken out; an unknown destination drops the "(…)" part. */
-export function removeLine(t: Translate, count: string, defaultGroupName: string | null, baseRole: string): string {
+export function removeLine(t: Translate, n: number, formatted: string, defaultGroupName: string | null, baseRole: string): string {
     const where = leaversWhere(t, defaultGroupName, baseRole);
-    const line = t('gr_confirm_remove').replace('{n}', count);
+    const line = t(countKey('gr_confirm_remove', n)).replace('{n}', formatted);
     return where === null ? line.replace(/\s*\(\{where\}\)/, '') : line.replace('{where}', where);
 }
