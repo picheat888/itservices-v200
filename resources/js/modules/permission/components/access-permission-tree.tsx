@@ -1,20 +1,11 @@
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { ACCESS_COUNT, ACCESS_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
-// Mirrors App\Support\Permissions::accessHierarchy() — keep in sync.
-// Each registry's view key gates its tab; its Edit key also covers owners and members.
-const MASTER = 'access.module';
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'access.overview', children: [], chip: false },
-    { view: 'access.email_view', children: ['access.email_add', 'access.email_edit', 'access.email_delete'] },
-    { view: 'access.file_view', children: ['access.file_add', 'access.file_edit', 'access.file_delete'] },
-    { view: 'access.social_view', children: ['access.social_add', 'access.social_edit', 'access.social_delete'] },
-    { view: 'access.software_view', children: ['access.software_add', 'access.software_edit', 'access.software_delete'] },
-];
+const { master: MASTER, groups: GROUPS } = ACCESS_TREE;
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
-export const ACCESS_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('access', key.replace('access.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('access', key.replace('access.', ''), lang);
@@ -38,27 +29,7 @@ export function AccessPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    group.children.forEach((c) => next.delete(c));
-                }
-            } else {
-                next.add(key);
-                const parent = GROUPS.find((g) => g.children.includes(key));
-                if (parent) {
-                    next.add(parent.view);
-                }
-                next.add(MASTER);
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, ACCESS_COUNT));
     };
 
     const activeCount = countGranted(ACCESS_COUNT, has).on;

@@ -1,20 +1,11 @@
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { STOCK_COUNT, STOCK_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
-// Mirrors App\Support\Permissions::stockHierarchy() — keep in sync.
-const MASTER = 'stock.module';
-// `chip: false` hides the "View" tag on single-switch groups.
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'stock.view_dashboard', children: [] },
-    { view: 'stock.view', children: ['stock.manage_items', 'stock.delete', 'stock.receive', 'stock.return', 'stock.transfer'] },
-    { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
-    { view: 'stock.view_count', children: [], chip: false },
-    { view: 'stock.view_events', children: [], chip: false },
-];
+const { master: MASTER, groups: GROUPS } = STOCK_TREE;
 const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
-export const STOCK_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('stock', key.replace('stock.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('stock', key.replace('stock.', ''), lang);
@@ -38,30 +29,7 @@ export function StockPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    ALL_KEYS.forEach((k) => next.delete(k));
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    group.children.forEach((c) => next.delete(c));
-                }
-            } else {
-                next.add(key);
-                const parent = GROUPS.find((g) => g.children.includes(key));
-                if (parent) {
-                    next.add(parent.view);
-                    next.add(MASTER);
-                }
-                if (GROUPS.some((g) => g.view === key)) {
-                    next.add(MASTER);
-                }
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, STOCK_COUNT));
     };
 
     const activeCount = countGranted(STOCK_COUNT, has).on;

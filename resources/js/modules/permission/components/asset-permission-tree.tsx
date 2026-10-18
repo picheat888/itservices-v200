@@ -1,21 +1,12 @@
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { ASSET_COUNT, ASSET_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
-// Mirrors App\Support\Permissions::assetHierarchy() — keep in sync.
-const MASTER = 'assets.module';
-// Returning your own kit is profile.return_assets, on the My Profile card.
-// `chip: false` hides the "View" tag on groups that gate a whole area.
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'assets.view_dashboard', children: [], chip: false },
-    { view: 'assets.view', children: ['assets.register', 'assets.edit', 'assets.delete'] },
-    { view: 'assets.manage', children: ['assets.transfer', 'assets.receive', 'assets.retire'], chip: false },
-    { view: 'assets.special', children: ['assets.force_recall', 'assets.cancel_writeoff'], chip: false },
-];
+const { master: MASTER, groups: GROUPS } = ASSET_TREE;
 // Every key in the card; all of them live under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
-export const ASSET_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('assets', key.replace('assets.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('assets', key.replace('assets.', ''), lang);
@@ -39,31 +30,7 @@ export function AssetPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    group.children.forEach((c) => next.delete(c));
-                }
-                // Turning off "My Assets" clears its child.
-            } else {
-                next.add(key);
-                const parent = GROUPS.find((g) => g.children.includes(key));
-                if (parent) {
-                    next.add(parent.view);
-                    next.add(MASTER);
-                }
-                if (GROUPS.some((g) => g.view === key)) {
-                    next.add(MASTER);
-                }
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, ASSET_COUNT));
     };
 
     const activeCount = countGranted(ASSET_COUNT, has).on;

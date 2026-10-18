@@ -1,31 +1,12 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { NOTIFICATION_COUNT, NOTIFICATION_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, PermissionCard, PermissionCell, SetHead } from './permission-layout';
 
-// Mirrors App\Support\Permissions::notificationHierarchy() — keep in sync.
-const MASTER = 'notifications.module';
-
-// The page's Email and Notification tabs; edit and toggle stay separate keys (the controllers enforce the split).
-const GROUPS: { id: string; labelKey: string; keys: string[] }[] = [
-    {
-        id: 'email',
-        labelKey: 'perm_ui_group_email',
-        keys: ['notifications.email_edit', 'notifications.email_toggle', 'notifications.email_test'],
-    },
-    {
-        id: 'inapp',
-        labelKey: 'perm_ui_group_inapp',
-        keys: ['notifications.inapp_edit', 'notifications.inapp_toggle', 'notifications.inapp_test'],
-    },
-];
-
-// The Logs tab stands on its own.
-const LOGS = 'notifications.logs';
-
+const { master: MASTER, groups: GROUPS, logs: LOGS } = NOTIFICATION_TREE;
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => g.keys), LOGS];
-export const NOTIFICATION_COUNT: CountSpec = { master: MASTER, gated: [...GROUPS.flatMap((g) => g.keys), LOGS] };
 
 const label = (key: string, lang: Lang) => actionLabel('notifications', key.replace('notifications.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('notifications', key.replace('notifications.', ''), lang);
@@ -49,21 +30,7 @@ export function NotificationPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                // Dropping the master drops everything under it — matching normalizeNotifications().
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-            } else {
-                next.add(key);
-                next.add(MASTER);
-            }
-
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, NOTIFICATION_COUNT));
     };
 
     const activeCount = countGranted(NOTIFICATION_COUNT, has).on;

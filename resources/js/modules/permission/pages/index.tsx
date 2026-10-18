@@ -22,29 +22,30 @@ import { Briefcase, Check, LayoutDashboard, Loader2, Lock, PencilLine, Plus, Sav
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { RoleRow } from '../api/permissionApi';
-import { ACCESS_COUNT, AccessPermissionTree } from '../components/access-permission-tree';
-import { ASSET_COUNT, AssetPermissionTree } from '../components/asset-permission-tree';
+import { AccessPermissionTree } from '../components/access-permission-tree';
+import { AssetPermissionTree } from '../components/asset-permission-tree';
 import { AuditLogTab } from '../components/audit-log-tab';
 import { CenteredAlert } from '../components/centered-alert';
-import { CONTRACT_COUNT, ContractPermissionTree } from '../components/contract-permission-tree';
-import { EMPLOYEE_COUNT, EmployeePermissionTree } from '../components/employee-permission-tree';
+import { ContractPermissionTree } from '../components/contract-permission-tree';
+import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { GroupRolesTab } from '../components/group-roles-tab';
-import { moduleCardSpec, ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
-import { NOTIFICATION_COUNT, NotificationPermissionTree } from '../components/notification-permission-tree';
+import { ModulePermissionCard } from '../components/module-permission-card';
+import { NotificationPermissionTree } from '../components/notification-permission-tree';
 import { CHANGED_TEXT, PermissionCard, PermissionCell, PermissionViewProvider, PlainRow, spreadRows } from '../components/permission-layout';
 import { ProfilePermissionTree } from '../components/profile-permission-tree';
-import { REPORT_COUNT, ReportPermissionTree } from '../components/report-permission-tree';
-import { REQUEST_COUNT, RequestPermissionTree } from '../components/request-permission-tree';
+import { ReportPermissionTree } from '../components/report-permission-tree';
+import { RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleBar } from '../components/role-bar';
 import { RoleModal, type RoleModalMode } from '../components/role-modal';
 import { RoleRowMenu } from '../components/role-row-menu';
-import { STOCK_COUNT, StockPermissionTree } from '../components/stock-permission-tree';
-import { TICKET_COUNT, TicketPermissionTree } from '../components/ticket-permission-tree';
-import { WORKFLOW_COUNT, WorkflowPermissionTree } from '../components/workflow-permission-tree';
+import { StockPermissionTree } from '../components/stock-permission-tree';
+import { TicketPermissionTree } from '../components/ticket-permission-tree';
+import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
 import { usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from '../hooks/use-permissions';
 import { rebaseDraft, specEdges } from '../lib/draft-rebase';
-import { countGranted, hiddenHitCount, specKeys, type CountSpec } from '../lib/permission-count';
+import { countGranted, hiddenHitCount, specKeys } from '../lib/permission-count';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { cardSpec, FLAT_CARD_META } from '../lib/permission-specs';
 import { isRoleChanged } from '../lib/refusal';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
@@ -108,7 +109,7 @@ const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: st
     { label: 'nav_admin', icon: Shield, modules: ['system'] },
 ];
 
-// Administration cards: live system.* keys plus "coming soon" placeholders
+// Administration cards: live system.* keys plus "coming soon" placeholders; PermissionMatrixTest reads these literals
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     {
         module: 'reports',
@@ -155,41 +156,6 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
         ],
     },
 ];
-
-// Administration modules drawn as the Stock-style card with a master switch
-const ADMIN_CARD_META: Record<string, { subtitleKey: string; master: ModuleMaster }> = {
-    permissions: {
-        subtitleKey: 'perm_ui_permissions_card_sub',
-        master: { mode: 'key', key: 'system.manage_permissions' },
-    },
-    settings: {
-        subtitleKey: 'perm_ui_settings_card_sub',
-        master: { mode: 'key', key: 'settings.access' },
-    },
-};
-
-// Cards drawn by their own tree component, with the tree's count spec
-const TREE_COUNT: Record<string, CountSpec> = {
-    stock: STOCK_COUNT,
-    employees: EMPLOYEE_COUNT,
-    contracts: CONTRACT_COUNT,
-    assets: ASSET_COUNT,
-    tickets: TICKET_COUNT,
-    workflows: WORKFLOW_COUNT,
-    requests: REQUEST_COUNT,
-    notifications: NOTIFICATION_COUNT,
-    reports: REPORT_COUNT,
-    access: ACCESS_COUNT,
-};
-
-/** The count spec a card is drawn with; flat cards count live keys only. */
-function cardSpec(group: { module: string; keys: string[] }): { spec: CountSpec; liveOnly: boolean } {
-    const tree = TREE_COUNT[group.module];
-    if (tree) return { spec: tree, liveOnly: false };
-    if (group.module === 'profile') return { spec: { free: group.keys }, liveOnly: false };
-    const meta = ADMIN_CARD_META[group.module];
-    return { spec: meta ? moduleCardSpec(group.keys, meta.master) : { free: group.keys }, liveOnly: true };
-}
 
 function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
@@ -448,7 +414,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         if (group.module === 'notifications') return <NotificationPermissionTree key={group.module} {...tree} />;
         if (group.module === 'reports') return <ReportPermissionTree key={group.module} {...tree} />;
         if (group.module === 'access') return <AccessPermissionTree key={group.module} {...tree} />;
-        const cardMeta = ADMIN_CARD_META[group.module];
+        const cardMeta = FLAT_CARD_META[group.module];
         if (cardMeta) {
             return (
                 <ModulePermissionCard

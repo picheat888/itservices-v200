@@ -1,37 +1,12 @@
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionLabel } from '../lib/permission-labels';
+import { EMPLOYEE_COUNT, EMPLOYEE_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
-// Mirrors App\Support\Permissions::employeeHierarchy() — keep in sync.
-const MASTER = 'employees.module';
-// `chip: false` hides the "View" tag on single-switch groups.
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'employees.view_dashboard', children: [], chip: false },
-    {
-        view: 'employees.view',
-        children: [
-            'employees.add',
-            'employees.import',
-            'employees.edit',
-            'employees.reset_password',
-            'employees.resign',
-            'employees.cancel_resign',
-            'employees.set_credentials',
-            'employees.delete',
-        ],
-    },
-    { view: 'employees.view_section', children: ['employees.section_add', 'employees.section_edit', 'employees.section_delete'] },
-    { view: 'employees.view_department', children: ['employees.department_add', 'employees.department_edit', 'employees.department_delete'] },
-    {
-        view: 'employees.view_position',
-        children: ['employees.position_add', 'employees.position_edit', 'employees.position_delete', 'employees.position_special'],
-    },
-    { view: 'employees.view_org', children: [], chip: false },
-];
+const { master: MASTER, groups: GROUPS } = EMPLOYEE_TREE;
 // Every key in the card; all of them live under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
-export const EMPLOYEE_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('employees', key.replace('employees.', ''), lang);
 
@@ -54,30 +29,7 @@ export function EmployeePermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    group.children.forEach((c) => next.delete(c));
-                }
-            } else {
-                next.add(key);
-                const parent = GROUPS.find((g) => g.children.includes(key));
-                if (parent) {
-                    next.add(parent.view);
-                    next.add(MASTER);
-                }
-                if (GROUPS.some((g) => g.view === key)) {
-                    next.add(MASTER);
-                }
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, EMPLOYEE_COUNT));
     };
 
     const activeCount = countGranted(EMPLOYEE_COUNT, has).on;

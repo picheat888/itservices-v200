@@ -1,20 +1,12 @@
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { CONTRACT_COUNT, CONTRACT_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
-// Mirrors App\Support\Permissions::contractHierarchy() — keep in sync.
-const MASTER = 'contracts.module';
-// `chip: false` hides the "View" tag on groups that gate a whole area.
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'contracts.view_dashboard', children: [], chip: false },
-    { view: 'contracts.view', children: ['contracts.create', 'contracts.edit', 'contracts.delete'] },
-    { view: 'contracts.view_lifecycle', children: ['contracts.cancel', 'contracts.expire', 'contracts.reactivate'], chip: false },
-    { view: 'contracts.alerts', children: [], chip: false },
-];
+const { master: MASTER, groups: GROUPS } = CONTRACT_TREE;
 // Every gated key under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
-export const CONTRACT_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('contracts', key.replace('contracts.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('contracts', key.replace('contracts.', ''), lang);
@@ -38,30 +30,7 @@ export function ContractPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    group.children.forEach((c) => next.delete(c));
-                }
-            } else {
-                next.add(key);
-                const parent = GROUPS.find((g) => g.children.includes(key));
-                if (parent) {
-                    next.add(parent.view);
-                    next.add(MASTER);
-                }
-                if (GROUPS.some((g) => g.view === key)) {
-                    next.add(MASTER);
-                }
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, CONTRACT_COUNT));
     };
 
     const activeCount = countGranted(CONTRACT_COUNT, has).on;

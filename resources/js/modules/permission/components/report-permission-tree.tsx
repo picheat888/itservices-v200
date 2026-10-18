@@ -1,24 +1,13 @@
 // Report Center permission card: the master, one switch per report domain, then export and schedule.
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { REPORT_COUNT, REPORT_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, PermissionCard, PermissionCell, SetHead, WIDE_CHILDREN } from './permission-layout';
 
-// Mirrors App\Support\Permissions::reportHierarchy()
-const MASTER = 'reports.module';
-
-const GROUPS: { id: string; labelKey: string; keys: string[] }[] = [
-    {
-        id: 'domains',
-        labelKey: 'perm_ui_group_report_domains',
-        keys: ['reports.tickets', 'reports.assets', 'reports.contracts', 'reports.stock', 'reports.requests', 'reports.employees', 'reports.access'],
-    },
-    { id: 'tools', labelKey: 'perm_ui_group_report_tools', keys: ['reports.export', 'reports.schedule'] },
-];
-
+const { master: MASTER, groups: GROUPS } = REPORT_TREE;
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => g.keys)];
-export const REPORT_COUNT: CountSpec = { master: MASTER, gated: GROUPS.flatMap((g) => g.keys) };
 
 const label = (key: string, lang: Lang) => actionLabel('reports', key.replace('reports.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('reports', key.replace('reports.', ''), lang);
@@ -41,20 +30,7 @@ export function ReportPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-            } else {
-                next.add(key);
-                next.add(MASTER);
-            }
-
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, REPORT_COUNT));
     };
 
     const activeCount = countGranted(REPORT_COUNT, has).on;
