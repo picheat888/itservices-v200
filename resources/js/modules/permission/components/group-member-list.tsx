@@ -42,9 +42,10 @@ export function GroupMemberList({
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const debounced = useDebouncedSearch(search);
-    const { data, isLoading, isFetching, isError, isPlaceholderData, refetch } = useGroupMembers(groupId, debounced, page);
+    const { data, isLoading, isFetching, isFetchedAfterMount, isError, isPlaceholderData, refetch } = useGroupMembers(groupId, debounced, page);
     const failed = groupId !== null && isError && !data;
-    const busy = groupId !== null && (isLoading || isPlaceholderData || (failed && isFetching));
+    // Rows cached from an earlier opening wait for the fresh fetch
+    const busy = groupId !== null && (isLoading || isPlaceholderData || !isFetchedAfterMount || (failed && isFetching));
 
     const name = (p: GroupMember) => localName(p, lang) ?? p.name;
     const department = (p: GroupMember) => localName(p.department ? { name: p.department, name_th: p.department_th } : null, lang);
@@ -77,7 +78,7 @@ export function GroupMemberList({
                 <button
                     type="button"
                     onClick={() => onUndo(p)}
-                    aria-label={`${t('gr_undo')} ${name(p)}`}
+                    aria-label={t('gr_undo_member').replace('{name}', name(p))}
                     className="text-brand inline-flex min-h-6 items-center px-1 text-[13px] font-medium underline-offset-[3px] hover:underline"
                 >
                     {t('gr_undo')}

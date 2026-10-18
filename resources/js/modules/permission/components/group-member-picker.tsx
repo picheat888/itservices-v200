@@ -44,12 +44,13 @@ export function GroupMemberPicker({
     const [loadingAll, setLoadingAll] = useState(false);
     const [departmentFailed, setDepartmentFailed] = useState(false);
     const debounced = useDebouncedSearch(search);
-    const { data, isLoading, isFetching, isError, isPlaceholderData, refetch } = useGroupCandidates(
+    const { data, isLoading, isFetching, isFetchedAfterMount, isError, isPlaceholderData, refetch } = useGroupCandidates(
         { groupId, search: debounced, departmentId, page },
         true,
     );
     const failed = isError && !data;
-    const busy = isLoading || isPlaceholderData || (failed && isFetching);
+    // Rows cached from an earlier opening wait for the fresh fetch
+    const busy = isLoading || isPlaceholderData || !isFetchedAfterMount || (failed && isFetching);
 
     const rows = data?.data ?? [];
     const total = data?.meta.total ?? 0;

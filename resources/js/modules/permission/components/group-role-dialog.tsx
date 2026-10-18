@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useBaseRoleLabel, useGroupRoleMutations, usePermissionMatrix } from '../hooks/use-permissions';
-import { isOverCeiling, removeLine } from '../lib/group-rules';
+import { countKey, isOverCeiling, removeLine } from '../lib/group-rules';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { GroupMemberList } from './group-member-list';
@@ -194,9 +194,9 @@ export function GroupRoleDialog({
         t('gr_confirm_group').replace('{name}', name.trim()),
         added.size > 0 &&
             (movedIn > 0
-                ? t('gr_confirm_add_moved').replace('{n}', fmtN(added.size)).replace('{m}', fmtN(movedIn))
-                : t('gr_confirm_add').replace('{n}', fmtN(added.size))),
-        removed.size > 0 && removeLine(t, fmtN(removed.size), leavesTo?.name ?? null, baseRole),
+                ? t(countKey('gr_confirm_add_moved', added.size)).replace('{n}', fmtN(added.size)).replace('{m}', fmtN(movedIn))
+                : t(countKey('gr_confirm_add', added.size)).replace('{n}', fmtN(added.size))),
+        removed.size > 0 && removeLine(t, removed.size, fmtN(removed.size), leavesTo?.name ?? null, baseRole),
         roleChanged && chosenRole && t('gr_confirm_role').replace('{role}', chosenRole.label),
         nameChanged && group && t('gr_confirm_rename').replace('{name}', group.name),
         group === null && added.size === 0 && t('gr_no_members'),
