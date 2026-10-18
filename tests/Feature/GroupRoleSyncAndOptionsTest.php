@@ -261,4 +261,99 @@ class GroupRoleSyncAndOptionsTest extends TestCase
             ->assertOk()
             ->assertJsonMissingPath('meta.addable');
     }
+
+    private function giveBaseRole(string ...$permissions): void
+    {
+        $base = Role::where('key', 'user')->first();
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $base->id, 'permission' => $permission, 'allowed' => true]);
+        }
+    }
+
+    public function test_a_group_without_a_role_is_ceiling_checked_against_the_base_role(): void
+    {
+        $this->giveBaseRole('tickets.create');
+        $it = GroupRole::create(['name' => 'IT', 'role' => 'admin']);
+        $sam = $this->person('Sam', 'admin', $it);
+        $this->actingAs($this->userWith('system.manage_groups'));
+
+        $this->postJson('/api/group-roles', ['name' => 'Roleless', 'role' => null, 'employee_ids' => [$sam->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+        $this->assertDatabaseMissing('group_roles', ['name' => 'Roleless']);
+
+        $this->putJson("/api/group-roles/{$it->id}", ['name' => 'IT', 'role' => null])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+        $this->assertSame('admin', $it->fresh()->role->key);
+        $this->assertSame('admin', $this->accountRole($sam));
+    }
+
+    public function test_a_caller_holding_the_base_roles_keys_may_use_a_group_without_a_role(): void
+    {
+        $this->giveBaseRole('tickets.create');
+        $it = GroupRole::create(['name' => 'IT', 'role' => 'user']);
+        $sam = $this->person('Sam', 'user', $it);
+        $this->actingAs($this->userWith('system.manage_groups', 'tickets.create'));
+
+        $this->postJson('/api/group-roles', ['name' => 'Roleless', 'role' => null, 'employee_ids' => [$sam->id]])->assertCreated();
+
+        $this->assertSame('user', $this->accountRole($sam));
+    }
+
+    public function test_removing_people_into_a_default_group_above_the_ceiling_is_refused(): void
+    {
+        $default = GroupRole::create(['name' => 'All Staff', 'role' => 'admin']);
+        AppSetting::put('default_employee_group_id', $default->id);
+        $basics = GroupRole::create(['name' => 'Basics', 'role' => 'user']);
+        $sam = $this->person('Sam', 'user', $basics);
+        $this->actingAs($this->userWith('system.manage_groups'));
+
+        $this->putJson("/api/group-roles/{$basics->id}", ['name' => 'Basics', 'role' => 'user', 'add_ids' => [], 'remove_ids' => [$sam->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+        $this->deleteJson("/api/group-roles/{$basics->id}")
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+
+        $this->assertSame([$sam->id], $basics->employees()->pluck('employees.id')->all());
+        $this->assertSame('user', $this->accountRole($sam));
+        $this->assertSame(0, $default->employees()->count());
+    }
+
+    public function test_removing_people_onto_a_base_role_above_the_ceiling_is_refused(): void
+    {
+        $this->giveBaseRole('tickets.create');
+        $basics = GroupRole::create(['name' => 'Basics', 'role' => 'admin']);
+        $sam = $this->person('Sam', 'admin', $basics);
+        $this->actingAs($this->userWith('system.manage_groups'));
+
+        $this->putJson("/api/group-roles/{$basics->id}", ['name' => 'Basics', 'role' => 'admin', 'add_ids' => [], 'remove_ids' => [$sam->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+
+        $this->assertSame('admin', $this->accountRole($sam));
+        $this->assertTrue($basics->employees()->whereKey($sam->id)->exists());
+    }
+
+    public function test_addable_is_zero_on_a_group_the_caller_may_not_add_to(): void
+    {
+        $it = Department::create(['name' => 'IT', 'tag' => 'IT']);
+        $this->person('Sam', 'user', null, $it->id);
+        $this->person('Tom', 'user', null, $it->id);
+        $admins = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        $support = GroupRole::create(['name' => 'Support', 'role' => 'admin']);
+        $basics = GroupRole::create(['name' => 'Basics', 'role' => 'user']);
+        $addable = fn (GroupRole $group) => $this->getJson("/api/group-roles-candidates?group_id={$group->id}&department_id={$it->id}")
+            ->assertOk()
+            ->json('meta.addable');
+
+        $this->actingAs($this->userWith('system.manage_groups'));
+        $this->assertSame(0, $addable($admins));
+        $this->assertSame(0, $addable($support));
+        $this->assertSame(2, $addable($basics));
+
+        $this->actingAs($this->super());
+        $this->assertSame(2, $addable($support));
+    }
 }
