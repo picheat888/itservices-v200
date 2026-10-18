@@ -32,7 +32,7 @@ class StoreAssetRequest extends FormRequest
         return [
             // asset_code = the Asset code (auto-generated when blank); tag = the user nickname.
             'asset_code' => ['nullable', 'string', 'max:60', Rule::unique('assets', 'asset_code')->ignore($assetId)],
-            'tag' => ['nullable', 'string', 'max:120'],
+            'tag' => ['nullable', 'string', 'max:10'],
             // Asset type is a Master Data category (managed under Settings → Master Data).
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
