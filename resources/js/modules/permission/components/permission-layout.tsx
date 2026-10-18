@@ -20,16 +20,26 @@ export const CHANGED_TEXT = 'font-semibold text-orange-700 dark:text-orange-400'
 
 const HIT_TEXT = 'bg-brand/10 -mx-0.5 rounded px-0.5';
 
-function useLabelClass(label: string, pkey?: string, hit?: boolean) {
+function useLabelClass(label: string, pkey?: string) {
     const { changed, query } = useContext(PermissionViewContext);
     const q = query.trim().toLowerCase();
-    return cn(pkey && changed(pkey) && CHANGED_TEXT, (hit || (q && label.toLowerCase().includes(q))) && HIT_TEXT);
+    return cn(pkey && changed(pkey) && CHANGED_TEXT, q && label.toLowerCase().includes(q) && HIT_TEXT);
 }
 
 export type SwitchProps = { label: string; info?: string; on: boolean; locked: boolean; onToggle: () => void; pkey?: string };
 
-function Label({ label, pkey, hit }: { label: string; pkey?: string; hit?: boolean }) {
-    return <span className={useLabelClass(label, pkey, hit)}>{label}</span>;
+function Label({ label, pkey }: { label: string; pkey?: string }) {
+    return <span className={useLabelClass(label, pkey)}>{label}</span>;
+}
+
+/** The master band's sub line: hidden search hits first, then the off count, else the module note. */
+function masterSub(master: SwitchProps & { sub?: string; rest: number }, hidden: number, lang: Lang): string {
+    if (hidden > 0) {
+        const key = hidden === 1 ? 'perm_search_hidden_by_master_one' : 'perm_search_hidden_by_master';
+        return translate(lang, key).replace('{n}', formatNumber(hidden, lang));
+    }
+    if (master.on || master.rest === 0) return master.sub ?? translate(lang, 'perm_ui_master_note');
+    return translate(lang, 'perm_ui_master_off').replace('{n}', formatNumber(master.rest, lang));
 }
 
 export function PermissionCard({
@@ -56,7 +66,6 @@ export function PermissionCard({
 }) {
     const { changed, hiddenHits } = useContext(PermissionViewContext);
     const hasBody = Boolean(children);
-    // A search hit under an off master tints the master, the switch that reveals it
     const hidden = master && !master.on ? hiddenHits(module) : 0;
 
     return (
@@ -66,15 +75,10 @@ export function PermissionCard({
                 <div className={cn('bg-brand/5 border-border flex items-center gap-2.5 px-3.5 py-2.5', hasBody && 'border-b')}>
                     <div className="min-w-0">
                         <div className="flex items-center gap-1 text-sm font-semibold">
-                            <Label label={master.label} pkey={master.pkey} hit={hidden > 0} />
+                            <Label label={master.label} pkey={master.pkey} />
                             {master.info && <InfoHint text={master.info} />}
                         </div>
-                        <div className="text-muted-foreground text-xs">
-                            {master.on || master.rest === 0
-                                ? (master.sub ?? translate(lang, 'perm_ui_master_note'))
-                                : translate(lang, 'perm_ui_master_off').replace('{n}', formatNumber(master.rest, lang))}
-                            {/* TODO(wording): perm_ui_search_hidden note for `hidden` matches, once approved */}
-                        </div>
+                        <div className="text-muted-foreground text-xs">{masterSub(master, hidden, lang)}</div>
                     </div>
                     <div className="ml-auto">
                         <PermissionSwitch label={master.label} on={master.on} locked={master.locked} onClick={master.onToggle} />

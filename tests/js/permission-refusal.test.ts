@@ -12,6 +12,7 @@ test('each known code has its own key', () => {
     assert.equal(refusalKey('last_super_admin'), 'perm_refusal_last_super_admin');
     assert.equal(refusalKey('own_access'), 'perm_refusal_own_access');
     assert.equal(refusalKey('grant_ceiling'), 'perm_refusal_grant_ceiling');
+    assert.equal(refusalKey('role_changed'), 'perm_refusal_role_changed');
 });
 
 test('an unknown or missing code has no key', () => {
@@ -36,11 +37,11 @@ test('no code and no message falls back to the generic error', () => {
     assert.equal(permissionRefusalText(undefined, t), 'T:cd_error');
 });
 
-test('a stale role save is told apart and shows the server words until its key exists', () => {
+test('a stale role save is told apart and worded by its key', () => {
     const stale = refused(409, { code: 'role_changed', message: 'This role was changed by someone else.' });
     assert.equal(isRoleChanged(stale), true);
     assert.equal(isRoleChanged(refused(409, { code: 'other' })), false);
     assert.equal(isRoleChanged(refused(422, { code: 'role_changed' })), false);
     assert.equal(isRoleChanged(new Error('network')), false);
-    assert.equal(permissionRefusalText(stale, t), 'This role was changed by someone else.');
+    assert.equal(permissionRefusalText(stale, t), 'T:perm_refusal_role_changed');
 });
