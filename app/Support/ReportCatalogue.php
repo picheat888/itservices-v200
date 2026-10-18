@@ -283,13 +283,19 @@ class ReportCatalogue
     /** Queue a file of a report the user may open. */
     public static function canExport(?User $user, string $key): bool
     {
-        return self::allows($user, $key) && (bool) $user?->hasPermission(self::EXPORT);
+        return self::allows($user, $key) && (bool) $user?->hasPermission(self::EXPORT) && ! self::hasLeft($user);
     }
 
     /** Set, change or send a schedule of a report the user may open. */
     public static function canSchedule(?User $user, string $key): bool
     {
-        return self::allows($user, $key) && (bool) $user?->hasPermission(self::SCHEDULE);
+        return self::allows($user, $key) && (bool) $user?->hasPermission(self::SCHEDULE) && ! self::hasLeft($user);
+    }
+
+    // Queued exports and scheduled runs skip the HTTP resign block, so they check it here
+    private static function hasLeft(?User $user): bool
+    {
+        return (bool) $user?->employee?->hasLeft();
     }
 
     /**

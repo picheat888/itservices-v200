@@ -170,7 +170,7 @@ class EmailNotificationService
         $vars += $this->globalVars();
 
         return [
-            'subject' => $this->render($template->subject, $vars),
+            'subject' => html_entity_decode($this->render($template->subject, $vars), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
             'html' => $this->render($template->body_html, $vars),
             'eyebrow' => $template->name,
         ];

@@ -9,6 +9,7 @@ use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Report\ReportExport;
@@ -270,6 +271,39 @@ class ReportScheduleTest extends TestCase
         $this->assertFalse($schedule->active);
         $this->assertSame([ReportSchedule::FAILED, 'forbidden'], [$schedule->last_status, $schedule->last_error]);
         $this->assertSame('forbidden', $this->bells($owner, 'report_schedule')[0]['error']);
+    }
+
+    public function test_an_owner_who_has_left_pauses_the_schedule_from_the_day_after_their_last_day(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-L1', 'first_name' => 'Leaving', 'last_name' => 'Soon', 'status' => 'resigned', 'last_day' => '2026-09-30']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
+        $owner->update(['employee_id' => $employee->id]);
+        $schedule = $this->schedule($owner, ['next_run_at' => '2026-09-30 07:00:00']);
+
+        // Still working on their last day: the run goes out.
+        $this->artisan('reports:send-scheduled')->assertSuccessful();
+        Mail::assertSentCount(1);
+        $this->assertTrue($schedule->refresh()->active);
+
+        $this->travelTo('2026-10-05 07:30:00');
+        $this->artisan('reports:send-scheduled')->assertSuccessful();
+
+        Mail::assertSentCount(1);
+        $schedule->refresh();
+        $this->assertFalse($schedule->active);
+        $this->assertSame([ReportSchedule::FAILED, 'forbidden'], [$schedule->last_status, $schedule->last_error]);
+    }
+
+    public function test_the_owners_name_is_written_into_the_mail_as_text_not_html(): void
+    {
+        $owner = $this->userWith([...$this->reportRights('assets')]);
+        $owner->update(['name' => '<a href="https://evil.example">Open report</a>']);
+        $this->schedule($owner, ['next_run_at' => '2026-09-30 07:00:00']);
+
+        $this->artisan('reports:send-scheduled')->assertSuccessful();
+
+        Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => ! str_contains($mail->bodyHtml, '<a href="https://evil.example">')
+            && str_contains($mail->bodyHtml, '&lt;a href=&quot;https://evil.example&quot;&gt;Open report&lt;/a&gt;'));
     }
 
     public function test_nothing_is_sent_while_the_email_template_is_switched_off(): void
