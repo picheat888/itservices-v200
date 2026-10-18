@@ -155,6 +155,8 @@ export const employee: Dict = {
     emp_del_block_workflow_approver: 'ถูกตั้งเป็นผู้อนุมัติใน Workflow',
     emp_del_block_subordinates: 'มีลูกน้องในสังกัด',
     emp_del_block_account_used: 'บัญชีเข้าใช้งานเคยถูกใช้แล้ว',
+    emp_del_block_own_account: 'ข้อมูลของตัวคุณเอง',
+    emp_del_block_super_account: 'บัญชีผู้ดูแลระบบสูงสุด ลบได้เฉพาะผู้ดูแลระบบสูงสุด',
     reset_password: 'รีเซ็ตรหัสผ่าน',
     reset_password_title: 'รีเซ็ตรหัสผ่าน?',
     reset_password_desc: 'รหัสผ่านจะถูกตั้งค่าใหม่เป็นรหัสพนักงาน ผู้ดูแลระบบต้องแจ้งรหัสผ่านใหม่ให้พนักงานทราบ',

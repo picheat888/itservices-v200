@@ -156,6 +156,8 @@ export const employee: Dict = {
     emp_del_block_workflow_approver: 'Named as an approver in a Workflow',
     emp_del_block_subordinates: 'Has people reporting to them',
     emp_del_block_account_used: 'Their login account has been used',
+    emp_del_block_own_account: 'Your own record',
+    emp_del_block_super_account: 'A Super admin account. Only a Super admin can delete it',
     reset_password: 'Reset password',
     reset_password_title: 'Reset password?',
     reset_password_desc: 'The password will be reset to the employee code. The admin must communicate the new password to the employee.',

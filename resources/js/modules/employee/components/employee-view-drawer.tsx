@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
 import { EmptyState } from '@/shared/components/empty-state';
 import { InfoHint } from '@/shared/components/info-hint';
@@ -48,6 +49,7 @@ import {
     useEmployeeTickets,
     useOrgChart,
 } from '../hooks/use-employees';
+import { accountDeleteBlockers } from '../lib/delete-account';
 import { deptColor, deptFill } from '../lib/org-tree';
 import { AccessPane, AssetsPane, IdChip, RAIL_HEADING, RailRow, RequestsPane, TicketsPane } from './employee-panes';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -107,6 +109,7 @@ export function EmployeeViewDrawer({
     const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
+    const { user } = useAuth();
 
     const [tab, setTab] = useState<DrawerTab>('overview');
     const [copied, setCopied] = useState<string | null>(null);
@@ -142,8 +145,9 @@ export function EmployeeViewDrawer({
     const resigned = emp.status === 'resigned';
     // Un-deletable until the single-employee fetch brings the blockers
     const blockers = emp.delete_blockers;
-    const deletable = !!blockers && blockers.length === 0;
-    const deleteBlockedReason = deletable ? undefined : blockers?.map((b) => t(`emp_del_block_${b}`)).join('\n');
+    const allBlockers = [...accountDeleteBlockers(emp, user, isSuperViewer), ...(blockers ?? [])];
+    const deletable = !!blockers && allBlockers.length === 0;
+    const deleteBlockedReason = allBlockers.length > 0 ? allBlockers.map((b) => t(`emp_del_block_${b}`)).join('\n') : undefined;
     const tenure = tenureOf(emp.joined_at);
     // The person this employee reports to (their manager), resolved from the org list.
     const managerNode = emp.manager_id ? nodeById.get(emp.manager_id) : null;

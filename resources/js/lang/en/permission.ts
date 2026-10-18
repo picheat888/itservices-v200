@@ -276,6 +276,8 @@ export const permission: Dict = {
     'perm_desc_notifications.inapp_test': 'Send a sample notification to your own tray.',
     'perm_desc_notifications.logs': 'Read every send and the reason one was skipped, including the recipient and the message body.',
     'perm_act_system.view_audit': 'View audit log',
+    'perm_desc_system.view_audit':
+        'Sees the audit log of every module, including deleted records such as employee email and phone. Give it to administrators only.',
     // permission tree — Reports
     perm_mod_reports: 'Reports',
     'perm_act_reports.module': 'Open the Report Center',
@@ -386,6 +388,14 @@ export const permission: Dict = {
     perm_saved_title: 'Permissions saved',
     perm_saved_desc: 'Saved {name}. It applies to {n} people.',
     perm_saved_desc_none: 'Saved {name}.',
+    perm_refusal_default_group_super: "A group with the Super admin role can't be the default group. New employees would get every permission.",
+    perm_refusal_admin_members_protected: 'This list includes a Super admin. Only a Super admin can move them.',
+    perm_refusal_last_super_admin: "Can't save: this would leave no Super admin.",
+    perm_refusal_own_access: "You can't change your own role or group. Ask a Super admin.",
+    perm_refusal_grant_ceiling: 'You can only grant permissions you have yourself.',
+    audit_members_added: 'Members added',
+    audit_members_removed: 'Members removed',
+    audit_role_changes: 'Account role changes',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'You have no access to this page yet',
