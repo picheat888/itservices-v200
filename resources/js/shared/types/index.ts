@@ -776,7 +776,14 @@ export interface SerialEvent {
 }
 
 export interface StockItemHistory {
-    item: { id: number; sku: string; name: string; current_stock: number; track_serial: boolean };
+    item: { id: number; sku: string; name: string; unit: string | null; current_stock: number; stock_value: number; track_serial: boolean };
+    reconciliation: {
+        lines: { type: StockMovementType; count: number; qty: number; sign: 1 | -1 | 0 }[];
+        computed: number;
+        current: number;
+        difference: number;
+    };
+    balances: { warehouse: string | null; qty: number }[];
     movements: {
         id: number;
         doc_no: string | null;

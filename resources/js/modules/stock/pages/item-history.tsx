@@ -9,12 +9,13 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
-import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer, SlidersHorizontal } from 'lucide-react';
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { StockSummary, SummaryFacts } from '../components/history-summary';
 import { useStockItemHistory } from '../hooks/use-stock';
 
-type View = 'issue' | 'receive' | 'adjust' | 'transfer';
+type View = 'issue' | 'receive' | 'return' | 'adjust' | 'transfer';
 type Movement = StockItemHistory['movements'][number];
 type Translate = ReturnType<typeof useT>;
 type FormatDateTime = ReturnType<typeof useDateFormat>['dateTime'];
@@ -23,6 +24,7 @@ type FormatDateTime = ReturnType<typeof useDateFormat>['dateTime'];
 const VIEW_EMPTY: Record<View, { title: string; hint: string }> = {
     issue: { title: 'stock_empty_history_issue', hint: 'stock_empty_history_issue_hint' },
     receive: { title: 'stock_empty_history_receive', hint: 'stock_empty_history_receive_hint' },
+    return: { title: 'stock_empty_history_return', hint: 'stock_empty_history_return_hint' },
     adjust: { title: 'stock_empty_history_adjust', hint: 'stock_empty_history_adjust_hint' },
     transfer: { title: 'stock_empty_history_transfer', hint: 'stock_empty_history_transfer_hint' },
 };
@@ -34,6 +36,12 @@ const VIEW_META: Record<View, { titleKey: string; icon: typeof ArrowDownToLine; 
         icon: ArrowDownToLine,
         tone: 'text-emerald-700 dark:text-emerald-400',
         bg: 'bg-emerald-100 dark:bg-emerald-950/40',
+    },
+    return: {
+        titleKey: 'stock_hist_return',
+        icon: RotateCcw,
+        tone: 'text-teal-700 dark:text-teal-400',
+        bg: 'bg-teal-100 dark:bg-teal-950/40',
     },
     adjust: {
         titleKey: 'stock_hist_adjust',
@@ -53,6 +61,7 @@ const VIEW_META: Record<View, { titleKey: string; icon: typeof ArrowDownToLine; 
 const VIEW_FILTER: Record<View, { types: string[]; event: SerialEvent['event'] }> = {
     issue: { types: ['issue'], event: 'issued' },
     receive: { types: ['receive'], event: 'received' },
+    return: { types: ['return'], event: 'returned' },
     adjust: { types: ['adjust_up', 'adjust_down'], event: 'adjusted' },
     transfer: { types: ['transfer'], event: 'transferred' },
 };
@@ -141,7 +150,7 @@ export default function ItemHistoryPage() {
             {view ? (
                 <CategoryView view={view} movements={moves(view)} serialsOf={serialsOf} t={t} fmt={fmt} formatMoney={formatMoney} />
             ) : (
-                <Hub data={data} onOpen={(v) => setParams({ v })} t={t} fmt={fmt} />
+                <Hub data={data} onOpen={(v) => setParams({ v })} t={t} fmt={fmt} formatMoney={formatMoney} />
             )}
 
             {/* Print-only footer */}
@@ -154,12 +163,23 @@ export default function ItemHistoryPage() {
 }
 
 // ── Hub ───────────────────────────────────────────────────────────────
-function Hub({ data, onOpen, t, fmt }: { data: StockItemHistory; onOpen: (v: View) => void; t: Translate; fmt: FormatDateTime }) {
-    const fmtN = useNumberFormat();
+function Hub({
+    data,
+    onOpen,
+    t,
+    fmt,
+    formatMoney,
+}: {
+    data: StockItemHistory;
+    onOpen: (v: View) => void;
+    t: Translate;
+    fmt: FormatDateTime;
+    formatMoney: (value: number) => string;
+}) {
     return (
         <>
             <h2 className="mb-2 text-sm font-semibold">{t('stock_history_other')}</h2>
-            <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden">
+            <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 print:hidden">
                 {(Object.keys(VIEW_META) as View[]).map((v) => {
                     const meta = VIEW_META[v];
                     const Icon = meta.icon;
@@ -179,10 +199,8 @@ function Hub({ data, onOpen, t, fmt }: { data: StockItemHistory; onOpen: (v: Vie
                 })}
             </div>
 
-            <div className="border-border bg-muted/30 mb-6 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm print:hidden">
-                <span className="text-muted-foreground">{t('stock_current')}</span>
-                <span className="text-lg font-bold tabular-nums">{fmtN(data.item.current_stock)}</span>
-            </div>
+            <SummaryFacts data={data} t={t} formatMoney={formatMoney} />
+            <StockSummary data={data} t={t} formatMoney={formatMoney} />
 
             {data.item.track_serial && (
                 <Table
@@ -240,9 +258,10 @@ function CategoryView({
             t('stock_hist_issue_by'),
             t('stock_hist_request_by'),
             t('stock_hist_request_no'),
+            t('stock_qty'),
             t('stock_hist_serials'),
         ];
-        wrapColumns = [8];
+        wrapColumns = [9];
         rows = movements.map((m, i) => [
             String(i + 1),
             <span>{m.doc_no ?? '—'}</span>,
@@ -252,7 +271,32 @@ function CategoryView({
             pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
             m.to_label ?? '—',
             m.reference ?? '—',
+            qtyCell(m),
             serialCell(m),
+        ]);
+    } else if (view === 'return') {
+        headers = [
+            '#',
+            t('stock_doc_no'),
+            t('audit_time'),
+            t('stock_hist_action'),
+            t('stock_warehouse'),
+            t('stock_hist_return_by'),
+            t('stock_hist_serials'),
+            t('stock_qty'),
+            t('stock_hist_note'),
+        ];
+        wrapColumns = [6, 8];
+        rows = movements.map((m, i) => [
+            String(i + 1),
+            <span>{m.doc_no ?? '—'}</span>,
+            fmt(m.moved_at),
+            action(m),
+            m.to_label ?? '—',
+            pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
+            serialCell(m),
+            qtyCell(m),
+            m.notes ?? '—',
         ]);
     } else if (view === 'receive') {
         headers = [
