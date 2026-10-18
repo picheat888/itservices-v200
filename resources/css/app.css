@@ -544,3 +544,106 @@
 .swal2-container {
     pointer-events: auto;
 }
+
+/* ── Sidebar below 1280px: icon rail ⇄ menu over the page (data-nav / data-narrow on the app shell) ── */
+[data-nav] {
+    --nav-dur: 180ms;
+    --nav-ease: cubic-bezier(0.3, 0, 0.8, 0.15);
+    --nav-label-dur: 80ms;
+    --nav-label-delay: 0ms;
+    --nav-mark-delay: 100ms;
+}
+[data-nav='open'] {
+    --nav-dur: 240ms;
+    --nav-ease: cubic-bezier(0.2, 0, 0, 1);
+    --nav-label-dur: 160ms;
+    --nav-label-delay: 80ms;
+    --nav-mark-delay: 0ms;
+}
+[data-narrow] .nav-label {
+    opacity: 0;
+    transition: opacity var(--nav-label-dur) ease var(--nav-label-delay);
+}
+[data-narrow] .nav-mark {
+    transition: opacity 80ms ease var(--nav-mark-delay);
+}
+[data-narrow][data-nav='open'] .nav-label {
+    opacity: 1;
+}
+[data-narrow][data-nav='open'] .nav-mark {
+    opacity: 0;
+}
+.nav-drawer {
+    clip-path: inset(0 12rem 0 0);
+    transition:
+        clip-path var(--nav-dur) var(--nav-ease),
+        box-shadow var(--nav-dur) var(--nav-ease);
+}
+[data-nav='open'] .nav-drawer {
+    clip-path: inset(0 -2.5rem 0 0);
+    box-shadow: 0 10px 30px rgb(15 23 42 / 0.25);
+}
+[data-narrow] .nav-row-bg {
+    clip-path: inset(0 12rem 0 0 round 0.375rem);
+    transition:
+        clip-path var(--nav-dur) var(--nav-ease),
+        background-color 120ms ease;
+}
+[data-narrow][data-nav='open'] .nav-row-bg {
+    clip-path: inset(0 0 0 0 round 0.375rem);
+}
+.nav-scrim {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--nav-dur) ease;
+}
+[data-nav='open'] .nav-scrim {
+    opacity: 1;
+    pointer-events: auto;
+}
+/* Narrow screens: ≡ rides the menu edge to its top-right corner and turns into X */
+[data-narrow] .nav-toggle {
+    position: relative;
+    z-index: 50;
+    transition: transform var(--nav-dur) var(--nav-ease);
+}
+[data-narrow][data-nav='open'] .nav-toggle {
+    transform: translateX(7.75rem);
+}
+.nav-burger-top {
+    transform-origin: 12px 6px;
+}
+.nav-burger-mid {
+    transform-origin: 12px 12px;
+}
+.nav-burger-bot {
+    transform-origin: 12px 18px;
+}
+.nav-burger path {
+    transition:
+        transform var(--nav-dur) var(--nav-ease),
+        opacity var(--nav-dur) ease;
+}
+[data-narrow][data-nav='open'] .nav-burger-top {
+    transform: translateY(6px) rotate(45deg);
+}
+[data-narrow][data-nav='open'] .nav-burger-mid {
+    transform: scaleX(0);
+    opacity: 0;
+}
+[data-narrow][data-nav='open'] .nav-burger-bot {
+    transform: translateY(-6px) rotate(-45deg);
+}
+@media (prefers-reduced-motion: reduce) {
+    .nav-drawer,
+    .nav-row-bg,
+    .nav-toggle,
+    .nav-burger path {
+        transition: none !important;
+    }
+    [data-narrow] .nav-label,
+    [data-narrow] .nav-mark,
+    .nav-scrim {
+        transition: opacity 120ms linear;
+    }
+}

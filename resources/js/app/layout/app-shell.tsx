@@ -21,6 +21,7 @@ import { NotificationsDropdown } from './notifications-dropdown';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { useNotificationToasts } from './use-notification-toasts';
+import { useSidebarStyle } from './use-sidebar-style';
 
 const SHELL_DIALOGS = ['profile', 'password'] as const;
 const SHELL_DIALOG_COMPANIONS = [PROFILE_SECTION_PARAM];
@@ -30,6 +31,8 @@ export function AppShell() {
     useUserPreferences();
     useNavigationGuardHost();
     const density = useUiStore((s) => s.density);
+    const { iconsOnly, narrow } = useSidebarStyle();
+    const menuOpen = narrow && !iconsOnly;
     const { user } = useAuth();
     const switchedTo = useAccountSync(user);
 
@@ -59,7 +62,12 @@ export function AppShell() {
     useNotificationToasts(openChangePassword);
 
     return (
-        <div className="bg-background flex h-screen overflow-hidden" data-density={density}>
+        <div
+            className="bg-background flex h-screen overflow-hidden"
+            data-density={density}
+            data-nav={iconsOnly ? 'closed' : 'open'}
+            data-narrow={narrow || undefined}
+        >
             <Sidebar onProfile={(section) => setShellDialog('profile', section ? { with: { section } } : undefined)} />
 
             <div className="flex min-w-0 flex-1 flex-col">
@@ -68,7 +76,10 @@ export function AppShell() {
                     {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} onChangePassword={openChangePassword} />}
                 </div>
 
-                <main className="bg-content relative flex-1 overflow-y-auto px-6 py-4 [--sticky-top:-1rem] [scrollbar-gutter:stable]">
+                <main
+                    inert={menuOpen}
+                    className="bg-content relative flex-1 overflow-y-auto px-6 py-4 [--sticky-top:-1rem] [scrollbar-gutter:stable]"
+                >
                     <Outlet />
                 </main>
             </div>
