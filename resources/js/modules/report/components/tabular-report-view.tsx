@@ -1,7 +1,8 @@
 // Body of every tabular report page: definition, filter bar, summary tiles, paged rows, export and schedule dialogs.
 import { useT } from '@/lang';
-import { type Column, DataTable } from '@/shared/components/data-table';
+import { type Column, DataTable, PAGE_SIZES } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -31,9 +32,6 @@ import { TabularCell } from './tabular-cell';
 import { ChartsSkeleton, TabularCharts } from './tabular-charts';
 import { TabularEmptyState } from './tabular-empty-state';
 import { TabularFilterBar } from './tabular-filter-bar';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
-
-const PAGE_SIZES = [20, 50, 100];
 
 export function errorMessageFor(t: (key: string) => string, error: unknown): string {
     const status = isAxiosError(error) ? error.response?.status : undefined;
