@@ -56,7 +56,6 @@ import {
     RefreshCcw,
     Search,
     Share2,
-    SquarePen,
     Tag,
     TrendingUp,
     Undo2,
@@ -75,6 +74,7 @@ import { AssetLocationDialog } from '../components/asset-location-dialog';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
 import { AssetReturnToVendorDialog } from '../components/asset-return-to-vendor-dialog';
+import { AssetRowMenu } from '../components/asset-row-menu';
 import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
@@ -1182,7 +1182,9 @@ export default function AssetsPage() {
                                             <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_col_handed_over')}</th>
                                             <th className="px-3 py-2.5">{t('asset_supplier')}</th>
                                             <th className="px-3 py-2.5 text-right">{t('asset_value')}</th>
-                                            <th className="px-3 py-2.5 text-right">{t('asset_actions')}</th>
+                                            <th className="bg-card dark:bg-muted sticky right-0 z-[2] w-14 px-3 py-2.5">
+                                                <span className="sr-only">{t('asset_actions')}</span>
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1289,10 +1291,10 @@ export default function AssetsPage() {
                                                         >
                                                             {a.asset_code}
                                                         </button>
-                                                        {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-[140px]" />}
+                                                        {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-28" />}
                                                     </td>
                                                     {/* Brand over model: "Latitude 5440" alone does not say Dell. */}
-                                                    <td className="max-w-[12rem] px-3 py-2.5">
+                                                    <td className="max-w-[10rem] px-3 py-2.5">
                                                         {a.brand && (
                                                             <div className="text-muted-foreground truncate text-xs" title={a.brand}>
                                                                 {a.brand}
@@ -1363,7 +1365,7 @@ export default function AssetsPage() {
                                                             <span className="text-muted-foreground">—</span>
                                                         )}
                                                     </td>
-                                                    <td className="max-w-[12rem] px-3 py-2.5">
+                                                    <td className="max-w-[9rem] px-3 py-2.5">
                                                         <TruncText text={localPair(a.supplier, a.supplier_th, lang)} />
                                                     </td>
                                                     <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap tabular-nums">
@@ -1382,65 +1384,19 @@ export default function AssetsPage() {
                                                             a.value_display
                                                         )}
                                                     </td>
-                                                    <td className="px-3 py-2.5">
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            {a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode && (
-                                                                <button
-                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600 dark:text-emerald-400"
-                                                                    type="button"
-                                                                    title={t('asset_accept')}
-                                                                    aria-label={t('asset_accept')}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        accept.mutate(a.id);
-                                                                    }}
-                                                                >
-                                                                    <Check className="h-4 w-4" aria-hidden="true" />
-                                                                </button>
-                                                            )}
-                                                            {canReceive && a.status === 'pending_return' && (
-                                                                <button
-                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600 dark:text-emerald-400"
-                                                                    type="button"
-                                                                    title={t('asset_mark_received')}
-                                                                    aria-label={t('asset_mark_received')}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setReceiveAsset(a);
-                                                                    }}
-                                                                >
-                                                                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                                                                </button>
-                                                            )}
-                                                            {canTransfer && a.status === 'ready' && (
-                                                                <button
-                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                                                                    type="button"
-                                                                    title={t('transfer_asset')}
-                                                                    aria-label={t('transfer_asset')}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setTransferAsset(a);
-                                                                    }}
-                                                                >
-                                                                    <Share2 className="h-4 w-4" aria-hidden="true" />
-                                                                </button>
-                                                            )}
-                                                            {canEdit && a.status !== 'writeoff' && (
-                                                                <button
-                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                                                                    type="button"
-                                                                    title={t('edit_asset')}
-                                                                    aria-label={t('edit_asset')}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openEdit(a);
-                                                                    }}
-                                                                >
-                                                                    <SquarePen className="h-4 w-4" aria-hidden="true" />
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                                    <td className={cn(PINNED_CELL, 'right-0 px-3 py-2.5')}>
+                                                        <AssetRowMenu
+                                                            asset={a}
+                                                            canAccept={a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode}
+                                                            canReceive={canReceive && a.status === 'pending_return'}
+                                                            canTransfer={canTransfer && a.status === 'ready'}
+                                                            canEdit={canEdit && a.status !== 'writeoff'}
+                                                            onView={() => openAsset(a)}
+                                                            onAccept={() => accept.mutate(a.id)}
+                                                            onReceive={() => setReceiveAsset(a)}
+                                                            onTransfer={() => setTransferAsset(a)}
+                                                            onEdit={() => openEdit(a)}
+                                                        />
                                                     </td>
                                                 </tr>
                                             ))

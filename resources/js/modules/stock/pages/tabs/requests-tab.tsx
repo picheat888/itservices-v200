@@ -220,7 +220,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             align: 'right',
             // Room for the buttons only when this page has a request the reader can approve or fulfill
             width: requests.some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'))
-                ? 'clamp(110px, calc(110px + (100vw - 1100px) * 0.5), 190px)'
+                ? 'clamp(110px, calc(110px + (100vw - 1100px) * 0.5), 176px)'
                 : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">

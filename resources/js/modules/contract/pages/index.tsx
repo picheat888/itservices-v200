@@ -49,6 +49,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
+import { ContractRowMenu } from '../components/contract-row-menu';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 import { CONTRACT_TYPE_TONE } from '../tones';
 
@@ -182,8 +183,12 @@ export default function ContractsPage() {
     const meta = listData?.meta;
     const totalRows = meta?.total ?? 0;
     usePageInRange(list, meta?.last_page);
-    // Below lg (tablet portrait) the start date drops out so the rest keeps room
-    const columns = useContractColumns(newlyCreated?.id ?? null);
+    const columns = useContractColumns(
+        newlyCreated?.id ?? null,
+        canEdit,
+        (c) => setSelectedId(c.id),
+        (c) => openEdit(c),
+    );
     const tableRows = newlyCreated ? [newlyCreated, ...rows.filter((r) => r.id !== newlyCreated.id)] : rows;
 
     // Switch tab and mirror it in the URL (?tab=); the All tab's list keys are cleared in the same write.
@@ -537,7 +542,12 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
 const NEW_ROW = 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12';
 
 /** Columns of the All-tab table; the pinned new contract carries a "New" badge. */
-function useContractColumns(newId: number | null): Column<Contract>[] {
+function useContractColumns(
+    newId: number | null,
+    canEdit: boolean,
+    onView: (c: Contract) => void,
+    onEdit: (c: Contract) => void,
+): Column<Contract>[] {
     const t = useT();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
@@ -558,7 +568,7 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
         {
             key: 'name',
             header: t('contract_name'),
-            minWidth: '15rem',
+            minWidth: '13rem',
             render: (c) => (
                 <div className="min-w-0">
                     <TruncText text={c.name} className="font-medium" />
@@ -569,7 +579,7 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
         {
             key: 'vendor',
             header: t('contract_vendor'),
-            width: '220px',
+            width: '200px',
             render: (c) => <TruncText text={localPair(c.vendor, c.vendor_th, lang)} />,
         },
         {
@@ -588,11 +598,11 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
             className: 'whitespace-nowrap',
             render: (c) => <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />,
         },
-        { key: 'value', header: t('contract_value'), width: '140px', className: 'whitespace-nowrap text-xs', render: (c) => c.value_display },
+        { key: 'value', header: t('contract_value'), width: '130px', className: 'whitespace-nowrap text-xs', render: (c) => c.value_display },
         {
             key: 'total',
             header: t('contract_total_value'),
-            width: '140px',
+            width: '130px',
             className: 'whitespace-nowrap text-xs',
             render: (c) => c.total_value_display ?? '—',
         },
@@ -600,7 +610,7 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
             key: 'assets',
             header: t('contract_link_assets'),
             align: 'right',
-            width: '110px',
+            width: '100px',
             className: 'whitespace-nowrap text-xs tabular-nums',
             render: (c) => formatNumber(c.assets_count ?? 0, lang),
         },
@@ -610,6 +620,14 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
             width: '120px',
             className: 'whitespace-nowrap',
             render: (c) => <ContractStatusBadge status={c.status} days={c.days_remaining} />,
+        },
+        {
+            key: 'actions',
+            sticky: 'right',
+            header: <span className="sr-only">{t('actions')}</span>,
+            width: '60px',
+            align: 'right',
+            render: (c) => <ContractRowMenu contract={c} canEdit={canEdit} onView={() => onView(c)} onEdit={() => onEdit(c)} />,
         },
     ];
 }
