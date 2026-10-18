@@ -12,7 +12,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -49,10 +49,16 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const sessions = sessionsPage?.data ?? [];
     const { open, save, commit, cancel } = useStockCountMutations();
     const { data: warehouses = [] } = useWarehouses();
-    const [selectedId, setSelectedId] = useState<number | null>(null);
+    // The open count sheet is in the URL (?count=<id>) so a reload or a shared link reopens it
+    const countId = toRecordId(list.get('count') || null);
+    const sheetOpen = countId !== null;
+    // Kept after close so the loaded session stays mounted during the close animation
+    const [selectedId, setSelectedId] = useState<number | null>(countId);
+    useEffect(() => {
+        if (countId !== null) setSelectedId(countId);
+    }, [countId]);
     const { data: session } = useStockCount(selectedId);
-    // Open state is separate from selectedId so the loaded session stays mounted during the close animation.
-    const [sheetOpen, setSheetOpen] = useState(false);
+    const openSheet = (id: number) => list.setParams({ count: String(id) });
     const [creating, setCreating] = useState(false);
     const { data: allItems = [] } = useStockItems({}, creating);
     const [wh, setWh] = useState('all');
@@ -136,8 +142,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 category: cat === 'all' ? null : cat,
                 stock_item_ids: selectedSkus,
             });
-            setSelectedId(created.id);
-            setSheetOpen(true);
+            openSheet(created.id);
         } catch (e) {
             onError(e);
         } finally {
@@ -206,7 +211,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             return (raw === '' ? null : Math.max(0, parseInt(raw, 10) || 0)) !== l.counted_qty;
         });
     const guardSheetClose = useDiscardGuard(sheetOpen && sheetDirty);
-    const closeSheet = () => setSheetOpen(false);
+    const closeSheet = () => list.setParams({ count: null });
 
     // Live audit summary for the open sheet: draft reads the typed entries, committed reads stored values.
     const countSummary = (() => {
@@ -360,10 +365,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 columns={sessionColumns}
                 rows={sessions}
                 rowKey={(s) => s.id}
-                onRowClick={(s) => {
-                    setSelectedId(s.id);
-                    setSheetOpen(true);
-                }}
+                onRowClick={(s) => openSheet(s.id)}
                 loading={sessionsLoading || sessionsFetching}
                 server={{ ...list.table.paging, total: sessionsPage?.meta.total ?? 0 }}
                 empty={{
