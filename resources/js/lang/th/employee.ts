@@ -54,6 +54,7 @@ export const employee: Dict = {
     org_expand_branch: 'ขยายลูกน้อง {n} คน',
     org_collapse_branch: 'ยุบลูกน้อง {n} คน',
     org_node_a11y: 'กด Enter หรือ Space เพื่อเลือกการ์ดนี้',
+    org_loading: 'กำลังโหลดผังองค์กร…',
     departments_count: 'แผนก',
     headcount_by_dept: 'จำนวนพนักงานต่อแผนก',
     recent_hires: 'พนักงานเข้าใหม่ล่าสุด',

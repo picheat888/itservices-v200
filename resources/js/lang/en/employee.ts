@@ -54,6 +54,7 @@ export const employee: Dict = {
     org_expand_branch: 'Expand {n} direct reports',
     org_collapse_branch: 'Collapse {n} direct reports',
     org_node_a11y: 'Press Enter or Space to select this card',
+    org_loading: 'Loading the org chart…',
     departments_count: 'Departments',
     headcount_by_dept: 'Headcount by department',
     recent_hires: 'Recent hires',

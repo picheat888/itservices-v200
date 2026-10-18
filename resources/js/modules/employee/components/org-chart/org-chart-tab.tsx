@@ -2,16 +2,18 @@ import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { localName } from '@/shared/lib/local-name';
 import { matchesAllWords } from '@/shared/lib/search-words';
+import { cn } from '@/shared/lib/utils';
 import type { OrgChartNode } from '@/shared/types';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Background, Controls, getNodesBounds, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge, type NodeChange } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOrgChart } from '../../hooks/use-employees';
+import { useOrgLayout } from '../../hooks/use-org-layout';
 import {
     deptColor,
-    layoutPositions,
     NODE_H,
     NODE_W,
     nodesWithReports,
@@ -61,6 +63,18 @@ function orgSearchText(n: {
     ]
         .filter(Boolean)
         .join(' ');
+}
+
+/** Runs `cb` once the next frame has been painted; returns a cancel function. */
+function afterPaint(cb: () => void): () => void {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+        timer = setTimeout(cb);
+    });
+    return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+    };
 }
 
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
@@ -113,12 +127,21 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const withReports = useMemo(() => nodesWithReports(data), [data]);
     const roots = useMemo(() => rootIds(data), [data]);
 
-    // Full-tree layout per data/direction so collapsing never moves other cards
-    const fullPositions = useMemo(() => {
-        const ids = data.map((n) => n.id);
-        const allEdges = visibleGraph(data, new Set<number>()).edges;
-        return layoutPositions(ids, allEdges, dir);
-    }, [data, dir]);
+    // Full-tree layout (off the main thread) so collapsing never moves other cards
+    const layout = useOrgLayout(data, dir);
+    const layoutDir = layout?.dir ?? dir;
+    const pending = !layout || layout.dir !== dir || layout.data !== data;
+
+    // Paint the tab first, then mount the heavy canvas, then fade it in
+    const [painted, setPainted] = useState(false);
+    const [shown, setShown] = useState(false);
+    const mountCanvas = painted && layout != null;
+    useEffect(() => afterPaint(() => setPainted(true)), []);
+    useEffect(() => {
+        if (mountCanvas && !shown) {
+            return afterPaint(() => setShown(true));
+        }
+    }, [mountCanvas, shown]);
 
     const toggle = useCallback((id: number) => {
         setCollapsed((prev) => {
@@ -181,7 +204,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             .map((n) => ({
                 id: String(n.id),
                 type: 'orgNode',
-                position: fullPositions.get(n.id) ?? { x: 0, y: 0 },
+                position: layout?.positions.get(n.id) ?? { x: 0, y: 0 },
                 // Explicit dims for the MiniMap
                 width: NODE_W,
                 height: NODE_H,
@@ -196,7 +219,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     isRoot: roots.has(n.id),
                     selected: selectedId === n.id,
                     dimmed: matchSet ? !matchSet.has(n.id) : false,
-                    dir,
+                    dir: layoutDir,
                     color: deptColor(n.department_code),
                     onToggle: toggle,
                 } satisfies OrgNodeData,
@@ -216,7 +239,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         });
 
         return { rfNodes: nodes, rfEdges: flowEdges };
-    }, [data, visibleIds, edges, fullPositions, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, lang]);
+    }, [data, visibleIds, edges, layout, collapsed, withReports, roots, selectedId, matchSet, layoutDir, toggle, lang]);
 
     // Fit the whole tree, lifted slightly above centre by padding the bottom of the bounds
     const runFit = useCallback(() => {
@@ -244,7 +267,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 clearTimeout(fitTimer.current);
             }
         };
-    }, [dir, visibleIds.size, runFit]);
+    }, [layoutDir, visibleIds.size, runFit]);
 
     const anyCollapsed = collapsed.size > 0;
     const toggleAll = useCallback(() => {
@@ -320,49 +343,64 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     onToggleAll={toggleAll}
                     onFit={runFit}
                 />
-                <div ref={paneRef} onKeyDownCapture={onCanvasKeyDownCapture} className="bg-background min-h-0 flex-1">
-                    <ReactFlow
-                        nodes={rfNodes}
-                        edges={rfEdges}
-                        nodeTypes={nodeTypes}
-                        fitView
-                        fitViewOptions={{ padding: 0.05 }}
-                        minZoom={MIN_ZOOM}
-                        maxZoom={MAX_ZOOM}
-                        zoomOnScroll={false}
-                        zoomOnPinch
-                        nodesDraggable={false}
-                        nodesConnectable={false}
-                        edgesFocusable={false}
-                        onNodesChange={onNodesChange}
-                        onNodeClick={onNodeClick}
-                        onPaneClick={() => setSelectedId(null)}
-                        ariaLabelConfig={{
-                            'node.a11yDescription.default': t('org_node_a11y'),
-                            'node.a11yDescription.keyboardDisabled': t('org_node_a11y'),
-                        }}
-                        proOptions={{ hideAttribution: true }}
-                    >
-                        <Background gap={22} size={1.4} color="var(--oc-dot)" />
-                        <Controls showInteractive={false} position="bottom-right" />
-                        <MiniMap
-                            position="bottom-left"
-                            pannable
-                            zoomable
-                            nodeColor={(n) => (n.data as OrgNodeData)?.color ?? 'var(--brand)'}
-                            nodeStrokeWidth={0}
-                            bgColor="var(--card)"
-                            className="border-border hidden overflow-hidden rounded-lg border lg:block"
-                            style={{ width: 180, height: 130 }}
-                        />
-                    </ReactFlow>
+                <div ref={paneRef} onKeyDownCapture={onCanvasKeyDownCapture} className="bg-background relative min-h-0 flex-1">
+                    {(!shown || pending) && <OrgChartSpinner className="bg-background/70 absolute inset-0 z-10" />}
+                    {mountCanvas && (
+                        <ReactFlow
+                            className={cn('transition-opacity duration-300 motion-reduce:transition-none', shown ? 'opacity-100' : 'opacity-0')}
+                            nodes={rfNodes}
+                            edges={rfEdges}
+                            nodeTypes={nodeTypes}
+                            fitView
+                            fitViewOptions={{ padding: 0.05 }}
+                            minZoom={MIN_ZOOM}
+                            maxZoom={MAX_ZOOM}
+                            zoomOnScroll={false}
+                            zoomOnPinch
+                            nodesDraggable={false}
+                            nodesConnectable={false}
+                            edgesFocusable={false}
+                            onNodesChange={onNodesChange}
+                            onNodeClick={onNodeClick}
+                            onPaneClick={() => setSelectedId(null)}
+                            ariaLabelConfig={{
+                                'node.a11yDescription.default': t('org_node_a11y'),
+                                'node.a11yDescription.keyboardDisabled': t('org_node_a11y'),
+                            }}
+                            proOptions={{ hideAttribution: true }}
+                        >
+                            <Background gap={22} size={1.4} color="var(--oc-dot)" />
+                            <Controls showInteractive={false} position="bottom-right" />
+                            <MiniMap
+                                position="bottom-left"
+                                pannable
+                                zoomable
+                                nodeColor={(n) => (n.data as OrgNodeData)?.color ?? 'var(--brand)'}
+                                nodeStrokeWidth={0}
+                                bgColor="var(--card)"
+                                className="border-border hidden overflow-hidden rounded-lg border lg:block"
+                                style={{ width: 180, height: 130 }}
+                            />
+                        </ReactFlow>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
 
-/** Loading placeholder shaped like the heading, toolbar and a few cards. */
+/** Spinner for the canvas area; a CSS transform spin keeps turning while the main thread mounts the cards. */
+function OrgChartSpinner({ className }: { className?: string }) {
+    const t = useT();
+    return (
+        <div role="status" className={cn('text-muted-foreground flex flex-col items-center justify-center gap-3 text-sm', className)}>
+            <Loader2 aria-hidden className="text-brand h-8 w-8 animate-spin" />
+            {t('org_loading')}
+        </div>
+    );
+}
+
+/** Loading placeholder shaped like the heading and toolbar, with the spinner in the canvas. */
 function OrgChartSkeleton() {
     return (
         <div className="space-y-3" aria-busy="true">
@@ -377,14 +415,7 @@ function OrgChartSkeleton() {
                     <Skeleton className="h-8 w-40" />
                     <Skeleton className="h-8 w-24" />
                 </div>
-                <div className="flex flex-1 flex-col items-center justify-center gap-10 p-6">
-                    <Skeleton className="h-[106px] w-[292px] max-w-full rounded-[15px]" />
-                    <div className="flex gap-6">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton key={i} className="h-[106px] w-[200px] rounded-[15px]" />
-                        ))}
-                    </div>
-                </div>
+                <OrgChartSpinner className="flex-1" />
             </div>
         </div>
     );
