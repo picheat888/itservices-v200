@@ -195,8 +195,7 @@ export function DataTable<T>({
         return rows.filter((r) => matchesAllWords(searchable(r), query));
     }, [rows, query, searchable, server]);
 
-    // Server-paginated tables render `rows` as-is (the parent fetched just this page);
-    // client tables slice the filtered set locally. Pagination state/handlers route accordingly.
+    // Pagination: server tables get one page, client tables slice locally
     const pageSize = server ? server.pageSize : fillHeight ? autoSize : (paging?.pageSize ?? clientPageSize);
     const total = server ? server.total : filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -211,9 +210,7 @@ export function DataTable<T>({
     // Server: rows are already the page. Client: slice (unless pagination is hidden).
     const pageRows = server ? rows : hidePagination ? filtered : filtered.slice(start, start + pageSize);
 
-    // Steady pager: while a page loads, hold the table at the height it had, so the pager under
-    // it stays under the reader's cursor and "next" can be clicked again and again. (Skeleton rows
-    // alone are shorter than real two-line rows; the table shrank and the pager jumped up.)
+    // Steady pager: hold the table height while a page loads
     const heldHeight = useHeldHeight(bodyRef, !!loading && !fillHeight);
 
     // Sticky header while the table fits its width (see useTableFitsWidth for why not when wider).
@@ -343,8 +340,7 @@ export function DataTable<T>({
                                     style={stickyStyle(c)}
                                     className={cn(
                                         stickyClass(c, true),
-                                        // A header is one label; broken across lines it reads as
-                                        // several and makes the header row taller than every data row.
+                                        // Header label stays on one line
                                         'text-muted-foreground overflow-hidden px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide text-ellipsis whitespace-nowrap uppercase',
                                         alignClass(c.align),
                                         hideClass(c),

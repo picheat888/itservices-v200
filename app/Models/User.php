@@ -233,8 +233,7 @@ class User extends Authenticatable
             return null;
         }
 
-        // Whole days between now and the deadline, counted the way a person would:
-        // a deadline later today is 0 days left, not a fraction of one.
+        // Whole calendar days: a deadline later today is 0 days left
         return (int) now()->startOfDay()->diffInDays($this->password_changed_at->copy()->addDays($days)->startOfDay(), false);
     }
 
@@ -249,9 +248,7 @@ class User extends Authenticatable
      */
     public function signOutEverywhere(?string $keepSessionId = null): void
     {
-        // Keyed off the table rather than the configured driver so the behaviour is the same
-        // everywhere it is stored — and testable. (Sessions held outside the database, e.g.
-        // in Redis, would need their own eviction; this app stores them here.)
+        // Database-stored sessions
         $table = config('session.table', 'sessions');
         if (Schema::hasTable($table)) {
             DB::table($table)
