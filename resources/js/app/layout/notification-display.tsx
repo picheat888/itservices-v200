@@ -1,6 +1,7 @@
 import type { AppNotification } from '@/modules/notification';
 import { PROFILE_ASSETS_SEARCH } from '@/modules/profile';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
+import { guardNavigation } from '@/shared/hooks/use-navigation-guard';
 import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
 import { formatNumber } from '@/shared/lib/number';
 import { requestTitle } from '@/shared/lib/request-meta';
@@ -357,6 +358,6 @@ export function notificationTarget(n: AppNotification): string {
 /** Opens a notification's target: a path navigates, a `?…` target opens its dialog over the current page. */
 export function openNotificationTarget(navigate: NavigateFunction, n: AppNotification, currentSearch: string): void {
     const resolved = resolveNotificationTarget(notificationTarget(n), currentSearch);
-    if (typeof resolved === 'string') navigate(resolved);
+    if (typeof resolved === 'string') guardNavigation(resolved, () => navigate(resolved));
     else navigate(resolved, { state: dialogPushedState() });
 }

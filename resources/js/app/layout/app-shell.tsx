@@ -12,6 +12,7 @@ import { PROFILE_SECTION_PARAM, ProfileDrawer } from '@/modules/profile';
 import { settingsApi } from '@/modules/settings';
 import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
+import { useNavigationGuardHost } from '@/shared/hooks/use-navigation-guard';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -27,6 +28,7 @@ const SHELL_DIALOG_COMPANIONS = [PROFILE_SECTION_PARAM];
 export function AppShell() {
     useDocumentTitle();
     useUserPreferences();
+    useNavigationGuardHost();
     const density = useUiStore((s) => s.density);
     const { user } = useAuth();
     const switchedTo = useAccountSync(user);
