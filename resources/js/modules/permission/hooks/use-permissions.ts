@@ -1,4 +1,4 @@
-import type { Role } from '@/shared/types';
+import { ME_KEY } from '@/shared/lib/query-client';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     groupRoleApi,
@@ -8,20 +8,16 @@ import {
     type GroupCandidateParams,
     type GroupRoleCreatePayload,
     type GroupRoleListResponse,
+    type GroupRoleOption,
     type GroupRoleUpdatePayload,
 } from '../api/permissionApi';
+import { baseRoleLabel } from '../lib/group-rules';
 
 const KEY = ['permissions-matrix'] as const;
 const GROUPS = ['group-roles'] as const;
-const BASE_ROLE: Role = 'user';
+const NO_ROLES: GroupRoleOption[] = [];
 
 export const usePermissionMatrix = () => useQuery({ queryKey: KEY, queryFn: permissionApi.matrix });
-
-/** Label of the role a person falls back to when they leave every group. */
-export function useBaseRoleLabel(): string {
-    const { data } = usePermissionMatrix();
-    return data?.roles.find((r) => r.value === BASE_ROLE)?.label ?? '';
-}
 
 export function useUpdateRolePermissions() {
     const qc = useQueryClient();
@@ -29,14 +25,20 @@ export function useUpdateRolePermissions() {
         mutationFn: (v: { role: string; permissions: string[]; version: string }) => permissionApi.updateRole(v.role, v.permissions, v.version),
         onSuccess: (data) => {
             qc.setQueryData(KEY, data);
-            qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+            qc.invalidateQueries({ queryKey: ME_KEY });
+            // The Role Group dialog greys roles by their permissions
+            qc.invalidateQueries({ queryKey: GROUPS, exact: true });
         },
     });
 }
 
 export function useRoleMutations() {
     const qc = useQueryClient();
-    const invalidate = () => qc.invalidateQueries({ queryKey: KEY });
+    const invalidate = () => {
+        qc.invalidateQueries({ queryKey: KEY });
+        // Role names and colours show on the Role Groups list and its dialog
+        qc.invalidateQueries({ queryKey: GROUPS, exact: true });
+    };
     return {
         create: useMutation({ mutationFn: (p: { name: string; color: string }) => roleApi.create(p), onSuccess: invalidate }),
         update: useMutation({
@@ -48,6 +50,17 @@ export function useRoleMutations() {
 }
 
 export const useGroupRoles = () => useQuery({ queryKey: GROUPS, queryFn: groupRoleApi.list });
+
+/** The roles a Role Group can be given, sent with the groups list. */
+export function useGroupRoleOptions(): GroupRoleOption[] {
+    const { data } = useGroupRoles();
+    return data?.roles ?? NO_ROLES;
+}
+
+/** Name of the role a person falls back to when they leave every group. */
+export function useBaseRoleLabel(): string {
+    return baseRoleLabel(useGroupRoleOptions());
+}
 
 /** One page of a saved group's members (none for a new group). */
 export const useGroupMembers = (groupId: number | null, search: string, page: number) =>
@@ -69,9 +82,20 @@ export const useGroupCandidates = (params: GroupCandidateParams, enabled: boolea
 
 export function useGroupRoleMutations() {
     const qc = useQueryClient();
-    const invalidate = () => qc.invalidateQueries({ queryKey: GROUPS });
+    // Membership moves change Role Templates member counts, and may change the caller's own role
+    const invalidateAround = () => {
+        qc.invalidateQueries({ queryKey: KEY });
+        qc.invalidateQueries({ queryKey: ME_KEY });
+    };
+    const invalidate = () => {
+        qc.invalidateQueries({ queryKey: GROUPS });
+        invalidateAround();
+    };
     // A dialog save only marks the group queries stale, so its confirm holds still; refreshList runs once it has closed
-    const markStale = () => qc.invalidateQueries({ queryKey: GROUPS, refetchType: 'none' });
+    const markStale = () => {
+        qc.invalidateQueries({ queryKey: GROUPS, refetchType: 'none' });
+        invalidateAround();
+    };
     return {
         create: useMutation({ mutationFn: (p: GroupRoleCreatePayload) => groupRoleApi.create(p), onSuccess: markStale }),
         update: useMutation({

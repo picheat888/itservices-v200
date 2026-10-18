@@ -19,7 +19,6 @@ export function useDeleteGroup(defaultGroup: GroupRole | null): (group: GroupRol
         const where = leaversWhere(t, defaultGroup && defaultGroup.id !== group.id ? defaultGroup.name : null, baseRole);
         const lines = [
             group.member_count > 0 &&
-                where !== null &&
                 t(countKey('gr_delete_members', group.member_count)).replace('{n}', fmtN(group.member_count)).replace('{where}', where),
             defaultGroup?.id === group.id && t('gr_delete_default'),
             t('gr_delete_desc'),

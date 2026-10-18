@@ -33,7 +33,7 @@ export function GroupMemberList({
     onRemove: (person: GroupMember) => void;
     onUndo: (person: GroupMember) => void;
     /** Where a leaver ends up, e.g. "Moves to User". */
-    leaveNote: string | null;
+    leaveNote: string;
     readOnly: boolean;
 }) {
     const t = useT();
