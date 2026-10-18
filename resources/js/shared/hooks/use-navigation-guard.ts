@@ -15,13 +15,18 @@ const useNavigationGuardStore = create<{ guard: NavigationGuard | null }>(() => 
 let asking = false;
 
 /** Runs `ask` once at a time; a second move while the prompt is open is dropped. */
-function askOnce(guard: NavigationGuard, onDiscard: () => void) {
+async function askOnce(guard: NavigationGuard, onDiscard: () => void) {
     if (asking) return;
     asking = true;
-    void guard.ask().then((discard) => {
+    let discard = false;
+    try {
+        discard = await guard.ask();
+    } catch {
+        discard = false;
+    } finally {
         asking = false;
-        if (discard) onDiscard();
-    });
+    }
+    if (discard) onDiscard();
 }
 
 /** While `active`, leaving the page (or changing one of `watchParams`) asks with the discard words first. */
@@ -49,7 +54,7 @@ export function guardNavigation(to: string, go: () => void) {
         go();
         return;
     }
-    askOnce(guard, go);
+    void askOnce(guard, go);
 }
 
 /** Intercepts link clicks and Back/Forward while a guard is registered. Mount once, inside the router. */
@@ -80,7 +85,7 @@ export function useNavigationGuardHost() {
             // Stopped at window capture, so the router link never sees this click
             event.preventDefault();
             event.stopPropagation();
-            askOnce(guard, () => {
+            void askOnce(guard, () => {
                 if (anchor.isConnected) {
                     replaying = true;
                     anchor.click();
@@ -103,7 +108,7 @@ export function useNavigationGuardHost() {
             // The browser has already moved: keep the router out of it and put the page's entry back
             event.stopImmediatePropagation();
             window.history.pushState(from.state, '', from.href);
-            askOnce(guard, () => {
+            void askOnce(guard, () => {
                 passNextPop = true;
                 window.history.back();
             });

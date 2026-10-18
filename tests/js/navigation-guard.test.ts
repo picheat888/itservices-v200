@@ -10,8 +10,12 @@ test('another page is guarded', () => {
     assert.equal(isGuardedMove(url('/permissions?tab=templates'), url('/tickets'), WATCH), true);
 });
 
-test('another origin is guarded', () => {
-    assert.equal(isGuardedMove(url('/permissions'), new URL('https://other.test/permissions'), WATCH), true);
+test('another origin and non-web links pass (beforeunload covers leaving the app)', () => {
+    assert.equal(isGuardedMove(url('/permissions'), new URL('https://other.test/permissions'), WATCH), false);
+    assert.equal(isGuardedMove(url('/permissions'), new URL('http://desk.test/tickets'), WATCH), false);
+    assert.equal(isGuardedMove(url('/permissions'), new URL('mailto:it@desk.test'), WATCH), false);
+    assert.equal(isGuardedMove(url('/permissions'), new URL('tel:+6621234567'), WATCH), false);
+    assert.equal(isGuardedMove(url('/permissions'), new URL('javascript:void(0)'), WATCH), false);
 });
 
 test('a watched param change is guarded', () => {
