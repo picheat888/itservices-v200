@@ -92,6 +92,7 @@ class ReportExportEmailTest extends TestCase
         $log = AuditLog::query()->where('action', 'Downloaded report export')->latest('id')->firstOrFail();
         $this->assertSame('email', $log->details['via']);
         $this->assertSame($export->id, $log->details['export_id']);
+        $this->assertSame(sprintf('RPT-260925-%04d', $export->id), $log->details['document_no']);
     }
 
     public function test_the_link_is_refused_to_anyone_else_when_tampered_or_after_expiry(): void

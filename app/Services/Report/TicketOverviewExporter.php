@@ -3,10 +3,11 @@
 namespace App\Services\Report;
 
 use App\Exports\Report\TicketOverviewExport;
-use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\CompanyProfile;
 use App\Support\DateDisplay;
 use App\Support\DocumentName;
+use App\Support\PdfFooter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Storage;
@@ -28,9 +29,9 @@ class TicketOverviewExporter
     /**
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      */
-    public function download(User $viewer, array $filters, string $format): Response
+    public function download(User $viewer, array $filters, string $format, ?string $documentNo = null): Response
     {
-        $file = $this->build($viewer, $filters, $format);
+        $file = $this->build($viewer, $filters, $format, $documentNo);
 
         return $format === 'xlsx'
             ? Excel::download($file['export'], $file['name'])
@@ -43,9 +44,9 @@ class TicketOverviewExporter
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      * @return array{name: string, path: string, rows: int}
      */
-    public function store(User $viewer, array $filters, string $format, string $directory): array
+    public function store(User $viewer, array $filters, string $format, string $directory, ?string $documentNo = null): array
     {
-        $file = $this->build($viewer, $filters, $format);
+        $file = $this->build($viewer, $filters, $format, $documentNo);
         $path = "{$directory}/{$file['name']}";
 
         $format === 'xlsx'
@@ -59,7 +60,7 @@ class TicketOverviewExporter
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int, source: ?string}  $filters
      * @return array{name: string, rows: int, export?: TicketOverviewExport, pdf?: \Barryvdh\DomPDF\PDF}
      */
-    private function build(User $viewer, array $filters, string $format): array
+    private function build(User $viewer, array $filters, string $format, ?string $documentNo = null): array
     {
         $summary = $this->reports->summary($viewer, $filters);
         $name = DocumentName::make('TicketReport', [$summary['range']['from'], $summary['range']['to']], $format);
@@ -74,15 +75,49 @@ class TicketOverviewExporter
         }
 
         $rows = $this->reports->exportRows($viewer, $filters, self::PDF_ROW_LIMIT);
+        $company = CompanyProfile::get();
         $pdf = Pdf::loadView('pdf.reports.ticket-overview', [
             'summary' => $summary,
+            'scope' => $this->scopeLines($filters, $summary['options']),
             'rows' => $rows,
             'truncated' => $summary['kpi']['total'] > $rows->count(),
-            'company' => AppSetting::get('company_name', ''),
+            'company' => $company,
+            'documentNo' => $documentNo,
             'printedBy' => $viewer->name,
             'dateConfig' => DateDisplay::config(),
         ])->setPaper('a4', 'landscape');
+        PdfFooter::stamp($pdf, $company['app_name'], "พิมพ์โดย {$viewer->name} เมื่อ ".DateDisplay::dateTime(now()), 'หน้า {PAGE_NUM} / {PAGE_COUNT}');
 
         return ['name' => $name, 'rows' => $rows->count(), 'pdf' => $pdf];
+    }
+
+    /**
+     * Every filter besides the dates as [label, value]; one "ไม่ได้กรอง" line when none narrows the tickets.
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  array<string, mixed>  $options
+     * @return list<array{0: string, 1: string}>
+     */
+    private function scopeLines(array $filters, array $options): array
+    {
+        $nameOf = function (array $list, ?int $id): ?string {
+            foreach ($list as $entry) {
+                if ((int) $entry['id'] === $id) {
+                    return ($entry['name_th'] ?? null) ?: $entry['name'];
+                }
+            }
+
+            return null;
+        };
+
+        $lines = array_filter([
+            $filters['categories'] !== [] ? ['หมวด', implode(', ', array_map(fn (string $c) => TicketLabels::category($c), $filters['categories']))] : null,
+            $filters['priority'] ? ['ความสำคัญ', TicketLabels::priority($filters['priority'])] : null,
+            $filters['department_id'] ? ['แผนก', $nameOf($options['departments'] ?? [], $filters['department_id']) ?? (string) $filters['department_id']] : null,
+            $filters['assignee_id'] ? ['ผู้รับผิดชอบ', $nameOf($options['assignees'] ?? [], $filters['assignee_id']) ?? (string) $filters['assignee_id']] : null,
+            $filters['source'] ? ['ที่มา', TicketLabels::source($filters['source']) ?? $filters['source']] : null,
+        ]);
+
+        return array_values($lines) ?: [['ตัวกรอง', 'ไม่ได้กรอง']];
     }
 }

@@ -3,10 +3,11 @@
 namespace App\Services\Report\Tabular;
 
 use App\Exports\Report\TabularReportExport;
-use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\CompanyProfile;
 use App\Support\DateDisplay;
 use App\Support\DocumentName;
+use App\Support\PdfFooter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
@@ -25,9 +26,9 @@ class TabularReportExporter
     /**
      * @param  array<string, mixed>  $filters
      */
-    public function download(TabularReport $report, User $viewer, array $filters, string $format): Response
+    public function download(TabularReport $report, User $viewer, array $filters, string $format, ?string $documentNo = null): Response
     {
-        $file = $this->build($report, $viewer, $filters, $format);
+        $file = $this->build($report, $viewer, $filters, $format, $documentNo);
 
         return $format === 'xlsx'
             ? Excel::download($file['export'], $file['name'])
@@ -40,9 +41,9 @@ class TabularReportExporter
      * @param  array<string, mixed>  $filters
      * @return array{name: string, path: string, rows: int}
      */
-    public function store(TabularReport $report, User $viewer, array $filters, string $format, string $directory): array
+    public function store(TabularReport $report, User $viewer, array $filters, string $format, string $directory, ?string $documentNo = null): array
     {
-        $file = $this->build($report, $viewer, $filters, $format);
+        $file = $this->build($report, $viewer, $filters, $format, $documentNo);
         $path = "{$directory}/{$file['name']}";
 
         $format === 'xlsx'
@@ -56,7 +57,7 @@ class TabularReportExporter
      * @param  array<string, mixed>  $filters
      * @return array{name: string, rows: int, export?: TabularReportExport, pdf?: \Barryvdh\DomPDF\PDF}
      */
-    private function build(TabularReport $report, User $viewer, array $filters, string $format): array
+    private function build(TabularReport $report, User $viewer, array $filters, string $format, ?string $documentNo = null): array
     {
         $query = $report->query($viewer, $filters);
         $summary = $report->summary($query, $filters);
@@ -77,6 +78,8 @@ class TabularReportExporter
         // type, per approver) are not what its headline total counts.
         $total = (clone $query)->toBase()->getCountForPagination();
 
+        $company = CompanyProfile::get();
+        $printedAt = DateDisplay::dateTime(now());
         $pdf = Pdf::loadView('pdf.reports.tabular', [
             'report' => $report,
             'summary' => $summary,
@@ -85,10 +88,12 @@ class TabularReportExporter
             'rows' => $rows,
             'truncated' => $total > $rows->count(),
             'total' => $total,
-            'company' => AppSetting::get('company_name', ''),
+            'company' => $company,
+            'documentNo' => $documentNo,
             'printedBy' => $viewer->name,
-            'printedAt' => DateDisplay::dateTime(now()),
+            'printedAt' => $printedAt,
         ])->setPaper('a4', $report->pdfOrientation());
+        PdfFooter::stamp($pdf, $company['app_name'], "พิมพ์โดย {$viewer->name} เมื่อ {$printedAt}", 'หน้า {PAGE_NUM} / {PAGE_COUNT}');
 
         return ['name' => $name, 'rows' => $rows->count(), 'pdf' => $pdf];
     }

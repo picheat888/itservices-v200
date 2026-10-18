@@ -144,6 +144,7 @@ class ReportExportService
 
         AuditLog::record('Downloaded report export', ReportCatalogue::title($export->report_key).' ('.$export->file_name.')', [
             'export_id' => $export->id,
+            'document_no' => $export->documentNo(),
             'format' => $export->format,
             'rows' => $export->rows_count,
             'via' => $via,
@@ -261,7 +262,7 @@ class ReportExportService
         $input = $export->filters ?? [];
 
         if ($export->report_key === ReportCatalogue::TICKETS_OVERVIEW) {
-            return $this->ticketOverview->store($user, TicketOverviewReportService::resolveFilters($input), $export->format, $directory);
+            return $this->ticketOverview->store($user, TicketOverviewReportService::resolveFilters($input), $export->format, $directory, $export->documentNo());
         }
 
         $report = ReportCatalogue::tabular($export->report_key)?->showOnly($export->columns);
@@ -269,7 +270,7 @@ class ReportExportService
             throw new \RuntimeException("Unknown report [{$export->report_key}]");
         }
 
-        return $this->tabular->store($report, $user, $report->resolveFilters($input), $export->format, $directory);
+        return $this->tabular->store($report, $user, $report->resolveFilters($input), $export->format, $directory, $export->documentNo());
     }
 
     private function removeFile(ReportExport $export): void
