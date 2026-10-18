@@ -1,7 +1,10 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { localLabel, localName, localPair } from '@/shared/lib/local-name';
 import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_ONBOARDING_BADGE, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
@@ -11,10 +14,9 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Check, Loader2, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { useRequestMutations } from '../hooks/use-requests';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export type DecisionAction = 'approve' | 'reject';
 
@@ -43,12 +45,13 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
 
     const [note, setNote] = useState('');
     const [noteErr, setNoteErr] = useState('');
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     useEffect(() => {
         setNote('');
         setNoteErr('');
-        setFormError('');
-    }, [request?.id, action]);
+        clearFormError();
+    }, [request?.id, action, clearFormError]);
     const isOpen = !!request && !!action;
     const guardClose = useDiscardGuard(isOpen && note.trim() !== '');
 
@@ -71,13 +74,13 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
             setNoteErr(t('req_decide_note_required'));
             return;
         }
-        setFormError('');
+        formError.clear();
         try {
             if (rejecting) await reject.mutateAsync({ id: ctx.request.id, note: note.trim() });
             else await approve.mutateAsync({ id: ctx.request.id, note: note.trim() || undefined });
             onClose();
         } catch (e) {
-            setFormError(serverMessage(e) ?? t('cd_error'));
+            formError.show(serverMessage(e) ?? t('cd_error'));
         }
     };
 
@@ -115,15 +118,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                 </div>
 
                 <div className="space-y-4">
-                    {formError && (
-                        <div
-                            key={formError}
-                            role="alert"
-                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError}
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     {/* The decision slip: service, what was asked for, who for and why */}
                     <div className="border-border space-y-3 rounded-lg border px-3.5 py-3">
@@ -191,21 +186,15 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
-                    <Button
+                    <SaveButton
                         variant={rejecting ? 'destructive' : 'default'}
                         className={rejecting ? undefined : REQUEST_APPROVE_BUTTON}
                         onClick={submit}
-                        disabled={pending}
+                        loading={pending}
                     >
-                        {pending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : rejecting ? (
-                            <X className="h-4 w-4" />
-                        ) : (
-                            <Check className="h-4 w-4" />
-                        )}
+                        {rejecting ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                         {rejecting ? t('req_reject') : t('req_approve')}
-                    </Button>
+                    </SaveButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

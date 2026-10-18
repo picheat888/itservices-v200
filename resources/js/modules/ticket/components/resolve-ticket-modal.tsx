@@ -1,14 +1,16 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
-import { Check, CheckCircle2, Loader2, X, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, X, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 
@@ -20,7 +22,8 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
     const { resolve } = useTicketMutations();
     const [resolution, setResolution] = useState('');
     const [err, setErr] = useState('');
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     const open = !!ticket && !!mode;
     // Retained ticket + mode so the content and its colours don't flip during the exit animation
@@ -35,9 +38,9 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
         if (open) {
             setResolution('');
             setErr('');
-            setFormError('');
+            clearFormError();
         }
-    }, [open]);
+    }, [open, clearFormError]);
 
     const submit = async () => {
         if (!ticket || !mode) return;
@@ -45,12 +48,12 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
             setErr(t('ticket_resolution_too_short'));
             return;
         }
-        setFormError('');
+        formError.clear();
         try {
             await resolve.mutateAsync({ id: ticket.id, mode, resolution: resolution.trim() });
             onClose();
         } catch (e: unknown) {
-            setFormError(refusalText(e, t, 'ticket_refusal_'));
+            formError.show(refusalText(e, t, 'ticket_refusal_'));
         }
     };
 
@@ -70,14 +73,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                 />
 
                 <div className="flex-1 space-y-4 overflow-y-auto border-t px-6 py-6">
-                    {formError && (
-                        <div
-                            key={formError}
-                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError}
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     <p className="text-muted-foreground text-sm">
                         {isComplete ? t('ticket_resolution_required') : t('ticket_cancel_reason_required')}
@@ -102,16 +98,10 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {isComplete ? t('cancel') : t('back')}
                     </Button>
-                    <Button variant={isComplete ? 'default' : 'destructive'} onClick={submit} disabled={pending}>
-                        {pending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : isComplete ? (
-                            <Check className="h-4 w-4" />
-                        ) : (
-                            <X className="h-4 w-4" />
-                        )}
+                    <SaveButton variant={isComplete ? 'default' : 'destructive'} onClick={submit} loading={pending}>
+                        {isComplete ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                         {isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

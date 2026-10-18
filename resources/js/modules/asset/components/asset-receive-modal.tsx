@@ -1,15 +1,17 @@
 import { useT } from '@/lang';
 import { useWarehouses } from '@/modules/settings';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { serverMessage } from '@/shared/lib/api-errors';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
-import { useToastStore } from '@/stores/toast';
-import { Check, Loader2, RotateCcw, Warehouse } from 'lucide-react';
+import { Check, RotateCcw, Warehouse } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Put assets back into the pool via a destination-warehouse picker. Serves both the
@@ -37,6 +39,8 @@ export function AssetReceiveModal({
     const { receive, recall, bulkRecall, bulkReceive } = useAssetMutations();
     const { data: warehouses = [] } = useWarehouses();
     const [warehouse, setWarehouse] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     // Retain the last single asset so its info card keeps rendering while the dialog animates
     // closed — clearing `asset` on close otherwise blanks the card mid-animation.
     const [shownAsset, setShownAsset] = useState<Asset | null>(asset ?? null);
@@ -55,12 +59,14 @@ export function AssetReceiveModal({
     useEffect(() => {
         if (!isOpen) return;
         setWarehouse(asset?.warehouse ?? '');
-    }, [asset, open, isOpen]);
+        clearFormError();
+    }, [asset, open, isOpen, clearFormError]);
 
     const options = warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }));
 
     const submit = async () => {
         if (!warehouse.trim()) return;
+        formError.clear();
         try {
             if (isBulk) {
                 if (isRecall) await bulkRecall.mutateAsync({ ids, warehouse: warehouse.trim() });
@@ -77,11 +83,10 @@ export function AssetReceiveModal({
             // before IT could pull it back — surface that; otherwise a generic failure.
             const status = (err as { response?: { status?: number } }).response?.status;
             if (isRecall && !isBulk && status === 422) {
-                useToastStore.getState().push(t('asset_recall_stale'), 'error', t('asset_recall_stale_title'));
+                formError.show(t('asset_recall_stale'));
             } else {
-                useToastStore.getState().push(t('asset_action_failed'), 'error', t('asset_action_failed_title'));
+                formError.show(serverMessage(err) ?? t('asset_action_failed'));
             }
-            onClose();
         }
     };
 
@@ -92,11 +97,7 @@ export function AssetReceiveModal({
         : isRecall
           ? t('asset_recall_title')
           : t('asset_receive_title');
-    const sub = isBulk
-        ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0))
-        : isRecall
-          ? t('asset_recall_sub')
-          : t('asset_receive_sub');
+    const sub = isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : isRecall ? t('asset_recall_sub') : t('asset_receive_sub');
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
@@ -118,6 +119,8 @@ export function AssetReceiveModal({
                 </div>
 
                 <div className="space-y-4 px-5 py-4">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
+
                     {shownAsset && !isBulk && (
                         <div className="border-border bg-muted/40 flex items-center gap-2.5 rounded-lg border px-3 py-2.5">
                             <Warehouse className="text-brand h-4 w-4 shrink-0" />
@@ -151,16 +154,10 @@ export function AssetReceiveModal({
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={busy || !warehouse.trim()}>
-                        {busy ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : isRecall ? (
-                            <RotateCcw className="h-4 w-4" />
-                        ) : (
-                            <Check className="h-4 w-4" />
-                        )}
+                    <SaveButton onClick={submit} loading={busy} disabled={!warehouse.trim()}>
+                        {isRecall ? <RotateCcw className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                         {t(isRecall ? 'asset_recall_action' : 'asset_mark_received')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

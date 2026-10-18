@@ -1,14 +1,16 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { fieldError } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
-import { Loader2, Undo2 } from 'lucide-react';
+import { Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Return the selected rented assets to their lessor (POST /assets/bulk-return-to-vendor).
@@ -25,24 +27,29 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
     const { returnToVendor } = useAssetMutations();
     const [note, setNote] = useState('');
     const [error, setError] = useState<string | undefined>();
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     // Reset on every open — guarded by `open` so a closing dialog keeps its content while it fades out.
     useEffect(() => {
         if (!open) return;
         setNote('');
         setError(undefined);
-    }, [open]);
+        clearFormError();
+    }, [open, clearFormError]);
 
     const guardClose = useDiscardGuard(open && note !== '');
 
     const submit = async () => {
+        formError.clear();
         try {
             await returnToVendor.mutateAsync({ ids, reason: note.trim() || undefined });
             onDone();
         } catch (e) {
             // The server names the assets it refused (not rented, or not back in the pool).
-            const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setError(fieldError(e, 'reason') ?? message ?? t('asset_return_vendor_failed'));
+            const noteErr = fieldError(e, 'reason');
+            setError(noteErr);
+            if (!noteErr) formError.show(serverMessage(e) ?? t('asset_return_vendor_failed'));
         }
     };
 
@@ -59,6 +66,7 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
                 </DialogDescription>
 
                 <div className="mt-4 space-y-4">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('asset_writeoff_note')} error={error}>
                         <Textarea
                             value={note}
@@ -74,10 +82,10 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
                     <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)} disabled={returnToVendor.isPending}>
                         {t('cancel')}
                     </Button>
-                    <Button className="flex-1" onClick={submit} disabled={returnToVendor.isPending}>
-                        {returnToVendor.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+                    <SaveButton className="flex-1" onClick={submit} loading={returnToVendor.isPending}>
+                        <Undo2 className="h-4 w-4" />
                         {t('asset_return_vendor')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

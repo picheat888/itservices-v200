@@ -2,11 +2,14 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { WorkflowStrip } from '@/modules/workflow';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { localLabel, localName } from '@/shared/lib/local-name';
@@ -23,11 +26,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Loader2, Send, Zap } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Send, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { type RequestTypeOption } from '../api/requestApi';
 import { useRequestMutations, useRequestOptions } from '../hooks/use-requests';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const LAST_STEP = 2;
 
@@ -69,7 +71,7 @@ export function RequestCreateDialog({
     const [files, setFiles] = useState<File[]>([]);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
-    const [formError, setFormError] = useState<{ title?: string; text: string } | null>(null);
+    const formError = useFormError();
     /** Upload percentage of the submit itself — one request, so one bar. */
     const [uploadPct, setUploadPct] = useState<number | null>(null);
 
@@ -84,7 +86,7 @@ export function RequestCreateDialog({
             setFields({});
             setFiles([]);
             setErr({});
-            setFormError(null);
+            formError.clear();
             setSaveState('idle');
             setUploadPct(null);
         }
@@ -107,7 +109,7 @@ export function RequestCreateDialog({
     const pickType = (option: RequestTypeOption) => {
         setType(option.type);
         setErr({});
-        setFormError(null);
+        formError.clear();
         // Files belong to the service they were picked for
         setFiles([]);
         // Seed schema defaults (e.g. qty = 1).
@@ -187,7 +189,7 @@ export function RequestCreateDialog({
             setStep(all.type ? 0 : 1);
             return;
         }
-        setFormError(null);
+        formError.clear();
         try {
             const created = await submit.mutateAsync({
                 payload: {
@@ -224,9 +226,9 @@ export function RequestCreateDialog({
             }
             // A refused reporting line arrives as a code (ChainBlockReason), worded here
             const blockKey = REQUEST_BLOCK_REASON_LABEL[resp?.errors?.requester?.[0] ?? ''];
-            if (blockKey) setFormError({ title: t('req_block_title'), text: t(blockKey) });
-            else if (offScreen.length) setFormError({ text: offScreen[0] });
-            else if (!Object.keys(serverErrs).length) setFormError({ text: serverMessage(e) ?? t('cd_error') });
+            if (blockKey) formError.show(`${t('req_block_title')}: ${t(blockKey)}`);
+            else if (offScreen.length) formError.show(offScreen[0]);
+            else if (!Object.keys(serverErrs).length) formError.show(serverMessage(e) ?? t('cd_error'));
         }
     };
 
@@ -307,16 +309,7 @@ export function RequestCreateDialog({
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto px-6 py-6">
-                    {formError && (
-                        <div
-                            key={formError.text}
-                            role="alert"
-                            className="bg-destructive/10 dark:text-destructive animate-shake mx-auto mb-5 max-w-[960px] space-y-0.5 rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError.title && <p className="font-semibold">{formError.title}</p>}
-                            <p>{formError.text}</p>
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} className="mx-auto mb-5 max-w-[960px]" />
                     <div key={step} className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
                         {/* ① Pick the service — one click moves on */}
                         {step === 0 && (
@@ -576,10 +569,10 @@ export function RequestCreateDialog({
                         </Button>
                     )}
                     {step === LAST_STEP && (
-                        <Button onClick={doSubmit} disabled={submit.isPending || saveState === 'done'}>
-                            {submit.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        <SaveButton onClick={doSubmit} loading={submit.isPending} disabled={saveState === 'done'}>
+                            <Send className="h-4 w-4" />
                             {saveState === 'done' ? t('req_submitted') : t('req_submit')}
-                        </Button>
+                        </SaveButton>
                     )}
                 </div>
             </DialogContent>

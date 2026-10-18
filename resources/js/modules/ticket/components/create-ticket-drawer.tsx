@@ -1,9 +1,11 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
+import { SaveButton } from '@/shared/components/save-button';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { TicketCategory } from '@/shared/types';
@@ -12,7 +14,7 @@ import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import { AlertCircle, Loader2, MessageSquarePlus, Send } from 'lucide-react';
+import { AlertCircle, MessageSquarePlus, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
@@ -38,7 +40,8 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     // Per-file upload progress (index → 0..100), populated while uploading after submit.
     const [progress, setProgress] = useState<Record<number, number>>({});
     // Why the server refused, shown as the banner over the form.
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     // What a failed submit already saved, so Submit again finishes the job instead of repeating
     // it: the ticket once it exists, and how many of the files (from the top) are on it.
     const [createdId, setCreatedId] = useState<number | null>(null);
@@ -66,11 +69,11 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             setFiles([]);
             setErrors({});
             setProgress({});
-            setFormError('');
+            clearFormError();
             setCreatedId(null);
             setSavedFiles(0);
         }
-    }, [open]);
+    }, [open, clearFormError]);
 
     const submit = async () => {
         const e: Record<string, string> = {};
@@ -82,7 +85,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
         setErrors(e);
         if (Object.keys(e).length || !category) return;
 
-        setFormError('');
+        formError.clear();
         // The files already on the ticket stay full; the rest start again from empty.
         setProgress(Object.fromEntries(files.slice(0, savedFiles).map((_, i) => [i, 100])));
         let saved = savedFiles;
@@ -113,7 +116,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
         } catch (err: unknown) {
             setSavedFiles(saved);
             // One file per request, so a file the upload rules turn down comes back as `files.0`.
-            setFormError(
+            formError.show(
                 hasFieldError(err, 'files.0')
                     ? t('ticket_refusal_file_rejected').replace('{name}', files[saved]?.name ?? '')
                     : refusalText(err, t, 'ticket_refusal_'),
@@ -142,15 +145,11 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
 
                 {/* Two equal columns: left = describe the issue, right = reach-back + evidence. */}
                 <div className="grid flex-1 grid-cols-1 content-start gap-x-10 gap-y-6 overflow-y-auto border-t px-6 py-6 sm:grid-cols-2">
-                    {formError && (
-                        <div
-                            key={formError}
-                            className="bg-destructive/10 dark:text-destructive animate-shake space-y-1 rounded-lg px-3.5 py-2.5 text-sm text-red-700 sm:col-span-2"
-                        >
-                            {created && <p className="font-medium">{t('ticket_open_files_pending')}</p>}
-                            <p>{formError}</p>
-                        </div>
-                    )}
+                    <FormErrorBanner
+                        message={created && formError.message ? `${t('ticket_open_files_pending')} ${formError.message}` : formError.message}
+                        shakeKey={formError.shakeKey}
+                        className="sm:col-span-2"
+                    />
 
                     {/* LEFT: what's wrong */}
                     <div className="space-y-6">
@@ -278,10 +277,10 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={pending}>
-                        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <SaveButton onClick={submit} loading={pending}>
+                        <Send className="h-4 w-4" />
                         {t('submit_ticket')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

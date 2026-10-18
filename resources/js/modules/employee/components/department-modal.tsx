@@ -1,6 +1,8 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { fieldError, refusalText } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Department } from '@/shared/types';
@@ -9,7 +11,6 @@ import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useDepartmentMutations } from '../hooks/use-departments';
 
@@ -24,20 +25,21 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
     const { create, update } = useDepartmentMutations();
     const [form, setForm] = useState(empty);
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-    const [error, setError] = useState('');
     const [saved, setSaved] = useState(false);
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     const initial = useRef(empty);
 
     useEffect(() => {
         if (open) {
             setFieldErrors({});
-            setError('');
+            clearFormError();
             setSaved(false);
             const values = department ? { name: department.name, name_th: department.name_th ?? '', tag: department.tag ?? '' } : empty;
             setForm(values);
             initial.current = values;
         }
-    }, [open, department]);
+    }, [open, department, clearFormError]);
 
     const isDirty =
         form.name.trim() !== initial.current.name.trim() ||
@@ -57,7 +59,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
         if (!canSave) return;
         if (department && !(await confirmEdit({ name: localName(department, lang), sub: department.code }))) return;
         setFieldErrors({});
-        setError('');
+        formError.clear();
         // Blank code → omit it so the backend auto-generates one; a typed code is sent through as a custom badge.
         const payload = { name: form.name.trim(), name_th: form.name_th.trim() || null, tag: form.tag.trim() || undefined };
         try {
@@ -68,7 +70,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
         } catch (err) {
             const fields: FieldErrors = { name: fieldError(err, 'name'), name_th: fieldError(err, 'name_th'), tag: fieldError(err, 'tag') };
             setFieldErrors(fields);
-            if (!fields.name && !fields.name_th && !fields.tag) setError(refusalText(err, t, 'dept_err_'));
+            if (!fields.name && !fields.name_th && !fields.tag) formError.show(refusalText(err, t, 'dept_err_'));
         }
     };
 
@@ -81,6 +83,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                 </DialogHeader>
                 <form onSubmit={submit} className="contents">
                     <div className="space-y-4">
+                        <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                         <div className="grid grid-cols-2 gap-3">
                             <Field label={t('dept_name_en')} required error={fieldErrors.name}>
                                 <Input
@@ -106,32 +109,12 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                                 autoComplete="off"
                             />
                         </Field>
-                        {error && (
-                            <p role="alert" className="text-destructive flex items-center gap-1.5 text-sm">
-                                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
-                                {error}
-                            </p>
-                        )}
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
-                        <Button type="submit" disabled={!canSave}>
-                            {saving ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t('saving')}
-                                </>
-                            ) : saved ? (
-                                <>
-                                    <Check className="h-4 w-4" />
-                                    {t('saved')}
-                                </>
-                            ) : (
-                                t('save')
-                            )}
-                        </Button>
+                        <SaveButton type="submit" loading={saving} success={saved} disabled={!canSave} />
                     </DialogFooter>
                 </form>
             </DialogContent>

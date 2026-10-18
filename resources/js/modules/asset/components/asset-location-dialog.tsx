@@ -1,16 +1,19 @@
 import { useT } from '@/lang';
 import { useLocations } from '@/modules/employee';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { serverMessage } from '@/shared/lib/api-errors';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
-import { Loader2, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Correct where in-use assets physically sit — the holder moved desk and took the kit along.
@@ -54,6 +57,8 @@ export function AssetLocationDialog({
     const [location, setLocation] = useState('');
     const [note, setNote] = useState('');
     const [err, setErr] = useState<string | undefined>();
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     // Single asset starts on its current place; reset only while open so a closing dialog keeps its content.
     const seedLocation = !isBulk && asset?.location_id ? String(asset.location_id) : '';
@@ -62,7 +67,8 @@ export function AssetLocationDialog({
         setLocation(seedLocation);
         setNote('');
         setErr(undefined);
-    }, [asset, open, isBulk, isOpen, seedLocation]);
+        clearFormError();
+    }, [asset, open, isBulk, isOpen, seedLocation, clearFormError]);
 
     const isDirty = location !== seedLocation || note !== '';
     const guardClose = useDiscardGuard(isOpen && isDirty);
@@ -75,11 +81,12 @@ export function AssetLocationDialog({
         const targetIds = isBulk ? (ids ?? []) : view ? [view.id] : [];
         if (!targetIds.length) return;
 
+        formError.clear();
         try {
             await updateLocation.mutateAsync({ ids: targetIds, location_id: Number(location), note: note.trim() || undefined });
             (onDone ?? onClose)();
-        } catch {
-            setErr(t('asset_location_failed'));
+        } catch (error) {
+            formError.show(serverMessage(error) ?? t('asset_location_failed'));
         }
     };
 
@@ -96,6 +103,8 @@ export function AssetLocationDialog({
                 <DialogDescription>{description}</DialogDescription>
 
                 <div className="mt-4 space-y-5">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
+
                     {/* Where it sits today, so the new choice is a change from something. */}
                     {!isBulk && (
                         <div className="text-sm">
@@ -123,10 +132,10 @@ export function AssetLocationDialog({
                     <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
-                    <Button className="flex-1" onClick={submit} disabled={updateLocation.isPending}>
-                        {updateLocation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                    <SaveButton className="flex-1" onClick={submit} loading={updateLocation.isPending}>
+                        <MapPin className="h-4 w-4" />
                         {t('asset_location_save')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

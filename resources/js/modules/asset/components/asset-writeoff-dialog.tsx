@@ -1,16 +1,18 @@
 import { useT } from '@/lang';
 import { useWriteoffReasons } from '@/modules/settings';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { fieldError } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
-import { FlaskConicalOff, Loader2 } from 'lucide-react';
+import { FlaskConicalOff } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Write off the selected Ready assets. The reason is picked from the list kept in Settings →
@@ -27,6 +29,8 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
     const [note, setNote] = useState('');
     const [reasonErr, setReasonErr] = useState<string | undefined>();
     const [noteErr, setNoteErr] = useState<string | undefined>();
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     const reasonOptions = useMemo(
         () =>
@@ -41,7 +45,8 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
         setNote('');
         setReasonErr(undefined);
         setNoteErr(undefined);
-    }, [open]);
+        clearFormError();
+    }, [open, clearFormError]);
 
     const isDirty = reasonId !== '' || note !== '';
     const guardClose = useDiscardGuard(open && isDirty);
@@ -51,12 +56,16 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
             setReasonErr(t('asset_writeoff_reason_required'));
             return;
         }
+        formError.clear();
         try {
             await bulk.mutateAsync({ ids, op: 'writeoff', writeoffReasonId: Number(reasonId), reason: note.trim() || undefined });
             onDone();
         } catch (error) {
-            setReasonErr(fieldError(error, 'writeoff_reason_id'));
-            setNoteErr(fieldError(error, 'reason') ?? (fieldError(error, 'writeoff_reason_id') ? undefined : t('asset_writeoff_failed')));
+            const reasonFieldErr = fieldError(error, 'writeoff_reason_id');
+            const noteFieldErr = fieldError(error, 'reason');
+            setReasonErr(reasonFieldErr);
+            setNoteErr(noteFieldErr);
+            if (!reasonFieldErr && !noteFieldErr) formError.show(serverMessage(error) ?? t('asset_writeoff_failed'));
         }
     };
 
@@ -70,6 +79,7 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
                 <DialogDescription>{t('asset_bulk_count').replace('{count}', fmtN(ids.length))}</DialogDescription>
 
                 <div className="mt-4 space-y-4">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('asset_writeoff_reason')} required error={reasonErr}>
                         <SearchableSelect
                             value={reasonId}
@@ -96,10 +106,10 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
                     <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)} disabled={bulk.isPending}>
                         {t('cancel')}
                     </Button>
-                    <Button variant="destructive" className="flex-1" onClick={submit} disabled={bulk.isPending}>
-                        {bulk.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConicalOff className="h-4 w-4" />}
+                    <SaveButton variant="destructive" className="flex-1" onClick={submit} loading={bulk.isPending}>
+                        <FlaskConicalOff className="h-4 w-4" />
                         {t('asset_writeoff')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

@@ -3,11 +3,12 @@ import { PhotoCropDialog, useDepartments, useEmployeePicker, useEmployeesByIds }
 import { useBrands } from '@/modules/settings';
 import { ColorSwatchPicker } from '@/shared/components/color-swatch-picker';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { refusalReason } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { refusalReason, serverMessage } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { cn, focusFirstError } from '@/shared/lib/utils';
@@ -206,6 +207,8 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
     const { data: brands = [] } = useBrands();
     const [form, setForm] = useState<FormState>(empty);
     const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     // Software logo (upload/crop/remove) + product-key controls live outside FormState.
     const [logo, setLogo] = useState<File | null>(null);
     const [removeLogo, setRemoveLogo] = useState(false);
@@ -231,6 +234,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         if (open) {
             setForm(fromRow(kind, row));
             setErrors({});
+            clearFormError();
             setLogo(null);
             setRemoveLogo(false);
             setCropSrc(null);
@@ -240,7 +244,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
             const licence = sw?.license_type ?? 'subscription';
             setStoreKey(sw ? !!sw.product_key : (LICENSE_CARDS.find((c) => c.value === licence)?.expectsKey ?? false));
         }
-    }, [open, kind, row]);
+    }, [open, kind, row, clearFormError]);
 
     // Kinds that carry an uploadable logo (software licences + social platforms).
     const hasLogo = kind === 'software' || kind === 'social-platforms';
@@ -386,6 +390,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
             if (logo) payload.logo = logo;
             if (removeLogo) payload.remove_logo = true;
         }
+        formError.clear();
         try {
             if (row) await update.mutateAsync({ id: row.id, payload });
             else await create.mutateAsync(payload);
@@ -405,7 +410,8 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                 focusFirstError(mapped as Record<string, string>);
                 return;
             }
-            throw err;
+            formError.show(serverMessage(err) ?? t('cd_error'));
+            return;
         }
         useToastStore.getState().push(t('saved'), 'success');
         onClose();
@@ -444,6 +450,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                 <div
                     className={cn('max-h-[calc(100dvh-10rem)] overflow-y-auto px-6', curKind === 'software' ? 'space-y-3.5 py-4' : 'space-y-4 py-5')}
                 >
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     {/* Software and Social lead with their logo beside the name instead of the shared Name. */}
                     {(curKind === 'email-groups' || curKind === 'file-shares') && (
                         <Field label={t('access_name')} required name="name" error={errors.name}>

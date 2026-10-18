@@ -1,8 +1,12 @@
 import { useT } from '@/lang';
 import { useEmployeePicker, useEmployeesByIds, useLocations } from '@/modules/employee';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { serverMessage } from '@/shared/lib/api-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, EmployeeOption } from '@/shared/types';
@@ -11,10 +15,9 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Loader2, Share2, Users } from 'lucide-react';
+import { AlertTriangle, Share2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations, useRecipientReadiness } from '../hooks/use-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Mode = 'employee' | 'shared';
 
@@ -57,6 +60,8 @@ export function AssetTransferDialog({
     const [location, setLocation] = useState('');
     const [reason, setReason] = useState('');
     const [err, setErr] = useState<{ employee?: string; shared?: string; location?: string }>({});
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     const employeeOption = (e: EmployeeOption): SearchOption => ({
         value: String(e.id),
@@ -84,7 +89,8 @@ export function AssetTransferDialog({
         setLocation('');
         setReason('');
         setErr({});
-    }, [asset, open, isOpen]);
+        clearFormError();
+    }, [asset, open, isOpen, clearFormError]);
 
     const isDirty = mode !== 'employee' || employeeId !== '' || sharedLabel !== '' || location !== '' || reason !== '';
     const guardClose = useDiscardGuard(isOpen && isDirty);
@@ -105,6 +111,7 @@ export function AssetTransferDialog({
 
         const owner = mode === 'employee' ? { owner_employee_id: Number(employeeId) } : { owner_label: sharedLabel.trim() };
 
+        formError.clear();
         try {
             if (isBulk) {
                 await bulkTransfer.mutateAsync({ ids, mode, ...owner, location_id: Number(location), reason: reason.trim() || undefined });
@@ -115,8 +122,8 @@ export function AssetTransferDialog({
                 });
             }
             (onDone ?? onClose)();
-        } catch {
-            setErr({ location: t('asset_transfer_failed') });
+        } catch (error) {
+            formError.show(serverMessage(error) ?? t('asset_transfer_failed'));
         }
     };
 
@@ -133,6 +140,8 @@ export function AssetTransferDialog({
                 <DialogDescription>{description}</DialogDescription>
 
                 <div className="mt-4 space-y-5">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
+
                     {/* Segmented toggle: Employee | Shared */}
                     <div className="bg-muted grid grid-cols-2 gap-2 rounded-lg p-1">
                         {(['employee', 'shared'] as Mode[]).map((m) => (
@@ -202,10 +211,10 @@ export function AssetTransferDialog({
                     <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
-                    <Button className="flex-1" onClick={submit} disabled={busy}>
-                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                    <SaveButton className="flex-1" onClick={submit} loading={busy}>
+                        <Share2 className="h-4 w-4" />
                         {t('asset_transfer_action')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

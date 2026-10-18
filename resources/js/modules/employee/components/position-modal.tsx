@@ -1,6 +1,8 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { fieldError, refusalText } from '@/shared/lib/api-errors';
 import type { Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -8,7 +10,6 @@ import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
-import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { usePositionMutations } from '../hooks/use-positions';
 
@@ -21,15 +22,18 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
     const [allowSpecial, setAllowSpecial] = useState(false);
     const [error, setError] = useState('');
     const [saved, setSaved] = useState(false);
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     useEffect(() => {
         if (open) {
             setTitle(position?.title ?? '');
             setAllowSpecial(position?.allow_special_position ?? false);
             setError('');
+            clearFormError();
             setSaved(false);
         }
-    }, [open, position]);
+    }, [open, position, clearFormError]);
 
     const isDirty = title.trim() !== (position?.title ?? '') || allowSpecial !== (position?.allow_special_position ?? false);
     const guardClose = useDiscardGuard(open && isDirty && !saved);
@@ -50,6 +54,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
         if (!canSave) return;
         if (position && !(await confirmEdit({ name: position.title, sub: position.code }))) return;
         setError('');
+        formError.clear();
         const payload = { title: title.trim(), allow_special_position: allowSpecial };
         try {
             if (position) await update.mutateAsync({ id: position.id, ...payload });
@@ -57,7 +62,9 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
             setSaved(true);
             setTimeout(onClose, 1200);
         } catch (err) {
-            setError(fieldError(err, 'title') ?? refusalText(err, t, 'pos_err_'));
+            const titleError = fieldError(err, 'title');
+            if (titleError) setError(titleError);
+            else formError.show(refusalText(err, t, 'pos_err_'));
         }
     };
 
@@ -69,6 +76,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                     <DialogTitle>{position ? t('edit_position') : t('add_position')}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={submit} className="contents">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('pos_title')} required error={error || undefined}>
                         <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus aria-required placeholder={t('pos_title_ph')} />
                     </Field>
@@ -84,21 +92,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                         <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
-                        <Button type="submit" disabled={!canSave}>
-                            {saving ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t('saving')}
-                                </>
-                            ) : saved ? (
-                                <>
-                                    <Check className="h-4 w-4" />
-                                    {t('saved')}
-                                </>
-                            ) : (
-                                t('save')
-                            )}
-                        </Button>
+                        <SaveButton type="submit" loading={saving} success={saved} disabled={!canSave} />
                     </DialogFooter>
                 </form>
             </DialogContent>

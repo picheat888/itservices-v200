@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { refusalText } from '@/shared/lib/api-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
@@ -11,7 +13,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Loader2, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketAssetPicker, useTicketMutations, useTicketRequesterAssets } from '../hooks/use-tickets';
 import { PriorityPicker } from './priority-picker';
@@ -28,7 +30,8 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     const [priority, setPriority] = useState<TicketPriority>('medium');
     const [note, setNote] = useState('');
     const [assetId, setAssetId] = useState('');
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
     const [shown, setShown] = useState<Ticket | null>(null);
@@ -75,13 +78,13 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
             setNote('');
             setAssetId('');
             setPickedAsset(null);
-            setFormError('');
+            clearFormError();
         }
-    }, [ticket]);
+    }, [ticket, clearFormError]);
 
     const submit = async () => {
         if (!ticket) return;
-        setFormError('');
+        formError.clear();
         try {
             await take.mutateAsync({
                 id: ticket.id,
@@ -92,7 +95,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
             });
             onClose();
         } catch (e: unknown) {
-            setFormError(refusalText(e, t, 'ticket_refusal_'));
+            formError.show(refusalText(e, t, 'ticket_refusal_'));
         }
     };
 
@@ -120,14 +123,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                 />
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
-                    {formError && (
-                        <div
-                            key={formError}
-                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError}
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     {!fromRequest && (
                         <Field label={t('ticket_priority')} required>
@@ -192,10 +188,10 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={pending}>
-                        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                    <SaveButton onClick={submit} loading={pending}>
+                        <Zap className="h-4 w-4" />
                         {t('ticket_take_case')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

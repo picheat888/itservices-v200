@@ -11,6 +11,7 @@ interface SaveButtonProps extends ButtonProps {
     success?: boolean;
     /** Busy label when the action is not a save (e.g. "Sending…"); defaults to "Saving…". */
     loadingLabel?: React.ReactNode;
+    ref?: React.Ref<HTMLButtonElement>;
 }
 
 /** How long the success checkmark stays before reverting to the idle label. */
