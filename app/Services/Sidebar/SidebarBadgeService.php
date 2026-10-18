@@ -26,12 +26,7 @@ use App\Models\User;
 use App\Support\Permissions;
 
 /**
- * Every "needs attention" count the sidebar badges show, resolved in a single request.
- *
- * Before this existed each badge fetched its own endpoint (9 requests on mount), so the
- * numbers popped in one at a time. Each count here mirrors the module endpoint it replaces
- * and is gated by the same permission, so a user never sees a number they could not have
- * loaded themselves; counts they cannot see come back as 0.
+ * Every "needs attention" count the sidebar badges show, in one request; counts the user may not see are 0.
  */
 class SidebarBadgeService
 {
@@ -46,7 +41,8 @@ class SidebarBadgeService
             'employees' => $this->gated($user, ['employees.view_dashboard'], fn () => $this->employeesWithoutAccount()),
             'requests' => $this->gated($user, ['requests.module'], fn () => $this->requestsNeedingAttention($user)),
             'access' => $this->gated($user, ['access.module', 'access.overview'], fn () => $this->accessAnomalies()),
-            'tickets' => $this->gated($user, ['tickets.create'], fn () => $this->ticketsNeedingAttention($user)),
+            // Same keys as the Tickets menu item (nav.ts anyOf).
+            'tickets' => $this->gatedAny($user, ['tickets.module', 'tickets.create', 'tickets.my'], fn () => $this->ticketsNeedingAttention($user)),
             // Mirrors assets/summary: its own gate (assets.view) plus the nav item's (assets.receive).
             'assets' => $this->gated($user, ['assets.view', 'assets.receive'], fn () => $this->assetsPendingReturn()),
             'my_assets' => $this->myAssetsPendingAcceptance($user),
@@ -70,6 +66,23 @@ class SidebarBadgeService
         }
 
         return $count();
+    }
+
+    /**
+     * Runs the counter when the user holds at least one listed permission — otherwise 0.
+     *
+     * @param  list<string>  $permissions
+     * @param  callable(): int  $count
+     */
+    private function gatedAny(?User $user, array $permissions, callable $count): int
+    {
+        foreach ($permissions as $permission) {
+            if ($user?->hasPermission($permission)) {
+                return $count();
+            }
+        }
+
+        return 0;
     }
 
     /**

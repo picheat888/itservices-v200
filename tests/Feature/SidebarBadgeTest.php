@@ -188,6 +188,28 @@ class SidebarBadgeTest extends TestCase
         $this->assertSame(0, $badges['tickets']);
     }
 
+    public function test_the_tickets_badge_opens_on_any_key_that_shows_the_tickets_menu(): void
+    {
+        $userWith = function (string $key, ?string $permission): User {
+            $employee = Employee::create(['code' => 'SB-T-'.$key, 'first_name' => 'Ticket', 'last_name' => $key, 'status' => 'active']);
+            $role = Role::create(['key' => 'sb_t_'.$key, 'name' => 'Tickets '.$key, 'is_system' => false]);
+            if ($permission !== null) {
+                RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+            }
+            Ticket::factory()->create(['requester_id' => $employee->id, 'status' => 'open', 'assignee_id' => null]);
+
+            return User::factory()->create(['role_id' => $role->id, 'employee_id' => $employee->id]);
+        };
+
+        foreach (['tickets.my', 'tickets.create', 'tickets.module'] as $permission) {
+            $user = $userWith(str_replace('.', '_', $permission), $permission);
+            $this->assertSame(1, $this->actingAs($user)->getJson('/api/sidebar-badges')->assertOk()->json('data.tickets'), $permission);
+        }
+
+        $none = $userWith('none', null);
+        $this->assertSame(0, $this->actingAs($none)->getJson('/api/sidebar-badges')->assertOk()->json('data.tickets'));
+    }
+
     public function test_my_assets_counts_for_a_linked_employee_with_no_permissions(): void
     {
         $employee = Employee::create(['code' => 'SB-0100', 'first_name' => 'Plain', 'last_name' => 'Staff', 'status' => 'active']);
