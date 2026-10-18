@@ -259,6 +259,7 @@ export default function TicketsPage() {
     // Desk gates of one ticket, for the row menu
     const gatesFor = (tk: Ticket) => ({
         canTake: canTake && hasLevel(tk.category),
+        canResolve: canTake,
         canAssign,
         canForward,
         meId: user?.id,
@@ -320,12 +321,17 @@ export default function TicketsPage() {
     // Workflow modals stack over the still-open detail drawer (kept via ?view=) and bounce
     // back to it on save/close — matching the edit-over-detail pattern of the sibling modules.
     const startResolve = (tk: Ticket, mode: ResolveMode) => setResolveState({ ticket: tk, mode });
-    // The progress dialog needs the single-ticket read (work-class forecast), which list rows do not carry
-    const startUpdateFromList = (tk: Ticket) =>
+    // The progress dialog needs the single-ticket read (work-class forecast); the drawer may still hold a list row
+    const startUpdateFromList = (tk: Ticket) => {
+        if (tk.updates !== undefined) {
+            setUpdateTicket(tk);
+            return;
+        }
         ticketApi
             .get(tk.id)
             .then(setUpdateTicket)
             .catch(() => setUpdateTicket(tk));
+    };
 
     // Filter-popover helpers (Stock-style): the active count drives the trigger badge;
     // reset clears every list filter back to "all".
@@ -724,6 +730,7 @@ export default function TicketsPage() {
                 ticket={detail ?? null}
                 onClose={() => closeDetail()}
                 canTake={canTake && (shownTicket ? hasLevel(shownTicket.category) : false)}
+                canResolve={canTake}
                 canAssign={canAssign}
                 canForward={canForward}
                 meId={user?.id}
@@ -734,7 +741,7 @@ export default function TicketsPage() {
                 onAssign={(tk) => setAssignTicket(tk)}
                 onForward={(tk) => setForwardTicket(tk)}
                 onResolve={startResolve}
-                onUpdate={(tk) => setUpdateTicket(tk)}
+                onUpdate={startUpdateFromList}
             />
             <EditTicketDrawer ticket={editTicket} onClose={() => setEditTicket(null)} />
             <TakeCaseModal ticket={takeTicket} onClose={() => setTakeTicket(null)} />

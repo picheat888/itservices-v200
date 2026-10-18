@@ -11,26 +11,22 @@ import { ArrowRightLeft, Check, Info, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
 
-/**
- * Forward an in-progress case to another IT staff (the current assignee is stuck
- * or unavailable). Priority and the SLA deadlines stay put — only the owner changes.
- */
+// Forward an in-progress case to another IT staff; priority and SLA deadlines stay put.
 export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
     const { forward } = useTicketMutations();
-    // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
+    // Retained copy so the content doesn't blank during the exit animation
     const [shown, setShown] = useState<Ticket | null>(null);
     useEffect(() => {
         if (ticket) setShown(ticket);
     }, [ticket]);
     const view = ticket ?? shown;
-    // Only staff whose Ticket Level covers this case's category can receive it.
+    // Only staff whose Ticket Level covers this case's category can receive it
     const { data: staff = [] } = useTicketStaff(!!view, view?.category);
     const [assigneeId, setAssigneeId] = useState('');
     const [formError, setFormError] = useState('');
 
-    // Neither the current assignee (they already have it) nor the person who filed the case
-    // (anti case-pumping) can receive it — the API rejects both, so neither is offered.
+    // Neither the current assignee nor the person who filed it; the API refuses both
     const staffOptions = useMemo(
         () =>
             staff
@@ -63,7 +59,7 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-visible p-0">
                 <FocusDialogHeader
                     icon={ArrowRightLeft}
                     eyebrow={view?.ticket_no}
@@ -83,11 +79,7 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
                     )}
 
                     <Field label={t('ticket_select_staff')} required>
-                        {/* No placeholder override: SearchableSelect falls back to the shared
-                            "Select…" key. An em dash is this app's marker for "no value" in
-                            tables, so on a required picker it read as "there is nobody" rather
-                            than as an invitation to choose. */}
-                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} />
+                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} preferDown />
                     </Field>
 
                     <div className="flex items-start gap-2 rounded-md bg-blue-500/10 px-3 py-2.5 text-sm text-blue-600 dark:text-blue-400">
@@ -96,7 +88,7 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
                     </div>
                 </div>
 
-                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 rounded-b-lg border-t px-6 py-3.5">
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>

@@ -61,6 +61,7 @@ class TicketClosureEmailTest extends TestCase
 
     private function close(Ticket $ticket, bool $complete, string $resolution): void
     {
+        $ticket->update(['status' => 'in_progress']);
         app(TicketService::class)->resolve($ticket, $complete, $resolution);
     }
 

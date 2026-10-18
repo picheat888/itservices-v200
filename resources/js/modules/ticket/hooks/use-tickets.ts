@@ -76,23 +76,17 @@ export function useTicketAssetPicker(enabled: boolean) {
 // The Tickets badge ("needs my attention") now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
-/**
- * Every write on a case. All but `create` refresh on failure as well as on success: a
- * refusal usually means the case moved on (someone else took it, it closed), and a
- * half-finished upload or removal has still changed it — either way the drawer behind the
- * dialog should show the case as it now stands.
- */
+/** Every write on a case; all but `create` refresh on failure too, since a refusal usually means the case moved on. */
 export function useTicketMutations() {
     const qc = useQueryClient();
+    // Returns the detail refetch so the action dialog stays busy until the case behind it is current
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: ['tickets-list'] });
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
         qc.invalidateQueries({ queryKey: SUMMARY });
-        // Refresh the open detail drawer (?view=<id>) so a stacked action modal
-        // bounces back to up-to-date status/assignee without reopening.
-        qc.invalidateQueries({ queryKey: ['ticket', 'view'] });
-        // Employee detail's read-only Tickets tab (employee module) mirrors this data.
+        // Employee detail's read-only Tickets tab mirrors this data
         qc.invalidateQueries({ queryKey: ['employee-tickets'] });
+        return qc.invalidateQueries({ queryKey: ['ticket', 'view'] });
     };
     return {
         create: useMutation({ mutationFn: (p: CreateTicketPayload) => ticketApi.create(p), onSuccess: invalidate }),
@@ -119,7 +113,6 @@ export function useTicketMutations() {
                 ticketApi.addUpdate(v.id, { body: v.body, ...(v.work_class ? { work_class: v.work_class } : {}) }),
             onSettled: invalidate,
         }),
-        /** Classify a case's kind of work — the deadline moves, so this invalidates the same as every other mutation here. */
         resolve: useMutation({
             mutationFn: (v: { id: number; mode: 'complete' | 'cancel'; resolution: string }) =>
                 ticketApi.resolve(v.id, { mode: v.mode, resolution: v.resolution }),

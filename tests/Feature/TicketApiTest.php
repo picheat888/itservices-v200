@@ -181,7 +181,7 @@ class TicketApiTest extends TestCase
         $updates = $this->actingAs($dispatcher)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json('data.updates');
         $this->assertCount(1, $updates);
         $this->assertSame('forwarded', $updates[0]['kind']);
-        $this->assertSame(['from' => $holder->name, 'to' => $next->name], $updates[0]['meta']);
+        $this->assertSame(['from' => $holder->name, 'from_th' => null, 'to' => $next->name, 'to_th' => null], $updates[0]['meta']);
         $this->assertSame($dispatcher->name, $updates[0]['author_name']);
 
         $bell = $holder->notifications()->first();

@@ -23,8 +23,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
     const [formError, setFormError] = useState('');
 
     const open = !!ticket && !!mode;
-    // Retain "shown" copies (ticket + mode) so the content — including the
-    // complete/cancel styling — doesn't flip or blank during the Radix exit animation.
+    // Retained ticket + mode so the content and its colours don't flip during the exit animation
     const [shown, setShown] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
     useEffect(() => {
         if (ticket && mode) setShown({ ticket, mode });
@@ -80,8 +79,10 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                         </div>
                     )}
 
-                    <p className="text-muted-foreground text-sm">{t('ticket_resolution_required')}</p>
-                    <Field label={t('ticket_resolution_details')} required error={err}>
+                    <p className="text-muted-foreground text-sm">
+                        {isComplete ? t('ticket_resolution_required') : t('ticket_cancel_reason_required')}
+                    </p>
+                    <Field label={isComplete ? t('ticket_resolution_details') : t('ticket_cancel_reason')} required error={err}>
                         <Textarea
                             value={resolution}
                             onChange={(e) => {
@@ -89,6 +90,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                                 setErr('');
                             }}
                             rows={5}
+                            maxLength={5000}
                             className={cn(err && 'border-destructive')}
                             placeholder={isComplete ? t('ticket_resolution_ph_complete') : t('ticket_resolution_ph_cancel')}
                         />
@@ -96,8 +98,9 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                 </div>
 
                 <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                    {/* "Back" on the cancel dialog, so its two buttons don't both read ยกเลิก */}
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
-                        {t('cancel')}
+                        {isComplete ? t('cancel') : t('back')}
                     </Button>
                     <Button variant={isComplete ? 'default' : 'destructive'} onClick={submit} disabled={pending}>
                         {pending ? (
