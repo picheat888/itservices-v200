@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Role extends Model
 {
@@ -14,6 +15,19 @@ class Role extends Model
     protected function casts(): array
     {
         return ['is_system' => 'boolean'];
+    }
+
+    /** A key slugged from the name, numbered when it is taken. */
+    public static function uniqueKeyFor(string $name): string
+    {
+        $base = Str::slug($name, '_') ?: 'role';
+        $key = $base;
+        $i = 1;
+        while (self::where('key', $key)->exists()) {
+            $key = $base.'_'.$i++;
+        }
+
+        return $key;
     }
 
     /**

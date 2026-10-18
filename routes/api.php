@@ -376,6 +376,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('permissions', [RolePermissionController::class, 'index'])->name('api.permissions.index');
     Route::put('permissions/{role}', [RolePermissionController::class, 'update'])->name('api.permissions.update');
     Route::post('roles', [RoleController::class, 'store'])->name('api.roles.store');
+    Route::post('roles/{key}/duplicate', [RoleController::class, 'duplicate'])->name('api.roles.duplicate');
     Route::put('roles/{key}', [RoleController::class, 'update'])->name('api.roles.update');
     Route::delete('roles/{key}', [RoleController::class, 'destroy'])->name('api.roles.destroy');
     Route::get('group-roles/{groupRole}/members', [GroupRoleController::class, 'members'])->name('api.group-roles.members');

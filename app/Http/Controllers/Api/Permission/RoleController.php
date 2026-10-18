@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
+use App\Services\Permission\RoleDuplicateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class RoleController extends Controller
 {
@@ -21,21 +21,30 @@ class RoleController extends Controller
             'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
 
-        $base = Str::slug($data['name'], '_') ?: 'role';
-        $key = $base;
-        $i = 1;
-        while (Role::where('key', $key)->exists()) {
-            $key = $base.'_'.$i++;
-        }
-
         $role = Role::create([
-            'key' => $key,
+            'key' => Role::uniqueKeyFor($data['name']),
             'name' => $data['name'],
             'color' => $data['color'] ?? '#64748b',
             'is_system' => false,
         ]);
 
         AuditLog::record('Created role', $role->name, subject: $role);
+
+        return response()->json(['data' => $role, 'message' => 'success'], 201);
+    }
+
+    /** A new custom role with the source's saved permissions; members are not copied. */
+    public function duplicate(Request $request, string $key, RoleDuplicateService $service): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
+        $source = Role::where('key', $key)->firstOrFail();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+        ]);
+
+        $role = $service->duplicate($source, $data['name'], $data['color'] ?? null, $request->user());
 
         return response()->json(['data' => $role, 'message' => 'success'], 201);
     }
