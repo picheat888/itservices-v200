@@ -8,7 +8,6 @@ use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
-use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Support\CsvReader;
 use Illuminate\Support\Facades\Auth;
@@ -355,8 +354,7 @@ class EmployeeImportService
      */
     private function persist(array $prepared, array $existingIdByCode): void
     {
-        $defaultGroupId = (int) AppSetting::get('default_employee_group_id', 0);
-        $group = $defaultGroupId ? GroupRole::find($defaultGroupId) : null;
+        $group = GroupRole::defaultForNewEmployees();
 
         // Codes for the blank rows are minted here rather than row by row by the model,
         // because the generator counts from max(id) and cannot see the codes THIS file

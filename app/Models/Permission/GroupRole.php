@@ -4,6 +4,7 @@ namespace App\Models\Permission;
 
 use App\Enums\UserRole;
 use App\Models\Employee\Employee;
+use App\Models\Settings\AppSetting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -36,6 +37,15 @@ class GroupRole extends Model
                 ['name' => ucfirst($key), 'color' => '#64748b', 'is_system' => UserRole::isSuperKey($key)],
             )->id;
         unset($this->attributes['role']);
+    }
+
+    /** The configured default group for new employees, or null when unset or tied to the super role. */
+    public static function defaultForNewEmployees(): ?self
+    {
+        $groupId = (int) AppSetting::get('default_employee_group_id', 0);
+        $group = $groupId ? static::with('role')->find($groupId) : null;
+
+        return $group && ! UserRole::isSuperKey($group->role?->key) ? $group : null;
     }
 
     /**
