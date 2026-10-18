@@ -5,20 +5,18 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, RotateCcw, SquarePen, Trash2, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useContractMutations } from '../hooks/use-contracts';
+import { isContractDeletable, useContractActions } from '../hooks/use-contract-actions';
 import { ContractAssetsTab } from './contract-assets-tab';
 import { ContractAttachmentsTab } from './contract-attachments-tab';
-import { ContractCancelDialog } from './contract-cancel-dialog';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Icon per contract type — mirrors the icons used by the Edit wizard's type cards. */
 const TYPE_ICON: Record<ContractType, LucideIcon> = {
@@ -68,10 +66,8 @@ export function ContractDetailDrawer({
     const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
-    const confirm = useConfirm();
-    const { expire, reactivate, remove } = useContractMutations();
+    const actions = useContractActions(onClose);
     const [tab, setTab] = useState<TabId>('overview');
-    const [cancelling, setCancelling] = useState(false);
 
     // The last contract, so the content stays put while the dialog animates closed
     const [shown, setShown] = useState<Contract | null>(contract);
@@ -89,78 +85,9 @@ export function ContractDetailDrawer({
     const c = contract ?? shown;
     if (!c) return null;
 
-    /** Any contract with linked assets must have them all written off before it can be closed. */
-    const assertAssetsClear = async (): Promise<boolean> => {
-        const pending = c.linked_assets.filter((a) => a.status !== 'writeoff');
-        if (pending.length > 0) {
-            await confirm({
-                variant: 'warn',
-                hideCancel: true,
-                title: t('contract_cannot_close_title'),
-                description: t('contract_cannot_close_desc').replace('{n}', fmtN(pending.length)),
-                confirmText: t('contract_got_it'),
-            });
-            return false;
-        }
-        return true;
-    };
-
-    /** Cancel = reversible early termination; opens the reason dialog once assets are clear. */
-    const handleCancel = async () => {
-        if (!(await assertAssetsClear())) return;
-        setCancelling(true);
-    };
-
-    /** Expired = permanent admin close-out; warn extra when ending before the end date. */
-    const handleExpire = async () => {
-        if (!(await assertAssetsClear())) return;
-        await confirm({
-            variant: 'danger',
-            title: t('contract_expire'),
-            entity: { name: c.name, sub: c.code },
-            description: t('contract_expire_permanent_note'),
-            confirmText: t('contract_expire'),
-            action: async () => {
-                await expire.mutateAsync(c.id);
-                onClose();
-            },
-        });
-    };
-
-    /** Reactivate a cancelled or expired contract — reopens it (clears cancelled_at / expired_at). */
-    const handleReactivate = async () => {
-        await confirm({
-            variant: 'edit',
-            title: t('contract_reactivate_confirm_title'),
-            entity: { name: c.name, sub: c.code },
-            confirmText: t('contract_reactivate'),
-            action: async () => {
-                await reactivate.mutateAsync(c.id);
-                onClose();
-            },
-        });
-    };
-
-    /** Hard-delete — only offered for a freshly added contract (active, no linked assets). */
-    const handleDelete = async () => {
-        await confirm({
-            variant: 'danger',
-            title: t('contract_delete_confirm'),
-            entity: { name: c.name, sub: c.code },
-            description: t('contract_delete_note'),
-            confirmText: t('contract_delete'),
-            action: async () => {
-                await remove.mutateAsync(c.id);
-                onClose();
-            },
-        });
-    };
-
     const days = c.days_remaining;
     const cancelled = c.status === 'cancelled';
-    // A mistakenly added contract can be removed outright only while it's still
-    // untouched: active status and no assets linked yet.
-    const deletable = c.status === 'active' && c.linked_assets.length === 0;
+    const deletable = isContractDeletable(c);
     const terminal = c.status === 'cancelled' || c.status === 'expired';
     const tone =
         c.status === 'cancelled' ? 'gray' : c.status === 'expired' ? 'gray' : c.status === 'overdue' ? 'red' : c.in_reminder ? 'amber' : 'green';
@@ -353,13 +280,13 @@ export function ContractDetailDrawer({
                         ((canCancel && c.status === 'active') || (canExpire && c.status === 'overdue') || (canDelete && deletable) || canEdit) && (
                             <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
                                 {canCancel && c.status === 'active' && (
-                                    <Button variant="destructive" onClick={handleCancel}>
+                                    <Button variant="destructive" onClick={() => actions.startCancel(c)}>
                                         <Ban className="h-4 w-4" />
                                         {t('contract_cancel')}
                                     </Button>
                                 )}
                                 {canExpire && c.status === 'overdue' && (
-                                    <Button variant="outline" onClick={handleExpire} disabled={expire.isPending}>
+                                    <Button variant="outline" onClick={() => actions.startExpire(c)} disabled={actions.pending.expire}>
                                         <Archive className="h-4 w-4" />
                                         {t('contract_expire')}
                                     </Button>
@@ -367,8 +294,8 @@ export function ContractDetailDrawer({
                                 {canDelete && deletable && (
                                     <Button
                                         variant="ghost"
-                                        onClick={handleDelete}
-                                        disabled={remove.isPending}
+                                        onClick={() => actions.startDelete(c)}
+                                        disabled={actions.pending.remove}
                                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                                     >
                                         <Trash2 className="h-4 w-4" />
@@ -388,7 +315,7 @@ export function ContractDetailDrawer({
                         Reactivate permission can reopen them (clears cancelled_at / expired_at). */}
                     {terminal && canReactivate && (
                         <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
-                            <Button variant="outline" onClick={handleReactivate} disabled={reactivate.isPending}>
+                            <Button variant="outline" onClick={() => actions.startReactivate(c)} disabled={actions.pending.reactivate}>
                                 <RotateCcw className="h-4 w-4" />
                                 {t('contract_reactivate')}
                             </Button>
@@ -396,14 +323,7 @@ export function ContractDetailDrawer({
                     )}
                 </DialogContent>
             </Dialog>
-            <ContractCancelDialog
-                contract={cancelling ? c : null}
-                onClose={() => setCancelling(false)}
-                onDone={() => {
-                    setCancelling(false);
-                    onClose();
-                }}
-            />
+            {actions.cancelDialog}
         </>
     );
 }

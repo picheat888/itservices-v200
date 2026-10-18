@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Contract;
 
+use App\Enums\Asset\AssetStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Contract\StoreContractRequest;
 use App\Http\Resources\Contract\ContractResource;
@@ -40,7 +41,10 @@ class ContractController extends Controller
 
         $query = Contract::query()
             ->with('vendor')
-            ->withCount('assets');
+            ->withCount([
+                'assets',
+                'assets as open_assets_count' => fn ($assets) => $assets->where('status', '!=', AssetStatus::Writeoff->value),
+            ]);
 
         // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
         match ($request->query('sort', 'end_asc')) {
