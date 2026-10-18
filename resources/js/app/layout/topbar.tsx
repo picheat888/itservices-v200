@@ -6,8 +6,14 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Bell, Moon, Sun } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { countRose } from './count-rise';
 import { useSidebarStyle } from './use-sidebar-style';
+
+/** Topbar buttons share one look: 36px (40px below 1280px), hover fades in, press shrinks the content. */
+const TOPBAR_BTN = 'group flex h-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150 max-xl:h-10';
+const TOPBAR_ICON_BTN = cn(TOPBAR_BTN, 'w-9 max-xl:w-10');
 
 interface TopbarProps {
     /** Whether the notifications panel is open — keeps the bell lit while it is. */
@@ -31,6 +37,8 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const langSwitchLabel = t(lang === 'en' ? 'lang_switch_to_th' : 'lang_switch_to_en');
     const { data: notifData } = useNotifications();
     const unreadCount = notifData?.unread ?? 0;
+    const [themeTurned, setThemeTurned] = useState(false);
+    const bellPops = useCountRises(notifData ? unreadCount : null);
 
     const crumbTail = useUiStore((s) => s.crumbTail);
     const current = findNavItem(pathname);
@@ -43,15 +51,15 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             <button
                 data-nav-toggle
                 onClick={toggleSidebar}
-                className="nav-toggle group text-muted-foreground hover:bg-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-md max-xl:h-10 max-xl:w-10"
+                className={cn('nav-toggle text-muted-foreground hover:bg-accent', TOPBAR_ICON_BTN)}
                 title={toggleLabel}
                 aria-label={toggleLabel}
                 aria-expanded={!iconsOnly}
                 aria-controls="app-sidebar"
             >
-                <span className="flex transition-transform duration-75 group-active:scale-[0.92]">
+                <Press>
                     <BurgerIcon />
-                </span>
+                </Press>
             </button>
 
             <nav aria-label={t('nav_breadcrumb')} inert={menuOpen} className="flex min-w-0 flex-1 items-center gap-2 text-sm whitespace-nowrap">
@@ -86,22 +94,32 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             <div inert={menuOpen} className="flex shrink-0 items-center gap-3">
                 <button
                     onClick={toggleLang}
-                    className="text-muted-foreground hover:bg-accent flex h-9 items-center gap-2 rounded-md px-2.5 max-xl:h-10"
+                    className={cn('text-muted-foreground hover:bg-accent px-2.5', TOPBAR_BTN)}
                     title={langSwitchLabel}
                     aria-label={langSwitchLabel}
                     lang={lang === 'en' ? 'th' : 'en'}
                 >
-                    <span aria-hidden>{lang === 'en' ? <FlagEN /> : <FlagTH />}</span>
-                    <span className="text-[11px] font-bold tracking-wide">{lang === 'en' ? 'EN' : 'TH'}</span>
+                    <Press>
+                        <span aria-hidden>{lang === 'en' ? <FlagEN /> : <FlagTH />}</span>
+                        <span className="text-[11px] font-bold tracking-wide">{lang === 'en' ? 'EN' : 'TH'}</span>
+                    </Press>
                 </button>
 
                 <button
-                    onClick={toggleDark}
-                    className="text-muted-foreground hover:bg-accent flex h-9 w-9 items-center justify-center rounded-md max-xl:h-10 max-xl:w-10"
+                    onClick={() => {
+                        setThemeTurned(true);
+                        toggleDark();
+                    }}
+                    className={cn('text-muted-foreground hover:bg-accent', TOPBAR_ICON_BTN)}
                     title={dark ? t('light_mode') : t('dark_mode')}
                     aria-label={dark ? t('light_mode') : t('dark_mode')}
                 >
-                    {dark ? <Sun className="h-[18px] w-[18px]" aria-hidden /> : <Moon className="h-[18px] w-[18px]" aria-hidden />}
+                    <Press>
+                        {/* Keyed so the new icon turns in (a keyframe: the theme swap pauses transitions for a frame) */}
+                        <span key={dark ? 'sun' : 'moon'} className={cn('flex', themeTurned && 'theme-icon-in')}>
+                            {dark ? <Sun className="h-[18px] w-[18px]" aria-hidden /> : <Moon className="h-[18px] w-[18px]" aria-hidden />}
+                        </span>
+                    </Press>
                 </button>
 
                 {/* Bell: lit while its panel is open */}
@@ -111,18 +129,22 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                     aria-haspopup="dialog"
                     aria-expanded={notifOpen}
                     aria-controls={notifOpen ? 'notif-tray' : undefined}
-                    className={cn(
-                        'relative flex h-9 w-9 items-center justify-center rounded-md transition-colors max-xl:h-10 max-xl:w-10',
-                        notifOpen ? 'bg-accent text-brand' : 'text-muted-foreground hover:bg-accent',
-                    )}
+                    className={cn('relative', TOPBAR_ICON_BTN, notifOpen ? 'bg-accent text-brand' : 'text-muted-foreground hover:bg-accent')}
                     title={t('notif_title')}
                     aria-label={unreadCount > 0 ? `${t('notif_title')} (${fmtN(unreadCount)})` : t('notif_title')}
                 >
-                    <Bell className="h-[18px] w-[18px]" aria-hidden />
+                    <Press>
+                        <Bell className="h-[18px] w-[18px]" aria-hidden />
+                    </Press>
                     {unreadCount > 0 && (
+                        // Keyed by rises, so the count pops each time a notification arrives
                         <span
+                            key={bellPops}
                             aria-hidden
-                            className="bg-destructive text-destructive-foreground absolute top-px right-px flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold"
+                            className={cn(
+                                'bg-destructive text-destructive-foreground ring-background absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold ring-2',
+                                bellPops > 0 && 'badge-pop',
+                            )}
                         >
                             {unreadCount > 9 ? '9+' : fmtN(unreadCount)}
                         </span>
@@ -131,6 +153,26 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             </div>
         </header>
     );
+}
+
+/** Button content that shrinks a touch while pressed. */
+function Press({ children }: { children: ReactNode }) {
+    return (
+        <span className="flex items-center gap-2 transition-transform duration-75 group-active:scale-[0.92] motion-reduce:transition-none">
+            {children}
+        </span>
+    );
+}
+
+/** How many times the count has gone up since it first loaded (null while loading). */
+function useCountRises(count: number | null): number {
+    const [seen, setSeen] = useState<number | null>(null);
+    const [rises, setRises] = useState(0);
+    if (count !== null && count !== seen) {
+        if (countRose(seen, count)) setRises(rises + 1);
+        setSeen(count);
+    }
+    return rises;
 }
 
 /** Menu icon drawn as three lines, so on narrow screens they can fold into an X (app.css `.nav-burger`). */

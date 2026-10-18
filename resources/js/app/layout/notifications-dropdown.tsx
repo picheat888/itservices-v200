@@ -44,13 +44,24 @@ function moveBetweenRows(e: React.KeyboardEvent<HTMLElement>, row: HTMLElement |
 /** The kind the server counts and filters by: payload type, plus the imitated module on a test sample. */
 const kindKey = (type: string | null, module: string | null) => `${type ?? ''}|${module ?? ''}`;
 
-export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: () => void; onChangePassword: () => void }) {
+export function NotificationsDropdown({
+    onClose,
+    onChangePassword,
+    closing = false,
+}: {
+    onClose: () => void;
+    onChangePassword: () => void;
+    /** Playing the close animation; the shell unmounts it right after. */
+    closing?: boolean;
+}) {
     // Prefers the wording an administrator set on the Bell tab, else the bundled string.
     const t = useNotificationText();
     const fmtN = useNumberFormat();
     const navigate = useNavigate();
     const location = useLocation();
     const ref = useRef<HTMLDivElement>(null);
+    // Focus moves into the tray as it opens, so a screen reader announces it and Tab starts inside
+    useEffect(() => ref.current?.focus(), []);
     const tabsRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
@@ -216,11 +227,17 @@ export function NotificationsDropdown({ onClose, onChangePassword }: { onClose: 
             id="notif-tray"
             role="dialog"
             aria-labelledby="notif-tray-title"
+            tabIndex={-1}
             onBlur={(e) => {
                 const next = e.relatedTarget as HTMLElement | null;
                 if (next && !ref.current?.contains(next) && !next.closest('[data-notif-btn]')) close(false);
             }}
-            className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 absolute top-[4.5rem] right-4 z-50 w-[440px] max-w-[calc(100vw-2rem)] origin-top-right duration-150 ease-out motion-reduce:animate-none"
+            className={cn(
+                'absolute top-[4.5rem] right-4 z-50 w-[440px] max-w-[calc(100vw-2rem)] origin-top-right motion-reduce:animate-none',
+                closing
+                    ? 'animate-out fade-out-0 zoom-out-95 slide-out-to-top-1 fill-mode-forwards pointer-events-none duration-100 ease-in'
+                    : 'animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 duration-150 ease-out',
+            )}
         >
             {/* Caret aimed back at the bell */}
             <div className="border-border bg-popover absolute -top-[5px] right-[13px] h-2.5 w-2.5 rotate-45 border-t border-l" />
