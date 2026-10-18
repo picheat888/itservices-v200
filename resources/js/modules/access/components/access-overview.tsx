@@ -461,21 +461,13 @@ export function AccessOverview({
                         </div>
                         <span className="text-muted-foreground flex items-center gap-2 text-xs">
                             {(gov.resigned_holders > 0 || gov.empty_resources > 0 || !gov.owners_complete) && (
-                                // Blinking dot = something below needs attention (red beats amber).
-                                <span className="relative flex h-2 w-2">
-                                    <span
-                                        className={cn(
-                                            'absolute inline-flex h-full w-full animate-ping rounded-full [animation-iteration-count:3] motion-reduce:hidden',
-                                            gov.resigned_holders > 0 ? 'bg-destructive/60' : 'bg-amber-500/60',
-                                        )}
-                                    />
-                                    <span
-                                        className={cn(
-                                            'relative inline-flex h-2 w-2 rounded-full',
-                                            gov.resigned_holders > 0 ? 'bg-destructive' : 'bg-amber-500',
-                                        )}
-                                    />
-                                </span>
+                                // Blinking dot = something below needs attention (red beats amber), same blink as header alerts
+                                <span
+                                    className={cn(
+                                        'alert-blink inline-flex h-2 w-2 rounded-full',
+                                        gov.resigned_holders > 0 ? 'bg-destructive' : 'bg-amber-500',
+                                    )}
+                                />
                             )}
                             {t('access_dash_latest')}
                         </span>
