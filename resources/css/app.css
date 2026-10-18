@@ -152,6 +152,8 @@
     --muted-foreground: hsl(215, 16%, 45%);
     --accent: hsl(210, 24%, 95%);
     --accent-foreground: hsl(222, 25%, 20%);
+    /* Table row hover / keyboard focus */
+    --row-hover: var(--accent);
     --destructive: hsl(0, 72%, 51%);
     --destructive-foreground: hsl(0, 0%, 98%);
     --border: hsl(214, 20%, 90%);
@@ -221,6 +223,7 @@
     --muted-foreground: hsl(215, 15%, 65%);
     --accent: hsl(217, 19%, 18%);
     --accent-foreground: hsl(210, 20%, 96%);
+    --row-hover: color-mix(in oklab, var(--accent) 50%, transparent);
     /* Lighter for text on the dark card (≥4.9:1 even on its /15 tint; 55% read at 3.8-4.2:1),
        so a light surface with near-black on it, as --brand does. */
     --destructive: hsl(0, 85%, 68%);
@@ -459,7 +462,7 @@
 /* Table rows: a clickable row tints on hover / keyboard focus through --row-tint */
 .row-hover:hover,
 .row-hover:focus-visible {
-    --row-tint: color-mix(in oklab, var(--color-accent) 50%, transparent);
+    --row-tint: var(--row-hover);
     background-color: var(--row-tint);
 }
 
