@@ -41,7 +41,18 @@ const empty = {
 };
 
 /** Centered "focus dialog" for editing an existing employee's profile and org assignment. */
-export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean; onClose: () => void; employee: Employee | null }) {
+export function EditEmployeeDialog({
+    open,
+    onClose,
+    onSaved,
+    employee,
+}: {
+    open: boolean;
+    onClose: () => void;
+    /** Called instead of onClose once the edit is saved. */
+    onSaved?: () => void;
+    employee: Employee | null;
+}) {
     const fmt = useDateFormat();
     const t = useT();
     const confirmEdit = useConfirmEdit();
@@ -287,7 +298,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             setOrgConfirm(false);
             // Show "✓ Saved" briefly, then close.
             setSaved(true);
-            window.setTimeout(onClose, 1200);
+            window.setTimeout(onSaved ?? onClose, 1200);
         } catch (err) {
             // manager_id = reporting-tree loop; other field errors land under their inputs
             const fieldErrors = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data?.errors;

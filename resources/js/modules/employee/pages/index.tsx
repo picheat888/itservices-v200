@@ -190,6 +190,37 @@ export default function EmployeesPage() {
     };
     const closeEmp = () => setView(null);
 
+    // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the view ?view stays under it
+    const editId = toRecordId(searchParams.get('edit'));
+    const { data: editSource, isError: editMissing, isFetching: editFetching } = useEmployee(editId);
+    useEffect(() => {
+        if (editId == null) setEditEmp(null);
+        else if (editSource && !editFetching && editEmp?.id !== editId) setEditEmp(editSource);
+    }, [editId, editSource, editFetching, editEmp?.id]);
+    // A link or reload cannot open a form the menus would not offer
+    const editOpen = editEmp != null && editEmp.id === editId && canEdit && editEmp.status !== 'resigned' && (!editEmp.is_super_admin || isSuper);
+    const writeEdit = (change: (p: URLSearchParams) => void) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                change(p);
+                return p;
+            },
+            { replace: true },
+        );
+    // The clicked row opens the form at once; a link or reload fetches it
+    const openEditEmp = (emp: Employee) => {
+        setEditEmp(emp);
+        writeEdit((p) => p.set('edit', String(emp.id)));
+    };
+    const closeEditEmp = () => writeEdit((p) => p.delete('edit'));
+    // A saved edit always lands on the employee's view
+    const showSavedEmp = () =>
+        writeEdit((p) => {
+            p.delete('edit');
+            if (editId != null) p.set('view', String(editId));
+        });
+
     // The add-employee drawer is URL-driven (?add=1) so a reload / shared link reopens it.
     const adding = searchParams.get('add') != null;
     const openAdd = () =>
@@ -523,7 +554,7 @@ export default function EmployeesPage() {
                             canCancelResign={canCancelResign}
                             canSetCredentials={canSetCredentials}
                             onView={openEmp}
-                            onEdit={setEditEmp}
+                            onEdit={openEditEmp}
                             onResign={setResignEmp}
                             onCancelResign={async (e) => {
                                 await confirm({
@@ -614,10 +645,18 @@ export default function EmployeesPage() {
             </Card>
 
             <AddEmployeeDrawer open={adding} onClose={closeAdd} />
-            <EditEmployeeDialog open={!!editEmp} onClose={() => setEditEmp(null)} employee={editEmp} />
+            <EditEmployeeDialog open={editOpen} onClose={closeEditEmp} onSaved={showSavedEmp} employee={editEmp} />
             <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
             {/* A dead ?view= link says so */}
-            <RecordMissingDialog open={viewEmpMissing} onClose={() => closeEmp()} />
+            <RecordMissingDialog
+                open={viewEmpMissing || editMissing}
+                onClose={() =>
+                    writeEdit((p) => {
+                        p.delete('view');
+                        p.delete('edit');
+                    })
+                }
+            />
             <EmployeeViewDrawer
                 employee={viewEmp ?? null}
                 onClose={() => closeEmp()}
@@ -644,7 +683,7 @@ export default function EmployeesPage() {
                 // Keep the view dialog open so the credentials modal stacks on top of it.
                 onSetCredentials={(e) => setCredEmp(e)}
                 // Keep the view dialog open so the edit dialog stacks on top (closing it returns here).
-                onEdit={setEditEmp}
+                onEdit={openEditEmp}
                 onViewProfile={setView}
             />
             <ResignModal

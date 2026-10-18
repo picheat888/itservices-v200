@@ -29,7 +29,16 @@ const ACCEPT_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'zip', 'doc', 'docx', 'xls', 'x
  * Stacks over the detail drawer and bounces back to it on save/close. Workflow fields
  * (priority / status / assignee) are not editable here.
  */
-export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
+export function EditTicketDrawer({
+    ticket,
+    onClose,
+    onSaved,
+}: {
+    ticket: Ticket | null;
+    onClose: () => void;
+    /** Called instead of onClose once the edit is saved. */
+    onSaved?: () => void;
+}) {
     const t = useT();
     const confirmEdit = useConfirmEdit();
     const { update, uploadAttachments, deleteAttachment } = useTicketMutations();
@@ -154,7 +163,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
             return;
         }
         setSaving(false);
-        onClose();
+        (onSaved ?? onClose)();
     };
 
     const uploading = uploadAttachments.isPending;
