@@ -15,17 +15,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class GroupRoleController extends Controller
 {
     /**
-     * Sets User.role to the group's role for all employees in the group.
-     *
-     * Login accounts are linked to their employee via the users.employee_id FK
-     * (set when an admin provisions the account), so we resolve them by that FK,
-     * with username as a fallback for any account not yet linked. Email is NOT
-     * used — it is a contact field, not the login identifier, and demo accounts
-     * deliberately carry a User email that differs from the Employee email.
+     * Sets the group's role on the login accounts of its employees (by employee_id, then username).
      *
      * @param  array<int>  $newEmployeeIds
      */
@@ -58,8 +53,7 @@ class GroupRoleController extends Controller
     }
 
     /**
-     * Move semantics for "one employee, one group": detach the given employees
-     * from every OTHER group, then set this group's membership to exactly them.
+     * Moves the employees into this group, detaching them from every other group.
      *
      * @param  array<int>  $employeeIds
      */
@@ -76,10 +70,7 @@ class GroupRoleController extends Controller
     }
 
     /**
-     * Handles employees removed from a group. An employee who now belongs to no
-     * group falls back to the default group (preserving "everyone has exactly one
-     * group"); if there is no default group, or they were removed FROM it, they
-     * become group-less with the base 'user' role.
+     * Moves employees left without a group into the default group, or the base 'user' role.
      *
      * @param  array<int>  $removedEmployeeIds
      */
@@ -105,6 +96,16 @@ class GroupRoleController extends Controller
             } else {
                 $this->setUserRole($employee, 'user');
             }
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function guardRole(array $data, ?Role $role): void
+    {
+        if (isset($data['role']) && $role === null) {
+            throw ValidationException::withMessages(['role' => 'The selected role is invalid.']);
         }
     }
 
@@ -167,6 +168,7 @@ class GroupRoleController extends Controller
         $this->gate($request);
         $data = $this->validateData($request);
         $role = RoleKeys::find($data['role'] ?? null);
+        $this->guardRole($data, $role);
         $this->guardSuperGroup($request, null, $role?->key);
 
         $employeeIds = $data['employee_ids'] ?? [];
@@ -188,6 +190,7 @@ class GroupRoleController extends Controller
         $this->gate($request);
         $data = $this->validateData($request);
         $role = RoleKeys::find($data['role'] ?? null);
+        $this->guardRole($data, $role);
         $this->guardSuperGroup($request, $groupRole->role?->key, $role?->key);
 
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();

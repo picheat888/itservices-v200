@@ -4,10 +4,7 @@ namespace App\Support;
 
 use App\Models\Permission\Role;
 
-/**
- * Resolves a role key from a request with an exact, case-sensitive match in PHP.
- * SQL collations (utf8mb4_unicode_ci) treat "SUPER" as "super", so lookups go through here.
- */
+// Exact, case-sensitive role key lookup done in PHP, not SQL.
 class RoleKeys
 {
     public static function find(?string $key): ?Role

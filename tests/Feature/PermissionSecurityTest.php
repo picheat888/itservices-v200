@@ -4,6 +4,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
+use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -47,21 +49,46 @@ class PermissionSecurityTest extends TestCase
 
     public function test_role_key_case_variant_is_refused_for_group_writes(): void
     {
+        $employee = Employee::create(['first_name' => 'Eve', 'last_name' => 'Caller', 'email' => 'eve@inaba.co.th']);
         $caller = $this->userWith('system.manage_groups');
+        $caller->update(['employee_id' => $employee->id]);
         $this->actingAs($caller);
         $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $ordinary->employees()->sync([$employee->id]);
+        $auditBefore = AuditLog::count();
 
         foreach (['SUPER', 'Super'] as $variant) {
-            $this->postJson('/api/group-roles', ['name' => 'Sneaky', 'role' => $variant])
+            $this->postJson('/api/group-roles', ['name' => 'Sneaky', 'role' => $variant, 'employee_ids' => [$employee->id]])
                 ->assertUnprocessable();
 
-            $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => $variant, 'employee_ids' => []])
+            $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => $variant, 'employee_ids' => [$employee->id]])
                 ->assertUnprocessable();
         }
 
         $this->assertDatabaseMissing('group_roles', ['name' => 'Sneaky']);
         $this->assertSame('staff', $ordinary->fresh()->role->key);
+        $this->assertSame([$employee->id], $ordinary->employees()->pluck('employees.id')->all());
         $this->assertFalse($caller->fresh()->isSuper());
+        $this->assertSame('staff', $caller->fresh()->role->key);
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_numeric_role_value_is_refused_not_stored_as_null(): void
+    {
+        $this->actingAs($this->userWith('system.manage_groups'));
+
+        $this->postJson('/api/group-roles', ['name' => 'Numeric', 'role' => '0'])
+            ->assertUnprocessable();
+
+        $this->assertDatabaseMissing('group_roles', ['name' => 'Numeric']);
+    }
+
+    public function test_exact_super_key_is_still_refused_for_permission_save(): void
+    {
+        $this->actingAs($this->userWith('system.manage_roles'));
+
+        $this->putJson('/api/permissions/super', ['permissions' => ['system.manage_roles']])
+            ->assertUnprocessable();
     }
 
     public function test_permission_save_needs_the_exact_role_key(): void
